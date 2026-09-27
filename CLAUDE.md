@@ -7,19 +7,34 @@ wallet ledger, deck builder (owned cards only), trades. Also a TypeScript learni
 Python/SQL developer: `lessons/NN-*.md` has one lesson per build phase. Update the relevant lesson
 when finishing a phase, and commit at the end of each lesson.
 
+## Architecture: read before writing code
+
+- Docs index: `docs/README.md`. Build order and per-phase workflow: `docs/roadmap.md`.
+- Modular monolith: `src/modules/<module>/{domain,application,infrastructure,queries,testing}` +
+  `index.ts` public API. Functional core, ports & adapters, factory-function DI, composition
+  roots in `src/server/` and `worker/`. See `docs/architecture/overview.md`.
+- Pattern choices: `docs/architecture/patterns.md`. Rules and naming:
+  `docs/architecture/conventions.md`. Tests: `docs/architecture/testing.md`. Why: `docs/adr/`.
+- **Process:** every phase starts with a design doc (`docs/design/NN-*.md` from the template) and
+  the user must approve it **before** implementation code is written. New cross-cutting decisions
+  become ADRs.
+
 ## Environment
 
 - NixOS + flakes + direnv: `flake.nix` provides node 22, pnpm, postgres 17. `.envrc` sets
   `DATABASE_URL`, `PG*` vars and `IMAGE_CACHE_DIR`. Outside a direnv shell, prefix commands with
   `nix develop -c`.
 - Postgres is project-local, socket-only, in `.dev/`: `pnpm db:start | db:stop | db:reset`.
-- Docker comes later (Phase 10). Read config only from env vars.
+- Docker comes later (Phase 11). Read config only from env vars.
 
-## Conventions
+## Conventions (summary)
 
-- Money is integer cents (`Cents` in `src/lib/money.ts`). Never floats.
-- All randomness (pack opening) and money movement happen server-side.
+- Expected failures return `Result`, errors are `{ kind: ... }` unions, and defects throw.
+- Money is integer cents (`Cents`). Never floats. (Currently `src/lib/money.ts`; it moves to
+  `src/shared/kernel/` in Phase 1.)
+- All randomness (pack opening) and money movement happen server-side, via injected `Rng`/`Clock`.
 - Card data: MTGJSON (sets, booster sheets, sealed products) + Scryfall (prices, images,
-  legalities). Prefer bulk files and batched calls (`/cards/collection`, 75 per request).
+  legalities), synced by the worker. Prefer bulk files and batched calls (`/cards/collection`, 75
+  per request).
 - `@/*` imports resolve to `src/*`.
 - Checks: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`.

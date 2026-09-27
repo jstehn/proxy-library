@@ -2,11 +2,12 @@ import { formatCents, parseUsd } from "@/lib/money";
 
 // Placeholder home page. Each section becomes a real route in later phases.
 const sections = [
-  { name: "Store", phase: 5, blurb: "Buy boosters, bundles and boxes." },
-  { name: "Inventory", phase: 5, blurb: "Your unopened product." },
-  { name: "Collection", phase: 6, blurb: "Every card you have opened or bought." },
-  { name: "Decks", phase: 8, blurb: "Build only from cards you own." },
-  { name: "Trades", phase: 9, blurb: "Swap cards and cash with friends." },
+  { name: "Wallet", phase: 3, blurb: "Allowance, grants and what you've spent." },
+  { name: "Store", phase: 6, blurb: "Buy boosters, bundles and boxes." },
+  { name: "Inventory", phase: 6, blurb: "Your unopened product." },
+  { name: "Collection", phase: 7, blurb: "Every card you have opened or bought." },
+  { name: "Decks", phase: 9, blurb: "Build only from cards you own." },
+  { name: "Trades", phase: 10, blurb: "Swap cards and cash with friends." },
 ];
 
 export default function Home() {
