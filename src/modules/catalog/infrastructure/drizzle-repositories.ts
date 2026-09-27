@@ -118,6 +118,8 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
               promoTypes: [...printing.treatments.promoTypes],
               isFullArt: printing.treatments.isFullArt,
               variantLabel: printing.variantLabel,
+              faces: printing.faces,
+              artist: printing.artist,
             })),
           )
           .onConflictDoUpdate({
@@ -139,6 +141,8 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
               promoTypes: excluded("promo_types"),
               isFullArt: excluded("is_full_art"),
               variantLabel: excluded("variant_label"),
+              faces: excluded("faces"),
+              artist: excluded("artist"),
               updatedAt: sql`now()`,
             },
           });

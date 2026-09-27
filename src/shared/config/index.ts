@@ -3,6 +3,10 @@ import { z } from "zod";
 // The only file that reads process.env (lint-enforced). Composition roots call
 // loadConfig() once and pass the pieces they need to the code they build.
 
+// Every setting below is set by .envrc. If one is reported missing right after an update, the
+// running terminal has the old environment: run `direnv reload`, then restart the process.
+const FROM_ENVRC = "is required (.envrc sets it: run `direnv reload`, then restart)";
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z
@@ -12,8 +16,8 @@ const EnvSchema = z.object({
     .string({ error: "is required (direnv generates one in .dev/auth-secret)" })
     .min(32, "must be at least 32 characters"),
   APP_URL: z.url({ error: "must be the app's public URL, e.g. http://localhost:3000" }),
-  IMAGE_CACHE_DIR: z.string({ error: "is required (direnv sets it)" }).min(1),
-  SYNC_CACHE_DIR: z.string({ error: "is required (direnv sets it)" }).min(1),
+  IMAGE_CACHE_DIR: z.string({ error: FROM_ENVRC }).min(1),
+  SYNC_CACHE_DIR: z.string({ error: FROM_ENVRC }).min(1),
   SYNC_TIME: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be a 24-hour time like 04:00")

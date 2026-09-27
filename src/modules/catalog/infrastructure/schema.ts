@@ -54,6 +54,8 @@ export const printings = pgTable(
     promoTypes: text("promo_types").array().notNull(),
     isFullArt: boolean("is_full_art").notNull(),
     variantLabel: text("variant_label").notNull(),
+    faces: jsonb("faces").notNull().default([]), // CardFace[]: printed text and stats per face
+    artist: text("artist"),
     imageUris: jsonb("image_uris"), // filled in by the Scryfall pass
     legalities: jsonb("legalities"),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),

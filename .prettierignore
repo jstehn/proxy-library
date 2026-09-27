@@ -3,3 +3,4 @@ pnpm-lock.yaml
 .dev/
 node_modules/
 AGENTS.md
+.next-e2e/

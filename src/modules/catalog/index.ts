@@ -21,6 +21,7 @@ export {
   PrintingId,
   SetCode,
   type BoosterConfig,
+  type CardFace,
   type DeckList,
   type Finish,
   type Printing,

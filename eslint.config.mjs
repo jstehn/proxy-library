@@ -253,5 +253,5 @@ export default defineConfig([
     },
   },
 
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "drizzle/**"]),
+  globalIgnores([".next/**", ".next-e2e/**", "out/**", "build/**", "next-env.d.ts", "drizzle/**"]),
 ]);

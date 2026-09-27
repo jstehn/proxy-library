@@ -38,6 +38,21 @@ describe("mapSetFile: set and printings", () => {
     expect(byNumber("1")?.variantLabel).toBe("");
   });
 
+  it("keeps each face's printed text and stats, and the artist", () => {
+    const beza = blb.printings.find((printing) => printing.name === "Beza, the Bounding Spring");
+    expect(beza?.faces).toHaveLength(1);
+    expect(beza?.faces[0]).toMatchObject({
+      name: "Beza, the Bounding Spring",
+      manaCost: "{2}{W}{W}",
+      typeLine: "Legendary Creature — Elemental Elk",
+      power: "4",
+      toughness: "5",
+      loyalty: null,
+    });
+    expect(beza?.faces[0].text).toContain("create a Treasure token");
+    expect(beza?.artist).toBe("Martin Wittfooth");
+  });
+
   it("keeps finishes, ids and card details", () => {
     const card = byNumber("1");
     expect(card?.name).toBe("Banishing Light");
@@ -191,9 +206,9 @@ describe("double-faced cards", () => {
     file.data.booster.play.sheets.common.cards[backId] = 1;
 
     const mapped = mapSetFile(file);
-    expect(
-      mapped.printings.filter((p) => p.scryfallId === front.identifiers.scryfallId),
-    ).toHaveLength(1);
+    const printings = mapped.printings.filter((p) => p.scryfallId === front.identifiers.scryfallId);
+    expect(printings).toHaveLength(1);
+    expect(printings[0].faces).toHaveLength(2); // the front face's text, then the back's
     const commonIds = mapped.boosters[0].sheets.common.cards.map((card) => card.printingId);
     expect(commonIds).toContain(front.uuid);
     expect(commonIds).not.toContain(backId);

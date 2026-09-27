@@ -107,9 +107,9 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // 4. Import enabled sets that are new (or, on a full run, have a new MTGJSON version).
     const statesByCode = new Map(states.map((state) => [state.code, state]));
-    const needsImport = (state: SetState) =>
-      state.importedVersion === null ||
-      (kind === "full" && state.importedVersion !== summary.mtgjsonVersion);
+    // A prices run imports only sets never imported before. A full run re-imports every enabled
+    // set: MTGJSON rebuilds daily anyway, and it fills in fields added to the catalog since.
+    const needsImport = (state: SetState) => state.importedVersion === null || kind === "full";
     for (const state of states.filter((s) => s.isEnabled && needsImport(s))) {
       try {
         await importSet(state.code, statesByCode, kind, summary);

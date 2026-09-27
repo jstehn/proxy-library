@@ -53,6 +53,18 @@ export type Treatments = Readonly<{
   isFullArt: boolean;
 }>;
 
+/** One face of a card: what's printed on it. Most cards have one; double-faced cards have two. */
+export type CardFace = Readonly<{
+  name: string;
+  manaCost: string | null; // "{2}{W}{W}"
+  typeLine: string;
+  text: string; // rules text, "" if none; "\n" between paragraphs
+  power: string | null; // strings, because of values like "*" or "1+*"
+  toughness: string | null;
+  loyalty: string | null;
+  defense: string | null;
+}>;
+
 export type Printing = Readonly<{
   id: PrintingId;
   setCode: SetCode;
@@ -70,6 +82,8 @@ export type Printing = Readonly<{
   finishes: readonly Finish[];
   treatments: Treatments;
   variantLabel: string; // "" for the regular version, "Borderless · Showcase" otherwise
+  faces: readonly CardFace[];
+  artist: string | null;
 }>;
 
 export type BoosterSheet = Readonly<{

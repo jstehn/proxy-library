@@ -14,6 +14,7 @@ import {
   SealedProductId,
   SetCode,
   type BoosterConfig,
+  type CardFace,
   type CardSetInfo,
   type Color,
   type DeckCard,
@@ -49,8 +50,27 @@ export function mapSetSummary(raw: MtgjsonSetSummary): CardSetInfo {
   };
 }
 
-/** Maps one card, or returns null if it isn't a paper printing we can use. */
-export function mapPrinting(raw: MtgjsonCard): Printing | null {
+function mapFace(raw: MtgjsonCard): CardFace {
+  return {
+    name: raw.faceName ?? raw.name,
+    manaCost: raw.manaCost ?? null,
+    typeLine: raw.type,
+    text: raw.text,
+    power: raw.power ?? null,
+    toughness: raw.toughness ?? null,
+    loyalty: raw.loyalty ?? null,
+    defense: raw.defense ?? null,
+  };
+}
+
+/**
+ * Maps one card, or returns null if it isn't a paper printing we can use. `otherFaces` are the
+ * card's other faces (the back of a double-faced card), for their printed text.
+ */
+export function mapPrinting(
+  raw: MtgjsonCard,
+  otherFaces: readonly MtgjsonCard[] = [],
+): Printing | null {
   const { scryfallId, scryfallOracleId } = raw.identifiers;
   if (!isPaperPrinting(raw.availability)) return null;
   if (scryfallId === undefined || scryfallOracleId === undefined) return null;
@@ -82,6 +102,8 @@ export function mapPrinting(raw: MtgjsonCard): Printing | null {
     finishes: FINISHES.filter((finish) => raw.finishes.includes(finish)),
     treatments,
     variantLabel: variantLabel(treatments),
+    faces: [raw, ...otherFaces].map(mapFace),
+    artist: raw.artist ?? null,
   };
 }
 
@@ -211,8 +233,11 @@ export function mapSetFile(file: MtgjsonSetFile): SetImport {
 
   const printings: Printing[] = [];
   let skippedPrintings = 0;
+  const cardsById = new Map(file.data.cards.map((card) => [card.uuid, card]));
+  const otherFacesOf = (card: MtgjsonCard) =>
+    card.otherFaceIds.flatMap((id) => cardsById.get(id) ?? []);
   for (const card of file.data.cards.filter(isFrontFace)) {
-    const printing = mapPrinting(card);
+    const printing = mapPrinting(card, otherFacesOf(card));
     if (printing === null) skippedPrintings++;
     else printings.push(printing);
   }

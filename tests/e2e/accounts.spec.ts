@@ -118,4 +118,10 @@ test("the admin browses the catalog (loaded from recorded fixtures)", async ({ p
   await expect(page.getByText("Banishing Light")).toBeVisible();
   await expect(page.getByText("Borderless · Showcase").first()).toBeVisible();
   await expect(page.getByText(/Nonfoil \$\d+\.\d\d/).first()).toBeVisible();
+
+  // Hovering a card enlarges it with its printed text and stats laid over the image.
+  await page.getByRole("button", { name: "Beza, the Bounding Spring: show card text" }).hover();
+  await expect(page.getByText("When Beza enters, create a Treasure token")).toBeVisible();
+  await expect(page.getByText("4/5")).toBeVisible();
+  await expect(page.getByText("Illustrated by Martin Wittfooth")).toBeVisible();
 });

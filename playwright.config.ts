@@ -18,6 +18,6 @@ export default defineConfig({
     url: `${APP_URL}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { DATABASE_URL: E2E_DATABASE_URL, APP_URL },
+    env: { DATABASE_URL: E2E_DATABASE_URL, APP_URL, NEXT_DIST_DIR: ".next-e2e" },
   },
 });

@@ -1,7 +1,7 @@
 import { count, desc, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
-import type { Finish } from "../domain/types";
+import type { CardFace, Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 
 // Read models for the catalog screens (ADR 0006): plain objects, ready to render.
@@ -85,6 +85,9 @@ export type PrintingCard = Readonly<{
   variantLabel: string;
   finishes: Finish[];
   hasImage: boolean;
+  /** What's printed on each face (front first), for the hover overlay. */
+  faces: CardFace[];
+  artist: string | null;
   /** Latest market price per finish; a finish is missing when there's no price. */
   prices: Partial<Record<Finish, Cents>>;
 }>;
@@ -99,10 +102,12 @@ export async function setPrintings(db: DbExecutor, code: string): Promise<Printi
     variant_label: string;
     finishes: Finish[];
     has_image: boolean;
+    faces: CardFace[];
+    artist: string | null;
     prices: Record<string, number> | null;
   }>(sql`
     select p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
-           p.image_uris is not null as has_image,
+           p.image_uris is not null as has_image, p.faces, p.artist,
            -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
            (select jsonb_object_agg(latest.finish, latest.usd_cents)
               from (select distinct on (s.finish) s.finish, s.usd_cents
@@ -124,6 +129,8 @@ export async function setPrintings(db: DbExecutor, code: string): Promise<Printi
     variantLabel: row.variant_label,
     finishes: row.finishes,
     hasImage: row.has_image,
+    faces: row.faces,
+    artist: row.artist,
     prices: Object.fromEntries(
       Object.entries(row.prices ?? {}).map(([finish, cents]) => [finish, Cents.of(Number(cents))]),
     ),

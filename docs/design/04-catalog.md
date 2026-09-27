@@ -200,7 +200,7 @@ disables sets that have rotated out, because players may still want them.
     - Scryfall's API is called at most 8 times per second, with a descriptive `User-Agent` and
       `Accept` header.
     - The Scryfall bulk file is downloaded at most once per Scryfall update, and cached on disk.
-    - An MTGJSON set file is downloaded only when its version changed.
+    - An MTGJSON set file is downloaded only when a set is first imported, or on a `full` run.
     - Card images are fetched once each, then served from our disk.
 
 ## 5. Use cases
@@ -220,7 +220,7 @@ disables sets that have rotated out, because players may still want them.
 2. Scryfall bulk file          → download only if newer than the cached copy (~79 MB, gzipped JSON Lines)
    (first pass)                → work out the current Standard sets; on the very first run, enable them
 3. For each enabled set        → collect its supporting sets
-4. For each set to import      → if MTGJSON's version changed: download the set file (~1 MB),
+4. For each set to import      → new sets (or every enabled set on a full run): download the set file (~1 MB),
                                   map it, and save it in ONE transaction (rule 3)
 5. Scryfall bulk file          → for every printing we have: today's price per finish, image
    (second pass)                  addresses, legalities (streamed line by line, never loaded whole)
@@ -449,8 +449,18 @@ these; that's why a real run came before the screens):
 - **Not built:** the `POST /cards/collection` fallback. The bulk file covered every English
   printing in the real run, so it isn't needed yet.
 - **Nightly runs are `prices` runs**, which also import any enabled set never imported before. A
-  `full` run re-imports every set whose MTGJSON version changed. MTGJSON rebuilds daily, so
-  that's every enabled set, and it should be used sparingly.
+  **`full` run re-imports every enabled set** (and its supporting sets' printings), whatever the
+  version. MTGJSON rebuilds daily, so a version check wouldn't save anything, and always
+  re-importing is also how fields added later get filled in for sets imported earlier (about 30
+  seconds for 82 sets).
+- **Card text and stats** (added on request after the first release): each printing stores
+  `faces`, the printed name, mana cost, type line, rules text and power/toughness, loyalty or
+  defense for every face (the back face's text too, for double-faced cards), plus the `artist`.
+  The set browser shows them in an overlay when a card is hovered, focused or tapped, over the
+  sharper `normal` image (loaded only for that card), with the artist credit Scryfall's
+  guidelines ask for. Mana symbols use the Mana icon font.
+- **Browser tests use their own build folder** (`.next-e2e`, via `NEXT_DIST_DIR`), because Next
+  allows only one dev server per build folder and the tests shouldn't need `pnpm dev` stopped.
 
 **The first real run** (2026-09-27): 810 paper sets listed, 20 Standard sets enabled and
 imported, 62 supporting sets, 25,205 printings, 35,788 price snapshots, 21 products left out

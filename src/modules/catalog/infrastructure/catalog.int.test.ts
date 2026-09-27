@@ -125,12 +125,14 @@ describe("running again", () => {
     expect(await countRows("price_snapshots")).toBe(2 * first.priceSnapshots);
   });
 
-  it("a full run doesn't re-download sets whose MTGJSON version is unchanged", async () => {
+  it("a prices run downloads no set files once they're imported; a full run re-imports them", async () => {
     const catalog = buildCatalog();
     await catalog.runSync("prices");
     mtgjson.downloads.length = 0;
-    await catalog.runSync("full");
+    await catalog.runSync("prices");
     expect(mtgjson.downloads).toEqual([]);
+    await catalog.runSync("full");
+    expect(mtgjson.downloads).toEqual(["BLB", "SPG"]);
   });
 });
 
