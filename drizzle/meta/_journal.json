@@ -78,6 +78,13 @@
       "when": 1790541629885,
       "tag": "0010_decks",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790543820134,
+      "tag": "0011_trades",
+      "breakpoints": true
     }
   ]
 }

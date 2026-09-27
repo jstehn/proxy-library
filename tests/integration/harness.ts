@@ -11,6 +11,11 @@ import {
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
 import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
+import {
+  drizzleHoldings,
+  drizzleTradePlayers,
+  drizzleTradeRepository,
+} from "@/modules/trades/infrastructure";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import {
@@ -50,6 +55,9 @@ export function servicesFor(transaction: DbExecutor) {
     storeSettings: drizzleStoreSettings(transaction),
     decks: drizzleDeckRepository(transaction),
     cards: drizzleCardLookup(transaction),
+    trades: drizzleTradeRepository(transaction),
+    tradePlayers: drizzleTradePlayers(transaction),
+    holdings: drizzleHoldings(transaction),
   };
 }
 

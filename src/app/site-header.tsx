@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tradesWaitingForYou } from "@/modules/trades";
 import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -9,6 +10,8 @@ export async function SiteHeader() {
   const actor = await getCurrentActor();
   // Showing the balance also pays any allowance that has come due (design doc 03, section 5).
   const balance = actor === null ? null : await getContainer().wallet.refreshWallet(actor.userId);
+  const waitingTrades =
+    actor === null ? 0 : await tradesWaitingForYou(getContainer().db, actor.userId);
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
@@ -23,6 +26,17 @@ export async function SiteHeader() {
             <Link href="/inventory">Inventory</Link>
             <Link href="/collection">Collection</Link>
             <Link href="/decks">Decks</Link>
+            <Link href="/trades">
+              Trades
+              {waitingTrades > 0 && (
+                <span
+                  className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white"
+                  title={`${waitingTrades} waiting for you`}
+                >
+                  {waitingTrades}
+                </span>
+              )}
+            </Link>
             <Link href="/sets">Sets</Link>
           </>
         )}

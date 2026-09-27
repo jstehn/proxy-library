@@ -32,6 +32,12 @@ import {
   drizzleStoreLedger,
   drizzleStoreSettings,
 } from "@/modules/store/infrastructure";
+import { makeTrades } from "@/modules/trades";
+import {
+  drizzleHoldings,
+  drizzleTradePlayers,
+  drizzleTradeRepository,
+} from "@/modules/trades/infrastructure";
 import { makeWallet } from "@/modules/wallet";
 import {
   drizzleEconomySettingsRepository,
@@ -76,6 +82,9 @@ export function buildCore(config: Config) {
       storeSettings: drizzleStoreSettings(transaction),
       decks: drizzleDeckRepository(transaction),
       cards: drizzleCardLookup(transaction),
+      trades: drizzleTradeRepository(transaction),
+      tradePlayers: drizzleTradePlayers(transaction),
+      holdings: drizzleHoldings(transaction),
     };
   }
 
@@ -114,6 +123,7 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
+  const trades = makeTrades({ unitOfWork, clock });
 
   return {
     config,
@@ -127,6 +137,7 @@ export function buildCore(config: Config) {
     inventory,
     store,
     decks,
+    trades,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

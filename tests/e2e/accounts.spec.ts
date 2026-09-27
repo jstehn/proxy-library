@@ -278,3 +278,61 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
     page.getByRole("listitem").filter({ hasText: "Beza's Bounty" }).getByText("short 1"),
   ).toBeVisible();
 });
+
+test("a new player offers money for one of the admin's cards, and the admin accepts", async ({
+  page,
+  browser,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await openAdminPage(page, "Invites");
+  await page.getByRole("button", { name: "Create invite" }).click();
+  // Read the new code from the confirmation (the list below also shows test 1's used invite).
+  const inviteCode = await page
+    .getByText(/^New invite/)
+    .locator("code")
+    .first()
+    .innerText();
+
+  // Rin joins and offers $5.00 for a Plains from the admin's collection.
+  const rinContext = await browser.newContext();
+  const rin = await rinContext.newPage();
+  await rin.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await rin.goto(`/register?invite=${inviteCode}`);
+  await register(rin, "rin", "Rin");
+  await rin.getByRole("link", { name: "Trades" }).click();
+  await rin.getByRole("link", { name: "New trade" }).click();
+  await rin.getByRole("link", { name: "Admin" }).click();
+  await rin.getByLabel("Search their cards").fill("Plains");
+  await rin.getByLabel("Search their cards").press("Enter");
+  await rin
+    .getByRole("link", { name: /^Add Plains/ })
+    .first()
+    .click();
+  // Wait for the draft to include the card before changing the money (both live in the URL).
+  await expect(rin.getByRole("link", { name: /^One fewer Plains/ })).toBeVisible();
+  await rin.getByLabel("Money you give").fill("5.00");
+  await rin.getByLabel("Money you give").press("Enter");
+  await expect(rin).toHaveURL(/giveMoney=5\.00/);
+  await rin.getByRole("button", { name: "Propose trade" }).click();
+  await expect(rin.getByRole("heading", { name: "Trade: Rin ⇄ Admin" })).toBeVisible();
+
+  // The admin sees the badge, opens the trade and accepts it.
+  await page.goto("/");
+  await expect(page.getByTitle("1 waiting for you")).toBeVisible();
+  const balanceBefore = await page.getByTitle("Your wallet").innerText();
+  await page.getByRole("link", { name: /^Trades/ }).click();
+  await page.getByRole("link", { name: "From Rin" }).click();
+  await page.getByRole("button", { name: "Accept" }).click();
+  await expect(page.getByText(/^accepted ·/)).toBeVisible();
+  await expect(page.getByTitle("Your wallet")).not.toHaveText(balanceBefore);
+
+  // Rin now owns the Plains, and paid $5.00.
+  await rin.goto("/collection"); // a fresh load, not the browser's cached copy
+  await expect(rin.getByText(/1 cards \(1 different\)/)).toBeVisible();
+  await expect(rin.getByTitle("Your wallet")).toHaveText("$45.00");
+  await rinContext.close();
+});
