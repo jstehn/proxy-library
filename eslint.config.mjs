@@ -125,7 +125,16 @@ const policies = [
   from(el("ui"), el("ui"), el("kernel")),
 
   // tests may additionally use fakes, config and the database
-  from(el("test-setup"), el("kernel"), el("db"), el("config")),
+  // Test setup acts like a small composition root: it may wire real modules together.
+  from(
+    el("test-setup"),
+    el("kernel"),
+    el("db"),
+    el("config"),
+    el("runtime"),
+    publicApi,
+    layer("infrastructure", { file: "index.ts" }),
+  ),
   {
     from: { file: { categories: "test" } },
     allow: {

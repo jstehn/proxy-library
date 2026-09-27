@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { manualClock } from "@/shared/kernel/testing";
 import { withRateLimit, withRetry, withUserAgent, type Fetch } from "./fetch";
@@ -53,6 +54,26 @@ describe("withRateLimit", () => {
     // Start 4 requests before any of them waits: they reserve slots 0, 125, 250, 375 ms.
     await Promise.all([limited("a"), limited("b"), limited("c"), limited("d")]);
     expect(waits).toEqual([125, 250, 375]);
+  });
+
+  it("spaces any number of simultaneous requests evenly, in whole milliseconds", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 20 }),
+        fc.integer({ min: 1, max: 30 }),
+        async (perSecond, requests) => {
+          const clock = manualClock("2026-01-01T00:00:00Z");
+          const waits: number[] = [];
+          const sleep = async (milliseconds: number) => {
+            waits.push(milliseconds);
+          };
+          const limited = withRateLimit({ perSecond, clock, sleep })(fakeFetch().fetchFn);
+          await Promise.all(Array.from({ length: requests }, (_, i) => limited(`r${i}`)));
+          const interval = Math.ceil(1000 / perSecond);
+          expect(waits).toEqual(Array.from({ length: requests - 1 }, (_, i) => (i + 1) * interval));
+        },
+      ),
+    );
   });
 
   it("doesn't wait when requests are already far enough apart", async () => {

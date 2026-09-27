@@ -30,6 +30,14 @@ A pyramid that mirrors the layers. Most tests are fast and pure, and a few are s
 - **Concurrency tests** against the real DB: two simultaneous debits that together exceed the
   balance, where exactly one must succeed.
 
+## Recorded fixtures
+
+`tests/fixtures/` holds small, trimmed copies of **real** MTGJSON and Scryfall data (provenance
+and the few synthetic additions are in its README). Catalog tests, and the end-to-end setup, read
+them through file-based gateways that go through the real anti-corruption layer. No test calls
+the network. Before building screens on outside data, also do one **real** run: it found three
+problems the fixtures couldn't (design doc 04, section 15).
+
 ## Test databases
 
 - `tcg_test` for integration tests (below) and `tcg_e2e` for browser tests. Both are created by

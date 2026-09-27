@@ -16,8 +16,10 @@ export async function SiteHeader() {
         <Link href="/" className="font-semibold">
           TCG Virtual Library
         </Link>
+        {actor !== null && <Link href="/sets">Sets</Link>}
         {actor !== null && actor.isAdmin && (
           <>
+            <Link href="/admin/catalog">Catalog</Link>
             <Link href="/admin/players">Players</Link>
             <Link href="/admin/invites">Invites</Link>
             <Link href="/admin/economy">Economy</Link>

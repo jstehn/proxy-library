@@ -1,7 +1,7 @@
 # Design: Catalog & data sync
 
 - **Phase:** 4
-- **Status:** **Approved** 2026-09-27 (paper-only rule added in review; open-question proposals accepted)
+- **Status:** **Implemented** 2026-09-27 (paper-only rule added in review). See section 15 for what changed while building, including three problems only real data revealed.
 - **Related ADRs:** 0006 (queries), **0007 (external data behind an anti-corruption layer)**,
   0011 (printing × finish), **0013 (daily price history)**, **0014 (pricing sources, new)**
 
@@ -410,3 +410,50 @@ from a cache with correct HTTP caching headers; recorded fixtures versus live ne
    Revisit if bundles need them.
 5. Set symbols on `/sets`: **Keyrune icon font from a CDN** (MTGJSON's `keyruneCode` matches it).
    Or no symbols, to avoid the external request.
+
+## 15. Implementation notes (what changed while building)
+
+**Found by running against real MTGJSON and Scryfall data** (the trimmed fixtures couldn't show
+these; that's why a real run came before the screens):
+
+1. **Double-faced cards.** MTGJSON lists one entry per _face_ (side "a", "b", …), and the faces
+   share one Scryfall id, so the first real import failed on the unique Scryfall-id column. Now
+   only the front face becomes a printing, and any reference to another face (in a booster
+   sheet, deck or product) is pointed at the front face.
+2. **Standard detection.** "At least one Standard-legal card" enabled ~120 sets, back to Alpha,
+   because basic lands are legal in every set and old sets contain reprints that are legal
+   again. Now a set counts when **at least 50% of its non-basic English paper cards** are
+   Standard-legal. Real data splits cleanly: 99–100% for the 20 current Standard sets, at most
+   24% for any older set.
+3. **Rule 5 changed: leave out, don't refuse.** 45 older sets failed because a single product
+   (e.g. a fat pack containing another set's land pack) referred to something missing. Now only
+   the booster, product or deck with the broken reference is left out, and each is listed in the
+   sync summary as `leftOut`. Nothing kept can refer to anything missing. Leaving out a booster
+   also leaves out the products containing it, repeated until nothing more changes. The sets
+   that products take individual cards from (promo sets) now count as supporting sets.
+
+**Other changes:**
+
+- **Supporting sets import printings only** (no boosters, products or decks of their own), so
+  their own references never block the enabled set that needs them.
+- **One set's unexpected error no longer stops the run.** It's recorded in `failedSets` with the
+  underlying cause (Drizzle's "Failed query" wrapper is unwrapped to the database's own reason).
+- **Catalog use cases are tested against real Postgres** with fixture gateways, not an in-memory
+  catalog repository. The repository is mostly SQL (upserts, latest price per finish), and a fake
+  would duplicate it without testing it.
+- **Fixture gateways live in `infrastructure/`**: they're adapters that read files, and they go
+  through the same anti-corruption layer as the HTTP gateways. The end-to-end tests use them to
+  load a catalog without the network (test setup may wire modules like a composition root).
+- **The rate limiter rounds its interval up to whole milliseconds.** A property test showed that
+  adding 166.666… ms to a large timestamp loses float precision.
+- **Not built:** the `POST /cards/collection` fallback. The bulk file covered every English
+  printing in the real run, so it isn't needed yet.
+- **Nightly runs are `prices` runs**, which also import any enabled set never imported before. A
+  `full` run re-imports every set whose MTGJSON version changed. MTGJSON rebuilds daily, so
+  that's every enabled set, and it should be used sparingly.
+
+**The first real run** (2026-09-27): 810 paper sets listed, 20 Standard sets enabled and
+imported, 62 supporting sets, 25,205 printings, 35,788 price snapshots, 21 products left out
+(mostly an upcoming set with no booster data yet), 16 Arena booster types and 15 MTGO redemption
+products and decks skipped. 35 seconds with the bulk file already cached; database 60 MB. Real
+card images: the first request takes about 150 ms, later ones about 1 ms from disk.

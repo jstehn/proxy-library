@@ -35,20 +35,20 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 
 ## Phases
 
-| #   | Phase                              | Key patterns introduced                                                                                                     | Status      |
-| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 0   | Dev environment & first TypeScript | —                                                                                                                           | ✅ Done     |
-| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                        | ✅ Done     |
-| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                             | ✅ Done     |
-| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                        | ✅ Done     |
-| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | In progress |
-| 5   | Pack engine                        | strategy, composite, weighted sampling, property + statistical tests                                                        | —           |
-| 6   | Store & inventory                  | UoW across modules, sealed-item state machine, events                                                                       | —           |
-| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | —           |
-| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | —           |
-| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | —           |
-| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —           |
-| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | —           |
+| #   | Phase                              | Key patterns introduced                                                                                                     | Status  |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 0   | Dev environment & first TypeScript | —                                                                                                                           | ✅ Done |
+| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                        | ✅ Done |
+| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                             | ✅ Done |
+| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                        | ✅ Done |
+| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | ✅ Done |
+| 5   | Pack engine                        | strategy, composite, weighted sampling, property + statistical tests                                                        | —       |
+| 6   | Store & inventory                  | UoW across modules, sealed-item state machine, events                                                                       | —       |
+| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | —       |
+| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | —       |
+| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | —       |
+| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —       |
+| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | —       |
 
 ### Why this order (changed from the original plan)
 
@@ -90,6 +90,19 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 ## Backlog: advanced features, later
 
 Wanted, but deliberately not scheduled yet:
+
+- **Set and product art** (requested 2026-09-27; aim to do it alongside Phase 6, when products
+  first appear in the store, or later if it takes too long):
+  - **Preferred: real product photos**, like the images on Amazon. MTGJSON gives every sealed
+    product the ids retailers use (e.g. `tcgplayerProductId`, `cardKingdomId`), and retailers
+    host a photo per product. **Decision needed first:** those images belong to the retailers,
+    so check their terms before downloading and caching them, even for a private app. The
+    catalog would store each product's identifiers (a small schema change plus a re-sync) and
+    cache the photos on disk like card images.
+  - **Fallback: generated art** for any product or set without a photo: an SVG "package" in
+    the set's colors with its Keyrune set symbol, set name and product type (Play Booster,
+    Bundle, …), framing a featured card's artwork (Scryfall's `art_crop`, which its guidelines
+    allow with artist credit). Sets get a banner the same way.
 
 - **Public player profiles:** a page per player showing their history, total spent, and money
   they gave themselves (self-funded). The ledger (ADR 0004) already records everything this needs.

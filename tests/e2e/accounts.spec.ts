@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// The tests share one database and build on each other, so they run in order.
+test.describe.configure({ mode: "serial" });
+
 // The whole accounts journey from design doc 02, section 12, in a real browser:
 // first visitor becomes admin → creates an invite → a second player registers with it →
 // the admin gives and takes money → the admin disables them → they can no longer get in.
@@ -88,4 +91,31 @@ test("first admin invites a player, manages their money, then disables them", as
   await expect(player.getByText("This account has been disabled")).toBeVisible();
 
   await playerContext.close();
+});
+
+test("the admin browses the catalog (loaded from recorded fixtures)", async ({ page }) => {
+  // Answer card-image requests locally, so the app never downloads images during the test.
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome, Admin" })).toBeVisible();
+
+  // The catalog page shows the fixture sync and Bloomburrow enabled as a Standard set.
+  await page.getByRole("link", { name: "Catalog" }).click();
+  await expect(page.getByText("succeeded")).toBeVisible();
+  // Find the set's row by its exact code ("BLB" also appears inside the sync details).
+  const blbRow = page.getByRole("listitem").filter({ has: page.getByText("BLB", { exact: true }) });
+  await expect(blbRow.getByText("Standard")).toBeVisible();
+  await expect(blbRow.getByRole("button", { name: "Enabled" })).toBeVisible();
+
+  // Players browse sets and cards, with variant labels and prices.
+  await page.getByRole("link", { name: "Sets" }).click();
+  await page.getByRole("link", { name: /Bloomburrow/ }).click();
+  await expect(page.getByRole("heading", { name: "Bloomburrow" })).toBeVisible();
+  await expect(page.getByText("Banishing Light")).toBeVisible();
+  await expect(page.getByText("Borderless · Showcase").first()).toBeVisible();
+  await expect(page.getByText(/Nonfoil \$\d+\.\d\d/).first()).toBeVisible();
 });

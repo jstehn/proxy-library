@@ -42,7 +42,9 @@ export function withRateLimit(options: {
   clock: Clock;
   sleep: Sleep;
 }): FetchWrapper {
-  const interval = 1000 / options.perSecond;
+  // Whole milliseconds, rounded UP so we never go faster than the limit. (Adding a fraction like
+  // 166.666… to a large timestamp loses float precision; a property test caught that.)
+  const interval = Math.ceil(1000 / options.perSecond);
   let nextFreeSlot = 0;
 
   return (next) => async (url, init) => {

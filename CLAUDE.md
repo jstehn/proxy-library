@@ -48,6 +48,10 @@ each lesson.
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
   `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
-  (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`.
+  (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
+  (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs).
+- External data (MTGJSON, Scryfall) enters only through `catalog/infrastructure` gateways → Zod → pure
+  mappers. Tests use recorded fixtures in `tests/fixtures/`, never the network. Be polite to both
+  services (ADR 0007).
 - Lint enforces architecture boundaries (`eslint.config.mjs`, ADR 0009). Don't disable a rule
   without a reason comment.
