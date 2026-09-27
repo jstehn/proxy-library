@@ -9,6 +9,9 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 - 🔒 `domain/` imports nothing outside `shared/kernel` (no `drizzle-orm`, `next`, `react`, `zod`,
   or Node built-ins).
 - 🔒 Only composition roots (`src/server/`, `worker/`) import `*/infrastructure`.
+- 🔒 Infrastructure may import its own module's layers, `shared/db`/`shared/http`, other modules'
+  `infrastructure/schema.ts` (for foreign keys) and other modules' public `index.ts` (for shared
+  types like `Actor`), and nothing else.
 - 🔒 No import cycles.
 - 🔒 The app composition root (`src/server/container.ts`) starts with `import "server-only"`, so a
   client component can't pull in DB code by accident. (Not in shared code: `server-only` throws

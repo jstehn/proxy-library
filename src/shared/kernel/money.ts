@@ -8,7 +8,8 @@ import type { Brand } from "./brand";
 export type Cents = Brand<number, "Cents">;
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-const USD_PATTERN = /^(\d+)(?:\.(\d{1,2}))?$/;
+const USD_PATTERN = /^\$?(\d+)(?:\.(\d{1,2}))?$/;
+const BASIS_POINTS_PER_WHOLE = 10_000; // 10000 basis points = 100%
 
 /** Companion object: construction and arithmetic for `Cents` (a value object without a class). */
 export const Cents = {
@@ -23,8 +24,9 @@ export const Cents = {
   },
 
   /**
-   * Parse a USD price string as Scryfall returns it ("12.34", "0.5") into cents, using
-   * string arithmetic so no float is ever involved. Returns null when absent or malformed.
+   * Parse a dollar amount ("12.34", "0.5", "$12", as Scryfall returns it or a person types it)
+   * into cents, using string arithmetic so no float is ever involved. Returns null when absent
+   * or malformed.
    */
   fromUsd(value: string | null | undefined): Cents | null {
     if (value == null) return null;
@@ -51,6 +53,23 @@ export const Cents = {
     let total = Cents.zero;
     for (const value of values) total = Cents.add(total, value);
     return total;
+  },
+
+  /**
+   * A percentage of an amount, where the rate is in basis points (5000 = 50%). The result is
+   * rounded DOWN to the whole cent, so nobody is ever paid more than the exact value.
+   * This is the only place money is rounded (design doc 03, "Rounding rule").
+   */
+  applyRate(amount: Cents, rateBasisPoints: number): Cents {
+    if (
+      !Number.isInteger(rateBasisPoints) ||
+      rateBasisPoints < 0 ||
+      rateBasisPoints > BASIS_POINTS_PER_WHOLE
+    ) {
+      throw new RangeError(`rate must be 0–10000 basis points, got ${rateBasisPoints}`);
+    }
+    if (amount < 0) throw new RangeError(`applyRate needs a non-negative amount, got ${amount}`);
+    return Cents.of(Math.floor((amount * rateBasisPoints) / BASIS_POINTS_PER_WHOLE));
   },
 
   /** 1234 -> "$12.34", -500 -> "-$5.00" */

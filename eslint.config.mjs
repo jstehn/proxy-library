@@ -71,6 +71,7 @@ const policies = [
     layer("application", { sameModule: true }),
     layer("infrastructure", { sameModule: true }),
     layer("infrastructure", { file: "schema.ts" }), // foreign keys to other modules' tables
+    publicApi, // other modules' public types (e.g. Actor), never their internals
   ),
   from(
     layer("queries"),

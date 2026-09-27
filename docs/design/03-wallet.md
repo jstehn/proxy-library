@@ -1,7 +1,7 @@
 # Design: Wallet
 
 - **Phase:** 3
-- **Status:** **In review** (no implementation until approved)
+- **Status:** **Approved** 2026-09-27 (open questions accepted as proposed)
 - **Related ADRs:** 0003 (Result), 0004 (append-only ledger), 0005 (unit of work),
   0008 (injected clock)
 
@@ -293,7 +293,7 @@ generated dates); row locks (`SELECT … FOR UPDATE`) versus advisory locks; doi
 instead of on a schedule; SQL aggregates with `FILTER`; parsing money typed by people; one module
 asking another a question through a port.
 
-## 14. Open questions (proposals in bold)
+## 14. Decisions from review (all proposals accepted)
 
 1. Largest single grant, correction or self-funding deposit: **$10,000.00** (typo guard); the
    self-funding limit setting can be lower.

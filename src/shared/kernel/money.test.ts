@@ -21,6 +21,7 @@ describe("Cents.fromUsd", () => {
     ["7", 700],
     [" 1.10 ", 110],
     ["0.29", 29], // 0.29 * 100 is 28.999999999999996 in floating point
+    ["$12.50", 1250],
   ])("parses %j as %i cents", (input, expected) => {
     expect(Cents.fromUsd(input)).toBe(expected);
   });
@@ -74,5 +75,33 @@ describe("Cents.format", () => {
     expect(Cents.format(Cents.of(1234))).toBe("$12.34");
     expect(Cents.format(Cents.of(-500))).toBe("-$5.00");
     expect(Cents.format(Cents.zero)).toBe("$0.00");
+  });
+});
+
+describe("Cents.applyRate", () => {
+  it("takes a percentage in basis points, rounding down to the cent", () => {
+    expect(Cents.applyRate(Cents.of(1000), 5000)).toBe(500); // 50% of $10.00
+    expect(Cents.applyRate(Cents.of(999), 5000)).toBe(499); // $4.995 rounds DOWN to $4.99
+    expect(Cents.applyRate(Cents.of(1), 9999)).toBe(0);
+    expect(Cents.applyRate(Cents.of(1234), 10_000)).toBe(1234);
+  });
+
+  it("never pays more than the exact value, and never more than the amount", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 10_000_000 }),
+        fc.integer({ min: 0, max: 10_000 }),
+        (amount, rate) => {
+          const result = Cents.applyRate(Cents.of(amount), rate);
+          expect(result).toBeLessThanOrEqual((amount * rate) / 10_000);
+          expect(result).toBeGreaterThan((amount * rate) / 10_000 - 1);
+          expect(result).toBeLessThanOrEqual(amount);
+        },
+      ),
+    );
+  });
+
+  it.each([-1, 10_001, 12.5])("rejects a rate of %s", (rate) => {
+    expect(() => Cents.applyRate(Cents.of(100), rate)).toThrow(RangeError);
   });
 });
