@@ -2,16 +2,23 @@
 .direnv/
 result
 
-# local dev state (postgres data, image cache)
+# local dev state (postgres data + socket, image cache)
 .dev/
 
-# env
+# env files (.envrc and .env.example ARE committed)
+.env
 .env*.local
 
-# node / next
+# dependencies
 node_modules/
+.pnp
+.pnp.*
+.pnpm-debug.log*
+
+# next.js
 .next/
 out/
+build/
 next-env.d.ts
 *.tsbuildinfo
 
@@ -22,4 +29,5 @@ test-results/
 
 # misc
 .DS_Store
+*.pem
 *.log
