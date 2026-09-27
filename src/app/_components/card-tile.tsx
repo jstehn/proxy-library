@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { ManaText } from "@/ui/mana";
@@ -18,6 +19,8 @@ type CardTileProps = {
   priceLine: string;
   /** Pulled as a foil (or etched): shows a rainbow sheen over the image. */
   isFoil?: boolean;
+  /** Where the card's name links to (its card page), if anywhere. */
+  href?: string;
 };
 
 export function CardTile(props: CardTileProps) {
@@ -73,7 +76,13 @@ export function CardTile(props: CardTileProps) {
         )}
         {props.isFoil && <FoilSheen />}
       </button>
-      <span className="leading-tight font-medium">{printing.name}</span>
+      {props.href ? (
+        <Link href={props.href} className="leading-tight font-medium hover:underline">
+          {printing.name}
+        </Link>
+      ) : (
+        <span className="leading-tight font-medium">{printing.name}</span>
+      )}
       <span className={`text-xs ${RARITY_COLORS[printing.rarity] ?? "text-zinc-500"}`}>
         #{printing.collectorNumber} · {printing.rarity}
         {printing.variantLabel && ` · ${printing.variantLabel}`}

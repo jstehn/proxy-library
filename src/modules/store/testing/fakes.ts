@@ -1,6 +1,16 @@
-import type { SealedProductId } from "@/modules/catalog";
+import type { Finish, PrintingId, SealedProductId } from "@/modules/catalog";
 import type { Cents } from "@/shared/kernel";
-import type { Listing, PriceList, SealedPurchase, StoreLedger } from "../application/ports";
+import type {
+  Listing,
+  MarketPrices,
+  MarketQuote,
+  PriceList,
+  SealedPurchase,
+  SingleTrade,
+  StoreLedger,
+  StoreSettings,
+} from "../application/ports";
+import { DEFAULT_BUYLIST_RATE_BPS } from "../domain/singles";
 
 // In-memory stand-ins for the store ports.
 
@@ -31,11 +41,38 @@ export function inMemoryPriceList(listings: readonly Listing[]) {
 
 export function inMemoryStoreLedger() {
   const purchases: SealedPurchase[] = [];
+  const singles: SingleTrade[] = [];
+  let lastId = 0;
   const ledger: StoreLedger = {
     async recordSealedPurchase(purchase) {
       purchases.push(purchase);
-      return purchases.length;
+      return ++lastId;
+    },
+    async recordSingle(trade) {
+      singles.push(trade);
+      return ++lastId;
     },
   };
-  return { ...ledger, purchases };
+  return { ...ledger, purchases, singles };
+}
+
+/** Market prices from a table: `"printingId/finish"` → quote. */
+export function inMemoryMarketPrices(quotes: Readonly<Record<string, MarketQuote>>): MarketPrices {
+  return {
+    async quote(printingId: PrintingId, finish: Finish) {
+      return quotes[`${printingId}/${finish}`] ?? null;
+    },
+  };
+}
+
+export function inMemoryStoreSettings(rateBps = DEFAULT_BUYLIST_RATE_BPS): StoreSettings {
+  let rate = rateBps;
+  return {
+    async buylistRate() {
+      return rate;
+    },
+    async setBuylistRate(newRate) {
+      rate = newRate;
+    },
+  };
 }

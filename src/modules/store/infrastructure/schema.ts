@@ -8,6 +8,7 @@ import {
   index,
   integer,
   pgTable,
+  smallint,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -80,5 +81,20 @@ export const storeTransactions = pgTable(
       sql`${table.totalCents} = ${table.unitPriceCents} * ${table.quantity}`,
     ),
     check("store_transactions_rate", sql`${table.rateBps} between 0 and 10000`),
+  ],
+);
+
+/** Store-wide settings: exactly one row (id = 1), seeded by a migration. */
+export const storeSettings = pgTable(
+  "store_settings",
+  {
+    id: smallint("id").primaryKey(),
+    buylistRateBps: integer("buylist_rate_bps").notNull(),
+    updatedAt: timestamptz("updated_at").notNull(),
+    updatedBy: text("updated_by"),
+  },
+  (table) => [
+    check("store_settings_single_row", sql`${table.id} = 1`),
+    check("store_settings_rate", sql`${table.buylistRateBps} between 0 and 10000`),
   ],
 );

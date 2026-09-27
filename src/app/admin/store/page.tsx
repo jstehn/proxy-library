@@ -1,10 +1,10 @@
 import { enabledSets } from "@/modules/catalog";
-import { kindPrices, productPrices } from "@/modules/store";
+import { currentBuylistRate, kindPrices, productPrices } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
-import { setKindPriceAction, setProductPriceAction } from "./actions";
+import { setBuylistRateAction, setKindPriceAction, setProductPriceAction } from "./actions";
 
 // MSRPs (ADR 0014): one price per product kind, and optional per-product overrides.
 
@@ -44,7 +44,8 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
   const setCode = typeof searchParams.set === "string" ? searchParams.set.toUpperCase() : null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
   const back = setCode === null ? "/admin/store" : `/admin/store?set=${setCode}`;
-  const [kinds, sets, products] = await Promise.all([
+  const [rateBps, kinds, sets, products] = await Promise.all([
+    currentBuylistRate(db),
     kindPrices(db),
     enabledSets(db),
     setCode === null ? Promise.resolve([]) : productPrices(db, setCode),
@@ -54,6 +55,26 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12">
       <h1 className="text-2xl font-semibold">Store prices</h1>
       {error && <Alert tone="error">{error}</Alert>}
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Buying cards from players</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          The store pays this share of a card&apos;s market price, rounded down to the cent. 0%
+          means the store doesn&apos;t buy cards.
+        </p>
+        <form action={setBuylistRateAction} className="flex items-center gap-2 text-sm">
+          <input
+            name="rate"
+            aria-label="Buylist rate (%)"
+            defaultValue={String(rateBps / 100)}
+            className={inputClass}
+          />
+          <span>%</span>
+          <button type="submit" className={buttonClass}>
+            Save
+          </button>
+        </form>
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price per kind of product</h2>

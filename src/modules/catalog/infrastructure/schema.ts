@@ -122,7 +122,11 @@ export const priceSnapshots = pgTable(
     day: date("day").notNull(),
     usdCents: bigint("usd_cents", { mode: "number" }).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.printingId, table.finish, table.day] })],
+  (table) => [
+    primaryKey({ columns: [table.printingId, table.finish, table.day] }),
+    // "The newest price day" is asked often, and the table grows every day (ADR 0013).
+    index("price_snapshots_day_idx").on(table.day),
+  ],
 );
 
 /** The sync job queue and its history (design doc 04, section 5). */

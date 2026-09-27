@@ -1,0 +1,1 @@
+CREATE INDEX "price_snapshots_day_idx" ON "price_snapshots" USING btree ("day");

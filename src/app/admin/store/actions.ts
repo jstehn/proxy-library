@@ -56,3 +56,19 @@ export async function setProductPriceAction(formData: FormData): Promise<void> {
       : `Price ${result.error.kind === "PriceInvalid" ? result.error.reason : "not allowed"}.`,
   );
 }
+
+/** "50" or "50%" → 5000 basis points. Undefined when it isn't a number. */
+function parsePercent(raw: FormDataEntryValue | null): number | undefined {
+  const text = typeof raw === "string" ? raw.trim().replace(/%$/, "") : "";
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(text)) return undefined;
+  const [whole, fraction = ""] = text.split(".");
+  return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+}
+
+export async function setBuylistRateAction(formData: FormData): Promise<void> {
+  const actor = await requireAdminActor();
+  const rate = parsePercent(formData.get("rate"));
+  if (rate === undefined) done("/admin/store", "Enter a percentage like 50.");
+  const result = await getContainer().store.setBuylistRate(actor, rate);
+  done("/admin/store", result.ok ? undefined : "The rate must be between 0% and 100%.");
+}

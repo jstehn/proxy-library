@@ -228,3 +228,64 @@ export async function packMsrp(
   ).rows;
   return row === undefined || row.msrp === null ? null : Cents.of(Number(row.msrp));
 }
+
+export type SingleHistoryRow = Readonly<{
+  id: number;
+  direction: "buy" | "sell";
+  finish: string;
+  quantity: number;
+  unitMarket: Cents;
+  rateBps: number;
+  unitPrice: Cents;
+  total: Cents;
+  priceDay: string | null;
+  at: string;
+}>;
+
+/** A player's buys and sells of one printing, oldest first (ADR 0013). */
+export async function singleHistory(
+  db: DbExecutor,
+  userId: string,
+  printingId: string,
+): Promise<SingleHistoryRow[]> {
+  const rows = await db.execute<{
+    id: number;
+    direction: "buy" | "sell";
+    finish: string;
+    quantity: number;
+    unit_market_cents: number;
+    rate_bps: number;
+    unit_price_cents: number;
+    total_cents: number;
+    price_day: string | null;
+    created_at: Date;
+  }>(sql`
+    select id, direction, finish, quantity, unit_market_cents, rate_bps, unit_price_cents,
+           total_cents, price_day::text as price_day, created_at
+      from store_transactions
+     where user_id = ${userId} and printing_id = ${printingId}
+     order by created_at, id
+  `);
+  return rows.rows.map((row) => ({
+    id: Number(row.id),
+    direction: row.direction,
+    finish: row.finish,
+    quantity: row.quantity,
+    unitMarket: Cents.of(Number(row.unit_market_cents)),
+    rateBps: row.rate_bps,
+    unitPrice: Cents.of(Number(row.unit_price_cents)),
+    total: Cents.of(Number(row.total_cents)),
+    priceDay: row.price_day,
+    at: new Date(row.created_at).toISOString(),
+  }));
+}
+
+/** The store's buylist rate, in basis points. */
+export async function currentBuylistRate(db: DbExecutor): Promise<number> {
+  const [row] = (
+    await db.execute<{ rate: number }>(
+      sql`select buylist_rate_bps as rate from store_settings where id = 1`,
+    )
+  ).rows;
+  return row?.rate ?? 0;
+}

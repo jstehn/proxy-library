@@ -37,8 +37,21 @@ export {
   enabledSets,
   findSet,
   listSetsForAdmin,
+  priceHistory,
   printingCards,
+  printingDetail,
   recentSyncRuns,
+  SEARCH_PAGE_SIZE,
+  searchPrintings,
   setPrintings,
 } from "./queries/catalog";
-export type { AdminSetRow, PrintingCard, SetSummary, SyncRunRow } from "./queries/catalog";
+export type {
+  AdminSetRow,
+  PricePoint,
+  PrintingCard,
+  PrintingDetail,
+  PrintingSearch,
+  SearchResult,
+  SetSummary,
+  SyncRunRow,
+} from "./queries/catalog";

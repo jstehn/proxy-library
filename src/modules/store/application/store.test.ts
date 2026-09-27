@@ -13,7 +13,12 @@ import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
 import { Cents, err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
-import { inMemoryPriceList, inMemoryStoreLedger } from "../testing/fakes";
+import {
+  inMemoryMarketPrices,
+  inMemoryPriceList,
+  inMemoryStoreLedger,
+  inMemoryStoreSettings,
+} from "../testing/fakes";
 import { makeStore } from "./make-store";
 import type { Listing } from "./ports";
 
@@ -68,6 +73,8 @@ beforeEach(() => {
     collection: inMemoryCollectionRepository(),
     priceList: inMemoryPriceList([packListing, boxListing]),
     storeLedger,
+    marketPrices: inMemoryMarketPrices({}),
+    storeSettings: inMemoryStoreSettings(),
   };
   store = makeStore({ unitOfWork: inMemoryUnitOfWork(services), clock: fixedClock(now) });
 });

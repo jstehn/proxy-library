@@ -1,118 +1,36 @@
 // Buying and opening sealed product against real Postgres (design doc 06, section 12), with the
-// catalog loaded from recorded fixtures (no network). Wired here like a small composition root.
+// catalog loaded from recorded fixtures (no network).
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { Actor } from "@/modules/accounts";
-import { makeCatalog, SealedProductId } from "@/modules/catalog";
-import {
-  drizzleCatalogRepository,
-  drizzleSyncRunRepository,
-  fixtureMtgjsonGateway,
-  fixtureScryfallGateway,
-} from "@/modules/catalog/infrastructure";
-import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
+import { SealedProductId } from "@/modules/catalog";
 import { makeInventory, type Item } from "@/modules/inventory";
-import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
-import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
-import { drizzlePriceList, drizzleStoreLedger } from "@/modules/store/infrastructure";
+import { Cents } from "@/shared/kernel";
+import { randomSeed } from "@/shared/runtime";
 import {
-  drizzleEconomySettingsRepository,
-  drizzlePlayerDirectory,
-  drizzleWalletRepository,
-} from "@/modules/wallet/infrastructure";
-import { loadConfig } from "@/shared/config";
-import { createDatabase, makeDrizzleUnitOfWork, type DbExecutor } from "@/shared/db";
-import { Cents, UserId } from "@/shared/kernel";
-import { randomSeed, systemClock } from "@/shared/runtime";
+  actor,
+  balance,
+  clock,
+  close,
+  count,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  unitOfWork,
+} from "./harness";
 
-const { db, close } = createDatabase(loadConfig().databaseUrl);
 afterAll(close);
 
-function servicesFor(transaction: DbExecutor) {
-  return {
-    catalog: drizzleCatalogRepository(transaction),
-    syncRuns: drizzleSyncRunRepository(transaction),
-    wallets: drizzleWalletRepository(transaction),
-    economy: drizzleEconomySettingsRepository(transaction),
-    playerDirectory: drizzlePlayerDirectory(transaction),
-    boosters: drizzleBoosterSource(transaction),
-    collection: drizzleCollectionRepository(transaction),
-    items: drizzleItemRepository(transaction),
-    productCatalog: drizzleProductCatalog(transaction),
-    priceList: drizzlePriceList(transaction),
-    storeLedger: drizzleStoreLedger(transaction),
-  };
-}
-const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
-const clock = systemClock();
 const store = makeStore({ unitOfWork, clock });
 const inventory = makeInventory({ unitOfWork, clock, seeds: { newSeed: randomSeed } });
 
 const PLAY_PACK = SealedProductId.of("1370435e-4972-553f-9dac-dc72408625ea");
 const BUNDLE = SealedProductId.of("ec99d990-704c-5ad3-ae7f-f1dbc5fd5ceb");
-
-function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
-}
 const jack = actor("jack");
 const admin = actor("admin", true);
 
-async function count(table: string, where = "true"): Promise<number> {
-  const result = await db.execute<{ total: number }>(
-    sql.raw(`select count(*)::int as total from ${table} where ${where}`),
-  );
-  return result.rows[0].total;
-}
-
-async function balance(userId: string): Promise<number> {
-  const result = await db.execute<{ total: number }>(
-    sql`select coalesce(sum(amount_cents), 0)::int as total from ledger_entries where user_id = ${userId}`,
-  );
-  return result.rows[0].total;
-}
-
-beforeAll(async () => {
-  // A fresh fixture catalog: Bloomburrow, enabled as a Standard set.
-  await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets cascade`,
-  );
-  const catalog = makeCatalog({
-    unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
-      catalog: drizzleCatalogRepository(transaction),
-      syncRuns: drizzleSyncRunRepository(transaction),
-    })),
-    mtgjson: fixtureMtgjsonGateway(),
-    scryfall: fixtureScryfallGateway(),
-    images: { get: async () => null, put: async () => undefined },
-    imageFetcher: { fetch: async () => new Uint8Array() },
-    clock,
-    syncTime: { hour: 4, minute: 0 },
-  });
-  await catalog.runSync("prices");
-});
-
-beforeEach(async () => {
-  await db.execute(sql`truncate invites, players, auth_users cascade`);
-  for (const id of ["jack", "admin"]) {
-    await db.execute(
-      sql`insert into auth_users (id, name, email, username) values (${id}, ${id}, ${`${id}@players.invalid`}, ${id})`,
-    );
-    await db.execute(sql`insert into players (user_id, created_at) values (${id}, now())`);
-  }
-  await db.execute(sql`truncate msrp_overrides`);
-  // Known money rules, whatever earlier tests left behind: a $50 starting grant, no allowance.
-  await db.execute(
-    sql`update economy_settings set starting_grant_cents = 5000, allowance_cents = 0 where id = 1`,
-  );
-});
+beforeAll(loadFixtureCatalog);
+beforeEach(() => resetPlayers(["jack", "admin"]));
 
 async function buy(productId: SealedProductId, quantity = 1): Promise<Item[]> {
   const result = await store.buySealed(jack, { productId, quantity });

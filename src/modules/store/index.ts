@@ -10,7 +10,17 @@ export type {
   StoreServices,
 } from "./application/ports";
 export { MAX_QUANTITY, productKind } from "./domain/pricing";
+export type {
+  BuySingleError,
+  SellSingleError,
+  SingleInput,
+  SingleReceipt,
+} from "./application/singles";
+export { DEFAULT_BUYLIST_RATE_BPS, payoutPerCopy } from "./domain/singles";
 export {
+  currentBuylistRate,
+  singleHistory,
+  type SingleHistoryRow,
   kindPrices,
   packMsrp,
   productPrices,

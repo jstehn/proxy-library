@@ -185,3 +185,128 @@ export async function recentSyncRuns(db: DbExecutor, limit = 20): Promise<SyncRu
     error: row.error,
   }));
 }
+
+/** What the singles store can be filtered and sorted by. Empty fields don't filter. */
+export type PrintingSearch = Readonly<{
+  name?: string;
+  setCode?: string;
+  rarity?: string;
+  /** "W", "U", "B", "R", "G", "C" (colorless) or "M" (multicolored). */
+  color?: string;
+  sort: "name" | "number" | "price";
+  page: number; // from 1
+}>;
+
+export const SEARCH_PAGE_SIZE = 60;
+
+/** SQL conditions for a search, on printings aliased "p". */
+function printingConditions(search: PrintingSearch) {
+  const conditions = [sql`true`];
+  if (search.name) conditions.push(sql`p.name ilike ${`%${search.name}%`}`);
+  if (search.setCode) conditions.push(sql`p.set_code = ${search.setCode.toUpperCase()}`);
+  if (search.rarity) conditions.push(sql`p.rarity = ${search.rarity}`);
+  if (search.color === "C") conditions.push(sql`cardinality(p.colors) = 0`);
+  else if (search.color === "M") conditions.push(sql`cardinality(p.colors) > 1`);
+  else if (search.color) conditions.push(sql`${search.color} = any(p.colors)`);
+  return sql.join(conditions, sql` and `);
+}
+
+export type SearchResult = Readonly<{ printingIds: string[]; total: number; pageCount: number }>;
+
+/**
+ * Printings in enabled sets matching a search, one page at a time (the singles store). Returns
+ * ids in order; `printingCards` supplies what to show for them.
+ */
+export async function searchPrintings(
+  db: DbExecutor,
+  search: PrintingSearch,
+): Promise<SearchResult> {
+  const where = printingConditions(search);
+  const order = {
+    name: sql`p.name, p.set_code, p.collector_number`,
+    number: sql`p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last, p.collector_number`,
+    // The most expensive finish on the newest price day.
+    price: sql`(select max(s.usd_cents) from price_snapshots s
+                 where s.printing_id = p.id
+                   and s.day = (select max(day) from price_snapshots)) desc nulls last, p.name`,
+  }[search.sort];
+  const offset = (Math.max(1, search.page) - 1) * SEARCH_PAGE_SIZE;
+
+  const [rows, totals] = await Promise.all([
+    db.execute<{ id: string }>(sql`
+      select p.id from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+       where ${where}
+       order by ${order}
+       limit ${SEARCH_PAGE_SIZE} offset ${offset}
+    `),
+    db.execute<{ total: number }>(sql`
+      select count(*)::int as total from printings p
+        join card_sets s on s.code = p.set_code and s.is_enabled
+       where ${where}
+    `),
+  ]);
+  const total = totals.rows[0].total;
+  return {
+    printingIds: rows.rows.map((row) => row.id),
+    total,
+    pageCount: Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE)),
+  };
+}
+
+export type PrintingDetail = Readonly<{
+  card: PrintingCard;
+  setCode: string;
+  setName: string;
+  keyruneCode: string;
+  isSetEnabled: boolean;
+  typeLine: string;
+}>;
+
+/** One printing with its set, for the card page. */
+export async function printingDetail(db: DbExecutor, id: string): Promise<PrintingDetail | null> {
+  const card = (await printingCards(db, [id])).get(id);
+  if (card === undefined) return null;
+  const [row] = (
+    await db.execute<{
+      set_code: string;
+      set_name: string;
+      keyrune_code: string;
+      is_enabled: boolean;
+      type_line: string;
+    }>(sql`
+      select s.code as set_code, s.name as set_name, s.keyrune_code, s.is_enabled, p.type_line
+        from printings p join card_sets s on s.code = p.set_code
+       where p.id = ${id}
+    `)
+  ).rows;
+  return {
+    card,
+    setCode: row.set_code,
+    setName: row.set_name,
+    keyruneCode: row.keyrune_code,
+    isSetEnabled: row.is_enabled,
+    typeLine: row.type_line,
+  };
+}
+
+export type PricePoint = Readonly<{ day: string; price: Cents }>;
+
+/** Every daily price of a printing, per finish, oldest first (ADR 0013). */
+export async function priceHistory(
+  db: DbExecutor,
+  id: string,
+): Promise<Partial<Record<Finish, PricePoint[]>>> {
+  const rows = await db.execute<{ finish: Finish; day: string; usd_cents: number }>(sql`
+    select finish, day::text as day, usd_cents from price_snapshots
+     where printing_id = ${id}
+     order by day
+  `);
+  const history: Partial<Record<Finish, PricePoint[]>> = {};
+  for (const row of rows.rows) {
+    history[row.finish] = [
+      ...(history[row.finish] ?? []),
+      { day: row.day, price: Cents.of(Number(row.usd_cents)) },
+    ];
+  }
+  return history;
+}

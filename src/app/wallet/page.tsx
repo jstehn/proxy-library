@@ -35,10 +35,11 @@ export default async function WalletPage() {
         )}
       </header>
 
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Stat label="Received" value={summary.received} />
         <Stat label="Self-funded" value={summary.selfFunded} />
         <Stat label="Spent" value={summary.spent} />
+        <Stat label="Sold to the store" value={summary.sold} />
         <Stat label="Corrected" value={summary.corrected} />
       </dl>
 

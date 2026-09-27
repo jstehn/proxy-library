@@ -8,7 +8,7 @@ import { economySettings, ledgerEntries } from "../infrastructure/schema";
 
 // Read models (ADR 0006): one query each, SQL aggregates, plain objects out.
 
-/** Ledger kinds that count as spending. They arrive in Phases 6 and 7, and the query is ready. */
+/** Ledger kinds that count as spending. */
 const SPENDING_KINDS = sql`('purchase_sealed', 'purchase_single')`;
 
 /** Sum of amounts for entries matching a SQL condition, as a number of cents (0 when none). */
@@ -20,6 +20,7 @@ export type WalletSummary = Readonly<{
   received: Cents; // starting grant + allowances + grants
   selfFunded: Cents;
   spent: Cents; // shown as a positive number
+  sold: Cents; // paid by the store for cards sold to it
   corrected: Cents; // shown as a positive number
 }>;
 
@@ -30,6 +31,7 @@ export async function walletSummary(db: DbExecutor, userId: UserId): Promise<Wal
       received: totalWhere(sql`${ledgerEntries.kind} in ('starting_grant', 'allowance', 'grant')`),
       selfFunded: totalWhere(sql`${ledgerEntries.kind} = 'self_fund'`),
       spent: totalWhere(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
+      sold: totalWhere(sql`${ledgerEntries.kind} = 'sellback'`),
       corrected: totalWhere(sql`${ledgerEntries.kind} = 'correction'`),
     })
     .from(ledgerEntries)
@@ -40,6 +42,7 @@ export async function walletSummary(db: DbExecutor, userId: UserId): Promise<Wal
     received: Cents.of(row.received),
     selfFunded: Cents.of(row.selfFunded),
     spent: Cents.of(-row.spent),
+    sold: Cents.of(row.sold),
     corrected: Cents.of(-row.corrected),
   };
 }
@@ -100,6 +103,7 @@ export async function playerMoney(db: DbExecutor): Promise<PlayerMoney[]> {
       entryCount: sql`count(${ledgerEntries.id})`.mapWith(Number),
       balance: sql`coalesce(sum(${ledgerEntries.amountCents}), 0)`.mapWith(Number),
       spent: totalWhere(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
+      sold: totalWhere(sql`${ledgerEntries.kind} = 'sellback'`),
       selfFunded: totalWhere(sql`${ledgerEntries.kind} = 'self_fund'`),
     })
     .from(players)
@@ -110,6 +114,7 @@ export async function playerMoney(db: DbExecutor): Promise<PlayerMoney[]> {
     userId: row.userId,
     balance: Cents.of(row.balance),
     spent: Cents.of(-row.spent),
+    sold: Cents.of(row.sold),
     selfFunded: Cents.of(row.selfFunded),
     hasWallet: row.entryCount > 0,
   }));

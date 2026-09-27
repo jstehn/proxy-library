@@ -24,7 +24,12 @@ import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventor
 import { makePacks } from "@/modules/packs";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
-import { drizzlePriceList, drizzleStoreLedger } from "@/modules/store/infrastructure";
+import {
+  drizzleMarketPrices,
+  drizzlePriceList,
+  drizzleStoreLedger,
+  drizzleStoreSettings,
+} from "@/modules/store/infrastructure";
 import { makeWallet } from "@/modules/wallet";
 import {
   drizzleEconomySettingsRepository,
@@ -65,6 +70,8 @@ export function buildCore(config: Config) {
       productCatalog: drizzleProductCatalog(transaction),
       priceList: drizzlePriceList(transaction),
       storeLedger: drizzleStoreLedger(transaction),
+      marketPrices: drizzleMarketPrices(transaction),
+      storeSettings: drizzleStoreSettings(transaction),
     };
   }
 

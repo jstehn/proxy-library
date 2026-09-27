@@ -1,17 +1,21 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { cardSets, sealedProducts } from "@/modules/catalog/infrastructure/schema";
-import { SealedProductId } from "@/modules/catalog";
+import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
-import { Cents } from "@/shared/kernel";
+import { Cents, type UserId } from "@/shared/kernel";
 import type {
   Listing,
+  MarketPrices,
+  MarketQuote,
   PriceChange,
   PriceList,
   SealedPurchase,
+  SingleTrade,
   StoreLedger,
+  StoreSettings,
 } from "../application/ports";
 import { productKind } from "../domain/pricing";
-import { msrpOverrides, msrpPrices, storeTransactions } from "./schema";
+import { msrpOverrides, msrpPrices, storeSettings, storeTransactions } from "./schema";
 
 export function drizzlePriceList(db: DbExecutor): PriceList {
   async function listing(productId: SealedProductId): Promise<Listing | null> {
@@ -92,5 +96,67 @@ export function drizzleStoreLedger(db: DbExecutor): StoreLedger {
     return row.id;
   }
 
-  return { recordSealedPurchase };
+  async function recordSingle(trade: SingleTrade): Promise<number> {
+    const [row] = await db
+      .insert(storeTransactions)
+      .values({
+        userId: trade.userId,
+        itemKind: "single",
+        direction: trade.direction,
+        printingId: trade.printingId,
+        finish: trade.finish,
+        quantity: trade.quantity,
+        unitMarketCents: trade.unitMarket,
+        rateBps: trade.rateBps,
+        unitPriceCents: trade.unitPrice,
+        totalCents: trade.total,
+        priceDay: trade.priceDay,
+        createdAt: trade.at,
+      })
+      .returning({ id: storeTransactions.id });
+    return row.id;
+  }
+
+  return { recordSealedPurchase, recordSingle };
+}
+
+export function drizzleMarketPrices(db: DbExecutor): MarketPrices {
+  async function quote(printingId: PrintingId, finish: Finish): Promise<MarketQuote | null> {
+    const result = await db.execute<{ usd_cents: number; day: string; is_enabled: boolean }>(sql`
+      select s.usd_cents, s.day::text as day, cs.is_enabled
+        from price_snapshots s
+        join printings p on p.id = s.printing_id
+        join card_sets cs on cs.code = p.set_code
+       where s.printing_id = ${printingId} and s.finish = ${finish}
+       order by s.day desc
+       limit 1
+    `);
+    const [row] = result.rows;
+    if (row === undefined) return null;
+    return { price: Cents.of(Number(row.usd_cents)), day: row.day, isSetEnabled: row.is_enabled };
+  }
+
+  return { quote };
+}
+
+const SETTINGS_ROW_ID = 1;
+
+export function drizzleStoreSettings(db: DbExecutor): StoreSettings {
+  async function buylistRate(): Promise<number> {
+    const [row] = await db
+      .select({ rate: storeSettings.buylistRateBps })
+      .from(storeSettings)
+      .where(eq(storeSettings.id, SETTINGS_ROW_ID));
+    if (row === undefined) throw new Error("store_settings has no row: run the migrations");
+    return row.rate;
+  }
+
+  async function setBuylistRate(rateBps: number, by: UserId, at: Date): Promise<void> {
+    await db
+      .update(storeSettings)
+      .set({ buylistRateBps: rateBps, updatedAt: at, updatedBy: by })
+      .where(eq(storeSettings.id, SETTINGS_ROW_ID));
+  }
+
+  return { buylistRate, setBuylistRate };
 }
