@@ -266,6 +266,44 @@ An interface is exactly a Python `typing.Protocol`: anything with a `now(): Date
 
 `Rng` (randomness) and `UnitOfWork` (transactions) follow the same pattern.
 
+### Reading function types
+
+`now(): Date` inside the interface is **not a call**. Nothing inside a type is ever evaluated.
+It describes a property whose value is a **function** taking no arguments and returning a `Date`.
+These two spellings mean the same thing:
+
+```ts
+interface Clock {
+  now(): Date;
+} // "method" shorthand
+interface Clock {
+  now: () => Date;
+} // "property holding a function"
+```
+
+In Python terms, the key maps to `Callable[[], datetime]`, not to a `datetime`. You get a value
+only when you **call** it (`clock.now()`), which is why the time is fresh every time.
+
+Async functions return a `Promise`, TypeScript's `Awaitable`:
+
+```ts
+type HealthTx = { system: { databaseTime(): Promise<Date> } };
+```
+
+This reads: an object with a `system` key, whose value is an object with a `databaseTime` function
+that returns something you `await` to get a `Date`. The Python equivalent:
+
+```python
+class SystemService(Protocol):
+    async def database_time(self) -> datetime: ...
+
+class HealthTx(TypedDict):
+    system: SystemService
+```
+
+Anything with that shape fits: the real service that queries Postgres, or a test fake like
+`{ system: { databaseTime: async () => new Date("2026-01-01T00:00:01Z") } }`.
+
 ### Closures hold private state
 
 ```ts
