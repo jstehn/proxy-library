@@ -1,18 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "./index";
 
+const validEnv = {
+  DATABASE_URL: "postgres://tcg@localhost/tcg",
+  AUTH_SECRET: "x".repeat(32),
+  APP_URL: "http://localhost:3000",
+};
+
 describe("loadConfig", () => {
   it("maps a valid environment to config", () => {
-    const config = loadConfig({ DATABASE_URL: "postgres://tcg@localhost/tcg", NODE_ENV: "test" });
-    expect(config).toEqual({ nodeEnv: "test", databaseUrl: "postgres://tcg@localhost/tcg" });
+    expect(loadConfig({ ...validEnv, NODE_ENV: "test" })).toEqual({
+      nodeEnv: "test",
+      databaseUrl: "postgres://tcg@localhost/tcg",
+      authSecret: "x".repeat(32),
+      appUrl: "http://localhost:3000",
+    });
   });
 
   it("defaults NODE_ENV to development", () => {
-    expect(loadConfig({ DATABASE_URL: "postgres://x/y" }).nodeEnv).toBe("development");
+    expect(loadConfig(validEnv).nodeEnv).toBe("development");
   });
 
   it("fails fast, naming the problem variable", () => {
     expect(() => loadConfig({})).toThrow(/DATABASE_URL/);
-    expect(() => loadConfig({ DATABASE_URL: "mysql://nope" })).toThrow(/postgres:\/\//);
+    expect(() => loadConfig({ ...validEnv, DATABASE_URL: "mysql://nope" })).toThrow(
+      /postgres:\/\//,
+    );
+    expect(() => loadConfig({ ...validEnv, AUTH_SECRET: "short" })).toThrow(/AUTH_SECRET/);
+    expect(() => loadConfig({ ...validEnv, APP_URL: "not a url" })).toThrow(/APP_URL/);
   });
 });

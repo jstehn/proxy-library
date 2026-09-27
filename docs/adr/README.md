@@ -19,5 +19,5 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0009 | [Lint-enforced architecture boundaries](0009-lint-enforced-boundaries.md)                    | Accepted |
 | 0010 | [Nix flake + direnv dev environment](0010-nix-dev-environment.md)                            | Accepted |
 | 0011 | [Track cards at printing × finish granularity](0011-printing-level-ownership.md)             | Accepted |
-| 0012 | [Better Auth for identity only, behind a port](0012-better-auth-identity-only.md)            | Proposed |
+| 0012 | [Better Auth for identity only, behind a port](0012-better-auth-identity-only.md)            | Accepted |
 | 0013 | [Daily price history and a store transaction ledger](0013-price-history-and-store-ledger.md) | Accepted |

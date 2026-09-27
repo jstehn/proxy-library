@@ -1,7 +1,7 @@
 # Design: Accounts & roles
 
 - **Phase:** 2
-- **Status:** **In review** (no implementation until approved)
+- **Status:** **Approved** 2026-09-27, with changes: minimum password length 6; public profile page deferred
 - **Related ADRs:** 0001 (modules), 0002 (factory DI), 0003 (Result), 0005 (unit of work),
   0009 (lint boundaries), **0012 (new: Better Auth for identity only)**
 
@@ -19,7 +19,8 @@ admin management of other players.
 
 - Money of any kind, including the self-funding _action_ itself. `wallet` (Phase 3) reads the
   `canSelfFund` permission defined here.
-- Public stats like "total spent" (`wallet`, Phase 3).
+- Public profile pages and public stats like "total spent" or "self-funded". These are deferred
+  to a later phase (see the roadmap backlog).
 - Email of any kind: no verification, no password-reset emails. Nothing is ever sent.
 - An audit log of admin actions (possible later via the `activity` module, Phase 11).
 
@@ -96,7 +97,7 @@ Each rule maps to at least one test (section 12).
 1. **Usernames** are 3–20 characters from `a–z 0–9 _ -`, stored lowercase, and unique.
    Signing in with "Jack" and "jack" is the same account.
 2. **Display names** are 1–40 characters after trimming whitespace.
-3. **Passwords** are at least 10 characters. We never store them, only Better Auth's scrypt hash.
+3. **Passwords** are at least 6 characters. We never store them, only Better Auth's scrypt hash.
 4. **The very first player** registers **without** an invite code and becomes an admin. Every
    later registration **requires** an open invite.
 5. **An invite works once.** Once used, revoked or expired, it's rejected.
@@ -286,23 +287,21 @@ never to exist, so nothing can ever be delivered there. It's never shown.
 
 ## 9. Read models (queries)
 
-| Query                         | Used by               | Returns                                                           |
-| ----------------------------- | --------------------- | ----------------------------------------------------------------- |
-| `listPlayers(db)`             | `/admin/players`      | username, display name, admin?, self-fund?, disabled?, joined     |
-| `listInvites(db, now)`        | `/admin/invites`      | code, status, created by, expires, used by                        |
-| `playerProfile(db, username)` | `/players/[username]` | display name, joined, admin badge (wallet stats added in Phase 3) |
-| `hasAnyPlayers(db)`           | `/register`           | whether to show the invite-code field                             |
+| Query                  | Used by          | Returns                                                       |
+| ---------------------- | ---------------- | ------------------------------------------------------------- |
+| `listPlayers(db)`      | `/admin/players` | username, display name, admin?, self-fund?, disabled?, joined |
+| `listInvites(db, now)` | `/admin/invites` | code, status, created by, expires, used by                    |
+| `hasAnyPlayers(db)`    | `/register`      | whether to show the invite-code field                         |
 
 ## 10. Screens and request flow
 
-| Route                 | Who        | Purpose                                                  |
-| --------------------- | ---------- | -------------------------------------------------------- |
-| `/register`           | signed out | register (invite field hidden when there are no players) |
-| `/sign-in`            | signed out | sign in                                                  |
-| `/account/password`   | signed in  | change password (forced when `mustChangePassword`)       |
-| `/admin/players`      | admin      | promote/demote, self-funding, disable, reset password    |
-| `/admin/invites`      | admin      | create, list, revoke invites                             |
-| `/players/[username]` | signed in  | public profile                                           |
+| Route               | Who        | Purpose                                                  |
+| ------------------- | ---------- | -------------------------------------------------------- |
+| `/register`         | signed out | register (invite field hidden when there are no players) |
+| `/sign-in`          | signed out | sign in                                                  |
+| `/account/password` | signed in  | change password (forced when `mustChangePassword`)       |
+| `/admin/players`    | admin      | promote/demote, self-funding, disable, reset password    |
+| `/admin/invites`    | admin      | create, list, revoke invites                             |
 
 - **All forms are server actions** (controllers): parse the form with Zod, get the actor, call
   the use case, and turn the `Result` into a message with an exhaustive `switch`.
@@ -356,13 +355,15 @@ parsing `FormData` with Zod; policy functions; database locks and race condition
 then act" breaks under concurrency); wrapping a third-party library behind a port; client
 components and `useActionState` for form feedback.
 
-## 14. Open questions (proposals in bold; change any of them in review)
+## 14. Decisions from review
 
 1. Invite lifetime: **7 days by default**, admin picks 1–30.
-2. Minimum password length: **10**.
+2. Minimum password length: **6** (changed in review).
 3. Username rules: **3–20 of `a–z 0–9 _ -`**.
 4. Session length: **30 days, renewed while in use**.
 5. Temp password format: **4 random words from a small built-in list** (easy to read aloud,
    e.g. `lotus-goblin-ember-tower`), versus random characters.
 6. Can an admin grant self-funding **to themselves**? **Yes.** It's the same switch, and because
    self-funding is always public (Phase 3), it stays transparent.
+
+7. Public profile page (`/players/[username]`): **deferred** to a later phase.
