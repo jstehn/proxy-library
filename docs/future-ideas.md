@@ -37,6 +37,14 @@ design doc (or joins a phase's design) and is removed from this list.
 - **`POST /cards/collection` fallback** for printings missing from Scryfall's bulk file (not
   needed so far: the bulk file covered every English paper printing).
 
+## Collection and store
+
+- **Serialized cards as individual copies** with their own serial number ("#127/500"), as ADR
+  0011's option (b). Today they're ordinary stacks.
+- **Bulk selling:** "sell everything above 4 copies" or "sell all commons under $0.10", with a
+  preview of the payout.
+- **Wishlist and price alerts** from the price history.
+
 ## Players and economy
 
 - **Public player profiles**: history, total spent, self-funded amounts. The ledger already

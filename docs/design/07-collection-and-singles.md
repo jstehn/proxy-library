@@ -145,3 +145,21 @@ markers for buys (▲) and sells (▼). There's no chart library, since it's a f
    a price.
 5. **Market price for buying is the latest snapshot**, even if it's a few days old (a set whose
    sync failed). The snapshot day is shown next to the price.
+
+## 14. Implementation notes (what changed while building)
+
+- **The sell form stays on the page, disabled, when you own none.** Selling your last copy first
+  made the form disappear, and its "Sold for …" message went with it: React keeps a form's state
+  only while the form is on the page. The end-to-end test caught it.
+- **`price_snapshots` gained an index on `day`.** "The newest price day" is asked by the store's
+  featured art and the singles search, and without the index every such question would read the
+  whole table, which grows by about 35,000 rows a day.
+- **Integration tests share a harness** (`tests/integration/harness.ts`): the composition-root
+  wiring, the fixture catalog, and `resetPlayers` (which also pins the money rules and the buylist
+  rate, so no test depends on what an earlier one left behind).
+- **The collection's filter conditions are written twice**, in the collection's query and the
+  catalog's search, because a module's queries may read other modules' tables but not import their
+  code. They're five short lines, so duplicating them is simpler than a shared layer.
+- **Adding two ports to `StoreServices`** made the compiler list every place that had to provide
+  them (the composition root, the integration harness, the fakes). That's structural typing doing
+  the bookkeeping.
