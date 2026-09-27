@@ -1,7 +1,7 @@
 # Design: Catalog & data sync
 
 - **Phase:** 4
-- **Status:** **In review** (no implementation until approved)
+- **Status:** **Approved** 2026-09-27 (paper-only rule added in review; open-question proposals accepted)
 - **Related ADRs:** 0006 (queries), **0007 (external data behind an anti-corruption layer)**,
   0011 (printing × finish), **0013 (daily price history)**, **0014 (pricing sources, new)**
 
@@ -399,7 +399,7 @@ and `for await`; decorators by function composition (user agent, rate limit, ret
 idempotent imports and upserts (`ON CONFLICT DO UPDATE`); a job queue in a table; serving files
 from a cache with correct HTTP caching headers; recorded fixtures versus live network in tests.
 
-## 14. Open questions (proposals in bold)
+## 14. Decisions from review (all proposals accepted)
 
 1. Nightly sync time: **04:00 in the server's time zone** (configurable with `SYNC_TIME`).
 2. Standard detection: **paper expansion/core sets with at least one Standard-legal card**, with

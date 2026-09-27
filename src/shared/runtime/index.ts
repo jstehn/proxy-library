@@ -11,3 +11,8 @@ export function randomSeed(): string {
   const words = crypto.getRandomValues(new Uint32Array(4));
   return Array.from(words, (word) => word.toString(16).padStart(8, "0")).join("");
 }
+
+/** Wait for real. Only composition roots pass this in; tests pass a fake that moves a manual clock. */
+export function realSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}

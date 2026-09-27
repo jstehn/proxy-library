@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "date": "2026-09-26",
+    "version": "5.3.0+20260926"
+  },
+  "data": [
+    {
+      "baseSetSize": 281,
+      "code": "BLB",
+      "isFoilOnly": false,
+      "isOnlineOnly": false,
+      "keyruneCode": "BLB",
+      "name": "Bloomburrow",
+      "releaseDate": "2024-08-02",
+      "totalSetSize": 397,
+      "type": "expansion"
+    },
+    {
+      "baseSetSize": 40,
+      "code": "BLC",
+      "isFoilOnly": false,
+      "isOnlineOnly": false,
+      "keyruneCode": "BLC",
+      "name": "Bloomburrow Commander",
+      "parentCode": "BLB",
+      "releaseDate": "2024-08-02",
+      "totalSetSize": 356,
+      "type": "commander"
+    },
+    {
+      "baseSetSize": 291,
+      "code": "FDN",
+      "isFoilOnly": false,
+      "isOnlineOnly": false,
+      "keyruneCode": "FDN",
+      "name": "Foundations",
+      "releaseDate": "2024-11-15",
+      "totalSetSize": 771,
+      "type": "core"
+    },
+    {
+      "baseSetSize": 0,
+      "code": "SPG",
+      "isFoilOnly": false,
+      "isOnlineOnly": false,
+      "keyruneCode": "SPG",
+      "name": "Special Guests",
+      "releaseDate": "2023-11-17",
+      "totalSetSize": 175,
+      "type": "masterpiece"
+    },
+    {
+      "baseSetSize": 30,
+      "code": "YBLB",
+      "isFoilOnly": false,
+      "isOnlineOnly": true,
+      "keyruneCode": "Y25",
+      "name": "Alchemy: Bloomburrow",
+      "parentCode": "BLB",
+      "releaseDate": "2024-08-20",
+      "totalSetSize": 30,
+      "type": "alchemy"
+    }
+  ]
+}

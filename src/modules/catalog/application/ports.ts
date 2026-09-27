@@ -1,0 +1,134 @@
+import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import type {
+  CardSetInfo,
+  Finish,
+  ImageUris,
+  PriceSnapshot,
+  PrintingId,
+  ScryfallCard,
+  SetCode,
+  SetImport,
+} from "../domain/types";
+
+// Ports: what the catalog needs from outside (design doc 04, section 6).
+
+/** MTGJSON, already parsed and translated by the anti-corruption layer. */
+export interface MtgjsonGateway {
+  /** The version of MTGJSON's current build, e.g. "5.3.0+20260926". */
+  metaVersion(): Promise<string>;
+  /** Every set MTGJSON knows about. */
+  setList(): Promise<ReadonlyArray<{ set: CardSetInfo; isOnlineOnly: boolean }>>;
+  /** One set file: printings, boosters, products and decks, digital-only things left out. */
+  setFile(code: SetCode): Promise<SetImport>;
+}
+
+/** Scryfall's daily bulk file of every card, read as a stream. */
+export interface ScryfallGateway {
+  /** A local copy of the newest bulk file, downloaded only if Scryfall has a newer one. */
+  latestBulkFile(): Promise<{ path: string; updatedAt: Date; downloaded: boolean }>;
+  /** The cards in that file, one at a time (the file is never loaded whole). */
+  readBulkFile(path: string): AsyncIterable<ScryfallCard>;
+}
+
+export type ImageSize = "small" | "normal" | "large";
+export type ImageFace = "front" | "back";
+export type ImageKey = Readonly<{ size: ImageSize; scryfallId: string; face: ImageFace }>;
+
+export interface ImageStore {
+  get(key: ImageKey): Promise<Uint8Array | null>;
+  put(key: ImageKey, bytes: Uint8Array): Promise<void>;
+}
+
+export interface ImageFetcher {
+  fetch(url: string): Promise<Uint8Array>;
+}
+
+export type SetState = Readonly<{
+  code: SetCode;
+  isEnabled: boolean;
+  isSupporting: boolean;
+  importedVersion: string | null; // last FULL import
+  printingCount: number;
+}>;
+
+/** Everything already in the catalog, for checking a new set's references (rule 5). */
+export type KnownReferences = Readonly<{
+  printingIds: ReadonlySet<string>;
+  productIds: ReadonlySet<string>;
+  boosters: ReadonlySet<string>; // "BLB/play"
+  decks: ReadonlySet<string>; // "BLB/Hare Raising"
+}>;
+
+/** Where a printing's images come from (Scryfall's addresses), or null if unknown. */
+export type ImageSource = Readonly<{ scryfallId: string; images: ImageUris | null }>;
+
+export type PricingPrinting = Readonly<{ id: PrintingId; finishes: readonly Finish[] }>;
+
+export type CardExtras = Readonly<{
+  scryfallId: string;
+  images: ImageUris | null;
+  legalities: Readonly<Record<string, string>>;
+}>;
+
+export interface CatalogRepository {
+  /** Adds new sets and updates names and dates of known ones. Never removes a set. */
+  saveSetList(sets: readonly CardSetInfo[]): Promise<void>;
+  setStates(): Promise<SetState[]>;
+  setEnabled(codes: readonly SetCode[], enabled: boolean): Promise<void>;
+  /** Marks exactly these sets as current Standard sets (and every other set as not). */
+  markStandard(codes: readonly SetCode[]): Promise<void>;
+  standardSetCodes(): Promise<SetCode[]>;
+  /**
+   * Saves one set import in the caller's transaction. Never deletes anything (rule 2).
+   * `printingsOnly` is for supporting sets: just their printings, marked as supporting.
+   */
+  saveImport(
+    setImport: SetImport,
+    options: { printingsOnly: boolean; importedAt: Date },
+  ): Promise<void>;
+  knownReferences(): Promise<KnownReferences>;
+  /** Every printing we hold, keyed by Scryfall id, for matching bulk-file prices. */
+  printingsForPricing(): Promise<Map<string, PricingPrinting>>;
+  savePriceSnapshots(snapshots: readonly PriceSnapshot[]): Promise<void>;
+  saveCardExtras(extras: readonly CardExtras[]): Promise<void>;
+  imageSource(printingId: PrintingId): Promise<ImageSource | null>;
+}
+
+export type SyncKind = "full" | "prices";
+export type SyncRun = Readonly<{ id: number; kind: SyncKind }>;
+
+export interface SyncRunRepository {
+  queue(run: { kind: SyncKind; requestedBy: UserId | null; requestedAt: Date }): Promise<void>;
+  /** Is a run queued or running? */
+  hasPending(): Promise<boolean>;
+  /** Takes the oldest queued run and marks it running, unless one is already running (rule 6). */
+  claimNext(now: Date): Promise<SyncRun | null>;
+  finish(
+    id: number,
+    result: {
+      status: "succeeded" | "failed";
+      summary: unknown;
+      error: string | null;
+      finishedAt: Date;
+    },
+  ): Promise<void>;
+  /** Runs left "running" by a crash are marked failed. Returns how many. */
+  failInterrupted(now: Date): Promise<number>;
+  lastStartedAt(): Promise<Date | null>;
+}
+
+export type CatalogServices = {
+  catalog: CatalogRepository;
+  syncRuns: SyncRunRepository;
+};
+
+export type CatalogDependencies = {
+  unitOfWork: UnitOfWork<CatalogServices>;
+  mtgjson: MtgjsonGateway;
+  scryfall: ScryfallGateway;
+  images: ImageStore;
+  imageFetcher: ImageFetcher;
+  clock: Clock;
+  /** When the nightly sync runs, in the server's time zone. */
+  syncTime: Readonly<{ hour: number; minute: number }>;
+};
