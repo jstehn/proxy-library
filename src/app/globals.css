@@ -78,6 +78,11 @@ body {
     transform: rotate(2deg) scale(1.05);
   }
 }
+@keyframes flip-in {
+  from {
+    transform: perspective(1000px) rotateY(90deg);
+  }
+}
 @keyframes foil-shimmer {
   from {
     background-position: 0% 50%;
@@ -98,6 +103,9 @@ body {
 }
 .animate-suspense {
   animation: suspense-shake 0.18s linear infinite;
+}
+.animate-flip-in {
+  animation: flip-in 0.35s ease-out;
 }
 .glow-rare {
   box-shadow:
@@ -133,6 +141,7 @@ body {
   .animate-pack-away,
   .animate-deal,
   .animate-suspense,
+  .animate-flip-in,
   .foil-shimmer {
     animation: none;
   }

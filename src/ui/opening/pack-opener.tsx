@@ -23,7 +23,9 @@ const PRELOAD_WAIT_MILLISECONDS = 3000; // rule 7: wait this long at most for im
 const SUSPENSE_MILLISECONDS = { rare: 900, mythic: 1600 };
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-const imageUrl = (card: OpenerCard) => `/api/images/${card.printingId}/normal/front`;
+// The large size (672 × 936): the spotlight and the phone stack show cards big enough to read,
+// and the grid's thumbnails reuse the same file, so each card downloads once.
+const imageUrl = (card: OpenerCard) => `/api/images/${card.printingId}/large/front`;
 
 /** Loads every card image in the background; resolves when they're all in (or failed). */
 function preload(cards: readonly OpenerCard[]): Promise<void> {
@@ -63,6 +65,8 @@ export function PackOpener(props: PackOpenerProps) {
   const sounds = useMemo(() => makeSounds(), []);
   const [suspenseIndex, setSuspenseIndex] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  /** A revealed card clicked in the grid, shown in the spotlight instead of the newest one. */
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const preloads = useRef(new Map<number, Promise<void>>());
 
   // Start loading every pack's images straight away (rule 7).
@@ -94,6 +98,7 @@ export function PackOpener(props: PackOpenerProps) {
     const flip = () => {
       send({ type: "revealNext" });
       setSuspenseIndex(null);
+      setFocusedIndex(null);
       setAnnouncement(
         `${card.name}, ${card.rarity}${card.finish === "nonfoil" ? "" : `, ${card.finish}`}`,
       );
@@ -176,19 +181,44 @@ export function PackOpener(props: PackOpenerProps) {
 
       {(state.phase === "revealing" || state.phase === "summary") && (
         <>
-          <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7">
-            {pack.cards.map((card, index) => (
-              <RevealSlot
-                key={`${pack.itemId}-${index}`}
-                card={card}
-                index={index}
-                isFaceUp={index < revealed}
-                isNext={state.phase === "revealing" && index === revealed}
-                isInSuspense={suspenseIndex === index}
-                onReveal={revealNext}
-              />
-            ))}
-          </ol>
+          {/* Phones: a stack you go through one card at a time, like holding the pack. */}
+          <div className="md:hidden">
+            <RevealStack
+              cards={pack.cards}
+              revealed={revealed}
+              suspenseIndex={suspenseIndex}
+              canReveal={state.phase === "revealing"}
+              onReveal={revealNext}
+            />
+          </div>
+
+          {/* Larger screens: the whole pack in a grid, and the newest card (or the one you
+              clicked) full size in the spotlight, where its text is readable. */}
+          <div className="hidden items-start gap-6 md:flex">
+            <Spotlight
+              card={
+                focusedIndex !== null
+                  ? pack.cards[focusedIndex]
+                  : revealed > 0
+                    ? pack.cards[revealed - 1]
+                    : null
+              }
+            />
+            <ol className="grid flex-1 grid-cols-5 gap-3 lg:grid-cols-7">
+              {pack.cards.map((card, index) => (
+                <RevealSlot
+                  key={`${pack.itemId}-${index}`}
+                  card={card}
+                  index={index}
+                  isFaceUp={index < revealed}
+                  isNext={state.phase === "revealing" && index === revealed}
+                  isInSuspense={suspenseIndex === index}
+                  onReveal={revealNext}
+                  onFocus={() => setFocusedIndex(index)}
+                />
+              ))}
+            </ol>
+          </div>
           <p aria-live="polite" className="sr-only">
             {announcement}
           </p>
@@ -233,6 +263,136 @@ export function PackOpener(props: PackOpenerProps) {
   );
 }
 
+/** A card's face: its image, with the moving foil shimmer on foils. */
+function CardFace(props: { card: OpenerCard }) {
+  const { card } = props;
+  return (
+    <div className="relative overflow-hidden rounded-[4.5%]">
+      {card.hasImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl(card)}
+          alt=""
+          className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800"
+        />
+      ) : (
+        <div className="flex aspect-[488/680] w-full items-center justify-center bg-zinc-200 p-2 text-center dark:bg-zinc-800">
+          {card.name}
+        </div>
+      )}
+      {card.finish !== "nonfoil" && <span aria-hidden className="foil-shimmer absolute inset-0" />}
+    </div>
+  );
+}
+
+const GLOW = { rare: "glow-rare", mythic: "glow-mythic", none: "" };
+
+/** "Borderless · foil · $9.56" */
+function cardDetails(card: OpenerCard): string {
+  return [
+    card.variantLabel,
+    card.finish === "nonfoil" ? "" : card.finish,
+    card.priceCents === null ? "no price" : dollars(card.priceCents),
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
+}
+
+function CardCaption(props: { card: OpenerCard }) {
+  return (
+    <p className="text-sm leading-tight">
+      <span className="font-medium">{props.card.name}</span>
+      <br />
+      <span className="text-zinc-500">{cardDetails(props.card)}</span>
+    </p>
+  );
+}
+
+/** The card being looked at, full size (larger screens). */
+function Spotlight(props: { card: OpenerCard | null }) {
+  const { card } = props;
+  return (
+    <aside aria-label="Spotlight" className="flex w-72 shrink-0 flex-col gap-2 lg:w-80">
+      {card === null ? (
+        <>
+          <CardBack />
+          <p className="text-sm text-zinc-500">
+            Each card appears here, full size, as you flip it.
+          </p>
+        </>
+      ) : (
+        <>
+          <div
+            key={card.printingId}
+            className={`animate-flip-in rounded-[4.5%] ${GLOW[hitLevel(card)]}`}
+          >
+            <CardFace card={card} />
+          </div>
+          <CardCaption card={card} />
+        </>
+      )}
+    </aside>
+  );
+}
+
+/**
+ * Phones: one card at a time. Tap the stack to flip the next card; it lands on top, full width.
+ * During suspense the face-down card on top shakes and glows first.
+ */
+function RevealStack(props: {
+  cards: readonly OpenerCard[];
+  revealed: number;
+  suspenseIndex: number | null;
+  canReveal: boolean;
+  onReveal: () => void;
+}) {
+  const { cards, revealed } = props;
+  const inSuspense = props.suspenseIndex !== null;
+  const faceUp = revealed > 0 && !inSuspense;
+  const top = faceUp ? cards[revealed - 1] : cards[Math.min(revealed, cards.length - 1)];
+  const stillFaceDown = cards.length - revealed - (faceUp ? 0 : 1);
+  const glow = faceUp || inSuspense ? GLOW[hitLevel(top)] : "";
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <button
+        type="button"
+        onClick={props.canReveal ? props.onReveal : undefined}
+        disabled={!props.canReveal}
+        aria-label={props.canReveal ? "Flip the next card" : top.name}
+        className="relative w-full max-w-xs"
+      >
+        {/* The rest of the pack, peeking out underneath. */}
+        {stillFaceDown > 0 && (
+          <div aria-hidden className="absolute inset-0 translate-x-2 translate-y-2">
+            <CardBack />
+          </div>
+        )}
+        <div
+          key={`${revealed}-${faceUp}`}
+          className={`relative rounded-[4.5%] ${faceUp ? "animate-flip-in" : ""} ${inSuspense ? "animate-suspense" : ""} ${glow}`}
+        >
+          {faceUp ? <CardFace card={top} /> : <CardBack />}
+        </div>
+      </button>
+      {faceUp ? <CardCaption card={top} /> : <p className="text-sm text-zinc-500">Tap to flip</p>}
+      <p className="text-xs text-zinc-500">
+        {revealed} of {cards.length} flipped
+      </p>
+      {/* The cards you've already seen, small. */}
+      {revealed > 1 && (
+        <ol className="grid w-full grid-cols-7 gap-1">
+          {cards.slice(0, revealed).map((card, index) => (
+            <li key={index}>
+              <CardFace card={card} />
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 type RevealSlotProps = {
   card: OpenerCard;
   index: number;
@@ -240,15 +400,13 @@ type RevealSlotProps = {
   isNext: boolean;
   isInSuspense: boolean;
   onReveal: () => void;
+  /** Show this (face-up) card in the spotlight. */
+  onFocus: () => void;
 };
 
 function RevealSlot(props: RevealSlotProps) {
   const { card } = props;
-  const level = hitLevel(card);
-  const glow =
-    props.isFaceUp || props.isInSuspense
-      ? { rare: "glow-rare", mythic: "glow-mythic", none: "" }[level]
-      : "";
+  const glow = props.isFaceUp || props.isInSuspense ? GLOW[hitLevel(card)] : "";
 
   return (
     <li
@@ -257,7 +415,7 @@ function RevealSlot(props: RevealSlotProps) {
     >
       <button
         type="button"
-        onClick={props.isNext ? props.onReveal : undefined}
+        onClick={props.isNext ? props.onReveal : props.isFaceUp ? props.onFocus : undefined}
         disabled={!props.isNext && !props.isFaceUp}
         aria-label={props.isFaceUp ? card.name : `Face-down card ${props.index + 1}`}
         className={`flip-card block w-full rounded-[4.5%] ${props.isNext && !props.isInSuspense ? "cursor-pointer ring-2 ring-zinc-400 ring-offset-2" : ""} ${props.isInSuspense ? "animate-suspense" : ""}`}
@@ -266,35 +424,12 @@ function RevealSlot(props: RevealSlotProps) {
           <div className="flip-face">
             <CardBack />
           </div>
-          <div className="flip-face flip-front overflow-hidden rounded-[4.5%]">
-            {card.hasImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imageUrl(card)}
-                alt=""
-                className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800"
-              />
-            ) : (
-              <div className="flex aspect-[488/680] w-full items-center justify-center bg-zinc-200 p-2 text-center dark:bg-zinc-800">
-                {card.name}
-              </div>
-            )}
-            {card.finish !== "nonfoil" && (
-              <span aria-hidden className="foil-shimmer absolute inset-0" />
-            )}
+          <div className="flip-face flip-front">
+            <CardFace card={card} />
           </div>
         </div>
       </button>
-      {props.isFaceUp && (
-        <span className="leading-tight">
-          <span className="font-medium">{card.name}</span>
-          <br />
-          <span className="text-zinc-500">
-            {card.finish === "nonfoil" ? "" : `${card.finish} · `}
-            {card.priceCents === null ? "no price" : dollars(card.priceCents)}
-          </span>
-        </span>
-      )}
+      {props.isFaceUp && <span className="leading-tight font-medium">{card.name}</span>}
     </li>
   );
 }

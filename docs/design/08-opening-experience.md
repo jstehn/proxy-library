@@ -135,3 +135,13 @@ None. The opener only reads what the page gives it.
   future-ideas.
 - **Checked by eye:** screenshots of the sealed pack, the tear, a flip in progress, the foil
   shimmer, and the suspense glow on a $9.56 foil rare.
+- **Readable cards, two layouts (after the first try-out, 2026-09-27).** In the 7-column grid,
+  flipped cards were too small to read. Now:
+  - **Larger screens** keep the 7-column grid and add a **spotlight**: the newest flipped card
+    (or any revealed card you click) at full size beside it.
+  - **Phones** get a **stack**: one card at a time, tap to flip the next, with the cards you've
+    seen in a small strip underneath. It's like going through a real pack.
+
+  Both are rendered, and CSS (`md:hidden` / `hidden md:flex`) shows the right one. The opener now
+  loads the **large** image size (672 × 936), so text is sharp in the spotlight and on phones. The
+  grid reuses the same file, so each card still downloads once.

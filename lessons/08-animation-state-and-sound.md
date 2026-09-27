@@ -284,7 +284,33 @@ gain.gain.exponentialRampToValueAtTime(0.0001, start + seconds); // long fade
 If you've done signal processing in Python (`scipy.signal`), this is the same idea, run live by the
 browser.
 
-## D4. Keyboard and screen readers
+## D4. One component, two layouts
+
+Phones and laptops want different openings: a laptop has room for the whole pack in a grid plus a
+full-size **spotlight** of the newest card, and a phone should show **one card at a time**, a stack
+you tap through. Both layouts read the **same state** from the same reducer, and CSS picks which is
+visible:
+
+```tsx
+<div className="md:hidden">        {/* phones: under 768 pixels wide */}
+  <RevealStack cards={pack.cards} revealed={revealed} … />
+</div>
+<div className="hidden md:flex">   {/* tablets and up */}
+  <Spotlight card={…} />
+  <ol className="grid grid-cols-5 lg:grid-cols-7">…</ol>
+</div>
+```
+
+Tailwind's `md:` prefix means "from the medium screen width up". An element with `display: none`
+is also removed from what screen readers and tests see, so only one layout is ever "there". The
+state machine didn't change at all: layouts are presentation, and presentation is free to differ.
+
+A related lesson from testing it: in the 7-column grid the flipped cards were **too small to read**,
+even though the images were sharp. Readability depends on the size a card is **shown** at, not just
+the file's size. The spotlight and the phone stack show one card large, using Scryfall's large
+image (672 × 936).
+
+## D5. Keyboard and screen readers
 
 - **Keyboard:** Space or Enter reveals the next card (and tears the pack). The listener ignores
   keys pressed inside buttons and form fields, so it doesn't clash with them.
