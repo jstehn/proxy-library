@@ -1,0 +1,13 @@
+# Everything the image doesn't need (and local state it must never contain).
+node_modules
+.next
+.next-e2e
+.dev
+.direnv
+.env
+.env.local
+backups
+test-results
+playwright-report
+coverage
+.git

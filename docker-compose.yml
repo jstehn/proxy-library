@@ -1,0 +1,77 @@
+# The whole app: Postgres, a one-time migration, the web app and the worker (design doc 11).
+# Copy .env.example to .env and set AUTH_SECRET first. Then: docker compose up -d --build
+
+x-app: &app
+  image: tcg-virtual-library
+  build: .
+  restart: unless-stopped
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://tcg:${POSTGRES_PASSWORD:-tcg}@db:5432/tcg
+    AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (at least 32 characters)}
+    APP_URL: ${APP_URL:-http://localhost:3000}
+    IMAGE_CACHE_DIR: /data/images
+    SYNC_CACHE_DIR: /data/cache
+    SYNC_TIME: ${SYNC_TIME:-04:00}
+    TZ: ${TZ:-UTC}
+  volumes:
+    - images:/data/images
+    - sync-cache:/data/cache
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tcg
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tcg}
+      POSTGRES_DB: tcg
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcg -d tcg"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Brings the database schema up to date, then exits. The app and worker wait for it, so a
+  # failed migration stops them from starting half-migrated.
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["pnpm", "worker", "migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    <<: *app
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # The nightly catalog sync, and syncs admins queue from /admin/catalog.
+  worker:
+    <<: *app
+    command: ["pnpm", "worker", "schedule"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  images:
+  sync-cache:

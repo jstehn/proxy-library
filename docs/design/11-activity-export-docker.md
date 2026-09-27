@@ -109,3 +109,24 @@ download (`Content-Disposition: attachment`).
    migration stops the app from starting instead of running half-migrated.
 4. **Condition "Near Mint", language "English"** in the Moxfield export, since the app tracks
    neither.
+
+## 8. Implementation notes (what changed while building)
+
+- **The image keeps the full install and uses `next start`**, not the standalone output. The
+  worker runs TypeScript with `tsx` and needs `src/`, `worker/`, `drizzle/` and every dependency
+  anyway, so one full image is simpler. It's larger (hundreds of MB), which is fine for a home server.
+- **Files in the image belong to the `node` user** (`COPY --chown`). The first run failed with
+  "Permission denied": one repository file was only readable by its owner on the host.
+- **The worker stops on `SIGTERM`** as well as `SIGINT`, so `docker compose stop` ends it cleanly.
+- **The Docker test did more than planned:** a fresh install's worker starts the first sync right
+  away (it has never synced), and it finished (35 sets, about 80 MB from Scryfall) in about 40
+  seconds, before it was stopped. That's exactly what a real first deployment does, so it proved
+  the worker too. docs/deploy.md tells new users to expect it.
+- **`check-products` found real problems** before any screens were built on it: TMT's "Enemy
+  Deck" (no cards yet), HOB's Co-op Kit (only extras, and it **was for sale**), and the stale empty
+  Reality Fracture precon rows. Fixes: empty deck lists are left out; products missing from a
+  set's latest import are **unlisted** (kept for owned items, never sold); references ignore
+  unlisted rows and the importing set's own old rows. All 451 products for sale then passed.
+- **A pg deprecation warning** ("client.query() when the client is already executing a query")
+  came from `Promise.all` on a transaction's single connection in `knownReferences`. It's now one
+  query at a time.

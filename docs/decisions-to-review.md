@@ -95,3 +95,14 @@ Each entry: the phase, what was decided, why, and where to change it.
 | **Proposals never expire** (either side can end them)                           | Playgroups are small; lesson 10's exercise 2 shows how to add expiry | `decide`                                     |
 | **At most $10,000 per side**, 99 copies per card line                           | Same limits as the rest of the app                                   | `checkOffer`                                 |
 | **Disabled players can't receive trades**                                       | Rule 2                                                               | `drizzleTradePlayers`                        |
+
+### Phase 11: activity, export, Docker
+
+| Decision                                                                                                                                              | Why                                                               | Where to change it                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------- |
+| **The feed shows notable pulls (rare, mythic, $5+), sealed purchases (product only, no price) and trades (who, how many cards, whether money moved)** | Money stays private, as agreed                                    | `recordEvent` calls; `activity-list.tsx` |
+| **Moxfield export uses "Near Mint" and "English"**                                                                                                    | The app tracks neither                                            | `COLLECTION_EXPORTERS.moxfield`          |
+| **One Docker image with the full install** (not the standalone output)                                                                                | The worker needs tsx and the source anyway                        | `Dockerfile`                             |
+| **Migrations run as a one-shot `migrate` service** before the app and worker start                                                                    | A failed migration stops startup instead of running half-migrated | `docker-compose.yml`                     |
+| **Products no longer in MTGJSON's latest data are unlisted, not deleted**                                                                             | Owned items keep opening; nothing unlisted is sold                | `sealed_products.is_listed`              |
+| **The Docker test ran one real first sync** (about 80 MB) before being stopped                                                                        | A fresh install syncs at once; it also proved the worker          | docs/deploy.md                           |

@@ -35,3 +35,6 @@ test-results/
 
 # Playwright
 /playwright/.cache/
+
+# Database backups (scripts/backup.sh)
+backups/

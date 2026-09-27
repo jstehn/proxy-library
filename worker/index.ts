@@ -81,10 +81,13 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     console.log("worker scheduling: checking for sync work every 30 seconds (Ctrl+C to stop)");
 
     let stopping = false;
-    process.once("SIGINT", () => {
+    // Ctrl+C in a terminal sends SIGINT; `docker compose stop` sends SIGTERM.
+    const stop = () => {
       stopping = true;
       console.log("stopping after the current step…");
-    });
+    };
+    process.once("SIGINT", stop);
+    process.once("SIGTERM", stop);
 
     while (!stopping) {
       if (await catalog.queueNightlyIfDue()) console.log("queued the nightly prices sync");

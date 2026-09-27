@@ -218,23 +218,23 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       // and decks don't count: the import's contents are checked against themselves instead.
       const otherSets = <T extends { setCode: string }>(rows: T[]) =>
         rows.filter((row) => row.setCode !== importingSet);
-      const [printingRows, productRows, boosterRows, deckRows] = await Promise.all([
-        db.select({ id: printings.id }).from(printings),
-        // Unlisted products (left out or dropped) don't count as known.
-        db
-          .select({ id: sealedProducts.id, setCode: sealedProducts.setCode })
-          .from(sealedProducts)
-          .where(eq(sealedProducts.isListed, true)),
-        db
-          .select({ setCode: boosterConfigs.setCode, boosterType: boosterConfigs.boosterType })
-          .from(boosterConfigs),
-        // A deck list with no cards doesn't count as known (rule 5b): an old row can linger
-        // after MTGJSON listed the deck before its cards.
-        db
-          .select({ setCode: deckLists.setCode, name: deckLists.name })
-          .from(deckLists)
-          .where(sql`jsonb_array_length(${deckLists.cards}) > 0`),
-      ]);
+      // One query at a time: a transaction is a single connection, and pg is dropping support
+      // for overlapping queries on one connection (Promise.all here logged a deprecation warning).
+      const printingRows = await db.select({ id: printings.id }).from(printings);
+      // Unlisted products (left out or dropped) don't count as known.
+      const productRows = await db
+        .select({ id: sealedProducts.id, setCode: sealedProducts.setCode })
+        .from(sealedProducts)
+        .where(eq(sealedProducts.isListed, true));
+      const boosterRows = await db
+        .select({ setCode: boosterConfigs.setCode, boosterType: boosterConfigs.boosterType })
+        .from(boosterConfigs);
+      // A deck list with no cards doesn't count as known (rule 5b): an old row can linger
+      // after MTGJSON listed the deck before its cards.
+      const deckRows = await db
+        .select({ setCode: deckLists.setCode, name: deckLists.name })
+        .from(deckLists)
+        .where(sql`jsonb_array_length(${deckLists.cards}) > 0`);
       return {
         printingIds: new Set(printingRows.map((row) => row.id)),
         productIds: new Set(otherSets(productRows).map((row) => row.id)),
