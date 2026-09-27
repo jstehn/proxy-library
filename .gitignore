@@ -1,0 +1,25 @@
+# nix / direnv
+.direnv/
+result
+
+# local dev state (postgres data, image cache)
+.dev/
+
+# env
+.env*.local
+
+# node / next
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# tests
+coverage/
+playwright-report/
+test-results/
+
+# misc
+.DS_Store
+*.log
