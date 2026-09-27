@@ -18,11 +18,11 @@ reach into each other's tables.
   }
   ```
 - The Drizzle implementation opens a transaction, builds **transaction-bound services** for every
-  module (by calling each module's factories with tx-bound repos), runs `work`, **commits on
+  module (by calling each module's factories with repositories bound to the transaction), runs `work`, **commits on
   `ok`** and **rolls back on `err` or throw**.
 - Each orchestrating use case declares the **narrow** service bundle it needs
-  (`type BuySealedTx = { wallet: WalletOps; inventory: InventoryOps }`) and receives a
-  `UnitOfWork<BuySealedTx>`. The composition root's full bundle satisfies it structurally.
+  (`type BuySealedServices = { wallet: WalletOps; inventory: InventoryOps }`) and receives a
+  `UnitOfWork<BuySealedServices>`. The composition root's full bundle satisfies it structurally.
 - Modules call each other's **operations** (`wallet.debit`) and never each other's repositories.
   This keeps every module's invariants (like the wallet lock) in that module.
 - Lock ordering rule: when locking multiple users' wallets, lock in ascending `user_id` order to
@@ -37,6 +37,6 @@ reach into each other's tables.
 
 ## Alternatives considered
 
-- **Pass `tx` into every function:** leaks Drizzle types into application code.
+- **Pass the transaction into every function:** leaks Drizzle types into application code.
 - **Sagas / eventual consistency:** unnecessary with one database.
 - **AsyncLocalStorage "ambient" transaction:** hidden coupling and harder to test and teach.

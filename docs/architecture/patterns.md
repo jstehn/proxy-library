@@ -46,16 +46,20 @@ satisfies `LedgerRepo` if it has the right methods. No `implements` keyword is r
 
 ## 3. Dependency injection with factory functions + a composition root
 
-**What:** use cases are built by `makeX(deps)` functions that close over their dependencies. One
+**What:** use cases are built by `makeX(dependencies)` functions that close over their dependencies. One
 file per entry point (`src/server/container.ts`, `worker/container.ts`) constructs the real
 adapters and calls the factories. This is the **composition root**. No DI container library.
 
 ```ts
-export function makeWalletService(deps: { ledger: LedgerRepo; clock: Clock; policy: AllowancePolicy }) {
-  return {
-    balance: (userId: UserId) => deps.ledger.balance(userId),
-    debit: async (userId: UserId, amount: Cents): Promise<Result<void, InsufficientFunds>> => { ... },
-  };
+export type WalletDependencies = { ledger: LedgerRepo; clock: Clock; policy: AllowancePolicy };
+
+export function makeWalletService(dependencies: WalletDependencies) {
+  const { ledger, clock, policy } = dependencies;
+
+  async function balance(userId: UserId): Promise<Cents> { … }
+  async function debit(userId: UserId, amount: Cents): Promise<Result<void, InsufficientFunds>> { … }
+
+  return { balance, debit };
 }
 export type WalletService = ReturnType<typeof makeWalletService>;
 ```
@@ -81,7 +85,7 @@ consistent together), phrased in domain terms: `ledger.append(entry)`,
 
 ## 5. Unit of Work (transaction boundary)
 
-**What:** `uow.run(work)` opens one DB transaction, builds **transaction-bound services** for the
+**What:** `unitOfWork.run(work)` opens one DB transaction, builds **transaction-bound services** for the
 modules involved, runs `work`, and **commits on `ok` / rolls back on `err` or throw**.
 
 ```ts
@@ -90,15 +94,22 @@ export interface UnitOfWork<S> {
 }
 
 // store/application/buy-sealed.ts: store declares only what it needs (interface segregation)
-type BuySealedTx = { wallet: WalletOps; inventory: InventoryOps; pricing: SealedPricing };
-export function makeBuySealed(deps: { uow: UnitOfWork<BuySealedTx> }) {
-  return (actor: Actor, productId: SealedProductId) =>
-    deps.uow.run(async ({ wallet, inventory, pricing }) => {
+type BuySealedServices = { wallet: WalletOps; inventory: InventoryOps; pricing: SealedPricing };
+type BuySealedDependencies = { unitOfWork: UnitOfWork<BuySealedServices> };
+
+export function makeBuySealed(dependencies: BuySealedDependencies) {
+  const { unitOfWork } = dependencies;
+
+  async function buySealed(actor: Actor, productId: SealedProductId) {
+    return unitOfWork.run(async ({ wallet, inventory, pricing }) => {
       const price = await pricing.priceOf(productId);
       const paid = await wallet.debit(actor.userId, price, { kind: "purchase_sealed", productId });
       if (!paid.ok) return paid; // → rollback
       return ok(await inventory.addSealed(actor.userId, productId));
     });
+  }
+
+  return buySealed;
 }
 ```
 
@@ -106,8 +117,8 @@ export function makeBuySealed(deps: { uow: UnitOfWork<BuySealedTx> }) {
 trade).
 
 **Why:** money and cards must move **together or not at all**. Because TS typing is structural,
-the composition root's big `TxServices` object automatically satisfies each use case's small
-`BuySealedTx`, so no module has to import the composition root.
+the composition root's big services object automatically satisfies each use case's small
+`BuySealedServices`, so no module has to import the composition root.
 
 ## 6. CQRS-lite: query functions for reads
 

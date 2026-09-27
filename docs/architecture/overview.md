@@ -131,12 +131,12 @@ sequenceDiagram
   participant A as Server action (controller)
   participant S as store.buySealed (use case)
   participant U as UnitOfWork
-  participant W as wallet (tx-bound)
-  participant I as inventory (tx-bound)
+  participant W as wallet (in transaction)
+  participant I as inventory (in transaction)
   B->>A: form submit {productId}
   A->>A: Zod-parse input, get Actor from session
   A->>S: buySealed(actor, productId)
-  S->>U: run(tx => ...)
+  S->>U: run(transaction => ...)
   U->>W: debit(actor.userId, price)  (locks wallet row)
   alt insufficient funds
     W-->>S: err(InsufficientFunds)

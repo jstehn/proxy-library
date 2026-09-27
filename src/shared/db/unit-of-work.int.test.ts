@@ -8,11 +8,13 @@ import { makeDrizzleUnitOfWork } from "./unit-of-work";
 // A throwaway table that exists only for this test file.
 const { db, close } = createDatabase(loadConfig().databaseUrl);
 
-const probeService = (tx: DbExecutor) => ({
-  insert: (note: string) => tx.execute(sql`insert into uow_probe (note) values (${note})`),
+const probeService = (transaction: DbExecutor) => ({
+  insert: (note: string) => transaction.execute(sql`insert into uow_probe (note) values (${note})`),
 });
 
-const uow = makeDrizzleUnitOfWork(db, (tx) => ({ probe: probeService(tx) }));
+const unitOfWork = makeDrizzleUnitOfWork(db, (transaction) => ({
+  probe: probeService(transaction),
+}));
 
 async function notes(): Promise<string[]> {
   const result = await db.execute<{ note: string }>(sql`select note from uow_probe order by id`);
@@ -34,7 +36,7 @@ afterAll(async () => {
 
 describe("makeDrizzleUnitOfWork", () => {
   it("commits when the work returns ok", async () => {
-    const result = await uow.run(async ({ probe }) => {
+    const result = await unitOfWork.run(async ({ probe }) => {
       await probe.insert("kept");
       return ok("done");
     });
@@ -44,7 +46,7 @@ describe("makeDrizzleUnitOfWork", () => {
   });
 
   it("rolls back every write when the work returns err, and returns the err", async () => {
-    const result = await uow.run(async ({ probe }) => {
+    const result = await unitOfWork.run(async ({ probe }) => {
       await probe.insert("first");
       await probe.insert("second");
       return err({ kind: "InsufficientFunds" as const });
@@ -57,7 +59,7 @@ describe("makeDrizzleUnitOfWork", () => {
   it("rolls back and rethrows when the work throws (a defect)", async () => {
     const boom = new Error("boom");
     await expect(
-      uow.run(async ({ probe }) => {
+      unitOfWork.run(async ({ probe }) => {
         await probe.insert("doomed");
         throw boom;
       }),

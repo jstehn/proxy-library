@@ -39,6 +39,10 @@ each lesson.
 - Card data: MTGJSON (sets, booster sheets, sealed products) + Scryfall (prices, images,
   legalities), synced by the worker. Prefer bulk files and batched calls (`/cards/collection`, 75
   per request).
+- **Readable for a TypeScript newcomer** (docs/architecture/conventions.md, "Readability"): full
+  words, no abbreviations (`unitOfWork`, `dependencies`, `transaction`); named types rather than
+  nested inline ones; factories unpack `dependencies`, define a named inner `function`, and return
+  it by name.
 - `@/*` imports resolve to `src/*`.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.

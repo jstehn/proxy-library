@@ -23,7 +23,7 @@ describe("manualClock", () => {
 
 describe("inMemoryUnitOfWork", () => {
   it("passes the services to the work and returns its result", async () => {
-    const uow = inMemoryUnitOfWork({ greeting: "hi" });
-    await expect(uow.run(async ({ greeting }) => ok(greeting))).resolves.toEqual(ok("hi"));
+    const unitOfWork = inMemoryUnitOfWork({ greeting: "hi" });
+    await expect(unitOfWork.run(async ({ greeting }) => ok(greeting))).resolves.toEqual(ok("hi"));
   });
 });

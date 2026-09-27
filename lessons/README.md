@@ -9,6 +9,8 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 00  | [Your development environment](00-dev-environment.md)                  | Nix + direnv, a project-local database, Next.js layout, first TypeScript and React                                  |
 | 01  | [Designing with types and dependencies](01-architecture-foundation.md) | generics, unions, overloads, branded types, dependency injection, transactions, testing, lint-enforced architecture |
 
+New term you don't recognize? Check the [glossary](GLOSSARY.md).
+
 ## How to use a lesson
 
 1. Read the **objectives** first, so you know what you're aiming for.
@@ -31,6 +33,16 @@ for). Every lesson follows this structure:
 | Exercises        | graded warm-up → challenge, each with a hint and a folded `<details>` solution that has been verified to compile/pass        |
 | Recap            | the key takeaways in a short list                                                                                            |
 | Further reading  | ADRs, docs, and external references                                                                                          |
+
+### Plain language rules
+
+- **No unexplained jargon.** Define every term in plain words the first time it's used, and add
+  it to [`GLOSSARY.md`](GLOSSARY.md).
+- **Introduce new syntax explicitly** the first time it appears (`? :`, destructuring, arrow
+  functions, …), with its Python equivalent.
+- **Toy example first, real code second.** Build the idea up in small steps on something tiny,
+  then read the project's code once every piece is familiar.
+- **Walk through real code line by line** instead of summarizing it with abstract terms.
 
 Code in lessons is quoted from the repo (with a link) or verified in a scratch file before
 publishing. If the code changes later, update the lesson.

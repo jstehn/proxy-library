@@ -11,7 +11,7 @@ hierarchies. TypeScript interfaces are structural, like Python `Protocol`s.
 ## Decision
 
 - **Domain:** plain `type`s and pure functions. No classes.
-- **Application:** `makeX(deps) => useCase` factory functions that close over their dependencies.
+- **Application:** `makeX(dependencies) => useCase` factory functions that close over their dependencies.
   Service types are derived with `ReturnType<typeof makeX>` or declared as interfaces when they
   are ports.
 - **Adapters:** also factories (`drizzleLedgerRepo(db)`). A class is allowed only when an

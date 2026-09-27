@@ -3,12 +3,12 @@ import { err, ok } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { makeCheckHealth } from "./health";
 
-// This is what testing with injected dependencies looks like: no database, no real
-// time, yet the use case runs exactly the code that production runs.
+// Testing with injected dependencies: we pass in a pretend database and a frozen clock,
+// yet checkHealth runs exactly the same code as in the real app.
 describe("checkHealth", () => {
   it("reports app and database time", async () => {
     const checkHealth = makeCheckHealth({
-      uow: inMemoryUnitOfWork({
+      unitOfWork: inMemoryUnitOfWork({
         system: { databaseTime: async () => new Date("2026-01-01T00:00:01Z") },
       }),
       clock: fixedClock("2026-01-01T00:00:00Z"),
@@ -25,7 +25,7 @@ describe("checkHealth", () => {
 
   it("turns an unreachable database into a DatabaseUnavailable error", async () => {
     const checkHealth = makeCheckHealth({
-      uow: inMemoryUnitOfWork({
+      unitOfWork: inMemoryUnitOfWork({
         system: {
           databaseTime: async () => {
             throw new Error("connect ENOENT .dev/.s.PGSQL.5432");

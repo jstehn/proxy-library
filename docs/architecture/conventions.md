@@ -37,18 +37,55 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 
 ## Naming
 
-| Thing               | Convention                             | Example                                         |
-| ------------------- | -------------------------------------- | ----------------------------------------------- |
-| Files               | kebab-case                             | `buy-sealed.ts`, `drizzle-ledger-repo.ts`       |
-| Types / interfaces  | PascalCase, no `I` prefix              | `LedgerRepo`, `BoosterConfig`                   |
-| Functions           | camelCase, verb first                  | `accrueAllowance`, `generatePack`               |
-| Factories           | `make` + thing                         | `makeWalletService`, `makeBuySealed`            |
-| Adapters            | tech + port                            | `drizzleLedgerRepo`, `httpScryfallGateway`      |
-| Fakes               | `inMemory` / `fixed` / `seeded` + port | `inMemoryLedgerRepo`, `fixedClock`, `seededRng` |
-| Error kinds         | PascalCase string literal              | `{ kind: "InsufficientFunds" }`                 |
-| Booleans            | `is`/`has`/`can` prefix                | `canSelfFund`, `isFoil`                         |
-| DB tables / columns | snake_case, plural tables              | `ledger_entries.amount_cents`                   |
-| Money variables     | include the unit                       | `priceCents`, or typed `Cents`                  |
+| Thing               | Convention                             | Example                                                                                                                  |
+| ------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Files               | kebab-case                             | `buy-sealed.ts`, `drizzle-ledger-repo.ts`                                                                                |
+| Types / interfaces  | PascalCase, no `I` prefix              | `LedgerRepo`, `BoosterConfig`                                                                                            |
+| Functions           | camelCase, verb first                  | `accrueAllowance`, `generatePack`                                                                                        |
+| Factories           | `make` + thing                         | `makeWalletService`, `makeBuySealed`                                                                                     |
+| Adapters            | tech + port                            | `drizzleLedgerRepo`, `httpScryfallGateway`                                                                               |
+| Fakes               | `inMemory` / `fixed` / `seeded` + port | `inMemoryLedgerRepo`, `fixedClock`, `seededRng`                                                                          |
+| Error kinds         | PascalCase string literal              | `{ kind: "InsufficientFunds" }`                                                                                          |
+| Booleans            | `is`/`has`/`can` prefix                | `canSelfFund`, `isFoil`                                                                                                  |
+| DB tables / columns | snake_case, plural tables              | `ledger_entries.amount_cents`                                                                                            |
+| Money variables     | include the unit                       | `priceCents`, or typed `Cents`                                                                                           |
+| Everything          | **full words, no abbreviations**       | `unitOfWork`, `dependencies`, `transaction`, not `uow`, `deps`, `tx`. Only universal ones are allowed: `db`, `id`, `url` |
+
+## Readability: the code is also teaching material
+
+This codebase is read by someone learning TypeScript. Prefer the version a newcomer can follow
+over the clever one.
+
+- **Name types instead of nesting them.** Don't write an object type inside another object type
+  inside a parameter list. Give each level a name (`CheckHealthDependencies`,
+  `HealthCheckServices`) and use the name.
+- **Factories follow one shape:**
+
+  ```ts
+  export type CheckHealthDependencies = {
+    unitOfWork: UnitOfWork<HealthCheckServices>;
+    clock: Clock;
+  };
+
+  export function makeCheckHealth(dependencies: CheckHealthDependencies) {
+    const { unitOfWork, clock } = dependencies; // 1. unpack what was passed in
+
+    async function checkHealth(): Promise<Result<HealthReport, HealthError>> {
+      // 2. a *named* function that does the work
+    }
+
+    return checkHealth; // 3. hand it back by name
+  }
+  ```
+
+  The returned function is declared with `function name() {}`, not as an anonymous
+  `return async () => …`, so it has a name in the code, in stack traces and in the editor.
+
+- **Use intermediate variables.** `const report: HealthReport = {…}; return ok(report);` is
+  easier to read than one long nested expression.
+- **Keep arrow functions for short callbacks**, such as `items.map((item) => item.id)`.
+- **Explain the why.** Comment the reason for anything surprising, and give every exported
+  function a one-line TSDoc saying what it's for.
 
 ## Functions and use cases
 

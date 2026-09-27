@@ -3,6 +3,7 @@
 - **Phase:** 1 (architecture foundation)
 - **Prerequisites:** [Lesson 00](00-dev-environment.md): TypeScript basics, unions, narrowing
 - **Time:** 2–3 hours, best split across the three parts
+- **Vocabulary:** unfamiliar terms are defined in the [glossary](GLOSSARY.md)
 
 ## Objectives
 
@@ -227,49 +228,81 @@ object of functions: no `new`, no `this`, nothing to inherit.
 
 # Part B: Designing with dependencies
 
-## B1. The problem: hidden dependencies
+A **dependency** is anything a piece of code needs from outside itself to do its job: the current
+time, the database, randomness, another service. This part is about one question: **where should
+a function get its dependencies from?** We'll build the answer up in small steps with a toy
+example, then read the real code.
 
-Imagine the allowance rule written the "obvious" way:
+Terms in **bold** the first time they appear are defined in the [glossary](GLOSSARY.md).
+
+## B1. The problem: code that grabs what it needs
+
+Here's a tiny function that greets someone based on the time of day:
 
 ```ts
-async function accrueAllowance(userId: UserId) {
-  const now = new Date();                          // hidden dependency: the real clock
-  const last = await db.select(…);                 // hidden dependency: a global database
-  …
+function greetingFor(name: string): string {
+  const hour = new Date().getHours(); // reads the real clock
+  const partOfDay = hour < 12 ? "morning" : "afternoon";
+  return `Good ${partOfDay}, ${name}`;
 }
 ```
 
-To test "three weeks passed, so three allowances," you'd have to wait three weeks or patch global
-time, and you'd need a live database. The function **reaches out** for what it needs, so you can't
-hand it anything else.
+Two bits of new syntax:
 
-## B2. Ports and adapters
+- `condition ? a : b` means "`a` if the condition is true, otherwise `b`". It's Python's
+  `a if condition else b`.
+- `` `Good ${partOfDay}` `` is a template string, Python's `f"Good {part_of_day}"`.
 
-Flip it around: the code declares **what it needs** as an interface (a **port**), and something
-else supplies an implementation (an **adapter**).
+Now try to **test** it. What does it return? That depends on when you run the test, so the test
+passes in the morning and fails in the afternoon. The function **reaches out and grabs** the real
+clock, so nobody can hand it a different one.
+
+The app has the same problem at a larger scale: "three weeks passed, so pay three allowances"
+can't be tested if the code reads the real clock, and nothing can be tested without a live
+database if the code imports one directly.
+
+## B2. Step 1: pass the dependency in
+
+The fix is to let the **caller** decide which clock to use:
 
 ```ts
-// src/shared/kernel/clock.ts: the port
+function greetingFor(name: string, clock: Clock): string {
+  const hour = clock.now().getHours();
+  const partOfDay = hour < 12 ? "morning" : "afternoon";
+  return `Good ${partOfDay}, ${name}`;
+}
+
+greetingFor("Ada", systemClock()); // real time, in the app
+greetingFor("Ada", fixedClock("2026-01-01T09:00")); // always 9am, in a test → "Good morning, Ada"
+```
+
+What is `Clock`? It's an **interface**: a description of what a clock must be able to do. From
+[`src/shared/kernel/clock.ts`](../src/shared/kernel/clock.ts):
+
+```ts
 export interface Clock {
   now(): Date;
 }
 ```
 
-An interface is exactly a Python `typing.Protocol`: anything with a `now(): Date` method **is** a
-`Clock`. There's no `implements` keyword and no inheritance. This project has three adapters:
+"A `Clock` is anything with a `now` method that returns a `Date`." It's exactly a Python
+`Protocol`. Anything with that shape counts, and nothing has to declare "I am a Clock". The
+project has three things that fit:
 
-| Adapter                        | Where                                                            | Used by    |
-| ------------------------------ | ---------------------------------------------------------------- | ---------- |
-| `systemClock()`                | [`shared/runtime`](../src/shared/runtime/index.ts)               | production |
-| `fixedClock("2026-01-01")`     | [`shared/kernel/testing`](../src/shared/kernel/testing/index.ts) | tests      |
-| `manualClock(…)` + `advanceBy` | same                                                             | tests      |
+| Implementation                 | Where                                                            | Used in |
+| ------------------------------ | ---------------------------------------------------------------- | ------- |
+| `systemClock()`                | [`shared/runtime`](../src/shared/runtime/index.ts)               | the app |
+| `fixedClock("2026-01-01")`     | [`shared/kernel/testing`](../src/shared/kernel/testing/index.ts) | tests   |
+| `manualClock(…)` + `advanceBy` | same                                                             | tests   |
 
-`Rng` (randomness) and `UnitOfWork` (transactions) follow the same pattern.
+Two names you'll see in the docs: the interface describing what's needed is called a **port**, and
+each implementation is called an **adapter**. `Clock` is a port, and `systemClock` and
+`fixedClock` are adapters.
 
 ### Reading function types
 
-`now(): Date` inside the interface is **not a call**. Nothing inside a type is ever evaluated.
-It describes a property whose value is a **function** taking no arguments and returning a `Date`.
+`now(): Date` inside the interface is **not a call**. Nothing inside a type is ever run. It
+describes a property whose value is a **function** that takes no arguments and returns a `Date`.
 These two spellings mean the same thing:
 
 ```ts
@@ -281,34 +314,86 @@ interface Clock {
 } // "property holding a function"
 ```
 
-In Python terms, the key maps to `Callable[[], datetime]`, not to a `datetime`. You get a value
-only when you **call** it (`clock.now()`), which is why the time is fresh every time.
+In Python terms the property is a `Callable[[], datetime]`, not a `datetime`. You get a value only
+when you **call** it (`clock.now()`), which is why the time is fresh every time.
 
-Async functions return a `Promise`, TypeScript's `Awaitable`:
+A function that returns a **Promise** gives you its value only once you `await` it. `Promise<Date>`
+is TypeScript's `Awaitable[datetime]`, and `async` functions always return a Promise.
 
-```ts
-type HealthTx = { system: { databaseTime(): Promise<Date> } };
-```
+## B3. Step 2: pass dependencies once, not on every call
 
-This reads: an object with a `system` key, whose value is an object with a `databaseTime` function
-that returns something you `await` to get a `Date`. The Python equivalent:
+Step 1 works, but every caller now has to pass the clock on every call. Real code needs several
+dependencies (a database, a clock, settings), and the page that displays a greeting shouldn't have
+to know about any of them.
+
+The fix is to **supply the dependencies once, up front, and get back a ready-to-use function**.
+You already know this trick from Python:
 
 ```python
-class SystemService(Protocol):
-    async def database_time(self) -> datetime: ...
+def make_greeter(clock):
+    def greeting_for(name):                        # an inner function...
+        hour = clock.now().hour                    # ...that uses `clock` from the outer function
+        part_of_day = "morning" if hour < 12 else "afternoon"
+        return f"Good {part_of_day}, {name}"
+    return greeting_for                            # hand the inner function back
 
-class HealthTx(TypedDict):
-    system: SystemService
+greeting_for = make_greeter(clock=SystemClock())   # supply the clock ONCE
+greeting_for("Ada")                                # then just call it
+greeting_for("Grace")
 ```
 
-Anything with that shape fits: the real service that queries Postgres, or a test fake like
-`{ system: { databaseTime: async () => new Date("2026-01-01T00:00:01Z") } }`.
+`greeting_for` still has access to `clock` after `make_greeter` has finished. An inner function
+that remembers variables from the function that created it is called a **closure**.
 
-### Closures hold private state
+The TypeScript version has the same shape:
+
+```ts
+type GreeterDependencies = { clock: Clock };
+
+function makeGreeter(dependencies: GreeterDependencies) {
+  const { clock } = dependencies; // (1) unpack what was passed in
+
+  function greetingFor(name: string): string {
+    // (2) the inner function that does the work
+    const hour = clock.now().getHours();
+    const partOfDay = hour < 12 ? "morning" : "afternoon";
+    return `Good ${partOfDay}, ${name}`;
+  }
+
+  return greetingFor; // (3) hand it back
+}
+
+const greetingFor = makeGreeter({ clock: systemClock() }); // supply the clock once
+greetingFor("Ada"); // then just call it
+```
+
+Line (1) is **destructuring**: `const { clock } = dependencies;` means
+`clock = dependencies["clock"]`. It pulls a named property out into its own variable.
+
+A function like `makeGreeter`, whose job is to build and return another function, is called a
+**factory function**. In this project they're always named `make…`. Handing code its dependencies
+from outside, instead of letting it grab them, is called **dependency injection**.
+
+If you'd rather think in classes, this is the same idea as:
+
+```python
+class Greeter:
+    def __init__(self, clock):        # ← makeGreeter({ clock })
+        self.clock = clock
+    def __call__(self, name): ...     # ← the returned greetingFor
+```
+
+Both versions take the dependencies once and use them on every call. The project uses the
+function version because it needs no `self` and no class.
+
+### Closures can also hold changing state
+
+`manualClock`, a test helper, uses a closure to keep a private, changeable variable:
 
 ```ts
 export function manualClock(start: Date | string) {
-  let current = new Date(start).getTime(); // private: only the functions below can touch it
+  let current = new Date(start).getTime(); // only the functions below can see this
+
   return {
     now: () => new Date(current),
     advanceBy: (milliseconds: number) => {
@@ -318,106 +403,177 @@ export function manualClock(start: Date | string) {
 }
 ```
 
-`current` lives on inside the returned functions after `manualClock` has returned. This is a
-**closure**, like a Python inner function using `nonlocal`. It gives you private state without a
-class.
+`(x) => …` is an **arrow function**, TypeScript's lambda. Unlike Python's `lambda` it can span
+several lines when it uses `{ }`. The project uses arrow functions for short helpers like these,
+and named `function`s for anything bigger.
 
-## B3. Dependency injection with factory functions
+## B4. The real thing: `makeCheckHealth`, line by line
 
-A **factory function** builds a use case with its dependencies baked in. From
-[`src/server/health.ts`](../src/server/health.ts):
+Now the real code reads just like `makeGreeter`. It's the health check behind `/api/health`, from
+[`src/server/health.ts`](../src/server/health.ts). First, it names the shapes it works with:
 
 ```ts
-type HealthTx = { system: { databaseTime(): Promise<Date> } };
+/** What a successful health check reports. */
+export type HealthReport = Readonly<{
+  status: "ok";
+  appTime: string;
+  databaseTime: string;
+}>;
 
-export function makeCheckHealth(deps: { uow: UnitOfWork<HealthTx>; clock: Clock }) {
-  return async (): Promise<Result<HealthReport, HealthError>> => {
-    // …uses deps.uow and deps.clock, never a global
+/** Why a health check can fail. */
+export type HealthError = Readonly<{
+  kind: "DatabaseUnavailable";
+  message: string;
+}>;
+
+/** The database operations a health check needs while a transaction is open. */
+type HealthCheckServices = {
+  system: {
+    databaseTime(): Promise<Date>;
   };
+};
+
+/** Everything checkHealth needs from outside. It's passed in, never imported directly. */
+export type CheckHealthDependencies = {
+  unitOfWork: UnitOfWork<HealthCheckServices>;
+  clock: Clock;
+};
+```
+
+- `Readonly<{…}>` makes every property unchangeable after creation.
+- `HealthCheckServices` says the check needs one thing from the database: a `system` object with a
+  `databaseTime` function.
+- `CheckHealthDependencies` lists the two dependencies: a **unit of work**, which runs code inside
+  a database transaction (section B8), and a `Clock`.
+
+Then the factory, with the same three steps as `makeGreeter`:
+
+```ts
+export function makeCheckHealth(dependencies: CheckHealthDependencies) {
+  const { unitOfWork, clock } = dependencies; // (1) unpack
+
+  async function checkHealth(): Promise<Result<HealthReport, HealthError>> {
+    // (2) the work
+    try {
+      return await unitOfWork.run(async (services) => {
+        const databaseTime = await services.system.databaseTime();
+        const report: HealthReport = {
+          status: "ok",
+          appTime: clock.now().toISOString(),
+          databaseTime: databaseTime.toISOString(),
+        };
+        return ok(report);
+      });
+    } catch (error) {
+      // For a health check, an unreachable database is an expected answer, not a bug.
+      return err({ kind: "DatabaseUnavailable", message: String(error) });
+    }
+  }
+
+  return checkHealth; // (3) hand it back
 }
 ```
 
-`makeCheckHealth` runs **once**, at startup, and returns the actual `checkHealth` function, which
-remembers `deps` through a closure. Compare it with the Python class you'd probably write:
+Reading step (2):
 
-```python
-class CheckHealth:
-    def __init__(self, uow, clock):   # ← makeCheckHealth(deps)
-        self.uow, self.clock = uow, clock
-    def __call__(self): ...           # ← the returned function
-```
+- `async function checkHealth(): Promise<Result<HealthReport, HealthError>>` means "an async
+  function that eventually returns either a `HealthReport` or a `HealthError`" (the `Result` type
+  from section A3).
+- `try { … } catch (error) { … }` is Python's `try: … except Exception as error: …`.
+- `unitOfWork.run(async (services) => { … })` passes an arrow function **into** `run`. A function
+  handed to another function to call later is a **callback**. `run` opens a transaction, calls our
+  callback with the `services` for that transaction, and commits or rolls back depending on what
+  the callback returns.
+- Inside, we ask the database for its time, build a `report` with the type `HealthReport`, and
+  return `ok(report)`.
+- If anything throws (for example the database is down), `catch` turns it into
+  `err({ kind: "DatabaseUnavailable", … })`, and the route answers `503` instead of crashing.
 
-It's the same idea (dependencies passed in once, used on every call) with less boilerplate and
-no `self` to forget.
+## B5. Where the real things get created: the composition root
 
-## B4. The composition root: the one place that wires real things
-
-Something has to create the real database and clock and hand them to the factories. That place is
-the **composition root**, [`src/server/core.ts`](../src/server/core.ts):
+Somebody has to create the real database and clock and pass them to `makeCheckHealth`. That
+happens in exactly one place, [`src/server/core.ts`](../src/server/core.ts), called the
+**composition root** (the spot where the program is "composed" from its parts):
 
 ```ts
+const { db, close } = createDatabase(config.databaseUrl);
 const clock = systemClock();
-const uow = makeDrizzleUnitOfWork(db, (tx) => ({ system: makeSystemService(tx) }));
-return { …, checkHealth: makeCheckHealth({ uow, clock }) };
+
+function servicesFor(transaction: DbExecutor) {
+  return { system: makeSystemService(transaction) };
+}
+
+const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
+
+return { …, checkHealth: makeCheckHealth({ unitOfWork, clock }) };
 ```
 
-A test is a second, tiny composition root that wires fakes instead
-([`health.test.ts`](../src/server/health.test.ts)):
+`{ unitOfWork, clock }` is shorthand for `{ unitOfWork: unitOfWork, clock: clock }`.
+
+A test is a second, tiny composition root that passes **fakes** instead, from
+[`health.test.ts`](../src/server/health.test.ts):
 
 ```ts
 const checkHealth = makeCheckHealth({
-  uow: inMemoryUnitOfWork({
+  unitOfWork: inMemoryUnitOfWork({
     system: { databaseTime: async () => new Date("2026-01-01T00:00:01Z") },
   }),
   clock: fixedClock("2026-01-01T00:00:00Z"),
 });
 ```
 
-**The use case code is identical in both.** Only the wiring differs. That's the whole point of
-dependency injection.
+**`checkHealth` itself is identical in both.** Only what gets passed in differs: the app gets a
+real database and clock, the test gets a pretend database and a frozen clock. That's the whole
+payoff of dependency injection. The test needs no database and no waiting, and runs in
+milliseconds.
 
-The project has two production composition roots sharing `buildCore`:
+The app and the worker each have a small entry file that calls `buildCore`:
 
-- [`src/server/container.ts`](../src/server/container.ts) for the Next.js app. It imports
-  `server-only`, which fails the build if browser code ever imports it, and caches the container
-  on `globalThis` so hot reloads don't open new database pools.
+- [`src/server/container.ts`](../src/server/container.ts) for the Next.js app. It adds
+  `import "server-only"`, which makes the build fail if browser code ever imports it, and keeps
+  one copy alive across hot reloads.
 - [`worker/container.ts`](../worker/container.ts) for background jobs (`pnpm worker health`).
 
-## B5. Structural typing gives you narrow interfaces for free
+## B6. Asking for only what you need
 
-`checkHealth` asked for `UnitOfWork<HealthTx>`, where `HealthTx` has only `system`. The container
-will eventually provide `{ system, wallet, inventory, collection, … }`. That bigger bundle is still
-accepted, because structural typing only checks that **at least** the requested members exist.
+`makeCheckHealth` asks for a unit of work whose services contain only `system`. As the project
+grows, the real services object will contain much more: `{ system, wallet, inventory, … }`.
 
-Each use case therefore declares the smallest dependency it needs, and sees nothing more. This is
-the **Interface Segregation Principle**, and you get it without writing any adapter classes.
+It will still be accepted, because TypeScript uses **structural typing**: it checks that the
+object has **at least** the properties asked for, and ignores extras. So each function can ask for
+exactly what it uses and see nothing else. The health check can't accidentally touch the wallet,
+because as far as its types know, there is no wallet.
 
-## B6. Case study: randomness you can replay
+(Design books call this the _Interface Segregation Principle_: depend on the smallest interface
+you need.)
 
-Pack opening needs randomness that is unpredictable to players but **reproducible** for debugging
-and tests. [`rng.ts`](../src/shared/kernel/rng.ts) solves both with a **seeded** generator:
+## B7. Case study: randomness you can replay
+
+Pack opening needs randomness that's unpredictable to players but **reproducible** for debugging
+and tests. [`rng.ts`](../src/shared/kernel/rng.ts) provides a **seeded** random number generator:
 
 ```ts
 const rng = seededRng("pack-42");
-rng.next(); // always the same sequence for the same seed
+rng.next(); // a number in [0, 1), always the same sequence for the same seed
 ```
 
-- In production, [`randomSeed()`](../src/shared/runtime/index.ts) takes 128 unpredictable bits from
-  the OS. The seed is stored with each opening, so any pack can be regenerated exactly.
+- In the app, [`randomSeed()`](../src/shared/runtime/index.ts) gets 128 unpredictable bits from the
+  operating system. The seed is saved with each opening, so any pack can be regenerated exactly.
 - In tests, readable seeds (`"rarity-odds"`) make every run identical.
 - `weightedPick` chooses in proportion to weights (mythic 1 : rare 7).
-  `weightedSample(rng, options, k)` draws `k` _distinct_ items, which is how booster sheets work.
+  `weightedSample(rng, options, k)` draws `k` _different_ items, which is how booster sheets work.
 
-It's the same port/adapter idea: the pack engine will receive an `Rng` and never touch
-`Math.random`.
+It's the same idea as the clock: the pack engine will be handed an `Rng` and never call
+`Math.random` itself.
 
-## B7. The unit of work: all or nothing
+## B8. The unit of work: all or nothing
 
-Buying a pack means **debit the wallet** _and_ **add the pack to inventory**. If the second step
-fails after the first succeeded, money has vanished. A **unit of work** groups steps into one
-database transaction: they all commit, or none do.
+Buying a pack means **take money from the wallet** _and_ **add the pack to your inventory**. If
+the second step fails after the first succeeded, the money has vanished. A database
+**transaction** groups steps so they all succeed together (**commit**) or are all undone
+(**rollback**). A **unit of work** is this project's wrapper around a transaction.
 
-The port ([`unit-of-work.ts`](../src/shared/kernel/unit-of-work.ts)):
+The interface, from [`unit-of-work.ts`](../src/shared/kernel/unit-of-work.ts):
 
 ```ts
 export interface UnitOfWork<Services> {
@@ -425,26 +581,31 @@ export interface UnitOfWork<Services> {
 }
 ```
 
-The rule is **commit on `ok`, roll back on `err` or on a thrown exception**. The Postgres adapter
-([`shared/db/unit-of-work.ts`](../src/shared/db/unit-of-work.ts)) has to bridge a mismatch: Drizzle
-rolls back only when the callback **throws**, but our use cases **return** failures. So:
+In words: `run` takes a callback called `work`, gives it the services for the open transaction,
+and returns whatever `work` returned. The rule is **commit if `work` returns `ok`; roll back if it
+returns `err` or throws**.
+
+The Postgres implementation
+([`shared/db/unit-of-work.ts`](../src/shared/db/unit-of-work.ts)) has one wrinkle. The database
+library (Drizzle) rolls back only when the callback **throws** an error, but our code **returns**
+`err` instead of throwing. So the implementation throws a private "signal" error when it sees
+`err`, which makes Drizzle roll back, then catches that signal and returns the original `err`:
 
 ```ts
-return await db.transaction(async (tx) => {
-  const result = await work(bindServices(tx));
+return await db.transaction(async (transaction) => {
+  const result = await work(servicesFor(transaction));
   if (!result.ok) {
-    rolledBackWith = result;
-    throw rollback;
-  } // err → throw → ROLLBACK
-  return result; // ok → COMMIT
+    failedResult = result;
+    throw rollbackSignal; // → ROLLBACK
+  }
+  return result; // → COMMIT
 });
-// …then catch that specific `rollback` signal and return `rolledBackWith` to the caller
 ```
 
-`bindServices(tx)` rebuilds each module's services around the open transaction `tx`, so every
-write inside `work` joins the same transaction.
+`servicesFor(transaction)` is the function from `core.ts` in B5. It builds the services so that
+all their database work happens inside this one transaction.
 
-## B8. Parse, don't validate
+## B9. Parse, don't validate
 
 Untrusted data (environment variables, form input, JSON from other services) should be
 **converted into a trusted type once, at the boundary**, so nothing inside ever re-checks it.
@@ -538,7 +699,7 @@ up as you type.
 | Using `any` to "make the error go away"            | `any` switches type checking off for everything it touches | use a generic `<T>`, or `unknown` and narrow it (lint forbids `any`)        |
 | Throwing for an expected failure                   | habit from Python                                          | return `err({ kind: … })`; throw only for bugs and outages                  |
 | Calling `new Date()` or `Math.random()` in logic   | it's convenient                                            | take a `Clock` / `Rng` parameter (lint enforces this)                       |
-| A module importing a global `db`                   | it's convenient                                            | accept a repository or `DbExecutor` through the factory's `deps`            |
+| A module importing a global `db`                   | it's convenient                                            | receive it through the factory's `dependencies`                             |
 | Casting with `as` to force a type                  | it silences the compiler without proving anything          | narrow with checks; `as` only inside smart constructors                     |
 | Putting `import "server-only"` in shared code      | it seems safe                                              | it **throws outside Next.js** (worker, tests); keep it in the app container |
 | Expecting per-project `env` in Vitest global setup | global setup runs in the main process, before test workers | read the variable explicitly (see `tests/setup/integration.ts`)             |
@@ -663,7 +824,7 @@ import { inMemoryUnitOfWork, manualClock } from "@/shared/kernel/testing";
 it("reports the current app time on each call", async () => {
   const clock = manualClock("2026-01-01T00:00:00Z");
   const checkHealth = makeCheckHealth({
-    uow: inMemoryUnitOfWork({ system: { databaseTime: async () => clock.now() } }),
+    unitOfWork: inMemoryUnitOfWork({ system: { databaseTime: async () => clock.now() } }),
     clock,
   });
 
