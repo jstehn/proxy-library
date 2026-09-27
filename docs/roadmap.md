@@ -25,7 +25,10 @@ flowchart LR
 4. **Application:** use-case factories, tested against in-memory fakes.
 5. **Infrastructure:** Drizzle repos and gateways, plus contract and integration tests.
 6. **UI:** server actions (parse → actor → use case → map Result) and views.
-7. **Lesson:** what we built, which patterns appeared, and exercises.
+7. **Lesson:** a real lesson that teaches the phase's concepts, **not** a log of what was built.
+   It follows the format in [`lessons/README.md`](../lessons/README.md): objectives, concepts built
+   up simple → complex with Python comparisons and real repo code, common mistakes, graded
+   exercises with verified solutions, a recap, and further reading.
 8. **Commit** once `pnpm check` is green.
 
 Inside-out order (domain → UI) means every layer is tested before anything depends on it.
@@ -82,7 +85,7 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 6. **Lint boundaries:** `eslint-plugin-boundaries`, `import/no-cycle`, and the restricted
    globals/imports from ADR 0009, each proven by a deliberately failing fixture that is then removed.
 7. **Walking skeleton:** a `/health` route that goes through container → UoW → DB, proving the wiring.
-8. **Lesson 01:** architecture in practice. **Commit.**
+8. **Lesson 01:** "Designing with types and dependencies". **Commit.**
 
 ## Phases 2–11
 

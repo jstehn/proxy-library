@@ -1,231 +1,394 @@
-# Lesson 00: Dev environment & first TypeScript
+# Lesson 00: Your development environment
 
-**Phase 0 of the build plan.** By the end you have a reproducible toolchain, a private Postgres,
-and a running Next.js app. You'll also have read your first TypeScript module.
+- **Phase:** 0
+- **Prerequisites:** comfortable with a terminal, Python and SQL. No JavaScript needed.
+- **Time:** about 1 hour, including exercises
 
-## Contents
+## Objectives
 
-1. [The toolchain: Nix flake + direnv](#1-the-toolchain-nix-flake--direnv)
-2. [A project-local Postgres](#2-a-project-local-postgres)
-3. [The Next.js project, file by file](#3-the-nextjs-project-file-by-file)
-4. [First TypeScript: `money.ts`](#4-first-typescript-moneyts)
-5. [First React: `page.tsx`](#5-first-react-pagetsx)
-6. [Daily commands](#6-daily-commands)
-7. [Exercises](#7-exercises)
+By the end of this lesson you will be able to:
+
+1. Explain what a Nix flake and direnv provide, and how that compares to a Python virtualenv.
+2. Start, stop and connect to the project's own Postgres, and read a socket-based connection
+   string.
+3. Find your way around a Next.js project: scripts, lockfile, `tsconfig.json`, and folder-based
+   routing.
+4. Read basic TypeScript: variables, typed functions, union types, `null`/`undefined`, narrowing
+   and equality.
+5. Read a simple React component written in JSX.
 
 ---
 
-## 1. The toolchain: Nix flake + direnv
+## 1. Reproducible environments
 
-| File           | Job                                                    | Python analogy                       |
-| -------------- | ------------------------------------------------------ | ------------------------------------ |
-| `flake.nix`    | Declares the _tools_: node 22, pnpm, postgres 17, jq   | `requirements.txt`, but for binaries |
-| `flake.lock`   | Pins nixpkgs to an exact commit (identical versions)   | `uv.lock` / `poetry.lock`            |
-| `.envrc`       | Read by direnv on `cd`: loads the flake, sets env vars | auto-activating venv + `.env`        |
-| `package.json` | Declares the _JavaScript libraries_ (next, react, …)   | `pyproject.toml`                     |
+### The problem
 
-There are two layers. **Nix** provides programs (`node`, `psql`), and **pnpm** provides the
-libraries our code imports. Nix doesn't manage `node_modules`, and pnpm doesn't manage Node.
+"Works on my machine" happens when each machine has different versions of the tools. In Python
+you solve half of this with a virtualenv: it pins **libraries**. But the interpreter itself, the
+database server and the CLI tools still come from whatever happens to be installed.
 
-What happens on `cd`:
+### The idea
 
+**Nix** pins **everything**: every program is built from an exact recipe and stored under
+`/nix/store/<hash>-name/`, so versions never collide. A **flake** is a project file that declares
+which programs the project needs. **direnv** activates it automatically when you `cd` into the
+folder, and deactivates it when you leave.
+
+| This project   | Job                                                  | Python equivalent                    |
+| -------------- | ---------------------------------------------------- | ------------------------------------ |
+| `flake.nix`    | declares the _tools_: node 22, pnpm, postgres 17, jq | `requirements.txt`, but for programs |
+| `flake.lock`   | pins the exact package-set version                   | `uv.lock` / `poetry.lock`            |
+| `.envrc`       | direnv script: load the flake, set env vars          | `source .venv/bin/activate` + `.env` |
+| `package.json` | declares the _JavaScript libraries_                  | `pyproject.toml`                     |
+
+There are two layers: **Nix provides programs** (`node`, `psql`) and **pnpm provides the
+libraries** our code imports (`next`, `zod`). Each manages only its own layer.
+
+Here is the heart of [`flake.nix`](../flake.nix):
+
+```nix
+devShells.default = pkgs.mkShell {
+  packages = with pkgs; [ nodejs_22 pnpm postgresql_17 jq ];
+};
 ```
-cd tcg-virtual-library
-  └─ direnv reads .envrc
-       ├─ use flake    → Nix puts node, pnpm, postgres from /nix/store/... first on PATH
-       └─ export ...   → PGDATA, PGHOST, PGUSER, PGDATABASE, DATABASE_URL, IMAGE_CACHE_DIR
+
+And of [`.envrc`](../.envrc):
+
+```bash
+use flake                                   # activate the dev shell above
+export PGHOST="$PWD/.dev"                   # project-specific environment variables
+export DATABASE_URL="postgres://tcg@localhost/tcg?host=$PWD/.dev"
 ```
 
-Leave the folder and it's all undone. Try `which psql` inside and outside the project.
+> **Try it:** run `which node` inside the project, then `cd ~` and run it again. Inside, the path
+> points into `/nix/store/…`. Outside, it's your system Node, or nothing at all.
 
-> **Gotcha:** flakes only see files that are **tracked by git**. A new file referenced by the
-> flake must be `git add`ed first, or Nix acts like it doesn't exist.
+## 2. A database that lives in the project
 
-## 2. A project-local Postgres
+### The problem
 
-`scripts/db.sh` runs Postgres as a normal process you own, with no system service and no Docker.
+A system-wide Postgres is shared state outside the repo. It can have a different version,
+leftover databases, or a port another project is already using.
 
-- **Where the programs come from:** `initdb`, `pg_ctl`, `psql`, `createdb` all come from the
-  flake's `postgresql_17` and are on PATH thanks to direnv.
-- **Where the data lives:** `PGDATA=.dev/pgdata`. This is a folder of database files, like a
-  SQLite file but a directory. `.dev/` is gitignored.
-- **What the script does:**
-  - `start`: `initdb` if the folder is new, then `pg_ctl start`, then `createdb tcg` if
-    missing. It's safe to run twice.
-  - `stop`: fast shutdown.
-  - `reset`: stop, delete the data, start fresh.
-  - `set -euo pipefail` at the top means "stop on the first error," like an uncaught
-    Python exception.
+### The idea
 
-### How addressing works: a Unix socket, not a port
+Postgres is just a program that stores its data in a folder. We run it **as you**, with its data
+in `.dev/pgdata` (gitignored), started and stopped by [`scripts/db.sh`](../scripts/db.sh):
+
+```sh
+pnpm db:start    # create the data folder on first run, start the server, create databases
+pnpm db:stop
+pnpm db:reset    # stop, delete all data, start fresh
+```
+
+### Sockets instead of ports
+
+Most databases listen on a **network port** (`localhost:5432`). Ours doesn't:
 
 ```bash
 pg_ctl start -o "-k $PGHOST -c listen_addresses=''"
 ```
 
-- `listen_addresses=''` opens **no network port**.
-- `-k $PGHOST` creates a **socket file** at `.dev/.s.PGSQL.5432` instead. A socket is a local-only
-  "phone line" that programs on this machine connect through. Nothing on your network can reach
-  it, and it can't clash with another Postgres on port 5432. That's why `--auth=trust` (no
-  password) is fine here.
+- `listen_addresses=''` means no network port at all.
+- `-k $PGHOST` creates a **Unix socket** instead: a special file (`.dev/.s.PGSQL.5432`) that
+  programs on the same machine connect through. Think of it as a private phone line. Nothing on
+  the network can reach it, and it can't clash with another Postgres.
 
-How clients find it:
-
-- `psql`/`createdb` read `PGHOST`. When it's a path (starts with `/`), they look for the socket in
-  that folder. `PGUSER`/`PGDATABASE` fill in the rest, so a bare `psql` just works.
-- The app reads `DATABASE_URL`:
+### Reading the connection string
 
 ```
-postgres://tcg@localhost/tcg?host=/home/.../tcg-virtual-library/.dev
-   │       │    │         │   └─ the real destination: the socket folder
+postgres://tcg@localhost/tcg?host=/home/you/…/tcg-virtual-library/.dev
+   │       │    │         │   └─ where to actually connect: the socket's folder
    │       │    │         └─ database name
-   │       │    └─ placeholder hostname (overridden by ?host=)
+   │       │    └─ a placeholder host (the URL format needs one; ?host= overrides it)
    │       └─ user
    └─ protocol
 ```
 
-In Phase 10 (Docker) only this string changes, to e.g. `postgres://tcg:pw@db:5432/tcg`. The code
-never hardcodes connection details. It only reads env vars.
+Command-line tools use the `PG*` variables instead. When `PGHOST` is a path (it starts with `/`),
+`psql` looks for a socket in that folder. That's why a bare `psql` just works here.
 
-## 3. The Next.js project, file by file
+The app never hardcodes any of this; it reads `DATABASE_URL`. When we move to Docker later, only
+that one string changes.
 
-Scaffolded with `create-next-app` (Next **16**, React 19, Tailwind 4, TypeScript 5.9).
+> **Try it:** `pnpm db:start`, then `ls -a .dev/`. Find the `.s.PGSQL.5432` socket file. Run
+> `psql -c 'select current_database()'`.
 
-| File                                | What it is                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `package.json`                      | Dependencies + **scripts** (`pnpm dev` runs `scripts.dev`). Like `[project.scripts]` / a Makefile.   |
-| `pnpm-lock.yaml`                    | Exact resolved versions of every library. Commit it and never edit it by hand.                       |
-| `pnpm-workspace.yaml`               | pnpm settings. `allowBuilds: sharp: false` stops a native image lib from compiling (handy on NixOS). |
-| `tsconfig.json`                     | TypeScript compiler settings. See below.                                                             |
-| `next.config.ts`                    | Next.js settings (empty for now).                                                                    |
-| `eslint.config.mjs`                 | Linter rules (≈ ruff/flake8).                                                                        |
-| `.prettierrc.json`                  | Formatter settings (≈ black). The tailwind plugin sorts class names.                                 |
-| `postcss.config.mjs`, `globals.css` | Tailwind wiring.                                                                                     |
-| `src/app/layout.tsx`                | Root **layout**: the `<html>`/`<body>` shell that wraps every page.                                  |
-| `src/app/page.tsx`                  | The page at `/`.                                                                                     |
-| `AGENTS.md` / `CLAUDE.md`           | Notes for AI assistants (AGENTS.md is regenerated by `next dev`).                                    |
+## 3. Anatomy of a Next.js project
 
-### `tsconfig.json` highlights
+**Next.js** is a framework that runs React pages _and_ server code in one app, roughly like
+Django, which also bundles views and server logic.
 
-- `"strict": true`: the important one. It turns on null checks, among other things. `string | null`
-  can't be used as a `string` until you've checked it. Think of it as mypy `--strict`, but enforced
-  on every build.
-- `"noEmit": true`: `tsc` only _checks_ types. Next.js does the actual compiling to JavaScript.
-- `"paths": { "@/*": ["./src/*"] }`: `import { x } from "@/lib/money"` means `src/lib/money.ts`,
-  so there's no `../../..` chain.
+| File                 | What it is                                                                   |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `package.json`       | dependencies and **scripts**: `pnpm dev` runs `scripts.dev`, like a Makefile |
+| `pnpm-lock.yaml`     | exact resolved versions of every library. Commit it, never edit it.          |
+| `tsconfig.json`      | TypeScript compiler settings                                                 |
+| `eslint.config.mjs`  | lint rules (like ruff)                                                       |
+| `.prettierrc.json`   | formatter settings (like black)                                              |
+| `src/app/layout.tsx` | the page shell (`<html>`, `<body>`) that wraps every page                    |
+| `src/app/page.tsx`   | the page at `/`                                                              |
 
-### Routing = folders
+### Two `tsconfig.json` settings that matter most
 
-The App Router maps folders to URLs. `src/app/page.tsx` is `/`, and `src/app/collection/page.tsx`
-will be `/collection`. `layout.tsx` wraps everything below it.
+- `"strict": true` turns on the strictest checks, most importantly **null checks**: a value that
+  might be `null` can't be used until you've checked it. It's like running mypy `--strict`, except
+  the build fails when it's violated.
+- `"paths": { "@/*": ["./src/*"] }` means `import … from "@/shared/kernel"` refers to
+  `src/shared/kernel`, from anywhere, without `../../..` chains.
 
-### Next 16 differences worth knowing
+### Routing is folders
 
-- Docs for the _installed_ version live in `node_modules/next/dist/docs/`. Prefer them over
-  older tutorials.
-- "Middleware" is now called **proxy** (`proxy.ts`). We'll use it for auth in Phase 2.
-- Types like `LayoutProps<"/">` are **generated** into `.next/types`. That's why
-  `pnpm typecheck` runs `next typegen` before `tsc`.
+The folder structure under `src/app/` **is** the URL structure:
 
-## 4. First TypeScript: `money.ts`
-
-> **Update (Phase 1):** this file moved to `src/shared/kernel/money.ts` and became a branded
-> `Cents` type with a companion object (`Cents.fromUsd`, `Cents.format`). See lesson 01. The
-> ideas below still apply.
-
-Open `src/lib/money.ts`. Line by line, compared with Python:
-
-```ts
-export type Cents = number;
+```
+src/app/page.tsx               →  /
+src/app/collection/page.tsx    →  /collection
+src/app/api/health/route.ts    →  /api/health   (an API endpoint instead of a page)
 ```
 
-A **type alias**, like `Cents = int` in Python typing. It has zero runtime cost and just
-documents intent. (JavaScript has only one number type, a 64-bit float, so "integer" is a
-promise we keep ourselves with `Math.round`.)
+> **Try it:** `pnpm dev`, then open <http://localhost:3000> and <http://localhost:3000/api/health>.
+
+## 4. TypeScript basics
+
+TypeScript is JavaScript plus type annotations. The annotations are checked by the compiler and
+then **erased**: what actually runs is plain JavaScript. It's the same deal as Python type hints,
+except the checker is always on.
+
+### Variables
 
 ```ts
-export function formatCents(cents: Cents): string {
+const limit = 15; // can't be reassigned (use this by default)
+let opened = 0; // can be reassigned
+opened += 1;
+// never use `var`: it's the old, confusingly scoped version
 ```
 
-≈ `def format_cents(cents: Cents) -> str:`. `export` makes it importable. Without it, it's
-module-private, like a leading `_`, except enforced.
+### Functions with types
 
 ```ts
-export function parseUsd(value: string | null | undefined): Cents | null {
-  if (value == null || value.trim() === "") return null;
+function formatCount(count: number): string {
+  return `${count} cards`; // backticks + ${} = f-string
+}
 ```
 
-- `string | null` is a **union type**, the same as `str | None`.
-- JS has _two_ "nothing" values, `null` and `undefined` (a missing property). `value == null`
-  (double `=`) is the one deliberate use of loose equality: it catches both.
-- Everywhere else, use `===`. Loose `==` does surprising conversions (`"0" == 0` is true).
-- After that `if`, TypeScript **narrows** `value` to `string`. Delete the check and
-  `value.trim()` becomes a compile error. This is the "strict null checks" payoff.
+This reads like `def format_count(count: int) -> str:`. The type goes after the name, and the
+return type after the parentheses. Note that JavaScript has one `number` type for both integers
+and floats.
+
+### Union types: "one of these"
 
 ```ts
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+function describe(price: string | null): string { … }
 ```
 
-`const` is a binding that can't be reassigned (use it by default; `let` when you must
-reassign; never `var`). `Intl` is the built-in locale formatting library. `{ style: ... }` is an
-**object literal**, which behaves like a dict.
+`string | null` is Python's `str | None`. The `|` means "or".
 
-Why cents: `0.1 + 0.2` is `0.30000000000000004` in both JS and Python. Summing float prices in a
-wallet eventually shows up as a wrong balance, so we store integers and format only when
-displaying.
+### Two kinds of nothing: `null` and `undefined`
 
-## 5. First React: `page.tsx`
+Python has one `None`. JavaScript has two:
+
+- `undefined` means "never set": a missing property, or an argument that wasn't passed.
+- `null` means "deliberately empty".
+
+`value == null` (with two `=`) catches **both**. It's the one place loose equality is useful.
+
+### Equality: always `===`
+
+```ts
+0 == "0"; // true  (!)  loose equality converts types first
+0 === "0"; // false      strict equality: same type AND same value
+```
+
+Use `===` and `!==` everywhere, except for the `== null` idiom above.
+
+### Narrowing: the payoff of strict mode
+
+Here's a real function from the project, `Cents.fromUsd` in
+[`src/shared/kernel/money.ts`](../src/shared/kernel/money.ts), slightly simplified:
+
+```ts
+fromUsd(value: string | null | undefined): Cents | null {
+  if (value == null) return null;                  // (1)
+  const match = USD_PATTERN.exec(value.trim());    // (2)
+  if (match === null) return null;
+  …
+}
+```
+
+At (1), `value` might be `string`, `null` or `undefined`. After the `if … return`, TypeScript
+**narrows** it: on line (2) it knows `value` must be a `string`, so `value.trim()` is allowed.
+Delete line (1) and the compiler refuses to build, because `null.trim()` would crash at runtime.
+This habit of checking first so the compiler can narrow is the most important one in TypeScript.
+
+(`Cents` itself is a special "branded" type. Lesson 01 explains it.)
+
+### Modules
+
+```ts
+export function formatCount(…) { … }              // make it importable
+import { formatCount } from "@/shared/format";    // import it elsewhere
+```
+
+Anything not exported is private to its file, which is stricter than Python's `_underscore`
+convention.
+
+> **Try it:** run `node` to open a REPL (like `python`). Type `0.1 + 0.2`, then `0 == "0"`, then
+> `0 === "0"`.
+
+## 5. React components and JSX
+
+A **React component** is a function that returns markup. From
+[`src/app/page.tsx`](../src/app/page.tsx), simplified:
 
 ```tsx
 export default function Home() {
-  const examplePrice = parseUsd("0.30");
+  const examplePrice = Cents.fromUsd("0.30");
   return (
-    <main>
-      ...
-      {sections.map((section) => (
-        <li key={section.name}>...</li>
-      ))}
-      ...
+    <main className="mx-auto max-w-3xl px-4">
+      <ul>
+        {sections.map((section) => (
+          <li key={section.name}>{section.name}</li>
+        ))}
+      </ul>
     </main>
   );
 }
 ```
 
-- A **component** is a function that returns markup (JSX, the HTML-looking syntax in `.tsx`
-  files). `export default` marks it as _the_ thing this file provides, which is what Next looks
-  for.
-- `{ ... }` inside JSX drops back into JavaScript. `sections.map(...)` is the list comprehension
-  `[<li> for section in sections]`.
-- `key` helps React track list items between renders. It must be unique among siblings.
-- `className` (not `class`) holds Tailwind utility classes: `px-4` is horizontal padding, `sm:` means
-  "on screens ≥ small", and `dark:` means "in dark mode".
-- This is a **Server Component** (the App Router default). It runs on the server and sends
-  finished HTML. Anything needing clicks or state will be marked `"use client"`, which comes up in
-  later phases.
+- The HTML-looking syntax is **JSX**, allowed in `.tsx` files. It compiles to function calls.
+- `{ … }` inside JSX switches back to TypeScript. `sections.map((section) => …)` is the list
+  comprehension `[<li> for section in sections]`, and `(section) => …` is a lambda.
+- `key` lets React track list items between renders. It must be unique among siblings.
+- `className` (not `class`) holds **Tailwind** utility classes: `px-4` is horizontal padding,
+  `max-w-3xl` is max width, and `dark:` prefixes apply in dark mode.
+- `export default` marks the one thing this file provides. Next.js looks for it in `page.tsx`.
 
-## 6. Daily commands
+This component runs **on the server** (a _Server Component_, the default) and sends finished
+HTML to the browser. Components that react to clicks run in the browser. Those come later.
 
-```sh
-direnv allow          # once, and again after .envrc changes
-pnpm db:start         # start Postgres (db:stop, db:status, db:reset)
-pnpm dev              # dev server with hot reload → http://localhost:3000
-pnpm typecheck        # generate route types + tsc
-pnpm lint             # eslint
-pnpm format           # prettier --write (format:check to only check)
-pnpm build            # production build (catches more errors than dev)
+## Common mistakes
+
+| Mistake                                              | Why it happens                                          | Avoid it by                                             |
+| ---------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------- |
+| A new file is "missing" when Nix evaluates the flake | flakes only see files **tracked by git**                | `git add` new files the flake needs                     |
+| `psql: could not connect`                            | Postgres isn't running, or direnv isn't loaded          | `pnpm db:start`; check `echo $PGHOST`; `direnv allow`   |
+| Using `==` and getting surprising `true`s            | loose equality converts types                           | always `===`, except `x == null`                        |
+| Following an old Next.js tutorial                    | Next 16 changed APIs (e.g. "middleware" is now "proxy") | read the docs shipped in `node_modules/next/dist/docs/` |
+| `pnpm -s …` fails                                    | pnpm 12 removed the `-s` flag                           | plain `pnpm <script>`                                   |
+
+## Exercises
+
+### 1. Where do tools come from? (warm-up)
+
+Run `which psql` inside the project folder and outside it. Explain the difference.
+
+<details><summary>Solution</summary>
+
+Inside, `psql` resolves to `/nix/store/…-postgresql-17…/bin/psql`, because direnv loaded the
+flake and put that folder first on `PATH`. Outside, it's either your system's `psql` or "not
+found". The project's tools exist only while you're in the project.
+
+</details>
+
+### 2. Watch the socket (warm-up)
+
+Start the database and list `.dev/`, then stop it and list again. What appears and disappears,
+and why can't another computer on your network connect?
+
+<details><summary>Solution</summary>
+
+`.s.PGSQL.5432` (and a `.lock` file) appear while the server runs and vanish when it stops.
+Because `listen_addresses=''`, Postgres opens no network port at all. The socket is a local file,
+reachable only by processes on this machine that can access the folder.
+
+</details>
+
+### 3. Let the compiler catch a bug
+
+In `src/app/page.tsx`, change `Cents.fromUsd("0.30")` to `Cents.fromUsd(42)` and run
+`pnpm typecheck`. Read the error, then explain why catching it here is better than at runtime.
+Undo the change afterwards.
+
+<details><summary>Solution</summary>
+
+```
+error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
 ```
 
-> **pnpm 12 note:** the old `-s` (silent) flag is gone. Use `pnpm <script>`.
+`fromUsd` declares `value: string | null | undefined`. A number would reach `value.trim()`, and
+numbers have no `.trim()`, so the page would crash for every visitor. The compiler rejects it
+before the code ever runs.
 
-Outside a direnv shell (e.g. scripts, CI), prefix a command with `nix develop -c`.
+</details>
 
-## 7. Exercises
+### 4. Write a narrowing function
 
-1. `pnpm db:start`, then `ls -la .dev/` and find the socket file. `pnpm db:stop` and watch it
-   disappear.
-2. In `page.tsx`, change `parseUsd("0.30")` to `parseUsd(null)` and reload. Then try `parseUsd(42)`
-   and run `pnpm typecheck`. Read the error. That's the compiler catching a bug before runtime.
-3. In `money.ts`, delete the `value == null` guard and run `pnpm typecheck`. Why does
-   `value.trim()` fail now?
-4. Add a `phase` 10 "Profile" card to `sections` in `page.tsx`. Notice that the page hot-reloads.
-5. In Node's REPL (`node`), run `0.1 + 0.2`, then `Math.round(0.1 * 100 + 0.2 * 100)`.
+In a scratch `.ts` file, write `label(count: number | null): string` that returns
+`"not counted yet"` for `null` and `"<n> cards"` otherwise. Then try to use `count` before the
+null check and read the error.
+
+<details><summary>Hint</summary>
+
+Check for `null` first and `return` early. After that, TypeScript knows `count` is a number.
+
+</details>
+
+<details><summary>Solution</summary>
+
+```ts
+function label(count: number | null): string {
+  if (count === null) return "not counted yet";
+  return `${count} cards`;
+}
+```
+
+Something like `count.toFixed(0)` before the check fails with
+`'count' is possibly 'null'`. That's strict null checking at work.
+
+</details>
+
+### 5. Why the project stores money as integers
+
+In the Node REPL, evaluate `0.1 + 0.2` and `0.29 * 100`. What would happen if a wallet stored
+dollars as floats and added thousands of prices?
+
+<details><summary>Solution</summary>
+
+`0.30000000000000004` and `28.999999999999996`. Most decimal fractions have no exact binary
+representation, so float sums drift by tiny amounts that eventually show up as wrong balances.
+The project stores **integer cents**, which are exact, and only formats as dollars for display.
+Lesson 01 shows how the type system enforces this.
+
+</details>
+
+### 6. Add to the page (challenge)
+
+Add a "Profile" card for phase 11 to the `sections` list in `src/app/page.tsx` with `pnpm dev`
+running. What happens in the browser when you save?
+
+<details><summary>Solution</summary>
+
+Add `{ name: "Profile", phase: 11, blurb: "Your public stats." }` to the array. The page updates
+without a manual reload, because the dev server's **hot reload** re-renders changed components.
+Because `name` is used as the `key`, it must be unique among the cards.
+
+</details>
+
+## Recap
+
+- **Nix provides programs, pnpm provides libraries.** direnv switches both on when you enter the
+  folder.
+- The database is **project-local and socket-only**. Its location comes from env vars, never
+  hardcoded.
+- Next.js **routes are folders**. `page.tsx` is a page, and `route.ts` is an API endpoint.
+- TypeScript types are **checked, then erased**. `strict` mode makes `null` explicit.
+- **Narrow before use:** check for `null`/`undefined` first, and the compiler lets you proceed.
+- Use `===` always, `== null` as the one exception, and `const` by default.
+
+## Further reading
+
+- [ADR 0010: Nix flake + direnv](../docs/adr/0010-nix-dev-environment.md)
+- TypeScript Handbook, "Everyday Types" and "Narrowing":
+  <https://www.typescriptlang.org/docs/handbook/2/everyday-types.html>
+- Next.js docs for this exact version: `node_modules/next/dist/docs/01-app/01-getting-started/`

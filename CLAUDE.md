@@ -4,8 +4,11 @@
 
 Self-hosted web app simulating an MTG collection: buy/open virtual sealed product, singles store,
 wallet ledger, deck builder (owned cards only), trades. Also a TypeScript learning project for a
-Python/SQL developer: `lessons/NN-*.md` has one lesson per build phase. Update the relevant lesson
-when finishing a phase, and commit at the end of each lesson.
+Python/SQL developer: `lessons/NN-*.md` has one lesson per build phase. Lessons **teach concepts**
+(objectives → concepts with Python comparisons → mistakes → exercises with verified solutions →
+recap), following `lessons/README.md`. They are not changelogs. Write or update the phase's lesson
+when finishing it, verify every exercise solution compiles and passes, and commit at the end of
+each lesson.
 
 ## Architecture: read before writing code
 
