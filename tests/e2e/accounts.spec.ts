@@ -9,7 +9,7 @@ test.describe.configure({ mode: "serial" });
 
 /** Admin pages live behind the "Admin" link, in their own menu. */
 async function openAdminPage(page: Page, name: string) {
-  await page.locator(`header a[href="/admin"]`).click(); // not the account link, also "Admin"
+  await page.locator(`header a[href="/admin"]:visible`).click(); // not the account link, also "Admin"
   await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name }).click();
 }
 
@@ -182,7 +182,7 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
   await expect(pack.getByText(/waiting in your inventory/)).toBeVisible();
   await expect(page.getByTitle("Your wallet")).toHaveText("$44.51");
 
-  await page.getByRole("link", { name: "Inventory" }).click();
+  await page.getByRole("link", { name: "Inventory", exact: true }).click();
   await page.getByRole("button", { name: "Open Bloomburrow Play Booster Pack" }).click();
 
   // The opener (design doc 08), with "reduce motion" on so it runs without waiting on animations.
@@ -242,7 +242,7 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await page.getByLabel("Password").fill("secret-password");
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await page.getByRole("link", { name: "Decks" }).click();
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
   await page.getByLabel("Deck name").fill("Beza's Bounty");
   await page.getByLabel("Format").selectOption("commander");
   await page.getByRole("button", { name: "Create deck" }).click();
@@ -273,7 +273,7 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
     "Commander\n1 Beza, the Bounding Spring\n\nDeck\n99 Plains",
   );
 
-  await page.getByRole("link", { name: "Decks" }).first().click();
+  await page.getByRole("link", { name: "Decks", exact: true }).first().click();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Beza's Bounty" }).getByText("short 1"),
   ).toBeVisible();
@@ -303,7 +303,7 @@ test("a new player offers money for one of the admin's cards, and the admin acce
   await rin.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
   await rin.goto(`/register?invite=${inviteCode}`);
   await register(rin, "rin", "Rin");
-  await rin.getByRole("link", { name: "Trades" }).click();
+  await rin.getByRole("link", { name: "Trades", exact: true }).click();
   await rin.getByRole("link", { name: "New trade" }).click();
   await rin.getByRole("link", { name: "Admin" }).click();
   await rin.getByLabel("Search their cards").fill("Plains");
@@ -322,9 +322,9 @@ test("a new player offers money for one of the admin's cards, and the admin acce
 
   // The admin sees the badge, opens the trade and accepts it.
   await page.goto("/");
-  await expect(page.getByTitle("1 waiting for you")).toBeVisible();
+  await expect(page.locator(`[title="1 waiting for you"]:visible`)).toBeVisible();
   const balanceBefore = await page.getByTitle("Your wallet").innerText();
-  await page.getByRole("link", { name: /^Trades/ }).click();
+  await page.getByRole("link", { name: /^Trades\s*\d*$/ }).click();
   await page.getByRole("link", { name: "From Rin" }).click();
   await page.getByRole("button", { name: "Accept" }).click();
   await expect(page.getByText(/^accepted ·/)).toBeVisible();
@@ -335,4 +335,46 @@ test("a new player offers money for one of the admin's cards, and the admin acce
   await expect(rin.getByText(/1 cards \(1 different\)/)).toBeVisible();
   await expect(rin.getByTitle("Your wallet")).toHaveText("$45.00");
   await rinContext.close();
+});
+
+test("the home page shows recent activity, and the collection downloads as a file", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  // Earlier tests bought a pack and traded; the feed shows both, without prices for purchases.
+  await expect(page.getByText("Admin bought Bloomburrow Play Booster Pack")).toBeVisible();
+  await expect(page.getByText(/Admin and Rin traded 1 card and some money/)).toBeVisible();
+
+  await page.getByRole("link", { name: "Collection", exact: true }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Moxfield CSV" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("collection-moxfield.csv");
+  const text = await (await file.createReadStream()).toArray();
+  expect(Buffer.concat(text).toString("utf8")).toMatch(/^Count,Tradelist Count,Name,Edition/);
+});
+
+test("on a phone, the main menu folds into a Menu button", async ({ browser }) => {
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await phone.newPage();
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(page.getByRole("link", { name: "Decks", exact: true })).toBeHidden();
+  await page.getByText("Menu", { exact: true }).click();
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Decks" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Decks", exact: true })).toBeHidden(); // closed after navigating
+  await phone.close();
 });

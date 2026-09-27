@@ -16,12 +16,13 @@
     "format:check": "prettier --check .",
     "test": "vitest --project unit",
     "test:int": "vitest run --project integration",
-    "test:all": "vitest run",
+    "test:all": "vitest run --project unit --project integration",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && vitest run --project unit",
     "worker": "tsx worker/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx worker/index.ts migrate",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:remote": "vitest run --project remote"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.6",

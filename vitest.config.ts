@@ -13,7 +13,7 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["src/**/*.test.ts", "worker/**/*.test.ts"],
-          exclude: ["**/*.int.test.ts"],
+          exclude: ["**/*.int.test.ts", "**/*.remote.test.ts"],
         },
       },
       {
@@ -30,6 +30,15 @@ export default defineConfig({
           globalSetup: ["tests/setup/integration.ts"],
           env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
           fileParallelism: false,
+        },
+      },
+      {
+        // Calls the real MTGJSON and Scryfall. Only `pnpm test:remote` runs it: automated tests
+        // never touch the network (docs/architecture/testing.md).
+        extends: true,
+        test: {
+          name: "remote",
+          include: ["src/**/*.remote.test.ts"],
         },
       },
     ],

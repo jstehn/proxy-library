@@ -6,7 +6,7 @@ import boundaries from "eslint-plugin-boundaries";
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
 const SOURCE = ["src/**/*.{ts,tsx}", "worker/**/*.ts"];
-const TESTS = ["**/*.test.ts", "**/*.int.test.ts", "**/*.contract.ts"];
+const TESTS = ["**/*.test.ts", "**/*.int.test.ts", "**/*.remote.test.ts", "**/*.contract.ts"];
 
 // --- Elements: what kind of architectural unit each file belongs to --------------------
 const elements = [

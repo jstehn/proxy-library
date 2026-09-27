@@ -3,7 +3,19 @@ import { tradesWaitingForYou } from "@/modules/trades";
 import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { PhoneMenu } from "./_components/phone-menu";
 import { signOutAction } from "./actions";
+
+const MAIN_LINKS = [
+  ["/store", "Store"],
+  ["/singles", "Singles"],
+  ["/inventory", "Inventory"],
+  ["/collection", "Collection"],
+  ["/decks", "Decks"],
+  ["/trades", "Trades"],
+  ["/sets", "Sets"],
+  ["/activity", "Activity"],
+] as const;
 
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
 export async function SiteHeader() {
@@ -13,22 +25,15 @@ export async function SiteHeader() {
   const waitingTrades =
     actor === null ? 0 : await tradesWaitingForYou(getContainer().db, actor.userId);
 
-  return (
-    <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
-        <Link href="/" className="font-semibold">
-          TCG Virtual Library
-        </Link>
-        {actor !== null && (
-          <>
-            <Link href="/store">Store</Link>
-            <Link href="/singles">Singles</Link>
-            <Link href="/inventory">Inventory</Link>
-            <Link href="/collection">Collection</Link>
-            <Link href="/decks">Decks</Link>
-            <Link href="/trades">
-              Trades
-              {waitingTrades > 0 && (
+  // The same links in two layouts: inline on larger screens, in the "Menu" on phones.
+  const links =
+    actor === null
+      ? null
+      : [
+          ...MAIN_LINKS.map(([href, label]) => (
+            <Link key={href} href={href}>
+              {label}
+              {href === "/trades" && waitingTrades > 0 && (
                 <span
                   className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white"
                   title={`${waitingTrades} waiting for you`}
@@ -37,10 +42,25 @@ export async function SiteHeader() {
                 </span>
               )}
             </Link>
-            <Link href="/sets">Sets</Link>
-          </>
+          )),
+          ...(actor.isAdmin
+            ? [
+                <Link key="/admin" href="/admin">
+                  Admin
+                </Link>,
+              ]
+            : []),
+        ];
+
+  return (
+    <header className="border-b border-zinc-200 dark:border-zinc-800">
+      <nav className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm">
+        <Link href="/" className="font-semibold">
+          TCG Virtual Library
+        </Link>
+        {links !== null && (
+          <div className="hidden flex-wrap items-center gap-x-3 md:flex">{links}</div>
         )}
-        {actor !== null && actor.isAdmin && <Link href="/admin">Admin</Link>}
         <span className="flex-1" />
         {actor === null ? (
           <Link href="/sign-in">Sign in</Link>
@@ -51,14 +71,25 @@ export async function SiteHeader() {
                 {Cents.format(balance)}
               </Link>
             )}
-            <Link href="/account/password" title="Change password">
-              {actor.displayName}
-            </Link>
-            <form action={signOutAction}>
-              <button type="submit" className="underline">
-                Sign out
-              </button>
-            </form>
+            <div className="hidden items-center gap-x-3 md:flex">
+              <Link href="/account/password" title="Change password">
+                {actor.displayName}
+              </Link>
+              <form action={signOutAction}>
+                <button type="submit" className="underline">
+                  Sign out
+                </button>
+              </form>
+            </div>
+            <PhoneMenu>
+              {links}
+              <Link href="/account/password">{actor.displayName}: change password</Link>
+              <form action={signOutAction} className="px-2 py-1.5">
+                <button type="submit" className="underline">
+                  Sign out
+                </button>
+              </form>
+            </PhoneMenu>
           </>
         )}
       </nav>
