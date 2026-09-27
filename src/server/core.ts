@@ -9,6 +9,12 @@ import {
   drizzleInviteRepository,
   drizzlePlayerRepository,
 } from "@/modules/accounts/infrastructure";
+import { makeWallet } from "@/modules/wallet";
+import {
+  drizzleEconomySettingsRepository,
+  drizzlePlayerDirectory,
+  drizzleWalletRepository,
+} from "@/modules/wallet/infrastructure";
 import type { Config } from "@/shared/config";
 import {
   createDatabase,
@@ -31,6 +37,9 @@ export function buildCore(config: Config) {
       system: makeSystemService(transaction),
       players: drizzlePlayerRepository(transaction),
       invites: drizzleInviteRepository(transaction),
+      wallets: drizzleWalletRepository(transaction),
+      economy: drizzleEconomySettingsRepository(transaction),
+      playerDirectory: drizzlePlayerDirectory(transaction),
     };
   }
 
@@ -43,12 +52,15 @@ export function buildCore(config: Config) {
     clock,
   });
 
+  const wallet = makeWallet({ unitOfWork, clock });
+
   return {
     config,
     db,
     clock,
     unitOfWork,
     accounts,
+    wallet,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

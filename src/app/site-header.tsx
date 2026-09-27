@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
+import { Cents } from "@/shared/kernel";
 import { signOutAction } from "./actions";
 
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
 export async function SiteHeader() {
   const actor = await getCurrentActor();
+  // Showing the balance also pays any allowance that has come due (design doc 03, section 5).
+  const balance = actor === null ? null : await getContainer().wallet.refreshWallet(actor.userId);
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
@@ -16,6 +20,7 @@ export async function SiteHeader() {
           <>
             <Link href="/admin/players">Players</Link>
             <Link href="/admin/invites">Invites</Link>
+            <Link href="/admin/economy">Economy</Link>
           </>
         )}
         <span className="flex-1" />
@@ -23,6 +28,11 @@ export async function SiteHeader() {
           <Link href="/sign-in">Sign in</Link>
         ) : (
           <>
+            {balance !== null && (
+              <Link href="/wallet" className="font-medium tabular-nums" title="Your wallet">
+                {Cents.format(balance)}
+              </Link>
+            )}
             <Link href="/account/password" title="Change password">
               {actor.displayName}
             </Link>

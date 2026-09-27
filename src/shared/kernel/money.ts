@@ -72,6 +72,15 @@ export const Cents = {
     return Cents.of(Math.floor((amount * rateBasisPoints) / BASIS_POINTS_PER_WHOLE));
   },
 
+  /** 1234 -> "12.34", 5 -> "0.05" (no "$"): for putting an amount back into a text field. */
+  toPlainDollars(amount: Cents): string {
+    const sign = amount < 0 ? "-" : "";
+    const absolute = Math.abs(amount);
+    const dollars = Math.floor(absolute / 100);
+    const cents = String(absolute % 100).padStart(2, "0");
+    return `${sign}${dollars}.${cents}`;
+  },
+
   /** 1234 -> "$12.34", -500 -> "-$5.00" */
   format(amount: Cents): string {
     return usd.format(amount / 100);

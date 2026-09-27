@@ -1,14 +1,21 @@
 "use client";
 import { useActionState } from "react";
 import type { PlayerListItem } from "@/modules/accounts";
+import { MoneyForm } from "./money-form";
 import { Alert, SubmitButton } from "@/ui/form";
 import { playerAction, type PlayerActionState } from "./actions";
 
 const initialState: PlayerActionState = { message: null, tone: "success", temporaryPassword: null };
 
 /** One player in the admin list, with a button for each thing an admin can change. */
-export function PlayerRow(props: { player: PlayerListItem; isYou: boolean }) {
-  const { player, isYou } = props;
+type PlayerRowProps = {
+  player: PlayerListItem;
+  isYou: boolean;
+  money: { balance: string; spent: string; selfFunded: string };
+};
+
+export function PlayerRow(props: PlayerRowProps) {
+  const { player, isYou, money } = props;
   const [state, formAction] = useActionState(playerAction, initialState);
   const shared = { formAction, userId: player.userId }; // passed to every ActionButton
 
@@ -22,6 +29,13 @@ export function PlayerRow(props: { player: PlayerListItem; isYou: boolean }) {
         {player.canSelfFund && <Badge>self-funding</Badge>}
         {player.isDisabled && <Badge tone="danger">disabled</Badge>}
       </div>
+
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <MoneyFigure label="Balance" value={money.balance} />
+        <MoneyFigure label="Spent" value={money.spent} />
+        <MoneyFigure label="Self-funded" value={money.selfFunded} />
+      </dl>
+      <MoneyForm userId={player.userId} username={player.username} />
 
       <div className="flex flex-wrap gap-2">
         {player.isAdmin ? (
@@ -72,6 +86,15 @@ function ActionButton(props: ActionButtonProps) {
         {props.label}
       </SubmitButton>
     </form>
+  );
+}
+
+function MoneyFigure(props: { label: string; value: string }) {
+  return (
+    <div className="flex gap-1">
+      <dt className="text-zinc-500">{props.label}</dt>
+      <dd className="font-medium tabular-nums">{props.value}</dd>
+    </div>
   );
 }
 

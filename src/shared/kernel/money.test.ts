@@ -105,3 +105,16 @@ describe("Cents.applyRate", () => {
     expect(() => Cents.applyRate(Cents.of(100), rate)).toThrow(RangeError);
   });
 });
+
+describe("Cents.toPlainDollars", () => {
+  it("writes an amount for a text field, and round-trips through fromUsd", () => {
+    expect(Cents.toPlainDollars(Cents.of(2000))).toBe("20.00");
+    expect(Cents.toPlainDollars(Cents.of(5))).toBe("0.05");
+    expect(Cents.toPlainDollars(Cents.of(-1250))).toBe("-12.50");
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 100_000_000 }), (amount) => {
+        expect(Cents.fromUsd(Cents.toPlainDollars(Cents.of(amount)))).toBe(amount);
+      }),
+    );
+  });
+});

@@ -1,7 +1,7 @@
 # Design: Wallet
 
 - **Phase:** 3
-- **Status:** **Approved** 2026-09-27 (open questions accepted as proposed)
+- **Status:** **Implemented** 2026-09-27 (approved with all proposals). See section 15 for how the build differed.
 - **Related ADRs:** 0003 (Result), 0004 (append-only ledger), 0005 (unit of work),
   0008 (injected clock)
 
@@ -302,3 +302,24 @@ asking another a question through a port.
    rare case.
 3. History length on `/wallet`: **latest 100 entries** for now (paging later if needed).
 4. Default payday: **Monday 00:00 UTC**. Change it on the settings page to your local time.
+
+## 15. Implementation notes (what changed while building)
+
+- **Opening a wallet exactly once** uses `insert … on conflict do nothing returning`, so only the
+  request that actually inserted the row pays the starting grant. Locking a row that doesn't exist
+  yet isn't possible, which is why the port has `openAccountIfMissing` and `lockAccount`
+  instead of a single "lock or create".
+- **Lock first, then read the settings**, so a settings change that finished while a refresh
+  waited for the lock is already visible to it.
+- **`refreshAllWallets` also opens wallets** for players who have never visited, so the admin
+  Players page shows everyone's starting grant immediately.
+- **`economy_settings.updated_by` has no foreign key.** With one, `TRUNCATE players CASCADE`
+  (as tests do) would also delete the single settings row.
+- **Kernel additions:** `Cents.applyRate` (the rounding rule) and `Cents.toPlainDollars`
+  ("20.00" for text fields, round-trip tested against `Cents.fromUsd`, which now also accepts a
+  leading `$`).
+- **Architecture rule refined:** infrastructure may import another module's public `index.ts`
+  (for shared types like `Actor`), recorded in conventions.md.
+- **Evidence for the row lock:** with `FOR UPDATE` removed from `lockAccount`, the "ten
+  simultaneous visits after three paydays" test failed 5 out of 5 runs, paying up to **24**
+  allowances instead of 3. With the lock it passes every time.

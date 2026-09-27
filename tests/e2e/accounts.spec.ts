@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 // The whole accounts journey from design doc 02, section 12, in a real browser:
 // first visitor becomes admin → creates an invite → a second player registers with it →
-// the admin disables them → they can no longer get in.
+// the admin gives and takes money → the admin disables them → they can no longer get in.
 
 async function register(page: Page, username: string, displayName: string) {
   await page.getByLabel("Username").fill(username);
@@ -11,7 +11,10 @@ async function register(page: Page, username: string, displayName: string) {
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
-test("first admin invites a player, then disables them", async ({ page, browser }) => {
+test("first admin invites a player, manages their money, then disables them", async ({
+  page,
+  browser,
+}) => {
   // Signed-out visitors are sent to sign in.
   await page.goto("/");
   await expect(page).toHaveURL(/\/sign-in$/);
@@ -39,6 +42,36 @@ test("first admin invites a player, then disables them", async ({ page, browser 
   // The invite now shows as used.
   await page.reload();
   await expect(page.getByText("used by @jack")).toBeVisible();
+
+  // --- Wallet (design doc 03) ---
+  // Jack's wallet opened with the $50 starting grant, shown in his header.
+  await expect(player.getByRole("link", { name: "$50.00" })).toBeVisible();
+
+  // The admin gives Jack $25, then takes $10 back, each with a note.
+  await page.getByRole("link", { name: "Players" }).click();
+  const jackMoney = page.getByRole("listitem").filter({ hasText: "@jack" });
+  await jackMoney.getByLabel("Amount for @jack").fill("25");
+  await jackMoney.getByLabel("Note for @jack").fill("Won Friday's draft");
+  await jackMoney.getByRole("button", { name: "Give" }).click();
+  await expect(jackMoney.getByText("Gave $25.00.")).toBeVisible();
+
+  await jackMoney.getByLabel("Amount for @jack").fill("10.00");
+  await jackMoney.getByLabel("Note for @jack").fill("Typo in last grant");
+  await jackMoney.getByRole("button", { name: "Take away" }).click();
+  await expect(jackMoney.getByText("Took away $10.00.")).toBeVisible();
+
+  // A balance can never go below $0.
+  await jackMoney.getByLabel("Amount for @jack").fill("1000");
+  await jackMoney.getByLabel("Note for @jack").fill("Too much");
+  await jackMoney.getByRole("button", { name: "Take away" }).click();
+  await expect(jackMoney.getByText("They only have $65.00")).toBeVisible();
+
+  // Jack sees his balance and the history with the notes.
+  await player.goto("/wallet");
+  await expect(player.getByRole("heading", { name: "Wallet" })).toBeVisible();
+  await expect(player.getByText("$65.00").first()).toBeVisible();
+  await expect(player.getByText("Won Friday's draft")).toBeVisible();
+  await expect(player.getByText("Typo in last grant")).toBeVisible();
 
   // The admin disables Jack.
   await page.getByRole("link", { name: "Players" }).click();
