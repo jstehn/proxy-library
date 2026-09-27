@@ -47,7 +47,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | ✅ Done |
 | 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | ✅ Done |
 | 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | ✅ Done |
-| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —       |
+| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | In progress |
 | 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | —       |
 
 ### Why this order (changed from the original plan)

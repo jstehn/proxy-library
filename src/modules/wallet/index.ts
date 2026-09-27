@@ -5,7 +5,13 @@ export type {
   GrantMoneyError,
 } from "./application/manage-money";
 export { makeWallet } from "./application/make-wallet";
-export { receive, spend, type ReceiveInput, type SpendInput } from "./application/payments";
+export {
+  lockWallets,
+  receive,
+  spend,
+  type ReceiveInput,
+  type SpendInput,
+} from "./application/payments";
 export type { Wallet } from "./application/make-wallet";
 export type {
   EconomySettingsRepository,

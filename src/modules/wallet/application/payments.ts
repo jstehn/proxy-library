@@ -11,7 +11,7 @@ import { bringUpToDate } from "./refresh";
 export type SpendInput = Readonly<{
   userId: UserId;
   amount: Cents;
-  kind: "purchase_sealed" | "purchase_single";
+  kind: "purchase_sealed" | "purchase_single" | "trade_out";
   note: string | null;
   ref: string; // what it paid for, e.g. "store:42"
   now: Date;
@@ -43,13 +43,13 @@ export async function spend(
 export type ReceiveInput = Readonly<{
   userId: UserId;
   amount: Cents;
-  kind: "sellback";
+  kind: "sellback" | "trade_in";
   note: string | null;
   ref: string;
   now: Date;
 }>;
 
-/** Pays money into a player's wallet (selling a card to the store). */
+/** Pays money into a player's wallet (selling a card to the store, receiving money in a trade). */
 export async function receive(services: WalletServices, input: ReceiveInput): Promise<LedgerEntry> {
   await bringUpToDate(services, input.userId, input.now);
   const entry = ledgerEntry({
@@ -62,4 +62,18 @@ export async function receive(services: WalletServices, input: ReceiveInput): Pr
   });
   await services.wallets.appendEntries([entry]);
   return entry;
+}
+
+/**
+ * Brings several wallets up to date and locks them, always in the same order (by user id). Two
+ * transactions that each need both of two wallets then queue up instead of each holding one lock
+ * and waiting forever for the other (a deadlock). Used by trades (design doc 10, rule 5).
+ */
+export async function lockWallets(
+  services: WalletServices,
+  userIds: readonly UserId[],
+  now: Date,
+): Promise<void> {
+  const inOrder = [...new Set(userIds)].sort();
+  for (const userId of inOrder) await bringUpToDate(services, userId, now);
 }

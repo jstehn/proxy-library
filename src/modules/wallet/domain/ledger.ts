@@ -1,7 +1,7 @@
 import { Cents, err, ok, type Result, type UserId } from "@/shared/kernel";
 import type { AmountInvalid, InsufficientFunds, NoteInvalid } from "./errors";
 
-/** Why money moved. (Phase 10 adds trades.) */
+/** Why money moved. */
 export type LedgerKind =
   | "starting_grant"
   | "allowance"
@@ -10,7 +10,9 @@ export type LedgerKind =
   | "self_fund"
   | "purchase_sealed" // buying sealed product from the store (Phase 6)
   | "purchase_single" // buying a single card from the store (Phase 7)
-  | "sellback"; // selling a single card to the store (Phase 7)
+  | "sellback" // selling a single card to the store (Phase 7)
+  | "trade_in" // money received in a trade (Phase 10)
+  | "trade_out"; // money given in a trade (Phase 10)
 
 /** Each kind goes one way only (design doc 03, rule 4). The database checks this too. */
 export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
@@ -22,6 +24,8 @@ export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
   purchase_sealed: "out",
   purchase_single: "out",
   sellback: "in",
+  trade_in: "in",
+  trade_out: "out",
 };
 
 /** One change to one player's money. Entries are only ever added, never changed (rule 1). */

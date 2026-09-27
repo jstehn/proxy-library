@@ -20,6 +20,10 @@ export function ledgerKindLabel(kind: LedgerKind): string {
       return "Bought a single";
     case "sellback":
       return "Sold to the store";
+    case "trade_in":
+      return "Received in a trade";
+    case "trade_out":
+      return "Given in a trade";
     default:
       return assertNever(kind);
   }

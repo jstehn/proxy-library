@@ -48,12 +48,12 @@ export const ledgerEntries = pgTable(
     check("ledger_entries_amount_nonzero", sql`${table.amountCents} <> 0`),
     check(
       "ledger_entries_kind_known",
-      sql`${table.kind} in ('starting_grant', 'allowance', 'grant', 'correction', 'self_fund', 'purchase_sealed', 'purchase_single', 'sellback')`,
+      sql`${table.kind} in ('starting_grant', 'allowance', 'grant', 'correction', 'self_fund', 'purchase_sealed', 'purchase_single', 'sellback', 'trade_in', 'trade_out')`,
     ),
-    // Rule 4: corrections and purchases take money away; every other kind adds it.
+    // Rule 4: corrections, purchases and money given in trades take money away; every other kind adds it.
     check(
       "ledger_entries_direction",
-      sql`(${table.kind} in ('correction', 'purchase_sealed', 'purchase_single')) = (${table.amountCents} < 0)`,
+      sql`(${table.kind} in ('correction', 'purchase_sealed', 'purchase_single', 'trade_out')) = (${table.amountCents} < 0)`,
     ),
   ],
 );
