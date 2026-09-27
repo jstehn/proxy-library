@@ -122,6 +122,52 @@ The last line reads: "a `Result` is **either** an `Ok<T>` **or** an `Err<E>`." I
 Result<Cents, { kind: "InsufficientFunds"; balance: Cents; required: Cents }>;
 ```
 
+### Reading a function that returns a Result
+
+```ts
+type QuantityError = { kind: "NotANumber"; input: string } | { kind: "Negative"; value: number };
+
+function parseQuantity(input: string): Result<number, QuantityError> {
+  const value = Number(input);
+  if (input.trim() === "" || !Number.isInteger(value)) return err({ kind: "NotANumber", input });
+  if (value < 0) return err({ kind: "Negative", value });
+  return ok(value);
+}
+```
+
+The first line has three parts: the name, what it **takes** (`input: string`), and, after the `:`
+that follows the `)`, what it **returns**. That return type is Python's `->`:
+`def parse_quantity(input: str) -> Result[int, QuantityError]`.
+
+`Result<number, QuantityError>` doesn't create anything for the function to use. It **fills in**
+`Result`'s two placeholders, and substituting them shows exactly what the function promises to
+return:
+
+```ts
+Result<number, QuantityError>
+  = Ok<number> | Err<QuantityError>
+  = { ok: true; value: number } | { ok: false; error: QuantityError }
+```
+
+`ok(...)` and `err(...)` are just shortcuts for building those two shapes. Without them, the
+function reads:
+
+```ts
+function parseQuantity(input: string): Result<number, QuantityError> {
+  const value = Number(input);
+  if (input.trim() === "" || !Number.isInteger(value)) {
+    return { ok: false, error: { kind: "NotANumber", input: input } }; // failure shape
+  }
+  if (value < 0) {
+    return { ok: false, error: { kind: "Negative", value: value } }; // failure shape
+  }
+  return { ok: true, value: value }; // success shape
+}
+```
+
+The compiler checks every `return` against the promised type. A misspelled `kind` or a
+`value: "four"` is a compile error.
+
 ### Why this beats exceptions for expected failures
 
 The `ok` field is a **discriminant**: a literal-typed field the compiler uses to tell the two
