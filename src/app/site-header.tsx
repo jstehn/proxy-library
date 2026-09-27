@@ -22,6 +22,7 @@ export async function SiteHeader() {
             <Link href="/singles">Singles</Link>
             <Link href="/inventory">Inventory</Link>
             <Link href="/collection">Collection</Link>
+            <Link href="/decks">Decks</Link>
             <Link href="/sets">Sets</Link>
           </>
         )}

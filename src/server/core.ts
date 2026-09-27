@@ -19,6 +19,8 @@ import {
   httpScryfallGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
+import { makeDecks } from "@/modules/decks";
+import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
@@ -72,6 +74,8 @@ export function buildCore(config: Config) {
       storeLedger: drizzleStoreLedger(transaction),
       marketPrices: drizzleMarketPrices(transaction),
       storeSettings: drizzleStoreSettings(transaction),
+      decks: drizzleDeckRepository(transaction),
+      cards: drizzleCardLookup(transaction),
     };
   }
 
@@ -109,6 +113,7 @@ export function buildCore(config: Config) {
   const packs = makePacks({ unitOfWork, seeds });
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
+  const decks = makeDecks({ unitOfWork, clock });
 
   return {
     config,
@@ -121,6 +126,7 @@ export function buildCore(config: Config) {
     packs,
     inventory,
     store,
+    decks,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

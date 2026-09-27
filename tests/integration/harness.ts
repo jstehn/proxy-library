@@ -10,6 +10,7 @@ import {
   fixtureScryfallGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
+import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import {
@@ -47,6 +48,8 @@ export function servicesFor(transaction: DbExecutor) {
     storeLedger: drizzleStoreLedger(transaction),
     marketPrices: drizzleMarketPrices(transaction),
     storeSettings: drizzleStoreSettings(transaction),
+    decks: drizzleDeckRepository(transaction),
+    cards: drizzleCardLookup(transaction),
   };
 }
 

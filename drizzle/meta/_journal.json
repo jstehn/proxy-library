@@ -71,6 +71,13 @@
       "when": 1790513629161,
       "tag": "0009_price_snapshot_day_index",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790541629885,
+      "tag": "0010_decks",
+      "breakpoints": true
     }
   ]
 }

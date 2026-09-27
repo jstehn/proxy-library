@@ -226,3 +226,41 @@ test("the admin sorts their collection, opens a card, and sells a copy to the st
   await expect(page.getByTitle("Your wallet")).not.toHaveText(balanceBefore);
   await expect(page.getByText(/Your store history for this card/)).toBeVisible();
 });
+
+test("the admin builds a Commander deck from a pasted list and exports it", async ({ page }) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks" }).click();
+  await page.getByLabel("Deck name").fill("Beza's Bounty");
+  await page.getByLabel("Format").selectOption("commander");
+  await page.getByRole("button", { name: "Create deck" }).click();
+  await expect(page.getByRole("heading", { name: "Beza's Bounty" })).toBeVisible();
+
+  await page
+    .getByLabel("Deck list")
+    .fill("Commander\n1 Beza, the Bounding Spring\nDeck\n98 Plains\n1 Card That Does Not Exist");
+  await page.getByRole("button", { name: "Add these cards" }).click();
+  await expect(
+    page.getByText(/Added 99 cards\. Not in the catalog: Card That Does Not Exist\./),
+  ).toBeVisible();
+
+  // 99 cards (needs 100), and Beza isn't owned: both reported, neither blocks building.
+  const problems = page.getByRole("region", { name: "Problems" });
+  await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
+  await expect(problems.getByText(/You own 0 Beza, the Bounding Spring/)).toBeVisible();
+
+  await page.getByRole("link", { name: "Export" }).click();
+  await expect(page.getByLabel("Deck list, names only")).toHaveValue(
+    "Commander\n1 Beza, the Bounding Spring\n\nDeck\n98 Plains",
+  );
+
+  await page.getByRole("link", { name: "Decks" }).first().click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Beza's Bounty" }).getByText("short 1"),
+  ).toBeVisible();
+});
