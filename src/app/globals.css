@@ -24,3 +24,116 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ---- Opening a pack (design doc 08) ------------------------------------------------------ */
+
+/* A card that turns over: the back and the front are two faces of one rotating element. */
+.flip-card {
+  perspective: 1000px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease-out;
+}
+.flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+}
+.flip-front {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+@keyframes tear-strip {
+  to {
+    transform: translate(40%, -140%) rotate(-14deg);
+    opacity: 0;
+  }
+}
+@keyframes pack-away {
+  to {
+    transform: translateY(40px) scale(0.9);
+    opacity: 0;
+  }
+}
+@keyframes deal {
+  from {
+    transform: translateY(-60px) scale(0.85) rotate(-4deg);
+    opacity: 0;
+  }
+}
+@keyframes suspense-shake {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1.03);
+  }
+  25% {
+    transform: rotate(-2deg) scale(1.05);
+  }
+  75% {
+    transform: rotate(2deg) scale(1.05);
+  }
+}
+@keyframes foil-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+.animate-tear-strip {
+  animation: tear-strip 0.6s ease-in forwards;
+}
+.animate-pack-away {
+  animation: pack-away 0.5s ease-in 0.35s forwards;
+}
+.animate-deal {
+  animation: deal 0.45s ease-out backwards;
+}
+.animate-suspense {
+  animation: suspense-shake 0.18s linear infinite;
+}
+.glow-rare {
+  box-shadow:
+    0 0 0 3px rgb(245 158 11 / 0.9),
+    0 0 28px 6px rgb(245 158 11 / 0.55);
+}
+.glow-mythic {
+  box-shadow:
+    0 0 0 3px rgb(234 88 12 / 0.95),
+    0 0 40px 10px rgb(234 88 12 / 0.6);
+}
+/* The moving rainbow on foils: a wide gradient slid sideways, blended over the art. */
+.foil-shimmer {
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgb(255 0 200 / 0.28) 32%,
+    rgb(0 220 255 / 0.3) 44%,
+    rgb(255 240 0 / 0.28) 56%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  mix-blend-mode: color-dodge;
+  animation: foil-shimmer 2.8s linear infinite;
+}
+
+/* Rule 5: with "reduce motion" on, cards appear without flipping, tearing or shaking. */
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner {
+    transition: none;
+  }
+  .animate-tear-strip,
+  .animate-pack-away,
+  .animate-deal,
+  .animate-suspense,
+  .foil-shimmer {
+    animation: none;
+  }
+}

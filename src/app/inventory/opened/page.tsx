@@ -2,11 +2,16 @@ import Link from "next/link";
 import { CardTile } from "@/app/_components/card-tile";
 import { printingCards, type PrintingCard } from "@/modules/catalog";
 import { openingView, type OpenedCard, type OpeningView } from "@/modules/inventory";
+import { findSet } from "@/modules/catalog";
+import { storePage } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
+import type { OpenerPack } from "@/ui/opening/machine";
+import { PackOpener } from "@/ui/opening/pack-opener";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
+import { productLabel } from "../../store/labels";
 
 // What one or more openings produced: packs in reveal order, decks, and what boxes unpacked into.
 // (Phase 8 turns a pack into an animated reveal.)
@@ -22,7 +27,9 @@ function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
   const actor = await requireActor();
   const { db } = getContainer();
-  const raw = (await props.searchParams).items;
+  const searchParams = await props.searchParams;
+  const raw = searchParams.items;
+  const animate = searchParams.animate === "1";
   const ids = (typeof raw === "string" ? raw.split(",") : [])
     .map(Number)
     .filter((id) => Number.isSafeInteger(id) && id > 0)
@@ -42,10 +49,8 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     ),
   );
 
-  return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
-      <KeyruneStylesheet />
-      <ManaStylesheet />
+  const results = (
+    <>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Opened</h1>
         {openings.length === 0 ? (
@@ -89,8 +94,66 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           )}
         </section>
       ))}
+    </>
+  );
+
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
+      <KeyruneStylesheet />
+      <ManaStylesheet />
+      {animate && packs.length > 0 ? (
+        <PackOpener packs={await openerPacks(packs, cards)}>{results}</PackOpener>
+      ) : (
+        results
+      )}
     </main>
   );
+}
+
+/**
+ * The packs as the opener needs them. The art on the pack is the set's featured card, never a
+ * card from inside it, so the front of the pack gives nothing away.
+ */
+async function openerPacks(
+  packs: readonly OpeningView[],
+  cards: Map<string, PrintingCard>,
+): Promise<OpenerPack[]> {
+  const { db } = getContainer();
+  const setCodes = [...new Set(packs.flatMap((pack) => (pack.setCode ? [pack.setCode] : [])))];
+  const sets = new Map(
+    await Promise.all(
+      setCodes.map(async (code) => {
+        const [set, page] = await Promise.all([findSet(db, code), storePage(db, code)]);
+        return [code, { set, featured: page?.set.featured ?? null }] as const;
+      }),
+    ),
+  );
+
+  return packs.map((pack) => {
+    const info = pack.setCode === null ? undefined : sets.get(pack.setCode);
+    const setName = info?.set?.name ?? pack.setCode ?? "";
+    return {
+      itemId: pack.itemId,
+      name: pack.name,
+      setCode: pack.setCode ?? "",
+      setName,
+      keyruneCode: info?.set?.keyruneCode ?? "",
+      label: productLabel(pack.name, setName),
+      featuredPrintingId: info?.featured?.printingId ?? null,
+      cards: pack.cards.map((card) => {
+        const printing = cards.get(card.printingId);
+        return {
+          printingId: card.printingId,
+          name: printing?.name ?? "Unknown card",
+          rarity: printing?.rarity ?? "common",
+          finish: card.finish,
+          priceCents: printing?.prices[card.finish] ?? null,
+          hasImage: printing?.hasImage ?? false,
+          variantLabel: printing?.variantLabel ?? "",
+        };
+      }),
+    };
+  });
 }
 
 function Unpacked(props: { opening: OpeningView }) {

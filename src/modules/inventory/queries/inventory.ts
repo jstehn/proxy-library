@@ -82,6 +82,7 @@ export type OpenedCard = Readonly<{
 export type OpeningView = Readonly<{
   itemId: number;
   name: string;
+  setCode: string | null; // packs and decks have one; products don't
   contentKind: "product" | "pack" | "deck";
   openedAt: string;
   seed: string | null;
@@ -107,6 +108,7 @@ export async function openingView(
     .select({
       itemId: sealedItems.id,
       name: sealedItems.name,
+      setCode: sealedItems.setCode,
       contentKind: sealedItems.contentKind,
       openedAt: sealedItems.openedAt,
       seed: itemOpenings.seed,
@@ -128,6 +130,7 @@ export async function openingView(
   return {
     itemId: row.itemId,
     name: row.name,
+    setCode: row.setCode,
     contentKind: row.contentKind as OpeningView["contentKind"],
     openedAt: (row.openedAt ?? new Date(0)).toISOString(),
     seed: row.seed,

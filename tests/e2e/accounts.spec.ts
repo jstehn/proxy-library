@@ -178,6 +178,17 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await page.getByRole("button", { name: "Open Bloomburrow Play Booster Pack" }).click();
+
+  // The opener (design doc 08), with "reduce motion" on so it runs without waiting on animations.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Tear open Bloomburrow Play Booster Pack" }).click();
+  await expect(page.getByRole("button", { name: /^Face-down card/ })).toHaveCount(14);
+  await page.getByRole("button", { name: "Reveal next" }).click();
+  await expect(page.getByRole("button", { name: /^Face-down card/ })).toHaveCount(13);
+  await page.getByRole("button", { name: "Reveal all" }).click();
+  await expect(page.getByText(/This pack is worth \$\d+\.\d\d at market price/)).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+
   await expect(page.getByRole("heading", { name: "Opened" })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Bloomburrow Play Booster Pack" }).getByRole("listitem"),
@@ -206,8 +217,9 @@ test("the admin sorts their collection, opens a card, and sells a copy to the st
   await page.getByRole("listitem").first().getByRole("link").click();
 
   await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
+  // The first finish you actually own: forms for finishes you have none of are disabled.
   await page
-    .getByRole("button", { name: /^Sell \(/ })
+    .locator("button:enabled", { hasText: /^Sell \(/ })
     .first()
     .click();
   await expect(page.getByText(/^Sold for \$\d+\.\d\d\.$/)).toBeVisible();

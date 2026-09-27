@@ -31,5 +31,7 @@ export async function openAction(formData: FormData): Promise<void> {
   const openings = Array.isArray(result.value) ? result.value : [result.value];
   revalidatePath("/inventory");
   revalidatePath("/collection");
-  redirect(`/inventory/opened?items=${openings.map((opening) => opening.item.id).join(",")}`);
+  // animate=1: play the packs in the opener first (design doc 08, section 5).
+  const ids = openings.map((opening) => opening.item.id).join(",");
+  redirect(`/inventory/opened?items=${ids}&animate=1`);
 }
