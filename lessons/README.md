@@ -15,6 +15,7 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 06  | [One purchase, many modules](06-transactions-across-modules.md)                      | one transaction across modules, intersection types, recursive unions and the Composite pattern, queues, `z.lazy`, state machines with row locks, `??` vs `\|\|`, CHECK constraints, cross-module tests                                 |
 | 07  | [Reading data, and keeping the books straight](07-reading-data-and-keeping-books.md) | SQL from optional filters with parameters, URL-driven filters, `as const` and `oneOf`, rounding money once, lock-check-change, reconciling ledgers, SVG charts, React state and unmounting                                             |
 | 08  | [Animation, state and sound in the browser](08-animation-state-and-sound.md)         | server decides / client performs, `useReducer` with a pure reducer, union UI state, `Promise.all`/`race` and fake timers, `useSyncExternalStore`, CSS 3D flips and reduced motion, Web Audio, accessibility                            |
+| 09  | [Rules as data, text as input](09-rules-as-data.md)                                  | union types from constant lists, rule tables, reporting problems vs refusing, parsing text with regular expressions, round-trip tests, CTEs and lateral joins, testing duplicated rules, print CSS                                     |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 

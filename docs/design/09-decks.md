@@ -166,3 +166,16 @@ to show the builder.
    reports anything else as "not found".
 5. **Partner and "background" pairs** are simplified: up to 2 commanders are allowed, with no check
    that the pair is allowed together.
+
+## 13. Implementation notes (what changed while building)
+
+- **The "short" count is worked out twice:** in SQL for the deck list (`decksFor`, one query for
+  every deck) and by the pure `deckProblems` in the builder. The integration test checks both on
+  the same data (a deck's "short" moves as copies are bought and sold, and the builder reports no
+  problems when everything is owned), so they can't drift apart unnoticed.
+- **The builder's rules facts come from each card's newest printing** that has legalities.
+  Legality belongs to the oracle card, so any printing would do, but the newest is the most likely
+  to be up to date.
+- **`importList` uses a plain `for … of` loop**, not `forEach`: TypeScript's narrowing of `deck`
+  (not null) doesn't carry into a callback, and a loop reads more simply anyway.
+- **Deleting a deck asks twice** (a `<details>` with a confirm button), with no JavaScript needed.

@@ -49,6 +49,15 @@ design doc (or joins a phase's design) and is removed from this list.
   preview of the payout.
 - **Wishlist and price alerts** from the price history.
 
+## Decks
+
+- **More formats** (brawl, oathbreaker, historic…), and partner and background checks for Commander.
+- **Deck statistics:** mana curve, color pips, card-type breakdown (lesson 09's exercise 5 has
+  the curve function).
+- **Sharing decks** with the playgroup (read-only links), and a "cards to get" list across all
+  your decks.
+- **Strict ownership as an option:** a copy used by one deck can't be used by another.
+
 ## Players and economy
 
 - **Public player profiles**: history, total spent, self-funded amounts. The ledger already
