@@ -44,7 +44,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | ✅ Done |
 | 5   | Pack engine                        | strategy, weighted + rejection sampling, property + statistical tests                                                       | ✅ Done |
 | 6   | Store & inventory                  | UoW across modules, composite (sealed expansion), sealed-item state machine, MSRP table                                     | ✅ Done |
-| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | —       |
+| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | In progress |
 | 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | —       |
 | 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | —       |
 | 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —       |
