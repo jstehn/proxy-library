@@ -19,7 +19,8 @@ Decided with the user:
 - **Sync:** **nightly** in the worker, plus a **"Sync now"** button for admins.
 - **Products:** import **all paper** sealed products (packs, boxes, cases, bundles, prerelease
   kits, preconstructed decks, tins) and the **deck lists** they contain.
-- **Paper only:** nothing unique to MTGO or Arena is imported (rule 9).
+- **Paper only:** only things that exist _only_ on MTGO or Arena are left out. Anything also
+  released in paper (e.g. Commander precons that are on Arena too) is imported (rule 9).
 - **Pricing:** singles at market price, sealed at MSRP (ADR 0014). This phase stores prices;
   selling is Phase 6.
 - **Images:** downloaded from Scryfall **the first time they're viewed**, then served locally.
@@ -173,19 +174,27 @@ disables sets that have rotated out, because players may still want them.
    that day's snapshot. Past days are never changed.
 8. **Only English printings** are imported (MTGJSON set files are English; Scryfall's
    `default_cards` is filtered to `lang: "en"`).
-9. **Paper only** (decided in review). Nothing unique to MTGO or Arena is imported:
-   - **sets** marked online-only (`isOnlineOnly`) are skipped entirely;
-   - **printings** whose `availability` doesn't include `paper` are skipped (e.g. Alchemy
-     cards), and Scryfall cards with `digital: true` are ignored;
-   - **booster types** for digital play are skipped (`play-arena`, anything ending in `-arena` or
-     `-mtgo`);
-   - **sealed products and deck lists** for digital redemption are skipped (subtype
-     `mtgo_redemption`, deck type "MTGO Redemption"), and `other` contents naming Arena or MTGO
-     codes are left out of the listed extras.
+9. **Paper only** (decided in review). The principle: **exclude something only when it exists
+   _only_ digitally.** Anything that also exists in paper is imported, even if it's on MTGO or
+   Arena too, such as a Commander precon deck that was also released on Arena, or a card
+   available on paper, MTGO and Arena. Concretely:
 
-   After filtering, rule 5 still applies: every card a remaining booster, product or deck refers
-   to must be a paper printing we imported, so a digital card can't slip in through a booster
-   sheet.
+   | Thing          | Excluded only when…                                                                  | Kept, for example                                        |
+   | -------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+   | Set            | MTGJSON marks it online-only (`isOnlineOnly`)                                        | every paper set, even if it's also on Arena              |
+   | Printing       | its `availability` lacks `paper` (e.g. an Alchemy rebalanced card)                   | a card available on `["arena", "mtgo", "paper"]`         |
+   | Booster type   | it's a digital booster configuration (`play-arena`, names ending `-arena` / `-mtgo`) | `play`, `collector`, `prerelease`, `collector-sample`, … |
+   | Sealed product | it's a digital redemption with no paper product (subtype `mtgo_redemption`)          | Commander decks, starter kits, bundles, boxes            |
+   | Deck list      | its only purpose is digital redemption (type "MTGO Redemption")                      | Commander decks, starter kit decks, bundle land packs    |
+
+   Two safety checks keep this honest:
+
+   - **Nothing referenced goes missing.** Every card a remaining booster, product or deck refers
+     to must be an imported paper printing (rule 5), so a digital-only card can't slip in, and a
+     paper product never loses a card by mistake.
+   - **The import reports what it skipped** (counts per kind, and the names of skipped products
+     and decks) in the sync run summary, so an admin can spot anything excluded that shouldn't
+     have been.
 
 10. **Polite to both services** (their published guidance):
     - Scryfall's API is called at most 8 times per second, with a descriptive `User-Agent` and
