@@ -10,3 +10,5 @@
 | [adr/](adr/README.md)                                      | you want to know **why** something is the way it is       |
 | [design/](design/TEMPLATE.md)                              | starting a phase (write its design doc first)             |
 | [../lessons/](../lessons/)                                 | learning: one lesson per phase                            |
+| [future-ideas.md](future-ideas.md)                         | you want the list of deferred ideas and known limits      |
+| [decisions-to-review.md](decisions-to-review.md)           | reviewing choices made during the unattended build        |

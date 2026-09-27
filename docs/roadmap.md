@@ -89,23 +89,9 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 
 ## Backlog: advanced features, later
 
-Wanted, but deliberately not scheduled yet:
-
-- **Set and product art** (requested 2026-09-27; aim to do it alongside Phase 6, when products
-  first appear in the store, or later if it takes too long):
-  - **Preferred: real product photos**, like the images on Amazon. MTGJSON gives every sealed
-    product the ids retailers use (e.g. `tcgplayerProductId`, `cardKingdomId`), and retailers
-    host a photo per product. **Decision needed first:** those images belong to the retailers,
-    so check their terms before downloading and caching them, even for a private app. The
-    catalog would store each product's identifiers (a small schema change plus a re-sync) and
-    cache the photos on disk like card images.
-  - **Fallback: generated art** for any product or set without a photo: an SVG "package" in
-    the set's colors with its Keyrune set symbol, set name and product type (Play Booster,
-    Bundle, …), framing a featured card's artwork (Scryfall's `art_crop`, which its guidelines
-    allow with artist credit). Sets get a banner the same way.
-
-- **Public player profiles:** a page per player showing their history, total spent, and money
-  they gave themselves (self-funded). The ledger (ADR 0004) already records everything this needs.
+Deferred requests and known limits live in [future-ideas.md](future-ideas.md). Generated
+product and set art (the fallback half of the "set and product art" request) is built in
+Phase 6. Real retailer photos wait for a decision on their terms of use.
 
 ## Phases 2–11
 

@@ -1,0 +1,51 @@
+# Future ideas
+
+Things we may change or add later: requests that were deferred, limits we know about, and
+improvements noticed along the way. Nothing here is scheduled. When one is picked up, it gets a
+design doc (or joins a phase's design) and is removed from this list.
+
+## Pack opening
+
+- **Special pack rules that MTGJSON's recipes can't express.** (Requested 2026-09-27.)
+  Example: **Reality Fracture** play boosters reportedly guarantee _matching Echoverse pairs_.
+  MTGJSON describes a pack as independent draws from weighted sheets (plus fixed sheets and
+  color balance), so "these two slots must hold a matching pair" can't be written in its format.
+  - **Status (2026-09-27):** MTGJSON has **no booster recipe for FRA yet** (only its two
+    Commander deck products), so FRA packs can't be opened at all today. Check again after a
+    full sync once MTGJSON publishes them, and read how they encode the pairs. They may use a
+    fixed sheet per pair, or many variants.
+  - **If the data can't express it:** add a small, per-set "booster rule" step after
+    `generatePack` (e.g. `pairEchoverse(pack, rng)`), chosen from a table keyed by set and
+    booster type (the same Strategy table idea as the sheet drawers). Each rule gets its own
+    statistical test, and `check-packs` checks it on real data.
+  - Other rules to look for in the same pass: guaranteed "one of each" slots, serialized-card
+    odds printed on the box, and Jumpstart theme packs (MTGJSON uses fixed sheets for these).
+- **Animated foil effects** beyond the still sheen: Phase 8 adds the animated shimmer on reveal.
+  A later pass could show different foil treatments (surge, galaxy, fracture foil) differently,
+  using the printing's promo types.
+
+## Catalog and images
+
+- **Real product photos** (retailer images) for sealed products and sets. **Needs a decision on
+  retailer terms of use first.** Generated SVG art covers every product until then.
+- **Image cache warming**: fetch a set's small images in the background after it's enabled,
+  politely rate-limited, so the first visit to a set page isn't slow.
+- **In-flight image de-duplication**: if two people ask for the same uncached image at once,
+  fetch it once.
+- **Sharper grid images on wide screens**: use the `normal` size for grid tiles above a screen
+  width, or use `srcset`.
+- **`POST /cards/collection` fallback** for printings missing from Scryfall's bulk file (not
+  needed so far: the bulk file covered every English paper printing).
+
+## Players and economy
+
+- **Public player profiles**: history, total spent, self-funded amounts. The ledger already
+  records everything needed.
+- **Config error messages** could suggest `direnv reload` when a variable is missing (declined
+  for now).
+
+## Testing
+
+- **Remote test suite** (`pnpm test:remote`, never run by default): a handful of checks against
+  the real MTGJSON and Scryfall endpoints, to notice when their formats change. Automated tests
+  stay offline (recorded fixtures, local image responses).
