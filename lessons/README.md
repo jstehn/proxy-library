@@ -17,6 +17,7 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 08  | [Animation, state and sound in the browser](08-animation-state-and-sound.md)         | server decides / client performs, `useReducer` with a pure reducer, union UI state, `Promise.all`/`race` and fake timers, `useSyncExternalStore`, CSS 3D flips and reduced motion, Web Audio, accessibility                            |
 | 09  | [Rules as data, text as input](09-rules-as-data.md)                                  | union types from constant lists, rule tables, reporting problems vs refusing, parsing text with regular expressions, round-trip tests, CTEs and lateral joins, testing duplicated rules, print CSS                                     |
 | 10  | [Two players, one transaction](10-two-players-one-transaction.md)                    | multi-party state machines, reserving vs re-checking, deadlocks and lock order, tests that prove vs tests that pass, URL-state forms and their limits                                                                                  |
+| 11  | [Shipping it](11-shipping-it.md)                                                     | events in the same transaction, CSV and file downloads, checks against real data, unlisting instead of deleting, recursive CTEs, Docker images and Compose, signals, tests by cost, one connection per transaction                     |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 

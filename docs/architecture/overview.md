@@ -64,13 +64,19 @@ flowchart TD
   store --> wallet & inventory & collection & catalog
   trades --> wallet & collection
   inventory --> packs & collection & catalog
-  decks --> collection & catalog
-  collection --> catalog
+  decks --> catalog_types
+  collection --> catalog_types
   packs --> catalog_types[catalog types only]
   wallet --> accounts
   store & trades & inventory & decks --> accounts
-  activity -.reads events from.-> store & inventory & trades
+  store & trades & inventory --> activity[activity: recordEvent in the same transaction]
 ```
+
+As built (2026-09-28): modules share each other's **types** freely (`import type`), and call each
+other's **functions that run inside the caller's transaction** (`spend`, `receiveItems`,
+`receiveCards`, `giveUpCards`, `recordEvent`). Read models may read any module's tables. Opening
+a precon creates a deck from the app layer (the open action calls `decks.createDeckFromCards`),
+so inventory doesn't depend on decks.
 
 Rules: the graph is **acyclic**. Modules depend on each other **only through their public
 `index.ts`**. `catalog` and `accounts` depend on no other feature module.

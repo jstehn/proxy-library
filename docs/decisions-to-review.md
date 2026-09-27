@@ -4,6 +4,18 @@ Phases 6–11 were built in one unattended overnight run (2026-09-27 → 28). De
 **self-approved** so work could continue. Everything decided without you is listed here, so you can
 review it in one place. Anything can still be changed.
 
+## Start here
+
+Everything on the roadmap is built (Phases 0–11), with a lesson per phase. To see it all:
+
+1. `direnv reload`, then `pnpm install`, `pnpm db:migrate`, restart `pnpm dev`.
+2. Things to try: open the repaired Reality Fracture precon in **Inventory** (it becomes a deck in
+   **Decks**), buy a Secrets of Strixhaven precon, **Collection** sections, the deck builder's
+   type-ahead, a trade between two accounts, **Activity** on the home page, the export links, and
+   the phone layout.
+3. Deploying: [deploy.md](deploy.md).
+4. Then read the tables below and tell me what to change.
+
 ## Answered by you before the run
 
 | Topic                 | Decision                                                                                                                                           |
