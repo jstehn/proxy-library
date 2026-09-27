@@ -20,6 +20,7 @@ export type {
   ProductUnavailable,
 } from "./domain/errors";
 export { ItemId, type Item, type ItemContent } from "./domain/item";
+export { productProblems, type CatalogKnowledge } from "./domain/unpack";
 export {
   openingView,
   recentOpenings,

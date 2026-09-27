@@ -1,4 +1,6 @@
 // Worker entry point: `pnpm worker <command>`.
+import { productProblems } from "@/modules/inventory";
+import { loadProductCheck } from "@/modules/inventory/infrastructure";
 import { runMigrations } from "@/shared/db";
 import { realSleep } from "@/shared/runtime";
 import { createWorkerContainer, type WorkerContainer } from "./container";
@@ -51,6 +53,24 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
       `\n${checks.length} recipes, ${opened} packs opened, ${withProblems.length} recipe(s) with problems`,
     );
     if (withProblems.length > 0) process.exitCode = 1;
+  },
+
+  /**
+   * `pnpm worker check-products`: every product in an enabled set must open into something, and
+   * everything it names must exist (design doc 11, section 5; the empty-precon bug).
+   */
+  async "check-products"(container) {
+    const { toCheck, knowledge } = await loadProductCheck(container.db);
+    let bad = 0;
+    for (const product of toCheck) {
+      const problems = productProblems(product.contents, knowledge);
+      if (problems.length === 0) continue;
+      bad += 1;
+      console.log(`\n${product.setCode} ${product.name}:`);
+      for (const problem of problems.slice(0, 5)) console.log(`  ${problem}`);
+    }
+    console.log(`\n${toCheck.length} products checked, ${bad} with problems`);
+    if (bad > 0) process.exitCode = 1;
   },
 
   /** `pnpm worker schedule`: keep running; do the nightly sync and anything admins queue. */

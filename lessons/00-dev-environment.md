@@ -242,10 +242,11 @@ A **React component** is a function that returns markup. From
 [`src/app/page.tsx`](../src/app/page.tsx), simplified:
 
 ```tsx
-export default function Home() {
-  const examplePrice = Cents.fromUsd("0.30");
+export default async function Home() {
+  const actor = await requireActor();
   return (
     <main className="mx-auto max-w-3xl px-4">
+      <h1>Welcome, {actor.displayName}</h1>
       <ul>
         {sections.map((section) => (
           <li key={section.name}>{section.name}</li>
@@ -306,8 +307,8 @@ reachable only by processes on this machine that can access the folder.
 
 ### 3. Let the compiler catch a bug
 
-In `src/app/page.tsx`, change `Cents.fromUsd("0.30")` to `Cents.fromUsd(42)` and run
-`pnpm typecheck`. Read the error, then explain why catching it here is better than at runtime.
+In `src/app/wallet/actions.ts`, change `Cents.fromUsd(form.data.amount)` to `Cents.fromUsd(42)` and
+run `pnpm typecheck`. Read the error, then explain why catching it here is better than at runtime.
 Undo the change afterwards.
 
 <details><summary>Solution</summary>
@@ -317,7 +318,7 @@ error TS2345: Argument of type 'number' is not assignable to parameter of type '
 ```
 
 `fromUsd` declares `value: string | null | undefined`. A number would reach `value.trim()`, and
-numbers have no `.trim()`, so the page would crash for every visitor. The compiler rejects it
+numbers have no `.trim()`, so adding funds would crash for everyone. The compiler rejects it
 before the code ever runs.
 
 </details>
@@ -364,12 +365,12 @@ Lesson 01 shows how the type system enforces this.
 
 ### 6. Add to the page (challenge)
 
-Add a "Profile" card for phase 11 to the `sections` list in `src/app/page.tsx` with `pnpm dev`
-running. What happens in the browser when you save?
+Add a "Profile" card to the `sections` list in `src/app/page.tsx` with `pnpm dev` running. What happens in the browser when you save?
 
 <details><summary>Solution</summary>
 
-Add `{ name: "Profile", phase: 11, blurb: "Your public stats." }` to the array. The page updates
+Add `{ name: "Profile", href: "/profile", blurb: "Your public stats." }` to the array. (The link
+leads nowhere yet: public profiles are in `docs/future-ideas.md`.) The page updates
 without a manual reload, because the dev server's **hot reload** re-renders changed components.
 Because `name` is used as the `key`, it must be unique among the cards.
 

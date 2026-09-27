@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
+import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryItemRepository, inMemoryProductCatalog } from "@/modules/inventory/testing/fakes";
@@ -40,8 +41,10 @@ let wallet: ReturnType<typeof inMemoryWalletServices>;
 let collection: ReturnType<typeof inMemoryCollectionRepository>;
 let storeLedger: ReturnType<typeof inMemoryStoreLedger>;
 let store: ReturnType<typeof makeStore>;
+let events: ReturnType<typeof inMemoryEventRecorder>;
 
 beforeEach(() => {
+  events = inMemoryEventRecorder();
   wallet = inMemoryWalletServices(["jack", "admin"]);
   collection = inMemoryCollectionRepository();
   storeLedger = inMemoryStoreLedger();
@@ -60,6 +63,7 @@ beforeEach(() => {
       "tarmo/nonfoil": { price: Cents.of(3000), day: "2026-01-06", isSetEnabled: true },
     }),
     storeSettings: inMemoryStoreSettings(),
+    events,
   };
   store = makeStore({ unitOfWork: inMemoryUnitOfWork(services), clock: fixedClock(now) });
 });

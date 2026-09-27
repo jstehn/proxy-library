@@ -26,7 +26,7 @@ export function drizzlePriceList(db: DbExecutor): PriceList {
         category: sealedProducts.category,
         subtype: sealedProducts.subtype,
         // An empty product is never for sale (design doc 06, rule 2).
-        isSetEnabled: sql<boolean>`${cardSets.isEnabled} and jsonb_array_length(${sealedProducts.contents}) > 0`,
+        isSetEnabled: sql<boolean>`${cardSets.isEnabled} and ${sealedProducts.isListed} and jsonb_array_length(${sealedProducts.contents}) > 0`,
         override: msrpOverrides.cents,
       })
       .from(sealedProducts)

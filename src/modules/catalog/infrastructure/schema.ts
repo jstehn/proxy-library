@@ -93,6 +93,9 @@ export const sealedProducts = pgTable(
     subtype: text("subtype"),
     releaseDate: text("release_date"),
     contents: jsonb("contents").notNull(),
+    // False once a product is no longer in its set's latest import (MTGJSON dropped it, or rule 5
+    // left it out). The row stays, so items people own still open; it just isn't sold.
+    isListed: boolean("is_listed").notNull().default(true),
   },
   (table) => [index("sealed_products_set_idx").on(table.setCode)],
 );

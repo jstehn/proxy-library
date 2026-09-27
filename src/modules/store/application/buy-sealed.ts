@@ -1,4 +1,5 @@
 import type { Actor } from "@/modules/accounts";
+import { recordEvent } from "@/modules/activity";
 import type { SealedProductId } from "@/modules/catalog";
 import { receiveItems, type Item } from "@/modules/inventory";
 import { spend, type InsufficientFunds } from "@/modules/wallet";
@@ -64,6 +65,17 @@ export function makeBuySealed(dependencies: StoreDependencies) {
         now,
       });
       if (!items.ok) return err({ kind: "ProductNotForSale" });
+      // The feed shows what was bought, never the price (design doc 11, decision 1).
+      await recordEvent(
+        services,
+        {
+          kind: "purchase",
+          actorId: actor.userId,
+          productName: listing.name,
+          quantity: quantity.value,
+        },
+        now,
+      );
       return ok({ transactionId, items: items.value });
     });
   }

@@ -1,20 +1,27 @@
+import Link from "next/link";
+import { activityFeed } from "@/modules/activity";
+import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { Cents } from "@/shared/kernel";
+import { ActivityList } from "./_components/activity-list";
 
-// Placeholder home page. Each section becomes a real route in later phases.
+// The home page: where to go, and what the playgroup has been up to.
 const sections = [
-  { name: "Wallet", phase: 3, blurb: "Allowance, grants and what you've spent." },
-  { name: "Store", phase: 6, blurb: "Buy boosters, bundles and boxes." },
-  { name: "Inventory", phase: 6, blurb: "Your unopened product." },
-  { name: "Collection", phase: 7, blurb: "Every card you have opened or bought." },
-  { name: "Decks", phase: 9, blurb: "Build only from cards you own." },
-  { name: "Trades", phase: 10, blurb: "Swap cards and cash with friends." },
+  { name: "Store", href: "/store", blurb: "Boosters, bundles, boxes and precons at MSRP." },
+  { name: "Singles", href: "/singles", blurb: "Any card from an enabled set at market price." },
+  { name: "Inventory", href: "/inventory", blurb: "Your unopened product. Tear something open." },
+  {
+    name: "Collection",
+    href: "/collection",
+    blurb: "Every card you've opened, bought or traded for.",
+  },
+  { name: "Decks", href: "/decks", blurb: "Build only from what you own, then print proxies." },
+  { name: "Trades", href: "/trades", blurb: "Swap cards and money with the playgroup." },
 ];
 
 export default async function Home() {
   // Runs on the server: a Server Component, the default in the App Router.
   const actor = await requireActor();
-  const examplePrice = Cents.fromUsd("0.30");
+  const recent = await activityFeed(getContainer().db, 5);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
@@ -25,20 +32,27 @@ export default async function Home() {
 
       <ul className="grid gap-4 sm:grid-cols-2">
         {sections.map((section) => (
-          <li
-            key={section.name}
-            className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-          >
-            <h2 className="font-medium">{section.name}</h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{section.blurb}</p>
-            <p className="mt-2 text-xs text-zinc-500">Coming in phase {section.phase}</p>
+          <li key={section.name}>
+            <Link
+              href={section.href}
+              className="block h-full rounded-lg border border-zinc-200 p-4 hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
+            >
+              <h2 className="font-medium">{section.name}</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">{section.blurb}</p>
+            </Link>
           </li>
         ))}
       </ul>
 
-      <p className="text-sm text-zinc-500">
-        Sanity check: a common worth {examplePrice === null ? "n/a" : Cents.format(examplePrice)}.
-      </p>
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">
+          Recent activity{" "}
+          <Link href="/activity" className="text-sm font-normal underline">
+            see all
+          </Link>
+        </h2>
+        <ActivityList items={recent} />
+      </section>
     </main>
   );
 }

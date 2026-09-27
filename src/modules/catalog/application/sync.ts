@@ -160,7 +160,7 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // Rule 5: leave out anything that refers to something we don't have, and report it.
     const checked = await inTransaction(async ({ catalog }) => {
-      const known = await catalog.knownReferences();
+      const known = await catalog.knownReferences(code);
       return withoutBrokenReferences(setImport, {
         hasPrinting: (id) => known.printingIds.has(id),
         hasProduct: (id) => known.productIds.has(id),

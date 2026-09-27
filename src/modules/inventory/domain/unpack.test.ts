@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { seededRng, UserId } from "@/shared/kernel";
 import { SAMPLE_PRODUCTS } from "../testing/fakes";
 import { itemForProduct, ItemId, openTransition, type Item } from "./item";
-import { nestedProductIds, unpack } from "./unpack";
+import { nestedProductIds, productProblems, unpack } from "./unpack";
 
 const products = (id: string) =>
   Object.values(SAMPLE_PRODUCTS).find((product) => product.id === id) ?? null;
@@ -96,5 +96,37 @@ describe("openTransition (rule 5)", () => {
   it("treats someone else's item exactly like a missing one", () => {
     const missing = openTransition(null, jack, now);
     expect(openTransition(item, UserId.of("mallory"), now)).toEqual(missing);
+  });
+});
+
+describe("productProblems (check-products)", () => {
+  const catalog = {
+    product: products,
+    hasBooster: (setCode: string, boosterType: string) =>
+      setCode === "TST" && boosterType === "play",
+    deckSize: (_setCode: string, deckName: string) => (deckName === "Land Pack" ? 10 : null),
+  };
+
+  it("finds nothing wrong with products that open into real things", () => {
+    for (const product of Object.values(SAMPLE_PRODUCTS)) {
+      if (product.id === "kit") continue; // one of its decks is missing on purpose, below
+      expect(productProblems(product.contents, catalog)).toEqual([]);
+    }
+  });
+
+  it("reports empty products and missing references, all the way down", () => {
+    expect(productProblems([], catalog)).toEqual(["gives nothing when opened"]);
+    expect(productProblems([{ kind: "other", name: "Spindown" }], catalog)).toEqual([
+      "gives nothing when opened",
+    ]);
+    expect(productProblems(SAMPLE_PRODUCTS.kit.contents, catalog)).toEqual([
+      'no deck list "Other Deck" (TST)',
+    ]);
+    expect(
+      productProblems(
+        [{ kind: "pack", setCode: SAMPLE_PRODUCTS.box.setCode, boosterType: "collector" }],
+        catalog,
+      ),
+    ).toEqual(["no booster recipe for TST collector"]);
   });
 });

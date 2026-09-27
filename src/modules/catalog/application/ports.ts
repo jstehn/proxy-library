@@ -88,7 +88,8 @@ export interface CatalogRepository {
     setImport: SetImport,
     options: { printingsOnly: boolean; importedAt: Date },
   ): Promise<void>;
-  knownReferences(): Promise<KnownReferences>;
+  /** What already exists, not counting the old contents of the set being imported. */
+  knownReferences(importingSet: SetCode): Promise<KnownReferences>;
   /** Every printing we hold, keyed by Scryfall id, for matching bulk-file prices. */
   printingsForPricing(): Promise<Map<string, PricingPrinting>>;
   savePriceSnapshots(snapshots: readonly PriceSnapshot[]): Promise<void>;

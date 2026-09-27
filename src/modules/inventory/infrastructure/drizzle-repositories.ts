@@ -7,7 +7,12 @@ import {
   type SealedContent,
   type SealedProduct,
 } from "@/modules/catalog";
-import { deckLists, sealedProducts } from "@/modules/catalog/infrastructure/schema";
+import {
+  boosterConfigs,
+  cardSets,
+  deckLists,
+  sealedProducts,
+} from "@/modules/catalog/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
 import { assertNever, UserId } from "@/shared/kernel";
 import type {
@@ -198,4 +203,62 @@ export function drizzleProductCatalog(db: DbExecutor): ProductCatalog {
   }
 
   return { products, deckCards };
+}
+
+/** Everything `pnpm worker check-products` needs, read once (design doc 11, section 5). */
+export async function loadProductCheck(db: DbExecutor) {
+  const [productRows, boosterRows, deckRows] = await Promise.all([
+    db
+      .select({
+        id: sealedProducts.id,
+        setCode: sealedProducts.setCode,
+        name: sealedProducts.name,
+        category: sealedProducts.category,
+        subtype: sealedProducts.subtype,
+        releaseDate: sealedProducts.releaseDate,
+        contents: sealedProducts.contents,
+        isEnabled: cardSets.isEnabled,
+        isListed: sealedProducts.isListed,
+      })
+      .from(sealedProducts)
+      .innerJoin(cardSets, eq(cardSets.code, sealedProducts.setCode)),
+    db
+      .select({ setCode: boosterConfigs.setCode, boosterType: boosterConfigs.boosterType })
+      .from(boosterConfigs),
+    db
+      .select({ setCode: deckLists.setCode, name: deckLists.name, cards: deckLists.cards })
+      .from(deckLists),
+  ]);
+  const products = new Map<SealedProductId, SealedProduct & { isForSale: boolean }>();
+  for (const row of productRows) {
+    const id = SealedProductId.of(row.id);
+    products.set(id, {
+      id,
+      setCode: SetCode.of(row.setCode),
+      name: row.name,
+      category: row.category,
+      subtype: row.subtype,
+      releaseDate: row.releaseDate,
+      contents: z.array(SealedContentSchema).parse(row.contents),
+      isForSale: row.isEnabled && row.isListed,
+    });
+  }
+  const boosters = new Set(boosterRows.map((row) => `${row.setCode}/${row.boosterType}`));
+  const deckSizes = new Map(
+    deckRows.map((row) => [
+      `${row.setCode}/${row.name}`,
+      Array.isArray(row.cards) ? row.cards.length : 0,
+    ]),
+  );
+  return {
+    /** Listed products in enabled sets: the ones players can see. */
+    toCheck: [...products.values()].filter((product) => product.isForSale),
+    knowledge: {
+      product: (id: SealedProductId) => products.get(id) ?? null,
+      hasBooster: (setCode: string, boosterType: string) =>
+        boosters.has(`${setCode}/${boosterType}`),
+      deckSize: (setCode: string, deckName: string) =>
+        deckSizes.get(`${setCode}/${deckName}`) ?? null,
+    },
+  };
 }

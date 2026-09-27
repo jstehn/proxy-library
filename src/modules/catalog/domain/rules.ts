@@ -177,6 +177,11 @@ export function withoutBrokenReferences(
   });
 
   decks = decks.filter((deck) => {
+    // Rule 5b for decks: MTGJSON lists some decks before their cards are known.
+    if (deck.cards.length === 0) {
+      leftOut.push(`deck "${deck.name}": MTGJSON lists no cards yet`);
+      return false;
+    }
     const missing = deck.cards.filter((card) => !hasPrinting(card.printingId)).length;
     if (missing > 0) leftOut.push(`deck "${deck.name}": ${missing} unknown card(s)`);
     return missing === 0;

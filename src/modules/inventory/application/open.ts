@@ -1,4 +1,5 @@
 import type { Actor } from "@/modules/accounts";
+import { isNotable, recordEvent } from "@/modules/activity";
 import { receiveCards, type CardGain } from "@/modules/collection";
 import { openBooster, type Pack } from "@/modules/packs";
 import { assertNever, err, ok, seededRng, type Result } from "@/shared/kernel";
@@ -48,6 +49,33 @@ function packGains(pack: Pack): CardGain[] {
   }));
 }
 
+/** Tells the activity feed about a pack's notable cards, if it had any (design doc 11). */
+async function recordPull(
+  services: InventoryServices,
+  item: Item,
+  pack: Pack,
+  now: Date,
+): Promise<void> {
+  const facts = await services.boosters.printingFacts(pack.cards.map((card) => card.printingId));
+  const cards = pack.cards.flatMap((card) => {
+    const printing = facts.get(card.printingId);
+    if (printing === undefined) return [];
+    const pulled = {
+      printingId: card.printingId,
+      name: printing.name,
+      finish: card.finish,
+      rarity: printing.rarity,
+      priceCents: printing.marketPrice[card.finish] ?? null,
+    };
+    return isNotable(pulled) ? [pulled] : [];
+  });
+  await recordEvent(
+    services,
+    { kind: "pull", actorId: item.ownerId, itemName: item.name, cards },
+    now,
+  );
+}
+
 /**
  * Opens an item that has already passed `openTransition` (so it's locked, owned, and now marked
  * opened in memory). `newSeed` gives a fresh seed for anything random inside.
@@ -73,6 +101,7 @@ async function openContent(
       const pack = opened.value;
       if (pack.cards.length === 0) return err({ kind: "NothingInside" });
       await receiveCards(services, item.ownerId, packGains(pack), { source: "pack", ref, at: now });
+      await recordPull(services, item, pack, now);
       await services.items.markOpened(item, {
         kind: "pack",
         seed,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
+import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { SealedProductId } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import {
@@ -60,8 +61,10 @@ let wallet: ReturnType<typeof inMemoryWalletServices>;
 let items: ReturnType<typeof inMemoryItemRepository>;
 let storeLedger: ReturnType<typeof inMemoryStoreLedger>;
 let store: ReturnType<typeof makeStore>;
+let events: ReturnType<typeof inMemoryEventRecorder>;
 
 beforeEach(() => {
+  events = inMemoryEventRecorder();
   wallet = inMemoryWalletServices(["jack", "admin"]);
   items = inMemoryItemRepository();
   storeLedger = inMemoryStoreLedger();
@@ -75,6 +78,7 @@ beforeEach(() => {
     storeLedger,
     marketPrices: inMemoryMarketPrices({}),
     storeSettings: inMemoryStoreSettings(),
+    events,
   };
   store = makeStore({ unitOfWork: inMemoryUnitOfWork(services), clock: fixedClock(now) });
 });
@@ -96,6 +100,15 @@ describe("buySealed", () => {
       ["purchase_sealed", -1647, "store:1"],
     ]);
     expect(await wallet.services.wallets.balance(jack.userId)).toBe(5000 - 1647);
+    // The feed shows what was bought, never the price.
+    expect(events.recorded.map((entry) => entry.event)).toEqual([
+      {
+        kind: "purchase",
+        actorId: jack.userId,
+        productName: "Test Play Booster Pack",
+        quantity: 3,
+      },
+    ]);
   });
 
   it("uses a product's own price over its kind's", async () => {

@@ -1,3 +1,4 @@
+import type { ActivityServices } from "@/modules/activity";
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { CollectionServices } from "@/modules/collection";
 import type { WalletServices } from "@/modules/wallet";
@@ -32,6 +33,7 @@ export type TradesServices = {
   tradePlayers: TradePlayers;
   holdings: Holdings;
 } & WalletServices &
-  CollectionServices;
+  CollectionServices &
+  ActivityServices;
 
 export type TradesDependencies = { unitOfWork: UnitOfWork<TradesServices>; clock: Clock };

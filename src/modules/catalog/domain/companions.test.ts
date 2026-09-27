@@ -82,6 +82,56 @@ describe("withoutBrokenReferences leaves out products with nothing inside", () =
   });
 });
 
+describe("withoutBrokenReferences leaves out decks with no cards", () => {
+  it("and the products that contain them (found with real data: TMT's Enemy Deck)", () => {
+    const set: SetImport = {
+      set: {
+        code: SetCode.of("TMT"),
+        name: "Turtles",
+        releaseDate: "2026-03-01",
+        type: "expansion",
+        keyruneCode: "tmt",
+        parentCode: null,
+      },
+      version: "5.3.0",
+      printings: [],
+      boosters: [],
+      decks: [
+        {
+          setCode: SetCode.of("TMT"),
+          name: "Enemy Deck",
+          type: "Theme Deck",
+          cards: [],
+          sourceSetCodes: [],
+        },
+      ],
+      products: [
+        {
+          id: SealedProductId.of("team-up"),
+          setCode: SetCode.of("TMT"),
+          name: "Turtle Team-Up",
+          category: "deck",
+          subtype: null,
+          releaseDate: null,
+          contents: [{ kind: "deck", setCode: SetCode.of("TMT"), deckName: "Enemy Deck" }],
+        },
+      ],
+      productCardSetCodes: [],
+      skipped: { printings: 0, boosterTypes: [], products: [], decks: [] },
+    };
+    const knowsNothing = {
+      hasPrinting: () => false,
+      hasProduct: () => false,
+      hasBooster: () => false,
+      hasDeck: () => false,
+    };
+    const checked = withoutBrokenReferences(set, knowsNothing);
+    expect(checked.setImport.decks).toEqual([]);
+    expect(checked.setImport.products).toEqual([]);
+    expect(checked.leftOut[0]).toBe('deck "Enemy Deck": MTGJSON lists no cards yet');
+  });
+});
+
 describe("companionsToEnable (rule 11)", () => {
   const set = (code: string, type: string, parentCode: string | null, isEnabled: boolean) => ({
     code: SetCode.of(code),

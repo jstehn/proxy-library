@@ -94,6 +94,20 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
           </strong>{" "}
           at market price{isFiltered && " (matching these filters)"}.
         </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Export everything:{" "}
+          <a href="/api/export/collection?format=moxfield" className="underline">
+            Moxfield CSV
+          </a>{" "}
+          ·{" "}
+          <a href="/api/export/collection?format=text" className="underline">
+            text list
+          </a>{" "}
+          ·{" "}
+          <a href="/api/export/collection?format=full" className="underline">
+            full CSV
+          </a>
+        </p>
       </header>
 
       <CardFilters

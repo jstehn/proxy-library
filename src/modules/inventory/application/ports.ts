@@ -1,3 +1,4 @@
+import type { ActivityServices } from "@/modules/activity";
 import type { SealedProduct, SealedProductId, SetCode } from "@/modules/catalog";
 import type { CardGain, CollectionServices } from "@/modules/collection";
 import type { PackCard, PacksServices, SeedSource } from "@/modules/packs";
@@ -58,7 +59,8 @@ export type InventoryServices = {
   items: ItemRepository;
   productCatalog: ProductCatalog;
 } & PacksServices &
-  CollectionServices;
+  CollectionServices &
+  ActivityServices;
 
 export type InventoryDependencies = {
   unitOfWork: UnitOfWork<InventoryServices>;

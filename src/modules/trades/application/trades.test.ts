@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
+import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { inMemoryCollectionRepository, sampleGain } from "@/modules/collection/testing/fakes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
 import { Cents, err, UserId } from "@/shared/kernel";
@@ -36,12 +37,15 @@ let wallet: ReturnType<typeof inMemoryWalletServices>;
 let collection: ReturnType<typeof inMemoryCollectionRepository>;
 let repository: ReturnType<typeof inMemoryTradeRepository>;
 let trades: ReturnType<typeof makeTrades>;
+let events: ReturnType<typeof inMemoryEventRecorder>;
 
 beforeEach(async () => {
   wallet = inMemoryWalletServices(["alice", "bob"]);
   collection = inMemoryCollectionRepository();
   repository = inMemoryTradeRepository();
+  events = inMemoryEventRecorder();
   const services = {
+    events,
     ...wallet.services,
     collection,
     trades: repository,
@@ -164,6 +168,15 @@ describe("acceptTrade (rules 4 and 5)", () => {
     expect(await balance(alice)).toBe(4700);
     expect(await balance(bob)).toBe(5300);
     expect(repository.get(id)?.status).toBe("accepted");
+    expect(events.recorded.map((entry) => entry.event)).toEqual([
+      {
+        kind: "trade",
+        actorId: bob.userId,
+        otherId: alice.userId,
+        cardsMoved: 3,
+        moneyChanged: true,
+      },
+    ]);
     expect(
       collection.log
         .filter((entry) => entry.source === "trade")

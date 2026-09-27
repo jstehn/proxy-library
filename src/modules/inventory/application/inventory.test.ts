@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { SealedProductId } from "@/modules/catalog";
+import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
@@ -34,12 +35,15 @@ const now = new Date("2026-09-27T12:00:00Z");
 let items: ReturnType<typeof inMemoryItemRepository>;
 let collection: ReturnType<typeof inMemoryCollectionRepository>;
 let services: Parameters<typeof receiveItems>[0];
+let events: ReturnType<typeof inMemoryEventRecorder>;
 let inventory: ReturnType<typeof makeInventory>;
 
 beforeEach(() => {
   items = inMemoryItemRepository();
   collection = inMemoryCollectionRepository();
+  events = inMemoryEventRecorder();
   services = {
+    events,
     items,
     collection,
     productCatalog: inMemoryProductCatalog(Object.values(SAMPLE_PRODUCTS), SAMPLE_DECKS),
@@ -91,6 +95,17 @@ describe("openItem", () => {
     ]);
     const total = collection.log[0].gains.reduce((sum, gain) => sum + gain.quantity, 0);
     expect(total).toBe(14);
+    // Every sample pack has a rare or mythic: the feed hears about it (design doc 11).
+    expect(events.recorded).toEqual([
+      expect.objectContaining({
+        event: expect.objectContaining({ kind: "pull", itemName: "Test Play Booster Pack" }),
+      }),
+    ]);
+    const pull = events.recorded[0].event;
+    expect(
+      pull.kind === "pull" &&
+        pull.cards.every((card) => card.rarity !== "common" || (card.priceCents ?? 0) >= 500),
+    ).toBe(true);
   });
 
   it("refuses to open the same pack twice", async () => {

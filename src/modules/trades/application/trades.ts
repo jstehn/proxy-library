@@ -1,4 +1,5 @@
 import type { Actor } from "@/modules/accounts";
+import { recordEvent } from "@/modules/activity";
 import { giveUpCards, receiveCards, type CardGain } from "@/modules/collection";
 import { lockWallets, receive, spend } from "@/modules/wallet";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
@@ -191,6 +192,21 @@ export function makeTrades(dependencies: TradesDependencies) {
       const done = await carryOut(services, decided.value, now);
       if (!done.ok) return done; // rolls back: nothing moved, the trade stays proposed
       await services.trades.decide(decided.value);
+      // The feed says who traded and how many cards, not what or for how much (decision 2).
+      await recordEvent(
+        services,
+        {
+          kind: "trade",
+          actorId: actor.userId,
+          otherId: decided.value.proposerId,
+          cardsMoved: decided.value.items.reduce(
+            (total, item) => total + (item.kind === "card" ? item.quantity : 0),
+            0,
+          ),
+          moneyChanged: decided.value.items.some((item) => item.kind === "money"),
+        },
+        now,
+      );
       return ok();
     });
   }

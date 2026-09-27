@@ -4,10 +4,12 @@ export { giveUpCards } from "./application/give-up-cards";
 export { receiveCards } from "./application/receive-cards";
 export type { Acquisition, AcquisitionSource, CardGain } from "./domain/cards";
 export type { NotEnoughCopies } from "./domain/errors";
+export { COLLECTION_EXPORTERS, csvField, type ExportRow } from "./domain/export";
 export {
   COLLECTION_PAGE_SIZE,
   collectionFor,
   collectionPage,
+  exportRows,
   ownedCopies,
   type CollectionFilter,
   type CollectionPage,

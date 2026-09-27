@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
+import type { ExportRow } from "../domain/export";
 import { acquisitions, collectionCards } from "../infrastructure/schema";
 
 // Read models for the collection screens (ADR 0006).
@@ -199,4 +200,43 @@ export async function ownedCopies(
     .from(collectionCards)
     .where(and(eq(collectionCards.userId, userId), eq(collectionCards.printingId, printingId)));
   return Object.fromEntries(rows.map((row) => [row.finish, row.quantity]));
+}
+
+/** Every card a player owns, with what the exporters need, in set and number order. */
+export async function exportRows(db: DbExecutor, userId: UserId): Promise<ExportRow[]> {
+  const rows = await db.execute<{
+    name: string;
+    set_code: string;
+    collector_number: string;
+    finish: ExportRow["finish"];
+    rarity: string;
+    quantity: number;
+    price: number | null;
+    first_acquired: Date;
+    last_acquired: Date;
+  }>(sql`
+    select p.name, p.set_code, p.collector_number, c.finish, p.rarity, c.quantity,
+           (select s.usd_cents from price_snapshots s
+             where s.printing_id = c.printing_id and s.finish = c.finish
+             order by s.day desc limit 1) as price,
+           (select min(a.created_at) from acquisitions a
+             where a.user_id = c.user_id and a.printing_id = c.printing_id and a.finish = c.finish) as first_acquired,
+           (select max(a.created_at) from acquisitions a
+             where a.user_id = c.user_id and a.printing_id = c.printing_id and a.finish = c.finish) as last_acquired
+      from collection_cards c join printings p on p.id = c.printing_id
+     where c.user_id = ${userId}
+     order by p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last,
+              p.collector_number, c.finish
+  `);
+  return rows.rows.map((row) => ({
+    name: row.name,
+    setCode: row.set_code,
+    collectorNumber: row.collector_number,
+    finish: row.finish,
+    rarity: row.rarity,
+    quantity: row.quantity,
+    priceCents: row.price === null ? null : Number(row.price),
+    firstAcquired: new Date(row.first_acquired ?? 0).toISOString(),
+    lastAcquired: new Date(row.last_acquired ?? 0).toISOString(),
+  }));
 }

@@ -9,8 +9,8 @@ import { Cents } from "@/shared/kernel";
 const KIND = sql`sp.category || '/' || coalesce(sp.subtype, 'default')`;
 /** A product's MSRP in SQL: its override, else its kind's price (null = not for sale). */
 const MSRP = sql`coalesce(o.cents, k.cents)`;
-/** Only products with something inside are for sale (design doc 06, rule 2). */
-const HAS_CONTENTS = sql`jsonb_array_length(sp.contents) > 0`;
+/** Only listed products with something inside are for sale (design doc 06, rule 2; 11). */
+const HAS_CONTENTS = sql`sp.is_listed and jsonb_array_length(sp.contents) > 0`;
 const PRICE_JOINS = sql`
   left join msrp_overrides o on o.product_id = sp.id
   left join msrp_prices k on k.kind = ${KIND}`;

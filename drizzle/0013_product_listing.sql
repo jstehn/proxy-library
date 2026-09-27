@@ -1,0 +1,1 @@
+ALTER TABLE "sealed_products" ADD COLUMN "is_listed" boolean DEFAULT true NOT NULL;

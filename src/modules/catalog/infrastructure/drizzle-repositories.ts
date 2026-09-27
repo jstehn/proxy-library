@@ -182,6 +182,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           .onConflictDoUpdate({
             target: sealedProducts.id,
             set: {
+              isListed: true,
               name: product.name,
               category: product.category,
               subtype: product.subtype,
@@ -190,6 +191,12 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
             },
           });
       }
+      // Products this import didn't include are no longer sold (rule 5b; design doc 11).
+      const listed = setImport.products.map((product) => product.id as string);
+      await db
+        .update(sealedProducts)
+        .set({ isListed: sql`${sealedProducts.id} = any(${sql.param(listed)}::text[])` })
+        .where(eq(sealedProducts.setCode, code));
       for (const deck of setImport.decks) {
         const row = { ...deck, cards: deck.cards, sourceSetCodes: [...deck.sourceSetCodes] };
         await db
@@ -206,20 +213,33 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
         .where(eq(cardSets.code, code));
     },
 
-    async knownReferences() {
+    async knownReferences(importingSet) {
+      // The set being imported is replaced by its new import, so its own old products, boosters
+      // and decks don't count: the import's contents are checked against themselves instead.
+      const otherSets = <T extends { setCode: string }>(rows: T[]) =>
+        rows.filter((row) => row.setCode !== importingSet);
       const [printingRows, productRows, boosterRows, deckRows] = await Promise.all([
         db.select({ id: printings.id }).from(printings),
-        db.select({ id: sealedProducts.id }).from(sealedProducts),
+        // Unlisted products (left out or dropped) don't count as known.
+        db
+          .select({ id: sealedProducts.id, setCode: sealedProducts.setCode })
+          .from(sealedProducts)
+          .where(eq(sealedProducts.isListed, true)),
         db
           .select({ setCode: boosterConfigs.setCode, boosterType: boosterConfigs.boosterType })
           .from(boosterConfigs),
-        db.select({ setCode: deckLists.setCode, name: deckLists.name }).from(deckLists),
+        // A deck list with no cards doesn't count as known (rule 5b): an old row can linger
+        // after MTGJSON listed the deck before its cards.
+        db
+          .select({ setCode: deckLists.setCode, name: deckLists.name })
+          .from(deckLists)
+          .where(sql`jsonb_array_length(${deckLists.cards}) > 0`),
       ]);
       return {
         printingIds: new Set(printingRows.map((row) => row.id)),
-        productIds: new Set(productRows.map((row) => row.id)),
-        boosters: new Set(boosterRows.map((row) => `${row.setCode}/${row.boosterType}`)),
-        decks: new Set(deckRows.map((row) => `${row.setCode}/${row.name}`)),
+        productIds: new Set(otherSets(productRows).map((row) => row.id)),
+        boosters: new Set(otherSets(boosterRows).map((row) => `${row.setCode}/${row.boosterType}`)),
+        decks: new Set(otherSets(deckRows).map((row) => `${row.setCode}/${row.name}`)),
       };
     },
 

@@ -89,3 +89,69 @@ export function unpack(
 
   return contents.every(visit) ? { items, cards, extras } : null;
 }
+
+/** What `check-products` needs to know about the catalog. */
+export type CatalogKnowledge = Readonly<{
+  product: ProductLookup;
+  hasBooster: (setCode: string, boosterType: string) => boolean;
+  deckSize: (setCode: string, deckName: string) => number | null; // null: no such deck
+}>;
+
+/**
+ * Everything wrong with a product, going all the way down its tree (design doc 11, section 5):
+ * it must give something, and every pack, deck and product it names must exist. Empty list: fine.
+ * A "variable" product is checked through every option, since any of them could be chosen.
+ */
+export function productProblems(
+  contents: readonly SealedContent[],
+  catalog: CatalogKnowledge,
+  depth = 0,
+): string[] {
+  if (depth > 5) return ["products nested more than 5 deep"];
+  const problems: string[] = [];
+  let givesSomething = false;
+  for (const content of contents) {
+    switch (content.kind) {
+      case "pack":
+        givesSomething = true;
+        if (!catalog.hasBooster(content.setCode, content.boosterType)) {
+          problems.push(`no booster recipe for ${content.setCode} ${content.boosterType}`);
+        }
+        break;
+      case "deck": {
+        const size = catalog.deckSize(content.setCode, content.deckName);
+        if (size === null) problems.push(`no deck list "${content.deckName}" (${content.setCode})`);
+        else if (size === 0) problems.push(`deck list "${content.deckName}" is empty`);
+        else givesSomething = true;
+        break;
+      }
+      case "sealed": {
+        const product = catalog.product(content.productId);
+        if (product === null) {
+          problems.push(`no product ${content.productId}`);
+          break;
+        }
+        const inner = productProblems(product.contents, catalog, depth + 1);
+        if (inner.length === 0) givesSomething = true;
+        else problems.push(...inner.map((problem) => `${product.name}: ${problem}`));
+        break;
+      }
+      case "card":
+        givesSomething = true;
+        break;
+      case "other":
+        break;
+      case "variable":
+        for (const option of content.options) {
+          const inner = productProblems(option, catalog, depth + 1);
+          if (inner.length === 0) givesSomething = true;
+          else problems.push(...inner);
+        }
+        break;
+      default:
+        return assertNever(content);
+    }
+  }
+  if (!givesSomething && problems.length === 0) problems.push("gives nothing when opened");
+  return problems;
+}

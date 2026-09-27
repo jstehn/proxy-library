@@ -2,6 +2,7 @@
 // module, the catalog loaded from recorded fixtures (no network), and players made with SQL.
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
+import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import { makeCatalog } from "@/modules/catalog";
 import {
   drizzleCatalogRepository,
@@ -58,6 +59,7 @@ export function servicesFor(transaction: DbExecutor) {
     trades: drizzleTradeRepository(transaction),
     tradePlayers: drizzleTradePlayers(transaction),
     holdings: drizzleHoldings(transaction),
+    events: drizzleEventRecorder(transaction),
   };
 }
 
