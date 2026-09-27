@@ -21,10 +21,13 @@ export {
   PrintingId,
   SetCode,
   type BoosterConfig,
+  type BoosterSheet,
   type CardFace,
+  type Color,
   type DeckList,
   type Finish,
   type Printing,
+  type Rarity,
   type SealedContent,
   type SealedProduct,
 } from "./domain/types";
@@ -32,6 +35,7 @@ export {
   enabledSets,
   findSet,
   listSetsForAdmin,
+  printingCards,
   recentSyncRuns,
   setPrintings,
 } from "./queries/catalog";

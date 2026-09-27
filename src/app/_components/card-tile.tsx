@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { ManaText } from "@/ui/mana";
 
-// One card in the set grid. Hovering (or focusing, or tapping) it opens a larger version with
+// One card in a grid (a set's cards, a pack's pulls). Hovering (or focusing, or tapping) it opens a larger version with
 // its printed text laid over the image, because the small grid image is too small to read.
 
 const RARITY_COLORS: Record<string, string> = {
@@ -13,7 +13,12 @@ const RARITY_COLORS: Record<string, string> = {
   mythic: "text-orange-600",
 };
 
-type CardTileProps = { printing: PrintingCard; priceLine: string };
+type CardTileProps = {
+  printing: PrintingCard;
+  priceLine: string;
+  /** Pulled as a foil (or etched): shows a rainbow sheen over the image. */
+  isFoil?: boolean;
+};
 
 export function CardTile(props: CardTileProps) {
   const { printing } = props;
@@ -48,7 +53,7 @@ export function CardTile(props: CardTileProps) {
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         aria-expanded={isOpen}
         aria-label={`${printing.name}: show card text`}
-        className="block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
+        className="relative block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
       >
         {printing.hasImage ? (
           // Plain <img>: pre-sized images from our own cache, lazily loaded.
@@ -66,6 +71,7 @@ export function CardTile(props: CardTileProps) {
             {printing.name}
           </div>
         )}
+        {props.isFoil && <FoilSheen />}
       </button>
       <span className="leading-tight font-medium">{printing.name}</span>
       <span className={`text-xs ${RARITY_COLORS[printing.rarity] ?? "text-zinc-500"}`}>
@@ -78,6 +84,16 @@ export function CardTile(props: CardTileProps) {
 
       {isOpen && <EnlargedCard printing={printing} align={align} />}
     </li>
+  );
+}
+
+/** A still rainbow sheen for foils. (The animated one comes with the opening effects, Phase 8.) */
+function FoilSheen() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1"
+    />
   );
 }
 

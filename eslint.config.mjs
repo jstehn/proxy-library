@@ -55,6 +55,9 @@ const policies = [
 
   // module layers: the dependency rule points inward (overview.md)
   from(layer("domain"), el("kernel"), layer("domain", { sameModule: true })),
+  // A domain may use another module's vocabulary (its types), never its code: `import type`
+  // only. The pack engine works on the catalog's BoosterConfig this way (overview.md).
+  { from: layer("domain"), allow: { to: publicApi, dependency: { kind: "type" } } },
   from(
     layer("application"),
     el("kernel"),
@@ -88,6 +91,7 @@ const policies = [
     layer("domain", { sameModule: true }),
     layer("application", { sameModule: true }),
     layer("testing", { sameModule: true }),
+    publicApi, // fakes and sample data built from other modules' types and constructors
   ),
   from(
     el("module"),

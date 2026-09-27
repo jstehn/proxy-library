@@ -20,6 +20,7 @@ export async function SiteHeader() {
         {actor !== null && actor.isAdmin && (
           <>
             <Link href="/admin/catalog">Catalog</Link>
+            <Link href="/admin/packs">Pack lab</Link>
             <Link href="/admin/players">Players</Link>
             <Link href="/admin/invites">Invites</Link>
             <Link href="/admin/economy">Economy</Link>

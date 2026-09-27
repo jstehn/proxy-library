@@ -28,6 +28,31 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     if (result?.status === "failed") process.exitCode = 1;
   },
 
+  /**
+   * `pnpm worker check-packs [packs]`: open that many packs (default 1,000) of every booster
+   * recipe in the catalog and report anything that breaks the recipe's rules (design doc 05).
+   */
+  async "check-packs"(container) {
+    const packsPerBooster = Number(process.argv[3] ?? 1_000);
+    if (!Number.isInteger(packsPerBooster) || packsPerBooster < 1) {
+      throw new Error(`packs must be a positive whole number, got ${process.argv[3]}`);
+    }
+    console.log(`opening ${packsPerBooster} packs of every booster recipe…`);
+    const checks = await container.packs.checkBoosters(packsPerBooster);
+    const withProblems = checks.filter((check) => check.problems.length > 0);
+    for (const check of withProblems) {
+      console.log(`\n${check.setCode} ${check.boosterType}:`);
+      for (const { problem, packs } of check.problems) {
+        console.log(`  ${problem} (in ${packs} of ${check.packsOpened} packs)`);
+      }
+    }
+    const opened = checks.reduce((total, check) => total + check.packsOpened, 0);
+    console.log(
+      `\n${checks.length} recipes, ${opened} packs opened, ${withProblems.length} recipe(s) with problems`,
+    );
+    if (withProblems.length > 0) process.exitCode = 1;
+  },
+
   /** `pnpm worker schedule`: keep running; do the nightly sync and anything admins queue. */
   async schedule(container) {
     const { catalog } = container;

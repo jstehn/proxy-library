@@ -5,7 +5,7 @@ import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
-import { CardTile } from "./card-tile";
+import { CardTile } from "@/app/_components/card-tile";
 
 const FINISH_LABELS: Record<Finish, string> = {
   nonfoil: "Nonfoil",

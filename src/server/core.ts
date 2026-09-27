@@ -18,6 +18,8 @@ import {
   httpMtgjsonGateway,
   httpScryfallGateway,
 } from "@/modules/catalog/infrastructure";
+import { makePacks } from "@/modules/packs";
+import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeWallet } from "@/modules/wallet";
 import {
   drizzleEconomySettingsRepository,
@@ -32,7 +34,7 @@ import {
   type DbExecutor,
 } from "@/shared/db";
 import { platformFetch, withRateLimit, withRetry, withUserAgent, type Fetch } from "@/shared/http";
-import { realSleep, systemClock } from "@/shared/runtime";
+import { randomSeed, realSleep, systemClock } from "@/shared/runtime";
 import { makeCheckHealth } from "./health";
 
 export function buildCore(config: Config) {
@@ -52,6 +54,7 @@ export function buildCore(config: Config) {
       playerDirectory: drizzlePlayerDirectory(transaction),
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
+      boosters: drizzleBoosterSource(transaction),
     };
   }
 
@@ -85,6 +88,8 @@ export function buildCore(config: Config) {
     syncTime: config.syncTime,
   });
 
+  const packs = makePacks({ unitOfWork, seeds: { newSeed: randomSeed } });
+
   return {
     config,
     db,
@@ -93,6 +98,7 @@ export function buildCore(config: Config) {
     accounts,
     wallet,
     catalog,
+    packs,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

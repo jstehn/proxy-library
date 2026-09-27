@@ -125,3 +125,31 @@ test("the admin browses the catalog (loaded from recorded fixtures)", async ({ p
   await expect(page.getByText("4/5")).toBeVisible();
   await expect(page.getByText("Illustrated by Martin Wittfooth")).toBeVisible();
 });
+
+test("the admin opens packs in the Pack lab", async ({ page }) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome, Admin" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Pack lab" }).click();
+  await page.getByLabel("Booster").selectOption("BLB/play");
+  await page.getByLabel("Packs").selectOption("10");
+  await page.getByRole("button", { name: "Open packs" }).click();
+
+  await expect(page.getByRole("heading", { name: "10 × Bloomburrow Play booster" })).toBeVisible();
+  // Expected vs observed, per rarity: the fixture's play booster always has one rare or mythic.
+  const rareRow = page.getByRole("row").filter({ hasText: "Rares" });
+  await expect(rareRow).toBeVisible();
+  await expect(page.getByText(/Cards inside an average pack are worth \$\d+\.\d\d/)).toBeVisible();
+
+  // Three sample packs of 14 cards, in reveal order.
+  for (const number of [1, 2, 3]) {
+    await expect(
+      page.getByRole("region", { name: `Pack ${number}` }).getByRole("listitem"),
+    ).toHaveCount(14);
+  }
+});

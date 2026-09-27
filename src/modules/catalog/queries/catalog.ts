@@ -92,36 +92,32 @@ export type PrintingCard = Readonly<{
   prices: Partial<Record<Finish, Cents>>;
 }>;
 
-/** A set's printings in collector-number order, each with its latest price per finish. */
-export async function setPrintings(db: DbExecutor, code: string): Promise<PrintingCard[]> {
-  const rows = await db.execute<{
-    id: string;
-    name: string;
-    collector_number: string;
-    rarity: string;
-    variant_label: string;
-    finishes: Finish[];
-    has_image: boolean;
-    faces: CardFace[];
-    artist: string | null;
-    prices: Record<string, number> | null;
-  }>(sql`
-    select p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
-           p.image_uris is not null as has_image, p.faces, p.artist,
-           -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
-           (select jsonb_object_agg(latest.finish, latest.usd_cents)
-              from (select distinct on (s.finish) s.finish, s.usd_cents
-                      from price_snapshots s
-                     where s.printing_id = p.id
-                     order by s.finish, s.day desc) latest) as prices
-      from printings p
-     where p.set_code = ${code.toUpperCase()}
-     -- "12" before "100", and "A-12" style numbers after plain ones.
-     order by nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last,
-              p.collector_number
-  `);
+type PrintingCardRow = {
+  id: string;
+  name: string;
+  collector_number: string;
+  rarity: string;
+  variant_label: string;
+  finishes: Finish[];
+  has_image: boolean;
+  faces: CardFace[];
+  artist: string | null;
+  prices: Record<string, number> | null;
+};
 
-  return rows.rows.map((row) => ({
+/** The columns of a PrintingCard, for printings aliased "p". */
+const PRINTING_CARD_COLUMNS = sql`
+  p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
+  p.image_uris is not null as has_image, p.faces, p.artist,
+  -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
+  (select jsonb_object_agg(latest.finish, latest.usd_cents)
+     from (select distinct on (s.finish) s.finish, s.usd_cents
+             from price_snapshots s
+            where s.printing_id = p.id
+            order by s.finish, s.day desc) latest) as prices`;
+
+function toPrintingCard(row: PrintingCardRow): PrintingCard {
+  return {
     id: row.id,
     name: row.name,
     collectorNumber: row.collector_number,
@@ -134,7 +130,34 @@ export async function setPrintings(db: DbExecutor, code: string): Promise<Printi
     prices: Object.fromEntries(
       Object.entries(row.prices ?? {}).map(([finish, cents]) => [finish, Cents.of(Number(cents))]),
     ),
-  }));
+  };
+}
+
+/** A set's printings in collector-number order, each with its latest price per finish. */
+export async function setPrintings(db: DbExecutor, code: string): Promise<PrintingCard[]> {
+  const rows = await db.execute<PrintingCardRow>(sql`
+    select ${PRINTING_CARD_COLUMNS}
+      from printings p
+     where p.set_code = ${code.toUpperCase()}
+     -- "12" before "100", and "A-12" style numbers after plain ones.
+     order by nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last,
+              p.collector_number
+  `);
+  return rows.rows.map(toPrintingCard);
+}
+
+/** These printings (any set), by id. Ids the catalog doesn't have are left out. */
+export async function printingCards(
+  db: DbExecutor,
+  ids: readonly string[],
+): Promise<Map<string, PrintingCard>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.execute<PrintingCardRow>(sql`
+    select ${PRINTING_CARD_COLUMNS}
+      from printings p
+     where p.id = any(${sql.param([...new Set(ids)])}::text[])
+  `);
+  return new Map(rows.rows.map((row) => [row.id, toPrintingCard(row)]));
 }
 
 export type SyncRunRow = Readonly<{
