@@ -1,4 +1,4 @@
-import { formatCents, parseUsd } from "@/lib/money";
+import { Cents } from "@/shared/kernel";
 
 // Placeholder home page. Each section becomes a real route in later phases.
 const sections = [
@@ -12,7 +12,7 @@ const sections = [
 
 export default function Home() {
   // Runs on the server: a Server Component, the default in the App Router.
-  const examplePrice = parseUsd("0.30");
+  const examplePrice = Cents.fromUsd("0.30");
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-16">
@@ -35,7 +35,7 @@ export default function Home() {
       </ul>
 
       <p className="text-sm text-zinc-500">
-        Sanity check: a common worth {examplePrice === null ? "n/a" : formatCents(examplePrice)}.
+        Sanity check: a common worth {examplePrice === null ? "n/a" : Cents.format(examplePrice)}.
       </p>
     </main>
   );

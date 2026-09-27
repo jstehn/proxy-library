@@ -10,15 +10,22 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   or Node built-ins).
 - 🔒 Only composition roots (`src/server/`, `worker/`) import `*/infrastructure`.
 - 🔒 No import cycles.
-- 🔒 Server-only modules start with `import "server-only"` so a client component can't pull in DB
-  code by accident.
+- 🔒 The app composition root (`src/server/container.ts`) starts with `import "server-only"`, so a
+  client component can't pull in DB code by accident. (Not in shared code: `server-only` throws
+  outside Next.js, which would break the worker and tests.)
+- `src/server/core.ts` holds the wiring shared by both composition roots.
+- Real adapters for kernel ports that touch the OS (`systemClock`, `randomSeed`) live in
+  `src/shared/runtime/`. Only composition roots import them.
 - `src/app/` holds routes, layouts, server actions and route-specific components (`_components/`).
   Shared presentational components live in `src/ui/`.
 
 ## TypeScript
 
 - 🔒 `strict` on. 🔒 No `any` (`@typescript-eslint/no-explicit-any`). 🔒 No non-null `!`.
-- `as` casts only inside smart constructors (`shared/kernel/brand.ts` and friends).
+- `as` casts only inside smart constructors.
+- A branded type gets a **companion object** with the same name that holds its constructor and
+  operations: `Cents.of(123)`, `Cents.add(a, b)`, `Cents.format(c)`, `UserId.of(s)`. TypeScript
+  keeps types and values in separate namespaces, so `Cents` is both.
 - Prefer `type` for unions and data, `interface` for ports (either is fine; be consistent per file).
 - Data is **immutable** by default: `readonly` fields, `ReadonlyArray<T>`, no mutating function
   parameters.
@@ -57,7 +64,7 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 
 ## Data and I/O
 
-- 🔒 Only `shared/config.ts` reads `process.env`.
+- 🔒 Only `shared/config/` reads `process.env`.
 - 🔒 Only adapters call `fetch`, `Date.now`/`new Date()`, `Math.random`, `fs`.
 - All external JSON is Zod-parsed in the adapter and mapped to domain types before it goes further.
 - Money is `Cents` (branded integer). Rates are basis points (`5000` = 50%). Rounding happens in

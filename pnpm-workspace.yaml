@@ -1,3 +1,7 @@
+# pnpm 12 blocks dependency install scripts unless explicitly allowed.
 allowBuilds:
+  # esbuild's postinstall only verifies its (statically linked) binary; needed by vitest/tsx/drizzle-kit.
+  esbuild: true
+  # native image library for next/image optimisation; we serve cached JPGs as-is.
   sharp: false
   unrs-resolver: false

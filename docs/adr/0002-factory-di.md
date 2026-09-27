@@ -1,6 +1,6 @@
 # 0002. Use plain functions with factory-function DI and a single composition root
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

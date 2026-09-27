@@ -32,20 +32,20 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 
 ## Phases
 
-| #   | Phase                              | Key patterns introduced                                                         | Status       |
-| --- | ---------------------------------- | ------------------------------------------------------------------------------- | ------------ |
-| 0   | Dev environment & first TypeScript | —                                                                               | ✅ Done      |
-| 1   | **Architecture foundation**        | kernel types, DI, UoW, lint boundaries, test harness                            | Design ready |
-| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                 | —            |
-| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests            | —            |
-| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache | —            |
-| 5   | Pack engine                        | strategy, composite, weighted sampling, property + statistical tests            | —            |
-| 6   | Store & inventory                  | UoW across modules, sealed-item state machine, events                           | —            |
-| 7   | Collection & singles store         | CQRS-lite queries, sell-back, URL-driven filters                                | —            |
-| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                    | —            |
-| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                        | —            |
-| 10  | Trades                             | trade state machine, multi-lock ordering                                        | —            |
-| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                   | —            |
+| #   | Phase                              | Key patterns introduced                                                         | Status  |
+| --- | ---------------------------------- | ------------------------------------------------------------------------------- | ------- |
+| 0   | Dev environment & first TypeScript | —                                                                               | ✅ Done |
+| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                            | ✅ Done |
+| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                 | —       |
+| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests            | —       |
+| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache | —       |
+| 5   | Pack engine                        | strategy, composite, weighted sampling, property + statistical tests            | —       |
+| 6   | Store & inventory                  | UoW across modules, sealed-item state machine, events                           | —       |
+| 7   | Collection & singles store         | CQRS-lite queries, sell-back, URL-driven filters                                | —       |
+| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                    | —       |
+| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                        | —       |
+| 10  | Trades                             | trade state machine, multi-lock ordering                                        | —       |
+| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                   | —       |
 
 ### Why this order (changed from the original plan)
 
@@ -61,23 +61,24 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 
 Design artifacts (this commit): [architecture overview](architecture/overview.md),
 [pattern catalog](architecture/patterns.md), [conventions](architecture/conventions.md),
-[testing strategy](architecture/testing.md), [ADRs 0001–0010](adr/README.md).
+[testing strategy](architecture/testing.md), [ADRs 0001–0011](adr/README.md).
 
-**Review gate →** approve or amend the ADRs (status Proposed → Accepted).
+**Review gate:** ✅ ADRs accepted 2026-09-26.
 
-Implementation steps once approved:
+Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-foundation.md)):
 
-1. **Shared kernel** (`src/shared/kernel/`): `result.ts`, `brand.ts` + ids, `money.ts` (move and
-   upgrade `src/lib/money.ts` to a branded `Cents` + `applyRate`), `clock.ts`, `rng.ts`
-   (`seededRng`, `cryptoRng`, `weightedPick`, `weightedSampleWithoutReplacement`),
-   `assert-never.ts`. Everything unit and property tested.
+1. **Shared kernel** (`src/shared/kernel/`): `result.ts`, `brand.ts`, `ids.ts`, `money.ts` (moved
+   from `src/lib/money.ts`, now a branded `Cents`), `clock.ts`, `rng.ts` (`seededRng`,
+   `weightedPick`, `weightedSample`), `unit-of-work.ts`, `assert-never.ts`. Unit and
+   property tested. OS-backed adapters (`systemClock`, `randomSeed`) went to `src/shared/runtime/`.
+   `applyRate` is deferred to Phase 3, where the wallet design doc fixes its rounding rule.
 2. **Test harness:** Vitest (+ fast-check), `pnpm test`/`test:int`/`check` scripts, and `tcg_test`
    database creation in `scripts/db.sh`.
-3. **Config:** `shared/config.ts` with a Zod-parsed env and a fail-fast startup error message.
+3. **Config:** `shared/config/` with a Zod-parsed env and a fail-fast startup error message.
 4. **DB foundation:** Drizzle client factory, drizzle-kit config, migrations folder, `UnitOfWork`
    (Drizzle implementation + in-memory implementation, with rollback-on-err integration tests).
 5. **Composition roots:** `src/server/container.ts` (with the `globalThis` dev cache and
-   `server-only`) and the `worker/` skeleton.
+   `server-only`) and `worker/container.ts`, both built on the shared wiring in `src/server/core.ts`.
 6. **Lint boundaries:** `eslint-plugin-boundaries`, `import/no-cycle`, and the restricted
    globals/imports from ADR 0009, each proven by a deliberately failing fixture that is then removed.
 7. **Walking skeleton:** a `/health` route that goes through container → UoW → DB, proving the wiring.

@@ -1,6 +1,6 @@
 # 0008. Generate randomness server-side through injected Rng and Clock ports
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context
@@ -19,6 +19,11 @@ accrual must be testable, which requires deterministic randomness and time.
   and it makes any reported "weird pack" reproducible.
 - Weighted selection helpers (`weightedPick`, `weightedSampleWithoutReplacement`) live in the
   kernel next to `Rng` and are property-tested.
+
+**Implementation note (Phase 1):** there's no separate `cryptoRng`. Production draws a fresh
+128-bit seed from the OS (`randomSeed()` in `shared/runtime`) and uses `seededRng(seed)`, which
+is the same generator tests use, so every opening can be replayed from its stored seed.
+`weightedSampleWithoutReplacement` shipped as `weightedSample`.
 
 ## Consequences
 

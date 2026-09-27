@@ -1,6 +1,6 @@
 # 0001. Structure the app as a modular monolith with hexagonal modules
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

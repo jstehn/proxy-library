@@ -1,6 +1,6 @@
 # 0006. Serve reads through query functions, not repositories
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

@@ -1,6 +1,6 @@
 # 0005. Coordinate multi-module writes with a Unit of Work
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

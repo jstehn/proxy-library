@@ -30,11 +30,16 @@ when finishing a phase, and commit at the end of each lesson.
 ## Conventions (summary)
 
 - Expected failures return `Result`, errors are `{ kind: ... }` unions, and defects throw.
-- Money is integer cents (`Cents`). Never floats. (Currently `src/lib/money.ts`; it moves to
-  `src/shared/kernel/` in Phase 1.)
+- Money is integer cents: `Cents` from `@/shared/kernel` (companion object: `Cents.of/add/format`).
+  Never floats.
 - All randomness (pack opening) and money movement happen server-side, via injected `Rng`/`Clock`.
 - Card data: MTGJSON (sets, booster sheets, sealed products) + Scryfall (prices, images,
   legalities), synced by the worker. Prefer bulk files and batched calls (`/cards/collection`, 75
   per request).
 - `@/*` imports resolve to `src/*`.
-- Checks: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`.
+- Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
+  DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
+- Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
+  `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm worker <cmd>`.
+- Lint enforces architecture boundaries (`eslint.config.mjs`, ADR 0009). Don't disable a rule
+  without a reason comment.

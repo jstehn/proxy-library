@@ -129,6 +129,10 @@ will be `/collection`. `layout.tsx` wraps everything below it.
 
 ## 4. First TypeScript: `money.ts`
 
+> **Update (Phase 1):** this file moved to `src/shared/kernel/money.ts` and became a branded
+> `Cents` type with a companion object (`Cents.fromUsd`, `Cents.format`). See lesson 01. The
+> ideas below still apply.
+
 Open `src/lib/money.ts`. Line by line, compared with Python:
 
 ```ts

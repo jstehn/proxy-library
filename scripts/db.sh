@@ -23,9 +23,14 @@ start() {
     pg_ctl start -l "$PGHOST/postgres.log" -o "-k $PGHOST -c listen_addresses=''" -w >/dev/null
     echo "Postgres started (socket in $PGHOST)"
   fi
-  if ! psql -d postgres -tAc "select 1 from pg_database where datname = '$PGDATABASE'" | grep -q 1; then
-    createdb "$PGDATABASE"
-    echo "Created database $PGDATABASE"
+  ensure_database "$PGDATABASE"
+  ensure_database "${PGDATABASE}_test" # used by integration tests (see docs/architecture/testing.md)
+}
+
+ensure_database() {
+  if ! psql -d postgres -tAc "select 1 from pg_database where datname = '$1'" | grep -q 1; then
+    createdb "$1"
+    echo "Created database $1"
   fi
 }
 

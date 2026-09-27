@@ -1,6 +1,6 @@
 # 0011. Track every card at exact printing × finish granularity
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

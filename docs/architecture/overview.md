@@ -1,6 +1,6 @@
 # Architecture overview
 
-> Status: **proposed**, awaiting review. Decisions are recorded as ADRs in [`../adr/`](../adr/).
+> Status: **accepted** (2026-09-26). Decisions are recorded as ADRs in [`../adr/`](../adr/).
 
 ## Goals, in priority order
 
@@ -111,12 +111,13 @@ This is enforced by lint (ADR [0009](../adr/0009-lint-enforced-boundaries.md)).
 
 ## Cross-cutting pieces (`src/shared/`)
 
-| Path               | Contents                                                                                                 |
-| ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `shared/kernel/`   | `Result`, `Brand`, ids (`UserId`, `CardId`, …), `Cents` + money functions, `Clock`, `Rng`, `assertNever` |
-| `shared/db/`       | Drizzle client factory, `UnitOfWork` implementation, schema barrel for migrations                        |
-| `shared/config.ts` | Zod-parsed environment. The only place that reads `process.env`.                                         |
-| `shared/http/`     | `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                      |
+| Path              | Contents                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/kernel/`  | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
+| `shared/db/`      | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
+| `shared/runtime/` | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
+| `shared/config/`  | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
+| `shared/http/`    | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
 
 The kernel is deliberately **tiny and stable**. It isn't a `utils/` dumping ground.
 
@@ -166,7 +167,7 @@ plain serializable view objects → render. Reads skip repositories and use case
 | Randomness     | `Rng` port, created server-side per opening. Seeded in tests.                   |
 | Time           | `Clock` port. Fixed in tests.                                                   |
 | External data  | Only in `catalog/infrastructure` (ACL). Translated to domain types at the edge. |
-| Config         | `shared/config.ts`, passed in by the composition root                           |
+| Config         | `shared/config/`, passed in by the composition root                             |
 | Sessions       | `accounts/infrastructure` (Better Auth) → exposes `getActor()`                  |
 
 ## Deployment view

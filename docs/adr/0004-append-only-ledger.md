@@ -1,6 +1,6 @@
 # 0004. Record money as an append-only ledger with per-account locking
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

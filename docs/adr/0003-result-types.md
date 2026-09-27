@@ -1,6 +1,6 @@
 # 0003. Return Result types for expected failures; throw only for defects
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

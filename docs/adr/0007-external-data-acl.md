@@ -1,6 +1,6 @@
 # 0007. Keep external card data behind an anti-corruption layer and sync in bulk
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 
 ## Context

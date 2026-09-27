@@ -147,7 +147,8 @@ bubble up to Next's error boundary and get logged.
 
 **What:** `type UserId = Brand<string, "UserId">`. At runtime it's a plain string, but the compiler
 refuses to pass a `CardId` where a `UserId` is expected. Brands are created only by **smart
-constructors** that validate (`cents(n)` rejects non-integers).
+constructors** that validate (`Cents.of(n)` rejects non-integers). Each brand has a companion
+object of the same name holding its constructor and operations (`Cents.add`, `Cents.format`).
 
 **Where:** all ids, `Cents`, `Percent`/`BasisPoints` (sell-back rate).
 
@@ -161,7 +162,7 @@ make those bugs compile errors.
 **What:** untrusted data (form input, env vars, MTGJSON/Scryfall JSON) is **parsed once at the
 boundary** into precise types. Inside, code trusts the types and never re-checks.
 
-**Where:** server actions (FormData → input type), `shared/config.ts` (env), catalog gateways
+**Where:** server actions (FormData → input type), `shared/config/` (env), catalog gateways
 (external JSON).
 
 **Python analogy:** Pydantic models at the API edge.
@@ -279,7 +280,7 @@ fakes can be trusted.
 | `utils.ts` / `helpers.ts` junk drawers               | Put the function in the module that owns the concept                               |
 | Scryfall JSON or Drizzle rows in the UI              | Map to domain types (ACL) or view models (queries)                                 |
 | Inheritance hierarchies                              | Composition, unions and strategies                                                 |
-| `process.env.X` scattered around                     | `shared/config.ts`, injected                                                       |
+| `process.env.X` scattered around                     | `shared/config/`, injected                                                         |
 | `any`, non-null `!`, `as` casts                      | Parse with Zod, narrow with checks. `as` is allowed only inside smart constructors |
 | Boolean flag parameters (`open(id, true)`)           | Separate functions or an options object with named fields                          |
 | Business rules in React components or server actions | Move them into domain functions                                                    |
