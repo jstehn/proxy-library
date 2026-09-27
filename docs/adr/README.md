@@ -21,3 +21,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0011 | [Track cards at printing × finish granularity](0011-printing-level-ownership.md)             | Accepted |
 | 0012 | [Better Auth for identity only, behind a port](0012-better-auth-identity-only.md)            | Accepted |
 | 0013 | [Daily price history and a store transaction ledger](0013-price-history-and-store-ledger.md) | Accepted |
+| 0014 | [Price singles at market value and sealed product at MSRP](0014-pricing-sources.md)          | Accepted |
