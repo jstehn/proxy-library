@@ -85,3 +85,13 @@ Each entry: the phase, what was decided, why, and where to change it.
 | **Admin pages moved into an Admin section** with its own menu                                                                    | Keeps the main menu for playing                                                                                          | `app/admin/layout.tsx`                                          |
 | **Opener: a spotlight on larger screens, a stack on phones; tapping a seen card on a phone shows it large**                      | Flipped cards were too small to read                                                                                     | `src/ui/opening/pack-opener.tsx`                                |
 | **Browser controls follow the dark theme** (`color-scheme`)                                                                      | Dropdown options were light grey on white                                                                                | `globals.css`                                                   |
+
+### Phase 10: trades
+
+| Decision                                                                        | Why                                                                  | Where to change it                           |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
+| **Nothing is reserved while a proposal waits; acceptance re-checks everything** | Simpler, and a refused acceptance explains exactly what changed      | `carryOut` in `trades/application/trades.ts` |
+| **Collections are visible to other players in the trade builder**               | You need to see what someone has to ask for it                       | `/trades/new`                                |
+| **Proposals never expire** (either side can end them)                           | Playgroups are small; lesson 10's exercise 2 shows how to add expiry | `decide`                                     |
+| **At most $10,000 per side**, 99 copies per card line                           | Same limits as the rest of the app                                   | `checkOffer`                                 |
+| **Disabled players can't receive trades**                                       | Rule 2                                                               | `drizzleTradePlayers`                        |

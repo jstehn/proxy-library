@@ -142,3 +142,21 @@ to ask for it).
 2. **Collections are visible to other players in the trade builder.**
 3. **Proposals don't expire.** Either side can end one (decline or cancel).
 4. **Money limit per side: $10,000**, the same as the wallet's per-entry limit.
+
+## 13. Implementation notes (what changed while building)
+
+- **The wallet gained `lockWallets(services, userIds, now)`**, which brings wallets up to date
+  and locks them sorted by user id. Trades use it; any future use case needing several wallets
+  should too.
+- **Deadlocks, tested honestly.** The integration test accepts two opposite trades at once and
+  both succeed, but it passed even with the ordering removed: the two transactions didn't overlap
+  closely enough. Two raw transactions that lock wallets in **opposite** orders, with a pause in
+  between, do fail: Postgres reports `deadlock detected` and aborts one. Locking in the **same**
+  order, the second waits and both commit. Lesson 10 shows the experiment. The ordering is
+  justified by that reasoning, not by the test.
+- **The builder's draft lives in the URL.** Each form carries the rest of the draft in hidden
+  fields. If someone submits one form before a click on another has loaded, the older draft wins
+  (the end-to-end test hit this and now waits). A client-side builder would avoid it, which is
+  listed in future-ideas.
+- **Counter-offers reuse the builder**, prefilled from the original trade seen from the other
+  side, with `replaces=<id>`.

@@ -58,6 +58,13 @@ design doc (or joins a phase's design) and is removed from this list.
   your decks.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
 
+## Trades
+
+- **A client-side trade builder** (no page load per "+ add"), which also removes the draft race
+  described in design doc 10, section 13.
+- **Trade expiry** after N days, and a cap on open proposals per player (lesson 10's exercises).
+- **Notifications** beyond the badge (e-mail isn't set up; a feed item comes with Phase 11).
+
 ## Players and economy
 
 - **Public player profiles**: history, total spent, self-funded amounts. The ledger already
