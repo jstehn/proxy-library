@@ -1,11 +1,13 @@
 import { ok } from "@/shared/kernel";
 import {
-  countsTowardStandard,
   isNightlySyncDue,
-  missingReferences,
   priceSnapshots,
   snapshotDay,
+  standardSetsFromTally,
   supportingSetCodes,
+  tallyStandard,
+  withoutBrokenReferences,
+  type StandardTally,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
 import type {
@@ -31,7 +33,10 @@ export type SyncSummary = {
   enabledAsStandard: string[];
   importedSets: string[];
   importedSupportingSets: string[];
-  failedSets: { code: string; problems: string[] }[];
+  /** Boosters, products and decks left out because they refer to something missing (rule 5). */
+  leftOut: string[];
+  /** Sets whose import failed with an unexpected error. The other sets still import. */
+  failedSets: { code: string; error: string }[];
   skippedDigital: {
     printings: number;
     boosterTypes: string[];
@@ -66,6 +71,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       enabledAsStandard: [],
       importedSets: [],
       importedSupportingSets: [],
+      leftOut: [],
       failedSets: [],
       skippedDigital: { printings: 0, boosterTypes: [], products: [], decks: [] },
       pricedPrintings: 0,
@@ -105,7 +111,11 @@ export function makeSync(dependencies: CatalogDependencies) {
       state.importedVersion === null ||
       (kind === "full" && state.importedVersion !== summary.mtgjsonVersion);
     for (const state of states.filter((s) => s.isEnabled && needsImport(s))) {
-      await importSet(state.code, statesByCode, kind, summary);
+      try {
+        await importSet(state.code, statesByCode, kind, summary);
+      } catch (error) {
+        summary.failedSets.push({ code: state.code, error: describeError(error) });
+      }
     }
 
     // 5. Today's prices, images and legalities for every printing we hold.
@@ -137,40 +147,35 @@ export function makeSync(dependencies: CatalogDependencies) {
       summary.importedSupportingSets.push(supportCode);
     }
 
-    // Rule 5: refuse to save a set that refers to anything we don't have.
-    const problems = await inTransaction(async ({ catalog }) => {
+    // Rule 5: leave out anything that refers to something we don't have, and report it.
+    const checked = await inTransaction(async ({ catalog }) => {
       const known = await catalog.knownReferences();
-      return missingReferences(setImport, {
+      return withoutBrokenReferences(setImport, {
         hasPrinting: (id) => known.printingIds.has(id),
         hasProduct: (id) => known.productIds.has(id),
         hasBooster: (setCode, boosterType) => known.boosters.has(`${setCode}/${boosterType}`),
         hasDeck: (setCode, deckName) => known.decks.has(`${setCode}/${deckName}`),
       });
     });
-    if (problems.length > 0) {
-      summary.failedSets.push({ code, problems });
-      return;
-    }
+    summary.leftOut.push(...checked.leftOut.map((reason) => `${code}: ${reason}`));
 
     // Rule 3: the whole set in one transaction.
     await inTransaction(({ catalog }) =>
-      catalog.saveImport(setImport, { printingsOnly: false, importedAt: clock.now() }),
+      catalog.saveImport(checked.setImport, { printingsOnly: false, importedAt: clock.now() }),
     );
     summary.importedSets.push(code);
   }
 
-  async function findStandardSets(bulkFilePath: string): Promise<Set<SetCode>> {
-    const codes = new Set<SetCode>();
-    for await (const card of scryfall.readBulkFile(bulkFilePath)) {
-      if (card.language === "en" && countsTowardStandard(card)) codes.add(card.setCode);
-    }
-    return codes;
+  async function findStandardSets(bulkFilePath: string): Promise<SetCode[]> {
+    const tally: StandardTally = new Map();
+    for await (const card of scryfall.readBulkFile(bulkFilePath)) tallyStandard(tally, card);
+    return standardSetsFromTally(tally);
   }
 
   async function pricePass(bulkFilePath: string, summary: SyncSummary): Promise<void> {
     const printings = await inTransaction(({ catalog }) => catalog.printingsForPricing());
     const day = snapshotDay(clock.now());
-    const standard = new Set<SetCode>();
+    const tally: StandardTally = new Map();
     let snapshots: PriceSnapshot[] = [];
     let extras: CardExtras[] = [];
 
@@ -185,9 +190,9 @@ export function makeSync(dependencies: CatalogDependencies) {
     }
 
     for await (const card of scryfall.readBulkFile(bulkFilePath)) {
-      // Only English paper cards count (rules 8 and 9).
+      tallyStandard(tally, card);
+      // Only English paper cards are priced (rules 8 and 9).
       if (card.language !== "en" || card.isDigital) continue;
-      if (countsTowardStandard(card)) standard.add(card.setCode);
 
       const printing = printings.get(card.scryfallId);
       if (printing === undefined) continue;
@@ -203,7 +208,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       if (extras.length >= BATCH_SIZE) await flush();
     }
     await flush();
-    await inTransaction(({ catalog }) => catalog.markStandard([...standard]));
+    await inTransaction(({ catalog }) => catalog.markStandard(standardSetsFromTally(tally)));
   }
 
   /** The worker's main step: run the oldest queued sync, if any. Returns what happened. */
@@ -220,7 +225,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       const status = summary.failedSets.length > 0 ? "failed" : "succeeded";
       const error =
         status === "failed"
-          ? `${summary.failedSets.length} set(s) could not be imported; see the summary`
+          ? `${summary.failedSets.length} set(s) failed to import: ${summary.failedSets.map((f) => f.code).join(", ")}`
           : null;
       await inTransaction(({ syncRuns }) =>
         syncRuns.finish(run.id, { status, summary, error, finishedAt: clock.now() }),
@@ -231,7 +236,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         syncRuns.finish(run.id, {
           status: "failed",
           summary: null,
-          error: error instanceof Error ? error.message : String(error),
+          error: describeError(error),
           finishedAt: clock.now(),
         }),
       );
@@ -258,7 +263,16 @@ export function makeSync(dependencies: CatalogDependencies) {
     });
   }
 
-  return { runSync, runNextQueuedSync, recoverInterruptedRuns, queueNightlyIfDue };
+  /** Queues a run started by the system (not an admin), unless one is already waiting. */
+  async function queueSync(kind: SyncKind): Promise<boolean> {
+    return inTransaction(async ({ syncRuns }) => {
+      if (await syncRuns.hasPending()) return false;
+      await syncRuns.queue({ kind, requestedBy: null, requestedAt: clock.now() });
+      return true;
+    });
+  }
+
+  return { runSync, runNextQueuedSync, recoverInterruptedRuns, queueNightlyIfDue, queueSync };
 }
 
 function addSkipped(summary: SyncSummary, setImport: SetImport) {
@@ -268,4 +282,16 @@ function addSkipped(summary: SyncSummary, setImport: SetImport) {
   skipped.boosterTypes.push(...setImport.skipped.boosterTypes.map(prefix));
   skipped.products.push(...setImport.skipped.products.map(prefix));
   skipped.decks.push(...setImport.skipped.decks.map(prefix));
+}
+
+/** An error's message plus the messages of what caused it (e.g. the database's own reason). */
+function describeError(error: unknown): string {
+  const messages: string[] = [];
+  let current: unknown = error;
+  while (current instanceof Error && messages.length < 5) {
+    // Drizzle's "Failed query" messages include every parameter; keep just the first line.
+    messages.push(current.message.split("\n")[0]);
+    current = current.cause;
+  }
+  return messages.length > 0 ? messages.join(" ← caused by: ") : String(error);
 }

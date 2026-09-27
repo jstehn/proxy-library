@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { priceSnapshots, standardSetCodes } from "../domain/rules";
+import {
+  priceSnapshots,
+  standardSetsFromTally,
+  tallyStandard,
+  type StandardTally,
+} from "../domain/rules";
 import { PrintingId } from "../domain/types";
 import { mapScryfallCard, ScryfallCardSchema } from "./scryfall";
 
@@ -28,11 +33,42 @@ describe("mapScryfallCard", () => {
   });
 });
 
-describe("standardSetCodes", () => {
-  it("counts paper expansion/core sets with Standard-legal cards, and nothing digital", () => {
-    const codes = standardSetCodes(lines);
-    expect(codes.has("BLB" as never)).toBe(true);
-    expect(codes.has("SPG" as never)).toBe(false); // a "masterpiece" set, not expansion/core
+describe("Standard detection", () => {
+  it("counts sets where most non-basic English paper cards are Standard-legal", () => {
+    const tally: StandardTally = new Map();
+    for (const card of lines) tallyStandard(tally, card);
+    expect(standardSetsFromTally(tally)).toEqual(["BLB"]); // SPG is a "masterpiece" set
+  });
+
+  it("ignores basic lands, which are legal in every set", () => {
+    const tally: StandardTally = new Map();
+    const oldBasic = {
+      ...lines[0],
+      setCode: "LEA" as never,
+      isStandardLegal: true,
+      isBasicLand: true,
+    };
+    const oldCard = {
+      ...lines[0],
+      setCode: "LEA" as never,
+      isStandardLegal: false,
+      isBasicLand: false,
+    };
+    tallyStandard(tally, oldBasic);
+    tallyStandard(tally, oldCard);
+    expect(standardSetsFromTally(tally)).toEqual([]);
+  });
+
+  it("ignores an old set with a few Standard-legal reprints", () => {
+    const tally: StandardTally = new Map();
+    const card = (legal: boolean) => ({
+      ...lines[0],
+      setCode: "M19" as never,
+      isStandardLegal: legal,
+    });
+    for (let i = 0; i < 15; i++) tallyStandard(tally, card(true));
+    for (let i = 0; i < 85; i++) tallyStandard(tally, card(false));
+    expect(standardSetsFromTally(tally)).toEqual([]);
   });
 });
 

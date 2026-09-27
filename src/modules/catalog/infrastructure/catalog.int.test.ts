@@ -72,6 +72,7 @@ describe("the first sync", () => {
     expect(summary.importedSupportingSets).toEqual(["SPG"]);
     expect(summary.importedSets).toEqual(["BLB"]);
     expect(summary.failedSets).toEqual([]);
+    expect(summary.leftOut).toEqual([]);
     expect(summary.skippedDigital).toEqual({
       printings: 1,
       boosterTypes: ["BLB: play-arena"],
@@ -134,14 +135,13 @@ describe("running again", () => {
 });
 
 describe("rule 5: nothing may refer to a missing card", () => {
-  it("refuses to import a set whose supporting set isn't available", async () => {
+  it("leaves out (and reports) what refers to a supporting set that isn't available", async () => {
     const withoutSpg = fixtureMtgjsonGateway({ hideSets: ["SPG"] });
     const summary = await buildCatalog(withoutSpg).runSync("prices");
-    expect(summary.importedSets).toEqual([]);
-    expect(summary.failedSets).toEqual([
-      { code: "BLB", problems: ["booster play, sheet specialGuest: 2 unknown card(s)"] },
-    ]);
-    expect(await countRows("printings")).toBe(0); // nothing half-saved
+    expect(summary.importedSets).toEqual(["BLB"]);
+    expect(summary.leftOut[0]).toBe("BLB: booster play: sheet specialGuest has 2 unknown card(s)");
+    expect(await countRows("booster_configs")).toBe(0);
+    expect(await countRows("sealed_products")).toBe(1); // only the starter kit remains
   });
 });
 

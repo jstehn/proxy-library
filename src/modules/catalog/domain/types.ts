@@ -132,6 +132,8 @@ export type SetImport = Readonly<{
   boosters: readonly BoosterConfig[];
   products: readonly SealedProduct[];
   decks: readonly DeckList[];
+  /** Sets that sealed products take individual cards from (e.g. promo sets for prerelease kits). */
+  productCardSetCodes: readonly SetCode[];
   skipped: SkippedDigital;
 }>;
 
@@ -159,6 +161,7 @@ export type ScryfallCard = Readonly<{
   isDigital: boolean;
   language: string;
   isStandardLegal: boolean;
+  isBasicLand: boolean;
   prices: ScryfallPrices;
   images: ImageUris | null;
   legalities: Readonly<Record<string, string>>;

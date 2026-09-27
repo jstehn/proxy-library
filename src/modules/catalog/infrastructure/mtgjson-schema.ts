@@ -39,6 +39,9 @@ export const MtgjsonCard = z.object({
   promoTypes: z.array(z.string()).default([]),
   isFullArt: z.boolean().default(false),
   availability: z.array(z.string()).default([]),
+  // Double-faced and other multi-part cards have one entry per face: side "a", "b", …
+  side: z.string().optional(),
+  otherFaceIds: z.array(z.string()).default([]),
   identifiers: z.object({
     scryfallId: z.string().optional(),
     scryfallOracleId: z.string().optional(),
@@ -66,7 +69,7 @@ export type MtgjsonBooster = z.infer<typeof Booster>;
 // Sealed product contents are recursive ("variable" holds more contents), so the type is
 // written out first and the schema refers to itself through z.lazy.
 export type MtgjsonContents = {
-  card?: { uuid: string; foil?: boolean; finishes?: string[] }[];
+  card?: { uuid: string; set: string; foil?: boolean; finishes?: string[] }[];
   pack?: { code: string; set: string }[];
   sealed?: { uuid: string; count: number; set: string }[];
   deck?: { name: string; set: string }[];
@@ -79,6 +82,7 @@ const Contents: z.ZodType<MtgjsonContents> = z.lazy(() =>
       .array(
         z.object({
           uuid: z.string(),
+          set: z.string(),
           foil: z.boolean().optional(),
           finishes: z.array(z.string()).optional(),
         }),

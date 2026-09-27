@@ -85,10 +85,15 @@ export function mapPrinting(raw: MtgjsonCard): Printing | null {
   };
 }
 
+/** Maps any face's id to the card's front-face id (unchanged for single-faced cards). */
+export type FaceResolver = (uuid: string) => PrintingId;
+const sameId: FaceResolver = (uuid) => PrintingId.of(uuid);
+
 export function mapBooster(
   setCode: SetCode,
   boosterType: string,
   raw: MtgjsonBooster,
+  resolve: FaceResolver = sameId,
 ): BoosterConfig {
   return {
     setCode,
@@ -99,7 +104,7 @@ export function mapBooster(
         name,
         {
           cards: Object.entries(sheet.cards).map(([uuid, weight]) => ({
-            printingId: PrintingId.of(uuid),
+            printingId: resolve(uuid),
             weight,
           })),
           isFoil: sheet.foil,
@@ -118,10 +123,10 @@ function cardFinish(card: { foil?: boolean; finishes?: string[] }): Finish {
   return card.foil ? "foil" : "nonfoil";
 }
 
-export function mapContents(raw: MtgjsonContents): SealedContent[] {
+export function mapContents(raw: MtgjsonContents, resolve: FaceResolver = sameId): SealedContent[] {
   const contents: SealedContent[] = [];
   for (const card of raw.card ?? []) {
-    contents.push({ kind: "card", printingId: PrintingId.of(card.uuid), finish: cardFinish(card) });
+    contents.push({ kind: "card", printingId: resolve(card.uuid), finish: cardFinish(card) });
   }
   for (const pack of raw.pack ?? []) {
     contents.push({ kind: "pack", setCode: SetCode.of(pack.set), boosterType: pack.code });
@@ -140,12 +145,19 @@ export function mapContents(raw: MtgjsonContents): SealedContent[] {
     if (!isDigitalCodeExtra(other.name)) contents.push({ kind: "other", name: other.name });
   }
   for (const variable of raw.variable ?? []) {
-    contents.push({ kind: "variable", options: variable.configs.map(mapContents) });
+    contents.push({
+      kind: "variable",
+      options: variable.configs.map((config) => mapContents(config, resolve)),
+    });
   }
   return contents;
 }
 
-export function mapSealedProduct(setCode: SetCode, raw: MtgjsonSealedProduct): SealedProduct {
+export function mapSealedProduct(
+  setCode: SetCode,
+  raw: MtgjsonSealedProduct,
+  resolve: FaceResolver = sameId,
+): SealedProduct {
   return {
     id: SealedProductId.of(raw.uuid),
     setCode,
@@ -153,15 +165,19 @@ export function mapSealedProduct(setCode: SetCode, raw: MtgjsonSealedProduct): S
     category: raw.category,
     subtype: raw.subtype,
     releaseDate: raw.releaseDate ?? null,
-    contents: mapContents(raw.contents),
+    contents: mapContents(raw.contents, resolve),
   };
 }
 
-export function mapDeck(setCode: SetCode, raw: MtgjsonDeck): DeckList {
+export function mapDeck(
+  setCode: SetCode,
+  raw: MtgjsonDeck,
+  resolve: FaceResolver = sameId,
+): DeckList {
   const toCard =
     (board: DeckCard["board"]) =>
     (card: MtgjsonDeck["mainBoard"][number]): DeckCard => ({
-      printingId: PrintingId.of(card.uuid),
+      printingId: resolve(card.uuid),
       count: card.count,
       finish: card.isEtched ? "etched" : card.isFoil ? "foil" : "nonfoil",
       board,
@@ -183,9 +199,19 @@ export function mapDeck(setCode: SetCode, raw: MtgjsonDeck): DeckList {
 export function mapSetFile(file: MtgjsonSetFile): SetImport {
   const set = mapSetSummary(file.data);
 
+  // A double-faced card is listed once per face (side "a", "b", …) with the same Scryfall id.
+  // We keep one printing per physical card (the front face), and point references to any other
+  // face at the front.
+  const isFrontFace = (card: MtgjsonCard) => card.side === undefined || card.side === "a";
+  const frontOf = new Map<string, string>();
+  for (const card of file.data.cards.filter(isFrontFace)) {
+    for (const otherFace of card.otherFaceIds) frontOf.set(otherFace, card.uuid);
+  }
+  const resolve: FaceResolver = (uuid) => PrintingId.of(frontOf.get(uuid) ?? uuid);
+
   const printings: Printing[] = [];
   let skippedPrintings = 0;
-  for (const card of file.data.cards) {
+  for (const card of file.data.cards.filter(isFrontFace)) {
     const printing = mapPrinting(card);
     if (printing === null) skippedPrintings++;
     else printings.push(printing);
@@ -200,13 +226,14 @@ export function mapSetFile(file: MtgjsonSetFile): SetImport {
     printings,
     boosters: boosterEntries
       .filter(([type]) => !isDigitalBoosterType(type))
-      .map(([type, raw]) => mapBooster(set.code, type, raw)),
+      .map(([type, raw]) => mapBooster(set.code, type, raw, resolve)),
     products: products
       .filter((product) => !isDigitalOnlyProduct(product))
-      .map((product) => mapSealedProduct(set.code, product)),
+      .map((product) => mapSealedProduct(set.code, product, resolve)),
     decks: file.data.decks
       .filter((deck) => !isDigitalOnlyDeck(deck))
-      .map((deck) => mapDeck(set.code, deck)),
+      .map((deck) => mapDeck(set.code, deck, resolve)),
+    productCardSetCodes: productCardSets(products.filter((p) => !isDigitalOnlyProduct(p))),
     skipped: {
       printings: skippedPrintings,
       boosterTypes: boosterEntries.map(([type]) => type).filter(isDigitalBoosterType),
@@ -214,4 +241,15 @@ export function mapSetFile(file: MtgjsonSetFile): SetImport {
       decks: file.data.decks.filter(isDigitalOnlyDeck).map((deck) => deck.name),
     },
   };
+}
+
+/** The sets that products' individual cards come from (e.g. a prerelease promo set). */
+function productCardSets(products: readonly MtgjsonSealedProduct[]): SetCode[] {
+  const codes = new Set<SetCode>();
+  function visit(contents: MtgjsonContents) {
+    for (const card of contents.card ?? []) codes.add(SetCode.of(card.set));
+    for (const variable of contents.variable ?? []) variable.configs.forEach(visit);
+  }
+  products.forEach((product) => visit(product.contents));
+  return [...codes];
 }

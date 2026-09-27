@@ -84,12 +84,14 @@ export function isDigitalCodeExtra(name: string): boolean {
 
 // --- Supporting sets and references ---------------------------------------------------------
 
-/** Every other set this set's boosters, products and decks draw cards from. */
+/** Every other set this set's boosters, decks and products draw cards from. */
 export function supportingSetCodes(setImport: SetImport): SetCode[] {
   const codes = new Set<SetCode>();
-  for (const booster of setImport.boosters)
+  for (const booster of setImport.boosters) {
     booster.sourceSetCodes.forEach((code) => codes.add(code));
+  }
   for (const deck of setImport.decks) deck.sourceSetCodes.forEach((code) => codes.add(code));
+  setImport.productCardSetCodes.forEach((code) => codes.add(code));
   codes.delete(setImport.set.code);
   return [...codes].sort();
 }
@@ -143,75 +145,107 @@ export type KnownCatalog = Readonly<{
 }>;
 
 /**
- * Rule 5: every card, product, booster and deck a set refers to must exist, either in this set
- * or already in the catalog. Returns human-readable problems (empty = all good).
+ * Rule 5: nothing we keep may refer to something we don't have. Boosters, decks and products
+ * whose references can't be satisfied (by this set or the rest of the catalog) are left out,
+ * and each is reported. Leaving one out can break another (a box of a dropped booster), so this
+ * repeats until nothing more changes.
  */
-export function missingReferences(setImport: SetImport, known: KnownCatalog): string[] {
-  const own = {
-    printings: new Set(setImport.printings.map((printing) => printing.id)),
-    products: new Set(setImport.products.map((product) => product.id)),
-    boosters: new Set(setImport.boosters.map((b) => `${b.setCode}/${b.boosterType}`)),
-    decks: new Set(setImport.decks.map((d) => `${d.setCode}/${d.name}`)),
-  };
-  const hasPrinting = (id: PrintingId) => own.printings.has(id) || known.hasPrinting(id);
-  const problems: string[] = [];
+export function withoutBrokenReferences(
+  setImport: SetImport,
+  known: KnownCatalog,
+): { setImport: SetImport; leftOut: string[] } {
+  const printingIds = new Set(setImport.printings.map((printing) => printing.id));
+  const hasPrinting = (id: PrintingId) => printingIds.has(id) || known.hasPrinting(id);
+  const leftOut: string[] = [];
 
-  for (const booster of setImport.boosters) {
+  let boosters = [...setImport.boosters];
+  let decks = [...setImport.decks];
+  let products = [...setImport.products];
+
+  boosters = boosters.filter((booster) => {
     for (const [sheetName, sheet] of Object.entries(booster.sheets)) {
-      const missing = sheet.cards.filter((card) => !hasPrinting(card.printingId));
-      if (missing.length > 0) {
-        problems.push(
-          `booster ${booster.boosterType}, sheet ${sheetName}: ${missing.length} unknown card(s)`,
+      const missing = sheet.cards.filter((card) => !hasPrinting(card.printingId)).length;
+      if (missing > 0) {
+        leftOut.push(
+          `booster ${booster.boosterType}: sheet ${sheetName} has ${missing} unknown card(s)`,
         );
+        return false;
       }
     }
+    return true;
+  });
+
+  decks = decks.filter((deck) => {
+    const missing = deck.cards.filter((card) => !hasPrinting(card.printingId)).length;
+    if (missing > 0) leftOut.push(`deck "${deck.name}": ${missing} unknown card(s)`);
+    return missing === 0;
+  });
+
+  // Products can contain other products, so keep filtering until nothing more is dropped.
+  for (let changed = true; changed;) {
+    changed = false;
+    const productIds = new Set(products.map((product) => product.id));
+    const boosterKeys = new Set(boosters.map((b) => `${b.setCode}/${b.boosterType}`));
+    const deckKeys = new Set(decks.map((d) => `${d.setCode}/${d.name}`));
+
+    products = products.filter((product) => {
+      const problem = firstProblem(product.contents, {
+        hasPrinting,
+        hasProduct: (id) => productIds.has(id) || known.hasProduct(id),
+        hasBooster: (code, type) =>
+          boosterKeys.has(`${code}/${type}`) || known.hasBooster(code, type),
+        hasDeck: (code, name) => deckKeys.has(`${code}/${name}`) || known.hasDeck(code, name),
+      });
+      if (problem === null) return true;
+      leftOut.push(`product "${product.name}": ${problem}`);
+      changed = true;
+      return false;
+    });
   }
-  for (const deck of setImport.decks) {
-    const missing = deck.cards.filter((card) => !hasPrinting(card.printingId));
-    if (missing.length > 0) problems.push(`deck "${deck.name}": ${missing.length} unknown card(s)`);
-  }
-  for (const product of setImport.products) {
-    const refs = contentReferences(product.contents);
-    const where = `product "${product.name}"`;
-    for (const id of refs.printingIds)
-      if (!hasPrinting(id)) problems.push(`${where}: unknown card ${id}`);
-    for (const id of refs.productIds) {
-      if (!own.products.has(id) && !known.hasProduct(id))
-        problems.push(`${where}: unknown product ${id}`);
-    }
-    for (const pack of refs.packs) {
-      const key = `${pack.setCode}/${pack.boosterType}`;
-      if (!own.boosters.has(key) && !known.hasBooster(pack.setCode, pack.boosterType)) {
-        problems.push(`${where}: unknown booster ${key}`);
-      }
-    }
-    for (const deck of refs.decks) {
-      const key = `${deck.setCode}/${deck.deckName}`;
-      if (!own.decks.has(key) && !known.hasDeck(deck.setCode, deck.deckName)) {
-        problems.push(`${where}: unknown deck ${key}`);
-      }
-    }
-  }
-  return problems;
+
+  return { setImport: { ...setImport, boosters, decks, products }, leftOut };
+}
+
+function firstProblem(contents: readonly SealedContent[], known: KnownCatalog): string | null {
+  const refs = contentReferences(contents);
+  const card = refs.printingIds.find((id) => !known.hasPrinting(id));
+  if (card !== undefined) return `unknown card ${card}`;
+  const product = refs.productIds.find((id) => !known.hasProduct(id));
+  if (product !== undefined) return `unknown product ${product}`;
+  const pack = refs.packs.find((p) => !known.hasBooster(p.setCode, p.boosterType));
+  if (pack !== undefined) return `unknown booster ${pack.setCode}/${pack.boosterType}`;
+  const deck = refs.decks.find((d) => !known.hasDeck(d.setCode, d.deckName));
+  if (deck !== undefined) return `unknown deck ${deck.setCode}/${deck.deckName}`;
+  return null;
 }
 
 // --- Standard sets, prices and the nightly schedule -----------------------------------------
 
-/** Does this card make its set a Standard set? Paper, expansion/core, Standard-legal. */
-export function countsTowardStandard(
-  card: Pick<ScryfallCard, "setType" | "isDigital" | "isStandardLegal">,
-): boolean {
+/** Per set: how many of its cards count, and how many of those are Standard-legal. */
+export type StandardTally = Map<SetCode, { legal: number; total: number }>;
+
+/**
+ * Adds one card to the tally. Only English paper cards from expansion/core sets count, and basic
+ * lands are ignored because they're Standard-legal in every set, old or new.
+ */
+export function tallyStandard(tally: StandardTally, card: ScryfallCard): void {
   const isMainSet = card.setType === "expansion" || card.setType === "core";
-  return isMainSet && !card.isDigital && card.isStandardLegal;
+  if (!isMainSet || card.isDigital || card.language !== "en" || card.isBasicLand) return;
+  const counts = tally.get(card.setCode) ?? { legal: 0, total: 0 };
+  counts.total++;
+  if (card.isStandardLegal) counts.legal++;
+  tally.set(card.setCode, counts);
 }
 
-/** Paper expansion/core sets with at least one Standard-legal card (design doc 04, section 3). */
-export function standardSetCodes(cards: Iterable<ScryfallCard>): Set<SetCode> {
-  const codes = new Set<SetCode>();
-  for (const card of cards) {
-    if (countsTowardStandard(card)) codes.add(card.setCode);
-  }
-  return codes;
+/**
+ * Sets where at least half of the counted cards are Standard-legal. Real data splits cleanly:
+ * current Standard sets are 99–100% legal, older sets at most about 25% (their reprints).
+ */
+export function standardSetsFromTally(tally: StandardTally, threshold = 0.5): SetCode[] {
+  return [...tally.entries()]
+    .filter(([, counts]) => counts.total > 0 && counts.legal / counts.total >= threshold)
+    .map(([code]) => code)
+    .sort();
 }
 
 /** Today's snapshot for each finish the printing has AND Scryfall has a price for. */

@@ -5,6 +5,8 @@ const validEnv = {
   DATABASE_URL: "postgres://tcg@localhost/tcg",
   AUTH_SECRET: "x".repeat(32),
   APP_URL: "http://localhost:3000",
+  IMAGE_CACHE_DIR: "/tmp/images",
+  SYNC_CACHE_DIR: "/tmp/cache",
 };
 
 describe("loadConfig", () => {
@@ -14,6 +16,9 @@ describe("loadConfig", () => {
       databaseUrl: "postgres://tcg@localhost/tcg",
       authSecret: "x".repeat(32),
       appUrl: "http://localhost:3000",
+      imageCacheDir: "/tmp/images",
+      syncCacheDir: "/tmp/cache",
+      syncTime: { hour: 4, minute: 0 },
     });
   });
 
@@ -28,5 +33,6 @@ describe("loadConfig", () => {
     );
     expect(() => loadConfig({ ...validEnv, AUTH_SECRET: "short" })).toThrow(/AUTH_SECRET/);
     expect(() => loadConfig({ ...validEnv, APP_URL: "not a url" })).toThrow(/APP_URL/);
+    expect(() => loadConfig({ ...validEnv, SYNC_TIME: "25:00" })).toThrow(/SYNC_TIME/);
   });
 });

@@ -11,6 +11,7 @@ export const ScryfallCardSchema = z.object({
   set_type: z.string(),
   digital: z.boolean().default(false),
   lang: z.string(),
+  type_line: z.string().default(""),
   legalities: z.record(z.string(), z.string()).default({}),
   prices: z.object({
     usd: z.string().nullable().default(null),
@@ -49,6 +50,7 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     isDigital: raw.digital,
     language: raw.lang,
     isStandardLegal: raw.legalities.standard === "legal",
+    isBasicLand: raw.type_line.includes("Basic Land"),
     prices: {
       nonfoil: Cents.fromUsd(raw.prices.usd),
       foil: Cents.fromUsd(raw.prices.usd_foil),

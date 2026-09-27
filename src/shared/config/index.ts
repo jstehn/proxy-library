@@ -12,6 +12,12 @@ const EnvSchema = z.object({
     .string({ error: "is required (direnv generates one in .dev/auth-secret)" })
     .min(32, "must be at least 32 characters"),
   APP_URL: z.url({ error: "must be the app's public URL, e.g. http://localhost:3000" }),
+  IMAGE_CACHE_DIR: z.string({ error: "is required (direnv sets it)" }).min(1),
+  SYNC_CACHE_DIR: z.string({ error: "is required (direnv sets it)" }).min(1),
+  SYNC_TIME: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be a 24-hour time like 04:00")
+    .default("04:00"),
 });
 
 export type Config = Readonly<{
@@ -21,6 +27,12 @@ export type Config = Readonly<{
   authSecret: string;
   /** Where players open the app, e.g. http://localhost:3000. */
   appUrl: string;
+  /** Where downloaded card images are kept. */
+  imageCacheDir: string;
+  /** Where the sync keeps its downloads (Scryfall's bulk file). */
+  syncCacheDir: string;
+  /** When the nightly sync runs, in the server's time zone. */
+  syncTime: Readonly<{ hour: number; minute: number }>;
 }>;
 
 /** Parse the environment once at startup and fail fast with a readable message. */
@@ -36,5 +48,11 @@ export function loadConfig(
     databaseUrl: parsed.data.DATABASE_URL,
     authSecret: parsed.data.AUTH_SECRET,
     appUrl: parsed.data.APP_URL,
+    imageCacheDir: parsed.data.IMAGE_CACHE_DIR,
+    syncCacheDir: parsed.data.SYNC_CACHE_DIR,
+    syncTime: {
+      hour: Number(parsed.data.SYNC_TIME.slice(0, 2)),
+      minute: Number(parsed.data.SYNC_TIME.slice(3, 5)),
+    },
   };
 }

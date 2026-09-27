@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contentReferences, missingReferences, supportingSetCodes } from "../domain/rules";
+import { contentReferences, supportingSetCodes, withoutBrokenReferences } from "../domain/rules";
 import { PrintingId, type SetImport } from "../domain/types";
 import { mapSetFile, mapSetSummary } from "./mtgjson-mapper";
 import { MtgjsonSetFile, MtgjsonSetListFile } from "./mtgjson-schema";
@@ -110,34 +110,40 @@ describe("mapSetFile: sealed products and decks", () => {
 });
 
 describe("references (rule 5)", () => {
+  const nothingKnown = {
+    hasPrinting: () => false,
+    hasProduct: () => false,
+    hasBooster: () => false,
+    hasDeck: () => false,
+  };
+
   it("names Special Guests (SPG) as a supporting set", () => {
     expect(supportingSetCodes(blb)).toEqual(["SPG"]);
   });
 
-  it("finds nothing missing once the supporting set's printings are known", () => {
+  it("leaves nothing out once the supporting set's printings are known", () => {
     const spgIds = new Set(spg.printings.map((printing) => printing.id));
-    const known = {
-      hasPrinting: (id: PrintingId) => spgIds.has(id),
-      hasProduct: () => false,
-      hasBooster: () => false,
-      hasDeck: () => false,
-    };
-    expect(missingReferences(blb, known)).toEqual([]);
+    const checked = withoutBrokenReferences(blb, {
+      ...nothingKnown,
+      hasPrinting: (id) => spgIds.has(id),
+    });
+    expect(checked.leftOut).toEqual([]);
+    expect(checked.setImport.products).toHaveLength(blb.products.length);
   });
 
-  it("reports the special-guest sheet when SPG hasn't been imported", () => {
-    const nothingKnown = {
-      hasPrinting: () => false,
-      hasProduct: () => false,
-      hasBooster: () => false,
-      hasDeck: () => false,
-    };
-    expect(missingReferences(blb, nothingKnown)).toEqual([
-      "booster play, sheet specialGuest: 2 unknown card(s)",
+  it("without SPG, leaves out the play booster and every product that contains it", () => {
+    const checked = withoutBrokenReferences(blb, nothingKnown);
+    expect(checked.setImport.boosters).toEqual([]);
+    expect(checked.leftOut[0]).toBe("booster play: sheet specialGuest has 2 unknown card(s)");
+    // The pack goes first, then the box (made of packs), the case (of boxes) and the bundle.
+    expect(checked.setImport.products.map((product) => product.name)).toEqual([
+      "Bloomburrow Starter Kit",
     ]);
+    expect(checked.leftOut).toHaveLength(5);
   });
 
   it("would catch a digital-only card slipping into a paper booster", () => {
+    const spgIds = new Set(spg.printings.map((printing) => printing.id));
     const sneaky: SetImport = {
       ...blb,
       boosters: [
@@ -155,15 +161,11 @@ describe("references (rule 5)", () => {
         },
       ],
     };
-    const known = {
-      hasPrinting: () => false,
-      hasProduct: () => false,
-      hasBooster: () => false,
-      hasDeck: () => false,
-    };
-    expect(missingReferences(sneaky, known)).toContain(
-      "booster play, sheet common: 1 unknown card(s)",
-    );
+    const checked = withoutBrokenReferences(sneaky, {
+      ...nothingKnown,
+      hasPrinting: (id) => spgIds.has(id),
+    });
+    expect(checked.leftOut).toContain("booster play: sheet common has 1 unknown card(s)");
   });
 });
 
@@ -173,5 +175,27 @@ describe("mapSetSummary", () => {
     const codes = list.data.map((entry) => mapSetSummary(entry).code);
     expect(codes.sort()).toEqual(["BLB", "BLC", "FDN", "SPG", "YBLB"]);
     expect(list.data.find((entry) => entry.code === "YBLB")?.isOnlineOnly).toBe(true);
+  });
+});
+
+describe("double-faced cards", () => {
+  it("keeps one printing per card (the front face) and points back-face references at it", () => {
+    const file = MtgjsonSetFile.parse(readFixture("BLB.json"));
+    const front = file.data.cards[0];
+    const backId = "00000000-bac4-4000-8000-000000000001";
+    // Pretend the first card is double-faced: its back face shares the Scryfall id.
+    front.side = "a";
+    front.otherFaceIds = [backId];
+    file.data.cards.push({ ...front, uuid: backId, side: "b", otherFaceIds: [front.uuid] });
+    // …and a booster sheet refers to the back face.
+    file.data.booster.play.sheets.common.cards[backId] = 1;
+
+    const mapped = mapSetFile(file);
+    expect(
+      mapped.printings.filter((p) => p.scryfallId === front.identifiers.scryfallId),
+    ).toHaveLength(1);
+    const commonIds = mapped.boosters[0].sheets.common.cards.map((card) => card.printingId);
+    expect(commonIds).toContain(front.uuid);
+    expect(commonIds).not.toContain(backId);
   });
 });

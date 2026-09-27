@@ -9,6 +9,15 @@ import {
   drizzleInviteRepository,
   drizzlePlayerRepository,
 } from "@/modules/accounts/infrastructure";
+import { makeCatalog } from "@/modules/catalog";
+import {
+  diskImageStore,
+  drizzleCatalogRepository,
+  drizzleSyncRunRepository,
+  httpImageFetcher,
+  httpMtgjsonGateway,
+  httpScryfallGateway,
+} from "@/modules/catalog/infrastructure";
 import { makeWallet } from "@/modules/wallet";
 import {
   drizzleEconomySettingsRepository,
@@ -22,7 +31,8 @@ import {
   makeSystemService,
   type DbExecutor,
 } from "@/shared/db";
-import { systemClock } from "@/shared/runtime";
+import { platformFetch, withRateLimit, withRetry, withUserAgent, type Fetch } from "@/shared/http";
+import { realSleep, systemClock } from "@/shared/runtime";
 import { makeCheckHealth } from "./health";
 
 export function buildCore(config: Config) {
@@ -40,6 +50,8 @@ export function buildCore(config: Config) {
       wallets: drizzleWalletRepository(transaction),
       economy: drizzleEconomySettingsRepository(transaction),
       playerDirectory: drizzlePlayerDirectory(transaction),
+      catalog: drizzleCatalogRepository(transaction),
+      syncRuns: drizzleSyncRunRepository(transaction),
     };
   }
 
@@ -54,6 +66,25 @@ export function buildCore(config: Config) {
 
   const wallet = makeWallet({ unitOfWork, clock });
 
+  // A polite fetch for outside services (design doc 04, rule 10): identifies us, spaces
+  // requests out, and retries temporary failures. Each service gets its own speed limit.
+  const userAgent = `TCGVirtualLibrary/0.1 (self-hosted playgroup app; ${config.appUrl})`;
+  function politeFetch(perSecond: number): Fetch {
+    const withRetries = withRetry({ attempts: 3, sleep: realSleep })(platformFetch);
+    const limited = withRateLimit({ perSecond, clock, sleep: realSleep })(withRetries);
+    return withUserAgent(userAgent)(limited);
+  }
+
+  const catalog = makeCatalog({
+    unitOfWork,
+    mtgjson: httpMtgjsonGateway(politeFetch(4)),
+    scryfall: httpScryfallGateway(politeFetch(8), config.syncCacheDir),
+    images: diskImageStore(config.imageCacheDir),
+    imageFetcher: httpImageFetcher(politeFetch(10)),
+    clock,
+    syncTime: config.syncTime,
+  });
+
   return {
     config,
     db,
@@ -61,6 +92,7 @@ export function buildCore(config: Config) {
     unitOfWork,
     accounts,
     wallet,
+    catalog,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };
