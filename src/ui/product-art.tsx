@@ -56,13 +56,13 @@ export function ProductArt(props: ProductArtProps) {
 
       {/* The art window: the card's art sits about a third of the way down its image. */}
       <div
-        className={`absolute inset-x-[8%] overflow-hidden rounded-md bg-black/30 ring-1 ring-white/30 ${isPack ? "top-[16%] bottom-[34%]" : "top-[22%] bottom-[30%]"}`}
+        className={`absolute inset-x-[8%] overflow-hidden rounded-md bg-black/30 ring-1 ring-white/30 ${isPack ? "top-[16%] aspect-[4/3]" : "top-[22%] bottom-[30%]"}`}
         style={
           props.featuredPrintingId
             ? {
                 backgroundImage: `url(/api/images/${props.featuredPrintingId}/normal/front)`,
-                backgroundSize: "125% auto",
-                backgroundPosition: "50% 24%",
+                backgroundSize: "118% auto",
+                backgroundPosition: "50% 20%",
               }
             : undefined
         }

@@ -153,3 +153,36 @@ test("the admin opens packs in the Pack lab", async ({ page }) => {
     ).toHaveCount(14);
   }
 });
+
+test("the admin buys a pack in the store, opens it, and finds the cards in their collection", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByTitle("Your wallet")).toHaveText("$50.00");
+
+  await page.getByRole("link", { name: "Store", exact: true }).click();
+  await page
+    .getByRole("link", { name: /Bloomburrow/ })
+    .first()
+    .click();
+  await expect(page.getByText("$5.49")).toBeVisible();
+  const pack = page.getByRole("listitem").filter({ hasText: "Bloomburrow Play Booster Pack" });
+  await pack.getByRole("button", { name: "Buy" }).click();
+  await expect(pack.getByText(/waiting in your inventory/)).toBeVisible();
+  await expect(page.getByTitle("Your wallet")).toHaveText("$44.51");
+
+  await page.getByRole("link", { name: "Inventory" }).click();
+  await page.getByRole("button", { name: "Open Bloomburrow Play Booster Pack" }).click();
+  await expect(page.getByRole("heading", { name: "Opened" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Bloomburrow Play Booster Pack" }).getByRole("listitem"),
+  ).toHaveCount(14);
+
+  await page.getByRole("link", { name: "Collection", exact: true }).click();
+  await expect(page.getByText(/14 cards \(\d+ different\)/)).toBeVisible();
+});

@@ -30,6 +30,14 @@ A pyramid that mirrors the layers. Most tests are fast and pure, and a few are s
 - **Concurrency tests** against the real DB: two simultaneous debits that together exceed the
   balance, where exactly one must succeed.
 
+## No network in automated tests
+
+Automated tests never call MTGJSON, Scryfall or any image host: they're slow, and too many calls
+could get the machine's address blocked. Outside data comes from recorded fixtures (below), and
+browser tests answer card-image requests locally (`page.route("**/api/images/**", …)`). A check
+that really must hit a live endpoint belongs in an opt-in `pnpm test:remote` suite that never runs
+by default. A few manual real calls while developing are fine.
+
 ## Recorded fixtures
 
 `tests/fixtures/` holds small, trimmed copies of **real** MTGJSON and Scryfall data (provenance
@@ -51,8 +59,9 @@ problems the fixtures couldn't (design doc 04, section 15).
 
 - `scripts/db.sh` also creates `tcg_test` on the same socket.
 - Vitest global setup runs migrations on `tcg_test` once per run.
-- Each integration test runs inside a transaction that's **rolled back** afterwards (fast
-  isolation). Concurrency tests are the exception: they truncate instead.
+- Integration tests **empty the tables they use** (`truncate … cascade`) in `beforeEach`, and set
+  any shared settings they depend on (such as `economy_settings`) themselves. Never assume another
+  test left the defaults in place (a Phase 6 test failed exactly that way).
 
 ## Layout
 
@@ -61,6 +70,8 @@ src/modules/wallet/domain/allowance.test.ts        next to the code it tests
 src/modules/wallet/application/wallet-service.test.ts
 src/modules/wallet/infrastructure/drizzle-ledger-repo.test.ts
 src/modules/wallet/testing/ledger-repo.contract.ts  shared contract suite
+tests/integration/*.int.test.ts                     journeys across modules (e.g. buy → open),
+                                                    wired like a small composition root
 tests/e2e/*.spec.ts                                 Playwright
 tests/fixtures/                                     recorded external payloads
 ```

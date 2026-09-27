@@ -220,3 +220,22 @@ card image (so no new image type is fetched), credited to the artist.
 4. Product art is HTML/CSS rather than SVG, so it can use the Keyrune font and cached card
    images directly.
 5. Products are sold only from **enabled** sets. Enabling a set is what puts it in the store.
+
+## 14. Implementation notes (what changed while building)
+
+- **Owned packs stay openable when their set is disabled.** The pack engine's `boosterConfig`
+  no longer filters by enabled sets (only the Pack lab's lists do). Otherwise an admin disabling a
+  set would strand every unopened pack of it.
+- **"Open all" takes several items**, so "Open all 9" works on a stack of identical packs, as
+  well as "open everything inside" on a box. It stops after 500 openings (a case of boxes). The
+  rest stay unopened, safe to open later.
+- **Opening a pack and the collection share one transaction** through
+  `InventoryServices = { items, productCatalog } & PacksServices & CollectionServices`: the
+  inventory module declares every repository it needs, and the composition root's `servicesFor`
+  provides one object that satisfies all of them.
+- **Cross-module journeys are tested in `tests/integration/`**, wired like a small composition
+  root with the fixture catalog. A module's own folder can't import other modules' infrastructure.
+- **No activity events yet.** The feed arrives in Phase 11, which adds its `EventRecorder` calls
+  to these use cases.
+- **Generated art** crops the card image with CSS `background-size` and `background-position`.
+  No new image size is fetched from Scryfall.

@@ -12,6 +12,7 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 03  | [Money, time and a ledger](03-wallet-ledger-and-time.md)               | append-only ledgers, time as an input and property tests with dates, lazy and idempotent work, row locks, SQL `FILTER`, money and time zones at the edges                                                                              |
 | 04  | [Pulling in outside data](04-pulling-in-outside-data.md)               | anti-corruption layers, streaming big files with async generators, composable fetch wrappers, idempotent imports, a job queue in a table, fixtures vs. a real run                                                                      |
 | 05  | [Randomness you can trust](05-randomness-you-can-trust.md)             | seeds and replayable randomness, weighted sampling with and without replacement, strategy tables and function types, rejection sampling, expected value vs. simulation, statistical tests that never flake, comparators, `import type` |
+| 06  | [One purchase, many modules](06-transactions-across-modules.md)        | one transaction across modules, intersection types, recursive unions and the Composite pattern, queues, `z.lazy`, state machines with row locks, `??` vs `\|\|`, CHECK constraints, cross-module tests                                 |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 
