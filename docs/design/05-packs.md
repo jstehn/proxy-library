@@ -240,3 +240,32 @@ compares these with NumPy/pandas equivalents throughout.
    which is market price. The Pack lab shows the market value of the average pack's contents in
    this phase. When Phase 6 adds the MSRP table, it also shows the pack's MSRP next to that value
    ("costs $5.49, contents average $3.80").
+
+## 15. Implementation notes (what changed while building)
+
+**Checked against real data first.** `pnpm worker check-packs` opened 1,000 packs of each of the
+96 real recipes (96,000 packs, under 3 seconds) and found no problems. Simulated odds matched the
+recipes, for example Bloomburrow play mythics at 0.194 expected and 0.197 observed, and Lost
+Caverns collector foils at 11.33 expected and 11.31 observed.
+
+- **Slots are drawn in name order**, not in the recipe's key order. Postgres reorders JSON keys,
+  so without this, how a recipe happened to be stored could change which cards a seed produced.
+- **Color balance gives up at once when it's impossible:** fewer than five cards in the slot, or a
+  sheet without a mono-colored card of every color. It only redraws when success is possible.
+- **Finishes:** a foil sheet whose name contains "etched" gives etched cards. Otherwise the
+  preference order is foil, etched, nonfoil on foil sheets, and nonfoil, foil, etched on regular
+  ones, picking the first finish the printing has.
+- **A fixed sheet whose slot count differs from its total weight** repeats (or cuts) its list.
+  The real data never does this, but it keeps rule 2 exact.
+- **`availableBoosters` is a query**, not part of the `BoosterSource` port: only the Pack lab's
+  picker uses it. The port gained `boosterKeys()` for `check-packs` instead.
+- **`openBooster` runs inside the caller's transaction** (it takes `PacksServices`, like
+  `bringUpToDate` in the wallet), ready for Phase 6's "open a pack". `makePacks` builds only the
+  admin use cases.
+- **Lint:** a domain may now import another module's public API **with `import type` only**. The
+  pack engine uses the catalog's `BoosterConfig` this way. A module's `testing/` folder may import
+  other modules' public APIs (to build sample data), which is how domain tests get a `PrintingId`.
+- **`CardTile` moved to `src/app/_components/`**, shared by the set page and the Pack lab, and
+  gained a still foil sheen. The animated one is Phase 8.
+- **`printingCards(db, ids)`** was added to the catalog's queries. It shares its SQL with
+  `setPrintings`.

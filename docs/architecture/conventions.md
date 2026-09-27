@@ -7,7 +7,10 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 - 🔒 Feature code lives in `src/modules/<module>/{domain,application,infrastructure,queries,testing}`.
 - 🔒 Other modules and `src/app/` import a module **only via its `index.ts`**.
 - 🔒 `domain/` imports nothing outside `shared/kernel` (no `drizzle-orm`, `next`, `react`, `zod`,
-  or Node built-ins).
+  or Node built-ins), except **types** from other modules' public `index.ts`, with `import type`
+  only (e.g. the pack engine works on the catalog's `BoosterConfig`). Using another module's
+  vocabulary is fine; running its code is not.
+- 🔒 `testing/` may also import other modules' public `index.ts`, to build sample data.
 - 🔒 Only composition roots (`src/server/`, `worker/`) import `*/infrastructure`.
 - 🔒 Infrastructure may import its own module's layers, `shared/db`/`shared/http`, other modules'
   `infrastructure/schema.ts` (for foreign keys) and other modules' public `index.ts` (for shared
