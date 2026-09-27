@@ -14,6 +14,12 @@ export function ledgerKindLabel(kind: LedgerKind): string {
       return "Correction by an admin";
     case "self_fund":
       return "Added by you";
+    case "purchase_sealed":
+      return "Bought sealed product";
+    case "purchase_single":
+      return "Bought a single";
+    case "sellback":
+      return "Sold to the store";
     default:
       return assertNever(kind);
   }

@@ -39,6 +39,7 @@ export const ledgerEntries = pgTable(
     note: text("note"),
     createdBy: text("created_by").references(() => players.userId),
     effectiveAt: timestamptz("effective_at").notNull(),
+    ref: text("ref"), // what the money was for in another module, e.g. "store:42"
     recordedAt: timestamptz("recorded_at").notNull().defaultNow(),
   },
   (table) => [
@@ -47,12 +48,12 @@ export const ledgerEntries = pgTable(
     check("ledger_entries_amount_nonzero", sql`${table.amountCents} <> 0`),
     check(
       "ledger_entries_kind_known",
-      sql`${table.kind} in ('starting_grant', 'allowance', 'grant', 'correction', 'self_fund')`,
+      sql`${table.kind} in ('starting_grant', 'allowance', 'grant', 'correction', 'self_fund', 'purchase_sealed', 'purchase_single', 'sellback')`,
     ),
-    // Rule 4: corrections take money away; every other kind adds it.
+    // Rule 4: corrections and purchases take money away; every other kind adds it.
     check(
       "ledger_entries_direction",
-      sql`(${table.kind} = 'correction') = (${table.amountCents} < 0)`,
+      sql`(${table.kind} in ('correction', 'purchase_sealed', 'purchase_single')) = (${table.amountCents} < 0)`,
     ),
   ],
 );

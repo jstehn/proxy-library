@@ -1,8 +1,16 @@
 import { Cents, err, ok, type Result, type UserId } from "@/shared/kernel";
 import type { AmountInvalid, InsufficientFunds, NoteInvalid } from "./errors";
 
-/** Why money moved. Later phases add purchases, sell-backs and trades. */
-export type LedgerKind = "starting_grant" | "allowance" | "grant" | "correction" | "self_fund";
+/** Why money moved. (Phase 10 adds trades.) */
+export type LedgerKind =
+  | "starting_grant"
+  | "allowance"
+  | "grant"
+  | "correction"
+  | "self_fund"
+  | "purchase_sealed" // buying sealed product from the store (Phase 6)
+  | "purchase_single" // buying a single card from the store (Phase 7)
+  | "sellback"; // selling a single card to the store (Phase 7)
 
 /** Each kind goes one way only (design doc 03, rule 4). The database checks this too. */
 export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
@@ -11,6 +19,9 @@ export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
   grant: "in",
   correction: "out",
   self_fund: "in",
+  purchase_sealed: "out",
+  purchase_single: "out",
+  sellback: "in",
 };
 
 /** One change to one player's money. Entries are only ever added, never changed (rule 1). */
@@ -21,6 +32,8 @@ export type LedgerEntry = Readonly<{
   note: string | null;
   createdBy: UserId | null; // null for automatic entries (allowance, starting grant)
   effectiveAt: Date; // when it counts; an allowance counts at its payday
+  /** What the money was for, in another module: "store:42" is store transaction 42. */
+  ref: string | null;
 }>;
 
 /** The largest amount one entry may move: a guard against typos like an extra zero (rule 5). */
@@ -38,6 +51,7 @@ export function ledgerEntry(input: {
   note?: string | null;
   createdBy?: UserId | null;
   effectiveAt: Date;
+  ref?: string | null;
 }): LedgerEntry {
   if (input.size <= 0) {
     throw new RangeError(`ledger entry size must be positive, got ${input.size}`);
@@ -49,6 +63,7 @@ export function ledgerEntry(input: {
     note: input.note ?? null,
     createdBy: input.createdBy ?? null,
     effectiveAt: input.effectiveAt,
+    ref: input.ref ?? null,
   };
 }
 

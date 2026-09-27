@@ -11,6 +11,7 @@ import {
   type SimulateOpeningsError,
   type SimulationReport,
 } from "@/modules/packs";
+import { packMsrp } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
 import { Cents, type Result } from "@/shared/kernel";
@@ -35,7 +36,7 @@ const COUNT_LABELS: Record<CountKey, string> = {
 
 const ERROR_MESSAGES = {
   Forbidden: "Only admins can use the Pack lab.",
-  BoosterUnavailable: "That booster isn't in the catalog (or its set isn't enabled).",
+  BoosterUnavailable: "That booster isn't in the catalog.",
   CountInvalid: `Choose between 1 and ${SIMULATION_LIMIT} packs.`,
 };
 
@@ -160,7 +161,10 @@ async function Report(props: { report: SimulationReport; choices: BoosterChoice[
     ...report.bestPulls.map((pull) => pull.printingId),
     ...report.samplePacks.flatMap((pack) => pack.cards.map((card) => card.printingId)),
   ];
-  const cards = await printingCards(db, shownIds);
+  const [cards, msrp] = await Promise.all([
+    printingCards(db, shownIds),
+    packMsrp(db, report.setCode, report.boosterType),
+  ]);
   const setName =
     props.choices.find((choice) => choice.setCode === report.setCode)?.setName ?? report.setCode;
   const rows = COUNT_KEYS.filter((key) => report.expected[key] > 0 || report.observed[key] > 0);
@@ -172,12 +176,14 @@ async function Report(props: { report: SimulationReport; choices: BoosterChoice[
           {report.packCount.toLocaleString("en-US")} × {setName} {boosterLabel(report.boosterType)}
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          {msrp === null
+            ? "This pack isn't sold on its own. "
+            : `A pack costs ${Cents.format(msrp)} (MSRP). `}
           Cards inside an average pack are worth{" "}
           <strong className="text-zinc-900 tabular-nums dark:text-zinc-100">
             {Cents.format(report.averageValue)}
           </strong>{" "}
-          at market price. (The pack&apos;s own price, its MSRP, arrives with the store.) Seed{" "}
-          <code className="text-xs">{report.seed}</code>
+          at market price. Seed <code className="text-xs">{report.seed}</code>
         </p>
 
         <table className="w-full max-w-lg text-sm">

@@ -9,7 +9,7 @@ export type BoosterKey = Readonly<{ setCode: SetCode; boosterType: string }>;
 
 /** Reads booster recipes and printing facts from the catalog's tables. */
 export interface BoosterSource {
-  /** The recipe, or null if there's none (or its set isn't enabled). */
+  /** The recipe, or null if there's none. Works for disabled sets too (owned packs stay openable). */
   boosterConfig(key: BoosterKey): Promise<BoosterConfig | null>;
   /** Facts for these printings, in one query. Unknown ids are simply missing from the map. */
   printingFacts(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, PrintingFacts>>;

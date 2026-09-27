@@ -19,6 +19,7 @@ export type { SyncSummary } from "./application/sync";
 export {
   FINISHES,
   PrintingId,
+  SealedProductId,
   SetCode,
   type BoosterConfig,
   type BoosterSheet,
@@ -30,6 +31,7 @@ export {
   type Rarity,
   type SealedContent,
   type SealedProduct,
+  type DeckCard,
 } from "./domain/types";
 export {
   enabledSets,

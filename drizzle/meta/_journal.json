@@ -36,6 +36,20 @@
       "when": 1790508835825,
       "tag": "0004_printing_faces",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790512379292,
+      "tag": "0005_store_and_inventory",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790512395995,
+      "tag": "0006_seed_msrp_prices",
+      "breakpoints": true
     }
   ]
 }

@@ -76,12 +76,11 @@ export function drizzleBoosterSource(db: DbExecutor): BoosterSource {
         sourceSetCodes: boosterConfigs.sourceSetCodes,
       })
       .from(boosterConfigs)
-      .innerJoin(cardSets, eq(cardSets.code, boosterConfigs.setCode))
+      // Any set, enabled or not: a pack someone owns must stay openable if its set is disabled.
       .where(
         and(
           eq(boosterConfigs.setCode, key.setCode),
           eq(boosterConfigs.boosterType, key.boosterType),
-          eq(cardSets.isEnabled, true),
         ),
       );
     if (row === undefined) return null;

@@ -109,10 +109,13 @@ describe("drizzleBoosterSource", () => {
     });
   });
 
-  it("has no recipe for a missing booster type or a disabled set", async () => {
+  it("has no recipe for a missing booster type", async () => {
     expect(await source.boosterConfig({ ...key, boosterType: "collector" })).toBeNull();
+  });
+
+  it("still opens a disabled set's packs, but doesn't list its recipes", async () => {
     await enableSet(false);
-    expect(await source.boosterConfig(key)).toBeNull();
+    expect(await source.boosterConfig(key)).not.toBeNull();
     expect(await source.boosterKeys()).toEqual([]);
   });
 

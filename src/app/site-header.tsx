@@ -12,15 +12,23 @@ export async function SiteHeader() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <nav className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
+      <nav className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
         <Link href="/" className="font-semibold">
           TCG Virtual Library
         </Link>
-        {actor !== null && <Link href="/sets">Sets</Link>}
+        {actor !== null && (
+          <>
+            <Link href="/store">Store</Link>
+            <Link href="/inventory">Inventory</Link>
+            <Link href="/collection">Collection</Link>
+            <Link href="/sets">Sets</Link>
+          </>
+        )}
         {actor !== null && actor.isAdmin && (
           <>
             <Link href="/admin/catalog">Catalog</Link>
             <Link href="/admin/packs">Pack lab</Link>
+            <Link href="/admin/store">Prices</Link>
             <Link href="/admin/players">Players</Link>
             <Link href="/admin/invites">Invites</Link>
             <Link href="/admin/economy">Economy</Link>

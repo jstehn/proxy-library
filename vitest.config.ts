@@ -21,7 +21,12 @@ export default defineConfig({
         extends: true,
         test: {
           name: "integration",
-          include: ["src/**/*.int.test.ts", "worker/**/*.int.test.ts"],
+          // tests/integration: journeys across several modules, wired like a composition root.
+          include: [
+            "src/**/*.int.test.ts",
+            "worker/**/*.int.test.ts",
+            "tests/integration/**/*.int.test.ts",
+          ],
           globalSetup: ["tests/setup/integration.ts"],
           env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
           fileParallelism: false,

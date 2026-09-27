@@ -53,6 +53,7 @@ export function drizzleWalletRepository(db: DbExecutor): WalletRepository {
           note: entry.note,
           createdBy: entry.createdBy,
           effectiveAt: entry.effectiveAt,
+          ref: entry.ref,
         })),
       );
     },
