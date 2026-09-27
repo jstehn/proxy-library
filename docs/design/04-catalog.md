@@ -17,8 +17,9 @@ Decided with the user:
 - **Sets:** the current **Standard** sets are enabled at first; admins enable or disable any set
   later.
 - **Sync:** **nightly** in the worker, plus a **"Sync now"** button for admins.
-- **Products:** import **all** sealed products (packs, boxes, cases, bundles, prerelease kits,
-  preconstructed decks, tins) and the **deck lists** they contain.
+- **Products:** import **all paper** sealed products (packs, boxes, cases, bundles, prerelease
+  kits, preconstructed decks, tins) and the **deck lists** they contain.
+- **Paper only:** nothing unique to MTGO or Arena is imported (rule 9).
 - **Pricing:** singles at market price, sealed at MSRP (ADR 0014). This phase stores prices;
   selling is Phase 6.
 - **Images:** downloaded from Scryfall **the first time they're viewed**, then served locally.
@@ -56,7 +57,6 @@ export type CardSet = Readonly<{
   name: string;
   releaseDate: string;
   type: string; // "expansion", "core", …
-  isOnlineOnly: boolean;
   keyruneCode: string;
   isEnabled: boolean;
   isSupporting: boolean;
@@ -119,7 +119,6 @@ export type SealedProduct = Readonly<{
   subtype: string | null; // e.g. "booster_box" / "collector"
   releaseDate: string | null;
   contents: SealedContents;
-  isDigital: boolean; // e.g. MTGO redemption: never sellable
 }>;
 
 export type DeckList = Readonly<{
@@ -174,8 +173,20 @@ disables sets that have rotated out, because players may still want them.
    that day's snapshot. Past days are never changed.
 8. **Only English printings** are imported (MTGJSON set files are English; Scryfall's
    `default_cards` is filtered to `lang: "en"`).
-9. **Digital-only products** (e.g. MTGO redemption) are imported for completeness but marked
-   `isDigital` and are never sellable.
+9. **Paper only** (decided in review). Nothing unique to MTGO or Arena is imported:
+   - **sets** marked online-only (`isOnlineOnly`) are skipped entirely;
+   - **printings** whose `availability` doesn't include `paper` are skipped (e.g. Alchemy
+     cards), and Scryfall cards with `digital: true` are ignored;
+   - **booster types** for digital play are skipped (`play-arena`, anything ending in `-arena` or
+     `-mtgo`);
+   - **sealed products and deck lists** for digital redemption are skipped (subtype
+     `mtgo_redemption`, deck type "MTGO Redemption"), and `other` contents naming Arena or MTGO
+     codes are left out of the listed extras.
+
+   After filtering, rule 5 still applies: every card a remaining booster, product or deck refers
+   to must be a paper printing we imported, so a digital card can't slip in through a booster
+   sheet.
+
 10. **Polite to both services** (their published guidance):
     - Scryfall's API is called at most 8 times per second, with a descriptive `User-Agent` and
       `Accept` header.
@@ -287,7 +298,7 @@ printings        (id pk, set_code fk, collector_number, name, oracle_id, scryfal
                   is_full_art bool, variant_label, image_uris jsonb, legalities jsonb, updated_at)
                   index (set_code, collector_number), index (oracle_id), unique (scryfall_id)
 booster_configs  (set_code fk, booster_type, variants jsonb, sheets jsonb, primary key (set_code, booster_type))
-sealed_products  (id pk, set_code fk, name, category, subtype, release_date, contents jsonb, is_digital bool)
+sealed_products  (id pk, set_code fk, name, category, subtype, release_date, contents jsonb)
 deck_lists       (set_code fk, name, type, cards jsonb, primary key (set_code, name))
 price_snapshots  (printing_id fk, finish, day date, usd_cents bigint,
                   primary key (printing_id, finish, day))                -- ADR 0013
