@@ -1,7 +1,7 @@
 # Design: Accounts & roles
 
 - **Phase:** 2
-- **Status:** **Approved** 2026-09-27, with changes: minimum password length 6; public profile page deferred
+- **Status:** **Implemented** 2026-09-27 (approved with changes: minimum password length 6; public profile page deferred). See section 15 for how the build differed.
 - **Related ADRs:** 0001 (modules), 0002 (factory DI), 0003 (Result), 0005 (unit of work),
   0009 (lint boundaries), **0012 (new: Better Auth for identity only)**
 
@@ -367,3 +367,26 @@ components and `useActionState` for form feedback.
    self-funding is always public (Phase 3), it stays transparent.
 
 7. Public profile page (`/players/[username]`): **deferred** to a later phase.
+
+## 15. Implementation notes (what changed while building)
+
+- **Password errors** became one `PasswordInvalid { reason }` (too short _or_ too long, since
+  Better Auth caps passwords at 128 characters) instead of `PasswordTooShort`. Username and
+  display-name errors follow the same `{ kind, reason }` shape.
+- **`InviteNotFound`** was added for codes that don't exist or aren't even shaped like a code.
+  `InviteNotOpen` now carries the `status` (used, expired or revoked) so the message can say which.
+- **Creating credentials** uses Better Auth's internal building blocks (`password.hash`,
+  `internalAdapter.createUser`, `linkAccount`), because its `signUpEmail` refuses to run at all
+  when public sign-up is disabled. This is the same sequence `signUpEmail` runs internally.
+- **Non-admins opening admin pages** get "not found" rather than "forbidden". Next 16's
+  `forbidden()` is still experimental, and "not found" also hides that the page exists.
+- **Transactions that can fail in several ways** state their types explicitly:
+  `unitOfWork.run<Player, SetAdminError>(…)`. TypeScript can't merge several error kinds on its
+  own (conventions.md, "Readability").
+- **Temporary passwords** are four words from a 128-word list (2^28 combinations), which is fine
+  for a one-time password on a home server that must be changed immediately.
+- **New configuration:** `AUTH_SECRET` (signs session cookies; `.envrc` generates a random one in
+  `.dev/auth-secret`) and `APP_URL` (the address players use; Better Auth checks it).
+- **Evidence for the accounts lock:** with `lockAccounts()` removed from `setAdmin`, the
+  "two admins demote each other" integration test failed 5 out of 5 runs (zero admins left).
+  With the lock it passes every time.

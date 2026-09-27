@@ -83,6 +83,10 @@ over the clever one.
 
 - **Use intermediate variables.** `const report: HealthReport = {…}; return ok(report);` is
   easier to read than one long nested expression.
+- **Name the types of a transaction that can fail in more than one way:**
+  `unitOfWork.run<Player, SetAdminError>(async (services) => …)`. TypeScript infers the error type
+  from the first `err(...)` it sees and then rejects the others, so spell it out. It also tells
+  the reader what the transaction can produce.
 - **Keep arrow functions for short callbacks**, such as `items.map((item) => item.id)`.
 - **Explain the why.** Comment the reason for anything surprising, and give every exported
   function a one-line TSDoc saying what it's for.

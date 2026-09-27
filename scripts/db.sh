@@ -25,6 +25,7 @@ start() {
   fi
   ensure_database "$PGDATABASE"
   ensure_database "${PGDATABASE}_test" # used by integration tests (see docs/architecture/testing.md)
+  ensure_database "${PGDATABASE}_e2e"  # used by end-to-end (browser) tests
 }
 
 ensure_database() {

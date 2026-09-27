@@ -20,7 +20,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && vitest run --project unit",
     "worker": "tsx worker/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx worker/index.ts migrate"
+    "db:migrate": "tsx worker/index.ts migrate",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.6",
@@ -34,6 +35,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
     "@types/pg": "^8.23.1",

@@ -4,10 +4,11 @@ A course in TypeScript and software design, taught through building this project
 matches one phase of the [roadmap](../docs/roadmap.md) and assumes you know **Python and SQL**, so
 new ideas are compared to their Python equivalents wherever one exists.
 
-| #   | Lesson                                                                 | You'll learn                                                                                                        |
-| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 00  | [Your development environment](00-dev-environment.md)                  | Nix + direnv, a project-local database, Next.js layout, first TypeScript and React                                  |
-| 01  | [Designing with types and dependencies](01-architecture-foundation.md) | generics, unions, overloads, branded types, dependency injection, transactions, testing, lint-enforced architecture |
+| #   | Lesson                                                                 | You'll learn                                                                                                                                                                       |
+| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 00  | [Your development environment](00-dev-environment.md)                  | Nix + direnv, a project-local database, Next.js layout, first TypeScript and React                                                                                                 |
+| 01  | [Designing with types and dependencies](01-architecture-foundation.md) | generics, unions, overloads, branded types, dependency injection, transactions, testing, lint-enforced architecture                                                                |
+| 02  | [Authentication, authorization and forms](02-accounts-and-forms.md)    | sessions, cookies and password hashing, wrapping a library behind a port, race conditions and locks, compensating actions, Server Actions and forms, contract and end-to-end tests |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 

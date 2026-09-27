@@ -47,6 +47,7 @@ each lesson.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
-  `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm worker <cmd>`.
+  `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
+  (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`.
 - Lint enforces architecture boundaries (`eslint.config.mjs`, ADR 0009). Don't disable a rule
   without a reason comment.

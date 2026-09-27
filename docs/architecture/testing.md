@@ -30,7 +30,16 @@ A pyramid that mirrors the layers. Most tests are fast and pure, and a few are s
 - **Concurrency tests** against the real DB: two simultaneous debits that together exceed the
   balance, where exactly one must succeed.
 
-## Test database
+## Test databases
+
+- `tcg_test` for integration tests (below) and `tcg_e2e` for browser tests. Both are created by
+  `pnpm db:start`, and neither is ever your development data.
+- Browser tests (`pnpm test:e2e`) start their own dev server on port 3100 against `tcg_e2e`,
+  after `tests/e2e/global-setup.ts` migrates and empties it.
+- Playwright's browsers come from Nix (`flake.nix`). The npm package `@playwright/test` must be
+  pinned to the **same version** as nixpkgs' `playwright-driver`, or it won't find them.
+
+### Integration test database
 
 - `scripts/db.sh` also creates `tcg_test` on the same socket.
 - Vitest global setup runs migrations on `tcg_test` once per run.
