@@ -120,3 +120,18 @@ None. The opener only reads what the page gives it.
 2. **The card back is our own design** (a dark swirl with the app's name), not the real Magic card
    back, which is Wizards of the Coast's artwork.
 3. **"Hit" includes any card worth $5 or more**, so an expensive uncommon gets its moment too.
+
+## 11. Implementation notes (what changed while building)
+
+- **Browser-only settings use `useSyncExternalStore`** (mute in `localStorage`, "reduce motion"
+  from `matchMedia`), like `LocalTime`: the server renders the default, and the browser switches
+  without a mismatch warning.
+- **The noise in the sounds comes from the kernel's seeded generator**, not `Math.random`. The
+  lint rule against `Math.random` applies everywhere, and noise doesn't need to be unpredictable.
+- **Spoilers are possible, cheating isn't.** The static results and the opener's card list are
+  sent to the browser with the page, so a curious player could read their pulls in the page
+  source before flipping. The pulls were already saved on the server, so nothing a browser does
+  can change them. Hiding them until the reveal would need a second request per pack. Listed in
+  future-ideas.
+- **Checked by eye:** screenshots of the sealed pack, the tear, a flip in progress, the foil
+  shimmer, and the suspense glow on a $9.56 foil rare.

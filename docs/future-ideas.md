@@ -24,6 +24,10 @@ design doc (or joins a phase's design) and is removed from this list.
   A later pass could show different foil treatments (surge, galaxy, fracture foil) differently,
   using the printing's promo types.
 
+- **Spoiler-proof reveals:** fetch each pack's cards only when it's torn open, so they aren't in
+  the page source beforehand.
+- **Real sound effects** (CC0 files) to replace the generated ones, and a volume slider.
+
 ## Catalog and images
 
 - **Real product photos** (retailer images) for sealed products and sets. **Needs a decision on

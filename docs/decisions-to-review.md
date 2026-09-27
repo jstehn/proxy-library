@@ -48,3 +48,13 @@ Each entry: the phase, what was decided, why, and where to change it.
 | **You can sell any card you own that has a price, even from a set that's no longer enabled**; you can only **buy** from enabled sets | Disabling a set shouldn't trap what people own                        | `sellSingle` / `buySingle`                   |
 | **The store sells at the latest snapshot, even if it's a few days old**; the snapshot's day is recorded and shown                    | A failed sync shouldn't close the store                               | `drizzleMarketPrices`                        |
 | **Singles are limited to 24 per purchase or sale** (same as sealed)                                                                  | Typo protection                                                       | `MAX_QUANTITY`                               |
+
+### Phase 8: opening experience
+
+| Decision                                                                                                               | Why                                                             | Where to change it                          |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| **CSS animations and a `useReducer` state machine, no animation library** (the original plan named Motion)             | The effects are simple keyframes, with one dependency fewer     | `src/ui/opening/`, `globals.css`            |
+| **Our own card back** (a purple swirl with the app's name), not the real Magic back                                    | The real back is Wizards of the Coast's artwork                 | `src/ui/opening/card-back.tsx`              |
+| **"Hit" = rare or better, or any card worth $5+**; mythics and $5+ cards get the bigger orange glow and a longer pause | An expensive uncommon deserves its moment too                   | `hitLevel`, `BIG_HIT_CENTS` in `machine.ts` |
+| **Only packs animate**; boxes and decks show their results directly (a box's packs animate one after another)          | That's where the suspense is                                    | `src/app/inventory/opened/page.tsx`         |
+| **Pulls can be seen in the page source before flipping**                                                               | The server already decided them, so it's a spoiler, not a cheat | future-ideas                                |

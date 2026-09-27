@@ -14,6 +14,7 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 05  | [Randomness you can trust](05-randomness-you-can-trust.md)                           | seeds and replayable randomness, weighted sampling with and without replacement, strategy tables and function types, rejection sampling, expected value vs. simulation, statistical tests that never flake, comparators, `import type` |
 | 06  | [One purchase, many modules](06-transactions-across-modules.md)                      | one transaction across modules, intersection types, recursive unions and the Composite pattern, queues, `z.lazy`, state machines with row locks, `??` vs `\|\|`, CHECK constraints, cross-module tests                                 |
 | 07  | [Reading data, and keeping the books straight](07-reading-data-and-keeping-books.md) | SQL from optional filters with parameters, URL-driven filters, `as const` and `oneOf`, rounding money once, lock-check-change, reconciling ledgers, SVG charts, React state and unmounting                                             |
+| 08  | [Animation, state and sound in the browser](08-animation-state-and-sound.md)         | server decides / client performs, `useReducer` with a pure reducer, union UI state, `Promise.all`/`race` and fake timers, `useSyncExternalStore`, CSS 3D flips and reduced motion, Web Audio, accessibility                            |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 
