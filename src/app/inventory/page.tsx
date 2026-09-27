@@ -13,6 +13,8 @@ const ERROR_MESSAGES: Record<OpenItemError["kind"], string> = {
   BoosterUnavailable: "That pack's recipe is missing from the catalog. Ask an admin to sync.",
   DeckUnavailable: "That deck's list is missing from the catalog. Ask an admin to sync.",
   ProductUnavailable: "That product is missing from the catalog. Ask an admin to sync.",
+  NothingInside:
+    "The catalog lists nothing inside that product, so it wasn't opened. Tell an admin: it needs a catalog sync or a refund.",
 };
 
 function errorMessage(kind: string | string[] | undefined): string | null {

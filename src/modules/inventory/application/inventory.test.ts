@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
+import { SealedProductId } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
@@ -11,6 +12,7 @@ import {
   inMemoryProductCatalog,
   SAMPLE_DECKS,
   SAMPLE_PRODUCTS,
+  sampleProduct,
 } from "../testing/fakes";
 import { makeInventory } from "./make-inventory";
 import { receiveItems } from "./receive-items";
@@ -165,5 +167,41 @@ describe("openAll", () => {
     if (!result.ok) throw new Error("expected openings");
     const seeds = result.value.map((opening) => (opening.kind === "pack" ? opening.pack.seed : ""));
     expect(new Set(seeds).size).toBe(3);
+  });
+});
+
+describe("nothing inside (found with real data: an empty precon)", () => {
+  it("refuses to open a product that gives nothing, and leaves it unopened", async () => {
+    services.productCatalog = inMemoryProductCatalog([
+      sampleProduct("empty", "Empty Precon", [{ kind: "other", name: "Reference card" }], "deck"),
+    ]);
+    const [item] = await services.items.add({
+      ownerId: jack.userId,
+      items: [
+        {
+          content: { kind: "product", productId: SealedProductId.of("empty") },
+          name: "Empty Precon",
+          productId: SealedProductId.of("empty"),
+        },
+      ],
+      origin: "purchase",
+      parentId: null,
+      at: now,
+    });
+    expect(await inventory.openItem(jack, item.id)).toEqual(err({ kind: "NothingInside" }));
+    expect(items.itemsOf(jack.userId)[0].status).toBe("unopened");
+  });
+
+  it("refuses to open a deck whose list is empty", async () => {
+    services.productCatalog = inMemoryProductCatalog(
+      Object.values(SAMPLE_PRODUCTS),
+      new Map([["TST/Land Pack", []]]),
+    );
+    const [bundle] = await give("bundle");
+    const unpacked = await inventory.openItem(jack, bundle.id);
+    if (!unpacked.ok || unpacked.value.kind !== "product") throw new Error("expected a product");
+    expect(await inventory.openItem(jack, unpacked.value.children[2].id)).toEqual(
+      err({ kind: "NothingInside" }),
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { assertNever } from "@/shared/kernel";
 import type {
   PrintingId,
   ScryfallCard,
@@ -189,6 +190,15 @@ export function withoutBrokenReferences(
     const deckKeys = new Set(decks.map((d) => `${d.setCode}/${d.name}`));
 
     products = products.filter((product) => {
+      // Rule 5b: a product must contain something to open. MTGJSON lists some new products before
+      // their contents are known (it gives `null`); selling those would sell an empty box.
+      if (!yieldsSomething(product.contents)) {
+        leftOut.push(
+          `product "${product.name}": ${product.contents.length === 0 ? "MTGJSON lists no contents yet" : "contains nothing to open"}`,
+        );
+        changed = true;
+        return false;
+      }
       const problem = firstProblem(product.contents, {
         hasPrinting,
         hasProduct: (id) => productIds.has(id) || known.hasProduct(id),
@@ -281,4 +291,49 @@ export function isNightlySyncDue(input: {
   todaysSyncTime.setHours(syncTime.hour, syncTime.minute, 0, 0);
   if (now.getTime() < todaysSyncTime.getTime()) return false;
   return lastRunStartedAt === null || lastRunStartedAt.getTime() < todaysSyncTime.getTime();
+}
+
+/** Whether opening these contents gives the player anything: a pack, a product, a deck or a card. */
+export function yieldsSomething(contents: readonly SealedContent[]): boolean {
+  return contents.some((content) => {
+    switch (content.kind) {
+      case "pack":
+      case "sealed":
+      case "deck":
+      case "card":
+        return true;
+      case "other":
+        return false;
+      case "variable":
+        return content.options.some(yieldsSomething);
+      default:
+        return assertNever(content);
+    }
+  });
+}
+
+/** The parts of a set's state the companion rule needs. */
+export type CompanionCandidate = Readonly<{
+  code: SetCode;
+  type: string;
+  parentCode: SetCode | null;
+  isEnabled: boolean;
+}>;
+
+/**
+ * Commander companion sets (e.g. FRC for Reality Fracture, SOC for Secrets of Strixhaven) hold a
+ * release's precon decks. Enabling a set enables its companions too, so its precons are imported
+ * and sold (rule 11). Returns the companions that still need enabling.
+ */
+export function companionsToEnable(sets: readonly CompanionCandidate[]): SetCode[] {
+  const enabled = new Set(sets.filter((set) => set.isEnabled).map((set) => set.code));
+  return sets
+    .filter(
+      (set) =>
+        !set.isEnabled &&
+        set.type === "commander" &&
+        set.parentCode !== null &&
+        enabled.has(set.parentCode),
+    )
+    .map((set) => set.code);
 }

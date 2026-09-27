@@ -9,6 +9,8 @@ import { Cents } from "@/shared/kernel";
 const KIND = sql`sp.category || '/' || coalesce(sp.subtype, 'default')`;
 /** A product's MSRP in SQL: its override, else its kind's price (null = not for sale). */
 const MSRP = sql`coalesce(o.cents, k.cents)`;
+/** Only products with something inside are for sale (design doc 06, rule 2). */
+const HAS_CONTENTS = sql`jsonb_array_length(sp.contents) > 0`;
 const PRICE_JOINS = sql`
   left join msrp_overrides o on o.product_id = sp.id
   left join msrp_prices k on k.kind = ${KIND}`;
@@ -60,7 +62,7 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
       from card_sets s
       join sealed_products sp on sp.set_code = s.code
       ${PRICE_JOINS}
-     where s.is_enabled and ${MSRP} is not null
+     where s.is_enabled and ${MSRP} is not null and ${HAS_CONTENTS}
      group by s.code
      order by s.release_date desc, s.code
   `);
@@ -116,7 +118,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
     select sp.id, sp.name, sp.category, sp.subtype, ${MSRP} as msrp
       from sealed_products sp
       ${PRICE_JOINS}
-     where sp.set_code = ${set.code} and ${MSRP} is not null
+     where sp.set_code = ${set.code} and ${MSRP} is not null and ${HAS_CONTENTS}
      order by sp.category, ${MSRP}, sp.name
   `);
   const featured = await featuredArt(db, [set.code]);

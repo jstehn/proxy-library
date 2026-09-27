@@ -7,6 +7,7 @@ import type {
   BoosterUnavailable,
   DeckUnavailable,
   ItemNotFound,
+  NothingInside,
   ProductUnavailable,
 } from "../domain/errors";
 import { openTransition, type Item, type ItemId } from "../domain/item";
@@ -29,9 +30,14 @@ export type Opening =
     }>;
 
 export type OpenItemError =
-  ItemNotFound | AlreadyOpened | BoosterUnavailable | DeckUnavailable | ProductUnavailable;
+  | ItemNotFound
+  | AlreadyOpened
+  | BoosterUnavailable
+  | DeckUnavailable
+  | ProductUnavailable
+  | NothingInside;
 
-type ContentError = BoosterUnavailable | DeckUnavailable | ProductUnavailable;
+type ContentError = BoosterUnavailable | DeckUnavailable | ProductUnavailable | NothingInside;
 
 /** The pack engine's cards, as collection gains (one copy each). */
 function packGains(pack: Pack): CardGain[] {
@@ -65,6 +71,7 @@ async function openContent(
       });
       if (!opened.ok) return opened;
       const pack = opened.value;
+      if (pack.cards.length === 0) return err({ kind: "NothingInside" });
       await receiveCards(services, item.ownerId, packGains(pack), { source: "pack", ref, at: now });
       await services.items.markOpened(item, {
         kind: "pack",
@@ -78,6 +85,7 @@ async function openContent(
     case "deck": {
       const cards = await services.productCatalog.deckCards(content.setCode, content.deckName);
       if (cards === null) return err({ kind: "DeckUnavailable" });
+      if (cards.length === 0) return err({ kind: "NothingInside" });
       await receiveCards(services, item.ownerId, cards, { source: "deck", ref, at: now });
       await services.items.markOpened(item, { kind: "deck", cards });
       return ok({ kind: "deck", item, cards });
@@ -93,6 +101,7 @@ async function openContent(
       const seed = newSeed();
       const plan = unpack(product.contents, (id) => nested.get(id) ?? null, seededRng(seed));
       if (plan === null) return err({ kind: "ProductUnavailable" });
+      if (plan.items.length === 0 && plan.cards.length === 0) return err({ kind: "NothingInside" });
 
       const children = await services.items.add({
         ownerId: item.ownerId,

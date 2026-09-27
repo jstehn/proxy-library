@@ -53,6 +53,8 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       const rows = await db
         .select({
           code: cardSets.code,
+          type: cardSets.type,
+          parentCode: cardSets.parentCode,
           isEnabled: cardSets.isEnabled,
           isSupporting: cardSets.isSupporting,
           importedVersion: cardSets.importedVersion,
@@ -61,7 +63,11 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
         .from(cardSets)
         .leftJoin(printings, eq(printings.setCode, cardSets.code))
         .groupBy(cardSets.code);
-      return rows.map((row): SetState => ({ ...row, code: SetCode.of(row.code) }));
+      return rows.map((row): SetState => ({
+        ...row,
+        code: SetCode.of(row.code),
+        parentCode: row.parentCode === null ? null : SetCode.of(row.parentCode),
+      }));
     },
 
     async setEnabled(codes, enabled) {

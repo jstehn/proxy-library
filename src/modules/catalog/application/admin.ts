@@ -1,6 +1,7 @@
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Result } from "@/shared/kernel";
 import type { Forbidden, ImageNotFound, SetNotFound, SyncAlreadyQueued } from "../domain/errors";
+import { companionsToEnable } from "../domain/rules";
 import type { PrintingId, SetCode } from "../domain/types";
 import type { CatalogDependencies, ImageFace, ImageSize, ImageSource, SyncKind } from "./ports";
 
@@ -36,7 +37,11 @@ export function makeCatalogAdmin(dependencies: CatalogDependencies) {
       if (state === undefined) return err({ kind: "SetNotFound" });
 
       await catalog.setEnabled([input.code], input.enabled);
-      const needsImport = input.enabled && state.importedVersion === null;
+      // Rule 11: enabling a set also enables its Commander companion set (its precons).
+      const companions = input.enabled ? companionsToEnable(await catalog.setStates()) : [];
+      await catalog.setEnabled(companions, true);
+      const needsImport =
+        input.enabled && (state.importedVersion === null || companions.length > 0);
       if (needsImport && !(await syncRuns.hasPending())) {
         await syncRuns.queue({
           kind: "prices",
@@ -58,6 +63,7 @@ export function makeCatalogAdmin(dependencies: CatalogDependencies) {
         .map((state) => state.code);
       if (toEnable.length > 0) {
         await catalog.setEnabled(toEnable, true);
+        await catalog.setEnabled(companionsToEnable(await catalog.setStates()), true);
         if (!(await syncRuns.hasPending())) {
           await syncRuns.queue({
             kind: "prices",

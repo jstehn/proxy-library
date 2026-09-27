@@ -8,6 +8,7 @@ import {
   tallyStandard,
   withoutBrokenReferences,
   type StandardTally,
+  companionsToEnable,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
 import type {
@@ -31,6 +32,7 @@ export type SyncSummary = {
   bulkFileDownloaded: boolean;
   setsInList: number;
   enabledAsStandard: string[];
+  enabledAsCompanions: string[];
   importedSets: string[];
   importedSupportingSets: string[];
   /** Boosters, products and decks left out because they refer to something missing (rule 5). */
@@ -69,6 +71,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       bulkFileDownloaded: false,
       setsInList: 0,
       enabledAsStandard: [],
+      enabledAsCompanions: [],
       importedSets: [],
       importedSupportingSets: [],
       leftOut: [],
@@ -102,6 +105,14 @@ export function makeSync(dependencies: CatalogDependencies) {
         await catalog.setEnabled(standard, true);
       });
       summary.enabledAsStandard = standard;
+      states = await inTransaction(({ catalog }) => catalog.setStates());
+    }
+
+    // 3b. Enabled sets bring their Commander companion sets with them (rule 11: precons).
+    const companions = companionsToEnable(states);
+    if (companions.length > 0) {
+      await inTransaction(({ catalog }) => catalog.setEnabled(companions, true));
+      summary.enabledAsCompanions = companions;
       states = await inTransaction(({ catalog }) => catalog.setStates());
     }
 

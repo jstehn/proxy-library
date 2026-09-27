@@ -45,6 +45,8 @@ export interface ImageFetcher {
 
 export type SetState = Readonly<{
   code: SetCode;
+  type: string; // "expansion", "commander", …
+  parentCode: SetCode | null;
   isEnabled: boolean;
   isSupporting: boolean;
   importedVersion: string | null; // last FULL import

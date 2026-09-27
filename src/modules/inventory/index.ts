@@ -14,6 +14,7 @@ export type {
   BoosterUnavailable,
   DeckUnavailable,
   ItemNotFound,
+  NothingInside,
   ProductUnavailable,
 } from "./domain/errors";
 export { ItemId, type Item, type ItemContent } from "./domain/item";
