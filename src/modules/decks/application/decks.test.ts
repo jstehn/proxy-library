@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
-import { DeckId, MAX_DECKS } from "../domain/deck";
-import { inMemoryCardLookup, inMemoryDeckRepository } from "../testing/fakes";
+import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
+import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "../testing/fakes";
 import { makeDecks } from "./make-decks";
 
 function actor(id: string): Actor {
@@ -122,5 +122,59 @@ describe("decks (design doc 09)", () => {
         },
       ]),
     );
+  });
+});
+
+describe("createDeckFromCards (opened precons)", () => {
+  it("keeps printings and boards, and is Commander when there's a commander", async () => {
+    const created = await decks.createDeckFromCards(jack, {
+      name: "Multiverse Reforged",
+      cards: [
+        {
+          printingId: samplePrintingId("delver-1"),
+          finish: "foil",
+          quantity: 1,
+          board: "commander",
+        },
+        { printingId: samplePrintingId("bolt-m11"), finish: "nonfoil", quantity: 1, board: "main" },
+        {
+          printingId: samplePrintingId("not-in-catalog"),
+          finish: "nonfoil",
+          quantity: 1,
+          board: "main",
+        },
+      ],
+    });
+    if (!created.ok) throw new Error(created.error.kind);
+    const deck = repository.get(created.value);
+    expect(deck?.format).toBe("commander");
+    expect(deck?.entries).toEqual([
+      {
+        oracleId: "delver",
+        board: "commander",
+        quantity: 1,
+        printingId: "delver-1",
+        finish: "foil",
+      },
+      { oracleId: "bolt", board: "main", quantity: 1, printingId: "bolt-m11", finish: "nonfoil" },
+    ]);
+  });
+
+  it("is casual without a commander", async () => {
+    const created = await decks.createDeckFromCards(jack, {
+      name: "Starter",
+      cards: [
+        { printingId: samplePrintingId("duress-1"), finish: "nonfoil", quantity: 2, board: "main" },
+      ],
+    });
+    expect(created.ok && repository.get(created.value)?.format).toBe("casual");
+  });
+});
+
+describe("becomesADeck", () => {
+  it("turns precons and starter decks into decks, but not a bundle's land pack", () => {
+    expect(becomesADeck("Commander Deck")).toBe(true);
+    expect(becomesADeck("Starter Kit")).toBe(true);
+    expect(becomesADeck("Bundle Land Pack")).toBe(false);
   });
 });

@@ -10,6 +10,8 @@ export type UnopenedGroup = Readonly<{
   name: string;
   contentKind: "product" | "pack" | "deck";
   productId: string | null;
+  /** The product's category ("booster_box", "deck", …), when it's a catalog product. */
+  category: string | null;
   setCode: string | null;
   /** Every item in the group, oldest first. "Open" opens the first; "Open all" opens them all. */
   itemIds: number[];
@@ -21,6 +23,9 @@ export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<Uno
       name: sealedItems.name,
       contentKind: sealedItems.contentKind,
       productId: sealedItems.productId,
+      category: sql<
+        string | null
+      >`(select sp.category from sealed_products sp where sp.id = ${sealedItems.productId})`,
       // A product item has no set code of its own; its packs and decks do.
       setCode: sql<string | null>`min(${sealedItems.setCode})`,
       itemIds: sql<number[]>`array_agg(${sealedItems.id} order by ${sealedItems.id})`,
@@ -35,6 +40,7 @@ export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<Uno
     // The CHECK constraint allows only these three.
     contentKind: row.contentKind as UnopenedGroup["contentKind"],
     productId: row.productId,
+    category: row.category,
     setCode: row.setCode,
     itemIds: row.itemIds.map(Number),
   }));

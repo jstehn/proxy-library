@@ -214,6 +214,7 @@ export async function ownedCardsNamed(
   db: DbExecutor,
   userId: UserId,
   name: string,
+  limit = 30,
 ): Promise<OwnedCardMatch[]> {
   if (name.trim() === "") return [];
   const rows = await db.execute<{
@@ -229,8 +230,9 @@ export async function ownedCardsNamed(
       from collection_cards c join printings p on p.id = c.printing_id
      where c.user_id = ${userId} and p.name ilike ${`%${name.trim()}%`}
      group by p.oracle_id
-     order by min(p.name)
-     limit 30
+     -- Names that start with what was typed come first ("swa" → Swamp before Muck Swamp).
+     order by lower(min(p.name)) like lower(${`${name.trim()}%`}) desc, min(p.name)
+     limit ${limit}
   `);
   return rows.rows.map((row) => ({
     oracleId: row.oracle_id,
@@ -239,4 +241,40 @@ export async function ownedCardsNamed(
     printingId: row.printing_id,
     finish: FinishSchema.parse(row.finish),
   }));
+}
+
+export type DeckRef = Readonly<{ id: number; name: string; quantity: number }>;
+
+/**
+ * For each printing, the player's decks that use its card (any printing of it counts: decks go by
+ * oracle card). Lets the collection say where a copy is, so you know which deck to pull it from.
+ */
+export async function decksUsing(
+  db: DbExecutor,
+  userId: UserId,
+  printingIds: readonly string[],
+): Promise<Map<string, DeckRef[]>> {
+  if (printingIds.length === 0) return new Map();
+  const rows = await db.execute<{
+    printing_id: string;
+    deck_id: number;
+    name: string;
+    quantity: number;
+  }>(sql`
+    select p.id as printing_id, d.id as deck_id, d.name, sum(e.quantity)::int as quantity
+      from printings p
+      join deck_entries e on e.oracle_id = p.oracle_id
+      join decks d on d.id = e.deck_id and d.owner_id = ${userId}
+     where p.id = any(${sql.param([...new Set(printingIds)])}::text[])
+     group by p.id, d.id, d.name
+     order by d.name
+  `);
+  const found = new Map<string, DeckRef[]>();
+  for (const row of rows.rows) {
+    found.set(row.printing_id, [
+      ...(found.get(row.printing_id) ?? []),
+      { id: Number(row.deck_id), name: row.name, quantity: row.quantity },
+    ]);
+  }
+  return found;
 }

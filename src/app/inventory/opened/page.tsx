@@ -30,6 +30,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
   const searchParams = await props.searchParams;
   const raw = searchParams.items;
   const animate = searchParams.animate === "1";
+  const newDecks = typeof searchParams.decks === "string" ? searchParams.decks : null;
   const ids = (typeof raw === "string" ? raw.split(",") : [])
     .map(Number)
     .filter((id) => Number.isSafeInteger(id) && id > 0)
@@ -53,6 +54,14 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     <>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Opened</h1>
+        {newDecks !== null && (
+          <p className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+            Added to your decks: <strong>{newDecks}</strong>.{" "}
+            <Link href="/decks" className="underline">
+              Open your decks
+            </Link>
+          </p>
+        )}
         {openings.length === 0 ? (
           <p className="text-sm text-zinc-500">Nothing to show.</p>
         ) : (

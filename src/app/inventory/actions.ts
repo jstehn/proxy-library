@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { becomesADeck } from "@/modules/decks";
 import { ItemId } from "@/modules/inventory";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -29,9 +30,24 @@ export async function openAction(formData: FormData): Promise<void> {
   if (!result.ok) redirect(`/inventory?error=${result.error.kind}`);
 
   const openings = Array.isArray(result.value) ? result.value : [result.value];
+
+  // Opened precons go straight into the deck list (feedback 2026-09-27). The cards are already
+  // in the collection, so the new deck starts with everything owned.
+  const newDecks: string[] = [];
+  for (const opening of openings) {
+    if (opening.kind !== "deck" || !becomesADeck(opening.deckType)) continue;
+    const created = await getContainer().decks.createDeckFromCards(actor, {
+      name: opening.item.name,
+      cards: opening.cards,
+    });
+    if (created.ok) newDecks.push(opening.item.name);
+  }
+
   revalidatePath("/inventory");
   revalidatePath("/collection");
+  revalidatePath("/decks");
   // animate=1: play the packs in the opener first (design doc 08, section 5).
   const ids = openings.map((opening) => opening.item.id).join(",");
-  redirect(`/inventory/opened?items=${ids}&animate=1`);
+  const decks = newDecks.length > 0 ? `&decks=${encodeURIComponent(newDecks.join(" | "))}` : "";
+  redirect(`/inventory/opened?items=${ids}&animate=1${decks}`);
 }

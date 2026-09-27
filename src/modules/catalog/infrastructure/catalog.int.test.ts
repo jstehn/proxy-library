@@ -69,8 +69,10 @@ describe("the first sync", () => {
     // Only paper sets are listed: YBLB (online-only Alchemy) is left out.
     expect(summary.setsInList).toBe(4);
     expect(summary.enabledAsStandard).toEqual(["BLB"]);
+    // Rule 11: BLB's Commander companion set (its precons) comes with it.
+    expect(summary.enabledAsCompanions).toEqual(["BLC"]);
     expect(summary.importedSupportingSets).toEqual(["SPG"]);
-    expect(summary.importedSets).toEqual(["BLB"]);
+    expect(summary.importedSets).toEqual(["BLB", "BLC"]);
     expect(summary.failedSets).toEqual([]);
     expect(summary.leftOut).toEqual([]);
     expect(summary.skippedDigital).toEqual({
@@ -92,7 +94,7 @@ describe("the first sync", () => {
     );
     expect(sets.rows).toEqual([
       { code: "BLB", is_enabled: true, is_supporting: false },
-      { code: "BLC", is_enabled: false, is_supporting: false },
+      { code: "BLC", is_enabled: true, is_supporting: false },
       { code: "FDN", is_enabled: false, is_supporting: false },
       { code: "SPG", is_enabled: false, is_supporting: true },
     ]);
@@ -132,7 +134,7 @@ describe("running again", () => {
     await catalog.runSync("prices");
     expect(mtgjson.downloads).toEqual([]);
     await catalog.runSync("full");
-    expect(mtgjson.downloads).toEqual(["BLB", "SPG"]);
+    expect(mtgjson.downloads).toEqual(["BLB", "SPG", "BLC"]);
   });
 });
 
@@ -140,7 +142,7 @@ describe("rule 5: nothing may refer to a missing card", () => {
   it("leaves out (and reports) what refers to a supporting set that isn't available", async () => {
     const withoutSpg = fixtureMtgjsonGateway({ hideSets: ["SPG"] });
     const summary = await buildCatalog(withoutSpg).runSync("prices");
-    expect(summary.importedSets).toEqual(["BLB"]);
+    expect(summary.importedSets).toEqual(["BLB", "BLC"]);
     expect(summary.leftOut[0]).toBe("BLB: booster play: sheet specialGuest has 2 unknown card(s)");
     expect(await countRows("booster_configs")).toBe(0);
     expect(await countRows("sealed_products")).toBe(1); // only the starter kit remains
@@ -160,7 +162,7 @@ describe("the sync queue", () => {
     const runs = await db.execute<{ status: string; imported: string }>(
       sql`select status, summary->>'importedSets' as imported from sync_runs`,
     );
-    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB"]' }]);
+    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB", "BLC"]' }]);
   });
 
   it("marks a run left 'running' by a crash as failed", async () => {

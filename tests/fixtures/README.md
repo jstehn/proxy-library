@@ -14,6 +14,10 @@ Trimming kept everything consistent: every booster sheet, product and deck only 
 that are in the fixtures. Sheet `totalWeight`s were recomputed. Heavy fields the app never reads
 (translations, rulings, purchase links) were removed.
 
+`mtgjson/BLC.json` is Bloomburrow Commander's real identity (code, type, parent set) with its
+cards, decks and products **trimmed to nothing**. It exists because enabling BLB now enables its
+Commander companion set (design doc 04, rule 11), and the fixture sync needs a file to read.
+
 **Synthetic additions** (made up on purpose, to test the filters):
 
 - `BLB.json`: an Alchemy-style card (`uuid 00000000-a1c4-…`, `availability: ["arena"]`) used only

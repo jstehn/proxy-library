@@ -89,3 +89,12 @@ export function withEntry(
   };
   return { ...deck, entries: [...others, entry] };
 }
+
+/**
+ * Which deck lists become decks in your deck list when you open them (feedback 2026-09-27: "buy a
+ * precon and have it in my decks"). Precons, starter and welcome decks do; a bundle's land pack
+ * isn't a deck.
+ */
+export function becomesADeck(deckType: string): boolean {
+  return !/land pack/i.test(deckType);
+}

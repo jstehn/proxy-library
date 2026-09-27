@@ -5,7 +5,6 @@ import {
   deckProblems,
   deckView,
   FORMATS,
-  ownedCardsNamed,
   type Board,
   type DeckLine,
 } from "@/modules/decks";
@@ -14,6 +13,7 @@ import { requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
 import { deleteDeckAction, importListAction, setEntryAction, updateDeckAction } from "../actions";
 import { FORMAT_LABELS, problemText } from "../labels";
+import { CardSearch } from "./card-search";
 
 const BOARD_TITLES: Record<Board, string> = {
   commander: "Commander",
@@ -70,10 +70,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const searchParams = await props.searchParams;
   const q = typeof searchParams.q === "string" ? searchParams.q : "";
 
-  const [view, matches] = await Promise.all([
-    deckView(db, actor.userId, deckId),
-    ownedCardsNamed(db, actor.userId, q),
-  ]);
+  const view = await deckView(db, actor.userId, deckId);
   if (view === null) notFound();
   const { deck, lines } = view;
   const owned = (oracleId: string) => lines.find((line) => line.oracleId === oracleId)?.owned ?? 0;
@@ -186,56 +183,13 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         <aside className="flex w-full flex-col gap-6 lg:w-80">
           <section className="flex flex-col gap-2">
             <h2 className="font-medium">Add from your collection</h2>
-            <form method="get" className="flex gap-2">
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Card name"
-                aria-label="Search your collection"
-                className={`${field} flex-1`}
-              />
-              <button type="submit" className={field}>
-                Search
-              </button>
-            </form>
-            <ul className="flex flex-col gap-1 text-sm">
-              {matches.map((match) => (
-                <li key={match.oracleId} className="flex items-center gap-2">
-                  <span className="flex-1">
-                    {match.name} <span className="text-xs text-zinc-500">own {match.owned}</span>
-                  </span>
-                  {(deck.format === "commander"
-                    ? (["commander", "main"] as const)
-                    : (["main", "side"] as const)
-                  ).map((board) => {
-                    const current =
-                      lines.find((line) => line.oracleId === match.oracleId && line.board === board)
-                        ?.quantity ?? 0;
-                    return (
-                      <form key={board} action={setEntryAction}>
-                        <input type="hidden" name="deckId" value={deck.id} />
-                        <input type="hidden" name="oracleId" value={match.oracleId} />
-                        <input type="hidden" name="board" value={board} />
-                        <input type="hidden" name="quantity" value={current + 1} />
-                        <input type="hidden" name="printingId" value={match.printingId} />
-                        <input type="hidden" name="finish" value={match.finish} />
-                        <input type="hidden" name="q" value={q} />
-                        <button
-                          type="submit"
-                          aria-label={`Add ${match.name} to ${BOARD_TITLES[board]}`}
-                          className={smallButton}
-                        >
-                          + {board === "commander" ? "cmdr" : board}
-                        </button>
-                      </form>
-                    );
-                  })}
-                </li>
-              ))}
-              {q !== "" && matches.length === 0 && (
-                <li className="text-zinc-500">Nothing in your collection matches.</li>
-              )}
-            </ul>
+            <CardSearch
+              deckId={deck.id}
+              boards={
+                deck.format === "commander" ? ["main", "commander", "side"] : ["main", "side"]
+              }
+              boardLabels={BOARD_TITLES}
+            />
           </section>
 
           <section className="flex flex-col gap-2">

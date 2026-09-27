@@ -51,6 +51,10 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
           <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
             {groups.map((group) => {
               const count = group.itemIds.length;
+              // Precons and starter kits hold decks: "Open" goes all the way to the cards (and
+              // the deck list). Boxes and bundles can still be unpacked into packs first.
+              const isDeckProduct =
+                group.contentKind === "product" && /deck/.test(group.category ?? "");
               // "Open all" goes inside products; for several packs it opens every one.
               const canOpenAll = group.contentKind === "product" || count > 1;
               return (
@@ -64,16 +68,16 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                   </span>
                   <form action={openAction}>
                     <input type="hidden" name="itemIds" value={group.itemIds[0]} />
-                    <input type="hidden" name="mode" value="one" />
+                    <input type="hidden" name="mode" value={isDeckProduct ? "all" : "one"} />
                     <button
                       type="submit"
                       className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
                       aria-label={`Open ${group.name}`}
                     >
-                      {group.contentKind === "product" ? "Unpack" : "Open"}
+                      {group.contentKind === "product" && !isDeckProduct ? "Unpack" : "Open"}
                     </button>
                   </form>
-                  {canOpenAll && (
+                  {canOpenAll && !isDeckProduct && (
                     <form action={openAction}>
                       <input
                         type="hidden"

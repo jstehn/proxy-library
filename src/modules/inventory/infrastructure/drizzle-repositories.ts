@@ -8,10 +8,10 @@ import {
   type SealedProduct,
 } from "@/modules/catalog";
 import { deckLists, sealedProducts } from "@/modules/catalog/infrastructure/schema";
-import type { CardGain } from "@/modules/collection";
 import type { DbExecutor } from "@/shared/db";
 import { assertNever, UserId } from "@/shared/kernel";
 import type {
+  DeckContents,
   ItemRepository,
   NewItemsInput,
   ProductCatalog,
@@ -150,6 +150,7 @@ const DeckCardsSchema = z.array(
     printingId: z.string().transform(PrintingId.of),
     count: z.number().int().positive(),
     finish: FinishSchema,
+    board: z.enum(["commander", "main", "side"]),
   }),
 );
 
@@ -179,17 +180,21 @@ export function drizzleProductCatalog(db: DbExecutor): ProductCatalog {
     );
   }
 
-  async function deckCards(setCode: SetCode, deckName: string): Promise<CardGain[] | null> {
+  async function deckCards(setCode: SetCode, deckName: string): Promise<DeckContents | null> {
     const [row] = await db
-      .select({ cards: deckLists.cards })
+      .select({ type: deckLists.type, cards: deckLists.cards })
       .from(deckLists)
       .where(and(eq(deckLists.setCode, setCode), eq(deckLists.name, deckName)));
     if (row === undefined) return null;
-    return DeckCardsSchema.parse(row.cards).map((card) => ({
-      printingId: card.printingId,
-      finish: card.finish,
-      quantity: card.count,
-    }));
+    return {
+      type: row.type,
+      cards: DeckCardsSchema.parse(row.cards).map((card) => ({
+        printingId: card.printingId,
+        finish: card.finish,
+        quantity: card.count,
+        board: card.board,
+      })),
+    };
   }
 
   return { products, deckCards };

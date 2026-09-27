@@ -48,6 +48,8 @@ export function CardFilters(props: {
   values: FilterValues;
   sets: ReadonlyArray<{ code: string; name: string }>;
   sorts: ReadonlyArray<readonly [string, string]>;
+  /** Ways to divide the results into sections, if the page has them. */
+  sections?: ReadonlyArray<readonly [string, string]>;
   showFinish?: boolean;
 }) {
   const value = (name: string) => props.values[name] ?? "";
@@ -88,6 +90,14 @@ export function CardFilters(props: {
           value={value("finish")}
           anyLabel="Any finish"
           options={FINISHES}
+        />
+      )}
+      {props.sections && (
+        <Select
+          name="sections"
+          label="Sections"
+          value={value("sections")}
+          options={props.sections}
         />
       )}
       <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />

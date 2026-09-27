@@ -46,6 +46,14 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
     async exists(oracleId) {
       return cards.some((card) => card.oracleId === oracleId);
     },
+    async oracleIdsOf(printingIds) {
+      const found = new Map<PrintingId, string>();
+      for (const card of cards) {
+        const printingId = PrintingId.of(card.printingId);
+        if (printingIds.includes(printingId)) found.set(printingId, card.oracleId);
+      }
+      return found;
+    },
     async resolve(_ownerId: UserId, queries: readonly CardQuery[]) {
       const found = new Map<number, ResolvedCard>();
       queries.forEach((query, index) => {

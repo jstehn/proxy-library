@@ -26,16 +26,7 @@ export async function SiteHeader() {
             <Link href="/sets">Sets</Link>
           </>
         )}
-        {actor !== null && actor.isAdmin && (
-          <>
-            <Link href="/admin/catalog">Catalog</Link>
-            <Link href="/admin/packs">Pack lab</Link>
-            <Link href="/admin/store">Prices</Link>
-            <Link href="/admin/players">Players</Link>
-            <Link href="/admin/invites">Invites</Link>
-            <Link href="/admin/economy">Economy</Link>
-          </>
-        )}
+        {actor !== null && actor.isAdmin && <Link href="/admin">Admin</Link>}
         <span className="flex-1" />
         {actor === null ? (
           <Link href="/sign-in">Sign in</Link>

@@ -2,6 +2,8 @@
 export { makeInventory, type Inventory } from "./application/make-inventory";
 export { OPEN_ALL_LIMIT, type Opening, type OpenItemError } from "./application/open";
 export type {
+  DeckCardGain,
+  DeckContents,
   InventoryDependencies,
   InventoryServices,
   ItemRepository,

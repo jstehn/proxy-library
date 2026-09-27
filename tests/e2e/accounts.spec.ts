@@ -7,6 +7,12 @@ test.describe.configure({ mode: "serial" });
 // first visitor becomes admin → creates an invite → a second player registers with it →
 // the admin gives and takes money → the admin disables them → they can no longer get in.
 
+/** Admin pages live behind the "Admin" link, in their own menu. */
+async function openAdminPage(page: Page, name: string) {
+  await page.locator(`header a[href="/admin"]`).click(); // not the account link, also "Admin"
+  await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name }).click();
+}
+
 async function register(page: Page, username: string, displayName: string) {
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Display name").fill(displayName);
@@ -29,7 +35,7 @@ test("first admin invites a player, manages their money, then disables them", as
   await expect(page.getByRole("heading", { name: "Welcome, Admin" })).toBeVisible();
 
   // The admin creates an invite and reads the code off the page.
-  await page.getByRole("link", { name: "Invites" }).click();
+  await openAdminPage(page, "Invites");
   await page.getByRole("button", { name: "Create invite" }).click();
   const inviteCode = await page.locator("code").first().innerText();
   expect(inviteCode).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
@@ -51,7 +57,7 @@ test("first admin invites a player, manages their money, then disables them", as
   await expect(player.getByRole("link", { name: "$50.00" })).toBeVisible();
 
   // The admin gives Jack $25, then takes $10 back, each with a note.
-  await page.getByRole("link", { name: "Players" }).click();
+  await openAdminPage(page, "Players");
   const jackMoney = page.getByRole("listitem").filter({ hasText: "@jack" });
   await jackMoney.getByLabel("Amount for @jack").fill("25");
   await jackMoney.getByLabel("Note for @jack").fill("Won Friday's draft");
@@ -77,7 +83,7 @@ test("first admin invites a player, manages their money, then disables them", as
   await expect(player.getByText("Typo in last grant")).toBeVisible();
 
   // The admin disables Jack.
-  await page.getByRole("link", { name: "Players" }).click();
+  await openAdminPage(page, "Players");
   const jackRow = page.getByRole("listitem").filter({ hasText: "@jack" });
   await jackRow.getByRole("button", { name: "Disable" }).click();
   await expect(jackRow.getByText("disabled", { exact: true })).toBeVisible();
@@ -104,7 +110,7 @@ test("the admin browses the catalog (loaded from recorded fixtures)", async ({ p
   await expect(page.getByRole("heading", { name: "Welcome, Admin" })).toBeVisible();
 
   // The catalog page shows the fixture sync and Bloomburrow enabled as a Standard set.
-  await page.getByRole("link", { name: "Catalog" }).click();
+  await openAdminPage(page, "Catalog");
   await expect(page.getByText("succeeded")).toBeVisible();
   // Find the set's row by its exact code ("BLB" also appears inside the sync details).
   const blbRow = page.getByRole("listitem").filter({ has: page.getByText("BLB", { exact: true }) });
@@ -135,7 +141,7 @@ test("the admin opens packs in the Pack lab", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Welcome, Admin" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Pack lab" }).click();
+  await openAdminPage(page, "Pack lab");
   await page.getByLabel("Booster").selectOption("BLB/play");
   await page.getByLabel("Packs").selectOption("10");
   await page.getByRole("button", { name: "Open packs" }).click();
@@ -211,6 +217,7 @@ test("the admin sorts their collection, opens a card, and sells a copy to the st
 
   // The pack opened in the previous test: sort it by value and open the most valuable card.
   await page.getByRole("link", { name: "Collection", exact: true }).click();
+  await page.getByLabel("Sections").selectOption("none");
   await page.getByLabel("Sort by").selectOption("value");
   await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page).toHaveURL(/sort=value/);
@@ -254,9 +261,16 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
   await expect(problems.getByText(/You own 0 Beza, the Bounding Spring/)).toBeVisible();
 
+  // Type-ahead: "pla" finds the Plains the admin owns; Enter adds one to the main deck.
+  await page.getByRole("combobox", { name: "Search your cards" }).fill("pla");
+  await expect(page.getByRole("option", { name: /^Plains/ })).toBeVisible();
+  await page.getByRole("combobox", { name: "Search your cards" }).press("Enter");
+  await expect(page.getByText("Added Plains (now 99).")).toBeVisible();
+  await expect(problems.getByText("The deck has 100 cards")).toHaveCount(0);
+
   await page.getByRole("link", { name: "Export" }).click();
   await expect(page.getByLabel("Deck list, names only")).toHaveValue(
-    "Commander\n1 Beza, the Bounding Spring\n\nDeck\n98 Plains",
+    "Commander\n1 Beza, the Bounding Spring\n\nDeck\n99 Plains",
   );
 
   await page.getByRole("link", { name: "Decks" }).first().click();

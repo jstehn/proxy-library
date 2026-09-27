@@ -347,19 +347,26 @@ function RevealStack(props: {
   onReveal: () => void;
 }) {
   const { cards, revealed } = props;
+  // A card tapped in the strip below, shown on top instead of the newest. It's remembered along
+  // with how many cards were face up then, so the next flip goes back to the newest card.
+  const [picked, setPicked] = useState<{ index: number; atRevealed: number } | null>(null);
+  const pickedIndex = picked !== null && picked.atRevealed === revealed ? picked.index : null;
+
   const inSuspense = props.suspenseIndex !== null;
-  const faceUp = revealed > 0 && !inSuspense;
-  const top = faceUp ? cards[revealed - 1] : cards[Math.min(revealed, cards.length - 1)];
+  const faceUp = (revealed > 0 || pickedIndex !== null) && !inSuspense;
+  const topIndex = pickedIndex ?? (faceUp ? revealed - 1 : Math.min(revealed, cards.length - 1));
+  const top = cards[topIndex];
   const stillFaceDown = cards.length - revealed - (faceUp ? 0 : 1);
   const glow = faceUp || inSuspense ? GLOW[hitLevel(top)] : "";
+  const flipsNext = props.canReveal && pickedIndex === null;
 
   return (
     <div className="flex flex-col items-center gap-3">
       <button
         type="button"
-        onClick={props.canReveal ? props.onReveal : undefined}
-        disabled={!props.canReveal}
-        aria-label={props.canReveal ? "Flip the next card" : top.name}
+        onClick={flipsNext ? props.onReveal : () => setPicked(null)}
+        disabled={!props.canReveal && pickedIndex === null}
+        aria-label={flipsNext ? "Flip the next card" : top.name}
         className="relative w-full max-w-xs"
       >
         {/* The rest of the pack, peeking out underneath. */}
@@ -369,7 +376,7 @@ function RevealStack(props: {
           </div>
         )}
         <div
-          key={`${revealed}-${faceUp}`}
+          key={`${topIndex}-${faceUp}`}
           className={`relative rounded-[4.5%] ${faceUp ? "animate-flip-in" : ""} ${inSuspense ? "animate-suspense" : ""} ${glow}`}
         >
           {faceUp ? <CardFace card={top} /> : <CardBack />}
@@ -378,13 +385,21 @@ function RevealStack(props: {
       {faceUp ? <CardCaption card={top} /> : <p className="text-sm text-zinc-500">Tap to flip</p>}
       <p className="text-xs text-zinc-500">
         {revealed} of {cards.length} flipped
+        {pickedIndex !== null && " · tap the big card to go back"}
       </p>
-      {/* The cards you've already seen, small. */}
+      {/* The cards you've already seen, small. Tap one to look at it again. */}
       {revealed > 1 && (
         <ol className="grid w-full grid-cols-7 gap-1">
           {cards.slice(0, revealed).map((card, index) => (
             <li key={index}>
-              <CardFace card={card} />
+              <button
+                type="button"
+                onClick={() => setPicked({ index, atRevealed: revealed })}
+                aria-label={`Show ${card.name}`}
+                className={`block w-full rounded-[4.5%] ${index === topIndex && faceUp ? "ring-2 ring-sky-500" : ""}`}
+              >
+                <CardFace card={card} />
+              </button>
             </li>
           ))}
         </ol>

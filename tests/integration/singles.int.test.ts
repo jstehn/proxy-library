@@ -86,24 +86,59 @@ describe("singles", () => {
 });
 
 describe("collectionPage", () => {
+  it("divides into color sections, in binder order", async () => {
+    const card = await affordableCard();
+    await store.buySingle(jack, { printingId: card.id, finish: "nonfoil", quantity: 1 });
+    const plains = (
+      await db.execute<{ id: string }>(sql`
+        select p.id from printings p join price_snapshots s on s.printing_id = p.id and s.finish = 'nonfoil'
+         where p.set_code = 'BLB' and p.type_line like 'Basic Land%' limit 1
+      `)
+    ).rows[0];
+    await store.buySingle(jack, {
+      printingId: PrintingId.of(plains.id),
+      finish: "nonfoil",
+      quantity: 1,
+    });
+
+    const page = await collectionPage(db, jack.userId, {
+      sections: "color",
+      sort: "mana",
+      page: 1,
+    });
+    const sections = page.rows.map((row) => row.section);
+    expect(sections.at(-1)).toBe("Lands"); // lands come last
+    expect(["White", "Blue", "Black", "Red", "Green", "Multicolored", "Colorless"]).toContain(
+      sections[0],
+    );
+    const byType = await collectionPage(db, jack.userId, {
+      sections: "type",
+      sort: "name",
+      page: 1,
+    });
+    expect(byType.rows.map((row) => row.section)).toContain("Lands");
+  });
+
   it("filters, sorts by value, and totals the whole filtered collection", async () => {
     const card = await affordableCard();
     await store.buySingle(jack, { printingId: card.id, finish: "nonfoil", quantity: 3 });
 
-    const all = await collectionPage(db, jack.userId, { sort: "value", page: 1 });
+    const all = await collectionPage(db, jack.userId, { sections: "none", sort: "value", page: 1 });
     expect(all.totals).toEqual({ different: 1, copies: 3, valueCents: 3 * card.price });
     expect(all.rows).toEqual([
-      { printingId: card.id, finish: "nonfoil", quantity: 3, price: card.price },
+      { printingId: card.id, finish: "nonfoil", quantity: 3, price: card.price, section: "" },
     ]);
 
     const byName = await collectionPage(db, jack.userId, {
       name: card.name.slice(0, 4).toLowerCase(),
+      sections: "none",
       sort: "name",
       page: 1,
     });
     expect(byName.rows).toHaveLength(1);
     const foilsOnly = await collectionPage(db, jack.userId, {
       finish: "foil",
+      sections: "none",
       sort: "newest",
       page: 1,
     });

@@ -52,9 +52,41 @@ export type CollectionFilter = Readonly<{
   /** "W", "U", "B", "R", "G", "C" (colorless) or "M" (multicolored). */
   color?: string;
   finish?: "nonfoil" | "foil" | "etched";
-  sort: "newest" | "value" | "name" | "set";
+  /** How the page is divided into sections (feedback 2026-09-27: colors matter most). */
+  sections: "none" | "color" | "type" | "rarity" | "set";
+  /** The order within each section. */
+  sort: "newest" | "value" | "name" | "mana" | "set";
   page: number; // from 1
 }>;
+
+/** Section keys in SQL, on printings aliased "p": [order, label] for each way of dividing. */
+const SECTIONS = {
+  none: [sql`0`, sql`''`],
+  // Binder order: each color, then multicolored, colorless, and lands.
+  color: [
+    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 8
+             when cardinality(p.colors) > 1 then 6
+             when cardinality(p.colors) = 0 then 7
+             else array_position(array['W','U','B','R','G'], p.colors[1]) end`,
+    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 'Lands'
+             when cardinality(p.colors) > 1 then 'Multicolored'
+             when cardinality(p.colors) = 0 then 'Colorless'
+             else (array['White','Blue','Black','Red','Green'])[array_position(array['W','U','B','R','G'], p.colors[1])] end`,
+  ],
+  // The first matching type, in the order players usually sort a collection.
+  type: [
+    sql`coalesce(array_position(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land'],
+          (select t from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
+            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1)), 9)`,
+    sql`coalesce((select t || 's' from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
+            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1), 'Other')`,
+  ],
+  rarity: [
+    sql`coalesce(array_position(array['mythic','rare','uncommon','common'], p.rarity), 5)`,
+    sql`initcap(p.rarity)`,
+  ],
+  set: [sql`0`, sql`s.name`],
+} as const;
 
 export const COLLECTION_PAGE_SIZE = 60;
 
@@ -64,6 +96,8 @@ export type CollectionRow = Readonly<{
   quantity: number;
   /** Latest market price of one copy in this finish, or null if there's none. */
   price: number | null;
+  /** The section this card is in ("Blue", "Creatures", …), or "" without sections. */
+  section: string;
 }>;
 
 export type CollectionPage = Readonly<{
@@ -94,8 +128,10 @@ export async function collectionPage(
   const where = sql.join(conditions, sql` and `);
 
   // The newest price of this finish, and the newest arrival of this stack.
+  const [sectionOrder, sectionLabel] = SECTIONS[filter.sections];
   const owned = sql`
-    select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number,
+    select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
+           s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = c.printing_id and s.finish = c.finish
              order by s.day desc limit 1) as price,
@@ -104,11 +140,13 @@ export async function collectionPage(
                and a.finish = c.finish) as last_acquired_at
       from collection_cards c
       join printings p on p.id = c.printing_id
+      join card_sets s on s.code = p.set_code
      where ${where}`;
   const order = {
     newest: sql`last_acquired_at desc nulls last, name`,
     value: sql`price * quantity desc nulls last, name`,
     name: sql`name, set_code, finish`,
+    mana: sql`mana_value, name, finish`,
     set: sql`set_code, nullif(regexp_replace(collector_number, '\\D', '', 'g'), '')::int nulls last, collector_number, finish`,
   }[filter.sort];
   const offset = (Math.max(1, filter.page) - 1) * COLLECTION_PAGE_SIZE;
@@ -119,9 +157,11 @@ export async function collectionPage(
       finish: CollectionRow["finish"];
       quantity: number;
       price: number | null;
+      section: string;
     }>(sql`
-      select printing_id, finish, quantity, price from (${owned}) owned
-       order by ${order}
+      select printing_id, finish, quantity, price, section from (${owned}) owned
+       -- Sections first (a set's section by newest set), then the chosen order within each.
+       order by section_order, release_date desc, set_code, ${order}
        limit ${COLLECTION_PAGE_SIZE} offset ${offset}
     `),
     db.execute<{ different: number; copies: number; value_cents: number }>(sql`
@@ -137,6 +177,7 @@ export async function collectionPage(
       finish: row.finish,
       quantity: row.quantity,
       price: row.price === null ? null : Number(row.price),
+      section: row.section,
     })),
     totals: {
       different: summary.different,

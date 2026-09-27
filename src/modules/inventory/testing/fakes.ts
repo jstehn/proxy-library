@@ -5,9 +5,9 @@ import {
   type SealedContent,
   type SealedProduct,
 } from "@/modules/catalog";
-import type { CardGain } from "@/modules/collection";
 import type { UserId } from "@/shared/kernel";
 import type {
+  DeckCardGain,
   ItemRepository,
   NewItemsInput,
   ProductCatalog,
@@ -62,7 +62,7 @@ export function inMemoryItemRepository() {
 
 export function inMemoryProductCatalog(
   products: readonly SealedProduct[],
-  decks: ReadonlyMap<string, CardGain[]> = new Map(),
+  decks: ReadonlyMap<string, readonly DeckCardGain[]> = new Map(),
 ): ProductCatalog {
   return {
     async products(productIds) {
@@ -73,7 +73,8 @@ export function inMemoryProductCatalog(
       return found;
     },
     async deckCards(setCode, deckName) {
-      return decks.get(`${setCode}/${deckName}`) ?? null;
+      const cards = decks.get(`${setCode}/${deckName}`);
+      return cards === undefined ? null : { type: "Theme Deck", cards };
     },
   };
 }
@@ -130,13 +131,16 @@ export const SAMPLE_PRODUCTS = {
 } as const;
 
 /** The sample decks: "TST/Land Pack" has 5 Forests and 5 Islands. */
-export const SAMPLE_DECKS: ReadonlyMap<string, CardGain[]> = new Map([
+export const SAMPLE_DECKS: ReadonlyMap<string, readonly DeckCardGain[]> = new Map([
   [
     "TST/Land Pack",
     [
-      { printingId: PrintingId.of("l-forest"), finish: "nonfoil", quantity: 5 },
-      { printingId: PrintingId.of("l-island"), finish: "nonfoil", quantity: 5 },
+      { printingId: PrintingId.of("l-forest"), finish: "nonfoil", quantity: 5, board: "main" },
+      { printingId: PrintingId.of("l-island"), finish: "nonfoil", quantity: 5, board: "main" },
     ],
   ],
-  ["TST/Other Deck", [{ printingId: PrintingId.of("c-W1"), finish: "nonfoil", quantity: 2 }]],
+  [
+    "TST/Other Deck",
+    [{ printingId: PrintingId.of("c-W1"), finish: "nonfoil", quantity: 2, board: "main" }],
+  ],
 ]);

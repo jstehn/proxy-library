@@ -21,6 +21,8 @@ type CardTileProps = {
   isFoil?: boolean;
   /** Where the card's name links to (its card page), if anywhere. */
   href?: string;
+  /** An extra line under the price, e.g. which decks use this card. */
+  note?: string;
 };
 
 export function CardTile(props: CardTileProps) {
@@ -90,6 +92,7 @@ export function CardTile(props: CardTileProps) {
       <span className="text-xs text-zinc-600 tabular-nums dark:text-zinc-400">
         {props.priceLine}
       </span>
+      {props.note && <span className="text-xs text-sky-700 dark:text-sky-400">{props.note}</span>}
 
       {isOpen && <EnlargedCard printing={printing} align={align} />}
     </li>

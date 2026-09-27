@@ -35,12 +35,21 @@ export interface ItemRepository {
   markOpened(item: Item, opening: StoredOpening): Promise<void>;
 }
 
+/** One card of a deck list: copies, and which board (commander, main or side) they go on. */
+export type DeckCardGain = CardGain & Readonly<{ board: "commander" | "main" | "side" }>;
+
+/** A deck list as it comes out of its box. */
+export type DeckContents = Readonly<{
+  type: string; // "Commander Deck", "Starter Kit", "Bundle Land Pack", …
+  cards: readonly DeckCardGain[];
+}>;
+
 /** Reads sealed products and deck lists from the catalog. */
 export interface ProductCatalog {
   /** These products, by id. Unknown ids are missing from the map. */
   products(productIds: readonly SealedProductId[]): Promise<Map<SealedProductId, SealedProduct>>;
-  /** Every card in a deck list (all boards), or null if there's no such deck. */
-  deckCards(setCode: SetCode, deckName: string): Promise<CardGain[] | null>;
+  /** A deck list's type and every card in it (all boards), or null if there's no such deck. */
+  deckCards(setCode: SetCode, deckName: string): Promise<DeckContents | null>;
 }
 
 /** The repositories that must share one transaction: inventory's, plus the pack engine's

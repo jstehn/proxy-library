@@ -12,7 +12,7 @@ import type {
 } from "../domain/errors";
 import { openTransition, type Item, type ItemId } from "../domain/item";
 import { nestedProductIds, unpack } from "../domain/unpack";
-import type { InventoryDependencies, InventoryServices } from "./ports";
+import type { DeckCardGain, InventoryDependencies, InventoryServices } from "./ports";
 
 // Opening items (design doc 06, section 5). Each opening is one transaction: the item is locked,
 // marked opened, and what came out of it is saved, or nothing changes at all.
@@ -20,7 +20,7 @@ import type { InventoryDependencies, InventoryServices } from "./ports";
 /** What opening one item produced. */
 export type Opening =
   | Readonly<{ kind: "pack"; item: Item; pack: Pack }>
-  | Readonly<{ kind: "deck"; item: Item; cards: readonly CardGain[] }>
+  | Readonly<{ kind: "deck"; item: Item; deckType: string; cards: readonly DeckCardGain[] }>
   | Readonly<{
       kind: "product";
       item: Item;
@@ -83,12 +83,12 @@ async function openContent(
     }
 
     case "deck": {
-      const cards = await services.productCatalog.deckCards(content.setCode, content.deckName);
-      if (cards === null) return err({ kind: "DeckUnavailable" });
-      if (cards.length === 0) return err({ kind: "NothingInside" });
-      await receiveCards(services, item.ownerId, cards, { source: "deck", ref, at: now });
-      await services.items.markOpened(item, { kind: "deck", cards });
-      return ok({ kind: "deck", item, cards });
+      const deck = await services.productCatalog.deckCards(content.setCode, content.deckName);
+      if (deck === null) return err({ kind: "DeckUnavailable" });
+      if (deck.cards.length === 0) return err({ kind: "NothingInside" });
+      await receiveCards(services, item.ownerId, deck.cards, { source: "deck", ref, at: now });
+      await services.items.markOpened(item, { kind: "deck", cards: deck.cards });
+      return ok({ kind: "deck", item, deckType: deck.type, cards: deck.cards });
     }
 
     case "product": {

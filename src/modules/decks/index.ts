@@ -2,6 +2,7 @@
 export { makeDecks, type Decks } from "./application/make-decks";
 export type {
   CreateDeckError,
+  DeckCardInput,
   ImportReport,
   SetEntryError,
   SetEntryInput,
@@ -14,6 +15,7 @@ export type {
   DecksServices,
 } from "./application/ports";
 export {
+  becomesADeck,
   BOARDS,
   DeckId,
   FORMATS,
@@ -32,8 +34,10 @@ export type {
 export { EXPORTERS, type ExportLine } from "./domain/list-format";
 export { deckProblems, shortCount, type CardRules, type DeckProblem } from "./domain/rules";
 export {
+  decksUsing,
   deckView,
   decksFor,
+  type DeckRef,
   ownedCardsNamed,
   type DeckLine,
   type DeckSummary,

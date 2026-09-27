@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FINISHES, priceHistory, printingDetail, type Finish } from "@/modules/catalog";
 import { ownedCopies } from "@/modules/collection";
+import { decksUsing } from "@/modules/decks";
 import {
   currentBuylistRate,
   MAX_QUANTITY,
@@ -39,12 +40,14 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
   const detail = await printingDetail(db, id);
   if (detail === null) notFound();
 
-  const [history, owned, trades, rateBps] = await Promise.all([
+  const [history, owned, trades, rateBps, inDecks] = await Promise.all([
     priceHistory(db, id),
     ownedCopies(db, actor.userId, id),
     singleHistory(db, actor.userId, id),
     currentBuylistRate(db),
+    decksUsing(db, actor.userId, [id]),
   ]);
+  const decks = inDecks.get(id) ?? [];
   const { card } = detail;
   const finishes = FINISHES.filter((finish) => card.finishes.includes(finish));
 
@@ -102,6 +105,24 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
               ))}
             </section>
           ))}
+
+          <section className="flex flex-col gap-1 text-sm">
+            <h2 className="font-medium">In your decks</h2>
+            {decks.length === 0 ? (
+              <p className="text-zinc-500">No deck uses this card.</p>
+            ) : (
+              <ul className="flex flex-wrap gap-x-3">
+                {decks.map((deck) => (
+                  <li key={deck.id}>
+                    <Link href={`/decks/${deck.id}`} className="underline">
+                      {deck.name}
+                    </Link>{" "}
+                    <span className="text-zinc-500">({deck.quantity})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <section className="flex flex-col gap-4">
             <h2 className="font-medium">Buy and sell</h2>

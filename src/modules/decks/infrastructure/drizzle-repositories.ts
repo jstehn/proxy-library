@@ -119,5 +119,13 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
     return found;
   }
 
-  return { exists, resolve };
+  async function oracleIdsOf(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, string>> {
+    if (printingIds.length === 0) return new Map();
+    const rows = await db.execute<{ id: string; oracle_id: string }>(sql`
+      select id, oracle_id from printings where id = any(${sql.param([...new Set(printingIds)])}::text[])
+    `);
+    return new Map(rows.rows.map((row) => [PrintingId.of(row.id), row.oracle_id]));
+  }
+
+  return { exists, resolve, oracleIdsOf };
 }

@@ -26,6 +26,8 @@ export type CardQuery = Readonly<{
 export interface CardLookup {
   /** Whether the catalog has this oracle card. */
   exists(oracleId: string): Promise<boolean>;
+  /** The oracle card of each printing (unknown printings are missing from the map). */
+  oracleIdsOf(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, string>>;
   /**
    * Finds each named card (matching front-face names too), preferring the exact printing asked
    * for, then a printing this player owns, then the newest. Missing names are left out.
