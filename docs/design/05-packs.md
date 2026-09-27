@@ -1,7 +1,7 @@
 # Design: Pack engine
 
 - **Phase:** 5
-- **Status:** **In review** (no implementation until approved)
+- **Status:** Approved (2026-09-27)
 - **Related ADRs:** 0008 (server-side, seeded randomness), 0011 (printing × finish), 0003 (Result)
 
 ## 1. Purpose & scope
@@ -231,11 +231,12 @@ Monte Carlo simulation; standard error and why "within 4 standard errors" makes 
 tests reliable; property tests that generate seeds; and checking every real recipe. The lesson
 compares these with NumPy/pandas equivalents throughout.
 
-## 14. Open questions (proposals in bold)
+## 14. Decisions from review
 
-1. Simulator size limit: **1,000 packs per run** (well under a second; enough to see mythic
-   rates).
-2. "Special" and "bonus" rarities (special guests, bonus sheets) are revealed **with the
-   rares/mythics** (last tier).
-3. Pack value uses **market price** (ADR 0014: singles at market). Sealed MSRP doesn't apply to
-   what's inside.
+1. Simulator size limit: **1,000 packs per run**.
+2. "Special" and "bonus" rarities are revealed **with the rares/mythics** (last tier).
+3. **A pack's price is its MSRP; its contents are valued at market** (ADR 0014). Buying a pack,
+   including a single pack, costs MSRP. The cards inside are worth what they'd fetch as singles,
+   which is market price. The Pack lab shows the market value of the average pack's contents in
+   this phase. When Phase 6 adds the MSRP table, it also shows the pack's MSRP next to that value
+   ("costs $5.49, contents average $3.80").

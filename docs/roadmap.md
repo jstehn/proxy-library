@@ -35,20 +35,20 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 
 ## Phases
 
-| #   | Phase                              | Key patterns introduced                                                                                                     | Status           |
-| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 0   | Dev environment & first TypeScript | —                                                                                                                           | ✅ Done          |
-| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                        | ✅ Done          |
-| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                             | ✅ Done          |
-| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                        | ✅ Done          |
-| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | ✅ Done          |
-| 5   | Pack engine                        | strategy, composite, weighted sampling, property + statistical tests                                                        | Design in review |
-| 6   | Store & inventory                  | UoW across modules, sealed-item state machine, events                                                                       | —                |
-| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | —                |
-| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | —                |
-| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | —                |
-| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —                |
-| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | —                |
+| #   | Phase                              | Key patterns introduced                                                                                                     | Status      |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 0   | Dev environment & first TypeScript | —                                                                                                                           | ✅ Done     |
+| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                        | ✅ Done     |
+| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                             | ✅ Done     |
+| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                        | ✅ Done     |
+| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | ✅ Done     |
+| 5   | Pack engine                        | strategy, weighted + rejection sampling, property + statistical tests                                                       | In progress |
+| 6   | Store & inventory                  | UoW across modules, composite (sealed expansion), sealed-item state machine, MSRP table                                     | —           |
+| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | —           |
+| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | —           |
+| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | —           |
+| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | —           |
+| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | —           |
 
 ### Why this order (changed from the original plan)
 
@@ -112,3 +112,8 @@ Wanted, but deliberately not scheduled yet:
 Each starts with its own design doc (`docs/design/NN-<module>.md`) and review gate. Scope per
 phase is as described in the original plan's feature list, now organized by module (see the
 [module table](architecture/overview.md#modules-bounded-contexts)).
+
+Carried forward from earlier reviews:
+
+- **Phase 6:** the MSRP table (ADR 0014) also feeds the Pack lab, which then shows each pack's
+  MSRP next to the average market value of its contents (design 05, decision 3).
