@@ -369,6 +369,11 @@ screens come in Phases 6–7.
   (treatments and variant labels), booster configs (variants, sheets, foil flags), sealed products
   (every content kind, including nesting and `variable`) and deck lists. Real Scryfall lines map
   to per-finish prices and image addresses. Malformed input is rejected with a clear message.
+- **Paper-only filtering (rule 9):** kept: a printing available on `arena` + `mtgo` + `paper`, a
+  Commander precon deck and its sealed product that also exist on Arena, and a `collector-sample`
+  booster. Excluded: an Alchemy printing (`arena` only), a `play-arena` booster, an MTGO
+  redemption product and deck, and an online-only set. Also, no remaining booster, product or deck
+  may refer to an excluded card.
 - **Pure functions:** `variantLabel` cases; `supportingSetCodes` (BLB → SPG, BLC, promo sets);
   `standardSetCodes`; `priceSnapshots` (missing prices skipped, one row per finish);
   `isNightlySyncDue` around midnight and daylight-saving edges; plus a property: the nightly
