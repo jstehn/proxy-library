@@ -47,6 +47,7 @@ export type SetState = Readonly<{
   code: SetCode;
   type: string; // "expansion", "commander", …
   parentCode: SetCode | null;
+  releaseDate: string; // "2026-09-01"
   isEnabled: boolean;
   isSupporting: boolean;
   importedVersion: string | null; // last FULL import

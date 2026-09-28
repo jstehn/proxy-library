@@ -118,3 +118,12 @@ Each entry: the phase, what was decided, why, and where to change it.
 | **Migrations run as a one-shot `migrate` service** before the app and worker start                                                                    | A failed migration stops startup instead of running half-migrated | `docker-compose.yml`                     |
 | **Products no longer in MTGJSON's latest data are unlisted, not deleted**                                                                             | Owned items keep opening; nothing unlisted is sold                | `sealed_products.is_listed`              |
 | **The Docker test ran one real first sync** (about 80 MB) before being stopped                                                                        | A fresh install syncs at once; it also proved the worker          | docs/deploy.md                           |
+
+### Requirements audit (2026-09-28)
+
+The full checklist is in [requirements-audit.md](requirements-audit.md).
+
+| Decision                                                                                      | Why                                                                                                       | Where to change it                           |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Nightly runs re-import sets released in the last 120 days** (catalog rule 12)               | Reality Fracture's booster recipes weren't in MTGJSON yet, and nightly runs would never have fetched them | `SETTLING_DAYS` in `catalog/domain/rules.ts` |
+| **Unpriced product kinds (Scene Boxes, Tins, Commander Kits, Codex Bundle, …) stay off sale** | Their MSRPs vary within a kind; you choose on Admin → Store                                               | `/admin/store`                               |

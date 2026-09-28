@@ -200,8 +200,16 @@ disables sets that have rotated out, because players may still want them.
     - Scryfall's API is called at most 8 times per second, with a descriptive `User-Agent` and
       `Accept` header.
     - The Scryfall bulk file is downloaded at most once per Scryfall update, and cached on disk.
-    - An MTGJSON set file is downloaded only when a set is first imported, or on a `full` run.
+    - An MTGJSON set file is downloaded only when a set is first imported, on a `full` run, or
+      nightly while the set is still settling (rule 12).
     - Card images are fetched once each, then served from our disk.
+
+11. **Enabling a set enables its Commander companion set** (added during the run; see
+    decisions-to-review).
+12. **Recent sets keep re-importing nightly** (added in the 2026-09-28 audit). A set released in
+    the last 120 days, or not released yet, is re-imported on every `prices` run, because MTGJSON
+    fills in a new set's booster recipes and precon contents after it first appears. Older sets
+    re-import only on a `full` run.
 
 ## 5. Use cases
 
@@ -448,7 +456,8 @@ these; that's why a real run came before the screens):
   adding 166.666… ms to a large timestamp loses float precision.
 - **Not built:** the `POST /cards/collection` fallback. The bulk file covered every English
   printing in the real run, so it isn't needed yet.
-- **Nightly runs are `prices` runs**, which also import any enabled set never imported before. A
+- **Nightly runs are `prices` runs**, which also import any enabled set never imported before
+  and, since rule 12, re-import recent sets (`isStillSettling`). A
   **`full` run re-imports every enabled set** (and its supporting sets' printings), whatever the
   version. MTGJSON rebuilds daily, so a version check wouldn't save anything, and always
   re-importing is also how fields added later get filled in for sets imported earlier (about 30

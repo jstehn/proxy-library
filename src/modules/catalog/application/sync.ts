@@ -9,6 +9,7 @@ import {
   withoutBrokenReferences,
   type StandardTally,
   companionsToEnable,
+  isStillSettling,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
 import type {
@@ -118,9 +119,12 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // 4. Import enabled sets that are new (or, on a full run, have a new MTGJSON version).
     const statesByCode = new Map(states.map((state) => [state.code, state]));
-    // A prices run imports only sets never imported before. A full run re-imports every enabled
-    // set: MTGJSON rebuilds daily anyway, and it fills in fields added to the catalog since.
-    const needsImport = (state: SetState) => state.importedVersion === null || kind === "full";
+    // A prices run imports sets never imported before, and re-imports recent sets whose data
+    // MTGJSON is still filling in (rule 12: a new set's booster recipes and precon contents often
+    // arrive after release). A full run re-imports every enabled set.
+    const now = clock.now();
+    const needsImport = (state: SetState) =>
+      state.importedVersion === null || kind === "full" || isStillSettling(state.releaseDate, now);
     for (const state of states.filter((s) => s.isEnabled && needsImport(s))) {
       try {
         await importSet(state.code, statesByCode, kind, summary);

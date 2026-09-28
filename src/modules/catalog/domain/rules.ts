@@ -13,6 +13,20 @@ import type {
 
 // Pure catalog rules (design doc 04, section 3). No I/O: everything comes in as arguments.
 
+/** How long after release a set is re-imported every night (rule 12). */
+export const SETTLING_DAYS = 120;
+
+/**
+ * Rule 12: a set released recently (or not yet released) is still "settling": MTGJSON keeps
+ * adding to it (booster recipes, precon contents), so nightly syncs re-import it, not only
+ * full syncs. Found in use: Reality Fracture came out with no booster recipes and an empty precon.
+ */
+export function isStillSettling(releaseDate: string, now: Date): boolean {
+  const released = Date.parse(`${releaseDate}T00:00:00Z`);
+  if (Number.isNaN(released)) return false;
+  return now.getTime() - released < SETTLING_DAYS * 86_400_000;
+}
+
 // --- Variant labels ------------------------------------------------------------------------
 
 // Treatment codes worth showing to players, in display order. Unknown codes are ignored, so a
