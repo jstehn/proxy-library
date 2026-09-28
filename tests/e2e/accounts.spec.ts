@@ -256,10 +256,10 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
     page.getByText(/Added 99 cards\. Not in the catalog: Card That Does Not Exist\./),
   ).toBeVisible();
 
-  // 99 cards (needs 100), and Beza isn't owned: both reported, neither blocks building.
+  // 99 cards (needs 100): reported, but it doesn't block building. (Whether Beza is owned depends
+  // on the random pack test 4 opened, so shortages are tested in the unit and integration tests.)
   const problems = page.getByRole("region", { name: "Problems" });
   await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
-  await expect(problems.getByText(/You own 0 Beza, the Bounding Spring/)).toBeVisible();
 
   // Type-ahead: "pla" finds the Plains the admin owns; Enter adds one to the main deck.
   await page.getByRole("combobox", { name: "Search your cards" }).fill("pla");
@@ -275,7 +275,10 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
 
   await page.getByRole("link", { name: "Decks", exact: true }).first().click();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Beza's Bounty" }).getByText("short 1"),
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Beza's Bounty" })
+      .getByText(/^(short \d+|all owned)$/),
   ).toBeVisible();
 });
 
@@ -308,17 +311,19 @@ test("a new player offers money for one of the admin's cards, and the admin acce
   await rin.getByRole("link", { name: "Admin" }).click();
   await rin.getByLabel("Search their cards").fill("Plains");
   await rin.getByLabel("Search their cards").press("Enter");
+  // No waiting between the steps: the controls always build on the latest change, even while
+  // the page for the previous one is still loading (this used to drop the card).
+  await expect(rin.getByRole("button", { name: /^Add Plains/ }).first()).toBeVisible();
   await rin
-    .getByRole("link", { name: /^Add Plains/ })
+    .getByRole("button", { name: /^Add Plains/ })
     .first()
     .click();
-  // Wait for the draft to include the card before changing the money (both live in the URL).
-  await expect(rin.getByRole("link", { name: /^One fewer Plains/ })).toBeVisible();
   await rin.getByLabel("Money you give").fill("5.00");
   await rin.getByLabel("Money you give").press("Enter");
-  await expect(rin).toHaveURL(/giveMoney=5\.00/);
   await rin.getByRole("button", { name: "Propose trade" }).click();
   await expect(rin.getByRole("heading", { name: "Trade: Rin ⇄ Admin" })).toBeVisible();
+  await expect(rin.getByText("1 × Plains")).toBeVisible();
+  await expect(rin.getByText("$5.00", { exact: true })).toBeVisible();
 
   // The admin sees the badge, opens the trade and accepts it.
   await page.goto("/");

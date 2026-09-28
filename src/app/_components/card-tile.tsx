@@ -61,10 +61,15 @@ export function CardTile(props: CardTileProps) {
         className="relative block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
       >
         {printing.hasImage ? (
-          // Plain <img>: pre-sized images from our own cache, lazily loaded.
+          // Plain <img>: pre-sized images from our own cache, lazily loaded. `srcSet` offers both
+          // sizes and `sizes` says how wide a tile is; the browser picks the sharper "normal"
+          // image whenever the small one (146 px) would be blurry, e.g. on wide or high-density
+          // screens. (The small one alone was too soft to read.)
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`/api/images/${printing.id}/small/front`}
+            srcSet={`/api/images/${printing.id}/small/front 146w, /api/images/${printing.id}/normal/front 488w`}
+            sizes="(min-width: 1024px) 190px, (min-width: 640px) 30vw, 50vw"
             alt={printing.name}
             loading="lazy"
             width={146}

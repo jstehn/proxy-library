@@ -6,16 +6,13 @@ import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents, UserId } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
-import { proposeTradeAction } from "../actions";
-import { adjust, draftHref, readDraft, type Draft, type DraftCard } from "../draft";
+import { draftHref, readDraft, type Draft, type DraftCard } from "../draft";
+import { DraftButton, DraftSync, DraftTextForm, ProposeForm } from "./draft-controls";
 
-// The trade builder (design doc 10, section 9). The draft lives in the URL: each + and − is a
-// link to the same page with one thing changed, so it works without JavaScript and the back
-// button undoes a change.
+// The trade builder (design doc 10, section 9). The draft lives in the URL, so the back button
+// undoes a change and a draft can be bookmarked. The buttons and forms (draft-controls.tsx) read
+// the URL when they're used, never a copy taken when the page was drawn.
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
-const smallButton = "rounded border border-zinc-300 px-2 text-sm leading-6 dark:border-zinc-700";
 const FINISH = { nonfoil: "", foil: " (foil)", etched: " (etched)" };
 
 function cardName(card: DraftCard, cards: Map<string, PrintingCard>): string {
@@ -50,13 +47,14 @@ function Offerable(props: {
               </span>
             </span>
             {canAdd && (
-              <Link
-                href={draftHref({ ...draft, [side]: adjust(draft[side], card, 1) })}
-                className={smallButton}
-                aria-label={`Add ${cardName({ ...card, quantity: 1 }, props.cards)}`}
+              <DraftButton
+                side={side}
+                card={card}
+                delta={1}
+                label={`Add ${cardName({ ...card, quantity: 1 }, props.cards)}`}
               >
                 + add
-              </Link>
+              </DraftButton>
             )}
           </li>
         );
@@ -83,13 +81,14 @@ function Chosen(props: {
             <li key={`${card.printingId}/${card.finish}`} className="flex items-center gap-2">
               <span className="w-6 text-right tabular-nums">{card.quantity}</span>
               <span className="flex-1">{cardName(card, props.cards)}</span>
-              <Link
-                href={draftHref({ ...draft, [side]: adjust(draft[side], card, -1) })}
-                className={smallButton}
-                aria-label={`One fewer ${cardName(card, props.cards)}`}
+              <DraftButton
+                side={side}
+                card={card}
+                delta={-1}
+                label={`One fewer ${cardName(card, props.cards)}`}
               >
                 −
-              </Link>
+              </DraftButton>
             </li>
           ))}
         </ul>
@@ -151,12 +150,6 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
     ...draft.get.map((card) => card.printingId),
   ]);
 
-  // Hidden fields that carry the rest of the draft through a search or money form.
-  const keep = (except: string[]) =>
-    Object.entries(Object.fromEntries(new URL(`http://x${draftHref(draft)}`).searchParams))
-      .filter(([key]) => !except.includes(key))
-      .map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />);
-
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
       <header>
@@ -186,37 +179,21 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
                 {isGive ? "You give" : `${partner.displayName} gives`}
               </h2>
               <Chosen title="Cards" cards={cards} draft={draft} side={side} />
-              <form method="get" className="flex items-center gap-2">
-                {keep([isGive ? "giveMoney" : "getMoney"])}
-                <label className="text-sm">
-                  Money $
-                  <input
-                    name={isGive ? "giveMoney" : "getMoney"}
-                    defaultValue={isGive ? draft.giveMoney : draft.getMoney}
-                    placeholder="0.00"
-                    aria-label={isGive ? "Money you give" : "Money they give"}
-                    className={`${field} ml-1 w-24`}
-                  />
-                </label>
-                <button type="submit" className={field}>
-                  Set
-                </button>
-              </form>
-              <form method="get" className="flex gap-2">
-                {keep([queryName])}
-                <input
-                  name={queryName}
-                  defaultValue={isGive ? draft.mine : draft.theirs}
-                  placeholder={
-                    isGive ? "Search your cards" : `Search ${partner.displayName}'s cards`
-                  }
-                  aria-label={isGive ? "Search your cards" : "Search their cards"}
-                  className={`${field} flex-1`}
-                />
-                <button type="submit" className={field}>
-                  Search
-                </button>
-              </form>
+              <DraftTextForm
+                name={isGive ? "giveMoney" : "getMoney"}
+                label={isGive ? "Money you give" : "Money they give"}
+                prefix="Money $"
+                defaultValue={isGive ? draft.giveMoney : draft.getMoney}
+                placeholder="0.00"
+                button="Set"
+              />
+              <DraftTextForm
+                name={queryName}
+                label={isGive ? "Search your cards" : "Search their cards"}
+                defaultValue={isGive ? draft.mine : draft.theirs}
+                placeholder={isGive ? "Search your cards" : `Search ${partner.displayName}'s cards`}
+                button="Search"
+              />
               <Offerable
                 rows={(isGive ? mine : theirs).rows}
                 cards={cards}
@@ -228,25 +205,8 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
         })}
       </div>
 
-      <form action={proposeTradeAction} className="flex flex-col gap-2">
-        {keep(["mine", "theirs"])}
-        <textarea
-          name="message"
-          rows={2}
-          maxLength={300}
-          placeholder="A message (optional)"
-          aria-label="Message"
-          className={field}
-        />
-        <div>
-          <button
-            type="submit"
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            {draft.replaces ? "Send counter-offer" : "Propose trade"}
-          </button>
-        </div>
-      </form>
+      <DraftSync />
+      <ProposeForm isCounter={draft.replaces !== null} />
     </main>
   );
 }

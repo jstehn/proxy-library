@@ -36,8 +36,6 @@ design doc (or joins a phase's design) and is removed from this list.
   politely rate-limited, so the first visit to a set page isn't slow.
 - **In-flight image de-duplication**: if two people ask for the same uncached image at once,
   fetch it once.
-- **Sharper grid images on wide screens**: use the `normal` size for grid tiles above a screen
-  width, or use `srcset`.
 - **`POST /cards/collection` fallback** for printings missing from Scryfall's bulk file (not
   needed so far: the bulk file covered every English paper printing).
 
@@ -60,8 +58,8 @@ design doc (or joins a phase's design) and is removed from this list.
 
 ## Trades
 
-- **A client-side trade builder** (no page load per "+ add"), which also removes the draft race
-  described in design doc 10, section 13.
+- **A client-side trade builder** (no page load per "+ add"). The draft race it would have fixed
+  is fixed already (design doc 10, section 13).
 - **Trade expiry** after N days, and a cap on open proposals per player (lesson 10's exercises).
 - **Notifications** beyond the badge (e-mail isn't set up; a feed item comes with Phase 11).
 

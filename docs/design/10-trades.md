@@ -154,9 +154,11 @@ to ask for it).
   between, do fail: Postgres reports `deadlock detected` and aborts one. Locking in the **same**
   order, the second waits and both commit. Lesson 10 shows the experiment. The ordering is
   justified by that reasoning, not by the test.
-- **The builder's draft lives in the URL.** Each form carries the rest of the draft in hidden
-  fields. If someone submits one form before a click on another has loaded, the older draft wins
-  (the end-to-end test hit this and now waits). A client-side builder would avoid it, which is
-  listed in future-ideas.
+- **The builder's draft lives in the URL.** The first version baked the draft into each link and
+  form when the page was drawn, so submitting one form before another click had loaded sent an
+  outdated draft and dropped a card (the end-to-end test hit it). **Fixed (2026-09-28):** the
+  controls are small client components that read the draft when they're used, including a draft
+  still loading (`router.push` only updates the address bar once the new page arrives). The test
+  now adds a card and sets money with no waiting in between.
 - **Counter-offers reuse the builder**, prefilled from the original trade seen from the other
   side, with `replaces=<id>`.
