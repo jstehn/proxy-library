@@ -1,6 +1,6 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import type { ExportRow } from "../domain/export";
 import { acquisitions, collectionCards } from "../infrastructure/schema";
 
@@ -50,7 +50,10 @@ export type CollectionFilter = Readonly<{
   name?: string;
   setCode?: string;
   rarity?: string;
-  /** "W", "U", "B", "R", "G", "C" (colorless) or "M" (multicolored). */
+  /**
+   * "W", "U", "B", "R", "G" (includes that color), "C" (colorless), "M" (multicolored), or a
+   * combination's code such as "GU" (exactly those colors).
+   */
   color?: string;
   finish?: "nonfoil" | "foil" | "etched";
   /** How the page is divided into sections (feedback 2026-09-27: colors matter most). */
@@ -60,17 +63,36 @@ export type CollectionFilter = Readonly<{
   page: number; // from 1
 }>;
 
+/** SQL: printing "p" has exactly these colors. */
+function hasExactly(colors: readonly ManaColor[]): SQL {
+  const array = sql.join(
+    colors.map((color) => sql`${color}`),
+    sql`, `,
+  );
+  return sql`(cardinality(p.colors) = ${colors.length} and p.colors @> array[${array}]::text[])`;
+}
+
+/** SQL: a multicolored printing's combination, as `pick` gives it (its position or its label). */
+function combinationOf(pick: (index: number, label: string) => SQL): SQL {
+  const whens = COLOR_COMBINATIONS.map(
+    (combination, index) =>
+      sql`when ${hasExactly(combination.colors)} then ${pick(index, combination.label)}`,
+  );
+  return sql`(case ${sql.join(whens, sql` `)} end)`;
+}
+
 /** Section keys in SQL, on printings aliased "p": [order, label] for each way of dividing. */
 const SECTIONS = {
   none: [sql`0`, sql`''`],
-  // Binder order: each color, then multicolored, colorless, and lands.
+  // Binder order: each color, then each multicolored combination (guilds, shards, wedges, four
+  // and five colors), colorless, and lands.
   color: [
-    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 8
-             when cardinality(p.colors) > 1 then 6
-             when cardinality(p.colors) = 0 then 7
+    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 60
+             when cardinality(p.colors) > 1 then ${combinationOf((index) => sql.raw(String(10 + index)))}
+             when cardinality(p.colors) = 0 then 50
              else array_position(array['W','U','B','R','G'], p.colors[1]) end`,
     sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 'Lands'
-             when cardinality(p.colors) > 1 then 'Multicolored'
+             when cardinality(p.colors) > 1 then ${combinationOf((_, label) => sql`${label}::text`)}
              when cardinality(p.colors) = 0 then 'Colorless'
              else (array['White','Blue','Black','Red','Green'])[array_position(array['W','U','B','R','G'], p.colors[1])] end`,
   ],
@@ -123,8 +145,10 @@ export async function collectionPage(
   if (filter.setCode) conditions.push(sql`p.set_code = ${filter.setCode.toUpperCase()}`);
   if (filter.rarity) conditions.push(sql`p.rarity = ${filter.rarity}`);
   if (filter.finish) conditions.push(sql`c.finish = ${filter.finish}`);
+  const combination = filter.color ? colorCombination(filter.color) : undefined;
   if (filter.color === "C") conditions.push(sql`cardinality(p.colors) = 0`);
   else if (filter.color === "M") conditions.push(sql`cardinality(p.colors) > 1`);
+  else if (combination) conditions.push(hasExactly(combination.colors));
   else if (filter.color) conditions.push(sql`${filter.color} = any(p.colors)`);
   const where = sql.join(conditions, sql` and `);
 

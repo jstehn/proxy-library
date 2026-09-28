@@ -1,7 +1,7 @@
 // Buying and selling singles against real Postgres (design doc 07, section 12).
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrintingId } from "@/modules/catalog";
+import { PrintingId, searchPrintings } from "@/modules/catalog";
 import { collectionPage } from "@/modules/collection";
 import { makeStore } from "@/modules/store";
 import {
@@ -108,15 +108,61 @@ describe("collectionPage", () => {
     });
     const sections = page.rows.map((row) => row.section);
     expect(sections.at(-1)).toBe("Lands"); // lands come last
-    expect(["White", "Blue", "Black", "Red", "Green", "Multicolored", "Colorless"]).toContain(
-      sections[0],
-    );
+    expect(["White", "Blue", "Black", "Red", "Green", "Colorless"]).toContain(sections[0]);
     const byType = await collectionPage(db, jack.userId, {
       sections: "type",
       sort: "name",
       page: 1,
     });
     expect(byType.rows.map((row) => row.section)).toContain("Lands");
+  });
+
+  it("gives each multicolored combination its own section and filter", async () => {
+    // Byrke is Green-White (Selesnya) and has only a foil price in the fixtures.
+    const byrke = (
+      await db.execute<{ id: string }>(sql`
+        select id from printings where name = 'Byrke, Long Ear of the Law' limit 1
+      `)
+    ).rows[0];
+    const bought = await store.buySingle(jack, {
+      printingId: PrintingId.of(byrke.id),
+      finish: "foil",
+      quantity: 1,
+    });
+    expect(bought.ok).toBe(true);
+
+    const bySection = await collectionPage(db, jack.userId, {
+      sections: "color",
+      sort: "name",
+      page: 1,
+    });
+    expect(bySection.rows.map((row) => row.section)).toEqual(["Green-White (Selesnya)"]);
+
+    const selesnya = await collectionPage(db, jack.userId, {
+      color: "WG", // any order
+      sections: "none",
+      sort: "name",
+      page: 1,
+    });
+    expect(selesnya.totals.different).toBe(1);
+    const simic = await collectionPage(db, jack.userId, {
+      color: "GU",
+      sections: "none",
+      sort: "name",
+      page: 1,
+    });
+    expect(simic.totals.different).toBe(0);
+
+    // The singles store filters the same way: only Bria is exactly Blue-Red (Izzet).
+    const izzet = await searchPrintings(db, { color: "UR", sort: "name", page: 1 });
+    const names = await db.execute<{ name: string }>(sql`
+      select distinct name from printings
+       where id in (${sql.join(
+         izzet.printingIds.map((id) => sql`${id}`),
+         sql`, `,
+       )})
+    `);
+    expect(names.rows).toEqual([{ name: "Bria, Riptide Rogue" }]);
   });
 
   it("filters, sorts by value, and totals the whole filtered collection", async () => {

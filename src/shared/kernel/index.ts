@@ -4,6 +4,8 @@ export { assertNever } from "./assert-never";
 export type { Brand } from "./brand";
 export type { Clock } from "./clock";
 export { UserId } from "./ids";
+export { COLOR_COMBINATIONS, colorCombination } from "./colors";
+export type { ColorCombination, ManaColor } from "./colors";
 export { Cents } from "./money";
 export { ok, err } from "./result";
 export type { Ok, Err, Result } from "./result";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { COLOR_COMBINATIONS } from "@/shared/kernel";
 
 // The filter bar shared by the collection and the singles store. A plain GET form: the filters
 // live in the URL, so a view can be bookmarked, shared, and reached with the back button.
@@ -13,8 +14,19 @@ const COLORS: Array<[string, string]> = [
   ["R", "Red"],
   ["G", "Green"],
   ["C", "Colorless"],
-  ["M", "Multicolored"],
+  ["M", "Multicolored (any)"],
 ];
+/** Each multicolored combination, grouped by how many colors it has. */
+const COMBINATION_GROUPS = [
+  { label: "Two colors", size: 2 },
+  { label: "Three colors", size: 3 },
+  { label: "Four or five colors", size: 4 },
+].map((group) => ({
+  label: group.label,
+  combinations: COLOR_COMBINATIONS.filter((combination) =>
+    group.size === 4 ? combination.colors.length >= 4 : combination.colors.length === group.size,
+  ),
+}));
 const FINISHES: Array<[string, string]> = [
   ["nonfoil", "Nonfoil"],
   ["foil", "Foil"],
@@ -76,13 +88,23 @@ export function CardFilters(props: {
         anyLabel="Any rarity"
         options={RARITIES.map((rarity) => [rarity, rarity] as const)}
       />
-      <Select
-        name="color"
-        label="Color"
-        value={value("color")}
-        anyLabel="Any color"
-        options={COLORS}
-      />
+      <select name="color" defaultValue={value("color")} aria-label="Color" className={field}>
+        <option value="">Any color</option>
+        {COLORS.map(([code, label]) => (
+          <option key={code} value={code}>
+            {label}
+          </option>
+        ))}
+        {COMBINATION_GROUPS.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.combinations.map((combination) => (
+              <option key={combination.code} value={combination.code}>
+                {combination.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
       {props.showFinish && (
         <Select
           name="finish"

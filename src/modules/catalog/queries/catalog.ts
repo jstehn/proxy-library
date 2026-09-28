@@ -1,6 +1,6 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { Cents } from "@/shared/kernel";
+import { Cents, colorCombination, type ManaColor } from "@/shared/kernel";
 import type { CardFace, Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 
@@ -191,7 +191,10 @@ export type PrintingSearch = Readonly<{
   name?: string;
   setCode?: string;
   rarity?: string;
-  /** "W", "U", "B", "R", "G", "C" (colorless) or "M" (multicolored). */
+  /**
+   * "W", "U", "B", "R", "G" (includes that color), "C" (colorless), "M" (multicolored), or a
+   * combination's code such as "GU" (exactly those colors).
+   */
   color?: string;
   sort: "name" | "number" | "price";
   page: number; // from 1
@@ -199,14 +202,25 @@ export type PrintingSearch = Readonly<{
 
 export const SEARCH_PAGE_SIZE = 60;
 
+/** SQL: printing "p" has exactly these colors. */
+function hasExactly(colors: readonly ManaColor[]): SQL {
+  const array = sql.join(
+    colors.map((color) => sql`${color}`),
+    sql`, `,
+  );
+  return sql`(cardinality(p.colors) = ${colors.length} and p.colors @> array[${array}]::text[])`;
+}
+
 /** SQL conditions for a search, on printings aliased "p". */
 function printingConditions(search: PrintingSearch) {
   const conditions = [sql`true`];
   if (search.name) conditions.push(sql`p.name ilike ${`%${search.name}%`}`);
   if (search.setCode) conditions.push(sql`p.set_code = ${search.setCode.toUpperCase()}`);
   if (search.rarity) conditions.push(sql`p.rarity = ${search.rarity}`);
+  const combination = search.color ? colorCombination(search.color) : undefined;
   if (search.color === "C") conditions.push(sql`cardinality(p.colors) = 0`);
   else if (search.color === "M") conditions.push(sql`cardinality(p.colors) > 1`);
+  else if (combination) conditions.push(hasExactly(combination.colors));
   else if (search.color) conditions.push(sql`${search.color} = any(p.colors)`);
   return sql.join(conditions, sql` and `);
 }
