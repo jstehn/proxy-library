@@ -29,8 +29,17 @@ pnpm worker sync      # load the catalog (downloads Scryfall's bulk file once)
 pnpm dev              # http://localhost:3000, and the first account becomes the admin
 ```
 
+After that, **one command runs everything** (also after a restart):
+
+```sh
+pnpm dev:all          # starts Postgres if needed, applies migrations, runs the app + the worker
+```
+
+Ctrl+C stops the app and the worker; Postgres keeps running until `pnpm db:stop`.
+
 | Command                      | Does                                                           |
 | ---------------------------- | -------------------------------------------------------------- |
+| `pnpm dev:all`               | database + migrations + app + worker, in one terminal          |
 | `pnpm check`                 | typecheck, lint, format check and unit tests (before a commit) |
 | `pnpm test:int`              | integration tests against the `tcg_test` database              |
 | `pnpm test:e2e`              | browser tests (Playwright, with Nix's browsers)                |

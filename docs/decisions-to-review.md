@@ -8,7 +8,7 @@ review it in one place. Anything can still be changed.
 
 Everything on the roadmap is built (Phases 0–11), with a lesson per phase. To see it all:
 
-1. `direnv reload`, then `pnpm install`, `pnpm db:migrate`, restart `pnpm dev`.
+1. `direnv reload`, `pnpm install`, then `pnpm dev:all` (database, migrations, app and worker).
 2. Things to try: open the repaired Reality Fracture precon in **Inventory** (it becomes a deck in
    **Decks**), buy a Secrets of Strixhaven precon, **Collection** sections, the deck builder's
    type-ahead, a trade between two accounts, **Activity** on the home page, the export links, and

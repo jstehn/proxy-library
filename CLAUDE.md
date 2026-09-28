@@ -27,7 +27,8 @@ each lesson.
 - NixOS + flakes + direnv: `flake.nix` provides node 22, pnpm, postgres 17. `.envrc` sets
   `DATABASE_URL`, `PG*` vars and `IMAGE_CACHE_DIR`. Outside a direnv shell, prefix commands with
   `nix develop -c`.
-- Postgres is project-local, socket-only, in `.dev/`: `pnpm db:start | db:stop | db:reset`.
+- Postgres is project-local, socket-only, in `.dev/`: `pnpm db:start | db:stop | db:reset`. It
+  doesn't survive a reboot: `pnpm dev:all` starts it (if needed), migrates, and runs app + worker.
 - Docker Compose for deployment (docs/deploy.md). Read config only from env vars.
 
 ## Conventions (summary)
