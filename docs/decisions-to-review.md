@@ -141,3 +141,9 @@ Design: [design/12-reset-player.md](design/12-reset-player.md).
 | **Pulls and purchases leave the activity feed; trades stay**                  | The feed shouldn't show cards that are gone; trades involve two | `forgetPullsAndPurchases`       | —                                                                                                     |
 | **"Spent" and "Self-funded" totals are not reset**                            | They're sums over the money history, which is never deleted     | `playerMoney` in wallet queries | Count the totals only since the player's last reset, so a reset after testing really starts from zero |
 | **Also fixed: "-$0.00"** shown as Spent for players who hadn't spent anything | JavaScript's negative zero; `Cents.of` now turns it into 0      | `Cents.of`                      | —                                                                                                     |
+
+### Fixes from your testing (2026-09-28)
+
+| Change                                                                                           | Why                                                                                                                                               | Where to change it                           | Good alternative |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------- |
+| **Printings that exist only in another language now get their image and price** (catalog rule 8) | A Japanese-only Deduce in a Secrets of Strixhaven Collector Booster showed no art; 216 printings (Japanese, Phyrexian, Dwarvish, Quenya) had none | `pricePass` in `catalog/application/sync.ts` | —                |

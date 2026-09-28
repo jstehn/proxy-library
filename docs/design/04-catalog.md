@@ -172,8 +172,13 @@ disables sets that have rotated out, because players may still want them.
 6. **One sync runs at a time** (an advisory lock). A second request waits in the queue.
 7. **One price snapshot per printing, finish and day.** Re-running on the same day overwrites
    that day's snapshot. Past days are never changed.
-8. **Only English printings** are imported (MTGJSON set files are English; Scryfall's
-   `default_cards` is filtered to `lang: "en"`).
+8. **The printings MTGJSON lists, in their own language.** MTGJSON set files list each printing
+   once, in English where it exists. Scryfall's `default_cards` entries are matched to them by
+   exact Scryfall id, in **any language** (changed 2026-09-28): a non-English entry only matches a
+   printing that exists **only** in that language, so a translation never replaces an English
+   card. Before the change, 216 such printings had no image or price: Japanese Mystical Archive
+   cards in Secrets of Strixhaven Collector Boosters, Phyrexian-language cards, and a few others.
+   Standard detection still counts English cards only.
 9. **Paper only** (decided in review). The principle: **exclude something only when it exists
    _only_ digitally.** Anything that also exists in paper is imported, even if it's on MTGO or
    Arena too, such as a Commander precon deck that was also released on Arena, or a card

@@ -1463,6 +1463,63 @@
         "type": "Enchantment",
         "types": ["Enchantment"],
         "uuid": "00000000-a1c4-4e3a-8000-000000000001"
+      },
+      {
+        "artist": "Martin Wittfooth",
+        "availability": ["arena", "mtgo", "paper"],
+        "boosterTypes": ["default"],
+        "borderColor": "black",
+        "colorIdentity": ["W"],
+        "colors": ["W"],
+        "convertedManaCost": 4.0,
+        "finishes": ["foil"],
+        "frameEffects": ["legendary"],
+        "frameVersion": "2015",
+        "identifiers": {
+          "cardKingdomFoilId": "299872",
+          "cardKingdomId": "298952",
+          "cardsphereFoilId": "124316",
+          "cardsphereId": "124242",
+          "deckboxId": "93014",
+          "mcmId": "777543",
+          "mcmMetaId": "436845",
+          "mtgArenaId": "91538",
+          "mtgjsonV4Id": "037603c7-3365-5651-b9f8-ad1cba918605",
+          "mtgoId": "129249",
+          "multiverseId": "668916",
+          "scryfallCardBackId": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+          "scryfallId": "00000000-7a9a-4000-8000-0000000000bb",
+          "scryfallIllustrationId": "ef24c61f-ae89-4267-a90c-1771b13edea9",
+          "scryfallOracleId": "020de6d7-f5a2-4036-ad25-451e5977b4d4",
+          "tcgplayerProductId": "558421"
+        },
+        "keywords": ["Treasure"],
+        "language": "Japanese",
+        "layout": "normal",
+        "legalities": {
+          "commander": "Legal",
+          "modern": "Legal",
+          "standard": "Legal"
+        },
+        "manaCost": "{2}{W}{W}",
+        "manaValue": 4.0,
+        "name": "Beza, the Bounding Spring",
+        "number": "900",
+        "power": "4",
+        "rarity": "mythic",
+        "relatedCards": {
+          "tokens": ["4811acb4-e116-5e6b-8d42-707057b51299", "abb2d41a-24fb-50ae-a778-b6177b7bc6ec"]
+        },
+        "securityStamp": "oval",
+        "setCode": "BLB",
+        "subtypes": ["Elemental", "Elk"],
+        "supertypes": ["Legendary"],
+        "text": "When Beza enters, create a Treasure token if an opponent controls more lands than you. You gain 4 life if an opponent has more life than you. Create two 1/1 blue Fish creature tokens if an opponent controls more creatures than you. Draw a card if an opponent has more cards in hand than you.",
+        "toughness": "5",
+        "type": "Legendary Creature \u2014 Elemental Elk",
+        "types": ["Creature"],
+        "uuid": "00000000-7a9a-4000-8000-000000000001",
+        "variations": ["733cd23e-f49d-538a-b633-4ea7efbc719e"]
       }
     ],
     "booster": {

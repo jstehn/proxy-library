@@ -139,7 +139,11 @@ test("the admin browses the catalog (loaded from recorded fixtures)", async ({ p
   await expect(page.getByText(/Nonfoil \$\d+\.\d\d/).first()).toBeVisible();
 
   // Hovering a card enlarges it with its printed text and stats laid over the image.
-  await page.getByRole("button", { name: "Beza, the Bounding Spring: show card text" }).hover();
+  // (The fixtures also hold a Japanese-only Beza, so there are two; hover the first.)
+  await page
+    .getByRole("button", { name: "Beza, the Bounding Spring: show card text" })
+    .first()
+    .hover();
   await expect(page.getByText("When Beza enters, create a Treasure token")).toBeVisible();
   await expect(page.getByText("4/5")).toBeVisible();
   await expect(page.getByText("Illustrated by Martin Wittfooth")).toBeVisible();

@@ -206,8 +206,10 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     for await (const card of scryfall.readBulkFile(bulkFilePath)) {
       tallyStandard(tally, card);
-      // Only English paper cards are priced (rules 8 and 9).
-      if (card.language !== "en" || card.isDigital) continue;
+      // Paper cards only (rule 9). Any language: a card is matched by its exact Scryfall id, so
+      // a non-English entry only matches a printing that exists only in that language, like the
+      // Japanese Mystical Archive cards in Secrets of Strixhaven Collector Boosters (rule 8).
+      if (card.isDigital) continue;
 
       const printing = printings.get(card.scryfallId);
       if (printing === undefined) continue;

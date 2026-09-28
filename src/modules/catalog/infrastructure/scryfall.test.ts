@@ -27,9 +27,12 @@ describe("mapScryfallCard", () => {
     expect(lines[0].images?.back).toBeNull();
   });
 
-  it("flags the synthetic digital card and the Spanish printing", () => {
+  it("flags the synthetic digital card, and reads the Spanish and Japanese-only printings' language", () => {
     expect(lines.filter((card) => card.isDigital)).toHaveLength(1);
-    expect(lines.filter((card) => card.language !== "en")).toHaveLength(1);
+    expect(lines.filter((card) => card.language !== "en").map((card) => card.language)).toEqual([
+      "es",
+      "ja",
+    ]);
   });
 });
 

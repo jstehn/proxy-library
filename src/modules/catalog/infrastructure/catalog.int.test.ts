@@ -82,11 +82,11 @@ describe("the first sync", () => {
       decks: ["BLB: Bloomburrow Redemption"],
     });
 
-    expect(await countRows("printings")).toBe(27 + 2);
+    expect(await countRows("printings")).toBe(28 + 2);
     expect(await countRows("booster_configs")).toBe(1);
     expect(await countRows("sealed_products")).toBe(5);
     expect(await countRows("deck_lists")).toBe(2);
-    expect(summary.pricedPrintings).toBe(29);
+    expect(summary.pricedPrintings).toBe(30);
     expect(await countRows("price_snapshots")).toBe(summary.priceSnapshots);
 
     const sets = await db.execute<{ code: string; is_enabled: boolean; is_supporting: boolean }>(
@@ -105,7 +105,21 @@ describe("the first sync", () => {
     const rows = await db.execute<{ with_images: number }>(
       sql`select count(*)::int as with_images from printings where image_uris is not null`,
     );
-    expect(rows.rows[0].with_images).toBe(29);
+    expect(rows.rows[0].with_images).toBe(30);
+  });
+
+  it("prices a printing that exists only in another language, but never swaps in a translation", async () => {
+    await buildCatalog().runSync("prices");
+    // A (synthetic) Japanese-only Beza: Scryfall lists it only as lang "ja" (rule 8).
+    const japanese = await db.execute<{ has_images: boolean; foil_cents: number | null }>(sql`
+      select p.image_uris is not null as has_images,
+             (select s.usd_cents from price_snapshots s
+               where s.printing_id = p.id and s.finish = 'foil')::int as foil_cents
+        from printings p where p.scryfall_id = '00000000-7a9a-4000-8000-0000000000bb'
+    `);
+    expect(japanese.rows).toEqual([{ has_images: true, foil_cents: 480 }]);
+    // The Spanish copy of the English Beza has its own Scryfall id, so it matches nothing.
+    expect(await countRows("printings")).toBe(30);
   });
 });
 
@@ -115,7 +129,7 @@ describe("running again", () => {
     const first = await catalog.runSync("prices");
     const second = await catalog.runSync("prices");
     expect(second.importedSets).toEqual([]); // already imported, same version
-    expect(await countRows("printings")).toBe(29);
+    expect(await countRows("printings")).toBe(30);
     expect(await countRows("price_snapshots")).toBe(first.priceSnapshots);
   });
 

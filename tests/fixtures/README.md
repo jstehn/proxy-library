@@ -24,6 +24,9 @@ Commander companion set (design doc 04, rule 11), and the fixture sync needs a f
   by a trimmed `play-arena` booster. Both must be excluded (design doc 04, rule 9).
 - `default-cards.jsonl`: the same Alchemy card with `digital: true`, and a Spanish (`lang: "es"`)
   copy of a real card. Both must be ignored.
+- A **Japanese-only Beza** (`BLB.json` uuid `00000000-7a9a-…-0001`, collector number 900, foil
+  only; `default-cards.jsonl` id `00000000-7a9a-…-00bb`, `lang: "ja"`). It must get its image
+  and price, like the real Japanese-only Mystical Archive cards (design doc 04, rule 8).
 
 Regenerate with `scripts/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
 `BLB.json.gz`, `SPG.json.gz` and `SetList.json.gz`).

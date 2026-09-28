@@ -21,7 +21,7 @@ describe("mapSetFile: set and printings", () => {
 
   it("keeps printings that exist in paper, even when they are also on Arena or MTGO", () => {
     // Every real Bloomburrow card is available on paper + MTGO (+ Arena).
-    expect(blb.printings).toHaveLength(27);
+    expect(blb.printings).toHaveLength(28);
     expect(blb.printings.every((printing) => printing.setCode === "BLB")).toBe(true);
   });
 
