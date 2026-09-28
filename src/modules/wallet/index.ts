@@ -5,6 +5,7 @@ export type {
   GrantMoneyError,
 } from "./application/manage-money";
 export { makeWallet } from "./application/make-wallet";
+export { resetBalance, type ResetBalanceInput } from "./application/reset-balance";
 export {
   lockWallets,
   receive,

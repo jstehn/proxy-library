@@ -70,7 +70,15 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
     await db.delete(decks).where(eq(decks.id, deckId)); // entries go with it (on delete cascade)
   }
 
-  return { create, countFor, lockOwned, save, delete: remove };
+  async function deleteAllOf(ownerId: UserId): Promise<number> {
+    const deleted = await db
+      .delete(decks)
+      .where(eq(decks.ownerId, ownerId))
+      .returning({ id: decks.id }); // entries go with them (on delete cascade)
+    return deleted.length;
+  }
+
+  return { create, countFor, lockOwned, save, delete: remove, deleteAllOf };
 }
 
 export function drizzleCardLookup(db: DbExecutor): CardLookup {

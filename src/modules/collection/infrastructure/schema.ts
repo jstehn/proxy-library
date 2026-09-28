@@ -58,7 +58,7 @@ export const acquisitions = pgTable(
     check("acquisitions_quantity_nonzero", sql`${table.quantity} <> 0`),
     check(
       "acquisitions_source_known",
-      sql`${table.source} in ('pack', 'deck', 'product', 'store', 'sale', 'trade')`,
+      sql`${table.source} in ('pack', 'deck', 'product', 'store', 'sale', 'trade', 'reset')`,
     ),
   ],
 );

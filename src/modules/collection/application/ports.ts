@@ -21,6 +21,8 @@ export interface CollectionRepository {
     losses: readonly CardGain[],
     acquisition: Acquisition,
   ): Promise<Result<void, NotEnoughCopies>>;
+  /** Every stack a player owns, locked until the transaction ends. */
+  everything(userId: UserId): Promise<CardGain[]>;
 }
 
 /** The repositories that must share one transaction. */

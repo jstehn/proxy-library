@@ -8,6 +8,14 @@ export function inMemoryEventRecorder() {
     async record(event, at) {
       recorded.push({ event, at });
     },
+    async forgetPullsAndPurchases(actorId) {
+      const before = recorded.length;
+      const kept = recorded.filter(
+        ({ event }) => event.actorId !== actorId || event.kind === "trade",
+      );
+      recorded.splice(0, recorded.length, ...kept);
+      return before - kept.length;
+    },
   };
   return { ...recorder, recorded };
 }

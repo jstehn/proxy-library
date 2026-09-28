@@ -20,7 +20,9 @@ export const Cents = {
     if (!Number.isSafeInteger(value)) {
       throw new RangeError(`Cents must be a safe integer, got ${value}`);
     }
-    return value as Cents;
+    // JavaScript has a negative zero (-0, e.g. from negating a total of 0), which formats as
+    // "-$0.00". Adding 0 turns it into a plain 0 and leaves every other number unchanged.
+    return (value + 0) as Cents;
   },
 
   /**

@@ -1,4 +1,5 @@
 // The inventory module's public API: the only file other modules and the app may import.
+export { discardAllItems } from "./application/discard-all-items";
 export { makeInventory, type Inventory } from "./application/make-inventory";
 export { OPEN_ALL_LIMIT, type Opening, type OpenItemError } from "./application/open";
 export type {

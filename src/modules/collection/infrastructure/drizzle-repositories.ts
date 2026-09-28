@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import type { CollectionRepository } from "../application/ports";
@@ -100,5 +101,19 @@ export function drizzleCollectionRepository(db: DbExecutor): CollectionRepositor
     return ok();
   }
 
-  return { receive, remove };
+  async function everything(userId: UserId): Promise<CardGain[]> {
+    const rows = await db
+      .select()
+      .from(collectionCards)
+      .where(eq(collectionCards.userId, userId))
+      .for("update");
+    return rows.map((row) => ({
+      printingId: PrintingId.of(row.printingId),
+      // The database only allows these three (a CHECK constraint).
+      finish: row.finish as CardGain["finish"],
+      quantity: row.quantity,
+    }));
+  }
+
+  return { receive, remove, everything };
 }

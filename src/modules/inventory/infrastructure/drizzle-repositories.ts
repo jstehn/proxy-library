@@ -115,7 +115,22 @@ export function drizzleItemRepository(db: DbExecutor): ItemRepository {
     });
   }
 
-  return { add, lock, markOpened };
+  async function removeAllOf(ownerId: UserId): Promise<number> {
+    // Lock them first: an opening in progress finishes before its item disappears.
+    const owned = await db
+      .select({ id: sealedItems.id })
+      .from(sealedItems)
+      .where(eq(sealedItems.ownerId, ownerId))
+      .for("update");
+    if (owned.length === 0) return 0;
+    const ids = owned.map((row) => row.id);
+    await db.delete(itemOpenings).where(inArray(itemOpenings.itemId, ids));
+    // One statement, so a box and the packs inside it (parent_id) go together.
+    await db.delete(sealedItems).where(inArray(sealedItems.id, ids));
+    return ids.length;
+  }
+
+  return { add, lock, markOpened, removeAllOf };
 }
 
 // Stored catalog JSON, checked again on the way in ("parse, don't validate").

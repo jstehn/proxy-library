@@ -15,6 +15,8 @@ export interface TradeRepository {
   lock(tradeId: TradeId): Promise<Trade | null>;
   /** Saves a decision: the new status and when it was made. */
   decide(trade: Trade): Promise<void>;
+  /** The trades still waiting for a decision that a player proposed or received. */
+  openInvolving(userId: UserId): Promise<TradeId[]>;
 }
 
 export interface TradePlayers {

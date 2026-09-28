@@ -82,6 +82,19 @@ test("first admin invites a player, manages their money, then disables them", as
   await expect(player.getByText("Won Friday's draft")).toBeVisible();
   await expect(player.getByText("Typo in last grant")).toBeVisible();
 
+  // The admin resets Jack's library, after typing his username to confirm (design doc 12).
+  await openAdminPage(page, "Players");
+  const jackReset = page.getByRole("listitem").filter({ hasText: "@jack" });
+  await jackReset.getByText("Reset library…").click();
+  await jackReset.getByLabel("Type jack to confirm").fill("jak");
+  await jackReset.getByRole("button", { name: "Reset library" }).click();
+  await expect(jackReset.getByText("Type jack to confirm.")).toBeVisible();
+  await jackReset.getByLabel("Type jack to confirm").fill("jack");
+  await jackReset.getByRole("button", { name: "Reset library" }).click();
+  await expect(jackReset.getByText("Balance is now $50.00.")).toBeVisible();
+  await player.goto("/wallet");
+  await expect(player.getByText("Library reset by admin")).toBeVisible();
+
   // The admin disables Jack.
   await openAdminPage(page, "Players");
   const jackRow = page.getByRole("listitem").filter({ hasText: "@jack" });

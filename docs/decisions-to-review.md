@@ -127,3 +127,14 @@ The full checklist is in [requirements-audit.md](requirements-audit.md).
 | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **Nightly runs re-import sets released in the last 120 days** (catalog rule 12)               | Reality Fracture's booster recipes weren't in MTGJSON yet, and nightly runs would never have fetched them | `SETTLING_DAYS` in `catalog/domain/rules.ts` |
 | **Unpriced product kinds (Scene Boxes, Tins, Commander Kits, Codex Bundle, …) stay off sale** | Their MSRPs vary within a kind; you choose on Admin → Store                                               | `/admin/store`                               |
+
+### Reset a player's library (2026-09-28)
+
+Design: [design/12-reset-player.md](design/12-reset-player.md).
+
+| Decision                                                                      | Why                                                             | Where to change it              |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------- |
+| **Opened items are deleted too**, not only unopened ones                      | A clean slate; the card history keeps what they produced        | `removeAllOf` in inventory      |
+| **Pulls and purchases leave the activity feed; trades stay**                  | The feed shouldn't show cards that are gone; trades involve two | `forgetPullsAndPurchases`       |
+| **"Spent" and "Self-funded" totals are not reset**                            | They're sums over the money history, which is never deleted     | `playerMoney` in wallet queries |
+| **Also fixed: "-$0.00"** shown as Spent for players who hadn't spent anything | JavaScript's negative zero; `Cents.of` now turns it into 0      | `Cents.of`                      |

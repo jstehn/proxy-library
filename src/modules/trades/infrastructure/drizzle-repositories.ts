@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId, type Finish } from "@/modules/catalog";
 import { collectionCards } from "@/modules/collection/infrastructure/schema";
@@ -104,7 +104,21 @@ export function drizzleTradeRepository(db: DbExecutor): TradeRepository {
       .where(eq(trades.id, trade.id));
   }
 
-  return { create, lock, decide };
+  async function openInvolving(userId: UserId): Promise<TradeId[]> {
+    const rows = await db
+      .select({ id: trades.id })
+      .from(trades)
+      .where(
+        and(
+          eq(trades.status, "proposed"),
+          or(eq(trades.proposerId, userId), eq(trades.recipientId, userId)),
+        ),
+      )
+      .orderBy(asc(trades.id));
+    return rows.map((row) => TradeId.of(row.id));
+  }
+
+  return { create, lock, decide, openInvolving };
 }
 
 export function drizzleTradePlayers(db: DbExecutor): TradePlayers {

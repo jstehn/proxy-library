@@ -1,6 +1,6 @@
 // The activity module's public API: the only file other modules and the app may import.
 export type { ActivityServices, EventRecorder } from "./application/ports";
-export { recordEvent } from "./application/record";
+export { forgetPullsAndPurchases, recordEvent } from "./application/record";
 export {
   isNotable,
   NOTABLE_PRICE_CENTS,

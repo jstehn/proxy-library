@@ -71,6 +71,11 @@ describe("arithmetic", () => {
 });
 
 describe("Cents.format", () => {
+  it("never keeps a negative zero, so nothing shows as -$0.00", () => {
+    expect(Object.is(Cents.of(-0), 0)).toBe(true);
+    expect(Cents.format(Cents.negate(Cents.zero))).toBe("$0.00");
+  });
+
   it("formats as US dollars", () => {
     expect(Cents.format(Cents.of(1234))).toBe("$12.34");
     expect(Cents.format(Cents.of(-500))).toBe("-$5.00");

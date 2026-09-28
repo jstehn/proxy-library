@@ -20,6 +20,15 @@ export function inMemoryTradeRepository() {
     async decide(trade) {
       trades.set(trade.id, trade);
     },
+    async openInvolving(userId) {
+      return [...trades.values()]
+        .filter(
+          (trade) =>
+            trade.status === "proposed" &&
+            (trade.proposerId === userId || trade.recipientId === userId),
+        )
+        .map((trade) => trade.id);
+    },
   };
   return { ...repository, get: (tradeId: TradeId) => trades.get(tradeId) };
 }

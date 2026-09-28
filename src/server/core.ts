@@ -25,6 +25,7 @@ import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infras
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
+import { makeResetPlayer } from "@/modules/reset";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
 import {
@@ -126,6 +127,7 @@ export function buildCore(config: Config) {
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
   const trades = makeTrades({ unitOfWork, clock });
+  const resetPlayer = makeResetPlayer({ unitOfWork, clock });
 
   return {
     config,
@@ -140,6 +142,7 @@ export function buildCore(config: Config) {
     store,
     decks,
     trades,
+    resetPlayer,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

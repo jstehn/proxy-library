@@ -1,0 +1,2 @@
+ALTER TABLE "acquisitions" DROP CONSTRAINT "acquisitions_source_known";--> statement-breakpoint
+ALTER TABLE "acquisitions" ADD CONSTRAINT "acquisitions_source_known" CHECK ("acquisitions"."source" in ('pack', 'deck', 'product', 'store', 'sale', 'trade', 'reset'));

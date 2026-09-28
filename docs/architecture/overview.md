@@ -56,6 +56,7 @@ root.
 | `decks`      | decks, ownership check, format legality, export formats                                                                                                                                                  | rich domain                       |
 | `trades`     | proposals, trade lifecycle, atomic execution                                                                                                                                                             | rich domain + orchestration       |
 | `activity`   | feed of domain events ("X opened a mythic")                                                                                                                                                              | read model                        |
+| `reset`      | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                              | orchestration only (no tables)    |
 
 ### Module dependency graph (allowed directions only)
 
@@ -70,6 +71,7 @@ flowchart TD
   wallet --> accounts
   store & trades & inventory & decks --> accounts
   store & trades & inventory --> activity[activity: recordEvent in the same transaction]
+  reset --> trades & wallet & inventory & collection & decks & activity
 ```
 
 As built (2026-09-28): modules share each other's **types** freely (`import type`), and call each

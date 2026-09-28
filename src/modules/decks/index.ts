@@ -1,4 +1,5 @@
 // The decks module's public API: the only file other modules and the app may import.
+export { deleteAllDecks } from "./application/delete-all-decks";
 export { makeDecks, type Decks } from "./application/make-decks";
 export type {
   CreateDeckError,

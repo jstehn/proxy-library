@@ -34,6 +34,8 @@ export interface ItemRepository {
   lock(itemId: ItemId): Promise<Item | null>;
   /** Saves an item as opened, with what the opening produced. */
   markOpened(item: Item, opening: StoredOpening): Promise<void>;
+  /** Deletes every item a player has, opened or not, with its opening. Returns how many. */
+  removeAllOf(ownerId: UserId): Promise<number>;
 }
 
 /** One card of a deck list: copies, and which board (commander, main or side) they go on. */

@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import type { PlayerListItem } from "@/modules/accounts";
 import { MoneyForm } from "./money-form";
+import { ResetForm } from "./reset-form";
 import { Alert, SubmitButton } from "@/ui/form";
 import { playerAction, type PlayerActionState } from "./actions";
 
@@ -56,6 +57,8 @@ export function PlayerRow(props: PlayerRowProps) {
             <ActionButton {...shared} intent="disable" label="Disable" danger />
           ))}
       </div>
+
+      <ResetForm userId={player.userId} username={player.username} />
 
       {state.message && <Alert tone={state.tone}>{state.message}</Alert>}
       {state.temporaryPassword && (

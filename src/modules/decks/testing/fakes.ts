@@ -34,6 +34,11 @@ export function inMemoryDeckRepository() {
     async delete(deckId) {
       decks.delete(deckId);
     },
+    async deleteAllOf(ownerId) {
+      const owned = [...decks.values()].filter((deck) => deck.ownerId === ownerId);
+      for (const deck of owned) decks.delete(deck.id);
+      return owned.length;
+    },
   };
   return { ...repository, get: (deckId: DeckId) => decks.get(deckId) };
 }

@@ -12,6 +12,8 @@ export interface DeckRepository {
   /** Saves the name, format and every entry (replacing the old entries). */
   save(deck: Deck, at: Date): Promise<void>;
   delete(deckId: DeckId): Promise<void>;
+  /** Deletes every deck a player has. Returns how many. */
+  deleteAllOf(ownerId: UserId): Promise<number>;
 }
 
 /** A card named in a pasted list, found in the catalog. */

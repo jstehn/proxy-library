@@ -53,6 +53,12 @@ export function inMemoryCollectionRepository() {
       });
       return ok();
     },
+    async everything(userId) {
+      return [...quantities].flatMap(([key, quantity]) => {
+        const [owner, printingId, finish] = key.split("/");
+        return owner === userId ? [sampleGain(printingId, quantity, finish as Finish)] : [];
+      });
+    },
   };
 
   return {

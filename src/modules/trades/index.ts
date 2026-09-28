@@ -7,6 +7,7 @@ export type {
   TradesDependencies,
   TradesServices,
 } from "./application/ports";
+export { closeOpenTrades } from "./application/close-open-trades";
 export {
   makeTrades,
   type AcceptTradeError,

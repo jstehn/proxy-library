@@ -46,6 +46,14 @@ export function inMemoryItemRepository() {
       items.set(item.id, item);
       openings.set(item.id, opening);
     },
+    async removeAllOf(ownerId) {
+      const owned = [...items.values()].filter((item) => item.ownerId === ownerId);
+      for (const item of owned) {
+        items.delete(item.id);
+        openings.delete(item.id);
+      }
+      return owned.length;
+    },
   };
 
   return {
