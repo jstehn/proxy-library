@@ -260,6 +260,9 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   // on the random pack test 4 opened, so shortages are tested in the unit and integration tests.)
   const problems = page.getByRole("region", { name: "Problems" });
   await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
+  const stats = page.getByRole("region", { name: "Deck statistics" });
+  await expect(stats.getByText("Land", { exact: true })).toBeVisible();
+  await expect(stats.getByText("Average mana value")).toBeVisible();
 
   // Type-ahead: "pla" finds the Plains the admin owns; Enter adds one to the main deck.
   await page.getByRole("combobox", { name: "Search your cards" }).fill("pla");

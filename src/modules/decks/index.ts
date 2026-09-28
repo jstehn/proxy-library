@@ -33,6 +33,7 @@ export type {
 } from "./domain/errors";
 export { EXPORTERS, type ExportLine } from "./domain/list-format";
 export { deckProblems, shortCount, type CardRules, type DeckProblem } from "./domain/rules";
+export { deckStats, mainType, TYPE_ORDER, type DeckStats } from "./domain/stats";
 export {
   decksUsing,
   deckView,

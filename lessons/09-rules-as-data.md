@@ -401,8 +401,8 @@ function manaCurve(lines: readonly CurveLine[]): number[] {
 ```
 
 (pandas: `df[~df.type.str.contains("Land")].groupby(df.mv.clip(upper=7)).quantity.sum()`.) The
-builder's `DeckLine` already has `manaValue` and `typeLine`, so drawing the curve is one small
-component. It's in future-ideas.
+builder's `DeckLine` already has `manaValue` and `typeLine`, so the builder now shows the curve:
+compare your version with [`stats.ts`](../src/modules/decks/domain/stats.ts).
 
 </details>
 

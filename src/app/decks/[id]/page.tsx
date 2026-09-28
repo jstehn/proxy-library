@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import {
   BOARDS,
   deckProblems,
+  deckStats,
+  mainType,
+  TYPE_ORDER,
   deckView,
   FORMATS,
   type Board,
@@ -24,19 +27,55 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 const smallButton = "rounded border border-zinc-300 px-2 text-sm leading-6 dark:border-zinc-700";
 
-/** Groups a board's lines by card type, in a fixed order, for the list. */
-const TYPE_ORDER = [
-  "Creature",
-  "Planeswalker",
-  "Instant",
-  "Sorcery",
-  "Artifact",
-  "Enchantment",
-  "Battle",
-  "Land",
-];
-function typeGroup(line: DeckLine): string {
-  return TYPE_ORDER.find((type) => line.typeLine.includes(type)) ?? "Other";
+/** The mana curve as bars, plus card types and the average mana value. */
+function StatsPanel(props: { lines: readonly DeckLine[] }) {
+  const stats = deckStats(props.lines);
+  const tallest = Math.max(...stats.curve, 1);
+  return (
+    <section aria-label="Deck statistics" className="flex flex-wrap items-end gap-8">
+      <div className="flex flex-col gap-1">
+        <div
+          className="flex h-20 items-end gap-1"
+          role="img"
+          aria-label={`Mana curve: ${stats.curve.join(", ")}`}
+        >
+          {stats.curve.map((count, manaValue) => (
+            <div
+              key={manaValue}
+              className="flex w-7 flex-col items-center justify-end gap-0.5 text-[10px] tabular-nums"
+            >
+              {count > 0 && <span>{count}</span>}
+              <div
+                className="w-full rounded-t bg-sky-500 dark:bg-sky-400"
+                style={{ height: `${(count / tallest) * 56}px` }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-1 text-[10px] text-zinc-500">
+          {stats.curve.map((_, manaValue) => (
+            <span key={manaValue} className="w-7 text-center">
+              {manaValue === 7 ? "7+" : manaValue}
+            </span>
+          ))}
+        </div>
+      </div>
+      <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        {[...TYPE_ORDER, "Other"]
+          .filter((type) => (stats.types[type] ?? 0) > 0)
+          .map((type) => (
+            <div key={type} className="flex gap-1">
+              <dt className="text-zinc-500">{type}</dt>
+              <dd className="tabular-nums">{stats.types[type]}</dd>
+            </div>
+          ))}
+        <div className="flex gap-1">
+          <dt className="text-zinc-500">Average mana value</dt>
+          <dd className="tabular-nums">{stats.averageManaValue.toFixed(2)}</dd>
+        </div>
+      </dl>
+    </section>
+  );
 }
 
 function EntryButtons(props: { deckId: number; line: DeckLine; q: string }) {
@@ -124,6 +163,8 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         )}
       </section>
 
+      {total > 0 && <StatsPanel lines={lines} />}
+
       <div className="flex flex-col gap-8 lg:flex-row">
         <section className="flex flex-1 flex-col gap-6">
           {BOARDS.map((board) => {
@@ -131,13 +172,16 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             if (onBoard.length === 0) return null;
             const groups = new Map<string, DeckLine[]>();
             for (const line of onBoard)
-              groups.set(typeGroup(line), [...(groups.get(typeGroup(line)) ?? []), line]);
+              groups.set(mainType(line.typeLine), [
+                ...(groups.get(mainType(line.typeLine)) ?? []),
+                line,
+              ]);
             return (
               <div key={board} className="flex flex-col gap-2">
                 <h2 className="font-medium">
                   {BOARD_TITLES[board]} ({onBoard.reduce((sum, line) => sum + line.quantity, 0)})
                 </h2>
-                {TYPE_ORDER.concat("Other")
+                {[...TYPE_ORDER, "Other"]
                   .filter((type) => groups.has(type))
                   .map((type) => (
                     <div key={type} className="flex flex-col gap-1">

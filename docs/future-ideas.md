@@ -50,8 +50,8 @@ design doc (or joins a phase's design) and is removed from this list.
 ## Decks
 
 - **More formats** (brawl, oathbreaker, historic…), and partner and background checks for Commander.
-- **Deck statistics:** mana curve, color pips, card-type breakdown (lesson 09's exercise 5 has
-  the curve function).
+- **More deck statistics:** color pips and a draw simulator (the curve, types and average mana
+  value are in the builder).
 - **Sharing decks** with the playgroup (read-only links), and a "cards to get" list across all
   your decks.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
