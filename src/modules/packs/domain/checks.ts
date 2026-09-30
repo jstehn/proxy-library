@@ -45,12 +45,22 @@ export function packProblems(
     if (!(sheetName in variant.slots)) problems.push(`card from unused sheet "${sheetName}"`);
   }
 
-  // Rule 3: no duplicates within a draw, unless the sheet allows them.
+  // Rule 3: no duplicates within a draw, unless the sheet allows them: not the same printing,
+  // and not two versions of one card (unless the sheet has too few different cards to avoid it).
   for (const [sheetName, printingIds] of cardsBySheet) {
     const sheet = config.sheets[sheetName];
     if (sheet === undefined || sheetKind(sheet) !== "distinct") continue;
     if (new Set(printingIds).size !== printingIds.length) {
       problems.push(`sheet "${sheetName}" repeated a card`);
+      continue;
+    }
+    const names = cardNames(printingIds, facts);
+    const sheetNames = cardNames(
+      sheet.cards.map((card) => card.printingId),
+      facts,
+    );
+    if (new Set(names).size < names.length && new Set(sheetNames).size >= names.length) {
+      problems.push(`sheet "${sheetName}" gave two versions of one card`);
     }
   }
 
@@ -90,4 +100,16 @@ function isBasicOrUnknown(printingId: PrintingId, facts: FactsLookup): boolean {
   } catch {
     return true;
   }
+}
+
+/** The card names of these printings (basic lands each count as their own; unknown ones too). */
+function cardNames(printingIds: readonly PrintingId[], facts: FactsLookup): string[] {
+  return printingIds.map((printingId) => {
+    try {
+      const printing = facts(printingId);
+      return printing.isBasicLand ? `basic:${printingId}` : printing.name;
+    } catch {
+      return `unknown:${printingId}`;
+    }
+  });
 }

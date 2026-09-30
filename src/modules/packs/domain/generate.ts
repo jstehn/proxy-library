@@ -7,7 +7,7 @@ import { revealOrder } from "./reveal";
 // from the Rng passed in, so the same seed always gives the same pack (rule 1).
 
 /** Draws `count` printings from one sheet. */
-type DrawSheet = (rng: Rng, sheet: BoosterSheet, count: number) => PrintingId[];
+type DrawSheet = (rng: Rng, sheet: BoosterSheet, count: number, facts: FactsLookup) => PrintingId[];
 
 /** How a sheet is drawn from, decided by its flags. */
 export type SheetKind = "fixed" | "withDuplicates" | "distinct";
@@ -38,9 +38,39 @@ function drawWithDuplicates(rng: Rng, sheet: BoosterSheet, count: number): Print
   return Array.from({ length: count }, () => weightedPick(rng, weightedCards(sheet)));
 }
 
-/** Weighted sampling without replacement: `count` different cards. */
-function drawDistinct(rng: Rng, sheet: BoosterSheet, count: number): PrintingId[] {
-  return weightedSample(rng, weightedCards(sheet), count);
+/**
+ * Which card a printing is, for telling repeats apart: its name. Two versions of one card (the
+ * regular one and its showcase art) are the same card. Basic lands are each their own, since
+ * they may repeat.
+ */
+function cardIdentity(printingId: PrintingId, facts: FactsLookup): string {
+  const printing = facts(printingId);
+  return printing.isBasicLand ? `basic:${printingId}` : `name:${printing.name}`;
+}
+
+/**
+ * Weighted sampling without replacement: `count` different cards, and never two versions of one
+ * card (rule 3), e.g. a regular and a showcase Oblivious Bookworm from one foil uncommon slot.
+ * A sheet with too few different cards for the slot falls back to different printings.
+ */
+function drawDistinct(
+  rng: Rng,
+  sheet: BoosterSheet,
+  count: number,
+  facts: FactsLookup,
+): PrintingId[] {
+  let remaining = weightedCards(sheet).filter((option) => option.weight > 0);
+  const identities = new Set(remaining.map((option) => cardIdentity(option.item, facts)));
+  if (identities.size < count) return weightedSample(rng, weightedCards(sheet), count);
+
+  const drawn: PrintingId[] = [];
+  for (let index = 0; index < count; index++) {
+    const printingId = weightedPick(rng, remaining);
+    drawn.push(printingId);
+    const identity = cardIdentity(printingId, facts);
+    remaining = remaining.filter((option) => cardIdentity(option.item, facts) !== identity);
+  }
+  return drawn;
 }
 
 /** The strategy for each kind of sheet (patterns.md: Strategy). */
@@ -80,11 +110,11 @@ function drawBalanced(
   const isPossible =
     count >= ALL_COLORS.length && monoColors(sheetPrintings, facts).size === ALL_COLORS.length;
 
-  let drawn = draw(rng, sheet, count);
+  let drawn = draw(rng, sheet, count, facts);
   if (!isPossible) return drawn;
   for (let attempt = 1; attempt < COLOR_BALANCE_ATTEMPTS; attempt++) {
     if (monoColors(drawn, facts).size === ALL_COLORS.length) break;
-    drawn = draw(rng, sheet, count);
+    drawn = draw(rng, sheet, count, facts);
   }
   return drawn;
 }
@@ -173,7 +203,7 @@ export function generatePack(config: BoosterConfig, rng: Rng, facts: FactsLookup
     const drawable = avoidsRepeats(sheet, facts) ? withoutGiven(sheet, count, given) : sheet;
     const printingIds = drawable.balanceColors
       ? drawBalanced(draw, rng, drawable, count, facts)
-      : draw(rng, drawable, count);
+      : draw(rng, drawable, count, facts);
     if (!isAnyRaritySheet(sheet, facts)) {
       for (const printingId of printingIds) {
         // Basic lands repeat in real packs (a Jumpstart pack has several of each).

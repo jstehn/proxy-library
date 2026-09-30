@@ -2,7 +2,15 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { PrintingId } from "@/modules/catalog";
 import { seededRng } from "@/shared/kernel";
-import { SAMPLE_BOOSTER, sampleFacts, sampleSheet, withSheet } from "../testing/recipes";
+import {
+  SAMPLE_BOOSTER,
+  SAMPLE_FACTS,
+  sampleFacts,
+  samplePrintingId,
+  sampleSheet,
+  withSheet,
+} from "../testing/recipes";
+import { factsLookup } from "./pack";
 import { packProblems } from "./checks";
 import { ALL_COLORS, generatePack, openPack } from "./generate";
 
@@ -91,6 +99,32 @@ describe("generatePack", () => {
         const ids = pack(seed, config).cards.map((card) => card.printingId);
         expect(new Set(ids).size).toBe(ids.length);
         expect(packProblems(config, pack(seed, config), sampleFacts)).toEqual([]);
+      }),
+    );
+  });
+
+  it("never gives two versions of one card from one slot (rule 3)", () => {
+    // A foil uncommon slot listing each uncommon twice: regular and showcase art (same name).
+    const withShowcases = new Map(SAMPLE_FACTS);
+    for (const n of [1, 2, 3, 4]) {
+      const regular = SAMPLE_FACTS.get(samplePrintingId(`u-${n}`));
+      if (regular) withShowcases.set(samplePrintingId(`u-${n}-showcase`), regular);
+    }
+    const facts = factsLookup(withShowcases);
+    const sheet = sampleSheet(
+      [1, 2, 3, 4].flatMap((n): Array<[string, number]> => [
+        [`u-${n}`, 1],
+        [`u-${n}-showcase`, 1],
+      ]),
+      { isFoil: true },
+    );
+    const config = withSheet("foilUncommon", sheet, { foilUncommon: 3 });
+    fc.assert(
+      fc.property(fc.string(), (seed) => {
+        const generated = generatePack(config, seededRng(seed), facts);
+        const names = generated.cards.map((card) => facts(card.printingId).name);
+        expect(new Set(names).size).toBe(3);
+        expect(packProblems(config, generated, facts)).toEqual([]);
       }),
     );
   });

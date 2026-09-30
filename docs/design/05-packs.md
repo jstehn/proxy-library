@@ -108,8 +108,10 @@ mythic, wildcard and foil slots that matter. The simulator compares these with w
 
 1. **Repeatable:** the same recipe and seed always produce the same pack, card for card.
 2. **Exact layout:** a pack has exactly the slot counts of the variant it rolled.
-3. **No duplicates within a draw** unless the sheet allows them. A fixed sheet contributes
-   exactly its listed cards and copies.
+3. **No duplicates within a draw** unless the sheet allows them: not the same printing, and
+   not two versions of one card (a regular and a showcase printing of the same name), unless
+   the sheet has too few different cards to fill the slot. A fixed sheet contributes exactly
+   its listed cards and copies.
 
    **3b. No repeats between slots of one rarity** (added 2026-09-30). A slot whose sheet holds
    one rarity band (commons, uncommons, the rare slot, a common-or-uncommon slot, lands) never
