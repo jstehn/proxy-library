@@ -35,12 +35,13 @@ services:
     labels:
       # Minor Postgres updates are fine, but a surprise restart mid-sync isn't worth it.
       com.centurylinklabs.watchtower.enable: "false"
-      # A nightly backup at 03:30, run by the server's Ofelia (which reads these labels): a
+      # A nightly backup, run by the server's Ofelia (which reads these labels when it starts). Its
+      # schedule is in UTC: 10:30 UTC is early morning here (02:30 in winter), before the sync. A
       # compressed dump in the `backups` volume, kept for 14 days. pg_dump's own format (-Fc)
       # is compressed and fails loudly, so a failed dump never leaves an empty "backup".
       # Restore: docs/deploy.md. ($$ is a literal $ in compose files.)
       ofelia.enabled: "true"
-      ofelia.job-exec.proxy-library-backup.schedule: "0 30 3 * * *"
+      ofelia.job-exec.proxy-library-backup.schedule: "0 30 10 * * *"
       ofelia.job-exec.proxy-library-backup.command: >-
         sh -c 'pg_dump -U tcg -d tcg -Fc -f /backups/proxy-library-$$(date +%F).dump
         && find /backups -name "proxy-library-*.dump" -mtime +13 -delete'

@@ -110,8 +110,9 @@ HTTPS-only: sign in through the domain, not `http://your-server:3470` (by design
 
 ### Backups
 
-The server's **Ofelia** reads the backup job from labels on the `db` container: every night at
-03:30, a compressed dump (`pg_dump -Fc`) goes into the `backups` volume, and dumps older than 14
+The server's **Ofelia** reads the backup job from labels on the `db` container (when Ofelia
+starts, so restart it after changing them): every night at 10:30 UTC (early morning here, 02:30 in
+winter), a compressed dump (`pg_dump -Fc`) goes into the `backups` volume, and dumps older than 14
 days are deleted. The volume is on the server's own disk, so copy a backup elsewhere now and then:
 
 ```sh
