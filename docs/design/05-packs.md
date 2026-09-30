@@ -110,6 +110,16 @@ mythic, wildcard and foil slots that matter. The simulator compares these with w
 2. **Exact layout:** a pack has exactly the slot counts of the variant it rolled.
 3. **No duplicates within a draw** unless the sheet allows them. A fixed sheet contributes
    exactly its listed cards and copies.
+
+   **3b. No repeats between slots of one rarity** (added 2026-09-30). A slot whose sheet holds
+   one rarity band (commons, uncommons, the rare slot, a common-or-uncommon slot, lands) never
+   gives a card, in the same finish, that another such slot or a fixed list already gave. The
+   **any-rarity** slots, whose sheets mix commons or uncommons with rares or mythics (the
+   non-foil wildcard, the traditional foil), may repeat a card, as in real packs. Basic lands
+   may always repeat. Fixed lists are drawn first, then the rest in name order, so every random
+   slot can avoid them. Found in Reality Fracture Play Boosters, where the common-or-uncommon
+   slot repeated one of the commons or the uncommon in about 4% of packs.
+
 4. **Finishes:** foil sheets give foil (or etched) cards; other sheets give nonfoil, unless the
    printing only exists in one finish. Every card's finish is one the printing actually has.
 5. **Color balance** on marked sheets: all five colors among the slot's mono-colored cards

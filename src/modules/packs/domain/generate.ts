@@ -89,6 +89,57 @@ function drawBalanced(
   return drawn;
 }
 
+const LOW_RARITIES = new Set(["common", "uncommon"]);
+const HIGH_RARITIES = new Set(["rare", "mythic"]);
+const anyRarityCache = new WeakMap<BoosterSheet, boolean>();
+
+/**
+ * Whether a sheet is an "any rarity" slot, like a wildcard or a traditional foil: its cards
+ * include both commons or uncommons and rares or mythics. Decided by what's on the sheet rather
+ * than its name, because MTGJSON's sheet names differ from set to set.
+ */
+export function isAnyRaritySheet(sheet: BoosterSheet, facts: FactsLookup): boolean {
+  const cached = anyRarityCache.get(sheet);
+  if (cached !== undefined) return cached;
+  const rarities = new Set(sheet.cards.map((card) => facts(card.printingId).rarity));
+  const anyRarity =
+    [...rarities].some((rarity) => LOW_RARITIES.has(rarity)) &&
+    [...rarities].some((rarity) => HIGH_RARITIES.has(rarity));
+  anyRarityCache.set(sheet, anyRarity);
+  return anyRarity;
+}
+
+/**
+ * Whether a sheet must avoid cards other slots already gave (rule 3b). Slots of one rarity
+ * (commons, uncommons, the rare slot, a common-or-uncommon slot, lands) never repeat each
+ * other, as in real packs. Any-rarity slots may repeat a card, as real wildcards and foils do,
+ * a fixed sheet is an exact printed list, and basic lands may always repeat.
+ */
+export function avoidsRepeats(sheet: BoosterSheet, facts: FactsLookup): boolean {
+  return !sheet.isFixed && !isAnyRaritySheet(sheet, facts);
+}
+
+/** A card in a finish: the same printing as a foil and as a nonfoil are different cards here. */
+export function repeatKey(printingId: PrintingId, sheet: BoosterSheet): string {
+  return `${printingId}/${sheet.isFoil ? "foil" : "regular"}`;
+}
+
+/**
+ * The sheet without the cards already given, unless too few would be left for the draw (then
+ * the whole sheet, so a tiny sheet still fills its slots).
+ */
+function withoutGiven(
+  sheet: BoosterSheet,
+  count: number,
+  given: ReadonlySet<string>,
+): BoosterSheet {
+  const remaining = sheet.cards.filter(
+    (card) => !given.has(repeatKey(card.printingId, sheet)) && card.weight > 0,
+  );
+  const enough = sheet.allowDuplicates ? remaining.length > 0 : remaining.length >= count;
+  return enough ? { ...sheet, cards: remaining } : sheet;
+}
+
 /** A generated pack before it's put in reveal order. */
 export type GeneratedPack = Readonly<{ variantIndex: number; cards: readonly PackCard[] }>;
 
@@ -101,9 +152,17 @@ export function generatePack(config: BoosterConfig, rng: Rng, facts: FactsLookup
   const variant = config.variants[variantIndex];
 
   const cards: PackCard[] = [];
-  // Slots are drawn in name order, so how the recipe's JSON happens to order its keys (Postgres
-  // reorders them) can never change which cards a seed produces.
-  const sheetNames = Object.keys(variant.slots).sort();
+  /** Cards the slots of one rarity (and fixed lists) have given so far (rule 3b). */
+  const given = new Set<string>();
+  // Fixed lists first (they're exact, so later slots can avoid their cards), then the rest. Each
+  // group in name order, so how the recipe's JSON happens to order its keys (Postgres reorders
+  // them) can never change which cards a seed produces.
+  const byName = Object.keys(variant.slots).sort();
+  const isFixedSheet = (name: string) => config.sheets[name]?.isFixed === true;
+  const sheetNames = [
+    ...byName.filter(isFixedSheet),
+    ...byName.filter((name) => !isFixedSheet(name)),
+  ];
   for (const sheetName of sheetNames) {
     const count = variant.slots[sheetName];
     const sheet = config.sheets[sheetName];
@@ -111,9 +170,16 @@ export function generatePack(config: BoosterConfig, rng: Rng, facts: FactsLookup
       throw new Error(`${config.setCode}/${config.boosterType}: no sheet named "${sheetName}"`);
     }
     const draw = DRAW_STRATEGIES[sheetKind(sheet)];
-    const printingIds = sheet.balanceColors
-      ? drawBalanced(draw, rng, sheet, count, facts)
-      : draw(rng, sheet, count);
+    const drawable = avoidsRepeats(sheet, facts) ? withoutGiven(sheet, count, given) : sheet;
+    const printingIds = drawable.balanceColors
+      ? drawBalanced(draw, rng, drawable, count, facts)
+      : draw(rng, drawable, count);
+    if (!isAnyRaritySheet(sheet, facts)) {
+      for (const printingId of printingIds) {
+        // Basic lands repeat in real packs (a Jumpstart pack has several of each).
+        if (!facts(printingId).isBasicLand) given.add(repeatKey(printingId, sheet));
+      }
+    }
 
     for (const printingId of printingIds) {
       const finish = finishFor(sheetName, sheet, facts(printingId).finishes);

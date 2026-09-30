@@ -34,17 +34,17 @@ purpose (see [future-ideas.md](future-ideas.md)).
 
 ## Data
 
-| Request                                                    | Status | Evidence                                                                                                                                                   |
-| ---------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MTGJSON + Scryfall, cached, batched, polite                | ✅     | set files per enabled set; one bulk file per Scryfall update; images cached on disk (ADR 0007)                                                             |
-| Standard sets first; nightly sync + "Sync now"             | ✅     | 20 Standard sets + 15 Commander companions enabled; `/admin/catalog`                                                                                       |
-| Commander version of a set enabled by default              | ✅     | `companionsToEnable`                                                                                                                                       |
-| Paper only, excluding only digital-only things             | ✅     | design doc 04 rule 9; e.g. `MSH: play-arena` skipped                                                                                                       |
-| A product that opens to nothing is a bug                   | ✅     | rule 5b, `NothingInside`, store filter; `worker check-products` passes                                                                                     |
-| **New sets fill in later without a manual full sync**      | ✅ new | **Rule 12 (added in this audit):** nightly runs re-import sets released in the last 120 days or not out yet                                                |
-| Reality Fracture booster packs                             | ⏳     | MTGJSON has no FRA booster recipes yet (checked 2026-09-28), so FRA packs, boxes and Draft Night are held back. The nightly run adds them when they appear |
-| Echoverse pairs in Reality Fracture                        | ➡️     | noted in future-ideas; needs the booster data first                                                                                                        |
-| Automated tests never hit the network; opt-in remote suite | ✅     | fixtures in `tests/fixtures/`; `pnpm test:remote` is separate                                                                                              |
+| Request                                                    | Status | Evidence                                                                                                    |
+| ---------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| MTGJSON + Scryfall, cached, batched, polite                | ✅     | set files per enabled set; one bulk file per Scryfall update; images cached on disk (ADR 0007)              |
+| Standard sets first; nightly sync + "Sync now"             | ✅     | 20 Standard sets + 15 Commander companions enabled; `/admin/catalog`                                        |
+| Commander version of a set enabled by default              | ✅     | `companionsToEnable`                                                                                        |
+| Paper only, excluding only digital-only things             | ✅     | design doc 04 rule 9; e.g. `MSH: play-arena` skipped                                                        |
+| A product that opens to nothing is a bug                   | ✅     | rule 5b, `NothingInside`, store filter; `worker check-products` passes                                      |
+| **New sets fill in later without a manual full sync**      | ✅ new | **Rule 12 (added in this audit):** nightly runs re-import sets released in the last 120 days or not out yet |
+| Reality Fracture booster packs                             | ✅     | MTGJSON published the recipes; the nightly run (rule 12) picked them up on 2026-09-29                       |
+| Echoverse pairs in Reality Fracture                        | ✅     | encoded by MTGJSON as fixed pair sheets; opened correctly (design doc 05, rule 3b fixed repeats)            |
+| Automated tests never hit the network; opt-in remote suite | ✅     | fixtures in `tests/fixtures/`; `pnpm test:remote` is separate                                               |
 
 ## Products that exist but aren't for sale
 

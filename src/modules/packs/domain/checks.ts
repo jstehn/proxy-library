@@ -1,5 +1,11 @@
-import type { BoosterConfig, PrintingId } from "@/modules/catalog";
-import { sheetKind, type GeneratedPack } from "./generate";
+import type { BoosterConfig, BoosterSheet, PrintingId } from "@/modules/catalog";
+import {
+  avoidsRepeats,
+  isAnyRaritySheet,
+  repeatKey,
+  sheetKind,
+  type GeneratedPack,
+} from "./generate";
 import type { FactsLookup } from "./pack";
 
 // Checks a generated pack against the rules its recipe implies (design doc 05, rules 2–4 and 6).
@@ -47,5 +53,41 @@ export function packProblems(
       problems.push(`sheet "${sheetName}" repeated a card`);
     }
   }
+
+  // Rule 3b: slots of one rarity never repeat a card another slot gave (in the same finish).
+  const sheetsByCard = new Map<string, Set<string>>();
+  for (const card of pack.cards) {
+    const sheet = config.sheets[card.sheet];
+    if (sheet === undefined || !knowsAll(sheet, facts) || isAnyRaritySheet(sheet, facts)) continue;
+    if (isBasicOrUnknown(card.printingId, facts)) continue; // basic lands may repeat
+    const key = repeatKey(card.printingId, sheet);
+    sheetsByCard.set(key, (sheetsByCard.get(key) ?? new Set()).add(card.sheet));
+  }
+  for (const [key, sheetNames] of sheetsByCard) {
+    const names = [...sheetNames];
+    const strict = names.some((name) => avoidsRepeats(config.sheets[name], facts));
+    if (names.length > 1 && strict) {
+      problems.push(`${key.split("/")[0]} came from both "${names.sort().join('" and "')}"`);
+    }
+  }
   return problems;
+}
+
+/** Whether every card on the sheet is a known printing (unknown ones are reported above). */
+function knowsAll(sheet: BoosterSheet, facts: FactsLookup): boolean {
+  try {
+    for (const card of sheet.cards) facts(card.printingId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Basic lands may repeat; an unknown printing is already reported by rule 6. */
+function isBasicOrUnknown(printingId: PrintingId, facts: FactsLookup): boolean {
+  try {
+    return facts(printingId).isBasicLand;
+  } catch {
+    return true;
+  }
 }

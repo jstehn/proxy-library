@@ -73,7 +73,62 @@ describe("generatePack", () => {
     );
   });
 
-  it("draws the slots in name order, so the recipe's key order doesn't matter", () => {
+  it("never repeats a card between slots of one rarity (rule 3b)", () => {
+    // A common-or-uncommon slot beside the commons and uncommons, like Reality Fracture's:
+    // every card it can give is also on one of those sheets.
+    const flex = sampleSheet([
+      ["c-W1", 1],
+      ["c-U1", 1],
+      ["c-B1", 1],
+      ["u-1", 1],
+      ["u-2", 1],
+    ]);
+    const config = {
+      ...withSheet("commonUncommon", flex, { common: 6, commonUncommon: 1, uncommon: 3 }),
+    };
+    fc.assert(
+      fc.property(fc.string(), (seed) => {
+        const ids = pack(seed, config).cards.map((card) => card.printingId);
+        expect(new Set(ids).size).toBe(ids.length);
+        expect(packProblems(config, pack(seed, config), sampleFacts)).toEqual([]);
+      }),
+    );
+  });
+
+  it("still lets an any-rarity slot (wildcard, foil) repeat another slot's card", () => {
+    // A nonfoil wildcard with commons and rares: over many packs it sometimes matches a common.
+    const wildcard = sampleSheet([
+      ["c-W1", 1],
+      ["c-U1", 1],
+      ["r-1", 1],
+    ]);
+    const config = withSheet("wildcard", wildcard, { common: 6, wildcard: 1 });
+    const repeats = Array.from({ length: 300 }, (_, n) => pack(`wild-${n}`, config)).filter(
+      (generated) => {
+        const ids = generated.cards.map((card) => card.printingId);
+        return new Set(ids).size < ids.length;
+      },
+    );
+    expect(repeats.length).toBeGreaterThan(0);
+    expect(packProblems(config, repeats[0], sampleFacts)).toEqual([]);
+  });
+
+  it("the pack check reports a repeat between slots of one rarity", () => {
+    const flex = sampleSheet([["c-W1", 1]]);
+    const config = withSheet("commonUncommon", flex, { common: 1, commonUncommon: 1 });
+    const repeated = {
+      variantIndex: 0,
+      cards: [
+        { printingId: "c-W1", finish: "nonfoil", sheet: "common" },
+        { printingId: "c-W1", finish: "nonfoil", sheet: "commonUncommon" },
+      ],
+    } as unknown as ReturnType<typeof pack>;
+    expect(packProblems(config, repeated, sampleFacts)).toEqual([
+      'c-W1 came from both "common" and "commonUncommon"',
+    ]);
+  });
+
+  it("draws fixed lists first, then the rest in name order, whatever the recipe's key order", () => {
     const reordered = {
       ...SAMPLE_BOOSTER,
       variants: SAMPLE_BOOSTER.variants.map((variant) => ({

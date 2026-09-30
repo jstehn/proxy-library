@@ -10,10 +10,11 @@ design doc (or joins a phase's design) and is removed from this list.
   Example: **Reality Fracture** play boosters reportedly guarantee _matching Echoverse pairs_.
   MTGJSON describes a pack as independent draws from weighted sheets (plus fixed sheets and
   color balance), so "these two slots must hold a matching pair" can't be written in its format.
-  - **Status (2026-09-27):** MTGJSON has **no booster recipe for FRA yet** (only its two
-    Commander deck products), so FRA packs can't be opened at all today. Check again after a
-    full sync once MTGJSON publishes them, and read how they encode the pairs. They may use a
-    fixed sheet per pair, or many variants.
+  - **Status (2026-09-30): handled by the data.** MTGJSON's FRA Play Booster recipe has 232
+    variants, each with a fixed two-card sheet holding one matched pair (`pairChandra`) and a
+    third-card sheet without that pair (`thirdNotChandra`). The engine opens these correctly,
+    and `check-packs` passes. The fix needed was rule 3b in design doc 05 (no repeats between
+    slots of one rarity), which FRA's common-or-uncommon slot exposed.
   - **If the data can't express it:** add a small, per-set "booster rule" step after
     `generatePack` (e.g. `pairEchoverse(pack, rng)`), chosen from a table keyed by set and
     booster type (the same Strategy table idea as the sheet drawers). Each rule gets its own
