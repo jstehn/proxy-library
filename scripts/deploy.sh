@@ -16,7 +16,7 @@ HOST="${DEPLOY_HOST:-your-server}"
 PORTAINER_URL="${PORTAINER_URL:-https://$HOST:9443}"
 TOKEN_FILE="${PORTAINER_TOKEN_FILE:-$HOME/.config/proxy-library/portainer-token}"
 STACK_NAME="${STACK_NAME:-proxylib-stack}"
-PORT="${DEPLOY_PORT:-3470}"
+PORT="${DEPLOY_PORT:-3470}" # used only when the stack is first created
 # Used only when the stack is first created. Afterwards, change them in Portainer.
 APP_URL="${DEPLOY_APP_URL:-https://proxylib.example.com}"
 TZ_NAME="${DEPLOY_TZ:-UTC}"
@@ -85,14 +85,18 @@ else
     }' | portainer PUT "/stacks/$STACK_ID?endpointId=$ENDPOINT_ID" --data @- >/dev/null
 fi
 
-echo "==> Waiting for the app to answer"
-URL="http://$HOST:$PORT/api/health"
+# Portainer replaces the containers after the API call returns, and until then the old version
+# still answers. So wait until the app container runs the new image and is healthy.
+echo "==> Waiting for $IMAGE to be running and healthy"
+APP_CONTAINER="$STACK_NAME-app-1"
 for _ in $(seq 1 90); do
-  if curl -fsS "$URL" >/dev/null 2>&1; then
+  STATE="$(ssh "$HOST" "docker inspect --format '{{.Config.Image}} {{.State.Health.Status}}' '$APP_CONTAINER'" 2>/dev/null || true)"
+  if [[ "$STATE" == "$IMAGE healthy" ]]; then
     echo "Deployed $IMAGE. Open $APP_URL"
     exit 0
   fi
   sleep 2
 done
-echo "The app didn't answer at $URL within 3 minutes. Check the stack's logs in Portainer." >&2
+echo "$IMAGE wasn't running and healthy within 3 minutes (last seen: ${STATE:-nothing})." >&2
+echo "Check the stack in Portainer: its containers and their logs." >&2
 exit 1
