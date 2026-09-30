@@ -14,13 +14,14 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-# The build only needs configuration that parses; real values come at runtime.
-ENV DATABASE_URL=postgres://build@localhost/build \
+# The build only needs configuration that parses; real values come at runtime. These are set for
+# this one command, so none of them ends up in the image.
+RUN DATABASE_URL=postgres://build@localhost/build \
     AUTH_SECRET=build-time-placeholder-secret-not-used-at-runtime \
     APP_URL=http://localhost:3000 \
     IMAGE_CACHE_DIR=/data/images \
-    SYNC_CACHE_DIR=/data/cache
-RUN pnpm exec next build
+    SYNC_CACHE_DIR=/data/cache \
+    pnpm exec next build
 
 # The runtime keeps the full dependencies and the source: the worker runs TypeScript with tsx.
 FROM base AS runtime

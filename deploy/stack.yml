@@ -1,0 +1,98 @@
+# Proxy Library on the server (docs/deploy.md): the Portainer stack "proxylib-stack". Unlike
+# ../docker-compose.yml, it uses a prebuilt image and has no build step, since Portainer stacks
+# can't build. scripts/deploy.sh builds the image, loads it on the server, and creates or updates
+# the stack through Portainer's API. Settings are the stack's environment variables in Portainer.
+
+x-app: &app
+  image: proxy-library:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://tcg:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/tcg
+    AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 characters)}
+    APP_URL: ${APP_URL:?Set APP_URL to the address players use}
+    IMAGE_CACHE_DIR: /data/images
+    SYNC_CACHE_DIR: /data/cache
+    SYNC_TIME: ${SYNC_TIME:-04:00}
+    TZ: ${TZ:-UTC}
+  labels:
+    # The image is built and loaded by scripts/deploy.sh, not pulled from a registry, so
+    # Watchtower must not try to update it.
+    com.centurylinklabs.watchtower.enable: "false"
+  volumes:
+    - images:/data/images
+    - sync-cache:/data/cache
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tcg
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: tcg
+      TZ: ${TZ:-UTC}
+    labels:
+      # Minor Postgres updates are fine, but a surprise restart mid-sync isn't worth it.
+      com.centurylinklabs.watchtower.enable: "false"
+      # A nightly backup at 03:30, run by the server's Ofelia (which reads these labels): a
+      # compressed dump in the `backups` volume, kept for 14 days. pg_dump's own format (-Fc)
+      # is compressed and fails loudly, so a failed dump never leaves an empty "backup".
+      # Restore: docs/deploy.md. ($$ is a literal $ in compose files.)
+      ofelia.enabled: "true"
+      ofelia.job-exec.proxy-library-backup.schedule: "0 30 3 * * *"
+      ofelia.job-exec.proxy-library-backup.command: >-
+        sh -c 'pg_dump -U tcg -d tcg -Fc -f /backups/proxy-library-$$(date +%F).dump
+        && find /backups -name "proxy-library-*.dump" -mtime +13 -delete'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcg -d tcg"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Brings the database schema up to date, then exits. The app and worker wait for it, so a
+  # failed migration stops them from starting half-migrated.
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["pnpm", "worker", "migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    <<: *app
+    ports:
+      - "${PORT:-3470}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # The nightly catalog sync, and syncs admins queue from Admin → Catalog.
+  worker:
+    <<: *app
+    command: ["pnpm", "worker", "schedule"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  images:
+  sync-cache:
+  backups:
