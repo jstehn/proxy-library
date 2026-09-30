@@ -79,7 +79,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
             imageId={view.keyArtId}
             alt={`${view.setName} key art`}
             sizes="640px"
-            className="aspect-[16/5] w-full max-w-2xl rounded-lg object-cover"
+            className="max-w-2xl rounded-lg"
           />
         )}
       </section>

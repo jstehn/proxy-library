@@ -4,7 +4,7 @@ import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { ProductArt } from "@/ui/product-art";
 import { KeyArt } from "@/ui/product-image";
-import { KeyruneStylesheet } from "@/ui/set-symbol";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 
 export default async function StorePage() {
   await requireActor();
@@ -32,7 +32,7 @@ export default async function StorePage() {
                     imageId={set.keyArtId}
                     alt={`${set.name} key art`}
                     sizes="(min-width: 1024px) 25vw, 50vw"
-                    className="aspect-[4/3] w-full rounded-lg object-cover shadow-md"
+                    className="rounded-lg shadow-md"
                   />
                 ) : (
                   <ProductArt
@@ -45,7 +45,14 @@ export default async function StorePage() {
                     artist={set.featured?.artist}
                   />
                 )}
-                <span className="text-sm font-medium">{set.name}</span>
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <SetSymbol
+                    keyruneCode={set.keyruneCode}
+                    fallbackCode={set.parentKeyruneCode}
+                    className="text-xl"
+                  />
+                  {set.name}
+                </span>
                 <span className="text-xs text-zinc-500">
                   {set.productsForSale} products · released {set.releaseDate}
                 </span>

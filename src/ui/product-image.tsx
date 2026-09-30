@@ -18,8 +18,12 @@ export function ProductImage(props: ProductImageProps) {
   if (photoIds.length === 0) return <ProductArt {...art} />;
 
   const imageId = photoIds[variant % photoIds.length];
+  // The box has the same shape as the generated art (its aspect ratio). The photo fills the box
+  // exactly and `object-contain` scales it down to fit whole, whatever its own shape: a tall pack
+  // photo gets space at the sides, a wide box photo space above and below. (`max-height: 100%`
+  // alone doesn't work here: the box's height comes only from its aspect ratio.)
   return (
-    <div className={`flex w-full items-center justify-center ${ASPECT[art.shape]}`}>
+    <div className={`relative w-full ${ASPECT[art.shape]}`}>
       {/* Plain <img>: pre-sized WebP from our own disk, lazily loaded. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -28,13 +32,17 @@ export function ProductImage(props: ProductImageProps) {
         sizes={sizes}
         alt={`${art.setName} ${art.label}`}
         loading="lazy"
-        className="max-h-full max-w-full object-contain drop-shadow-lg"
+        className="absolute inset-0 h-full w-full object-contain drop-shadow-lg"
       />
     </div>
   );
 }
 
-/** A set's official key art as a banner or tile, or nothing when it has none. */
+/**
+ * A set's official key art, whole: WPN's key art is a wide banner (1920 × 699, about 2.75 : 1),
+ * so it's shown in a frame of that shape and scaled to fit, never cropped. `className` adds
+ * rounding and shadows, not a size.
+ */
 export function KeyArt(props: {
   imageId: string;
   alt: string;
@@ -49,7 +57,7 @@ export function KeyArt(props: {
       sizes={props.sizes ?? "100vw"}
       alt={props.alt}
       loading="lazy"
-      className={props.className}
+      className={`aspect-[1920/699] w-full object-contain ${props.className ?? ""}`}
     />
   );
 }

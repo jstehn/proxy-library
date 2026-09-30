@@ -33,11 +33,15 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
           imageId={set.keyArtId}
           alt={`${set.name} key art`}
           sizes="(min-width: 1152px) 1152px, 100vw"
-          className="aspect-[16/5] w-full rounded-xl object-cover"
+          className="rounded-xl"
         />
       )}
       <header className="flex items-center gap-3">
-        <SetSymbol keyruneCode={set.keyruneCode} className="text-4xl" />
+        <SetSymbol
+          keyruneCode={set.keyruneCode}
+          fallbackCode={set.parentKeyruneCode}
+          className="text-4xl"
+        />
         <div>
           <h1 className="text-2xl font-semibold">{set.name}</h1>
           <p className="text-sm text-zinc-500">

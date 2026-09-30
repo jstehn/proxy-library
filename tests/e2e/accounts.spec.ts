@@ -203,6 +203,14 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
   await expect
     .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);
+  // It fits inside its box (the same size as the generated art), whatever the photo's shape.
+  const [photoBox, frameBox] = await Promise.all([
+    photo.boundingBox(),
+    photo.locator("..").boundingBox(),
+  ]);
+  expect(photoBox && frameBox).toBeTruthy();
+  expect(photoBox!.height).toBeLessThanOrEqual(frameBox!.height + 1);
+  expect(photoBox!.width).toBeLessThanOrEqual(frameBox!.width + 1);
   await pack.getByText("What's inside").click();
   await expect(pack.getByText("From Wizards of the Coast's product page.")).toBeVisible();
   await expect(

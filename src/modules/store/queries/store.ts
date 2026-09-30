@@ -22,10 +22,14 @@ const PRICE_JOINS = sql`
   left join product_wpn_links l on l.product_id = sp.id
   left join wpn_products w on w.set_code = l.wpn_set_code and w.name = l.wpn_name`;
 
-/** A set's key art (from WPN), once downloaded: an artwork image id, or null. */
+/**
+ * A set's key art (from WPN), once downloaded: an artwork image id, or null. A Commander
+ * companion set has no WPN page of its own, so it shows its main set's.
+ */
 const KEY_ART = sql`(
   select pg.key_art->>'id' from wpn_pages pg
-   where pg.set_code = s.code
+   where pg.set_code = case when s.type = 'commander' then coalesce(s.parent_code, s.code)
+                            else s.code end
      and pg.key_art->>'id' in (select image_id from artwork_files)
 )`;
 
@@ -73,6 +77,8 @@ export type StoreSet = Readonly<{
   code: string;
   name: string;
   keyruneCode: string;
+  /** The main set's symbol, for a Commander set whose own symbol Keyrune may not have yet. */
+  parentKeyruneCode: string | null;
   releaseDate: string;
   productsForSale: number;
   featured: FeaturedArt | null;
@@ -111,9 +117,10 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
     release_date: string;
     products_for_sale: number;
     key_art_id: string | null;
+    parent_keyrune_code: string | null;
   }>(sql`
     select s.code, s.name, s.keyrune_code, s.release_date, count(*)::int as products_for_sale,
-           ${KEY_ART} as key_art_id
+           ${KEY_ART} as key_art_id, (select p.keyrune_code from card_sets p where p.code = s.parent_code) as parent_keyrune_code
       from card_sets s
       join sealed_products sp on sp.set_code = s.code
       ${PRICE_JOINS}
@@ -129,6 +136,7 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
     code: row.code,
     name: row.name,
     keyruneCode: row.keyrune_code,
+    parentKeyruneCode: row.parent_keyrune_code,
     releaseDate: row.release_date,
     productsForSale: row.products_for_sale,
     featured: featured.get(row.code) ?? null,
@@ -159,8 +167,10 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       keyrune_code: string;
       release_date: string;
       key_art_id: string | null;
+      parent_keyrune_code: string | null;
     }>(sql`
-      select s.code, s.name, s.keyrune_code, s.release_date, ${KEY_ART} as key_art_id
+      select s.code, s.name, s.keyrune_code, s.release_date, ${KEY_ART} as key_art_id,
+             (select p.keyrune_code from card_sets p where p.code = s.parent_code) as parent_keyrune_code
         from card_sets s where s.code = ${code.toUpperCase()} and s.is_enabled
     `)
   ).rows;
@@ -195,6 +205,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       code: set.code,
       name: set.name,
       keyruneCode: set.keyrune_code,
+      parentKeyruneCode: set.parent_keyrune_code,
       releaseDate: set.release_date,
       featured: featured.get(set.code) ?? null,
       keyArtId: set.key_art_id,
