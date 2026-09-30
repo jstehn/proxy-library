@@ -47,6 +47,7 @@ const packListing: Listing = {
   kind: "booster_pack/play",
   isSetEnabled: true,
   kindPrice: Cents.of(549),
+  officialMsrp: null,
   override: null,
 };
 const boxListing: Listing = {

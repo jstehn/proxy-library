@@ -195,6 +195,19 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
     .click();
   await expect(page.getByText("$5.49")).toBeVisible();
   const pack = page.getByRole("listitem").filter({ hasText: "Bloomburrow Play Booster Pack" });
+
+  // Wizards' official photo (design doc 13), served from our disk, and WPN's product details.
+  const photo = pack.locator('img[src^="/api/artwork/"]');
+  await photo.scrollIntoViewIfNeeded(); // it loads lazily, when it comes into view
+  await expect(photo).toBeVisible();
+  await expect
+    .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
+  await pack.getByText("What's inside").click();
+  await expect(pack.getByText("From Wizards of the Coast's product page.")).toBeVisible();
+  await expect(
+    page.getByText(/unofficial Fan Content permitted under the Fan Content Policy/),
+  ).toBeVisible();
   await pack.getByRole("button", { name: "Buy" }).click();
   await expect(pack.getByText(/waiting in your inventory/)).toBeVisible();
   await expect(page.getByTitle("Your wallet")).toHaveText("$44.51");

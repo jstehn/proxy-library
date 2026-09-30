@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SealedProductId } from "@/modules/catalog";
 import { makeInventory, type Item } from "@/modules/inventory";
-import { makeStore } from "@/modules/store";
+import { makeStore, storePage } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import {
@@ -111,5 +111,36 @@ describe("opening", () => {
     expect(await count("sealed_items", "status = 'unopened'")).toBe(0);
     expect(await count("acquisitions", "source = 'product'")).toBe(1); // the foil promo
     expect(await count("acquisitions", "source = 'deck'")).toBeGreaterThan(0);
+  });
+});
+
+describe("official photos, MSRPs and details from WPN (design doc 13)", () => {
+  it("shows the photos and WPN's details; a case keeps its generated art", async () => {
+    const page = await storePage(db, "BLB");
+    const product = (name: string) => page?.products.find((p) => p.name === name);
+    expect(page?.set.keyArtId).toMatch(/^[A-Za-z0-9]+-[a-f0-9]{12}$/);
+    expect(product("Bloomburrow Play Booster Pack")?.photoIds).toHaveLength(1);
+    expect(product("Bloomburrow Play Booster Pack")?.contents.length).toBeGreaterThan(0);
+    expect(product("Bloomburrow Play Booster Pack")?.releaseDate).toBe("2024-08-02");
+    expect(product("Bloomburrow Play Booster Box Case")?.photoIds ?? []).toEqual([]);
+  });
+
+  it("charges Wizards' official MSRP when it has one, and an admin's own price over that", async () => {
+    // Bloomburrow's recorded page lists no MSRPs, so give its Play Booster one.
+    await db.execute(
+      sql`update wpn_products set msrp_cents = 599 where name = 'Bloomburrow Play Booster'`,
+    );
+    const shown = (await storePage(db, "BLB"))?.products.find(
+      (p) => p.name === "Bloomburrow Play Booster Pack",
+    )?.msrp;
+    expect(shown).toBe(599); // not the kind's $5.49
+    await buy(PLAY_PACK);
+    expect(await balance("jack")).toBe(5000 - 599);
+
+    await store.setProductPrice(admin, { productId: PLAY_PACK, price: Cents.of(450) });
+    await buy(PLAY_PACK);
+    expect(await balance("jack")).toBe(5000 - 599 - 450);
+    await store.setProductPrice(admin, { productId: PLAY_PACK, price: null });
+    await db.execute(sql`update wpn_products set msrp_cents = null`);
   });
 });

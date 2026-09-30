@@ -13,7 +13,7 @@ export function shapeForCategory(category: string): ProductShape {
   return "kit";
 }
 
-const ASPECT: Record<ProductShape, string> = {
+export const ASPECT: Record<ProductShape, string> = {
   pack: "aspect-[5/8]",
   box: "aspect-[4/3]",
   bundle: "aspect-square",
@@ -28,7 +28,7 @@ function hueFor(setCode: string): number {
   return hash;
 }
 
-type ProductArtProps = {
+export type ProductArtProps = {
   setCode: string;
   setName: string;
   keyruneCode: string;

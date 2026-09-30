@@ -31,8 +31,10 @@ design doc (or joins a phase's design) and is removed from this list.
 
 ## Catalog and images
 
-- **Real product photos** (retailer images) for sealed products and sets. **Needs a decision on
-  retailer terms of use first.** Generated SVG art covers every product until then.
+- ~~Real product photos~~ **Done (design doc 13):** Wizards' official photos and key art from
+  Wizards Play Network, with generated art as the fallback. Still open: **photos for Commander
+  decks one by one** (WPN's per-deck box photos aren't labeled; an admin can assign them), and
+  products WPN doesn't list (tins, Commander kits, welcome decks).
 - **Image cache warming**: fetch a set's small images in the background after it's enabled,
   politely rate-limited, so the first visit to a set page isn't slow.
 - **In-flight image de-duplication**: if two people ask for the same uncached image at once,

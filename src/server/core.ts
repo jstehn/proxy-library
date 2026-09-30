@@ -12,12 +12,15 @@ import {
 } from "@/modules/accounts/infrastructure";
 import { makeCatalog } from "@/modules/catalog";
 import {
+  diskArtworkStore,
   diskImageStore,
+  drizzleArtworkRepository,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   httpImageFetcher,
   httpMtgjsonGateway,
   httpScryfallGateway,
+  httpWpnGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
 import { makeDecks } from "@/modules/decks";
@@ -74,6 +77,7 @@ export function buildCore(config: Config) {
       playerDirectory: drizzlePlayerDirectory(transaction),
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
+      artwork: drizzleArtworkRepository(transaction),
       boosters: drizzleBoosterSource(transaction),
       collection: drizzleCollectionRepository(transaction),
       items: drizzleItemRepository(transaction),
@@ -117,6 +121,9 @@ export function buildCore(config: Config) {
     scryfall: httpScryfallGateway(politeFetch(8), config.syncCacheDir),
     images: diskImageStore(config.imageCacheDir),
     imageFetcher: httpImageFetcher(politeFetch(10)),
+    // WPN pages one a second; their images come from a CDN (design doc 13, rule 3).
+    wpn: httpWpnGateway(politeFetch(1), politeFetch(4)),
+    artworkFiles: diskArtworkStore(config.imageCacheDir),
     clock,
     syncTime: config.syncTime,
   });

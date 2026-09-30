@@ -3,7 +3,7 @@
 // lives in a pure reducer (machine.ts); this component only draws it and sends events. The
 // cards were decided on the server, so nothing here can change a pull.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { ProductArt } from "../product-art";
+import { ProductImage } from "../product-image";
 import { CardBack } from "./card-back";
 import {
   hitLevel,
@@ -159,7 +159,10 @@ export function PackOpener(props: PackOpenerProps) {
             aria-label={`Tear open ${pack.name}`}
             className={`relative w-56 ${state.phase === "tearing" ? "animate-pack-away" : "transition-transform hover:scale-105 hover:-rotate-1"}`}
           >
-            <ProductArt
+            <ProductImage
+              photoIds={pack.photoIds}
+              variant={pack.photoVariant}
+              sizes="224px"
               setCode={pack.setCode}
               setName={pack.setName}
               keyruneCode={pack.keyruneCode}

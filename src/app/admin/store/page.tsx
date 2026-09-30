@@ -114,6 +114,10 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price for one product</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          A product sells at its own price if it has one, else Wizards&apos; official MSRP (from its
+          WPN product page), else its kind&apos;s price.
+        </p>
         <form method="get" className="flex items-center gap-2 text-sm">
           <select
             name="set"
@@ -140,6 +144,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
                 <th className="py-1 font-medium">Product</th>
                 <th className="py-1 font-medium">Kind price</th>
+                <th className="py-1 font-medium">Official MSRP</th>
                 <th className="py-1 font-medium">Own price</th>
               </tr>
             </thead>
@@ -154,6 +159,9 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                   </td>
                   <td className="py-1.5 tabular-nums">
                     {product.kindPrice === null ? "not sold" : Cents.format(product.kindPrice)}
+                  </td>
+                  <td className="py-1.5 tabular-nums">
+                    {product.officialMsrp === null ? "—" : Cents.format(product.officialMsrp)}
                   </td>
                   <td className="py-1.5">
                     <PriceForm

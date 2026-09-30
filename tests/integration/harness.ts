@@ -5,10 +5,13 @@ import type { Actor } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import { makeCatalog } from "@/modules/catalog";
 import {
+  drizzleArtworkRepository,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   fixtureMtgjsonGateway,
   fixtureScryfallGateway,
+  fixtureWpnGateway,
+  memoryArtworkStore,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
 import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
@@ -43,6 +46,7 @@ export function servicesFor(transaction: DbExecutor) {
   return {
     catalog: drizzleCatalogRepository(transaction),
     syncRuns: drizzleSyncRunRepository(transaction),
+    artwork: drizzleArtworkRepository(transaction),
     wallets: drizzleWalletRepository(transaction),
     economy: drizzleEconomySettingsRepository(transaction),
     playerDirectory: drizzlePlayerDirectory(transaction),
@@ -68,17 +72,20 @@ export const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
 /** A fresh catalog from the recorded fixtures: Bloomburrow, enabled as a Standard set. */
 export async function loadFixtureCatalog(): Promise<void> {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
   );
   const catalog = makeCatalog({
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
+      artwork: drizzleArtworkRepository(transaction),
     })),
     mtgjson: fixtureMtgjsonGateway(),
     scryfall: fixtureScryfallGateway(),
     images: { get: async () => null, put: async () => undefined },
     imageFetcher: { fetch: async () => new Uint8Array() },
+    wpn: fixtureWpnGateway(),
+    artworkFiles: memoryArtworkStore(),
     clock,
     syncTime: { hour: 4, minute: 0 },
   });

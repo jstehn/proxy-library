@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { recentOpenings, unopenedItems, type OpenItemError } from "@/modules/inventory";
+import { packKey, packPhotos, productPhotos, variantFor } from "@/modules/catalog";
+import {
+  recentOpenings,
+  unopenedItems,
+  type OpenItemError,
+  type UnopenedGroup,
+} from "@/modules/inventory";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
@@ -30,6 +36,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
     recentOpenings(db, actor.userId),
   ]);
   const error = errorMessage((await props.searchParams).error);
+  const photos = await photosFor(groups);
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
@@ -59,9 +66,11 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
               const canOpenAll = group.contentKind === "product" || count > 1;
               return (
                 <li key={group.itemIds[0]} className="flex flex-wrap items-center gap-3 py-3">
-                  {group.setCode && (
-                    <i className={`ss ss-${group.setCode.toLowerCase()} text-2xl`} aria-hidden />
-                  )}
+                  <Thumbnail
+                    photoIds={photos.get(group.itemIds[0]) ?? []}
+                    itemId={group.itemIds[0]}
+                    setCode={group.setCode}
+                  />
                   <span className="flex-1 font-medium">
                     {group.name}
                     {count > 1 && <span className="text-zinc-500"> × {count}</span>}
@@ -124,5 +133,53 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
         </section>
       )}
     </main>
+  );
+}
+
+/** Each group's official photos (by its first item's id): its product's, or a loose pack's. */
+async function photosFor(groups: readonly UnopenedGroup[]): Promise<Map<number, string[]>> {
+  const { db } = getContainer();
+  const byProduct = await productPhotos(
+    db,
+    groups.flatMap((group) => (group.productId ? [group.productId] : [])),
+  );
+  const byPack = await packPhotos(
+    db,
+    groups.flatMap((group) =>
+      group.contentKind === "pack" && group.setCode && group.boosterType
+        ? [{ setCode: group.setCode, boosterType: group.boosterType }]
+        : [],
+    ),
+  );
+  const photos = new Map<number, string[]>();
+  for (const group of groups) {
+    const found = group.productId
+      ? byProduct.get(group.productId)
+      : group.setCode && group.boosterType
+        ? byPack.get(packKey(group.setCode, group.boosterType))
+        : undefined;
+    if (found) photos.set(group.itemIds[0], found);
+  }
+  return photos;
+}
+
+/** A small official photo (the same pack art every time for an item), or the set's symbol. */
+function Thumbnail(props: { photoIds: readonly string[]; itemId: number; setCode: string | null }) {
+  if (props.photoIds.length === 0) {
+    return props.setCode ? (
+      <i className={`ss ss-${props.setCode.toLowerCase()} w-10 text-center text-2xl`} aria-hidden />
+    ) : (
+      <span className="w-10" />
+    );
+  }
+  const imageId = props.photoIds[variantFor(props.itemId, props.photoIds.length)];
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/api/artwork/${imageId}/small`}
+      alt=""
+      loading="lazy"
+      className="h-14 w-10 object-contain"
+    />
   );
 }

@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 import { createGunzip, gunzipSync } from "node:zlib";
 import { downloadToFile, fetchBytes, fetchJson, type Fetch } from "@/shared/http";
 import type {
+  ArtworkStore,
   ImageFetcher,
   ImageKey,
   ImageStore,
@@ -119,6 +120,32 @@ export function diskImageStore(root: string): ImageStore {
       const path = pathFor(key);
       await mkdir(join(root, key.size), { recursive: true });
       // Write-then-rename: a reader never sees a half-written image.
+      const partial = `${path}.partial-${process.pid}`;
+      await writeFile(partial, bytes);
+      await rename(partial, path);
+    },
+  };
+}
+
+/** Product photos and key art on disk: <root>/artwork/<size>/<imageId>.webp (design doc 13). */
+export function diskArtworkStore(root: string): ArtworkStore {
+  const SAFE_ID = /^[A-Za-z0-9-]+$/;
+  function pathFor(imageId: string, size: string): string {
+    if (!SAFE_ID.test(imageId)) throw new RangeError(`not an artwork id: ${imageId}`);
+    return join(root, "artwork", size, `${imageId}.webp`);
+  }
+  return {
+    async get(imageId, size) {
+      try {
+        return new Uint8Array(await readFile(pathFor(imageId, size)));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+      }
+    },
+    async put(imageId, size, bytes) {
+      const path = pathFor(imageId, size);
+      await mkdir(join(root, "artwork", size), { recursive: true });
       const partial = `${path}.partial-${process.pid}`;
       await writeFile(partial, bytes);
       await rename(partial, path);

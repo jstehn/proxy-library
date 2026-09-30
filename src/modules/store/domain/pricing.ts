@@ -8,9 +8,26 @@ export function productKind(category: string, subtype: string | null): string {
   return `${category}/${subtype ?? "default"}`;
 }
 
-/** The MSRP a product sells for: its own override if it has one, else its kind's price. */
-export function msrpFor(prices: { override: Cents | null; kindPrice: Cents | null }): Cents | null {
-  return prices.override ?? prices.kindPrice;
+/**
+ * Whether a product may sell at its kind's price. A case never does: MTGJSON files some cases
+ * under a single product's kind (a "Collector Booster Box Master Case" is a `booster_box`), so
+ * the kind's price would sell several boxes for the price of one. A case sells only at its
+ * official MSRP or an admin's own price. The SQL in store queries mirrors this (`IS_CASE`).
+ */
+export function kindPriceApplies(productName: string): boolean {
+  return !/\bcase\b/i.test(productName);
+}
+
+/**
+ * The MSRP a product sells for (ADR 0014, amended by ADR 0015): its own override, else Wizards'
+ * official MSRP from WPN, else its kind's price. None of them means not for sale.
+ */
+export function msrpFor(prices: {
+  override: Cents | null;
+  officialMsrp: Cents | null;
+  kindPrice: Cents | null;
+}): Cents | null {
+  return prices.override ?? prices.officialMsrp ?? prices.kindPrice;
 }
 
 export const MAX_PRICE = Cents.of(1_000_000); // $10,000.00

@@ -11,7 +11,9 @@ import type { MtgjsonGateway } from "../application/ports";
 import { PrintingId, SetCode } from "../domain/types";
 import { fakeImageFetcher, inMemoryImageStore } from "../testing/fakes";
 import { drizzleCatalogRepository, drizzleSyncRunRepository } from "./drizzle-repositories";
+import { drizzleArtworkRepository } from "./drizzle-artwork";
 import { fixtureMtgjsonGateway, fixtureScryfallGateway } from "./fixture-gateways";
+import { fixtureWpnGateway, memoryArtworkStore } from "./wpn";
 
 const { db, close } = createDatabase(loadConfig().databaseUrl);
 afterAll(close);
@@ -29,17 +31,22 @@ let clock: ReturnType<typeof manualClock>;
 let mtgjson: ReturnType<typeof fixtureMtgjsonGateway>;
 let images: ReturnType<typeof inMemoryImageStore>;
 let imageFetcher: ReturnType<typeof fakeImageFetcher>;
+let wpn: ReturnType<typeof fixtureWpnGateway>;
+let artworkFiles: ReturnType<typeof memoryArtworkStore>;
 
 function buildCatalog(gateway: MtgjsonGateway = mtgjson) {
   return makeCatalog({
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
+      artwork: drizzleArtworkRepository(transaction),
     })),
     mtgjson: gateway,
     scryfall: fixtureScryfallGateway(),
     images,
     imageFetcher,
+    wpn,
+    artworkFiles,
     clock,
     syncTime: { hour: 4, minute: 0 },
   });
@@ -54,10 +61,12 @@ async function countRows(table: string): Promise<number> {
 
 beforeEach(async () => {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
   );
   clock = manualClock("2026-09-27T12:00:00Z");
   mtgjson = fixtureMtgjsonGateway();
+  wpn = fixtureWpnGateway();
+  artworkFiles = memoryArtworkStore();
   images = inMemoryImageStore();
   imageFetcher = fakeImageFetcher();
 });
@@ -252,5 +261,118 @@ describe("images", () => {
     expect(
       await catalog.imageFor({ printingId: PrintingId.of(row.id), size: "small", face: "back" }),
     ).toEqual(err({ kind: "ImageNotFound" }));
+  });
+});
+
+describe("official photos, key art and details from WPN (design doc 13)", () => {
+  const productId = async (name: string) =>
+    (await db.execute<{ id: string }>(sql`select id from sealed_products where name = ${name}`))
+      .rows[0].id;
+  const links = async () =>
+    (
+      await db.execute<{ name: string; wpn_name: string | null; match: string; photo: string }>(sql`
+        select sp.name, l.wpn_name, l.match, l.photo
+          from product_wpn_links l join sealed_products sp on sp.id = l.product_id
+         order by sp.name
+      `)
+    ).rows;
+
+  it("reads each enabled set's page, links its products, and downloads every image", async () => {
+    const summary = await buildCatalog().runSync("prices");
+
+    expect(summary.artwork).toMatchObject({
+      pagesRead: ["BLB (bloomburrow)"],
+      noPage: [],
+      unreadable: [],
+      imageFailures: 0,
+    });
+    expect(wpn.pagesRead).toEqual(["bloomburrow"]); // not BLC: a Commander set has no page
+    expect(await links()).toEqual([
+      {
+        name: "Bloomburrow Bundle",
+        wpn_name: "Bloomburrow Bundle",
+        match: "by_kind",
+        photo: "variants",
+      },
+      {
+        name: "Bloomburrow Play Booster Box",
+        wpn_name: "Bloomburrow Play Booster Display",
+        match: "by_kind",
+        photo: "variants",
+      },
+      {
+        name: "Bloomburrow Play Booster Pack",
+        wpn_name: "Bloomburrow Play Booster",
+        match: "by_kind",
+        photo: "variants",
+      },
+      {
+        name: "Bloomburrow Starter Kit",
+        wpn_name: "Bloomburrow Starter Kit",
+        match: "by_kind",
+        photo: "variants",
+      },
+    ]); // the case is never matched
+    const images = await countRows("artwork_files");
+    expect(images).toBe(summary.artwork.imagesDownloaded);
+    expect(artworkFiles.keys).toHaveLength(images * 2); // two sizes each
+    const [page] = (
+      await db.execute<{ status: string; has_key_art: boolean }>(
+        sql`select status, key_art is not null as has_key_art from wpn_pages where set_code = 'BLB'`,
+      )
+    ).rows;
+    expect(page).toEqual({ status: "found", has_key_art: true });
+  });
+
+  it("doesn't read an old set's page again on a nightly run, or download images twice", async () => {
+    await buildCatalog().runSync("prices");
+    const second = await buildCatalog().runSync("prices");
+    expect(second.artwork.pagesRead).toEqual([]); // Bloomburrow isn't settling
+    expect(second.artwork.imagesDownloaded).toBe(0);
+    const full = await buildCatalog().runSync("full");
+    expect(full.artwork.pagesRead).toEqual(["BLB (bloomburrow)"]);
+    expect(full.artwork.imagesDownloaded).toBe(0);
+  });
+
+  it("keeps an admin's choice when the page is read again", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    const bundle = await productId("Bloomburrow Bundle");
+
+    expect(
+      await catalog.choosePhoto(admin, { productId: bundle, wpnName: null, photoIndex: null }),
+    ).toEqual({ ok: true, value: undefined });
+    expect(
+      await catalog.choosePhoto(admin, {
+        productId: bundle,
+        wpnName: "Bloomburrow Bundle",
+        photoIndex: 9,
+      }),
+    ).toEqual(err({ kind: "PhotoNotOnPage" }));
+    await catalog.runSync("full");
+    expect((await links()).find((link) => link.name === "Bloomburrow Bundle")).toEqual({
+      name: "Bloomburrow Bundle",
+      wpn_name: null,
+      match: "admin",
+      photo: "none",
+    });
+
+    // Undoing it links the product automatically at the next read of the page.
+    await catalog.clearPhotoChoice(admin, bundle);
+    await db.execute(sql`delete from sync_runs where status = 'queued'`);
+    await catalog.runSync("prices");
+    expect((await links()).find((link) => link.name === "Bloomburrow Bundle")?.match).toBe(
+      "by_kind",
+    );
+  });
+
+  it("never fails the sync over a missing or changed page (generated art stays)", async () => {
+    wpn = fixtureWpnGateway({ broken: ["bloomburrow"] });
+    const summary = await buildCatalog().runSync("prices");
+    expect(summary.failedSets).toEqual([]);
+    expect(summary.artwork.unreadable).toEqual([
+      { code: "BLB", error: "the page has no embedded data" },
+    ]);
+    expect(await links()).toEqual([]);
   });
 });

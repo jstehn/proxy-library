@@ -49,6 +49,8 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | ✅ Done |
 | 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | ✅ Done |
 | 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | ✅ Done |
+| 12  | Reset a player (admin and self)    | orchestration module over other modules' in-transaction functions                                                           | ✅ Done |
+| 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                         | ✅ Done |
 
 ### Why this order (changed from the original plan)
 
@@ -90,8 +92,8 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 ## Backlog: advanced features, later
 
 Deferred requests and known limits live in [future-ideas.md](future-ideas.md). Generated
-product and set art (the fallback half of the "set and product art" request) is built in
-Phase 6. Real retailer photos wait for a decision on their terms of use.
+product and set art is built in Phase 6; Wizards' official product photos and key art (from
+Wizards Play Network, not retailers) replace it where available since Phase 13.
 
 ## Phases 2–11
 

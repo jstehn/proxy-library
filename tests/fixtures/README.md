@@ -18,6 +18,8 @@ that are in the fixtures. Sheet `totalWeight`s were recomputed. Heavy fields the
 cards, decks and products **trimmed to nothing**. It exists because enabling BLB now enables its
 Commander companion set (design doc 04, rule 11), and the fixture sync needs a file to read.
 
+| `wpn/*.html` | Wizards Play Network product pages for Bloomburrow, Secrets of Strixhaven and Final Fantasy (2026-09-30), trimmed to what we read: the header block (key art) and Nuxt's embedded data (`__NUXT_DATA__`), kept verbatim (Prettier ignores them) |
+
 **Synthetic additions** (made up on purpose, to test the filters):
 
 - `BLB.json`: an Alchemy-style card (`uuid 00000000-a1c4-…`, `availability: ["arena"]`) used only

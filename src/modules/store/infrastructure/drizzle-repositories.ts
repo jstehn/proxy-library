@@ -1,5 +1,10 @@
-import { eq, sql } from "drizzle-orm";
-import { cardSets, sealedProducts } from "@/modules/catalog/infrastructure/schema";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  cardSets,
+  productWpnLinks,
+  sealedProducts,
+  wpnProducts,
+} from "@/modules/catalog/infrastructure/schema";
 import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { Cents, type UserId } from "@/shared/kernel";
@@ -14,7 +19,7 @@ import type {
   StoreLedger,
   StoreSettings,
 } from "../application/ports";
-import { productKind } from "../domain/pricing";
+import { kindPriceApplies, productKind } from "../domain/pricing";
 import { msrpOverrides, msrpPrices, storeSettings, storeTransactions } from "./schema";
 
 export function drizzlePriceList(db: DbExecutor): PriceList {
@@ -28,10 +33,19 @@ export function drizzlePriceList(db: DbExecutor): PriceList {
         // An empty product is never for sale (design doc 06, rule 2).
         isSetEnabled: sql<boolean>`${cardSets.isEnabled} and ${sealedProducts.isListed} and jsonb_array_length(${sealedProducts.contents}) > 0`,
         override: msrpOverrides.cents,
+        officialMsrp: wpnProducts.msrpCents,
       })
       .from(sealedProducts)
       .innerJoin(cardSets, eq(cardSets.code, sealedProducts.setCode))
       .leftJoin(msrpOverrides, eq(msrpOverrides.productId, sealedProducts.id))
+      .leftJoin(productWpnLinks, eq(productWpnLinks.productId, sealedProducts.id))
+      .leftJoin(
+        wpnProducts,
+        and(
+          eq(wpnProducts.setCode, productWpnLinks.wpnSetCode),
+          eq(wpnProducts.name, productWpnLinks.wpnName),
+        ),
+      )
       .where(eq(sealedProducts.id, productId));
     if (product === undefined) return null;
 
@@ -45,8 +59,10 @@ export function drizzlePriceList(db: DbExecutor): PriceList {
       name: product.name,
       kind,
       isSetEnabled: product.isSetEnabled,
-      kindPrice: kindRow === undefined ? null : Cents.of(kindRow.cents),
+      kindPrice:
+        kindRow === undefined || !kindPriceApplies(product.name) ? null : Cents.of(kindRow.cents),
       override: product.override === null ? null : Cents.of(product.override),
+      officialMsrp: product.officialMsrp === null ? null : Cents.of(product.officialMsrp),
     };
   }
 

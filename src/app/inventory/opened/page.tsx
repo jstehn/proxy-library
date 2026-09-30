@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { CardTile } from "@/app/_components/card-tile";
-import { printingCards, type PrintingCard } from "@/modules/catalog";
+import {
+  packKey,
+  packPhotos,
+  printingCards,
+  variantFor,
+  type PrintingCard,
+} from "@/modules/catalog";
 import { openingView, type OpenedCard, type OpeningView } from "@/modules/inventory";
 import { findSet } from "@/modules/catalog";
 import { storePage } from "@/modules/store";
@@ -138,9 +144,21 @@ async function openerPacks(
     ),
   );
 
+  const photos = await packPhotos(
+    db,
+    packs.flatMap((pack) =>
+      pack.setCode && pack.boosterType
+        ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]
+        : [],
+    ),
+  );
+
   return packs.map((pack) => {
     const info = pack.setCode === null ? undefined : sets.get(pack.setCode);
     const setName = info?.set?.name ?? pack.setCode ?? "";
+    const photoIds =
+      (pack.setCode && pack.boosterType && photos.get(packKey(pack.setCode, pack.boosterType))) ||
+      [];
     return {
       itemId: pack.itemId,
       name: pack.name,
@@ -149,6 +167,8 @@ async function openerPacks(
       keyruneCode: info?.set?.keyruneCode ?? "",
       label: productLabel(pack.name, setName),
       featuredPrintingId: info?.featured?.printingId ?? null,
+      photoIds,
+      photoVariant: variantFor(pack.itemId, photoIds.length),
       cards: pack.cards.map((card) => {
         const printing = cards.get(card.printingId);
         return {

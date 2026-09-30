@@ -1,5 +1,11 @@
 // The catalog module's public API: the only file other modules and the app may import.
-export type { RequestSyncError, SetSetEnabledError } from "./application/admin";
+export type {
+  ChoosePhotoError,
+  RequestSyncError,
+  SetPageSlugError,
+  SetSetEnabledError,
+} from "./application/admin";
+export type { ArtworkSummary } from "./application/artwork";
 export { makeCatalog } from "./application/make-catalog";
 export type { Catalog } from "./application/make-catalog";
 export type {
@@ -12,8 +18,11 @@ export type {
   ImageStore,
   MtgjsonGateway,
   ScryfallGateway,
+  ArtworkRepository,
+  ArtworkStore,
   SyncKind,
   SyncRunRepository,
+  WpnGateway,
 } from "./application/ports";
 export type { SyncSummary } from "./application/sync";
 export {
@@ -55,3 +64,12 @@ export type {
   SetSummary,
   SyncRunRow,
 } from "./queries/catalog";
+export { variantFor, type ArtworkSize, type ContentsLine } from "./domain/wpn";
+export {
+  packKey,
+  packPhotos,
+  photosOverview,
+  productPhotos,
+  setPhotos,
+  type SetPhotosView,
+} from "./queries/artwork";

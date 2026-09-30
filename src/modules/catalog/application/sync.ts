@@ -12,6 +12,7 @@ import {
   isStillSettling,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
+import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
 import type {
   CardExtras,
   CatalogDependencies,
@@ -48,6 +49,8 @@ export type SyncSummary = {
   };
   pricedPrintings: number;
   priceSnapshots: number;
+  /** Official product photos, key art, MSRPs and details from WPN (design doc 13). */
+  artwork: ArtworkSummary;
   durationMs: number;
 };
 
@@ -62,6 +65,8 @@ export function makeSync(dependencies: CatalogDependencies) {
     if (!result.ok) throw new Error("unreachable");
     return result.value;
   }
+
+  const artworkPass = makeArtworkPass(dependencies, inTransaction);
 
   async function runSync(kind: SyncKind): Promise<SyncSummary> {
     const startedAt = clock.now().getTime();
@@ -80,6 +85,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       skippedDigital: { printings: 0, boosterTypes: [], products: [], decks: [] },
       pricedPrintings: 0,
       priceSnapshots: 0,
+      artwork: emptyArtworkSummary(),
       durationMs: 0,
     };
 
@@ -135,6 +141,13 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // 5. Today's prices, images and legalities for every printing we hold.
     await pricePass(bulkFile.path, summary);
+
+    // 6. Official product photos, key art, MSRPs and details from WPN. Never fails the sync.
+    try {
+      summary.artwork = await artworkPass(kind, states);
+    } catch (error) {
+      summary.artwork.unreadable.push({ code: "*", error: describeError(error) });
+    }
 
     summary.durationMs = clock.now().getTime() - startedAt;
     return summary;

@@ -67,5 +67,5 @@ much within a kind, and guessing would be wrong.
 
 ## Deferred on purpose
 
-Public profiles and public spending totals, retailer product photos, spoiler-proof reveals, image
+Public profiles and public spending totals, spoiler-proof reveals, image
 cache warming, and Echoverse pairs: see [future-ideas.md](future-ideas.md).

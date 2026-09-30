@@ -213,3 +213,30 @@ None.
 
 A sealed product's price is the first of: **an admin's own price**, **WPN's official MSRP**, **its
 kind's price**. None of them means not for sale, as before. The admin store page shows all three.
+
+## 15. Implementation notes (what changed while building)
+
+- **Matching was tuned on all 19 real pages** against our real products (a one-off check, not a
+  test). It found four problems, each now a rule in `matchWpnProducts`:
+  1. Cases hide under other categories ("Scene Box Case" is a `box_set`, "Collector Booster Box
+     Master Case" a `booster_box`): products **named** "case" or "set of" never match.
+  2. A generic name claimed a specific product ("Bundle" took the "Pizza Bundle"): specific names
+     match first, standard names second.
+  3. "Collector Booster" also matched each set's "… Minimal Packaging" version, so neither got a
+     photo: when one of several matches is **plainly** the product (the WPN name, or it plus
+     "pack"/"box"), it gets the photo.
+  4. "Commander Decks Collector's Edition" didn't match "Commander Deck Wakanda Forever
+     Collector's Edition" (words apart): names match when every WPN word appears, in any order,
+     and our product adds no **product-type word** (so "Nightmare Bundle" ≠ "Nightmare Bundle
+     Booster").
+     Result on real data: 234 links, 144 with a photo, 262 images, 0 download failures.
+- **A pricing bug found on the way:** cases filed under a single product's kind (Master Cases,
+  Beginner Box Cases) sold at that kind's price: 24 Collector Booster Boxes for $269.99. Cases
+  now never take their kind's price (`kindPriceApplies`, mirrored in SQL as `IS_CASE`).
+- **Admin undo is cheap:** undoing a choice marks that one set's page to be read again and queues
+  a prices sync, instead of a full sync.
+- **Browser tests use their own image folder** (`.dev/e2e-images`), so their placeholder photos
+  can never overwrite the real ones in the development cache.
+- **Commander decks' generated art now features their own commander** (it showed the set's
+  most valuable card before), from the deck list's commander.
+- The data's product order differs slightly from the page's visual order; nothing depends on it.

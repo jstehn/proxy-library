@@ -9,6 +9,7 @@ const ADMIN_PAGES = [
   ["/admin/invites", "Invites"],
   ["/admin/economy", "Economy"],
   ["/admin/catalog", "Catalog"],
+  ["/admin/photos", "Photos"],
   ["/admin/store", "Store prices"],
   ["/admin/packs", "Pack lab"],
 ] as const;

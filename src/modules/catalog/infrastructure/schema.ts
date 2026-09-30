@@ -1,11 +1,14 @@
 // Tables owned by the catalog module (design doc 04, section 8).
+import { sql } from "drizzle-orm";
 import {
   bigint,
   bigserial,
   boolean,
+  check,
   date,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -148,3 +151,77 @@ export const syncRuns = pgTable(
   },
   (table) => [index("sync_runs_status_idx").on(table.status, table.requestedAt)],
 );
+
+// --- Wizards Play Network: photos, key art, MSRPs and details (design doc 13) --------------
+
+/** What we know about each set's WPN page. */
+export const wpnPages = pgTable(
+  "wpn_pages",
+  {
+    setCode: text("set_code")
+      .primaryKey()
+      .references(() => cardSets.code),
+    /** The slug an admin typed, used instead of the ones made from the set's name. */
+    slugOverride: text("slug_override"),
+    /** The slug that worked, or null when none did. */
+    slug: text("slug"),
+    status: text("status").notNull(),
+    keyArt: jsonb("key_art"), // WpnImage | null
+    error: text("error"),
+    checkedAt: timestamptz("checked_at").notNull(),
+  },
+  (table) => [
+    check("wpn_pages_status_known", sql`${table.status} in ('found', 'no_page', 'unreadable')`),
+  ],
+);
+
+/** The products a set's WPN page offered at its last read. */
+export const wpnProducts = pgTable(
+  "wpn_products",
+  {
+    setCode: text("set_code")
+      .notNull()
+      .references(() => cardSets.code),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    releaseDate: text("release_date"),
+    msrpCents: integer("msrp_cents"),
+    description: text("description"), // plain text
+    contents: jsonb("contents").notNull(), // ContentsLine[]
+    images: jsonb("images").notNull(), // WpnImage[]
+  },
+  (table) => [
+    primaryKey({ columns: [table.setCode, table.name] }),
+    check("wpn_products_msrp_range", sql`${table.msrpCents} between 1 and 1000000`),
+  ],
+);
+
+/** Which WPN product each of our products belongs to (design doc 13, section 3). */
+export const productWpnLinks = pgTable(
+  "product_wpn_links",
+  {
+    productId: text("product_id")
+      .primaryKey()
+      .references(() => sealedProducts.id),
+    wpnSetCode: text("wpn_set_code"),
+    wpnName: text("wpn_name"), // null: an admin chose "no WPN product"
+    match: text("match").notNull(),
+    /** "variants" shows the WPN photos; "one" shows photoIndex; "none" keeps generated art. */
+    photo: text("photo").notNull(),
+    photoIndex: integer("photo_index"),
+  },
+  (table) => [
+    check("product_wpn_links_match_known", sql`${table.match} in ('by_name', 'by_kind', 'admin')`),
+    check("product_wpn_links_photo_known", sql`${table.photo} in ('variants', 'one', 'none')`),
+    check(
+      "product_wpn_links_one_has_index",
+      sql`(${table.photo} = 'one') = (${table.photoIndex} is not null)`,
+    ),
+  ],
+);
+
+/** Images downloaded (in every size) to the artwork store. Others aren't shown yet. */
+export const artworkFiles = pgTable("artwork_files", {
+  imageId: text("image_id").primaryKey(),
+  downloadedAt: timestamptz("downloaded_at").notNull(),
+});

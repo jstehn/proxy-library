@@ -13,6 +13,8 @@ export type UnopenedGroup = Readonly<{
   /** The product's category ("booster_box", "deck", …), when it's a catalog product. */
   category: string | null;
   setCode: string | null;
+  /** For packs, their booster type ("play"), to find their photo. */
+  boosterType: string | null;
   /** Every item in the group, oldest first. "Open" opens the first; "Open all" opens them all. */
   itemIds: number[];
 }>;
@@ -28,6 +30,7 @@ export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<Uno
       >`(select sp.category from sealed_products sp where sp.id = ${sealedItems.productId})`,
       // A product item has no set code of its own; its packs and decks do.
       setCode: sql<string | null>`min(${sealedItems.setCode})`,
+      boosterType: sql<string | null>`min(${sealedItems.boosterType})`,
       itemIds: sql<number[]>`array_agg(${sealedItems.id} order by ${sealedItems.id})`,
     })
     .from(sealedItems)
@@ -42,6 +45,7 @@ export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<Uno
     productId: row.productId,
     category: row.category,
     setCode: row.setCode,
+    boosterType: row.boosterType,
     itemIds: row.itemIds.map(Number),
   }));
 }
@@ -89,6 +93,7 @@ export type OpeningView = Readonly<{
   itemId: number;
   name: string;
   setCode: string | null; // packs and decks have one; products don't
+  boosterType: string | null; // packs only, e.g. "play"
   contentKind: "product" | "pack" | "deck";
   openedAt: string;
   seed: string | null;
@@ -115,6 +120,7 @@ export async function openingView(
       itemId: sealedItems.id,
       name: sealedItems.name,
       setCode: sealedItems.setCode,
+      boosterType: sealedItems.boosterType,
       contentKind: sealedItems.contentKind,
       openedAt: sealedItems.openedAt,
       seed: itemOpenings.seed,
@@ -137,6 +143,7 @@ export async function openingView(
     itemId: row.itemId,
     name: row.name,
     setCode: row.setCode,
+    boosterType: row.boosterType,
     contentKind: row.contentKind as OpeningView["contentKind"],
     openedAt: (row.openedAt ?? new Date(0)).toISOString(),
     seed: row.seed,

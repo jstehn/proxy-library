@@ -9,6 +9,7 @@ import type {
   SetCode,
   SetImport,
 } from "../domain/types";
+import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
 
 // Ports: what the catalog needs from outside (design doc 04, section 6).
 
@@ -45,6 +46,7 @@ export interface ImageFetcher {
 
 export type SetState = Readonly<{
   code: SetCode;
+  name: string;
   type: string; // "expansion", "commander", …
   parentCode: SetCode | null;
   releaseDate: string; // "2026-09-01"
@@ -98,6 +100,71 @@ export interface CatalogRepository {
   imageSource(printingId: PrintingId): Promise<ImageSource | null>;
 }
 
+/** Wizards Play Network, parsed and validated by the anti-corruption layer (design doc 13). */
+export interface WpnGateway {
+  /** A set's product page, or null when there's no page at that slug. */
+  setPage(slug: string): Promise<WpnSetPage | null>;
+  /** One image, resized by Wizards' image host to this width. */
+  image(image: WpnImage, width: number): Promise<Uint8Array>;
+}
+
+/** Downloaded product photos and key art, on disk next to card images. */
+export interface ArtworkStore {
+  get(imageId: string, size: ArtworkSize): Promise<Uint8Array | null>;
+  put(imageId: string, size: ArtworkSize, bytes: Uint8Array): Promise<void>;
+}
+
+/** What we know about a set's WPN page. */
+export type WpnPageState = Readonly<{
+  setCode: SetCode;
+  slugOverride: string | null;
+  status: "found" | "no_page" | "unreadable";
+  checkedAt: Date;
+}>;
+
+/** An admin's own choice for one product (design doc 13, rule 5). */
+export type AdminPhotoChoice = Readonly<{
+  productId: string;
+  /** null: no WPN product (and so no photo, MSRP or details from WPN). */
+  wpnName: string | null;
+  /** Which photo to show: null for none (generated art). */
+  photoIndex: number | null;
+}>;
+
+export interface ArtworkRepository {
+  pageStates(): Promise<WpnPageState[]>;
+  /** Listed products of these sets, for matching to a WPN page. */
+  productsOf(setCodes: readonly SetCode[]): Promise<ProductForMatching[]>;
+  /** Saves what a set's page offered, replacing the previous read, and the product links. */
+  savePage(
+    setCode: SetCode,
+    page: WpnSetPage,
+    links: readonly WpnLink[],
+    checkedAt: Date,
+  ): Promise<void>;
+  /** Records that a set has no page, or an unreadable one. Keeps anything read before. */
+  savePageProblem(
+    setCode: SetCode,
+    status: "no_page" | "unreadable",
+    error: string | null,
+    checkedAt: Date,
+  ): Promise<void>;
+  setSlugOverride(setCode: SetCode, slug: string | null): Promise<void>;
+  /** The images no download has stored yet, and whether each is a product photo or key art. */
+  imagesToDownload(): Promise<Array<{ image: WpnImage; kind: "product" | "keyArt" }>>;
+  markDownloaded(imageId: string, at: Date): Promise<void>;
+  /**
+   * What an admin may choose for a product: the WPN products on its set's page and how many
+   * photos each has. Null when there's no such product.
+   */
+  photoOptions(
+    productId: string,
+  ): Promise<ReadonlyArray<{ name: string; imageCount: number }> | null>;
+  saveAdminChoice(choice: AdminPhotoChoice): Promise<void>;
+  /** Removes an admin's choice; returns the set whose page the product belongs to, if any. */
+  clearAdminChoice(productId: string): Promise<SetCode | null>;
+}
+
 export type SyncKind = "full" | "prices";
 export type SyncRun = Readonly<{ id: number; kind: SyncKind }>;
 
@@ -124,6 +191,7 @@ export interface SyncRunRepository {
 export type CatalogServices = {
   catalog: CatalogRepository;
   syncRuns: SyncRunRepository;
+  artwork: ArtworkRepository;
 };
 
 export type CatalogDependencies = {
@@ -132,6 +200,8 @@ export type CatalogDependencies = {
   scryfall: ScryfallGateway;
   images: ImageStore;
   imageFetcher: ImageFetcher;
+  wpn: WpnGateway;
+  artworkFiles: ArtworkStore;
   clock: Clock;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;

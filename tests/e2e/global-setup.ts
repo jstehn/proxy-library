@@ -4,11 +4,15 @@
 import { sql } from "drizzle-orm";
 import { makeCatalog } from "@/modules/catalog";
 import {
+  diskArtworkStore,
+  drizzleArtworkRepository,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   fixtureMtgjsonGateway,
   fixtureScryfallGateway,
+  fixtureWpnGateway,
 } from "@/modules/catalog/infrastructure";
+import { E2E_IMAGE_CACHE_DIR } from "../../playwright.config";
 import { loadConfig } from "@/shared/config";
 import { createDatabase, makeDrizzleUnitOfWork, runMigrations } from "@/shared/db";
 import { systemClock } from "@/shared/runtime";
@@ -31,13 +35,14 @@ export default async function globalSetup() {
       sql`update economy_settings set starting_grant_cents = 5000, allowance_cents = 2000 where id = 1`,
     );
     await db.execute(
-      sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets cascade`,
+      sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
     );
 
     const catalog = makeCatalog({
       unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
         catalog: drizzleCatalogRepository(transaction),
         syncRuns: drizzleSyncRunRepository(transaction),
+        artwork: drizzleArtworkRepository(transaction),
       })),
       mtgjson: fixtureMtgjsonGateway(),
       scryfall: fixtureScryfallGateway(),
@@ -50,6 +55,9 @@ export default async function globalSetup() {
           throw new Error("no image downloads during setup");
         },
       },
+      // Recorded WPN pages; "downloads" are placeholder images in the e2e image folder.
+      wpn: fixtureWpnGateway(),
+      artworkFiles: diskArtworkStore(E2E_IMAGE_CACHE_DIR),
       clock: systemClock(),
       syncTime: { hour: 4, minute: 0 },
     });

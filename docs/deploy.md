@@ -103,6 +103,13 @@ update the stack. Don't change `AUTH_SECRET` (it signs everyone out) or `POSTGRE
 
 The containers opt out of **Watchtower**, which would try to pull the app's image from a registry.
 
+### Official product photos (WPN)
+
+The sync reads each enabled set's Wizards Play Network page (one a second) and downloads the
+product photos and key art (about 35 MB for 20 sets, in the `images` volume). The first time
+takes about 8 minutes; later syncs only read new or recent sets and fetch new images. Anything
+without a photo shows generated art. Check and correct matches on **Admin → Photos**.
+
 ### Signing in: use the domain
 
 `APP_URL` is `https://proxylib.example.com`, so sign-in cookies are marked

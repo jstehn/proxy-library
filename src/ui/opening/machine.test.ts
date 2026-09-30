@@ -32,6 +32,8 @@ function pack(itemId: number, cards: OpenerCard[]): OpenerPack {
     keyruneCode: "tst",
     label: "Play Booster Pack",
     featuredPrintingId: null,
+    photoIds: [],
+    photoVariant: 0,
     cards,
   };
 }

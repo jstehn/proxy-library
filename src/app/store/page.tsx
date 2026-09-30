@@ -3,6 +3,7 @@ import { storeSets } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { ProductArt } from "@/ui/product-art";
+import { KeyArt } from "@/ui/product-image";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
 
 export default async function StorePage() {
@@ -26,15 +27,24 @@ export default async function StorePage() {
           {sets.map((set) => (
             <li key={set.code}>
               <Link href={`/store/${set.code}`} className="flex flex-col gap-2">
-                <ProductArt
-                  setCode={set.code}
-                  setName={set.name}
-                  keyruneCode={set.keyruneCode}
-                  label={set.name}
-                  shape="box"
-                  featuredPrintingId={set.featured?.printingId}
-                  artist={set.featured?.artist}
-                />
+                {set.keyArtId ? (
+                  <KeyArt
+                    imageId={set.keyArtId}
+                    alt={`${set.name} key art`}
+                    sizes="(min-width: 1024px) 25vw, 50vw"
+                    className="aspect-[4/3] w-full rounded-lg object-cover shadow-md"
+                  />
+                ) : (
+                  <ProductArt
+                    setCode={set.code}
+                    setName={set.name}
+                    keyruneCode={set.keyruneCode}
+                    label={set.name}
+                    shape="box"
+                    featuredPrintingId={set.featured?.printingId}
+                    artist={set.featured?.artist}
+                  />
+                )}
                 <span className="text-sm font-medium">{set.name}</span>
                 <span className="text-xs text-zinc-500">
                   {set.productsForSale} products · released {set.releaseDate}

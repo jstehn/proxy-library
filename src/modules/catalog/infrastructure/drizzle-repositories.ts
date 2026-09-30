@@ -55,6 +55,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           code: cardSets.code,
           type: cardSets.type,
           parentCode: cardSets.parentCode,
+          name: cardSets.name,
           releaseDate: cardSets.releaseDate,
           isEnabled: cardSets.isEnabled,
           isSupporting: cardSets.isSupporting,

@@ -13,6 +13,8 @@ export type Listing = Readonly<{
   isSetEnabled: boolean;
   kindPrice: Cents | null;
   override: Cents | null;
+  /** Wizards' official MSRP from its WPN product page, if it lists one (ADR 0015). */
+  officialMsrp: Cents | null;
 }>;
 
 export type PriceChange = Readonly<{ price: Cents | null; by: UserId; at: Date }>;

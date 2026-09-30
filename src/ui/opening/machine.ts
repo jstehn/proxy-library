@@ -20,6 +20,10 @@ export type OpenerPack = Readonly<{
   keyruneCode: string;
   label: string; // "Play Booster Pack"
   featuredPrintingId: string | null;
+  /** Official photos of this kind of pack (design doc 13); empty for generated art. */
+  photoIds: readonly string[];
+  /** Which photo this pack shows (the same one every time for this item). */
+  photoVariant: number;
   cards: readonly OpenerCard[]; // in reveal order (rule 1)
 }>;
 

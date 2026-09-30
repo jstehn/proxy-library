@@ -7,13 +7,64 @@ import { Cents } from "@/shared/kernel";
 
 /** The kind key of a sealed product row aliased "sp", in SQL (matches productKind()). */
 const KIND = sql`sp.category || '/' || coalesce(sp.subtype, 'default')`;
-/** A product's MSRP in SQL: its override, else its kind's price (null = not for sale). */
-const MSRP = sql`coalesce(o.cents, k.cents)`;
+/**
+ * A product's MSRP in SQL: its override, else Wizards' official MSRP, else its kind's price
+ * (null = not for sale). ADR 0014, amended by ADR 0015.
+ */
+const MSRP = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
 /** Only listed products with something inside are for sale (design doc 06, rule 2; 11). */
 const HAS_CONTENTS = sql`sp.is_listed and jsonb_array_length(sp.contents) > 0`;
+/** A case never takes its kind's price (mirrors `kindPriceApplies` in domain/pricing.ts). */
+const IS_CASE = sql`sp.name ~* '\\mcase\\M'`;
 const PRICE_JOINS = sql`
   left join msrp_overrides o on o.product_id = sp.id
-  left join msrp_prices k on k.kind = ${KIND}`;
+  left join msrp_prices k on k.kind = ${KIND} and not ${IS_CASE}
+  left join product_wpn_links l on l.product_id = sp.id
+  left join wpn_products w on w.set_code = l.wpn_set_code and w.name = l.wpn_name`;
+
+/** A set's key art (from WPN), once downloaded: an artwork image id, or null. */
+const KEY_ART = sql`(
+  select pg.key_art->>'id' from wpn_pages pg
+   where pg.set_code = s.code
+     and pg.key_art->>'id' in (select image_id from artwork_files)
+)`;
+
+/**
+ * A product's photos (design doc 13): the downloaded WPN photos its link says to show, in order.
+ * "variants" shows them all (one per owned item); "one" shows the admin's pick; "none", nothing.
+ */
+const PHOTO_IDS = sql`(
+  select coalesce(jsonb_agg(image->>'id' order by position), '[]'::jsonb)
+    from jsonb_array_elements(w.images) with ordinality as photos(image, position)
+   where (l.photo = 'variants' or (l.photo = 'one' and position - 1 = l.photo_index))
+     and image->>'id' in (select image_id from artwork_files)
+)`;
+
+/**
+ * For a deck product, the first commander of its deck list, so its generated art can feature
+ * that card (design doc 13, decision 1). Null for other products.
+ */
+const COMMANDER_PRINTING = sql`(
+  select card->>'printingId'
+    from jsonb_array_elements(sp.contents) as item
+    join deck_lists d on d.set_code = item->>'setCode' and d.name = item->>'deckName'
+    cross join jsonb_array_elements(d.cards) as card
+   where item->>'kind' = 'deck' and card->>'board' = 'commander'
+   limit 1
+)`;
+
+/** What a product's packaging should show, and what WPN says about it. */
+export type ProductPresentation = Readonly<{
+  /** Downloaded official photos (artwork image ids); empty means generated art. */
+  photoIds: readonly string[];
+  /** A card to feature in generated art: the deck's commander, or null for the set's own. */
+  featured: FeaturedArt | null;
+  /** From WPN: plain text, or null. */
+  description: string | null;
+  contents: ReadonlyArray<{ depth: number; text: string }>;
+  /** From WPN, e.g. "2026-10-02", or null. */
+  releaseDate: string | null;
+}>;
 
 /** A card whose art decorates a set's products: its most valuable rare or mythic. */
 export type FeaturedArt = Readonly<{ printingId: string; artist: string | null }>;
@@ -25,6 +76,8 @@ export type StoreSet = Readonly<{
   releaseDate: string;
   productsForSale: number;
   featured: FeaturedArt | null;
+  /** The set's official key art, as an artwork image id, once downloaded. */
+  keyArtId: string | null;
 }>;
 
 /** The most valuable rare or mythic with an image, per set, on the newest price day. */
@@ -57,8 +110,10 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
     keyrune_code: string;
     release_date: string;
     products_for_sale: number;
+    key_art_id: string | null;
   }>(sql`
-    select s.code, s.name, s.keyrune_code, s.release_date, count(*)::int as products_for_sale
+    select s.code, s.name, s.keyrune_code, s.release_date, count(*)::int as products_for_sale,
+           ${KEY_ART} as key_art_id
       from card_sets s
       join sealed_products sp on sp.set_code = s.code
       ${PRICE_JOINS}
@@ -77,6 +132,7 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
     releaseDate: row.release_date,
     productsForSale: row.products_for_sale,
     featured: featured.get(row.code) ?? null,
+    keyArtId: row.key_art_id,
   }));
 }
 
@@ -86,7 +142,8 @@ export type ProductForSale = Readonly<{
   category: string;
   subtype: string | null;
   msrp: Cents;
-}>;
+}> &
+  ProductPresentation;
 
 export type StorePage = Readonly<{
   set: Omit<StoreSet, "productsForSale">;
@@ -101,9 +158,10 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       name: string;
       keyrune_code: string;
       release_date: string;
+      key_art_id: string | null;
     }>(sql`
-      select code, name, keyrune_code, release_date
-        from card_sets where code = ${code.toUpperCase()} and is_enabled
+      select s.code, s.name, s.keyrune_code, s.release_date, ${KEY_ART} as key_art_id
+        from card_sets s where s.code = ${code.toUpperCase()} and s.is_enabled
     `)
   ).rows;
   if (set === undefined) return null;
@@ -114,10 +172,20 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
     category: string;
     subtype: string | null;
     msrp: number;
+    photo_ids: string[];
+    commander_printing_id: string | null;
+    commander_artist: string | null;
+    description: string | null;
+    contents: Array<{ depth: number; text: string }> | null;
+    wpn_release_date: string | null;
   }>(sql`
-    select sp.id, sp.name, sp.category, sp.subtype, ${MSRP} as msrp
+    select sp.id, sp.name, sp.category, sp.subtype, ${MSRP} as msrp,
+           ${PHOTO_IDS} as photo_ids,
+           cp.id as commander_printing_id, cp.artist as commander_artist,
+           w.description, w.contents, w.release_date as wpn_release_date
       from sealed_products sp
       ${PRICE_JOINS}
+      left join printings cp on cp.id = ${COMMANDER_PRINTING} and cp.image_uris is not null
      where sp.set_code = ${set.code} and ${MSRP} is not null and ${HAS_CONTENTS}
      order by sp.category, ${MSRP}, sp.name
   `);
@@ -129,6 +197,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       keyruneCode: set.keyrune_code,
       releaseDate: set.release_date,
       featured: featured.get(set.code) ?? null,
+      keyArtId: set.key_art_id,
     },
     products: rows.rows.map((row) => ({
       id: row.id,
@@ -136,6 +205,14 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       category: row.category,
       subtype: row.subtype,
       msrp: Cents.of(Number(row.msrp)),
+      photoIds: row.photo_ids,
+      featured:
+        row.commander_printing_id === null
+          ? null
+          : { printingId: row.commander_printing_id, artist: row.commander_artist },
+      description: row.description,
+      contents: row.contents ?? [],
+      releaseDate: row.wpn_release_date,
     })),
   };
 }
@@ -177,6 +254,8 @@ export type ProductPriceRow = Readonly<{
   kind: string;
   kindPrice: Cents | null;
   override: Cents | null;
+  /** Wizards' official MSRP from WPN, if it lists one (ADR 0015). */
+  officialMsrp: Cents | null;
 }>;
 
 /** Every product in one enabled set with its kind price and override, for the admin page. */
@@ -188,9 +267,10 @@ export async function productPrices(db: DbExecutor, setCode: string): Promise<Pr
     kind: string;
     kind_cents: number | null;
     override_cents: number | null;
+    official_cents: number | null;
   }>(sql`
     select sp.id, sp.set_code, sp.name, ${KIND} as kind,
-           k.cents as kind_cents, o.cents as override_cents
+           k.cents as kind_cents, o.cents as override_cents, w.msrp_cents as official_cents
       from sealed_products sp
       join card_sets s on s.code = sp.set_code and s.is_enabled
       ${PRICE_JOINS}
@@ -205,6 +285,7 @@ export async function productPrices(db: DbExecutor, setCode: string): Promise<Pr
     kind: row.kind,
     kindPrice: toCents(row.kind_cents),
     override: toCents(row.override_cents),
+    officialMsrp: toCents(row.official_cents),
   }));
 }
 

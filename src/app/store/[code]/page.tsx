@@ -3,7 +3,8 @@ import { storePage, type ProductForSale } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
-import { ProductArt, shapeForCategory } from "@/ui/product-art";
+import { shapeForCategory } from "@/ui/product-art";
+import { KeyArt, ProductImage } from "@/ui/product-image";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
@@ -11,7 +12,9 @@ import { BuyForm } from "./buy-form";
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   await requireActor();
   const { code } = await props.params;
-  const page = await storePage(getContainer().db, code);
+  const { db, clock } = getContainer();
+  const page = await storePage(db, code);
+  const today = clock.now().toISOString().slice(0, 10);
   if (page === null) notFound();
   const { set } = page;
 
@@ -25,6 +28,14 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
       <KeyruneStylesheet />
+      {set.keyArtId && (
+        <KeyArt
+          imageId={set.keyArtId}
+          alt={`${set.name} key art`}
+          sizes="(min-width: 1152px) 1152px, 100vw"
+          className="aspect-[16/5] w-full rounded-xl object-cover"
+        />
+      )}
       <header className="flex items-center gap-3">
         <SetSymbol keyruneCode={set.keyruneCode} className="text-4xl" />
         <div>
@@ -41,23 +52,71 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
           <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((product) => (
               <li key={product.id} className="flex flex-col gap-2">
-                <ProductArt
+                <ProductImage
+                  photoIds={product.photoIds}
                   setCode={set.code}
                   setName={set.name}
                   keyruneCode={set.keyruneCode}
                   label={productLabel(product.name, set.name)}
                   shape={shapeForCategory(product.category)}
-                  featuredPrintingId={set.featured?.printingId}
-                  artist={set.featured?.artist}
+                  featuredPrintingId={(product.featured ?? set.featured)?.printingId}
+                  artist={(product.featured ?? set.featured)?.artist}
                 />
                 <span className="text-sm leading-tight font-medium">{product.name}</span>
                 <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                {isUpcoming(product.releaseDate, today) && (
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    Releases {formatDay(product.releaseDate)}
+                  </span>
+                )}
                 <BuyForm productId={product.id} productName={product.name} />
+                <ProductDetails product={product} />
               </li>
             ))}
           </ul>
         </section>
       ))}
     </main>
+  );
+}
+
+/** Whether a WPN release date (e.g. "2026-10-02") is after today ("2026-09-30"). */
+function isUpcoming(releaseDate: string | null, today: string): releaseDate is string {
+  return releaseDate !== null && releaseDate > today;
+}
+
+/** "2026-10-02" → "Oct 2". */
+function formatDay(day: string): string {
+  return new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** WPN's description and contents, as plain text, folded away until asked for. */
+function ProductDetails(props: { product: ProductForSale }) {
+  const { description, contents } = props.product;
+  if (description === null && contents.length === 0) return null;
+  return (
+    <details className="text-xs text-zinc-600 dark:text-zinc-400">
+      <summary className="cursor-pointer select-none">What&apos;s inside</summary>
+      <div className="mt-2 flex flex-col gap-2">
+        {contents.length > 0 && (
+          <ul className="flex flex-col gap-0.5">
+            {contents.map((line, index) => (
+              <li key={index} style={{ paddingLeft: `${line.depth * 0.75}rem` }}>
+                {line.depth > 0 ? "· " : ""}
+                {line.text}
+              </li>
+            ))}
+          </ul>
+        )}
+        {description?.split("\n").map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+        <p className="text-[10px] text-zinc-500">From Wizards of the Coast&apos;s product page.</p>
+      </div>
+    </details>
   );
 }
