@@ -22,4 +22,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0012 | [Better Auth for identity only, behind a port](0012-better-auth-identity-only.md)                  | Accepted |
 | 0013 | [Daily price history and a store transaction ledger](0013-price-history-and-store-ledger.md)       | Accepted |
 | 0014 | [Price singles at market value and sealed product at MSRP](0014-pricing-sources.md)                | Accepted |
-| 0015 | [Official product photos and key art from Wizards Play Network pages](0015-wpn-product-imagery.md) | Proposed |
+| 0015 | [Official product photos and key art from Wizards Play Network pages](0015-wpn-product-imagery.md) | Accepted |

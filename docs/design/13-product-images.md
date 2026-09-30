@@ -1,7 +1,7 @@
-# Design: official product photos and key art
+# Design: official product photos, key art and product details (WPN)
 
 - **Phase:** 13 (after launch)
-- **Status:** **In review** (implementation starts only after approval)
+- **Status:** **Approved** (2026-09-30, with the decisions in section 13)
 - **Related ADRs:** 0007 (external data behind an anti-corruption layer), 0015 (new, proposed:
   Wizards Play Network as a source of product imagery), 0014 (pricing sources)
 
@@ -184,12 +184,32 @@ None.
   falls back to generated art for a product without one.
 - **Remote test** (opt-in `pnpm test:remote`): one live WPN page still parses.
 
-## 13. Open questions
+## 13. Decisions from review (2026-09-30)
 
-1. **Commander decks:** WPN has **one group photo** of a set's decks, not one per deck. Use it for
-   every deck (recommended: it's official and shows the product), or keep each deck's generated art,
-   which features its own commander's card art?
-2. **Cases** (six displays): show the display's photo, or keep the generated art (recommended: a
-   case isn't what the photo shows)?
-3. **Key art on the store's set list** as each set's tile image (recommended), or only as the
-   banner on the set's own page?
+1. **Commander decks keep their generated art featuring their own commander.** WPN's per-deck box
+   photos aren't labeled (numbered 01–05), so they're offered in the admin picker instead.
+2. **Cases keep generated art** (a case isn't what the display photo shows). Cases, "Set of N"
+   bundles and displays of decks are never matched.
+3. **Key art on the store's set tiles** as well as each set's banner.
+4. **Everything is downloaded at sync time and kept** (not on first view), since it's small: two
+   sizes per photo (about 50 MB in all for our 19 sets, against 236 MB at full size).
+5. **Also kept from WPN** (a survey of all 19 pages: 190 products):
+   - **Official MSRP** (79 products, mostly 2025 onward) becomes the product's price. An admin's
+     own price still wins; a product without one keeps its kind's price. (Examples: Final Fantasy
+     Play Booster $6.99 not $5.49, Collector $37.99 not $24.99; Secrets of Strixhaven Draft Night
+     $89.99 not $149.99; Final Fantasy Scene Boxes $41.99, previously not for sale.)
+   - **"What's inside":** each product's description and contents (card counts, rarity odds,
+     which cards it can contain), stored and shown as **plain text** (never WPN's HTML).
+   - **All photo variants:** e.g. three Play Booster pack arts; each unopened pack in an inventory
+     shows one, chosen by the item, so it doesn't change between visits.
+   - **Release dates:** "Releases Oct 2" on products not out yet.
+   - Not kept: UPC, SKU, sizes and weights, marketing zips, set logos (the policy forbids using
+     logos on their own), social media art.
+6. **Data comes from the page's embedded data** (`__NUXT_DATA__`: one JSON record per product,
+   with name, images, MSRP, contents and release date), not from its HTML layout, which has
+   generated class names. Only the key art is read from the page's header block.
+
+## 14. Pricing precedence (changes ADR 0014)
+
+A sealed product's price is the first of: **an admin's own price**, **WPN's official MSRP**, **its
+kind's price**. None of them means not for sale, as before. The admin store page shows all three.

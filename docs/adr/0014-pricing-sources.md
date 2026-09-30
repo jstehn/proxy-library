@@ -24,6 +24,9 @@ product ids).
     prices;
   - an optional **per-product override** for exceptions;
   - a product with no applicable MSRP isn't for sale until an admin sets one.
+  - **Amended 2026-09-30 (ADR 0015, design doc 13):** between the two, **Wizards' official MSRP**
+    from its Wizards Play Network product page, where it lists one. The order is: the product's
+    own override, then the official MSRP, then its kind's price.
 - Selling back (Phase 7) applies to **singles only**, at a buylist percentage of market price
   (`Cents.applyRate`, rounding down).
 

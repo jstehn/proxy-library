@@ -1,6 +1,6 @@
 # 0015. Official product photos and key art from Wizards Play Network pages
 
-- **Status:** Proposed (with design doc 13)
+- **Status:** Accepted (with design doc 13, 2026-09-30)
 - **Date:** 2026-09-30
 
 ## Context
