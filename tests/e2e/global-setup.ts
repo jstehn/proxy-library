@@ -25,6 +25,11 @@ export default async function globalSetup() {
   try {
     await runMigrations(db);
     await db.execute(sql`truncate invites, players, auth_users cascade`);
+    // The tests' amounts ($50.00 to start, $20.00 a week) are pinned here, so they don't depend
+    // on the defaults (which are $200.00 and $50.00).
+    await db.execute(
+      sql`update economy_settings set starting_grant_cents = 5000, allowance_cents = 2000 where id = 1`,
+    );
     await db.execute(
       sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets cascade`,
     );

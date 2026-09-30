@@ -104,7 +104,7 @@ export function buildCore(config: Config) {
 
   // A polite fetch for outside services (design doc 04, rule 10): identifies us, spaces
   // requests out, and retries temporary failures. Each service gets its own speed limit.
-  const userAgent = `TCGVirtualLibrary/0.1 (self-hosted playgroup app; ${config.appUrl})`;
+  const userAgent = `ProxyLibrary/1.0 (self-hosted playgroup app; ${config.appUrl})`;
   function politeFetch(perSecond: number): Fetch {
     const withRetries = withRetry({ attempts: 3, sleep: realSleep })(platformFetch);
     const limited = withRateLimit({ perSecond, clock, sleep: realSleep })(withRetries);

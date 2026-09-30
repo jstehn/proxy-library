@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# TCG Virtual Library
+# Proxy Library
 
 Self-hosted web app simulating an MTG collection: buy/open virtual sealed product, singles store,
 wallet ledger, deck builder (owned cards only), trades. Also a TypeScript learning project for a

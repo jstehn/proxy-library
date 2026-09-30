@@ -131,6 +131,24 @@ describe("resetting a player", () => {
     ).toBe(1);
   });
 
+  it("lets a player start over themselves, but not reset someone else", async () => {
+    const card = await cheapCard();
+    await store.buySingle(jack, { printingId: card, finish: "nonfoil", quantity: 1 });
+    await store.buySingle(bob, { printingId: card, finish: "nonfoil", quantity: 1 });
+
+    expect(await resetPlayer(jack, jack.userId)).toMatchObject({
+      ok: true,
+      value: { copiesRemoved: 1, balance: Cents.of(5000) },
+    });
+    expect(await count("collection_cards", "user_id = 'jack'")).toBe(0);
+    expect(await count("ledger_entries", "user_id = 'jack' and note = 'Started over'")).toBe(1);
+    expect(await resetPlayer(jack, bob.userId)).toEqual({
+      ok: false,
+      error: { kind: "Forbidden" },
+    });
+    expect(await count("collection_cards", "user_id = 'bob'")).toBe(1);
+  });
+
   it("works on an empty library, and only for admins and real players", async () => {
     expect(await resetPlayer(admin, bob.userId)).toMatchObject({
       ok: true,

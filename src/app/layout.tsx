@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TCG Virtual Library",
+  title: "Proxy Library",
   description: "Open virtual Magic: The Gathering product and build decks from what you own.",
 };
 

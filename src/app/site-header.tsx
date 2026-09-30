@@ -56,7 +56,7 @@ export async function SiteHeader() {
     <header className="border-b border-zinc-200 dark:border-zinc-800">
       <nav className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm">
         <Link href="/" className="font-semibold">
-          TCG Virtual Library
+          Proxy Library
         </Link>
         {links !== null && (
           <div className="hidden flex-wrap items-center gap-x-3 md:flex">{links}</div>
@@ -72,7 +72,7 @@ export async function SiteHeader() {
               </Link>
             )}
             <div className="hidden items-center gap-x-3 md:flex">
-              <Link href="/account/password" title="Change password">
+              <Link href="/account" title="Your account">
                 {actor.displayName}
               </Link>
               <form action={signOutAction}>
@@ -83,7 +83,7 @@ export async function SiteHeader() {
             </div>
             <PhoneMenu>
               {links}
-              <Link href="/account/password">{actor.displayName}: change password</Link>
+              <Link href="/account">{actor.displayName}: account</Link>
               <form action={signOutAction} className="px-2 py-1.5">
                 <button type="submit" className="underline">
                   Sign out

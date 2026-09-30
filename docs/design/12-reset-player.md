@@ -23,8 +23,10 @@ In **one transaction** (all or nothing), for one player:
 
 ## 3. Rules
 
-1. **Only admins**, and only for a player who exists (`Forbidden`, `PlayerNotFound`). An admin
-   may reset themselves.
+1. **An admin may reset anyone; a player may reset themselves** (added 2026-09-29: "Start over"
+   on the Account page, confirmed by typing START OVER, with a warning that it wipes every card
+   and doesn't recover all funds). Anyone else gets `Forbidden`; an unknown player gets
+   `PlayerNotFound`. A self-reset's money entry is noted "Started over".
 2. **Nothing in a ledger is deleted.** Money: one entry, noted "Library reset by <admin>".
    Cards: negative `reset` acquisitions, so the card history still adds up to what's owned.
    Store receipts and accepted trades stay.

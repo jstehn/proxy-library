@@ -9,7 +9,7 @@ purpose (see [future-ideas.md](future-ideas.md)).
 | Request                                                               | Status | Evidence                                                                                          |
 | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------- |
 | Limited virtual wallet                                                | ✅     | `wallet` module, append-only ledger; `/wallet`                                                    |
-| $20/week allowance, $50 starting grant, admin corrections             | ✅     | `wallet/domain/ledger.ts`, economy settings on `/admin/economy`                                   |
+| $50/week allowance, $200 starting grant, admin corrections            | ✅     | `wallet/domain/ledger.ts`, economy settings on `/admin/economy`                                   |
 | Admin-permitted self-funding; totals spent / self-funded              | ✅     | Admin → Players (balance, spent, self-funded, allow self-funding); visible to admins only for now |
 | Buy sealed product at MSRP (single packs too)                         | ✅     | `/store`; MSRP per kind + per-product overrides on `/admin/store`                                 |
 | Open with realistic odds (MTGJSON booster sheets and weights)         | ✅     | `packs/domain/generate.ts` (Monte Carlo tests); Pack lab `/admin/packs`                           |

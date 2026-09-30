@@ -6,7 +6,7 @@ import { fetchJson, platformFetch, withUserAgent } from "@/shared/http";
 import { MtgjsonMetaFile } from "./mtgjson-schema";
 import { ScryfallBulkDataSchema } from "./scryfall";
 
-const politeFetch = withUserAgent("TCGVirtualLibrary/0.1 (self-hosted playgroup app; remote test)")(
+const politeFetch = withUserAgent("ProxyLibrary/1.0 (self-hosted playgroup app; remote test)")(
   platformFetch,
 );
 

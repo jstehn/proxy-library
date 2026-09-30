@@ -1,4 +1,4 @@
-# TCG Virtual Library
+# Proxy Library
 
 A self-hosted web app for a Magic: The Gathering playgroup that brings back the "make it out of
 what you have" constraint that proxying removes. Everyone gets a weekly allowance. You buy sealed

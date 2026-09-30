@@ -1,5 +1,5 @@
 {
-  description = "TCG Virtual Library - dev environment";
+  description = "Proxy Library - dev environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -32,7 +32,7 @@
           # Project-specific env vars (DATABASE_URL etc.) live in .envrc,
           # because direnv knows the project path reliably.
           shellHook = ''
-            echo "tcg-virtual-library: node $(node --version), pnpm $(pnpm --version), $(postgres --version)"
+            echo "proxy-library: node $(node --version), pnpm $(pnpm --version), $(postgres --version)"
           '';
         };
       });

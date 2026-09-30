@@ -22,9 +22,10 @@ export type ResetSummary = Readonly<{
 }>;
 
 /**
- * An admin empties a player's library (design doc 12): cards, sealed items and decks go, open
- * trades close, and the balance goes back to the starting grant. All or nothing, in one
- * transaction. The money and card histories keep a record of it.
+ * Empties a player's library (design doc 12): cards, sealed items and decks go, open trades
+ * close, and the balance goes back to the starting grant, as when the account was new. All or
+ * nothing, in one transaction. The money and card histories keep a record of it. An admin may
+ * reset anyone; a player may reset themselves ("Start over" on their Account page).
  */
 export function makeResetPlayer(dependencies: ResetDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -33,12 +34,13 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
     actor: Actor,
     userId: UserId,
   ): Promise<Result<ResetSummary, ResetPlayerError>> {
-    if (!actor.isAdmin) return err({ kind: "Forbidden" });
+    const isSelf = actor.userId === userId;
+    if (!actor.isAdmin && !isSelf) return err({ kind: "Forbidden" });
 
     return unitOfWork.run<ResetSummary, ResetPlayerError>(async (services) => {
       if (!(await services.playerDirectory.exists(userId))) return err({ kind: "PlayerNotFound" });
       const now = clock.now();
-      const note = `Library reset by ${actor.username}`;
+      const note = isSelf ? "Started over" : `Library reset by ${actor.username}`;
 
       // Locks are taken in the same order as the actions they could meet (a trade being
       // accepted locks the trade, then wallets; an opening locks the item, then cards), so a

@@ -62,10 +62,10 @@ export const DIRECTION: Record<LedgerKind, "in" | "out"> = { … };
 
 // wallet/domain/economy.ts
 export type EconomySettings = Readonly<{
-  allowance: Cents;                 // default $20.00
+  allowance: Cents;                 // default $50.00 (was $20.00 until 2026-09-29)
   allowancePeriodDays: number;      // default 7
   allowanceAnchor: Date;            // a payday; others are anchor ± N × period. Default Monday 00:00 UTC
-  startingGrant: Cents;             // default $50.00
+  startingGrant: Cents;             // default $200.00 (was $50.00 until 2026-09-29)
   selfFundLimit: Cents;             // max per self-funding deposit, default $100.00
 }>;
 
