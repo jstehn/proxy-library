@@ -4,21 +4,34 @@
 #
 #   scripts/deploy.sh
 #
-# Needs SSH access to the server (to load the image, which isn't in a registry) and a Portainer
-# access token in ~/.config/proxy-library/portainer-token (Portainer → My account → Access tokens).
+# Needs your server's settings in deploy/local.env (copy deploy/local.env.example; it's
+# git-ignored), SSH access to the server (to load the image, which isn't in a registry) and a
+# Portainer access token in ~/.config/proxy-library/portainer-token (Portainer → My account →
+# Access tokens).
 #
 # The first deploy creates the stack with new random secrets, sent straight to Portainer (never
 # printed or saved here). Later deploys keep the stack's settings and only change IMAGE_TAG.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-HOST="${DEPLOY_HOST:-your-server}"
+# Your server's settings: from the environment, else deploy/local.env.
+if [[ -r deploy/local.env ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source deploy/local.env
+  set +a
+fi
+if [[ -z "${DEPLOY_HOST:-}" || -z "${DEPLOY_APP_URL:-}" ]]; then
+  echo "Set DEPLOY_HOST and DEPLOY_APP_URL in deploy/local.env (see deploy/local.env.example)." >&2
+  exit 1
+fi
+HOST="$DEPLOY_HOST"
 PORTAINER_URL="${PORTAINER_URL:-https://$HOST:9443}"
 TOKEN_FILE="${PORTAINER_TOKEN_FILE:-$HOME/.config/proxy-library/portainer-token}"
 STACK_NAME="${STACK_NAME:-proxylib-stack}"
 PORT="${DEPLOY_PORT:-3470}" # used only when the stack is first created
 # Used only when the stack is first created. Afterwards, change them in Portainer.
-APP_URL="${DEPLOY_APP_URL:-https://proxylib.example.com}"
+APP_URL="$DEPLOY_APP_URL"
 TZ_NAME="${DEPLOY_TZ:-UTC}"
 
 if [[ ! -r "$TOKEN_FILE" ]]; then

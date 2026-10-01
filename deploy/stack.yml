@@ -36,7 +36,7 @@ services:
       # Minor Postgres updates are fine, but a surprise restart mid-sync isn't worth it.
       com.centurylinklabs.watchtower.enable: "false"
       # A nightly backup, run by the server's Ofelia (which reads these labels when it starts). Its
-      # schedule is in UTC: 10:30 UTC is early morning here (02:30 in winter), before the sync. A
+      # schedule is in UTC (10:30 UTC here; pick an hour that's night where you are). A
       # compressed dump in the `backups` volume, kept for 14 days. pg_dump's own format (-Fc)
       # is compressed and fails loudly, so a failed dump never leaves an empty "backup".
       # Restore: docs/deploy.md. ($$ is a literal $ in compose files.)

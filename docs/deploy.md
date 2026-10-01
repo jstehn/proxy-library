@@ -59,18 +59,21 @@ The app serves plain HTTP. For access from outside your network, put it behind a
 with TLS (Caddy, nginx, Traefik), and set `APP_URL` to the public `https://` address, since invite
 links and cookies use it.
 
-## Our Docker server (Portainer, proxylib.example.com)
+## Deploying to a Portainer server
 
-Proxy Library runs on the Docker server at `your-server` as the Portainer stack
-**proxylib-stack**, and players open it at **https://proxylib.example.com**.
+`scripts/deploy.sh` deploys to a Docker server managed by Portainer, as the stack
+**proxylib-stack**. Your server's details live in **`deploy/local.env`**, which git ignores:
+copy [`deploy/local.env.example`](../deploy/local.env.example) and fill in the server
+(`DEPLOY_HOST`), the public address (`DEPLOY_APP_URL`), the port and the time zone. Below,
+`your-server` and `https://proxylib.example.com` stand for your values.
 
-| Piece      | Where                                                                                                                                                |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stack file | [`deploy/stack.yml`](../deploy/stack.yml): `docker-compose.yml` without the build step (Portainer stacks can't build)                                |
-| App port   | **3470** on the server (3000 was taken)                                                                                                          |
-| HTTPS      | Nginx Proxy Manager: proxy host `proxylib.example.com` → `http://your-server:3470`, Let's Encrypt certificate, Force SSL, websockets on |
-| Settings   | the stack's **environment variables** in Portainer (`APP_URL`, `AUTH_SECRET`, `POSTGRES_PASSWORD`, `PORT`, `SYNC_TIME`, `TZ`, `IMAGE_TAG`)           |
-| Data       | Docker volumes `proxylib-stack_pgdata` (the database), `…_images`, `…_sync-cache`, `…_backups`                                                       |
+| Piece      | Where                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack file | [`deploy/stack.yml`](../deploy/stack.yml): `docker-compose.yml` without the build step (Portainer stacks can't build)                       |
+| App port   | `DEPLOY_PORT` on the server (3470 in the example; pick one that's free)                                                                     |
+| HTTPS      | a reverse proxy (e.g. Nginx Proxy Manager): your domain → `http://your-server:3470`, a Let's Encrypt certificate, HTTPS only, websockets on |
+| Settings   | the stack's **environment variables** in Portainer (`APP_URL`, `AUTH_SECRET`, `POSTGRES_PASSWORD`, `PORT`, `SYNC_TIME`, `TZ`, `IMAGE_TAG`)  |
+| Data       | Docker volumes `proxylib-stack_pgdata` (the database), `…_images`, `…_sync-cache`, `…_backups`                                              |
 
 ### Deploying
 
@@ -94,14 +97,15 @@ values, sent straight to Portainer. Later deploys keep every setting and only ch
 becomes the admin, and anyone who can reach the site could otherwise take that role.
 
 **Roll back**: in Portainer, open the stack, set `IMAGE_TAG` to an earlier commit
-(`docker images proxy-library` on the server lists them), and update the stack. The server's
-weekly prune deletes unused images older than 7 days, so that's how far back you can go.
+(`docker images proxy-library` on the server lists them), and update the stack. Old images stay
+on the server until something prunes them, so pruning limits how far back you can go.
 
 **Change a setting** (for example `SYNC_TIME`): edit the environment variable in Portainer and
 update the stack. Don't change `AUTH_SECRET` (it signs everyone out) or `POSTGRES_PASSWORD`
 (the database keeps the password it was created with).
 
-The containers opt out of **Watchtower**, which would try to pull the app's image from a registry.
+The containers opt out of **Watchtower** (if your server runs it), which would try to pull the
+app's image from a registry.
 
 ### Official product photos (WPN)
 
@@ -112,14 +116,14 @@ without a photo shows generated art. Check and correct matches on **Admin → Ph
 
 ### Signing in: use the domain
 
-`APP_URL` is `https://proxylib.example.com`, so sign-in cookies are marked
-HTTPS-only: sign in through the domain, not `http://your-server:3470` (by design).
+When `APP_URL` is an `https://` address, sign-in cookies are marked HTTPS-only: sign in through
+the domain, not `http://your-server:3470` (by design).
 
 ### Backups
 
-The server's **Ofelia** reads the backup job from labels on the `db` container (when Ofelia
-starts, so restart it after changing them): every night at 10:30 UTC (early morning here, 02:30 in
-winter), a compressed dump (`pg_dump -Fc`) goes into the `backups` volume, and dumps older than 14
+If your server runs **Ofelia** (a job scheduler for Docker), it reads the backup job from labels on the `db` container (when Ofelia
+starts, so restart it after changing them): every night at 10:30 UTC (change the schedule in `deploy/stack.yml` to suit your time zone), a
+compressed dump (`pg_dump -Fc`) goes into the `backups` volume, and dumps older than 14
 days are deleted. The volume is on the server's own disk, so copy a backup elsewhere now and then:
 
 ```sh

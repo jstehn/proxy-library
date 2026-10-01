@@ -8,6 +8,8 @@ result
 # env files (.envrc and .env.example ARE committed)
 .env
 .env*.local
+# your server's deploy settings (deploy/local.env.example IS committed)
+deploy/local.env
 
 # dependencies
 node_modules/
