@@ -1,40 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EXPORTERS, parseList } from "./list-format";
-
-describe("parseList", () => {
-  it("reads the common list styles", () => {
-    const { lines, unreadable } = parseList(`
-      4 Lightning Bolt
-      2x Counterspell
-      1 Sol Ring (C21) 263
-      Mountain
-      // a comment
-    `);
-    expect(unreadable).toEqual([]);
-    expect(lines).toEqual([
-      { quantity: 4, name: "Lightning Bolt", setCode: null, collectorNumber: null, board: "main" },
-      { quantity: 2, name: "Counterspell", setCode: null, collectorNumber: null, board: "main" },
-      { quantity: 1, name: "Sol Ring", setCode: "C21", collectorNumber: "263", board: "main" },
-      { quantity: 1, name: "Mountain", setCode: null, collectorNumber: null, board: "main" },
-    ]);
-  });
-
-  it("switches boards on section headers and SB: lines", () => {
-    const { lines } = parseList(
-      "Commander\n1 Ruby\n\nDeck\n1 Bolt\nSideboard\n2 Duress\nMain\nSB: 1 Negate",
-    );
-    expect(lines.map((line) => [line.name, line.board])).toEqual([
-      ["Ruby", "commander"],
-      ["Bolt", "main"],
-      ["Duress", "side"],
-      ["Negate", "side"],
-    ]);
-  });
-
-  it("reports lines it can't read instead of guessing", () => {
-    expect(parseList("0 Nothing\n500 Too Many").unreadable).toEqual(["0 Nothing", "500 Too Many"]);
-  });
-});
+import { parseList } from "@/shared/card-search";
+import { EXPORTERS } from "./list-format";
 
 describe("exporters (Strategy)", () => {
   const lines = [

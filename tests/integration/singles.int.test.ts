@@ -154,7 +154,12 @@ describe("collectionPage", () => {
     expect(simic.totals.different).toBe(0);
 
     // The singles store filters the same way: only Bria is exactly Blue-Red (Izzet).
-    const izzet = await searchPrintings(db, { color: "UR", sort: "name", page: 1 });
+    const izzet = await searchPrintings(db, {
+      userId: jack.userId,
+      color: "UR",
+      sort: "name",
+      page: 1,
+    });
     const names = await db.execute<{ name: string }>(sql`
       select distinct name from printings
        where id in (${sql.join(
@@ -176,7 +181,7 @@ describe("collectionPage", () => {
     ]);
 
     const byName = await collectionPage(db, jack.userId, {
-      name: card.name.slice(0, 4).toLowerCase(),
+      search: card.name.slice(0, 4).toLowerCase(),
       sections: "none",
       sort: "name",
       page: 1,

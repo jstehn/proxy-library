@@ -1,5 +1,7 @@
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { parseSearch } from "@/shared/card-search";
+import { foilCopy, searchCondition } from "@/shared/card-search/sql";
 import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import type { ExportRow } from "../domain/export";
 import { acquisitions, collectionCards } from "../infrastructure/schema";
@@ -47,7 +49,8 @@ export async function collectionFor(db: DbExecutor, userId: UserId): Promise<Own
 
 /** How the collection page can be filtered and sorted. Empty fields don't filter. */
 export type CollectionFilter = Readonly<{
-  name?: string;
+  /** Card search text, Scryfall-style (design doc 15). `is:foil` means this copy is foil. */
+  search?: string;
   setCode?: string;
   rarity?: string;
   /**
@@ -128,6 +131,8 @@ export type CollectionPage = Readonly<{
   /** Over everything matching the filter, not just this page. */
   totals: { different: number; copies: number; valueCents: number };
   pageCount: number;
+  /** Parts of the search that were ignored, to show under the box. */
+  notes: readonly string[];
 }>;
 
 /**
@@ -140,8 +145,11 @@ export async function collectionPage(
   userId: UserId,
   filter: CollectionFilter,
 ): Promise<CollectionPage> {
-  const conditions = [sql`c.user_id = ${userId}`];
-  if (filter.name) conditions.push(sql`p.name ilike ${`%${filter.name}%`}`);
+  const parsed = parseSearch(filter.search ?? "");
+  const conditions = [
+    sql`c.user_id = ${userId}`,
+    searchCondition(parsed.node, { userId, foil: foilCopy(sql`c.finish`) }),
+  ];
   if (filter.setCode) conditions.push(sql`p.set_code = ${filter.setCode.toUpperCase()}`);
   if (filter.rarity) conditions.push(sql`p.rarity = ${filter.rarity}`);
   if (filter.finish) conditions.push(sql`c.finish = ${filter.finish}`);
@@ -210,6 +218,7 @@ export async function collectionPage(
       valueCents: Number(summary.value_cents),
     },
     pageCount: Math.max(1, Math.ceil(summary.different / COLLECTION_PAGE_SIZE)),
+    notes: parsed.notes,
   };
 }
 

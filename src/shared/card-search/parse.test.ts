@@ -7,7 +7,7 @@ import {
   toggleTerm,
   hasTerm,
   type SearchNode,
-} from "./search";
+} from "./parse";
 
 const term = (field: string, comparison: string, value: string): SearchNode =>
   ({ kind: "term", term: { field, comparison, value } }) as SearchNode;
@@ -120,5 +120,74 @@ describe("toggleTerm", () => {
     const manaValue = /^mv[<>=:]/i;
     expect(toggleTerm('o:"draw a card" mv=2', "mv=3", manaValue)).toBe('o:"draw a card" mv=3');
     expect(toggleTerm("mv=3", "mv=3", manaValue)).toBe("");
+  });
+});
+
+describe("design doc 15 keywords", () => {
+  const only = (text: string) => {
+    const parsed = parseSearch(text);
+    return { node: parsed.node, notes: parsed.notes };
+  };
+
+  it("reads exact names with !", () => {
+    expect(only('!"Lightning Bolt"').node).toEqual(term("name", "=", "Lightning Bolt"));
+    expect(only("!Opt").node).toEqual(term("name", "=", "Opt"));
+  });
+
+  it("reads the new keywords, with their aliases", () => {
+    expect(only("kw:flying").node).toEqual(term("keyword", ":", "flying"));
+    expect(only('keyword:"first strike"').node).toEqual(term("keyword", ":", "first strike"));
+    expect(only("loy>=4").node).toEqual(term("loyalty", ">=", "4"));
+    expect(only("def<3").node).toEqual(term("defense", "<", "3"));
+    expect(only('a:"rebecca guay"').node).toEqual(term("artist", ":", "rebecca guay"));
+    expect(only("cn<=100").node).toEqual(term("number", "<=", "100"));
+    expect(only("cn:12a").node).toEqual(term("number", ":", "12a"));
+    expect(only("produces:gw").node).toEqual(term("produces", ":", "gw"));
+    expect(only("usd<0.50").node).toEqual(term("usd", "<", "0.50"));
+    expect(only("year>=2024").node).toEqual(term("year", ">=", "2024"));
+    expect(only("date>=2024-08").node).toEqual(term("date", ">=", "2024-08"));
+    expect(only("border:borderless").node).toEqual(term("border", ":", "borderless"));
+    expect(only("frame:showcase").node).toEqual(term("frame", ":", "showcase"));
+    expect(only("own=0").node).toEqual(term("own", "=", "0"));
+    for (const value of ["mdfc", "dfc", "adventure", "showcase", "fullart", "vanilla", "bear"]) {
+      expect(only(`is:${value}`).notes).toEqual([]);
+    }
+  });
+
+  it("reads /patterns/, keeping spaces and parentheses inside them", () => {
+    expect(only("o:/draw (a|two) cards?/ t:instant").node).toEqual({
+      kind: "and",
+      children: [
+        {
+          kind: "term",
+          term: { field: "oracle", comparison: ":", value: "draw (a|two) cards?", isPattern: true },
+        },
+        term("type", ":", "instant"),
+      ],
+    });
+    expect(only("/^bolt/").node).toEqual({
+      kind: "term",
+      term: { field: "name", comparison: ":", value: "^bolt", isPattern: true },
+    });
+    expect(only("o:/a\\/b/").node).toMatchObject({ term: { value: "a\\/b", isPattern: true } });
+  });
+
+  it("notes patterns it won't run, and values that don't fit", () => {
+    expect(only("o:/(unclosed/").notes).toEqual(["/(unclosed/ isn't a valid pattern (ignored)"]);
+    expect(only(`o:/${"a".repeat(101)}/`).notes).toEqual([
+      "A /pattern/ longer than 100 characters (ignored)",
+    ]);
+    expect(only("o:/(?<word>x)/").notes).toEqual([
+      "/(?<word>x)/ uses a feature not supported (ignored)",
+    ]);
+    expect(only("mv:/2/").notes).toEqual(['"mv:" doesn\'t take a /pattern/ (ignored)']);
+    expect(only("produces:x").notes).toEqual([
+      '"x" isn\'t a mana color (W, U, B, R, G or C) (ignored)',
+    ]);
+    expect(only("border:plaid").notes).toHaveLength(1);
+    expect(only("date>=yesterday").notes).toHaveLength(1);
+    expect(only("is:sparkly").notes).toEqual([
+      '"is:sparkly" isn\'t supported (see Search help) (ignored)',
+    ]);
   });
 });

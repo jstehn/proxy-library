@@ -15,6 +15,8 @@ export const ScryfallCardSchema = z.object({
   legalities: z.record(z.string(), z.string()).default({}),
   // Colors of mana the card can make (lands, rocks, dorks), for deck statistics (design doc 14).
   produced_mana: z.array(z.string()).optional(),
+  // Keyword abilities and actions ("Flying", "Scry"), for `kw:` searches (design doc 15).
+  keywords: z.array(z.string()).optional(),
   prices: z.object({
     usd: z.string().nullable().default(null),
     usd_foil: z.string().nullable().default(null),
@@ -61,5 +63,6 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     images: mapImages(raw),
     legalities: raw.legalities,
     producedMana: (raw.produced_mana ?? []).filter((symbol) => /^[WUBRGC]$/.test(symbol)),
+    keywords: raw.keywords ?? [],
   };
 }

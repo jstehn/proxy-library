@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
-import { parseSearch } from "../domain/search";
-import { searchCondition } from "./search-sql";
+import { parseSearch } from "@/shared/card-search";
+import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 
 // Browsing your collection while building a deck (design doc 14, section 2.1): one entry per
 // card you own (shown as the printing you have most copies of), with what the deck needs to know.
@@ -170,7 +170,7 @@ export async function browseCollection(
            ${legal} as is_legal,
            count(*) over ()::int as total
       from owned join printings p on p.id = owned.printing_id
-     where ${searchCondition(parsed.node, { userId })} and ${colorFilter}
+     where ${searchCondition(parsed.node, { userId, foil: foilOwnedBy(userId) })} and ${colorFilter}
        and (${!input.onlyLegal} or ${legal})
      order by ${ORDER[input.sort]}
      limit ${BROWSE_PAGE_SIZE} offset ${offset}

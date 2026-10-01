@@ -20,6 +20,9 @@ Commander companion set (design doc 04, rule 11), and the fixture sync needs a f
 
 | `wpn/*.html` | Wizards Play Network product pages for Bloomburrow, Secrets of Strixhaven, Final Fantasy and Innistrad: Midnight Hunt (an older page format) (2026-09-30), trimmed to what we read: the header block (key art) and Nuxt's embedded data (`__NUXT_DATA__`), kept verbatim (Prettier ignores them) |
 
+`scryfall/default-cards.jsonl` also carries each card's real `keywords` and `produced_mana`
+(added 2026-10-01 from Scryfall's bulk file of that day, for the card search tests; design doc 15).
+
 `images/card.jpg` is a made-up 8 × 8 JPEG (a blue square, drawn by Chromium). It stands in for
 card images: in the proxy PDF unit tests, and in the browser tests' image cache, so making a proxy
 PDF there never downloads an image.

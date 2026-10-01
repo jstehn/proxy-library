@@ -19,7 +19,7 @@ import type {
   QuantityInvalid,
   TooManyDecks,
 } from "../domain/errors";
-import { parseList } from "../domain/list-format";
+import { parseList } from "@/shared/card-search";
 import type { DecksDependencies } from "./ports";
 
 // Deck use cases (design doc 09, section 5). Every one works only on the actor's own decks
@@ -154,7 +154,8 @@ export function makeManageDecks(dependencies: DecksDependencies) {
           board: line.board,
           quantity: Math.min(MAX_QUANTITY, (existing?.quantity ?? 0) + line.quantity),
           printingId: card.printingId,
-          finish: card.finish,
+          // "*F*" / "*E*" in the list choose the finish; otherwise the one found.
+          finish: line.finish ?? card.finish,
         });
         added += line.quantity;
       }

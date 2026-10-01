@@ -1,9 +1,11 @@
+import Link from "next/link";
 import {
   CardFilters,
   filterValues,
   oneOf,
   pageNumber,
   Pagination,
+  searchText,
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
 import { enabledSets, FINISHES, printingCards, searchPrintings } from "@/modules/catalog";
@@ -22,7 +24,7 @@ const SORTS = [
 const FINISH_LABELS = { nonfoil: "", foil: "Foil ", etched: "Etched " };
 
 export default async function SinglesPage(props: PageProps<"/singles">) {
-  await requireActor();
+  const actor = await requireActor();
   const { db } = getContainer();
   const searchParams = await props.searchParams;
   const values = filterValues(searchParams);
@@ -30,7 +32,8 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
 
   const [result, sets] = await Promise.all([
     searchPrintings(db, {
-      name: values.name,
+      userId: actor.userId,
+      search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
       color: values.color,
@@ -50,10 +53,20 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Singles</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Buy any card from an enabled set at its market price. {result.total} cards match.
+          Buy any card from an enabled set at its market price. {result.total} cards match. Have a
+          list?{" "}
+          <Link href="/singles/list" className="underline">
+            Buy a list of cards
+          </Link>
         </p>
       </header>
-      <CardFilters action="/singles" values={values} sets={sets} sorts={SORTS} />
+      <CardFilters
+        action="/singles"
+        values={values}
+        sets={sets}
+        sorts={SORTS}
+        notes={result.notes}
+      />
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {result.printingIds.map((id) => {
           const printing = cards.get(id);

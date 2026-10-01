@@ -63,7 +63,6 @@ export {
   type BrowsePage,
   type BrowseSort,
 } from "./queries/browse";
-export { parseSearch, type ParsedSearch, type SearchNode } from "./domain/search";
 export { makeProxySheets, type ProxySheet } from "./application/proxy-sheets";
 export type {
   ProxyImageSource,

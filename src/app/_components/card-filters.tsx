@@ -63,77 +63,97 @@ export function CardFilters(props: {
   /** Ways to divide the results into sections, if the page has them. */
   sections?: ReadonlyArray<readonly [string, string]>;
   showFinish?: boolean;
+  /** Parts of the search that were ignored, shown under the form. */
+  notes?: readonly string[];
 }) {
   const value = (name: string) => props.values[name] ?? "";
   return (
-    <form method="get" action={props.action} className="flex flex-wrap items-center gap-2">
-      <input
-        name="name"
-        defaultValue={value("name")}
-        placeholder="Card name"
-        aria-label="Card name"
-        className={`${field} w-48`}
-      />
-      <Select
-        name="set"
-        label="Set"
-        value={value("set")}
-        anyLabel="Any set"
-        options={props.sets.map((set) => [set.code, `${set.name} (${set.code})`] as const)}
-      />
-      <Select
-        name="rarity"
-        label="Rarity"
-        value={value("rarity")}
-        anyLabel="Any rarity"
-        options={RARITIES.map((rarity) => [rarity, rarity] as const)}
-      />
-      <select name="color" defaultValue={value("color")} aria-label="Color" className={field}>
-        <option value="">Any color</option>
-        {COLORS.map(([code, label]) => (
-          <option key={code} value={code}>
-            {label}
-          </option>
-        ))}
-        {COMBINATION_GROUPS.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.combinations.map((combination) => (
-              <option key={combination.code} value={combination.code}>
-                {combination.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-      {props.showFinish && (
-        <Select
-          name="finish"
-          label="Finish"
-          value={value("finish")}
-          anyLabel="Any finish"
-          options={FINISHES}
+    <form method="get" action={props.action} className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          name="q"
+          defaultValue={searchText(props.values)}
+          placeholder="Search: bolt, t:creature mv<=2, kw:flying, is:showcase"
+          aria-label="Search cards"
+          className={`${field} w-full sm:w-80`}
         />
-      )}
-      {props.sections && (
         <Select
-          name="sections"
-          label="Sections"
-          value={value("sections")}
-          options={props.sections}
+          name="set"
+          label="Set"
+          value={value("set")}
+          anyLabel="Any set"
+          options={props.sets.map((set) => [set.code, `${set.name} (${set.code})`] as const)}
         />
+        <Select
+          name="rarity"
+          label="Rarity"
+          value={value("rarity")}
+          anyLabel="Any rarity"
+          options={RARITIES.map((rarity) => [rarity, rarity] as const)}
+        />
+        <select name="color" defaultValue={value("color")} aria-label="Color" className={field}>
+          <option value="">Any color</option>
+          {COLORS.map(([code, label]) => (
+            <option key={code} value={code}>
+              {label}
+            </option>
+          ))}
+          {COMBINATION_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.combinations.map((combination) => (
+                <option key={combination.code} value={combination.code}>
+                  {combination.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        {props.showFinish && (
+          <Select
+            name="finish"
+            label="Finish"
+            value={value("finish")}
+            anyLabel="Any finish"
+            options={FINISHES}
+          />
+        )}
+        {props.sections && (
+          <Select
+            name="sections"
+            label="Sections"
+            value={value("sections")}
+            options={props.sections}
+          />
+        )}
+        <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
+        <button
+          type="submit"
+          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          Show
+        </button>
+        <Link href={props.action} className="text-sm underline">
+          Clear
+        </Link>
+        <Link href="/search-help" className="text-sm underline">
+          Search help
+        </Link>
+      </div>
+      {props.notes !== undefined && props.notes.length > 0 && (
+        <ul className="text-xs text-amber-700 dark:text-amber-400">
+          {props.notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
       )}
-      <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
-      <button
-        type="submit"
-        className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-      >
-        Show
-      </button>
-      <Link href={props.action} className="text-sm underline">
-        Clear
-      </Link>
     </form>
   );
+}
+
+/** The search text from the URL: `q`, or `name` from links made before design doc 15. */
+export function searchText(values: FilterValues): string {
+  return values.q ?? values.name ?? "";
 }
 
 /** Previous and next page links that keep the current filters. */

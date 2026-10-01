@@ -74,6 +74,7 @@ export type CardExtras = Readonly<{
   images: ImageUris | null;
   legalities: Readonly<Record<string, string>>;
   producedMana: readonly string[];
+  keywords: readonly string[];
 }>;
 
 export interface CatalogRepository {

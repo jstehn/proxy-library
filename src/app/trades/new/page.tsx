@@ -134,7 +134,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
 
   const search = (userId: string, name: string) =>
     collectionPage(db, UserId.of(userId), {
-      name: name || undefined,
+      search: name || undefined,
       sections: "none",
       sort: "name",
       page: 1,

@@ -1,9 +1,8 @@
-import type { Color } from "@/modules/catalog";
-import { COLOR_COMBINATIONS } from "@/shared/kernel";
+import { COLOR_COMBINATIONS, type ManaColor } from "@/shared/kernel";
 
-// The deck builder's search language (design doc 14, section 2.3), modeled on Scryfall's. Pure:
-// text in, a tree of conditions out, plus notes about anything it couldn't read. The SQL lives in
-// decks/queries/search-sql.ts.
+// The card search language (design docs 14 and 15), modeled on Scryfall's and used by every card
+// search box. Pure: text in, a tree of conditions out, plus notes about anything it couldn't
+// read. The SQL lives in ./sql.ts.
 //
 //   bolt                   name contains "bolt"
 //   o:"draw a card"        rules text contains the phrase
@@ -12,6 +11,11 @@ import { COLOR_COMBINATIONS } from "@/shared/kernel";
 //   id<=esper              color identity within white-blue-black
 //   mv<=2  pow>=4          mana value, power, toughness
 //   -t:land  (a or b)      not, or, parentheses
+//   !"Lightning Bolt"      exactly that name
+//   o:/draw (a|two)/       a regular expression (names, rules text, type line, artist)
+//   kw:flying is:mdfc usd<1 year>=2024 own=0 …   see KEYWORDS below
+
+type Color = ManaColor;
 
 /** The fields a search term can be about. */
 export type SearchField =
@@ -27,12 +31,32 @@ export type SearchField =
   | "rarity"
   | "set"
   | "format"
-  | "is";
+  | "is"
+  | "keyword"
+  | "loyalty"
+  | "defense"
+  | "artist"
+  | "number"
+  | "produces"
+  | "usd"
+  | "year"
+  | "date"
+  | "border"
+  | "frame"
+  | "own";
 
 export type Comparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | ":";
 
-/** One condition, e.g. `mv<=2` is { field: "manaValue", comparison: "<=", value: "2" }. */
-export type SearchTerm = Readonly<{ field: SearchField; comparison: Comparison; value: string }>;
+/**
+ * One condition, e.g. `mv<=2` is { field: "manaValue", comparison: "<=", value: "2" }. `o:/x/`
+ * has the value "x" and `isPattern: true`: a regular expression rather than plain words.
+ */
+export type SearchTerm = Readonly<{
+  field: SearchField;
+  comparison: Comparison;
+  value: string;
+  isPattern?: boolean;
+}>;
 
 export type SearchNode =
   | Readonly<{ kind: "all" }> // an empty search matches everything
@@ -78,10 +102,51 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   legal: "format",
   is: "is",
   name: "name",
+  kw: "keyword",
+  keyword: "keyword",
+  loy: "loyalty",
+  loyalty: "loyalty",
+  def: "defense",
+  defense: "defense",
+  a: "artist",
+  artist: "artist",
+  cn: "number",
+  number: "number",
+  produces: "produces",
+  usd: "usd",
+  year: "year",
+  date: "date",
+  border: "border",
+  frame: "frame",
+  own: "own",
+  owned: "own",
 };
 
-const NUMERIC_FIELDS = new Set<SearchField>(["manaValue", "power", "toughness"]);
-const IS_VALUES = new Set(["foil", "commander"]);
+const NUMERIC_FIELDS = new Set<SearchField>([
+  "manaValue",
+  "power",
+  "toughness",
+  "loyalty",
+  "defense",
+  "usd",
+  "year",
+  "own",
+]);
+/** Text fields that accept a /regular expression/ instead of words. */
+const PATTERN_FIELDS = new Set<SearchField>(["name", "oracle", "type", "artist"]);
+/** The longest regular expression accepted, so a search can't ask the database for too much. */
+export const MAX_PATTERN_LENGTH = 100;
+
+/** Every `is:` value, grouped as the search help shows them. */
+export const IS_VALUES = {
+  finish: ["foil", "etched"],
+  layout: ["dfc", "transform", "mdfc", "split", "adventure", "flip", "meld", "saga", "class"],
+  treatment: ["showcase", "borderless", "extendedart", "fullart", "serialized", "promo"],
+  kind: ["commander", "permanent", "spell", "historic", "legendary", "vanilla", "bear"],
+} as const;
+const ALL_IS_VALUES = new Set<string>(Object.values(IS_VALUES).flat());
+export const BORDERS = ["black", "white", "borderless", "silver", "gold", "yellow"] as const;
+export const FRAME_VERSIONS = ["1993", "1997", "2003", "2015", "future"] as const;
 const RARITIES = new Set(["common", "uncommon", "rare", "mythic", "special", "bonus"]);
 const RARITY_SHORT: Readonly<Record<string, string>> = {
   c: "common",
@@ -123,9 +188,18 @@ function tokenize(text: string): Token[] {
       }
       let word = "";
       let inQuotes = false;
+      let inPattern = false;
       while (index < text.length) {
         const next = text[index];
-        if (next === '"') inQuotes = !inQuotes;
+        if (inPattern) {
+          // Inside /…/ everything counts, spaces and parentheses too; "\/" is a literal slash.
+          word += next;
+          if (next === "\\" && index + 1 < text.length) word += text[++index];
+          else if (next === "/") inPattern = false;
+        } else if (next === "/" && !inQuotes && /^(!?|[a-z]+(<=|>=|!=|=|<|>|:))$/i.test(word)) {
+          word += next; // a pattern starts right after the keyword (or at the word's start)
+          inPattern = true;
+        } else if (next === '"') inQuotes = !inQuotes;
         else if (!inQuotes && (/\s/.test(next) || next === "(" || next === ")")) break;
         else word += next;
         index++;
@@ -199,18 +273,49 @@ export function parseSearch(text: string): ParsedSearch {
 
 /** One word as a condition, or null (with a note) when it can't be read. */
 function wordNode(word: string, notes: string[]): SearchNode | null {
-  const { keyword, comparison, value } = splitWord(word);
-  if (keyword === null) return { kind: "term", term: { field: "name", comparison: ":", value } };
+  // !name: exactly this name (`!"Lightning Bolt"`; the quotes are already gone).
+  if (word.startsWith("!") && word.length > 1) {
+    return { kind: "term", term: { field: "name", comparison: "=", value: word.slice(1) } };
+  }
+  const { keyword, comparison, value: rawValue } = splitWord(word);
+  const pattern = patternIn(rawValue);
+  if (keyword === null) {
+    if (pattern === undefined) {
+      return { kind: "term", term: { field: "name", comparison: ":", value: rawValue } };
+    }
+    const problem = patternProblem(pattern);
+    if (problem !== null) {
+      notes.push(`${problem} (ignored)`);
+      return null;
+    }
+    return {
+      kind: "term",
+      term: { field: "name", comparison: ":", value: pattern, isPattern: true },
+    };
+  }
 
   const field = KEYWORDS[keyword];
   if (field === undefined) {
     notes.push(`Unknown keyword "${keyword}${comparison}" (ignored)`);
     return null;
   }
-  if (value === "") {
+  if (rawValue === "") {
     notes.push(`"${word}" has no value (ignored)`);
     return null;
   }
+  if (pattern !== undefined) {
+    const problem = PATTERN_FIELDS.has(field)
+      ? comparison === ":" || comparison === "="
+        ? patternProblem(pattern)
+        : `"${comparison}" doesn't apply to a pattern`
+      : `"${keyword}${comparison}" doesn't take a /pattern/`;
+    if (problem !== null) {
+      notes.push(`${problem} (ignored)`);
+      return null;
+    }
+    return { kind: "term", term: { field, comparison: ":", value: pattern, isPattern: true } };
+  }
+  const value = rawValue;
   const problem = valueProblem(field, comparison, value);
   if (problem !== null) {
     notes.push(`${problem} (ignored)`);
@@ -227,12 +332,62 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
     return `"${value}" isn't a color`;
   }
   if (field === "rarity" && rarityName(value) === null) return `"${value}" isn't a rarity`;
-  if (field === "is" && !IS_VALUES.has(value.toLowerCase())) {
-    return `"is:${value}" isn't supported (try is:foil or is:commander)`;
+  if (field === "is" && !ALL_IS_VALUES.has(value.toLowerCase())) {
+    return `"is:${value}" isn't supported (see Search help)`;
   }
-  const textField = ["name", "oracle", "type", "set", "format", "mana", "is"].includes(field);
+  if (field === "produces" && !/^[wubrgc]+$/i.test(value)) {
+    return `"${value}" isn't a mana color (W, U, B, R, G or C)`;
+  }
+  if (field === "border" && !BORDERS.some((border) => border === value.toLowerCase())) {
+    return `"${value}" isn't a border (${BORDERS.join(", ")})`;
+  }
+  if (field === "date" && !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(value)) {
+    return `"${value}" isn't a date (write 2024, 2024-08 or 2024-08-02)`;
+  }
+  if (field === "number" && comparison !== ":" && comparison !== "=" && !/^\d+$/.test(value)) {
+    return `"${value}" isn't a number`;
+  }
+  const textField = [
+    "name",
+    "oracle",
+    "type",
+    "set",
+    "format",
+    "mana",
+    "is",
+    "keyword",
+    "artist",
+    "produces",
+    "border",
+    "frame",
+  ].includes(field);
   if (textField && comparison !== ":" && comparison !== "=" && comparison !== "!=") {
     return `"${comparison}" doesn't apply to text`;
+  }
+  return null;
+}
+
+/** The pattern inside `/…/`, or undefined when the value isn't one. */
+function patternIn(value: string): string | undefined {
+  return value.length >= 2 && value.startsWith("/") && value.endsWith("/")
+    ? value.slice(1, -1)
+    : undefined;
+}
+
+/**
+ * Why a regular expression can't be used, or null. It must compile, stay short, and avoid the
+ * few JavaScript features Postgres's regular expressions don't have (named groups, \p{…}).
+ */
+function patternProblem(pattern: string): string | null {
+  if (pattern === "") return "An empty /pattern/";
+  if (pattern.length > MAX_PATTERN_LENGTH) {
+    return `A /pattern/ longer than ${MAX_PATTERN_LENGTH} characters`;
+  }
+  if (/\(\?<[^=!]|\\[pPk]\{?/.test(pattern)) return `/${pattern}/ uses a feature not supported`;
+  try {
+    new RegExp(pattern, "i");
+  } catch {
+    return `/${pattern}/ isn't a valid pattern`;
   }
   return null;
 }

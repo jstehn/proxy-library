@@ -19,6 +19,8 @@ const elements = [
   { type: "db", pattern: "src/shared/db" },
   { type: "http", pattern: "src/shared/http" },
   { type: "config", pattern: "src/shared/config" },
+  // The card search language and card lists (ADR 0017): index.ts is pure, sql.ts is server-only.
+  { type: "card-search", pattern: "src/shared/card-search" },
   // src/modules/<module>/<layer>: domain | application | infrastructure | queries | testing
   { type: "module-layer", pattern: "src/modules/*/*", capture: ["module", "layer"] },
   // src/modules/<module> itself, which holds only index.ts: the module's public API
@@ -42,6 +44,9 @@ const from = (selector, ...to) => ({ from: selector, allow: { to } });
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
 // A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
 const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
+// The card search language's pure half, and its SQL half (ADR 0017).
+const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
+const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql.ts" } };
 
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
@@ -54,9 +59,10 @@ const policies = [
   from(el("runtime"), el("kernel")),
   from(el("db"), el("kernel"), el("db")),
   from(el("http"), el("kernel"), el("http")),
+  from(el("card-search"), el("kernel"), el("card-search")),
 
   // module layers: the dependency rule points inward (overview.md)
-  from(layer("domain"), el("kernel"), layer("domain", { sameModule: true })),
+  from(layer("domain"), el("kernel"), layer("domain", { sameModule: true }), cardSearch),
   // A domain may use another module's vocabulary (its types), never its code: `import type`
   // only. The pack engine works on the catalog's BoosterConfig this way (overview.md).
   { from: layer("domain"), allow: { to: publicApi, dependency: { kind: "type" } } },
@@ -66,6 +72,7 @@ const policies = [
     layer("domain", { sameModule: true }),
     layer("application", { sameModule: true }),
     publicApi, // other modules, only through their public API
+    cardSearch,
   ),
   from(
     layer("infrastructure"),
@@ -85,6 +92,8 @@ const policies = [
     layer("domain", { sameModule: true }),
     layer("queries", { sameModule: true }),
     layer("infrastructure", { file: "schema.ts" }), // reads may join across modules (ADR 0006)
+    cardSearch,
+    cardSearchSql, // searches run as SQL in queries (ADR 0017)
   ),
   from(
     layer("testing"),
@@ -127,7 +136,16 @@ const policies = [
   ),
 
   // delivery (Next.js): controllers and views
-  from(el("app"), el("app"), el("ui"), el("server"), el("kernel"), publicApi, clientApi),
+  from(
+    el("app"),
+    el("app"),
+    el("ui"),
+    el("server"),
+    el("kernel"),
+    publicApi,
+    clientApi,
+    cardSearch, // the pure half only: client components may use it (ADR 0017)
+  ),
   // client.ts re-exports only its own module's domain (no database code reaches the browser).
   {
     from: clientApi,
@@ -183,7 +201,14 @@ export default defineConfig([
 
   // Pure code: the kernel and every module's domain import no frameworks, DB, or Node APIs.
   {
-    files: ["src/shared/kernel/**/*.ts", "src/modules/*/domain/**/*.ts"],
+    files: [
+      "src/shared/kernel/**/*.ts",
+      "src/modules/*/domain/**/*.ts",
+      // the card search language's pure half (its sql.ts may use drizzle-orm)
+      "src/shared/card-search/index.ts",
+      "src/shared/card-search/parse.ts",
+      "src/shared/card-search/list.ts",
+    ],
     ignores: TESTS,
     rules: {
       "no-restricted-imports": [

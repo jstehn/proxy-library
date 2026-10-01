@@ -1,6 +1,8 @@
 import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, colorCombination, type ManaColor } from "@/shared/kernel";
+import { parseSearch } from "@/shared/card-search";
+import { FOIL_IN_CATALOG, searchCondition } from "@/shared/card-search/sql";
+import { Cents, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import type { CardFace, Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 
@@ -194,7 +196,10 @@ export async function recentSyncRuns(db: DbExecutor, limit = 20): Promise<SyncRu
 
 /** What the singles store can be filtered and sorted by. Empty fields don't filter. */
 export type PrintingSearch = Readonly<{
-  name?: string;
+  /** The player searching (`own` counts their copies). */
+  userId: UserId;
+  /** Card search text, Scryfall-style (design doc 15): `bolt`, `t:creature mv<=2`, … */
+  search?: string;
   setCode?: string;
   rarity?: string;
   /**
@@ -217,10 +222,12 @@ function hasExactly(colors: readonly ManaColor[]): SQL {
   return sql`(cardinality(p.colors) = ${colors.length} and p.colors @> array[${array}]::text[])`;
 }
 
-/** SQL conditions for a search, on printings aliased "p". */
-function printingConditions(search: PrintingSearch) {
-  const conditions = [sql`true`];
-  if (search.name) conditions.push(sql`p.name ilike ${`%${search.name}%`}`);
+/** SQL conditions for a search, on printings aliased "p", and notes about ignored parts. */
+function printingConditions(search: PrintingSearch): { where: SQL; notes: readonly string[] } {
+  const parsed = parseSearch(search.search ?? "");
+  const conditions = [
+    searchCondition(parsed.node, { userId: search.userId, foil: FOIL_IN_CATALOG }),
+  ];
   if (search.setCode) conditions.push(sql`p.set_code = ${search.setCode.toUpperCase()}`);
   if (search.rarity) conditions.push(sql`p.rarity = ${search.rarity}`);
   const combination = search.color ? colorCombination(search.color) : undefined;
@@ -228,10 +235,16 @@ function printingConditions(search: PrintingSearch) {
   else if (search.color === "M") conditions.push(sql`cardinality(p.colors) > 1`);
   else if (combination) conditions.push(hasExactly(combination.colors));
   else if (search.color) conditions.push(sql`${search.color} = any(p.colors)`);
-  return sql.join(conditions, sql` and `);
+  return { where: sql.join(conditions, sql` and `), notes: parsed.notes };
 }
 
-export type SearchResult = Readonly<{ printingIds: string[]; total: number; pageCount: number }>;
+export type SearchResult = Readonly<{
+  printingIds: string[];
+  total: number;
+  pageCount: number;
+  /** Parts of the search that were ignored, to show under the box. */
+  notes: readonly string[];
+}>;
 
 /**
  * Printings in enabled sets matching a search, one page at a time (the singles store). Returns
@@ -241,7 +254,7 @@ export async function searchPrintings(
   db: DbExecutor,
   search: PrintingSearch,
 ): Promise<SearchResult> {
-  const where = printingConditions(search);
+  const { where, notes } = printingConditions(search);
   const order = {
     name: sql`p.name, p.set_code, p.collector_number`,
     number: sql`p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last, p.collector_number`,
@@ -270,6 +283,7 @@ export async function searchPrintings(
     printingIds: rows.rows.map((row) => row.id),
     total,
     pageCount: Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE)),
+    notes,
   };
 }
 

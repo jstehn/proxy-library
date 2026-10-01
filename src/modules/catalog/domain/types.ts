@@ -181,6 +181,8 @@ export type ScryfallCard = Readonly<{
   legalities: Readonly<Record<string, string>>;
   /** Mana symbols the card can produce: "W", "U", "B", "R", "G", "C". Empty for most cards. */
   producedMana: readonly string[];
+  /** Keyword abilities and actions ("Flying", "Ward", "Scry"), for `kw:` searches. */
+  keywords: readonly string[];
 }>;
 
 export type PriceSnapshot = Readonly<{

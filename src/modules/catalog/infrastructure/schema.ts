@@ -66,6 +66,11 @@ export const printings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Keyword abilities (Scryfall's keywords), for `kw:` searches (design doc 15).
+    keywords: text("keywords")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (table) => [

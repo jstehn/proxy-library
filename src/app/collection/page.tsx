@@ -5,6 +5,7 @@ import {
   oneOf,
   pageNumber,
   Pagination,
+  searchText,
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
 import { enabledSets, printingCards } from "@/modules/catalog";
@@ -61,11 +62,11 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
   const values = filterValues(searchParams);
   const page = pageNumber(searchParams);
   const finish = oneOf(values.finish, ["", "nonfoil", "foil", "etched"] as const);
-  const isFiltered = ["name", "set", "rarity", "color", "finish"].some((key) => key in values);
+  const isFiltered = ["q", "name", "set", "rarity", "color", "finish"].some((key) => key in values);
 
   const [result, sets] = await Promise.all([
     collectionPage(db, actor.userId, {
-      name: values.name,
+      search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
       color: values.color,
@@ -117,6 +118,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
         sorts={SORTS}
         sections={SECTIONS}
         showFinish
+        notes={result.notes}
       />
 
       {result.rows.length === 0 ? (

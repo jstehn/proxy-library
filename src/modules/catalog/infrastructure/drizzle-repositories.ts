@@ -289,6 +289,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
             imageUris: card.images,
             legalities: card.legalities,
             producedMana: [...card.producedMana],
+            keywords: [...card.keywords],
           })
           .where(eq(printings.scryfallId, card.scryfallId));
       }

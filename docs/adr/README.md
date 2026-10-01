@@ -24,3 +24,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0014 | [Price singles at market value and sealed product at MSRP](0014-pricing-sources.md)                | Accepted |
 | 0015 | [Official product photos and key art from Wizards Play Network pages](0015-wpn-product-imagery.md) | Accepted |
 | 0016 | [A browser-safe public API per module (`client.ts`)](0016-client-safe-module-api.md)               | Accepted |
+| 0017 | [One card search language, shared by every module that searches cards](0017-shared-card-search.md) | Accepted |

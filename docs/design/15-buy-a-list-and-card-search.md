@@ -1,7 +1,7 @@
 # Design: buy singles from a list, and one card search everywhere
 
 - **Phase:** 15
-- **Status:** **In review** (implementation starts only after approval)
+- **Status:** **Approved** (2026-10-01, with the recommended answer to every question in section 8)
 - **Related:** design doc 07 (singles store), design doc 09 (deck lists), design doc 14 (search
   language), ADR 0006 (cross-module reads), ADR 0009 (lint boundaries), ADR 0016 (client API)
 
@@ -187,7 +187,14 @@ SQL builder; the browser may import the pure parts only (no `drizzle-orm` reache
   balance drop; search the singles store with `t:creature mv<=2`.
 - Screenshots in dark mode and at phone width.
 
-## 8. Open questions (for review)
+## 8. Decisions from review (2026-10-01)
+
+All six recommendations were accepted: cheapest printing by default; "only buy what I don't
+already own" on by default; a "Buy what this deck is short" link on each deck; regular
+expressions allowed (up to 100 characters); the keyword list as proposed; the menus stay beside
+the search box.
+
+The questions as asked:
 
 1. **Default printing** when a line doesn't name one: the **cheapest** for sale (recommended:
    it's a game economy), or the **newest**? Either way, both are offered on the screen.

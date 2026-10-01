@@ -233,6 +233,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         images: card.images,
         legalities: card.legalities,
         producedMana: card.producedMana,
+        keywords: card.keywords,
       });
       summary.pricedPrintings++;
       summary.priceSnapshots += todays.length;

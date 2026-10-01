@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, BrowseCard, BrowseSort, DeckLine } from "@/modules/decks";
-import { hasTerm, mainType, toggleTerm } from "@/modules/decks/client";
+import { mainType } from "@/modules/decks/client";
+import { hasTerm, toggleTerm } from "@/shared/card-search";
 import { ManaText } from "@/ui/mana";
 import { browseAction, cardDetailAction, setQuantityAction, type BuilderDeck } from "./actions";
 import { DeckList } from "./deck-list";
