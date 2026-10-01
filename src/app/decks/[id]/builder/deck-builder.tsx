@@ -26,6 +26,19 @@ const SORT_LABELS: Readonly<Record<BrowseSort, string>> = {
   newest: "Newest",
 };
 
+/**
+ * How big the cards in the grid are. Phones get a fixed number of columns instead, since a
+ * minimum width that suits a desktop leaves one lonely column on a phone. (Written out in full so
+ * Tailwind finds the classes.)
+ */
+const CARD_SIZE_NAMES = ["small", "medium", "large"] as const;
+type CardSize = (typeof CARD_SIZE_NAMES)[number];
+const CARD_SIZES: Readonly<Record<CardSize, string>> = {
+  small: "grid-cols-3 sm:grid-cols-[repeat(auto-fill,minmax(8rem,1fr))]",
+  medium: "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(11rem,1fr))]",
+  large: "grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(15rem,1fr))]",
+};
+
 /** Quick filters: each button adds or removes a term in the search box. */
 const TYPE_FILTERS = [
   "Creature",
@@ -78,6 +91,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
   const [includeColorless, setIncludeColorless] = useState(true);
   const [showEverything, setShowEverything] = useState(false);
   const [sort, setSort] = useState<BrowseSort>("name");
+  const [cardSize, setCardSize] = useState<CardSize>("medium");
   const [browse, setBrowse] = useState<BrowseState>(EMPTY_BROWSE);
   const latestBrowse = useRef(0);
 
@@ -361,15 +375,32 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
           className={`min-w-0 flex-1 flex-col gap-3 ${tab === "collection" ? "flex" : "hidden lg:flex"}`}
         >
           <div className="flex flex-col gap-2">
-            <input
-              ref={searchRef}
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search your cards"
-              placeholder='Search: bolt, t:creature mv<=3, o:"draw a card", id<=esper'
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                ref={searchRef}
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Search your cards"
+                placeholder='Search: bolt, t:creature mv<=3, o:"draw a card", id<=esper'
+                className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+              />
+              <div role="group" aria-label="Card size" className="flex shrink-0 items-center gap-1">
+                <span className="mr-1 hidden text-xs text-zinc-500 sm:inline">Card size</span>
+                {CARD_SIZE_NAMES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    aria-pressed={cardSize === size}
+                    aria-label={`${size[0].toUpperCase()}${size.slice(1)} cards`}
+                    onClick={() => setCardSize(size)}
+                    className={pill(cardSize === size)}
+                  >
+                    {size === "small" ? "S" : size === "medium" ? "M" : "L"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {browse.notes.length > 0 && (
               <ul className="text-xs text-amber-700 dark:text-amber-400">
                 {browse.notes.map((note) => (
@@ -489,7 +520,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
             ref={gridRef}
             onKeyDown={onGridKey}
             aria-label="Cards you own"
-            className={`grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2 transition-opacity ${isFirstPageLoading && browse.cards.length > 0 ? "opacity-60" : ""}`}
+            className={`grid ${CARD_SIZES[cardSize]} gap-3 transition-opacity ${isFirstPageLoading && browse.cards.length > 0 ? "opacity-60" : ""}`}
           >
             {browse.cards.map((card, index) => {
               const heading =
@@ -600,43 +631,55 @@ function GridCard(props: {
           {props.heading}
         </li>
       )}
-      <li className="relative">
+      <li>
         <button
           type="button"
           data-card
           onClick={props.onSelect}
           aria-pressed={props.isSelected}
           aria-label={`${card.name}, you own ${card.owned}${props.inThisDeck > 0 ? `, ${props.inThisDeck} in this deck` : ""}`}
-          className={`block w-full rounded-[5%] transition ${props.isSelected ? "ring-4 ring-sky-500" : "hover:scale-[1.03]"} ${card.misfit ? "opacity-45" : ""}`}
+          className="group block w-full text-left"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/images/${card.printingId}/normal/front`}
-            alt=""
-            loading="lazy"
-            width={488}
-            height={680}
-            className="aspect-[488/680] w-full rounded-[4.5%] bg-zinc-200 dark:bg-zinc-800"
-          />
+          <span
+            className={`relative block rounded-[5%] transition ${props.isSelected ? "ring-4 ring-sky-500" : "group-hover:scale-[1.03]"} ${card.misfit ? "opacity-45" : ""}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/images/${card.printingId}/normal/front`}
+              alt=""
+              loading="lazy"
+              width={488}
+              height={680}
+              className="aspect-[488/680] w-full rounded-[4.5%] bg-zinc-200 dark:bg-zinc-800"
+            />
+            {props.inThisDeck > 0 && (
+              <span className="absolute top-1 right-1 rounded bg-green-700 px-1.5 text-[11px] font-semibold text-white">
+                {props.inThisDeck} in deck
+              </span>
+            )}
+            {card.misfit && (
+              <span className="absolute top-1 left-1 rounded bg-amber-600 px-1.5 text-[11px] font-medium text-white">
+                {card.misfit === "color" ? "off-color" : "not legal"}
+              </span>
+            )}
+          </span>
+          {/* The name, always readable (the art's own text is small at this size). */}
+          <span className="mt-1 flex items-baseline gap-1 text-sm leading-tight">
+            <span className="min-w-0 flex-1 truncate font-medium" title={card.name}>
+              {card.name}
+            </span>
+            {card.manaCost && (
+              <span className="shrink-0 text-xs">
+                <ManaText text={card.manaCost} />
+              </span>
+            )}
+          </span>
+          <span className="block text-xs text-zinc-500">
+            own {card.owned}
+            {card.otherDecks > 0 &&
+              ` · in ${card.otherDecks} other ${card.otherDecks === 1 ? "deck" : "decks"}`}
+          </span>
         </button>
-        <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-black/75 px-1.5 text-[11px] font-medium text-white">
-          own {card.owned}
-        </span>
-        {props.inThisDeck > 0 && (
-          <span className="pointer-events-none absolute top-1 right-1 rounded bg-green-700 px-1.5 text-[11px] font-semibold text-white">
-            {props.inThisDeck} in deck
-          </span>
-        )}
-        {card.misfit && (
-          <span className="pointer-events-none absolute top-1 left-1 rounded bg-amber-600 px-1.5 text-[11px] font-medium text-white">
-            {card.misfit === "color" ? "off-color" : "not legal"}
-          </span>
-        )}
-        {card.otherDecks > 0 && (
-          <span className="pointer-events-none absolute right-1 bottom-1 rounded bg-black/75 px-1.5 text-[11px] text-white">
-            {card.otherDecks} other {card.otherDecks === 1 ? "deck" : "decks"}
-          </span>
-        )}
       </li>
     </>
   );
