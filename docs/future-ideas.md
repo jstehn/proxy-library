@@ -78,3 +78,13 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Remote test suite** (`pnpm test:remote`, never run by default): a handful of checks against
   the real MTGJSON and Scryfall endpoints, to notice when their formats change. Automated tests
   stay offline (recorded fixtures, local image responses).
+
+## Deck building (out of scope for design doc 14, 2026-09-30)
+
+- **Suggestions:** "cards like this" and "cards that go with your commander", from your own
+  collection first.
+- **Price-based recommendations:** the cheapest singles that would complete a deck, or upgrades
+  within a budget.
+- **Automatic tags** like ramp, card draw, removal and board wipes (from rules text), with counts
+  in the deck statistics.
+- **Sharing decks publicly** (a read-only link), and deck comments.

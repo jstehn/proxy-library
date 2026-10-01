@@ -52,7 +52,8 @@ each lesson.
   (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
   (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs;
   `check-packs [n]` opens n packs of every booster recipe and reports rule violations;
-  `check-products` checks every product for sale contains something), `pnpm test:remote` (the only
+  `check-products` checks every product for sale contains something; `check-commanders` checks every
+  precon's commander is allowed to lead a deck), `pnpm test:remote` (the only
   tests that call MTGJSON/Scryfall; never run automatically).
 - Automated tests never touch the network: recorded fixtures, local image responses.
 - Docker: `docker compose up -d --build` (see docs/deploy.md). Dev stays on Nix + direnv.

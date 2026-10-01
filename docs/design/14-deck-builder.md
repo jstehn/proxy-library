@@ -1,7 +1,7 @@
 # Design: deck builder 2.0 and proxy PDFs
 
 - **Phase:** 14
-- **Status:** **In review** (implementation starts only after approval)
+- **Status:** **Approved** (2026-09-30, with the decisions in section 8)
 - **Related:** design doc 09 (decks), ADR 0007 (Scryfall data), lesson 09
 
 ## 1. Purpose & scope
@@ -121,15 +121,16 @@ any browser or print shop.
   border and no guide on it.
 - **Options** (a short form before downloading):
 
-| Option             | Choices                                                                                                                                                    | Default             |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Page size          | Letter, A4                                                                                                                                                 | Letter              |
-| Basic lands        | include, skip                                                                                                                                              | skip                |
-| Double-faced cards | **side by side** (front and back next to each other, to stick back to back on sticker paper), front only, backs on separate pages (for two-sided printing) | side by side        |
-| Which cards        | the whole deck, the main deck, cards not marked "have a real copy"                                                                                         | the whole deck      |
-| Gap between cards  | 0, 1, 2, 3 mm                                                                                                                                              | 2 mm                |
-| Cut guides         | corner marks, full lines, none                                                                                                                             | corner marks        |
-| Copies             | as many as the deck has, or one of each                                                                                                                    | as many as the deck |
+| Option             | Choices                                                                                                                                 | Default                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Page size          | Letter, A4                                                                                                                              | Letter                        |
+| Basic lands        | include, skip                                                                                                                           | skip                          |
+| Double-faced cards | **back faces on their own pages** (only back faces, mirrored to line up with the fronts for two-sided printing or stickers), front only | back faces on their own pages |
+| Which cards        | the whole deck, the main deck, cards not marked "have a real copy"                                                                      | the whole deck                |
+| Gap between cards  | 0, 1, 2, 3 mm                                                                                                                           | 2 mm                          |
+| Bleed              | none, 1/8 inch (3 mm) of image around each card                                                                                         | none                          |
+| Cut guides         | corner marks, full lines, none                                                                                                          | corner marks                  |
+| Copies             | as many as the deck has, or one of each                                                                                                 | as many as the deck           |
 
 - Images are Scryfall's **large** size (672 × 936, about 270 dots per inch at card size), from our
   image cache (fetched once each, as now).
@@ -174,19 +175,33 @@ limits are already handled by the deck rules.
   negation, `or`, parentheses, errors); integration tests against the fixture catalog.
 - Color identity filter: integration test (a red-white commander sees only R/W/RW/colorless).
 - Stats: unit tests with known decks.
-- PDF layout: unit tests (positions within the page, guides outside cards, DFCs side by side,
+- PDF layout: unit tests (positions within the page, guides outside cards, back faces on mirrored back pages,
   basics skipped); an integration test that the PDF downloads and has the right page count.
 - Browser test: search, select, add with a quantity, the stats change, hover a name to preview.
 - Screenshots in dark mode and at phone width.
 
-## 8. Open questions
+## 8. Decisions from review (2026-09-30)
 
-1. **Search keywords:** is this the right set to start with? Anything you use on Scryfall that's
-   missing?
-2. **Color identity filter on by default**, with "Show everything I own" to turn it off: right?
-3. **Adding more copies than you own:** allow it and mark the line (as now: you might own more
-   later), or stop at what you own? Recommended: allow and mark.
-4. **Proxy defaults:** Letter, skip basic lands, double-faced side by side, 2 mm gaps with corner
-   marks. Any to change? Other options you want ("have a real copy" marking, a "PROXY" stamp,
-   bleed for professional printing)?
-5. **A new library, pdf-lib**, for making PDFs: OK?
+1. **Search keywords:** the set in section 2.3, as proposed.
+2. **Color filter:** on by default **only for Commander decks** (the commander's color identity),
+   and the player can **choose which colors to see** (toggle each color, and colorless) in any
+   deck, Commander or not.
+3. **More copies than you own:** allowed, and the line is marked (as now).
+4. **Proxy PDFs:** the proposed defaults, except **double-faced cards**: their back faces go on
+   **separate pages made only of back faces**, in mirrored positions, so a two-sided print (or a
+   sticker on the back) lines each back up with its front. Side-by-side is not offered. **Bleed**
+   is an option (an extra margin of image around each card, for professional cutting).
+5. **pdf-lib** for making PDFs: approved.
+6. Out-of-scope ideas (suggestions, price-based recommendations, automatic tags, public sharing)
+   are listed in [future-ideas.md](../future-ideas.md).
+
+## 9. Commander eligibility (fixed before this phase)
+
+Precon decks showed the commander rule was too narrow: _Hearthhull, the Worldseed_ (World
+Shaper) and _Inspirit, Flagship Vessel_ (Counter Intelligence) are legendary **Spacecraft**, not
+creatures, yet lead their precons. Since Edge of Eternities (2025), a **legendary Vehicle or
+Spacecraft with a printed power and toughness** can be a commander. `canBeCommander` now accepts
+legendary creatures, those Vehicles and Spacecraft, and cards that say "can be your commander",
+and a **Background** as a second commander beside one that says "Choose a Background".
+`pnpm worker check-commanders` tests every precon's commanders in the catalog (all 60 pass); the
+search keyword `is:commander` uses the same rule.

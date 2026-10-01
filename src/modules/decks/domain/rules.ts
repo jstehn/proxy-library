@@ -14,6 +14,8 @@ export type CardRules = Readonly<{
   colorIdentity: readonly Color[];
   legalities: Readonly<Record<string, string>>; // Scryfall's, e.g. { modern: "legal" }
   isBasicLand: boolean;
+  /** Whether a face has a printed power and toughness (a Spacecraft or Vehicle can). */
+  hasPowerToughness: boolean;
 }>;
 
 export type RulesLookup = (oracleId: string) => CardRules;
@@ -53,11 +55,34 @@ function isUnlimited(card: CardRules): boolean {
   return card.isBasicLand || /a deck can have any number of cards named/i.test(card.text);
 }
 
-function canBeCommander(card: CardRules): boolean {
+/**
+ * Whether a card can lead a Commander deck on its own (Commander rule 903.3):
+ * - a legendary creature;
+ * - a legendary Vehicle or Spacecraft with a printed power and toughness (allowed since Edge of
+ *   Eternities, 2025: Hearthhull, the Worldseed, a Spacecraft, leads its precon);
+ * - or a card that says it "can be your commander".
+ * Checked against every precon's commanders in the catalog by `pnpm worker check-commanders`.
+ */
+export function canBeCommander(card: CardRules): boolean {
+  const isLegendary = /\bLegendary\b/.test(card.typeLine);
   return (
-    (/\bLegendary\b/.test(card.typeLine) && /\bCreature\b/.test(card.typeLine)) ||
+    (isLegendary && /\bCreature\b/.test(card.typeLine)) ||
+    (isLegendary && /\b(Vehicle|Spacecraft)\b/.test(card.typeLine) && card.hasPowerToughness) ||
     /can be your commander/i.test(card.text)
   );
+}
+
+/** A Background can be the second commander, beside one that says "Choose a Background". */
+function isBackground(card: CardRules): boolean {
+  return /\bLegendary\b/.test(card.typeLine) && /\bBackground\b/.test(card.typeLine);
+}
+
+/** The names of the commanders that may not lead this deck (an empty list means all may). */
+export function invalidCommanders(commanders: readonly CardRules[]): string[] {
+  const choosesBackground = commanders.some((card) => /choose a background/i.test(card.text));
+  return commanders
+    .filter((card) => !canBeCommander(card) && !(isBackground(card) && choosesBackground))
+    .map((card) => card.name);
 }
 
 /** Copies of each oracle card across every board. */
@@ -135,12 +160,11 @@ function commanderProblems(deck: Deck, rules: RulesLookup, size: number): DeckPr
   if (commanderCount > 2) problems.push({ kind: "TooManyCommanders", count: commanderCount });
   if (total !== size) problems.push({ kind: "WrongSize", required: size, count: total });
 
-  const identity = new Set<string>();
-  for (const commander of commanders) {
-    const card = rules(commander.oracleId);
-    if (!canBeCommander(card)) problems.push({ kind: "CommanderInvalid", name: card.name });
-    for (const color of card.colorIdentity) identity.add(color);
+  const commanderCards = commanders.map((commander) => rules(commander.oracleId));
+  for (const name of invalidCommanders(commanderCards)) {
+    problems.push({ kind: "CommanderInvalid", name });
   }
+  const identity = new Set<string>(commanderCards.flatMap((card) => card.colorIdentity));
   if (commanderCount > 0) {
     for (const entry of deck.entries) {
       const card = rules(entry.oracleId);

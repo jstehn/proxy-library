@@ -37,16 +37,17 @@ pnpm dev:all          # starts Postgres if needed, applies migrations, runs the 
 
 Ctrl+C stops the app and the worker; Postgres keeps running until `pnpm db:stop`.
 
-| Command                      | Does                                                           |
-| ---------------------------- | -------------------------------------------------------------- |
-| `pnpm dev:all`               | database + migrations + app + worker, in one terminal          |
-| `pnpm check`                 | typecheck, lint, format check and unit tests (before a commit) |
-| `pnpm test:int`              | integration tests against the `tcg_test` database              |
-| `pnpm test:e2e`              | browser tests (Playwright, with Nix's browsers)                |
-| `pnpm test:remote`           | the only tests that call MTGJSON and Scryfall (run by hand)    |
-| `pnpm worker schedule`       | the nightly sync and admin-queued syncs                        |
-| `pnpm worker check-packs`    | opens 1,000 packs of every booster recipe and reports problems |
-| `pnpm worker check-products` | checks every product for sale contains something               |
+| Command                        | Does                                                           |
+| ------------------------------ | -------------------------------------------------------------- |
+| `pnpm dev:all`                 | database + migrations + app + worker, in one terminal          |
+| `pnpm check`                   | typecheck, lint, format check and unit tests (before a commit) |
+| `pnpm test:int`                | integration tests against the `tcg_test` database              |
+| `pnpm test:e2e`                | browser tests (Playwright, with Nix's browsers)                |
+| `pnpm test:remote`             | the only tests that call MTGJSON and Scryfall (run by hand)    |
+| `pnpm worker schedule`         | the nightly sync and admin-queued syncs                        |
+| `pnpm worker check-packs`      | opens 1,000 packs of every booster recipe and reports problems |
+| `pnpm worker check-products`   | checks every product for sale contains something               |
+| `pnpm worker check-commanders` | checks every precon's commander may lead a Commander deck      |
 
 Documentation starts at [docs/README.md](docs/README.md): architecture, design docs for every
 phase, and decision records.

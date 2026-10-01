@@ -1,4 +1,5 @@
 // Worker entry point: `pnpm worker <command>`.
+import { invalidCommanders, preconCommanders } from "@/modules/decks";
 import { productProblems } from "@/modules/inventory";
 import { loadProductCheck } from "@/modules/inventory/infrastructure";
 import { runMigrations } from "@/shared/db";
@@ -70,6 +71,24 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
       for (const problem of problems.slice(0, 5)) console.log(`  ${problem}`);
     }
     console.log(`\n${toCheck.length} products checked, ${bad} with problems`);
+    if (bad > 0) process.exitCode = 1;
+  },
+
+  /**
+   * `pnpm worker check-commanders`: every precon's commanders must be allowed to lead a deck. A
+   * precon always has a valid commander, so any failure is a gap in our rule (Hearthhull, the
+   * Worldseed found the 2025 Spacecraft rule).
+   */
+  async "check-commanders"(container) {
+    const decks = await preconCommanders(container.db);
+    let bad = 0;
+    for (const deck of decks) {
+      const invalid = invalidCommanders(deck.commanders);
+      if (invalid.length === 0) continue;
+      bad += 1;
+      console.log(`${deck.setCode} ${deck.deckName}: rejected ${invalid.join(", ")}`);
+    }
+    console.log(`\n${decks.length} precon decks checked, ${bad} with a rejected commander`);
     if (bad > 0) process.exitCode = 1;
   },
 

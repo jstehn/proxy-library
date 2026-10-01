@@ -118,6 +118,7 @@ export async function deckView(
     collector_number: string;
     is_basic_land: boolean;
     face_text: string;
+    has_power_toughness: boolean;
     color_identity: string[];
     legalities: Record<string, string> | null;
     owned: number;
@@ -128,7 +129,8 @@ export async function deckView(
            coalesce(e.finish, owned_printing.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.set_code, shown.collector_number,
-           newest.is_basic_land, newest.face_text, newest.color_identity, newest.legalities,
+           newest.is_basic_land, newest.face_text, newest.has_power_toughness,
+           newest.color_identity, newest.legalities,
            coalesce((select sum(c.quantity) from collection_cards c join printings p on p.id = c.printing_id
                       where c.user_id = ${userId} and p.oracle_id = e.oracle_id), 0)::int as owned,
            (select array_agg(distinct d2.name) from deck_entries e2 join decks d2 on d2.id = e2.deck_id
@@ -138,6 +140,8 @@ export async function deckView(
       join lateral (
         select p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
                coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
+               exists (select 1 from jsonb_array_elements(p.faces) f
+                        where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
                p.color_identity, p.legalities
           from printings p join card_sets s on s.code = p.set_code
          where p.oracle_id = e.oracle_id
@@ -167,6 +171,7 @@ export async function deckView(
       colorIdentity: row.color_identity.map((color) => ColorSchema.parse(color)),
       legalities: row.legalities ?? {},
       isBasicLand: row.is_basic_land,
+      hasPowerToughness: row.has_power_toughness,
     };
     return {
       oracleId: row.oracle_id,
@@ -277,4 +282,56 @@ export async function decksUsing(
     ]);
   }
   return found;
+}
+
+/** One precon deck list's commanders, as the deck rules see them (for `check-commanders`). */
+export type PreconCommanders = Readonly<{
+  setCode: string;
+  deckName: string;
+  commanders: CardRules[];
+}>;
+
+/** Every deck list in the catalog that has a commander board, with its commanders' rules facts. */
+export async function preconCommanders(db: DbExecutor): Promise<PreconCommanders[]> {
+  const rows = await db.execute<{
+    set_code: string;
+    deck_name: string;
+    name: string;
+    type_line: string;
+    face_text: string;
+    has_power_toughness: boolean;
+    color_identity: string[];
+    legalities: Record<string, string> | null;
+  }>(sql`
+    select d.set_code, d.name as deck_name, p.name, p.type_line,
+           coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
+           exists (select 1 from jsonb_array_elements(p.faces) f
+                    where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
+           p.color_identity, p.legalities
+      from deck_lists d
+      cross join jsonb_array_elements(d.cards) as card
+      join printings p on p.id = card->>'printingId'
+     where card->>'board' = 'commander'
+     order by d.set_code, d.name, p.name
+  `);
+  const byDeck = new Map<string, PreconCommanders>();
+  for (const row of rows.rows) {
+    const key = `${row.set_code}/${row.deck_name}`;
+    const deck = byDeck.get(key) ?? {
+      setCode: row.set_code,
+      deckName: row.deck_name,
+      commanders: [],
+    };
+    deck.commanders.push({
+      name: row.name,
+      typeLine: row.type_line,
+      text: row.face_text,
+      colorIdentity: row.color_identity.map((color) => ColorSchema.parse(color)),
+      legalities: row.legalities ?? {},
+      isBasicLand: false,
+      hasPowerToughness: row.has_power_toughness,
+    });
+    byDeck.set(key, deck);
+  }
+  return [...byDeck.values()];
 }

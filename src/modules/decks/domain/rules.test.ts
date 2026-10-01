@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import { samplePrintingId } from "../testing/fakes";
 import { DeckId, withEntry, type Deck, type Format } from "./deck";
-import { deckProblems, shortCount, type CardRules } from "./rules";
+import { canBeCommander, deckProblems, shortCount, type CardRules } from "./rules";
 
 // Small made-up cards, keyed by oracle id.
 const legalEverywhere = {
@@ -20,6 +20,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: ["R"],
     legalities: { ...legalEverywhere, standard: "not_legal" },
     isBasicLand: false,
+    hasPowerToughness: false,
   },
   mountain: {
     name: "Mountain",
@@ -28,6 +29,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: ["R"],
     legalities: legalEverywhere,
     isBasicLand: true,
+    hasPowerToughness: false,
   },
   rats: {
     name: "Relentless Rats",
@@ -36,6 +38,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: ["B"],
     legalities: legalEverywhere,
     isBasicLand: false,
+    hasPowerToughness: false,
   },
   ruby: {
     name: "Ruby Commander",
@@ -44,6 +47,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: ["R"],
     legalities: legalEverywhere,
     isBasicLand: false,
+    hasPowerToughness: true,
   },
   planeswalker: {
     name: "Walker",
@@ -52,6 +56,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: ["R"],
     legalities: legalEverywhere,
     isBasicLand: false,
+    hasPowerToughness: false,
   },
   sorcery: {
     name: "Plain Sorcery",
@@ -60,6 +65,7 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: [],
     legalities: legalEverywhere,
     isBasicLand: false,
+    hasPowerToughness: false,
   },
   lotus: {
     name: "Black Lotus",
@@ -68,6 +74,46 @@ const CARDS: Record<string, CardRules> = {
     colorIdentity: [],
     legalities: { vintage: "restricted", commander: "banned" },
     isBasicLand: false,
+    hasPowerToughness: false,
+  },
+  // The real Hearthhull, the Worldseed (Edge of Eternities Commander): a Spacecraft that
+  // becomes a creature, and leads the World Shaper precon.
+  hearthhull: {
+    name: "Hearthhull, the Worldseed",
+    typeLine: "Legendary Artifact — Spacecraft",
+    text: "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft.)",
+    colorIdentity: ["B", "R", "G"],
+    legalities: legalEverywhere,
+    isBasicLand: false,
+    hasPowerToughness: true,
+  },
+  // A Spacecraft with no power and toughness never becomes a creature.
+  station: {
+    name: "Orbital Station",
+    typeLine: "Legendary Artifact — Spacecraft",
+    text: "Station",
+    colorIdentity: [],
+    legalities: legalEverywhere,
+    isBasicLand: false,
+    hasPowerToughness: false,
+  },
+  chooser: {
+    name: "Background Chooser",
+    typeLine: "Legendary Creature — Elf",
+    text: "Choose a Background (You can have a Background as a second commander.)",
+    colorIdentity: ["G"],
+    legalities: legalEverywhere,
+    isBasicLand: false,
+    hasPowerToughness: true,
+  },
+  background: {
+    name: "Noble Heritage",
+    typeLine: "Legendary Enchantment — Background",
+    text: "Commander creatures you own get +1/+1.",
+    colorIdentity: ["W"],
+    legalities: legalEverywhere,
+    isBasicLand: false,
+    hasPowerToughness: false,
   },
 };
 const rules = (oracleId: string) => CARDS[oracleId];
@@ -210,6 +256,24 @@ describe("commander (rule 3)", () => {
       ["mountain", 99],
     ]);
     expect(kinds(deckProblems(sorcery, rules, ownAll))).toContain("CommanderInvalid");
+  });
+
+  it("accepts a legendary Spacecraft or Vehicle with power and toughness (since 2025)", () => {
+    expect(canBeCommander(rules("hearthhull"))).toBe(true);
+    expect(canBeCommander(rules("station"))).toBe(false);
+  });
+
+  it("accepts a Background only beside a commander that chooses one", () => {
+    const paired = deck("commander", [
+      ["chooser", 1, "commander"],
+      ["background", 1, "commander"],
+    ]);
+    expect(kinds(deckProblems(paired, rules, ownAll))).not.toContain("CommanderInvalid");
+    const alone = deck("commander", [
+      ["ruby", 1, "commander"],
+      ["background", 1, "commander"],
+    ]);
+    expect(kinds(deckProblems(alone, rules, ownAll))).toContain("CommanderInvalid");
   });
 
   it("is singleton, keeps to the commander's colors, and follows commander bans", () => {
