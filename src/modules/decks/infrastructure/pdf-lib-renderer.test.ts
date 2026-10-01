@@ -12,6 +12,7 @@ const line = (printingId: string, quantity: number, hasBack = false): ProxyLine 
   board: "main",
   isBasicLand: false,
   hasBack,
+  isFoil: false,
 });
 
 async function pdfFor(lines: readonly ProxyLine[], options: Partial<ProxyOptions> = {}) {

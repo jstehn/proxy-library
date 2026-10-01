@@ -17,6 +17,7 @@ export { hasTerm, toggleTerm } from "./domain/search";
 export {
   DEFAULT_PROXY_OPTIONS,
   GAPS_IN_MILLIMETERS,
+  pageList,
   proxySummary,
   type ProxyLine,
   type ProxyOptions,

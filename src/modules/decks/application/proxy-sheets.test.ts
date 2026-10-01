@@ -10,6 +10,7 @@ const line = (name: string, quantity: number, hasBack = false): ProxyLine => ({
   board: "main",
   isBasicLand: false,
   hasBack,
+  isFoil: false,
 });
 
 describe("proxySheet", () => {

@@ -6,6 +6,7 @@ import {
   cardsToPrint,
   DEFAULT_PROXY_OPTIONS,
   PAGE_MARGIN,
+  pageList,
   POINTS_PER_MILLIMETER,
   proxyPages,
   proxySummary,
@@ -28,6 +29,7 @@ const line = (name: string, changes: Partial<ProxyLine> = {}): ProxyLine => ({
   board: "main",
   isBasicLand: false,
   hasBack: false,
+  isFoil: false,
   ...changes,
 });
 
@@ -36,6 +38,7 @@ const singles = (count: number): ProxyCard[] =>
     printingId: `card-${index}`,
     name: `Card ${index}`,
     hasBack: false,
+    isFoil: false,
   }));
 
 const overlaps = (a: Box, b: Box) =>
@@ -124,8 +127,8 @@ describe("proxyPages", () => {
   it("puts double-faced cards last, each page of fronts followed by their mirrored backs", () => {
     const cards: ProxyCard[] = [
       ...singles(2),
-      { printingId: "delver", name: "Delver of Secrets", hasBack: true },
-      { printingId: "huntmaster", name: "Huntmaster of the Fells", hasBack: true },
+      { printingId: "delver", name: "Delver of Secrets", hasBack: true, isFoil: false },
+      { printingId: "huntmaster", name: "Huntmaster of the Fells", hasBack: true, isFoil: false },
     ];
     const pages = proxyPages(cards, options());
     expect(pages.map((page) => page.side)).toEqual(["front", "front", "back"]);
@@ -181,9 +184,52 @@ describe("proxySummary", () => {
     expect(proxySummary(deck, DEFAULT_PROXY_OPTIONS)).toEqual({
       cards: 11,
       pages: 4, // 9 + 1 singles, then Delver's front and back
-      twoSidedPages: 2,
+      twoSidedPages: [3, 4],
+      foilPages: [],
       perPage: 9,
       sideways: false,
     });
+  });
+});
+
+describe("foils on their own pages", () => {
+  const deck = [
+    line("Opt", { quantity: 2 }),
+    line("Lightning Bolt", { quantity: 3, isFoil: true }),
+    line("Delver of Secrets", { hasBack: true, isFoil: true }),
+    line("Ponder"),
+  ];
+
+  it("mixes foils in by default", () => {
+    const pages = proxyPages(cardsToPrint(deck, DEFAULT_PROXY_OPTIONS), DEFAULT_PROXY_OPTIONS);
+    expect(pages.map((page) => page.placements.length)).toEqual([6, 1, 1]);
+    expect(pages.every((page) => !page.foil)).toBe(true);
+  });
+
+  it("puts every foil, double-faced ones too, on foil pages after the rest", () => {
+    const foilOptions = options({ foils: "ownPages" });
+    const pages = proxyPages(cardsToPrint(deck, foilOptions), foilOptions);
+    const names = pages.map((page) => page.placements.map((placement) => placement.name));
+    expect(names).toEqual([
+      ["Opt", "Opt", "Ponder"],
+      ["Lightning Bolt", "Lightning Bolt", "Lightning Bolt"],
+      ["Delver of Secrets"],
+      ["Delver of Secrets"],
+    ]);
+    expect(pages.map((page) => page.foil)).toEqual([false, true, true, true]);
+    expect(proxySummary(deck, foilOptions)).toMatchObject({
+      pages: 4,
+      foilPages: [2, 3, 4],
+      twoSidedPages: [3, 4],
+    });
+  });
+});
+
+describe("pageList", () => {
+  it("joins runs of pages", () => {
+    expect(pageList([4])).toBe("page 4");
+    expect(pageList([2, 3, 4])).toBe("pages 2–4");
+    expect(pageList([2, 3, 4, 7])).toBe("pages 2–4 and 7");
+    expect(pageList([1, 3, 5, 6])).toBe("pages 1, 3 and 5–6");
   });
 });

@@ -36,6 +36,8 @@ export type ProxyOptions = Readonly<{
   bleed: "none" | "eighthInch";
   guides: "corners" | "lines" | "none";
   copies: "deck" | "one";
+  /** Foils mixed in with the rest, or on their own pages (to print on foil paper). */
+  foils: "mixed" | "ownPages";
 }>;
 
 /** The defaults agreed in design doc 14 (section 3 and decision 4). */
@@ -48,6 +50,7 @@ export const DEFAULT_PROXY_OPTIONS: ProxyOptions = {
   bleed: "none",
   guides: "corners",
   copies: "deck",
+  foils: "mixed",
 };
 
 /** What the sheet needs to know about one deck line. */
@@ -59,10 +62,17 @@ export type ProxyLine = Readonly<{
   isBasicLand: boolean;
   /** Whether the printing has a back face with its own image (double-faced cards). */
   hasBack: boolean;
+  /** Whether the deck's copy is foil (foil or etched): the line's finish. */
+  isFoil: boolean;
 }>;
 
 /** One copy to print. */
-export type ProxyCard = Readonly<{ printingId: string; name: string; hasBack: boolean }>;
+export type ProxyCard = Readonly<{
+  printingId: string;
+  name: string;
+  hasBack: boolean;
+  isFoil: boolean;
+}>;
 
 /** The copies to print, in deck order, following the options. */
 export function cardsToPrint(lines: readonly ProxyLine[], options: ProxyOptions): ProxyCard[] {
@@ -75,6 +85,7 @@ export function cardsToPrint(lines: readonly ProxyLine[], options: ProxyOptions)
         printingId: line.printingId,
         name: line.name,
         hasBack: line.hasBack && options.backFaces === "pages",
+        isFoil: line.isFoil,
       };
       return Array.from({ length: copies }, () => card);
     });
@@ -99,6 +110,8 @@ export type ProxyPage = Readonly<{
   height: number;
   /** "back" pages hold only back faces, mirrored to line up with the page before. */
   side: "front" | "back";
+  /** Whether this page is for foil paper (only when foils get their own pages). */
+  foil: boolean;
   placements: Placement[];
   /** Cut guides, drawn underneath the cards so they only show between and around them. */
   guides: GuideLine[];
@@ -189,35 +202,55 @@ export function proxyPages(cards: readonly ProxyCard[], options: ProxyOptions): 
     return { printingId: card.printingId, name: card.name, face, card: cardBox, image };
   }
 
-  function page(side: "front" | "back", placements: Placement[]): ProxyPage {
+  function page(side: "front" | "back", foil: boolean, placements: Placement[]): ProxyPage {
     return {
       width: grid.width,
       height: grid.height,
       side,
+      foil,
       placements,
       guides: guidesFor(placements, options.guides, bleed, grid),
     };
   }
 
-  const singles = cards.filter((card) => !card.hasBack);
-  const doubles = cards.filter((card) => card.hasBack);
+  /** One group's pages: single-faced cards, then double-faced fronts each followed by backs. */
+  function pagesFor(group: readonly ProxyCard[], foil: boolean): ProxyPage[] {
+    const singles = group.filter((card) => !card.hasBack);
+    const doubles = group.filter((card) => card.hasBack);
+    return [
+      ...chunks(singles, perPage).map((cardsOnPage) =>
+        page(
+          "front",
+          foil,
+          cardsOnPage.map((card, index) => placement(card, index, "front")),
+        ),
+      ),
+      ...chunks(doubles, perPage).flatMap((cardsOnPage) => [
+        page(
+          "front",
+          foil,
+          cardsOnPage.map((card, index) => placement(card, index, "front")),
+        ),
+        page(
+          "back",
+          foil,
+          cardsOnPage.map((card, index) => placement(card, index, "back")),
+        ),
+      ]),
+    ];
+  }
+
+  // Foils on their own pages come last, so the foil paper goes in once, at the end.
+  if (options.foils === "mixed") return pagesFor(cards, false);
   return [
-    ...chunks(singles, perPage).map((group) =>
-      page(
-        "front",
-        group.map((card, index) => placement(card, index, "front")),
-      ),
+    ...pagesFor(
+      cards.filter((card) => !card.isFoil),
+      false,
     ),
-    ...chunks(doubles, perPage).flatMap((group) => [
-      page(
-        "front",
-        group.map((card, index) => placement(card, index, "front")),
-      ),
-      page(
-        "back",
-        group.map((card, index) => placement(card, index, "back")),
-      ),
-    ]),
+    ...pagesFor(
+      cards.filter((card) => card.isFoil),
+      true,
+    ),
   ];
 }
 
@@ -267,8 +300,10 @@ function guidesFor(
 export type ProxySummary = Readonly<{
   cards: number;
   pages: number;
-  /** Pages of double-faced cards (fronts and backs), to print two-sided. */
-  twoSidedPages: number;
+  /** Page numbers (from 1) of double-faced cards' fronts and backs, to print two-sided. */
+  twoSidedPages: number[];
+  /** Page numbers of foils, to print on foil paper (empty unless foils get their own pages). */
+  foilPages: number[];
   perPage: number;
   sideways: boolean;
 }>;
@@ -277,15 +312,32 @@ export function proxySummary(lines: readonly ProxyLine[], options: ProxyOptions)
   const cards = cardsToPrint(lines, options);
   const pages = proxyPages(cards, options);
   const grid = sheetGrid(options);
-  const doubles = cards.filter((card) => card.hasBack).length;
-  const perPage = grid.columns * grid.rows;
+  // A page is two-sided when it holds backs, or when the page after it does (its fronts).
+  const twoSidedPages = pages.flatMap((page, index) =>
+    page.side === "back" || pages[index + 1]?.side === "back" ? [index + 1] : [],
+  );
   return {
     cards: cards.length,
     pages: pages.length,
-    twoSidedPages: perPage === 0 ? 0 : 2 * Math.ceil(doubles / perPage),
-    perPage,
+    twoSidedPages,
+    foilPages: pages.flatMap((page, index) => (page.foil ? [index + 1] : [])),
+    perPage: grid.columns * grid.rows,
     sideways: grid.width > grid.height,
   };
+}
+
+/** Page numbers in words, runs joined: [2, 3, 4, 7] → "pages 2–4 and 7". */
+export function pageList(pages: readonly number[]): string {
+  const runs: string[] = [];
+  for (let start = 0; start < pages.length;) {
+    let end = start;
+    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end++;
+    runs.push(start === end ? `${pages[start]}` : `${pages[start]}–${pages[end]}`);
+    start = end + 1;
+  }
+  const words =
+    runs.length <= 1 ? runs.join("") : `${runs.slice(0, -1).join(", ")} and ${runs.at(-1)}`;
+  return `${pages.length === 1 ? "page" : "pages"} ${words}`;
 }
 
 /** How the renderer finds a placement's image among the fetched ones. */

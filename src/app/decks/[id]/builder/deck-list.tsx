@@ -157,6 +157,14 @@ function ListLine(props: {
         onSelect={() => props.onSelect(line)}
         className="min-w-0 flex-1"
       />
+      {line.finish !== "nonfoil" && (
+        <span
+          title={`The deck's copy is ${line.finish}: it prints with the foils`}
+          className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-zinc-900"
+        >
+          {line.finish === "etched" ? "etched" : "foil"}
+        </span>
+      )}
       {problems.length > 0 && (
         <span
           title={problems.join("\n")}

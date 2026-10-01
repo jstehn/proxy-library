@@ -28,6 +28,7 @@ const OptionsSchema = z.object({
   bleed: z.enum(["none", "eighthInch"]).catch(defaults.bleed),
   guides: z.enum(["corners", "lines", "none"]).catch(defaults.guides),
   copies: z.enum(["deck", "one"]).catch(defaults.copies),
+  foils: z.enum(["mixed", "ownPages"]).catch(defaults.foils),
 });
 
 /** The options in a query string such as `?paper=a4&bleed=eighthInch`. */
@@ -54,6 +55,7 @@ export async function proxyDeck(
     board: line.board,
     isBasicLand: line.isBasicLand,
     hasBack: cards.get(line.printingId)?.hasBackImage ?? false,
+    isFoil: line.finish !== "nonfoil", // foil and etched both print on foil paper
   }));
   return { view, lines };
 }

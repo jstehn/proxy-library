@@ -5,6 +5,7 @@ import {
   DEFAULT_PROXY_OPTIONS,
   GAPS_IN_MILLIMETERS,
   proxyPages,
+  pageList,
   proxySummary,
   type ProxyLine,
   type ProxyOptions,
@@ -89,7 +90,27 @@ const BLEED: Question<"bleed"> = {
   help: "Extra image around each card, so a slightly-off cut still shows no white edge. Fewer cards fit on a page.",
 };
 
-const QUESTIONS = [PAPER, BASIC_LANDS, BACK_FACES, CARDS, COPIES, GAP, GUIDES, BLEED] as const;
+const FOILS: Question<"foils"> = {
+  key: "foils",
+  title: "Foils",
+  choices: [
+    { value: "mixed", label: "With the other cards" },
+    { value: "ownPages", label: "On their own pages" },
+  ],
+  help: "For printing foils on foil paper: they come after everything else, so the foil paper goes in once. A card is foil when the deck's copy is (foil or etched).",
+};
+
+const QUESTIONS = [
+  PAPER,
+  BASIC_LANDS,
+  BACK_FACES,
+  FOILS,
+  CARDS,
+  COPIES,
+  GAP,
+  GUIDES,
+  BLEED,
+] as const;
 
 export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }) {
   const [options, setOptions] = useState<ProxyOptions>(DEFAULT_PROXY_OPTIONS);
@@ -139,8 +160,13 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
           {summary.cards === 0
             ? "Nothing to print with these options."
             : `${summary.cards} ${summary.cards === 1 ? "card" : "cards"} on ${summary.pages} ${summary.pages === 1 ? "page" : "pages"}, ${summary.perPage} to a page${summary.sideways ? " (sideways)" : ""}.`}
-          {summary.twoSidedPages > 0 &&
-            ` The last ${summary.twoSidedPages} pages are double-faced cards: print them two-sided.`}
+          {summary.twoSidedPages.length > 0 &&
+            ` Double-faced cards are on ${pageList(summary.twoSidedPages)}: print those two-sided.`}
+          {options.foils === "ownPages" &&
+            summary.cards > 0 &&
+            (summary.foilPages.length > 0
+              ? ` Foils are on ${pageList(summary.foilPages)}: print those on foil paper.`
+              : " This deck has no foils.")}
         </p>
         <a
           href={`/decks/${props.deckId}/proxies.pdf?${query}`}

@@ -232,3 +232,8 @@ search keyword `is:commander` uses the same rule.
   options are the whole deck or the deck without its sideboard (future-ideas.md).
 - **Browser tests never download images:** the setup puts a placeholder JPEG in the test image
   cache for every printing, so making a PDF there stays offline.
+- **Foils on their own pages** (added 2026-10-01, at your request): a proxy option, off by
+  default. Foils (the deck's copy is foil or etched) print after everything else, starting on a
+  fresh page, so they can go on foil paper; double-faced foils keep their mirrored back pages.
+  The form names the foil pages and the two-sided pages by number, and the deck list tags foil
+  lines.
