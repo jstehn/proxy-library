@@ -60,6 +60,16 @@ describe("parseWpnPage", () => {
     expect(sceneBoxes.map((product) => product.msrpCents)).toEqual([4199, 4199, 4199, 4199]);
   });
 
+  it("reads an older page whose products have no contents (Innistrad: Midnight Hunt, 2021)", () => {
+    const mid = page("innistrad-midnight-hunt");
+    expect(mid.products.map((product) => product.name)).toContain(
+      "Innistrad: Midnight Hunt Set Boosters",
+    );
+    expect(mid.products).toHaveLength(11);
+    expect(mid.products.every((product) => product.images.length > 0)).toBe(true);
+    expect(mid.products.some((product) => product.description !== null)).toBe(true);
+  });
+
   it("refuses a page whose shape changed, rather than guessing", () => {
     expect(() => parseWpnPage("<html><body>Redesigned!</body></html>", "x")).toThrow(
       WpnPageUnreadable,

@@ -80,6 +80,8 @@ const KINDS_BY_WPN_NAME: Readonly<Record<string, readonly string[]>> = {
   "draft booster display": ["booster_box/draft"],
   "set booster": ["booster_pack/set"],
   "set booster display": ["booster_box/set"],
+  "theme booster": ["booster_pack/theme"],
+  "theme booster display": ["booster_box/theme"],
   "jumpstart booster": ["booster_pack/jumpstart"],
   "jumpstart booster display": ["booster_box/jumpstart"],
   bundle: ["bundle/default"],

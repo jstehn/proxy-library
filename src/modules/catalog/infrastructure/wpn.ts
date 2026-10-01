@@ -76,7 +76,11 @@ function unflatten(flat: unknown[]): unknown {
   return value(0);
 }
 
-/** Every object anywhere in the data that has `fields.name` and `fields.packageContents`. */
+/**
+ * Every product record anywhere in the data: labeled "Product | …" (`entryTitle`), or, as a
+ * fallback, having a name and contents. Older pages (2021's Innistrad: Midnight Hunt) have no
+ * `packageContents` at all, so the label is what identifies a product.
+ */
 function productRecords(root: unknown): unknown[] {
   const found = new Map<string, unknown>();
   const visited = new Set<unknown>();
@@ -87,29 +91,38 @@ function productRecords(root: unknown): unknown[] {
     if (node === null || typeof node !== "object" || visited.has(node)) continue;
     visited.add(node);
     const fields = (node as { fields?: Record<string, unknown> }).fields;
-    if (fields && typeof fields.name === "string" && "packageContents" in fields) {
-      const key = typeof fields.entryTitle === "string" ? fields.entryTitle : fields.name;
-      if (!found.has(key)) found.set(key, fields);
-    }
+    const key = fields === undefined ? null : productKey(fields);
+    if (fields !== undefined && key !== null && !found.has(key)) found.set(key, fields);
     queue.push(...(Array.isArray(node) ? node : Object.values(node)));
   }
   return [...found.values()];
 }
 
+/** One image in a product record: an asset with a file address. */
+const ImageAsset = z.object({ fields: z.object({ file: z.object({ url: z.string() }) }) });
+
+/** A product record's identity (its label, else its name), or null for any other record. */
+function productKey(fields: Record<string, unknown>): string | null {
+  const { name, entryTitle } = fields;
+  if (typeof name !== "string") return null;
+  const labeled = typeof entryTitle === "string" && entryTitle.startsWith("Product |");
+  if (!labeled && !("packageContents" in fields)) return null;
+  return typeof entryTitle === "string" ? entryTitle : name;
+}
+
 /** The fields we use from a product record; everything else is ignored. */
 const ProductRecord = z.object({
   name: z.string().min(1),
-  releaseDate: z.string().optional(),
-  msrp: z.string().optional(),
-  copy: z.string().optional(),
-  packageContents: z.string().optional(),
-  images: z
-    .array(
-      z.object({
-        fields: z.object({ file: z.object({ url: z.string() }) }).optional(),
-      }),
-    )
-    .optional(),
+  // Optional fields may be missing or null (older records leave some empty).
+  releaseDate: z.string().nullish(),
+  msrp: z.string().nullish(),
+  copy: z.string().nullish(),
+  archiveCopy: z.string().nullish(), // older pages' description
+  entryTitle: z.string().nullish(),
+  packageContents: z.string().nullish(),
+  // Each image is checked on its own below: one odd image (some older records have empty slots)
+  // shouldn't hide the product.
+  images: z.array(z.unknown()).nullish(),
 });
 
 // --- WPN's HTML fragments, as plain text -------------------------------------------------
@@ -219,14 +232,17 @@ export function parseWpnPage(html: string, slug: string): WpnSetPage {
     if (!parsed.success) continue; // one odd product shouldn't hide the others
     const fields = parsed.data;
     const images = (fields.images ?? [])
-      .map((image) => (image.fields ? wpnImage(image.fields.file.url) : null))
+      .map((image) => {
+        const asset = ImageAsset.safeParse(image);
+        return asset.success ? wpnImage(asset.data.fields.file.url) : null;
+      })
       .filter((image): image is WpnImage => image !== null);
     products.push({
       name: cleanText(fields.name),
       releaseDate: /^\d{4}-\d{2}-\d{2}/.exec(fields.releaseDate ?? "")?.[0] ?? null,
       msrpCents: parseMsrp(fields.msrp),
-      description: plainText(fields.copy),
-      contents: contentsLines(fields.packageContents),
+      description: plainText(fields.copy ?? fields.archiveCopy ?? undefined),
+      contents: contentsLines(fields.packageContents ?? undefined),
       images,
     });
   }

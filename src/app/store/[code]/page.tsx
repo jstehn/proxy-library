@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { CardWithPreview } from "@/app/_components/card-preview";
+import { printingCards, type PrintingCard } from "@/modules/catalog";
 import { storePage, type ProductForSale } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -15,6 +17,15 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   const { db, clock } = getContainer();
   const page = await storePage(db, code);
   const today = clock.now().toISOString().slice(0, 10);
+  // A Commander deck shows its commander's whole card (readable on hover), so it's clear who
+  // leads the deck.
+  const commanderOf = (product: ProductForSale): PrintingCard | undefined =>
+    product.featured ? commanders.get(product.featured.printingId) : undefined;
+  const commanders = await printingCards(
+    db,
+    page?.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])) ??
+      [],
+  );
   if (page === null) notFound();
   const { set } = page;
 
@@ -54,29 +65,39 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
         <section key={label} className="flex flex-col gap-3">
           <h2 className="text-lg font-medium">{label}</h2>
           <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {products.map((product) => (
-              <li key={product.id} className="flex flex-col gap-2">
-                <ProductImage
-                  photoIds={product.photoIds}
-                  setCode={set.code}
-                  setName={set.name}
-                  keyruneCode={set.keyruneCode}
-                  label={productLabel(product.name, set.name)}
-                  shape={shapeForCategory(product.category)}
-                  featuredPrintingId={(product.featured ?? set.featured)?.printingId}
-                  artist={(product.featured ?? set.featured)?.artist}
-                />
-                <span className="text-sm leading-tight font-medium">{product.name}</span>
-                <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
-                {isUpcoming(product.releaseDate, today) && (
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
-                    Releases {formatDay(product.releaseDate)}
-                  </span>
-                )}
-                <BuyForm productId={product.id} productName={product.name} />
-                <ProductDetails product={product} />
-              </li>
-            ))}
+            {products.map((product) => {
+              const commander = commanderOf(product);
+              return (
+                <li key={product.id} className="flex flex-col gap-2">
+                  {commander ? (
+                    <CardWithPreview
+                      printing={commander}
+                      caption={`Commander: ${commander.name}`}
+                    />
+                  ) : (
+                    <ProductImage
+                      photoIds={product.photoIds}
+                      setCode={set.code}
+                      setName={set.name}
+                      keyruneCode={set.keyruneCode}
+                      label={productLabel(product.name, set.name)}
+                      shape={shapeForCategory(product.category)}
+                      featuredPrintingId={(product.featured ?? set.featured)?.printingId}
+                      artist={(product.featured ?? set.featured)?.artist}
+                    />
+                  )}
+                  <span className="text-sm leading-tight font-medium">{product.name}</span>
+                  <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                  {isUpcoming(product.releaseDate, today) && (
+                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                      Releases {formatDay(product.releaseDate)}
+                    </span>
+                  )}
+                  <BuyForm productId={product.id} productName={product.name} />
+                  <ProductDetails product={product} />
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}
