@@ -1,3 +1,5 @@
+import type { Cents } from "@/shared/kernel";
+
 // Every expected failure in the store module.
 export type Forbidden = Readonly<{ kind: "Forbidden" }>;
 /** No such product, its set isn't enabled, or it has no MSRP (design doc 06, rules 1–2). */
@@ -14,3 +16,11 @@ export type WorthNothing = Readonly<{ kind: "WorthNothing" }>;
 /** The buylist rate is 0%: the store isn't buying cards (rule 5). */
 export type NotBuying = Readonly<{ kind: "NotBuying" }>;
 export type RateInvalid = Readonly<{ kind: "RateInvalid" }>;
+/** A list with nothing to buy (design doc 15). */
+export type ListEmpty = Readonly<{ kind: "ListEmpty" }>;
+/** More lines than one purchase allows (design doc 15, rule 5). */
+export type ListTooLong = Readonly<{ kind: "ListTooLong"; max: number }>;
+/** One line of a list can't be bought; `line` is its position (from 0). */
+export type LineNotForSale = Readonly<{ kind: "LineNotForSale"; line: number }>;
+/** Prices rose since the quote was shown: nothing was bought (design doc 15, rule 2). */
+export type PricesChanged = Readonly<{ kind: "PricesChanged"; total: Cents }>;

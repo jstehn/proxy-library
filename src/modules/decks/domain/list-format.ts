@@ -1,4 +1,5 @@
 import type { Board } from "./deck";
+import type { DeckProblem } from "./rules";
 
 // Deck lists as text, out (design doc 09, section 10). Reading lists in is shared with the
 // store: @/shared/card-search (design doc 15).
@@ -36,3 +37,25 @@ export const EXPORTERS: Readonly<Record<"printings" | "names", Exporter>> = {
   /** "4 Lightning Bolt": for anything else. */
   names: (lines) => sections(lines, (line) => `${line.quantity} ${line.name}`),
 };
+
+/** What the shopping list needs to know about a deck line: its card and finish. */
+export type ShortLine = Readonly<{
+  oracleId: string;
+  name: string;
+  finish: "nonfoil" | "foil" | "etched";
+}>;
+
+/**
+ * The cards a deck is short of, as a list to buy (design doc 15, decision 3): "2 Lightning Bolt",
+ * with "*F*" or "*E*" when the deck's copy is foil or etched. Basic lands are never short.
+ */
+export function shortList(problems: readonly DeckProblem[], lines: readonly ShortLine[]): string {
+  return problems
+    .flatMap((problem) => {
+      if (problem.kind !== "Short") return [];
+      const finish = lines.find((line) => line.oracleId === problem.oracleId)?.finish ?? "nonfoil";
+      const marker = finish === "foil" ? " *F*" : finish === "etched" ? " *E*" : "";
+      return [`${problem.needed - problem.owned} ${problem.name}${marker}`];
+    })
+    .join("\n");
+}

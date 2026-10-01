@@ -32,7 +32,7 @@ export type {
   QuantityInvalid,
   TooManyDecks,
 } from "./domain/errors";
-export { EXPORTERS, type ExportLine } from "./domain/list-format";
+export { EXPORTERS, shortList, type ExportLine, type ShortLine } from "./domain/list-format";
 export {
   canBeCommander,
   deckProblems,

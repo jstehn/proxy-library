@@ -14,7 +14,7 @@ import type {
 } from "../domain/errors";
 import { checkQuantity, totalPrice } from "../domain/pricing";
 import { checkRate, FULL_RATE_BPS, payoutPerCopy } from "../domain/singles";
-import type { StoreDependencies } from "./ports";
+import type { StoreDependencies, StoreServices } from "./ports";
 
 // Buying and selling single cards (design doc 07, section 5). Each is one transaction across
 // the store's records, the wallet and the collection.
@@ -32,6 +32,59 @@ export type BuySingleError = NotForSale | NoPrice | QuantityInvalid | Insufficie
 export type SellSingleError =
   NoPrice | QuantityInvalid | NotEnoughCopies | WorthNothing | NotBuying;
 
+/** A price the store has checked: the market quote that a purchase is recorded at. */
+export type CheckedQuote = Readonly<{ price: Cents; day: string }>;
+
+/**
+ * The heart of buying singles, shared by buying one card and buying a list (design doc 15,
+ * rule 4): one store record, one wallet entry linked to it, and the cards. Runs inside the
+ * caller's transaction; an error leaves the caller to return it, which rolls everything back.
+ */
+export async function buyCopies(
+  services: StoreServices,
+  input: Readonly<{
+    actor: Actor;
+    line: SingleInput;
+    quote: CheckedQuote;
+    now: Date;
+  }>,
+): Promise<Result<SingleReceipt, InsufficientFunds>> {
+  const { actor, line, quote, now } = input;
+  const total = totalPrice(quote.price, line.quantity);
+  const transactionId = await services.storeLedger.recordSingle({
+    userId: actor.userId,
+    direction: "buy",
+    printingId: line.printingId,
+    finish: line.finish,
+    quantity: line.quantity,
+    unitMarket: quote.price,
+    rateBps: FULL_RATE_BPS,
+    unitPrice: quote.price,
+    total,
+    priceDay: quote.day,
+    at: now,
+  });
+  const ref = `store:${transactionId}`;
+
+  const paid = await spend(services, {
+    userId: actor.userId,
+    amount: total,
+    kind: "purchase_single",
+    note: null,
+    ref,
+    now,
+  });
+  if (!paid.ok) return paid;
+
+  await receiveCards(
+    services,
+    actor.userId,
+    [{ printingId: line.printingId, finish: line.finish, quantity: line.quantity }],
+    { source: "store", ref, at: now },
+  );
+  return ok({ transactionId, unitPrice: quote.price, total, priceDay: quote.day });
+}
+
 /** A player buys copies of one printing, in one finish, at market price (rules 1, 2, 7). */
 export function makeBuySingle(dependencies: StoreDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -47,41 +100,13 @@ export function makeBuySingle(dependencies: StoreDependencies) {
       const quote = await services.marketPrices.quote(input.printingId, input.finish);
       if (quote === null) return err({ kind: "NoPrice" });
       if (!quote.isSetEnabled) return err({ kind: "NotForSale" });
-
-      const now = clock.now();
-      const total = totalPrice(quote.price, quantity.value);
-      const transactionId = await services.storeLedger.recordSingle({
-        userId: actor.userId,
-        direction: "buy",
-        printingId: input.printingId,
-        finish: input.finish,
-        quantity: quantity.value,
-        unitMarket: quote.price,
-        rateBps: FULL_RATE_BPS,
-        unitPrice: quote.price,
-        total,
-        priceDay: quote.day,
-        at: now,
+      // The store record rolls back too when the wallet can't pay.
+      return buyCopies(services, {
+        actor,
+        line: { ...input, quantity: quantity.value },
+        quote,
+        now: clock.now(),
       });
-      const ref = `store:${transactionId}`;
-
-      const paid = await spend(services, {
-        userId: actor.userId,
-        amount: total,
-        kind: "purchase_single",
-        note: null,
-        ref,
-        now,
-      });
-      if (!paid.ok) return paid; // rolls back the store record too
-
-      await receiveCards(
-        services,
-        actor.userId,
-        [{ printingId: input.printingId, finish: input.finish, quantity: quantity.value }],
-        { source: "store", ref, at: now },
-      );
-      return ok({ transactionId, unitPrice: quote.price, total, priceDay: quote.day });
     });
   }
 

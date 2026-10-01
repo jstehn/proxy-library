@@ -176,3 +176,57 @@ describe("setBuylistRate", () => {
     expect((await store.setBuylistRate(admin, 10_000)).ok).toBe(true);
   });
 });
+
+describe("buyList (design doc 15)", () => {
+  const line = (printingId: PrintingId, quantity: number) =>
+    ({ printingId, finish: "nonfoil", quantity }) as const;
+
+  it("buys every line, each recorded like a single purchase (rule 4)", async () => {
+    const result = await store.buyList(jack, {
+      lines: [line(bolt, 2), line(penny, 3)],
+      expectedTotal: Cents.of(401),
+    });
+    expect(result).toMatchObject({ ok: true, value: { cards: 5, total: 401 } });
+    expect(owned("bolt")).toBe(2);
+    expect(owned("penny")).toBe(3);
+    expect(kinds()).toEqual([
+      ["starting_grant", 5000],
+      ["purchase_single", -398],
+      ["purchase_single", -3],
+    ]);
+    expect(storeLedger.singles).toHaveLength(2);
+  });
+
+  it("buys at a lower price than the one confirmed, but never a higher one (rule 2)", async () => {
+    expect(
+      await store.buyList(jack, { lines: [line(bolt, 1)], expectedTotal: Cents.of(250) }),
+    ).toMatchObject({ ok: true, value: { total: 199 } });
+    expect(
+      await store.buyList(jack, { lines: [line(bolt, 1)], expectedTotal: Cents.of(150) }),
+    ).toEqual(err({ kind: "PricesChanged", total: Cents.of(199) }));
+    expect(owned("bolt")).toBe(1);
+  });
+
+  it("refuses an empty, too long or unbuyable list before buying anything", async () => {
+    expect(await store.buyList(jack, { lines: [], expectedTotal: Cents.of(0) })).toEqual(
+      err({ kind: "ListEmpty" }),
+    );
+    expect(
+      await store.buyList(jack, {
+        lines: Array.from({ length: 251 }, () => line(penny, 1)),
+        expectedTotal: Cents.of(251),
+      }),
+    ).toEqual(err({ kind: "ListTooLong", max: 250 }));
+    expect(
+      await store.buyList(jack, { lines: [line(penny, 0)], expectedTotal: Cents.of(0) }),
+    ).toMatchObject(err({ kind: "QuantityInvalid" }));
+    expect(
+      await store.buyList(jack, {
+        lines: [line(penny, 1), line(oldSet, 1)],
+        expectedTotal: Cents.of(501),
+      }),
+    ).toEqual(err({ kind: "LineNotForSale", line: 1 }));
+    expect(owned("penny")).toBe(0);
+    expect(storeLedger.singles).toHaveLength(0);
+  });
+});

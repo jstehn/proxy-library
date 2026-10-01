@@ -46,6 +46,10 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
               Print proxies
             </Link>{" "}
             ·{" "}
+            <Link href={`/singles/list?deck=${deck.id}`} className="underline">
+              Buy what it&apos;s short
+            </Link>{" "}
+            ·{" "}
             <Link href="/decks" className="underline">
               All decks
             </Link>

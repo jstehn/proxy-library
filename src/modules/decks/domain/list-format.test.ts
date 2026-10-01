@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseList } from "@/shared/card-search";
-import { EXPORTERS } from "./list-format";
+import { EXPORTERS, shortList } from "./list-format";
 
 describe("exporters (Strategy)", () => {
   const lines = [
@@ -40,6 +40,28 @@ describe("exporters (Strategy)", () => {
       [1, "Ruby", "commander"],
       [4, "Lightning Bolt", "main"],
       [2, "Duress", "side"],
+    ]);
+  });
+});
+
+describe("shortList", () => {
+  it("lists what the deck is short of, keeping foil and etched markers", () => {
+    const text = shortList(
+      [
+        { kind: "Short", oracleId: "bolt", name: "Lightning Bolt", needed: 4, owned: 1 },
+        { kind: "TooFewCards", minimum: 60, count: 5 },
+        { kind: "Short", oracleId: "ring", name: "The One Ring", needed: 1, owned: 0 },
+      ],
+      [
+        { oracleId: "bolt", name: "Lightning Bolt", finish: "nonfoil" },
+        { oracleId: "ring", name: "The One Ring", finish: "foil" },
+      ],
+    );
+    expect(text).toBe("3 Lightning Bolt\n1 The One Ring *F*");
+    // …and the store reads it back the same way.
+    expect(parseList(text).lines.map((line) => [line.quantity, line.name, line.finish])).toEqual([
+      [3, "Lightning Bolt", null],
+      [1, "The One Ring", "foil"],
     ]);
   });
 });

@@ -181,3 +181,14 @@ Design: [design/14-deck-builder.md](design/14-deck-builder.md).
 | **Bleed is the card's own image stretched behind it**                                                            | Scryfall images end at the card's edge; stretching extends the border's color                 | `pdf-lib-renderer.ts`                          | Mirror the edge pixels (needs image processing)                                     |
 | **No "have a real copy" filter for proxies**                                                                     | Nothing marks real copies yet                                                                 | —                                              | A per-line "I own a real one" flag (future-ideas.md)                                |
 | **Foils on their own pages is an option, off by default**; a card is foil when the deck's copy is foil or etched | Your request (foil paper); off keeps the fewest pages for everyone else                       | `foils` in `decks/domain/proxy-sheet.ts`       | Mark a line foil in the builder even without owning a foil copy                     |
+
+### Buy a list; card search everywhere (2026-10-01)
+
+Design: [design/15-buy-a-list-and-card-search.md](design/15-buy-a-list-and-card-search.md).
+
+| Decision                                                               | Why                                                                  | Where to change it                           | Good alternative                                                 |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| **A list purchase leaves no activity entry**                           | Money totals stay private in the feed; singles record nothing either | `buyList` in `store/application/buy-list.ts` | "Jack bought 37 singles" without the amount                      |
+| **`usd` means the cheapest current price of the printing, any finish** | One number per card, easy to explain                                 | `usd` in `shared/card-search/sql.ts`         | Separate `usd` (nonfoil) and `usdfoil` keywords, as Scryfall has |
+| **Up to 250 lines and 100-character patterns**                         | Bounded work for one request                                         | `MAX_LIST_LINES`, `MAX_PATTERN_LENGTH`       | Larger limits if your group pastes whole collections             |
+| **Lower prices at purchase go through; higher ones stop the purchase** | Nobody minds paying less                                             | `buyList`                                    | Stop on any change                                               |

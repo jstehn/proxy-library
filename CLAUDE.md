@@ -47,6 +47,8 @@ each lesson.
 - `@/*` imports resolve to `src/*`.
 - Client components import a module's pure code from `@/modules/<module>/client` (ADR 0016), never
   its `index.ts` (that would pull server code into the browser); `import type` from `index.ts` is fine.
+- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it)
+  and `@/shared/card-search/sql` (queries only), ADR 0017.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),

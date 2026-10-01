@@ -1,7 +1,7 @@
 # Design: buy singles from a list, and one card search everywhere
 
 - **Phase:** 15
-- **Status:** **Approved** (2026-10-01, with the recommended answer to every question in section 8)
+- **Status:** **Built** (approved 2026-10-01 with the recommended answers in section 8; implementation notes in section 9)
 - **Related:** design doc 07 (singles store), design doc 09 (deck lists), design doc 14 (search
   language), ADR 0006 (cross-module reads), ADR 0009 (lint boundaries), ADR 0016 (client API)
 
@@ -207,3 +207,23 @@ The questions as asked:
    are possible too, at the cost of storing more of Scryfall's data.)
 6. **Menus on the singles and collection pages**: keep them beside the search box (recommended:
    quick to use without syntax), or replace them with search terms?
+
+## 9. Implementation notes (what changed while building)
+
+- **No activity entry for a list purchase.** The activity feed's rule (design doc 11) is that money
+  amounts other than card prices stay private, and buying a single records nothing either. So a
+  list purchase records nothing in the feed, rather than "bought 37 singles for $144.00".
+- **`usd`** compares the **cheapest current price among the printing's finishes**, not "nonfoil, or
+  foil with `is:foil`": simpler to explain, and `is:foil` already narrows the finish where it
+  matters.
+- **A foil-only card asked for without a marker** is reported ("no nonfoil printing for sale (sold
+  as foil: mark it _F_)"), not bought as foil, matching rule 3.3.
+- **Owned copies are used up line by line**, so a card listed twice isn't covered by the same
+  copies twice.
+- **Regular expressions** are checked in JavaScript and also refused when they use features
+  Postgres doesn't have (named groups, `\p{…}`). An unclosed `/pattern` becomes plain text.
+- **The purchase's shared core** (`buyCopies`) is used by both `buySingle` and `buyList`, so a list
+  purchase is recorded exactly like single purchases (rule 4).
+- **Fixtures:** the Scryfall fixture gained each card's real `keywords` and `produced_mana`, copied
+  from that day's bulk file, for the `kw:` and `produces:` tests.
+- `is:class` was added beside the proposed layouts; `is:etched` sits with the finishes.
