@@ -1,0 +1,192 @@
+# Design: deck builder 2.0 and proxy PDFs
+
+- **Phase:** 14
+- **Status:** **In review** (implementation starts only after approval)
+- **Related:** design doc 09 (decks), ADR 0007 (Scryfall data), lesson 09
+
+## 1. Purpose & scope
+
+Building a 60- or 100-card deck from memory of card names doesn't work. This phase makes the
+deck builder a place to **browse your collection visually**, search it the way Scryfall does,
+see only cards that fit (a Commander deck's colors), read any card at a glance, and watch the
+deck's statistics change as you build. Deck lists look like Moxfield's: grouped, with mana costs,
+and every name previews its card. Proxies print as **PDFs** with cutting guides and options.
+
+**Out of scope:** suggestions ("cards like this"), price-based recommendations, automatic tags
+like "ramp" or "removal" (possible later), sharing decks publicly.
+
+## 2. The builder screen
+
+A two-part screen on wide displays; on a phone, two tabs ("Collection" and "Deck") with the
+selected card as a sheet that slides up.
+
+```
+┌────────────── your collection ───────────────┐┌──────── the deck ────────┐
+│ [ search: t:creature mv<=3 o:"draw a card" ] ││ Silverquill Influence    │
+│ [W][U][B][R][G][C]  [Creature][Instant]…     ││ Commander (1)    ┌──────┐│
+│ ┌────┐┌────┐┌────┐┌────┐┌────┐┌────┐         ││  Killian ⓦⓑ     │ card ││
+│ │card││card││card││card││card││card│  …      ││ Creatures (31)   │ you  ││
+│ └────┘└────┘└────┘└────┘└────┘└────┘         ││  1 Sol Ring  ①  │hover ││
+│ ┌────┐┌────┐ (scrolls; loads more as you go) ││  2 …             └──────┘│
+├──────────────── selected card ───────────────┤│ Lands (37)               │
+│ [ big card image ]  Killian, Decisive Mentor ││ ── stats ──              │
+│  text, stats, owned 2 · in this deck 1       ││ curve ▁▃▆█▅▂ · lands 37  │
+│  [−] 1 [+]   [Add to main] [Sideboard] [⭐]  ││ colors ⚪60% ⚫40% …      │
+└──────────────────────────────────────────────┘└──────────────────────────┘
+```
+
+### 2.1 Browsing your collection
+
+- **Card images in a grid**, not names, loading more as you scroll (60 at a time).
+- **Only cards that can go in this deck** by default: owned cards, legal in the deck's format
+  and, in **Commander**, within the commander's **color identity** (section 4). A switch, "Show
+  everything I own", turns the filter off (cards that don't fit are then dimmed and marked).
+- Each card shows **how many you own** and **how many are already in this deck**. Ownership is
+  shared across decks (decided in phase 9), so it also says when other decks use it.
+- **Sort** by name, mana value, color or newest. **Group** the grid by type, like the
+  collection page can.
+
+### 2.2 Selecting a card
+
+**Clicking a card selects it:** it's highlighted in the grid and shown large in the
+**selected-card panel**: the full card image, its text and stats (so long cards are readable),
+how many you own and how many the deck has. There you choose a **quantity** (− / +, starting at
+
+1. and **add it** to the main deck, the sideboard, or (Commander) as the commander. Keyboard: the
+   arrow keys move the selection, **Enter** adds, **+**/**−** change the quantity, and **/** jumps
+   to the search box.
+
+### 2.3 Search (inspired by Scryfall's syntax)
+
+One search box understands plain words and a set of Scryfall's keywords. Plain words search
+card names. Everything combines with spaces (and), `or`, `-` (not), parentheses and quotes.
+
+| Write            | Finds                                                   | Example                  |
+| ---------------- | ------------------------------------------------------- | ------------------------ |
+| words            | names containing them                                   | `bolt`                   |
+| `o:` / `oracle:` | words or a "quoted phrase" in the rules text            | `o:"draw a card"`        |
+| `t:` / `type:`   | type line                                               | `t:legendary t:creature` |
+| `c:` / `color:`  | colors; with `=`, `<=`, `>=`, `<`, `>`                  | `c:rw`, `c<=bg`, `c:m`   |
+| `id:` / `ci:`    | color identity (same comparisons)                       | `id<=esper`              |
+| `mv` / `cmc`     | mana value: `=`, `<`, `<=`, `>`, `>=`                   | `mv<=2`                  |
+| `m:` / `mana:`   | mana cost symbols                                       | `m:{G}{G}`               |
+| `pow` / `tou`    | power / toughness, with comparisons                     | `pow>=4`                 |
+| `r:` / `rarity:` | rarity                                                  | `r:mythic`               |
+| `s:` / `set:`    | set code                                                | `s:sos`                  |
+| `f:` / `format:` | legal in a format                                       | `f:pauper`               |
+| `is:`            | `is:foil`, `is:commander` (could lead a Commander deck) | `is:commander c:w`       |
+
+Color words work too: guild, shard and wedge names (`c:simic`, `id<=esper`), and `c:c`
+(colorless) and `c:m` (multicolored). A search that has an unknown keyword or a typo still runs
+the parts it understands, and says which part it ignored, like Scryfall.
+
+**Quick filters** sit under the box for people who don't type syntax: color buttons, type
+buttons and a mana value range. Pressing one edits the search text, so the box always shows the
+whole search (and teaches the syntax).
+
+### 2.4 The deck list (like Moxfield)
+
+- The **commander** first, shown as its full card.
+- Then **grouped by type** (Creatures, Planeswalkers, Instants, Sorceries, Artifacts,
+  Enchantments, Battles, Lands), each with a count. Each line: quantity, name, **mana cost as
+  symbols**, and − / + / remove controls.
+- **Hovering a name previews the card** (on a phone, tapping a name shows it). Clicking a name
+  selects it in the selected-card panel.
+- A **view switch**: list (default) or **visual** (the cards as overlapping images per group).
+- Problems (not owned, not legal, too many copies, outside the color identity) are marked on
+  their line, as now.
+
+### 2.5 Live statistics
+
+Updated the moment a card is added or removed (computed in the browser from the deck in hand):
+
+- **Card count** against the format's target (100 for Commander, 60 minimum otherwise).
+- **Mana curve**: spells by mana value, stacked creatures / non-creatures.
+- **Lands**: count and share of the deck (with the usual guide: about 36–38 in Commander, 24 in
+  a 60-card deck), plus other mana sources (cards that produce mana: rocks, dorks).
+- **Colors**: colored symbols in mana costs (what you need) next to the colors your lands and
+  mana sources produce (what you have), as two bars per color.
+- **Types**: counts per type.
+- **Average mana value** (without lands).
+- **Price**: the deck's total market value.
+
+## 3. Proxy PDFs
+
+The proxy sheet becomes a **PDF** made on the server, so it prints at exactly the right size in
+any browser or print shop.
+
+- Cards at **2.5 × 3.5 inches** (63.5 × 88.9 mm, the real card size), 3 × 3 on US Letter (or A4).
+- **Cutting guides just outside each card**: a small gap between cards (default 2 mm) with crop
+  marks at every corner, outside the card, so a cut along them leaves a clean card with no white
+  border and no guide on it.
+- **Options** (a short form before downloading):
+
+| Option             | Choices                                                                                                                                                    | Default             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Page size          | Letter, A4                                                                                                                                                 | Letter              |
+| Basic lands        | include, skip                                                                                                                                              | skip                |
+| Double-faced cards | **side by side** (front and back next to each other, to stick back to back on sticker paper), front only, backs on separate pages (for two-sided printing) | side by side        |
+| Which cards        | the whole deck, the main deck, cards not marked "have a real copy"                                                                                         | the whole deck      |
+| Gap between cards  | 0, 1, 2, 3 mm                                                                                                                                              | 2 mm                |
+| Cut guides         | corner marks, full lines, none                                                                                                                             | corner marks        |
+| Copies             | as many as the deck has, or one of each                                                                                                                    | as many as the deck |
+
+- Images are Scryfall's **large** size (672 × 936, about 270 dots per inch at card size), from our
+  image cache (fetched once each, as now).
+- Library: **pdf-lib** (pure JavaScript, MIT licence) to draw images and lines into a PDF.
+
+## 4. Commander color identity
+
+A card's **color identity** is every color in its mana cost and rules text (Scryfall's
+`color_identity`, which we already store). In Commander, every card's identity must be within the
+commander's (two partners: their identities combined). So a red-white commander allows red,
+white, red-and-white and colorless cards. The rule is already checked when a deck is shown; this
+phase uses it to **filter the browser** and to mark lines that break it. Cards with special rules
+(e.g. "a deck can have any number of cards named …") still follow color identity; their copy
+limits are already handled by the deck rules.
+
+## 5. Data changes
+
+- **`produced_mana`** from Scryfall's bulk file (already downloaded nightly) on each printing, for
+  the mana-sources statistic. Migration adds the column; the price pass fills it.
+- No other new tables. Search runs as SQL over `printings` joined with your collection.
+
+## 6. Design (code)
+
+- **Search language**: a pure parser in `decks/domain/search.ts`: text → a tree of conditions
+  (`{ kind: "and" | "or" | "not" | "term" }`), with errors for the parts it couldn't read. A
+  query builder in `decks/queries` turns the tree into SQL conditions with parameters (never
+  string-built SQL). Fully unit-tested, including odd input.
+- **Collection browser**: a query `ownedCardsForDeck(deck, search, sort, page)` returning cards
+  with owned / in-this-deck / in-other-decks counts and whether each fits the deck.
+- **Builder UI**: a client component that holds the deck in memory, so stats update instantly;
+  each change is saved through the existing deck actions (which re-check ownership and rules).
+- **Card preview**: the shared enlarged-card view (`card-preview.tsx`) for hovered names and the
+  selected-card panel.
+- **Stats**: extend `deckStats` (pure) with lands, mana sources, color requirements vs sources,
+  price; unit-tested.
+- **PDF**: `GET /decks/[id]/proxies.pdf?…options` builds the PDF from the deck's lines and cached
+  large images; the layout (positions, guides) is a pure function, unit-tested.
+
+## 7. Test plan
+
+- Search parser and query builder: unit tests (every keyword, comparisons, color names,
+  negation, `or`, parentheses, errors); integration tests against the fixture catalog.
+- Color identity filter: integration test (a red-white commander sees only R/W/RW/colorless).
+- Stats: unit tests with known decks.
+- PDF layout: unit tests (positions within the page, guides outside cards, DFCs side by side,
+  basics skipped); an integration test that the PDF downloads and has the right page count.
+- Browser test: search, select, add with a quantity, the stats change, hover a name to preview.
+- Screenshots in dark mode and at phone width.
+
+## 8. Open questions
+
+1. **Search keywords:** is this the right set to start with? Anything you use on Scryfall that's
+   missing?
+2. **Color identity filter on by default**, with "Show everything I own" to turn it off: right?
+3. **Adding more copies than you own:** allow it and mark the line (as now: you might own more
+   later), or stop at what you own? Recommended: allow and mark.
+4. **Proxy defaults:** Letter, skip basic lands, double-faced side by side, 2 mm gaps with corner
+   marks. Any to change? Other options you want ("have a real copy" marking, a "PROXY" stamp,
+   bleed for professional printing)?
+5. **A new library, pdf-lib**, for making PDFs: OK?
