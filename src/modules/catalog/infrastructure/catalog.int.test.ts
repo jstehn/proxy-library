@@ -91,7 +91,7 @@ describe("the first sync", () => {
       decks: ["BLB: Bloomburrow Redemption"],
     });
 
-    expect(await countRows("printings")).toBe(28 + 2);
+    expect(await countRows("printings")).toBe(29 + 2); // Wick has no Scryfall entry: unpriced
     expect(await countRows("booster_configs")).toBe(1);
     expect(await countRows("sealed_products")).toBe(5);
     expect(await countRows("deck_lists")).toBe(2);
@@ -128,7 +128,7 @@ describe("the first sync", () => {
     `);
     expect(japanese.rows).toEqual([{ has_images: true, foil_cents: 480 }]);
     // The Spanish copy of the English Beza has its own Scryfall id, so it matches nothing.
-    expect(await countRows("printings")).toBe(30);
+    expect(await countRows("printings")).toBe(31);
   });
 });
 
@@ -138,7 +138,7 @@ describe("running again", () => {
     const first = await catalog.runSync("prices");
     const second = await catalog.runSync("prices");
     expect(second.importedSets).toEqual([]); // already imported, same version
-    expect(await countRows("printings")).toBe(30);
+    expect(await countRows("printings")).toBe(31);
     expect(await countRows("price_snapshots")).toBe(first.priceSnapshots);
   });
 
@@ -237,7 +237,11 @@ describe("images", () => {
   it("fetches an image once, then serves it from the cache", async () => {
     const catalog = buildCatalog();
     await catalog.runSync("prices");
-    const [row] = (await db.execute<{ id: string }>(sql`select id from printings limit 1`)).rows;
+    const [row] = (
+      await db.execute<{ id: string }>(
+        sql`select id from printings where image_uris is not null limit 1`,
+      )
+    ).rows;
     const request = {
       printingId: PrintingId.of(row.id),
       size: "normal" as const,
@@ -254,7 +258,11 @@ describe("images", () => {
   it("reports an unknown printing or a missing back face", async () => {
     const catalog = buildCatalog();
     await catalog.runSync("prices");
-    const [row] = (await db.execute<{ id: string }>(sql`select id from printings limit 1`)).rows;
+    const [row] = (
+      await db.execute<{ id: string }>(
+        sql`select id from printings where image_uris is not null limit 1`,
+      )
+    ).rows;
     expect(
       await catalog.imageFor({ printingId: PrintingId.of("nope"), size: "small", face: "front" }),
     ).toEqual(err({ kind: "ImageNotFound" }));

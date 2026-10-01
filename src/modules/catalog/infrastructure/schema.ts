@@ -61,6 +61,11 @@ export const printings = pgTable(
     artist: text("artist"),
     imageUris: jsonb("image_uris"), // filled in by the Scryfall pass
     legalities: jsonb("legalities"),
+    // Colors of mana it can make (Scryfall's produced_mana), for deck statistics.
+    producedMana: text("produced_mana")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (table) => [

@@ -73,6 +73,12 @@ export type DeckLine = Readonly<{
   name: string;
   typeLine: string;
   manaValue: number;
+  /** e.g. "{2}{W}{U}", or null for cards without one (lands). */
+  manaCost: string | null;
+  /** Colors of mana it can make, for the deck statistics. */
+  producedMana: string[];
+  /** Latest market price of one copy in its finish, in cents, if known. */
+  priceCents: number | null;
   setCode: string;
   collectorNumber: string;
   owned: number;
@@ -114,6 +120,9 @@ export async function deckView(
     name: string;
     type_line: string;
     mana_value: number;
+    mana_cost: string | null;
+    produced_mana: string[] | null;
+    price_cents: number | null;
     set_code: string;
     collector_number: string;
     is_basic_land: boolean;
@@ -128,7 +137,13 @@ export async function deckView(
            shown.id as printing_id,
            coalesce(e.finish, owned_printing.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
-           shown.name, shown.type_line, shown.mana_value, shown.set_code, shown.collector_number,
+           shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
+           (select s.usd_cents from price_snapshots s
+             where s.printing_id = shown.id
+               and s.finish = coalesce(e.finish, owned_printing.finish,
+                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
+             order by s.day desc limit 1) as price_cents,
+           shown.set_code, shown.collector_number,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
            newest.color_identity, newest.legalities,
            coalesce((select sum(c.quantity) from collection_cards c join printings p on p.id = c.printing_id
@@ -182,6 +197,9 @@ export async function deckView(
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),
+      manaCost: row.mana_cost,
+      producedMana: row.produced_mana ?? [],
+      priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,
       collectorNumber: row.collector_number,
       owned: row.owned,
@@ -204,48 +222,6 @@ export async function deckView(
     })),
   };
   return { deck, lines, rules };
-}
-
-export type OwnedCardMatch = Readonly<{
-  oracleId: string;
-  name: string;
-  owned: number;
-  printingId: string; // the printing you have most copies of
-  finish: "nonfoil" | "foil" | "etched";
-}>;
-
-/** Cards in a player's collection whose name contains `name`, one line per oracle card. */
-export async function ownedCardsNamed(
-  db: DbExecutor,
-  userId: UserId,
-  name: string,
-  limit = 30,
-): Promise<OwnedCardMatch[]> {
-  if (name.trim() === "") return [];
-  const rows = await db.execute<{
-    oracle_id: string;
-    name: string;
-    owned: number;
-    printing_id: string;
-    finish: string;
-  }>(sql`
-    select p.oracle_id, min(p.name) as name, sum(c.quantity)::int as owned,
-           (array_agg(c.printing_id order by c.quantity desc))[1] as printing_id,
-           (array_agg(c.finish order by c.quantity desc))[1] as finish
-      from collection_cards c join printings p on p.id = c.printing_id
-     where c.user_id = ${userId} and p.name ilike ${`%${name.trim()}%`}
-     group by p.oracle_id
-     -- Names that start with what was typed come first ("swa" → Swamp before Muck Swamp).
-     order by lower(min(p.name)) like lower(${`${name.trim()}%`}) desc, min(p.name)
-     limit ${limit}
-  `);
-  return rows.rows.map((row) => ({
-    oracleId: row.oracle_id,
-    name: row.name,
-    owned: row.owned,
-    printingId: row.printing_id,
-    finish: FinishSchema.parse(row.finish),
-  }));
 }
 
 export type DeckRef = Readonly<{ id: number; name: string; quantity: number }>;

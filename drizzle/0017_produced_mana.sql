@@ -1,0 +1,1 @@
+ALTER TABLE "printings" ADD COLUMN "produced_mana" text[] DEFAULT '{}'::text[] NOT NULL;

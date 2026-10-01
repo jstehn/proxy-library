@@ -13,6 +13,8 @@ export const ScryfallCardSchema = z.object({
   lang: z.string(),
   type_line: z.string().default(""),
   legalities: z.record(z.string(), z.string()).default({}),
+  // Colors of mana the card can make (lands, rocks, dorks), for deck statistics (design doc 14).
+  produced_mana: z.array(z.string()).optional(),
   prices: z.object({
     usd: z.string().nullable().default(null),
     usd_foil: z.string().nullable().default(null),
@@ -58,5 +60,6 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     },
     images: mapImages(raw),
     legalities: raw.legalities,
+    producedMana: (raw.produced_mana ?? []).filter((symbol) => /^[WUBRGC]$/.test(symbol)),
   };
 }

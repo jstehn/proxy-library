@@ -2,14 +2,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId } from "@/modules/catalog";
-import {
-  deckProblems,
-  deckView,
-  decksFor,
-  makeDecks,
-  ownedCardsNamed,
-  type DeckId,
-} from "@/modules/decks";
+import { deckProblems, deckView, decksFor, makeDecks, type DeckId } from "@/modules/decks";
 import { makeStore } from "@/modules/store";
 import { UserId } from "@/shared/kernel";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
@@ -77,12 +70,5 @@ describe("decks", () => {
       view.lines.find((line) => line.oracleId === oracleId)?.owned ?? 0;
     expect(deckProblems(view.deck, (oracleId) => view.rules[oracleId], owned)).toEqual([]);
     expect(await deckView(db, UserId.of("someone-else"), first)).toBeNull();
-  });
-
-  it("finds owned cards by name for the builder's search", async () => {
-    const { id: printingId, name } = await card();
-    await store.buySingle(jack, { printingId, finish: "nonfoil", quantity: 2 });
-    const matches = await ownedCardsNamed(db, jack.userId, name.slice(0, 5));
-    expect(matches).toEqual([expect.objectContaining({ name, owned: 2, printingId })]);
   });
 });

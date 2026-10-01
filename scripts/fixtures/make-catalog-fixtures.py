@@ -20,7 +20,7 @@ keep |= set(first_n("uncommon", {"uncommon"}, 4))
 keep |= set(first_n("rareMythicWithShowcase", {"rare"}, 2))
 keep |= set(first_n("rareMythicWithShowcase", {"mythic"}, 1))
 keep |= set(first_n("land", {"common"}, 2))
-for number in ["295", "356", "343", "386", "379"]:  # showcase, extended art, raised foil, bundle promo, starter deck
+for number in ["295", "356", "343", "386", "379", "120"]:  # showcase, extended art, raised foil, bundle promo, starter deck, Wick (identity wider than its cost)
     keep.add(by_number[number]["uuid"])
 
 # Decks: Hare Raising (starter kit) trimmed to kept cards + one extra; the bundle land pack; MTGO redemption.

@@ -287,27 +287,43 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await expect(page.getByRole("heading", { name: "Beza's Bounty" })).toBeVisible();
 
   await page
-    .getByLabel("Deck list")
-    .fill("Commander\n1 Beza, the Bounding Spring\nDeck\n98 Plains\n1 Card That Does Not Exist");
+    .getByLabel("Paste a deck list")
+    .fill("Commander\n1 Beza, the Bounding Spring\nDeck\n97 Plains\n1 Card That Does Not Exist");
   await page.getByRole("button", { name: "Add these cards" }).click();
   await expect(
-    page.getByText(/Added 99 cards\. Not in the catalog: Card That Does Not Exist\./),
+    page.getByText(/Added 98 cards\. Not in the catalog: Card That Does Not Exist\./),
   ).toBeVisible();
 
-  // 99 cards (needs 100): reported, but it doesn't block building. (Whether Beza is owned depends
+  // 98 cards (needs 100): reported, but it doesn't block building. (Whether Beza is owned depends
   // on the random pack test 4 opened, so shortages are tested in the unit and integration tests.)
   const problems = page.getByRole("region", { name: "Problems" });
-  await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
+  await expect(problems.getByText("The deck has 98 cards; it needs exactly 100.")).toBeVisible();
   const stats = page.getByRole("region", { name: "Deck statistics" });
   await expect(stats.getByText("Land", { exact: true })).toBeVisible();
-  await expect(stats.getByText("Average mana value")).toBeVisible();
+  await expect(stats.getByText("98 / 100")).toBeVisible();
 
-  // Type-ahead: "pla" finds the Plains the admin owns; Enter adds one to the main deck.
-  await page.getByRole("combobox", { name: "Search your cards" }).fill("pla");
-  await expect(page.getByRole("option", { name: /^Plains/ })).toBeVisible();
-  await page.getByRole("combobox", { name: "Search your cards" }).press("Enter");
-  await expect(page.getByText("Added Plains (now 99).")).toBeVisible();
-  await expect(problems.getByText("The deck has 100 cards")).toHaveCount(0);
+  // Browse the collection: search, select a card (it's shown large), choose a quantity, add.
+  await page.getByRole("searchbox", { name: "Search your cards" }).fill("t:basic plains");
+  const collection = page.getByRole("list", { name: "Cards you own" });
+  await collection.getByRole("button", { name: /^Plains, you own \d+, 97 in this deck$/ }).click();
+  const selected = page.getByRole("region", { name: "Selected: Plains" });
+  await selected.getByRole("button", { name: "One more to add" }).click();
+  await selected.getByRole("button", { name: "One more to add" }).click();
+  await selected.getByRole("button", { name: "One fewer to add" }).click();
+  await selected.getByRole("button", { name: "Add to deck" }).click();
+  await expect(page.getByText("Added 2 Plains (now 99).")).toBeVisible();
+  await expect(stats.getByText("100 / 100")).toBeVisible(); // the statistics follow at once
+  await expect(problems.getByText(/The deck has \d+ cards/)).toHaveCount(0);
+
+  // The deck list's own controls, and hovering a name previews the card.
+  const deckList = page.getByRole("region", { name: "Deck list" });
+  await deckList.getByRole("button", { name: "One fewer Plains" }).click();
+  await expect(stats.getByText("99 / 100")).toBeVisible();
+  await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible();
+  await deckList.getByRole("button", { name: "One more Plains" }).click();
+  await expect(stats.getByText("100 / 100")).toBeVisible();
+  await deckList.getByRole("button", { name: "Plains", exact: true }).hover();
+  await expect(page.locator("[data-card-preview]")).toBeVisible();
 
   await page.getByRole("link", { name: "Export" }).click();
   await expect(page.getByLabel("Deck list, names only")).toHaveValue(

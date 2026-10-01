@@ -47,11 +47,20 @@ export {
   deckView,
   decksFor,
   type DeckRef,
-  ownedCardsNamed,
   preconCommanders,
   type PreconCommanders,
   type DeckLine,
   type DeckSummary,
   type DeckView,
-  type OwnedCardMatch,
 } from "./queries/decks";
+export {
+  BROWSE_PAGE_SIZE,
+  BROWSE_SORTS,
+  browseCollection,
+  deckBrowseContext,
+  type BrowseCard,
+  type BrowseInput,
+  type BrowsePage,
+  type BrowseSort,
+} from "./queries/browse";
+export { parseSearch, type ParsedSearch, type SearchNode } from "./domain/search";

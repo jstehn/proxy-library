@@ -73,6 +73,7 @@ export type CardExtras = Readonly<{
   scryfallId: string;
   images: ImageUris | null;
   legalities: Readonly<Record<string, string>>;
+  producedMana: readonly string[];
 }>;
 
 export interface CatalogRepository {

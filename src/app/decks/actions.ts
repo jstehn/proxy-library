@@ -2,16 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { PrintingId } from "@/modules/catalog";
-import {
-  BOARDS,
-  DeckId,
-  deckView,
-  FORMATS,
-  ownedCardsNamed,
-  type Board,
-  type OwnedCardMatch,
-} from "@/modules/decks";
+import { DeckId, FORMATS } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 
@@ -39,45 +30,6 @@ export async function createDeckAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/decks");
   redirect(deckPath(result.value));
-}
-
-const EntryForm = z.object({
-  deckId: z.coerce.number().int().positive(),
-  oracleId: z.string().min(1),
-  board: z.enum(BOARDS),
-  quantity: z.coerce.number().int(),
-  printingId: z.string().optional(),
-  finish: z.enum(["nonfoil", "foil", "etched"]).optional(),
-});
-
-export async function setEntryAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
-  const form = EntryForm.safeParse(Object.fromEntries(formData));
-  if (!form.success) redirect("/decks");
-  const { deckId, oracleId, board, quantity, printingId, finish } = form.data;
-  const result = await getContainer().decks.setEntry(actor, {
-    deckId: DeckId.of(deckId),
-    oracleId,
-    board,
-    quantity: Math.max(0, quantity),
-    printingId: printingId ? PrintingId.of(printingId) : undefined,
-    finish,
-  });
-  if (!result.ok) {
-    if (result.error.kind === "DeckNotFound") redirect("/decks");
-    redirect(
-      deckPath(
-        deckId,
-        result.error.kind === "QuantityInvalid"
-          ? "At most 99 copies."
-          : "That card isn't in the catalog.",
-      ),
-    );
-  }
-  revalidatePath(deckPath(deckId));
-  redirect(
-    `${deckPath(deckId)}${formData.get("q") ? `?q=${encodeURIComponent(String(formData.get("q")))}` : ""}`,
-  );
 }
 
 export async function updateDeckAction(formData: FormData): Promise<void> {
@@ -120,39 +72,4 @@ export async function importListAction(formData: FormData): Promise<void> {
   if (unreadable.length > 0) parts.push(`Couldn't read: ${unreadable.join(" | ")}.`);
   revalidatePath(deckPath(deckId));
   redirect(`${deckPath(deckId)}?imported=${encodeURIComponent(parts.join(" "))}`);
-}
-
-/** The type-ahead box: your owned cards whose names match what's typed so far. */
-export async function searchOwnedAction(query: string): Promise<OwnedCardMatch[]> {
-  const actor = await requireActor();
-  if (query.trim().length === 0) return [];
-  return ownedCardsNamed(getContainer().db, actor.userId, query.slice(0, 60), 10);
-}
-
-export type AddCardResult = { ok: true; message: string } | { ok: false; message: string };
-
-/** Adds one copy of a card you own to a board (from the type-ahead box). */
-export async function addCardAction(input: {
-  deckId: number;
-  board: Board;
-  card: OwnedCardMatch;
-}): Promise<AddCardResult> {
-  const actor = await requireActor();
-  const { db, decks } = getContainer();
-  const view = await deckView(db, actor.userId, input.deckId);
-  if (view === null) return { ok: false, message: "That deck isn't yours." };
-  const current =
-    view.lines.find((line) => line.oracleId === input.card.oracleId && line.board === input.board)
-      ?.quantity ?? 0;
-  const result = await decks.setEntry(actor, {
-    deckId: DeckId.of(input.deckId),
-    oracleId: input.card.oracleId,
-    board: input.board,
-    quantity: current + 1,
-    printingId: PrintingId.of(input.card.printingId),
-    finish: input.card.finish,
-  });
-  if (!result.ok) return { ok: false, message: "Couldn't add that card." };
-  revalidatePath(deckPath(input.deckId));
-  return { ok: true, message: `Added ${input.card.name} (now ${current + 1}).` };
 }

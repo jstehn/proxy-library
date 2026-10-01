@@ -40,6 +40,8 @@ const layer = (name, { sameModule = false, file } = {}) => ({
 });
 const from = (selector, ...to) => ({ from: selector, allow: { to } });
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
+// A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
+const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
 
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
@@ -125,7 +127,14 @@ const policies = [
   ),
 
   // delivery (Next.js): controllers and views
-  from(el("app"), el("app"), el("ui"), el("server"), el("kernel"), publicApi),
+  from(el("app"), el("app"), el("ui"), el("server"), el("kernel"), publicApi, clientApi),
+  // client.ts re-exports only its own module's domain (no database code reaches the browser).
+  {
+    from: clientApi,
+    disallow: {
+      to: [layer("application"), layer("queries"), layer("infrastructure"), layer("testing")],
+    },
+  },
   from(el("ui"), el("ui"), el("kernel")),
 
   // tests may additionally use fakes, config and the database

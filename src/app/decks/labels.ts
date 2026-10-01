@@ -32,7 +32,7 @@ export function problemText(problem: DeckProblem): string {
     case "TooManyCommanders":
       return `${problem.count} commanders; the most is 2.`;
     case "CommanderInvalid":
-      return `${problem.name} can't be a commander (it isn't a legendary creature).`;
+      return `${problem.name} can't be a commander (a commander is a legendary creature, a legendary Vehicle or Spacecraft with power and toughness, or says it can be your commander).`;
     case "OutsideColorIdentity":
       return `${problem.name} is outside your commander's colors.`;
     default:

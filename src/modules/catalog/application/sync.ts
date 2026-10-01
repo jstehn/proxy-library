@@ -232,6 +232,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         scryfallId: card.scryfallId,
         images: card.images,
         legalities: card.legalities,
+        producedMana: card.producedMana,
       });
       summary.pricedPrintings++;
       summary.priceSnapshots += todays.length;

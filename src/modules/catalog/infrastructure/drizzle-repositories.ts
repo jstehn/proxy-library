@@ -285,7 +285,11 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       for (const card of extras) {
         await db
           .update(printings)
-          .set({ imageUris: card.images, legalities: card.legalities })
+          .set({
+            imageUris: card.images,
+            legalities: card.legalities,
+            producedMana: [...card.producedMana],
+          })
           .where(eq(printings.scryfallId, card.scryfallId));
       }
     },

@@ -120,6 +120,13 @@
       "when": 1790803984426,
       "tag": "0016_wpn_artwork",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790828553154,
+      "tag": "0017_produced_mana",
+      "breakpoints": true
     }
   ]
 }

@@ -54,7 +54,8 @@ export function EnlargedCard(props: {
   );
 }
 
-function FaceText(props: { face: CardFace; isBackFace: boolean }) {
+/** One face's printed text: name and cost, type line, rules text, stats. */
+export function FaceText(props: { face: CardFace; isBackFace: boolean }) {
   const { face } = props;
   const stats =
     face.power !== null && face.toughness !== null
@@ -153,5 +154,67 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
       )}
       {isOpen && <EnlargedCard printing={printing} align={align} />}
     </div>
+  );
+}
+
+/** Where a name's floating preview goes: beside the name, kept inside the window. */
+type PreviewSpot = Readonly<{ left: number; top: number }>;
+
+const PREVIEW_WIDTH = 260;
+const PREVIEW_HEIGHT = Math.round((PREVIEW_WIDTH * 680) / 488);
+
+/**
+ * A card name that shows the card's image while hovered or focused (and on a tap), like
+ * Moxfield's deck lists: a list of names alone doesn't show what a deck is.
+ */
+export function NamePreview(props: {
+  printing: PrintingCard | undefined;
+  name: string;
+  onSelect?: () => void;
+  className?: string;
+}) {
+  const [spot, setSpot] = useState<PreviewSpot | null>(null);
+  const nameRef = useRef<HTMLButtonElement>(null);
+
+  function show() {
+    const box = nameRef.current?.getBoundingClientRect();
+    if (box === undefined || props.printing === undefined) return;
+    // To the left of the name when there's room (deck lists sit on the right), else the right.
+    const left =
+      box.left - PREVIEW_WIDTH - 12 >= 8
+        ? box.left - PREVIEW_WIDTH - 12
+        : Math.min(box.right + 12, window.innerWidth - PREVIEW_WIDTH - 8);
+    const top = Math.max(8, Math.min(box.top - 40, window.innerHeight - PREVIEW_HEIGHT - 8));
+    setSpot({ left, top });
+  }
+
+  return (
+    <>
+      <button
+        ref={nameRef}
+        type="button"
+        onMouseEnter={show}
+        onMouseLeave={() => setSpot(null)}
+        onFocus={show}
+        onBlur={() => setSpot(null)}
+        onClick={props.onSelect}
+        className={`truncate text-left hover:underline ${props.className ?? ""}`}
+      >
+        {props.name}
+      </button>
+      {spot && props.printing?.hasImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/images/${props.printing.id}/normal/front`}
+          alt=""
+          aria-hidden
+          data-card-preview
+          width={PREVIEW_WIDTH}
+          height={PREVIEW_HEIGHT}
+          className="pointer-events-none fixed z-50 rounded-[4.5%] shadow-2xl ring-1 ring-black/30"
+          style={{ left: spot.left, top: spot.top, width: PREVIEW_WIDTH }}
+        />
+      )}
+    </>
   );
 }
