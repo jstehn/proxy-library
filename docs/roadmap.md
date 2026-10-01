@@ -51,6 +51,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | ✅ Done |
 | 12  | Reset a player (admin and self)    | orchestration module over other modules' in-transaction functions                                                           | ✅ Done |
 | 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                         | ✅ Done |
+| 14  | Deck builder 2.0 and proxy PDFs    | a search language (parser → tree → SQL), client-safe module API (ADR 0016), optimistic UI, pure page layout, PDF rendering  | ✅ Done |
 
 ### Why this order (changed from the original plan)
 

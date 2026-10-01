@@ -1,7 +1,7 @@
 # Design: deck builder 2.0 and proxy PDFs
 
 - **Phase:** 14
-- **Status:** **Approved** (2026-09-30, with the decisions in section 8)
+- **Status:** **Built** (approved 2026-09-30 with the decisions in section 8; implementation notes in section 10)
 - **Related:** design doc 09 (decks), ADR 0007 (Scryfall data), lesson 09
 
 ## 1. Purpose & scope
@@ -205,3 +205,30 @@ legendary creatures, those Vehicles and Spacecraft, and cards that say "can be y
 and a **Background** as a second commander beside one that says "Choose a Background".
 `pnpm worker check-commanders` tests every precon's commanders in the catalog (all 60 pass); the
 search keyword `is:commander` uses the same rule.
+
+## 10. Implementation notes (what changed while building)
+
+- **The browser filters by legality too:** "Show everything I own" turns off both the color and
+  the format filter (cards that don't fit are dimmed and labelled "off-color" or "not legal").
+  The quick color buttons are the identity filter itself, not search text, so the search box
+  never fights them.
+- **Grouping the grid by type** is a sort ("Type") that adds a heading where the type changes, in
+  the deck list's order.
+- **Identity counts the rules text**, as Scryfall's `color_identity` does: _Wick, the Whorled
+  Mind_ costs {3}{B} but is Grixis. It's now in the test fixtures (real MTGJSON data), and an
+  integration test pins that a blue-red deck can't browse it.
+- **One deck line holds at most 99 copies** (as before); adding more says so ("the most one line
+  can hold").
+- **The builder keeps the deck in the browser** and saves each change through a server action that
+  returns the fresh deck; problems update when that answer arrives. A pasted list or new settings
+  start the builder afresh (keyed on the deck's contents).
+- **Proxy layout:** nothing prints closer than 1/8 inch to the paper's edge. With bleed, 3 × 3
+  doesn't fit on Letter or A4, so the sheet turns sideways when that fits more (Letter: 3 × 2).
+  Guides are drawn first and the cards on top, so corner marks only show outside the cards.
+- **Double-faced cards print last**, each page of fronts followed by a page of only their backs in
+  mirrored columns. "Double-faced" means the printing has a back image (split and adventure
+  cards have two faces but one image).
+- **"Cards not marked 'have a real copy'"** wasn't built: nothing marks real copies yet. The
+  options are the whole deck or the deck without its sideboard (future-ideas.md).
+- **Browser tests never download images:** the setup puts a placeholder JPEG in the test image
+  cache for every printing, so making a PDF there stays offline.

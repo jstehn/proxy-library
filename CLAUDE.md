@@ -45,6 +45,8 @@ each lesson.
   nested inline ones; factories unpack `dependencies`, define a named inner `function`, and return
   it by name.
 - `@/*` imports resolve to `src/*`.
+- Client components import a module's pure code from `@/modules/<module>/client` (ADR 0016), never
+  its `index.ts` (that would pull server code into the browser); `import type` from `index.ts` is fine.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
