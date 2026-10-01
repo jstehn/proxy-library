@@ -14,3 +14,12 @@ export {
   type StatsLine,
 } from "./domain/stats";
 export { hasTerm, toggleTerm } from "./domain/search";
+export {
+  DEFAULT_PROXY_OPTIONS,
+  GAPS_IN_MILLIMETERS,
+  proxySummary,
+  type ProxyLine,
+  type ProxyOptions,
+  type ProxySummary,
+} from "./domain/proxy-sheet";
+export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";

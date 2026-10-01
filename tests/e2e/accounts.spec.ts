@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { PDFDocument } from "pdf-lib";
 
 // The tests share one database and build on each other, so they run in order.
 test.describe.configure({ mode: "serial" });
@@ -324,6 +326,21 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await expect(stats.getByText("100 / 100")).toBeVisible();
   await deckList.getByRole("button", { name: "Plains", exact: true }).hover();
   await expect(page.locator("[data-card-preview]")).toBeVisible();
+
+  // Proxies: choose options, see what they make, and download the PDF.
+  await page.getByRole("link", { name: "Print proxies" }).click();
+  await expect(page.getByText(/^1 card on 1 page, 9 to a page\./)).toBeVisible(); // Beza; Plains skipped
+  await page.getByText("Include them").click();
+  await page.getByText("1/8 inch (3 mm)").click();
+  await expect(page.getByText(/^100 cards on 17 pages, 6 to a page \(sideways\)\./)).toBeVisible();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download PDF" }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("Bezas Bounty proxies.pdf");
+  const pdf = readFileSync(await download.path());
+  expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+  expect((await PDFDocument.load(pdf)).getPageCount()).toBe(17);
+  await page.getByRole("link", { name: "Back to the deck" }).click();
 
   await page.getByRole("link", { name: "Export" }).click();
   await expect(page.getByLabel("Deck list, names only")).toHaveValue(

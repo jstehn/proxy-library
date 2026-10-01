@@ -85,6 +85,8 @@ export type PrintingCard = Readonly<{
   variantLabel: string;
   finishes: Finish[];
   hasImage: boolean;
+  /** Whether it has a second card face with its own image (double-faced cards, not split ones). */
+  hasBackImage: boolean;
   /** What's printed on each face (front first), for the hover overlay. */
   faces: CardFace[];
   artist: string | null;
@@ -100,6 +102,7 @@ type PrintingCardRow = {
   variant_label: string;
   finishes: Finish[];
   has_image: boolean;
+  has_back_image: boolean;
   faces: CardFace[];
   artist: string | null;
   prices: Record<string, number> | null;
@@ -108,7 +111,9 @@ type PrintingCardRow = {
 /** The columns of a PrintingCard, for printings aliased "p". */
 const PRINTING_CARD_COLUMNS = sql`
   p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
-  p.image_uris is not null as has_image, p.faces, p.artist,
+  p.image_uris is not null as has_image,
+  coalesce(jsonb_typeof(p.image_uris->'back') = 'object', false) as has_back_image,
+  p.faces, p.artist,
   -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
   (select jsonb_object_agg(latest.finish, latest.usd_cents)
      from (select distinct on (s.finish) s.finish, s.usd_cents
@@ -125,6 +130,7 @@ function toPrintingCard(row: PrintingCardRow): PrintingCard {
     variantLabel: row.variant_label,
     finishes: row.finishes,
     hasImage: row.has_image,
+    hasBackImage: row.has_back_image,
     faces: row.faces,
     artist: row.artist,
     prices: Object.fromEntries(

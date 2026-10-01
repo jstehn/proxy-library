@@ -1,10 +1,12 @@
 // Runs once before the browser tests: bring the e2e database up to date, empty it, and load the
 // card catalog from the recorded fixtures (the real sync code, with file-based gateways, so no
 // network is used).
+import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { makeCatalog } from "@/modules/catalog";
 import {
   diskArtworkStore,
+  diskImageStore,
   drizzleArtworkRepository,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
@@ -64,6 +66,24 @@ export default async function globalSetup() {
     await catalog.queueSync("prices");
     const result = await catalog.runNextQueuedSync();
     if (result?.status !== "succeeded") throw new Error("fixture catalog sync failed");
+
+    // Card images the server itself reads (proxy PDFs) are placeholders already in the cache,
+    // so it never downloads one. (The browser's own image requests are stubbed in each test.)
+    const placeholder = new Uint8Array(readFileSync("tests/fixtures/images/card.jpg"));
+    const cardImages = diskImageStore(E2E_IMAGE_CACHE_DIR);
+    const printings = await db.execute<{ scryfall_id: string; has_back: boolean }>(sql`
+      select scryfall_id, coalesce(jsonb_typeof(image_uris->'back') = 'object', false) as has_back
+        from printings where image_uris is not null
+    `);
+    for (const printing of printings.rows) {
+      const faces = printing.has_back ? (["front", "back"] as const) : (["front"] as const);
+      for (const face of faces) {
+        await cardImages.put(
+          { size: "large", scryfallId: printing.scryfall_id, face },
+          placeholder,
+        );
+      }
+    }
   } finally {
     await close();
   }

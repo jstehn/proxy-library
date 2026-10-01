@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { PrintingId } from "@/modules/catalog";
 import type { UserId } from "@/shared/kernel";
-import type { CardLookup, CardQuery, DeckRepository, ResolvedCard } from "../application/ports";
+import type {
+  CardLookup,
+  CardQuery,
+  DeckRepository,
+  ProxyImageSource,
+  ResolvedCard,
+} from "../application/ports";
 import { DeckId, type Deck } from "../domain/deck";
 
 // In-memory stand-ins for the decks ports.
@@ -83,4 +91,24 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
 /** A printing id for tests (domain code may only import catalog types, not its constructors). */
 export function samplePrintingId(raw: string): PrintingId {
   return PrintingId.of(raw);
+}
+
+/** A real 8 × 8 JPEG (one blue square, drawn by Chromium), to stand in for card images. */
+export const TINY_JPEG = new Uint8Array(
+  readFileSync(join(process.cwd(), "tests/fixtures/images/card.jpg")),
+);
+
+/**
+ * Card images from memory: every printing has a front; only those in `withBacks` have a back.
+ * Remembers what was asked for, to check each image is fetched once.
+ */
+export function fakeProxyImages(withBacks: readonly string[] = []) {
+  const requests: string[] = [];
+  const images: ProxyImageSource = {
+    async image(printingId, face) {
+      requests.push(`${printingId}/${face}`);
+      return face === "front" || withBacks.includes(printingId) ? TINY_JPEG : null;
+    },
+  };
+  return { images, requests };
 }

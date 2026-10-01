@@ -1,6 +1,7 @@
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
 import type { Deck, DeckId, Format } from "../domain/deck";
+import type { ProxyPage } from "../domain/proxy-sheet";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
@@ -40,3 +41,16 @@ export interface CardLookup {
 export type DecksServices = { decks: DeckRepository; cards: CardLookup };
 
 export type DecksDependencies = { unitOfWork: UnitOfWork<DecksServices>; clock: Clock };
+
+/** Large card images for proxy sheets (the catalog's image cache, wired in core.ts). */
+export interface ProxyImageSource {
+  /** The image's bytes (JPEG), or null when the card has no image of that face. */
+  image(printingId: string, face: "front" | "back"): Promise<Uint8Array | null>;
+}
+
+/** Draws laid-out proxy pages as a PDF. Images are keyed by `proxyImageKey`. */
+export interface ProxyPdfRenderer {
+  render(pages: readonly ProxyPage[], images: ReadonlyMap<string, Uint8Array>): Promise<Uint8Array>;
+}
+
+export type ProxySheetsDependencies = { images: ProxyImageSource; renderer: ProxyPdfRenderer };

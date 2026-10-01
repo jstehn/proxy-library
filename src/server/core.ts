@@ -10,7 +10,7 @@ import {
   drizzleInviteRepository,
   drizzlePlayerRepository,
 } from "@/modules/accounts/infrastructure";
-import { makeCatalog } from "@/modules/catalog";
+import { makeCatalog, PrintingId } from "@/modules/catalog";
 import {
   diskArtworkStore,
   diskImageStore,
@@ -23,8 +23,12 @@ import {
   httpWpnGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { makeDecks } from "@/modules/decks";
-import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
+import { makeDecks, makeProxySheets } from "@/modules/decks";
+import {
+  drizzleCardLookup,
+  drizzleDeckRepository,
+  pdfLibRenderer,
+} from "@/modules/decks/infrastructure";
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
@@ -133,6 +137,20 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
+  // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3).
+  const proxySheet = makeProxySheets({
+    images: {
+      async image(printingId, face) {
+        const found = await catalog.imageFor({
+          printingId: PrintingId.of(printingId),
+          size: "large",
+          face,
+        });
+        return found.ok ? found.value : null;
+      },
+    },
+    renderer: pdfLibRenderer(),
+  });
   const trades = makeTrades({ unitOfWork, clock });
   const resetPlayer = makeResetPlayer({ unitOfWork, clock });
 
@@ -148,6 +166,7 @@ export function buildCore(config: Config) {
     inventory,
     store,
     decks,
+    proxySheet,
     trades,
     resetPlayer,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),

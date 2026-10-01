@@ -1,46 +1,29 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deckView } from "@/modules/decks";
-import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
+import { ProxyForm } from "./proxy-form";
+import { proxyDeck } from "./proxy-lines";
 
-// Proxy sheet (design doc 09): every card in the deck at real size, 63 × 88 mm, three by three on a
-// page. Print from the browser at 100% scale ("actual size"). The large images keep text sharp.
+// Proxy PDFs (design doc 14, section 3): choose the options, then download the PDF. It prints at
+// exactly the real card size from any PDF viewer (choose "actual size", not "fit to page").
 
 export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
   const actor = await requireActor();
-  const deckId = Number((await props.params).id);
-  const view = Number.isSafeInteger(deckId)
-    ? await deckView(getContainer().db, actor.userId, deckId)
-    : null;
-  if (view === null) notFound();
-
-  // One image per copy: 4 Lightning Bolts print 4 times.
-  const copies = view.lines.flatMap((line) => Array.from({ length: line.quantity }, () => line));
+  const deck = await proxyDeck(actor.userId, Number((await props.params).id));
+  if (deck === null) notFound();
 
   return (
-    <main className="mx-auto flex w-full flex-col items-center gap-4 px-4 py-8 print:p-0">
-      <header className="flex flex-col items-center gap-1 text-center print:hidden">
-        <h1 className="text-2xl font-semibold">Proxies: {view.deck.name}</h1>
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold">Proxies: {deck.view.deck.name}</h1>
         <p className="text-sm text-zinc-500">
-          {copies.length} cards on {Math.ceil(copies.length / 9)} pages. Print at 100% scale
-          (&quot;actual size&quot;), with no margins added by the browser.{" "}
-          <Link href={`/decks/${view.deck.id}`} className="underline">
+          A PDF of real-size cards (2.5 × 3.5 inches) with cutting guides.{" "}
+          <Link href={`/decks/${deck.view.deck.id}`} className="underline">
             Back to the deck
           </Link>
         </p>
       </header>
-      <div className="grid grid-cols-[repeat(3,63mm)] gap-[1mm] print:gap-0">
-        {copies.map((line, index) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={index}
-            src={`/api/images/${line.printingId}/large/front`}
-            alt={line.name}
-            className="h-[88mm] w-[63mm] break-inside-avoid bg-zinc-100 object-cover"
-          />
-        ))}
-      </div>
+      <ProxyForm deckId={deck.view.deck.id} lines={deck.lines} />
     </main>
   );
 }

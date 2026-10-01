@@ -64,3 +64,19 @@ export {
   type BrowseSort,
 } from "./queries/browse";
 export { parseSearch, type ParsedSearch, type SearchNode } from "./domain/search";
+export { makeProxySheets, type ProxySheet } from "./application/proxy-sheets";
+export type {
+  ProxyImageSource,
+  ProxyPdfRenderer,
+  ProxySheetsDependencies,
+} from "./application/ports";
+export {
+  cardsToPrint,
+  DEFAULT_PROXY_OPTIONS,
+  GAPS_IN_MILLIMETERS,
+  PAPER_SIZES,
+  proxyPages,
+  proxySummary,
+  type ProxyLine,
+  type ProxyOptions,
+} from "./domain/proxy-sheet";
