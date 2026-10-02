@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Color } from "@/modules/catalog";
-import { sampleCardFacts, samplePrintingId } from "../testing/samples";
+import { sampleCardFacts, samplePick, samplePrintingId } from "../testing/samples";
 import type { DraftCardFacts } from "./auto-pick";
 import type { DraftCard } from "./draft";
 import { colorPips, splitLands, suggestBuild } from "./suggested-build";
@@ -13,7 +13,8 @@ function pool(facts: readonly DraftCardFacts[]) {
       slot: index,
       printingId: samplePrintingId(`card${index}`),
       finish: "nonfoil",
-      pick: { seat: 0, pickNumber: index + 1, auto: false, at: new Date(0) },
+      pick: samplePick(0, index + 1),
+      cameFrom: null,
     };
   });
   return { cards, lookup: (id: string) => lookup.get(id) };

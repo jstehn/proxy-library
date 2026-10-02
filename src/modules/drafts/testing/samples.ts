@@ -87,3 +87,21 @@ export function sampleCardFacts(
 export function samplePrintingId(raw: string): PrintingId {
   return PrintingId.of(raw);
 }
+
+/** A drafted card's pick record, for tests that build pools by hand. */
+export function samplePick(seat: number, pickNumber: number) {
+  return {
+    seat,
+    pickNumber,
+    auto: false,
+    at: new Date(0),
+    round: 1,
+    random: false,
+    state: "faceDown" as const,
+    poolSeat: seat,
+    notes: [],
+  };
+}
+
+/** A fixed "random" source for domain tests that never draw at random. */
+export const NO_RNG = { next: () => 0 };

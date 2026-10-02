@@ -2,6 +2,7 @@ import type { ActivityServices } from "@/modules/activity";
 import type { Color, PrintingId, SetCode } from "@/modules/catalog";
 import type { CollectionServices } from "@/modules/collection";
 import type { DeckId, DecksServices } from "@/modules/decks";
+import type { InventoryServices } from "@/modules/inventory";
 import type { PacksServices, SeedSource } from "@/modules/packs";
 import type { WalletServices } from "@/modules/wallet";
 import type { Cents, Clock, UnitOfWork, UserId } from "@/shared/kernel";
@@ -15,13 +16,15 @@ export interface DraftRepository {
   create(draft: NewDraft): Promise<DraftId>;
   /** The whole draft, its row locked until the transaction ends, or null. */
   lock(draftId: DraftId): Promise<Draft | null>;
+  /** The whole draft, without locking it (for reading only), or null. */
+  find(draftId: DraftId): Promise<Draft | null>;
   /** Writes whatever changed between `before` and `after` (both from the same `lock`). */
   save(before: Draft, after: Draft): Promise<void>;
   /** The lobby or running draft a player has a seat in (rule 1), or null. */
   activeDraftOf(userId: UserId): Promise<DraftId | null>;
   /** The lobbies a player has a seat in (for a reset). */
   lobbiesWith(userId: UserId): Promise<DraftId[]>;
-  /** Running drafts with a seat whose deadline is at or before `now`: the worker's work. */
+  /** Drafts with a deadline at or before `now` (a pick, an owed color, a deal step). */
   withDeadlineBefore(now: Date): Promise<DraftId[]>;
   /** Remembers the deck a finished draft made for a player, for the "open your deck" link. */
   setDeckOf(draftId: DraftId, userId: UserId, deckId: DeckId): Promise<void>;
@@ -56,6 +59,7 @@ export type DraftsServices = {
   CollectionServices &
   PacksServices &
   DecksServices &
+  Pick<InventoryServices, "items"> &
   ActivityServices;
 
 export type DraftsDependencies = {

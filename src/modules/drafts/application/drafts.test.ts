@@ -4,6 +4,7 @@ import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId, SetCode, type Color } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/testing/fakes";
+import { inMemoryItemRepository } from "@/modules/inventory/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
@@ -118,6 +119,7 @@ beforeEach(async () => {
     collection,
     boosters: inMemoryBoosterSource([SAMPLE_BOOSTER], SAMPLE_FACTS),
     decks: deckRepository,
+    items: inMemoryItemRepository(),
     cards: inMemoryCardLookup(knownCards),
     events,
   };

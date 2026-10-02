@@ -7,7 +7,7 @@ import { AWAY_AFTER_SECONDS } from "../domain/timers";
 // Read models for the draft screens (design doc 17, section 9). What a player may see is decided
 // here: their own pack and picks, and only counts for everyone else (rule 13).
 
-export type DraftStatusName = "lobby" | "drafting" | "finished" | "cancelled";
+export type DraftStatusName = "lobby" | "drafting" | "dealing" | "finished" | "cancelled";
 
 export type DraftSummary = Readonly<{
   id: number;
@@ -89,7 +89,7 @@ export async function draftsOverview(db: DbExecutor, userId: UserId): Promise<Dr
       from drafts d
       join card_sets s on s.code = d.set_code
       join auth_users h on h.id = d.host_id
-     where d.status in ('lobby', 'drafting')
+     where d.status in ('lobby', 'drafting', 'dealing')
      order by seated desc, d.status = 'lobby' desc, d.created_at desc
   `);
   const finished = await db.execute<SummaryRow>(sql`
@@ -179,25 +179,12 @@ export type SeatView = Readonly<{
   away: boolean;
 }>;
 
-export type CardInPack = Readonly<{ slot: number; printingId: string; finish: string }>;
-
-export type PickedCard = Readonly<{
-  printingId: string;
-  finish: string;
-  pickNumber: number;
-  round: number;
-  auto: boolean;
-}>;
-
 export type YourSeat = Readonly<{
   seatNumber: number;
   /** The basic lands dealt to you from the packs (rule 15). */
   basicsReceived: Array<Readonly<{ printingId: string; finish: string; quantity: number }>>;
   /** Cards your bots picked, which went to your collection (rule 16). */
   botPicks: number;
-  /** The pack in front of you, or null while you wait. */
-  pack: Readonly<{ packNumber: number; cards: CardInPack[] }> | null;
-  picks: PickedCard[];
   deckId: number | null;
 }>;
 
@@ -320,15 +307,7 @@ export async function draftView(
     you:
       mine === undefined
         ? null
-        : await yourSeat(
-            db,
-            draftId,
-            userId,
-            draft.status,
-            draft.round,
-            mine.seat_number,
-            mine.deck_id,
-          ),
+        : await yourSeat(db, draftId, userId, mine.seat_number, mine.deck_id),
   };
 }
 
@@ -336,54 +315,9 @@ async function yourSeat(
   db: DbExecutor,
   draftId: number,
   userId: UserId,
-  status: DraftStatusName,
-  round: number,
   seatNumber: number,
   deckId: number | null,
 ): Promise<YourSeat> {
-  let pack: YourSeat["pack"] = null;
-  if (status === "drafting") {
-    // The front of your queue: the earliest-arrived pack of this round with cards left.
-    const front = await db.execute<{ pack_number: number }>(sql`
-      select p.pack_number
-        from draft_packs p
-       where p.draft_id = ${draftId} and p.round = ${round} and p.holder_seat = ${seatNumber}
-         and exists (select 1 from draft_cards c
-                      where c.draft_id = p.draft_id and c.pack_number = p.pack_number
-                        and c.picked_by_seat is null)
-       order by p.queue_position
-       limit 1
-    `);
-    const packNumber = front.rows[0]?.pack_number;
-    if (packNumber !== undefined) {
-      const cards = await db.execute<{ slot: number; printing_id: string; finish: string }>(sql`
-        select slot, printing_id, finish from draft_cards
-         where draft_id = ${draftId} and pack_number = ${packNumber} and picked_by_seat is null
-         order by slot
-      `);
-      pack = {
-        packNumber: Number(packNumber),
-        cards: cards.rows.map((card) => ({
-          slot: card.slot,
-          printingId: card.printing_id,
-          finish: card.finish,
-        })),
-      };
-    }
-  }
-  const picks = await db.execute<{
-    printing_id: string;
-    finish: string;
-    pick_number: number;
-    round: number;
-    picked_auto: boolean;
-  }>(sql`
-    select c.printing_id, c.finish, c.pick_number, p.round, c.picked_auto
-      from draft_cards c
-      join draft_packs p on p.draft_id = c.draft_id and p.pack_number = c.pack_number
-     where c.draft_id = ${draftId} and c.picked_by_seat = ${seatNumber}
-     order by c.pick_number
-  `);
   const basics = await db.execute<{ printing_id: string; finish: string; quantity: number }>(sql`
     select printing_id, finish, count(*)::int as quantity
       from draft_basics
@@ -405,14 +339,27 @@ async function yourSeat(
       quantity: row.quantity,
     })),
     botPicks: botPicks.rows[0]?.total ?? 0,
-    pack,
-    picks: picks.rows.map((pick) => ({
-      printingId: pick.printing_id,
-      finish: pick.finish,
-      pickNumber: pick.pick_number,
-      round: pick.round,
-      auto: pick.picked_auto,
-    })),
     deckId: deckId === null ? null : Number(deckId),
   };
+}
+
+export type BoosterOption = Readonly<{
+  setCode: string;
+  setName: string;
+  boosterType: string;
+}>;
+
+/** Every booster the app can open, newest set first: what a Lore Seeker may add (any set). */
+export async function boosterOptions(db: DbExecutor): Promise<BoosterOption[]> {
+  const rows = await db.execute<{ set_code: string; set_name: string; booster_type: string }>(sql`
+    select b.set_code, s.name as set_name, b.booster_type
+      from booster_configs b
+      join card_sets s on s.code = b.set_code
+     order by s.release_date desc, s.code, b.booster_type
+  `);
+  return rows.rows.map((row) => ({
+    setCode: row.set_code,
+    setName: row.set_name,
+    boosterType: row.booster_type,
+  }));
 }

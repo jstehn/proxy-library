@@ -10,3 +10,5 @@ export type ProductUnavailable = Readonly<{ kind: "ProductUnavailable" }>;
 /** Opening it would give nothing: an empty product, deck or pack. Always a data problem, never a
  * normal outcome, so it's refused and the item stays unopened. */
 export type NothingInside = Readonly<{ kind: "NothingInside" }>;
+/** Not a booster pack (a product or a deck), where only a pack will do (a Lore Seeker's pack). */
+export type NotAPack = Readonly<{ kind: "NotAPack" }>;

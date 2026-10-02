@@ -1,20 +1,24 @@
 import type { Actor } from "@/modules/accounts";
-import type { SetCode } from "@/modules/catalog";
+import { SetCode, type Color } from "@/modules/catalog";
 import type { DeckId, TooManyDecks } from "@/modules/decks";
+import { ItemId, openPackForDraft } from "@/modules/inventory";
 import { openBooster } from "@/modules/packs";
 import { receive, spend, type InsufficientFunds } from "@/modules/wallet";
 import { Cents, err, ok, seededRng, type Result } from "@/shared/kernel";
+import { peekAtPack, watchPlayer } from "../domain/actions";
+import { abilityOf, type CardRef } from "../domain/abilities";
 import { chooseAutoPick, isBasicLand, type FactsLookup } from "../domain/auto-pick";
 import { dealBasics, takeOutBasics } from "../domain/basics";
+import { acceptDeal, endDeals as endDealsNow, offerForDeal, revealForDeal } from "../domain/deals";
 import {
   addBot as addBotSeat,
-  applyPick,
+  cardAt,
   checkCanStart,
   checkSeats,
   checkTimer,
+  isBot,
   joinDraft as joinTable,
   leaveDraft as leaveTable,
-  isBot,
   newDraft,
   removeBot as removeBotSeat,
   seatOf,
@@ -25,25 +29,37 @@ import {
   type OpenedPack,
 } from "../domain/draft";
 import type {
+  AbilityUnavailable,
   AlreadyInADraft,
   BoosterNotDraftable,
   BotNotFound,
   BotsForAdminsOnly,
+  CardNoLongerOwned,
   DraftFull,
   DraftNotFinished,
   DraftNotFound,
   DraftNotOpen,
   DraftNotRunning,
+  LorePackUnavailable,
   NotAway,
   NotHost,
+  NothingToAnswer,
   NothingToPick,
   NotSeated,
   PriceUnavailable,
   SeatsInvalid,
-  StalePick,
   TimerInvalid,
   TooFewPlayers,
 } from "../domain/errors";
+import {
+  chooseColor as chooseTableColor,
+  decideOnCard,
+  draftStep,
+  type AddedPack,
+  type StepChoices,
+  type StepContext,
+  type StepError,
+} from "../domain/steps";
 import { DRAFT_STYLES } from "../domain/style";
 import {
   markPresence as markSeatPresence,
@@ -52,11 +68,13 @@ import {
   runTimers as runTableTimers,
   type ChooseCard,
 } from "../domain/timers";
+import { visibleTo, type DraftSeen } from "../domain/visibility";
 import type { DraftsDependencies, DraftsServices } from "./ports";
 import { loadFacts, makeDeckFor, settle } from "./settle";
 
-// Draft use cases (design doc 17, section 5). Each runs in one transaction that starts by locking
-// the draft, so two picks at the same moment take turns (lock order: draft, wallets, cards, decks).
+// Draft use cases (design docs 17 and 18). Each runs in one transaction that starts by locking
+// the draft, so two actions at the same moment take turns (lock order: draft, wallets, cards,
+// decks). Every change goes through the pure domain, then bots act, then `settle` saves it.
 
 export type CreateDraftInput = Readonly<{
   setCode: SetCode;
@@ -65,6 +83,27 @@ export type CreateDraftInput = Readonly<{
   /** null turns the pick timer off. */
   secondsPerPick: number | null;
 }>;
+
+/** Where a Lore Seeker's added pack comes from (design doc 18, decision 2). */
+export type LorePackSource =
+  | Readonly<{ source: "inventory"; itemId: number }>
+  | Readonly<{ source: "buy"; setCode: string; boosterType: string }>;
+
+/** The choices about the card being drafted, as a player sends them. */
+export type PickChoices = Omit<StepChoices, "addPack"> & Readonly<{ addPack?: LorePackSource }>;
+
+export type PickInput = Readonly<{
+  draftId: DraftId;
+  packNumber: number;
+  /** A slot, or "random" while an Archdemon of Paliano is face up. */
+  slot: number | "random";
+  choices?: PickChoices;
+}>;
+
+export type DealAnswer =
+  | Readonly<{ draftId: DraftId; step: "reveal"; card: CardRef | null }>
+  | Readonly<{ draftId: DraftId; step: "offer"; card: CardRef | null }>
+  | Readonly<{ draftId: DraftId; step: "accept"; offerSeat: number | null }>;
 
 export type CreateDraftError =
   | BoosterNotDraftable
@@ -78,14 +117,30 @@ export type JoinDraftError =
 export type LeaveDraftError = DraftNotFound | NotSeated | DraftNotOpen;
 export type StartDraftError =
   DraftNotFound | NotHost | DraftNotOpen | TooFewPlayers | BoosterNotDraftable;
-export type PickError = DraftNotFound | NotSeated | DraftNotRunning | StalePick;
-export type PickForAwayError = DraftNotFound | NotHost | DraftNotRunning | NotAway | NothingToPick;
+export type PickError =
+  | DraftNotFound
+  | NotSeated
+  | StepError
+  | LorePackUnavailable
+  | InsufficientFunds
+  | CardNoLongerOwned;
+export type AnswerError =
+  | DraftNotFound
+  | NotSeated
+  | DraftNotRunning
+  | AbilityUnavailable
+  | NothingToAnswer
+  | LorePackUnavailable
+  | InsufficientFunds
+  | CardNoLongerOwned;
+export type PickForAwayError =
+  DraftNotFound | NotHost | DraftNotRunning | NotAway | NothingToPick | CardNoLongerOwned;
+export type EndDealsError = DraftNotFound | NotHost | DraftNotRunning | CardNoLongerOwned;
 export type MakeDraftDeckError = DraftNotFound | NotSeated | DraftNotFinished | TooManyDecks;
 export type AddBotError =
   DraftNotFound | BotsForAdminsOnly | NotHost | DraftNotOpen | DraftFull | InsufficientFunds;
 export type RemoveBotError = DraftNotFound | NotHost | DraftNotOpen | BotNotFound;
 
-export type PickInput = Readonly<{ draftId: DraftId; packNumber: number; slot: number }>;
 export type TimerReport = Readonly<{ drafts: number; autoPicks: number; extensions: number }>;
 
 const choosingWith =
@@ -94,16 +149,6 @@ const choosingWith =
     chooseAutoPick(pack, pool, facts);
 
 /** Rule 1: one unfinished draft per player. */
-/**
- * Lets every bot with a pack in front of it pick, until none has (rule 16). Bots answer at once,
- * so this runs after anything that can pass a pack to one.
- */
-async function letBotsPick(services: DraftsServices, draft: Draft, now: Date): Promise<Draft> {
-  if (draft.status !== "drafting" || !draft.seats.some(isBot)) return draft;
-  const facts = await loadFacts(services, draft);
-  return runBots(draft, now, choosingWith(facts)).draft;
-}
-
 async function checkNotInADraft(
   services: DraftsServices,
   actor: Actor,
@@ -142,6 +187,111 @@ export function makeDrafts(dependencies: DraftsDependencies) {
       if (draft === null) return err({ kind: "DraftNotFound" });
       return work(services, draft, clock.now());
     });
+  }
+
+  /** What the engine needs for this draft now: card facts, the time, a fresh seed. */
+  async function contextFor(
+    services: DraftsServices,
+    draft: Draft,
+    now: Date,
+  ): Promise<StepContext> {
+    return { now, cards: await loadFacts(services, draft), rng: seededRng(seeds.newSeed()) };
+  }
+
+  /** Bots act on anything that has reached them (rule 16), with facts for any new cards. */
+  async function letBotsAct(services: DraftsServices, draft: Draft, now: Date): Promise<Draft> {
+    const running = draft.status === "drafting" || draft.status === "dealing";
+    if (!draft.seats.some(isBot) || !running) return draft;
+    const ctx = await contextFor(services, draft, now);
+    return runBots(draft, ctx, choosingWith(ctx.cards)).draft;
+  }
+
+  /** Bots act, then the change is saved with everything that goes with it. */
+  async function save(
+    services: DraftsServices,
+    before: Draft,
+    after: Draft,
+    now: Date,
+  ): Promise<Result<void, CardNoLongerOwned>> {
+    return settle(services, before, await letBotsAct(services, after, now), now);
+  }
+
+  /**
+   * Opens a Lore Seeker's added pack: one of the player's unopened packs, or one bought at the
+   * store's price. Its basic lands are dealt out like the others (design doc 17, rule 15).
+   */
+  async function openLorePack(
+    services: DraftsServices,
+    actor: Actor,
+    draft: Draft,
+    request: LorePackSource,
+    ctx: StepContext,
+  ): Promise<Result<AddedPack, LorePackUnavailable | InsufficientFunds>> {
+    const seed = seeds.newSeed();
+    const unavailable = (reason: string) =>
+      err<LorePackUnavailable>({ kind: "LorePackUnavailable", reason });
+    let opened: OpenedPack;
+    if (request.source === "inventory") {
+      const pack = await openPackForDraft(services, {
+        ownerId: actor.userId,
+        itemId: ItemId.of(request.itemId),
+        seed,
+        now: ctx.now,
+      });
+      if (!pack.ok) return unavailable("that isn't an unopened booster pack of yours");
+      opened = { seed, cards: pack.value.cards };
+    } else {
+      const setCode = SetCode.of(request.setCode);
+      const price = await services.draftCatalog.packPrice(setCode, request.boosterType);
+      if (price === null) return unavailable("the store has no price for that pack");
+      const pack = await openBooster(services, {
+        setCode,
+        boosterType: request.boosterType,
+        seed,
+      });
+      if (!pack.ok) return unavailable("that booster can't be opened");
+      const paid = await spend(services, {
+        userId: actor.userId,
+        amount: price,
+        kind: "draft_entry",
+        note: `Lore Seeker pack: ${await services.draftCatalog.setName(setCode)}`,
+        ref: `draft:${draft.id}`,
+        now: ctx.now,
+      });
+      if (!paid.ok) return paid;
+      opened = { seed, cards: pack.value.cards };
+    }
+    const facts = await services.draftCatalog.cardFacts(
+      opened.cards.map((card) => card.printingId),
+    );
+    const { packs, basics } = takeOutBasics([[opened]], (printingId) => {
+      const card = facts.get(printingId);
+      return card !== undefined && isBasicLand(card);
+    });
+    const people = seatsInOrder(draft)
+      .filter((seat) => !isBot(seat))
+      .map((seat) => seat.userId);
+    return ok({ pack: packs[0][0], basics: dealBasics(basics, people, ctx.rng) });
+  }
+
+  /** The player's choices, with a Lore Seeker's pack opened if they asked for one. */
+  async function resolveChoices(
+    services: DraftsServices,
+    actor: Actor,
+    draft: Draft,
+    drafting: CardRef | null,
+    choices: PickChoices | undefined,
+    ctx: StepContext,
+  ): Promise<Result<StepChoices, LorePackUnavailable | InsufficientFunds>> {
+    const { addPack, ...rest } = choices ?? {};
+    if (addPack === undefined || drafting === null) return ok(rest);
+    const card = cardAt(draft, drafting);
+    // Only a Lore Seeker adds a pack: anything else ignores the request (and nothing is spent).
+    if (card === null || abilityOf(ctx.cards(card.printingId)?.name)?.ability.kind !== "addPack") {
+      return ok(rest);
+    }
+    const opened = await openLorePack(services, actor, draft, addPack, ctx);
+    return opened.ok ? ok({ ...rest, addPack: opened.value }) : opened;
   }
 
   /** Hosts a new draft: the host takes the first seat and pays the entry fee. */
@@ -254,46 +404,150 @@ export function makeDrafts(dependencies: DraftsDependencies) {
         .filter((seat) => !isBot(seat))
         .map((seat) => seat.userId);
       const dealt = dealBasics(basics, people, seededRng(seeds.newSeed()));
-      const started = startTable(draft, packs, now, dealt);
-      await settle(services, draft, await letBotsPick(services, started, now), now);
+      // Nobody has drafted yet, so no card can be "no longer owned".
+      await save(services, draft, startTable(draft, packs, now, dealt), now);
       return ok();
     });
   }
 
+  /** Drafts one card: one step of a turn with a pack (design doc 18, section 7). */
   async function makePick(actor: Actor, input: PickInput): Promise<Result<void, PickError>> {
     return withDraft<void, PickError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const picked = applyPick(
+      const ctx = await contextFor(services, draft, now);
+      const drafting =
+        input.slot === "random" ? null : { packNumber: input.packNumber, slot: input.slot };
+      const choices = await resolveChoices(services, actor, draft, drafting, input.choices, ctx);
+      if (!choices.ok) return choices;
+      const stepped = draftStep(
         draft,
         {
           seatNumber: seat.seatNumber,
           packNumber: input.packNumber,
           slot: input.slot,
           auto: false,
+          choices: choices.value,
         },
-        now,
+        ctx,
       );
-      if (!picked.ok) return picked;
-      // Picking also shows the player is here.
-      const here = markSeatPresence(picked.value.draft, actor.userId, true, now);
-      await settle(services, draft, await letBotsPick(services, here, now), now);
-      return ok();
+      if (!stepped.ok) return stepped;
+      // Drafting also shows the player is here.
+      const here = markSeatPresence(stepped.value.draft, actor.userId, true, now);
+      return save(services, draft, here, now);
     });
   }
 
-  /** The host picks for a player who has gone (the timer does this by itself when it's on). */
+  /** The choices about a card drawn at random (Archdemon of Paliano), once it's been seen. */
+  async function decideCard(
+    actor: Actor,
+    input: { draftId: DraftId; choices: PickChoices },
+  ): Promise<Result<void, AnswerError>> {
+    return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      const ctx = await contextFor(services, draft, now);
+      const choices = await resolveChoices(
+        services,
+        actor,
+        draft,
+        seat.abilities.awaitingChoices,
+        input.choices,
+        ctx,
+      );
+      if (!choices.ok) return choices;
+      const decided = decideOnCard(draft, seat.seatNumber, choices.value, ctx);
+      if (!decided.ok) return decided;
+      return save(services, draft, decided.value, now);
+    });
+  }
+
+  /** A color the player owes (Paliano, the High City; Regicide). */
+  async function chooseColor(
+    actor: Actor,
+    input: { draftId: DraftId; color: Color },
+  ): Promise<Result<void, AnswerError>> {
+    return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      const ctx = await contextFor(services, draft, now);
+      const chosen = chooseTableColor(draft, seat.seatNumber, input.color, ctx);
+      if (!chosen.ok) return chosen;
+      return save(services, draft, chosen.value, now);
+    });
+  }
+
+  /** Whispergear Sneak: look at a pack. */
+  async function peekWithSneak(
+    actor: Actor,
+    input: { draftId: DraftId; card: CardRef; packNumber: number },
+  ): Promise<Result<void, AnswerError>> {
+    return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      const ctx = await contextFor(services, draft, now);
+      const peeked = peekAtPack(draft, seat.seatNumber, input.card, input.packNumber, ctx);
+      if (!peeked.ok) return peeked;
+      return save(services, draft, peeked.value, now);
+    });
+  }
+
+  /** Illusionary Informant: see the next card another player drafts. */
+  async function watchWithInformant(
+    actor: Actor,
+    input: { draftId: DraftId; card: CardRef; targetSeat: number },
+  ): Promise<Result<void, AnswerError>> {
+    return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      const ctx = await contextFor(services, draft, now);
+      const watching = watchPlayer(draft, seat.seatNumber, input.card, input.targetSeat, ctx);
+      if (!watching.ok) return watching;
+      return save(services, draft, watching.value, now);
+    });
+  }
+
+  /**
+   * One Deal Broker step (design doc 18): the broker reveals a card or makes no deal, the others
+   * offer a card or nothing, the broker accepts one offer or none.
+   */
+  async function answerDeal(actor: Actor, input: DealAnswer): Promise<Result<void, AnswerError>> {
+    return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      const ctx = await contextFor(services, draft, now);
+      const answered =
+        input.step === "reveal"
+          ? revealForDeal(draft, seat.seatNumber, input.card, ctx)
+          : input.step === "offer"
+            ? offerForDeal(draft, seat.seatNumber, input.card, ctx)
+            : acceptDeal(draft, seat.seatNumber, input.offerSeat, ctx);
+      if (!answered.ok) return answered;
+      return save(services, draft, answered.value, now);
+    });
+  }
+
+  /** The host ends the deals: pools are final as they are (timer off, someone has gone). */
+  async function endDeals(actor: Actor, draftId: DraftId): Promise<Result<void, EndDealsError>> {
+    return withDraft<void, EndDealsError>(draftId, async (services, draft, now) => {
+      if (draft.hostId !== actor.userId) return err({ kind: "NotHost" });
+      if (draft.status !== "dealing") return err({ kind: "DraftNotRunning" });
+      const ended = endDealsNow(draft, await contextFor(services, draft, now));
+      return settle(services, draft, ended, now);
+    });
+  }
+
+  /** The host does what a player who has gone would do: a pick, an owed color, a deal step. */
   async function pickForAway(
     actor: Actor,
     input: { draftId: DraftId; seatNumber: number },
   ): Promise<Result<void, PickForAwayError>> {
     return withDraft<void, PickForAwayError>(input.draftId, async (services, draft, now) => {
       if (draft.hostId !== actor.userId) return err({ kind: "NotHost" });
-      const facts = await loadFacts(services, draft);
-      const picked = pickForAwaySeat(draft, input.seatNumber, now, choosingWith(facts));
-      if (!picked.ok) return picked;
-      await settle(services, draft, await letBotsPick(services, picked.value.draft, now), now);
-      return ok();
+      const ctx = await contextFor(services, draft, now);
+      const acted = pickForAwaySeat(draft, input.seatNumber, ctx, choosingWith(ctx.cards));
+      if (!acted.ok) return acted;
+      return save(services, draft, acted.value.draft, now);
     });
   }
 
@@ -302,17 +556,17 @@ export function makeDrafts(dependencies: DraftsDependencies) {
    * isn't seated, so any signed-in player can watch a lobby.
    */
   async function markPresence(actor: Actor, draftId: DraftId, here: boolean): Promise<void> {
-    await withDraft<void, never>(draftId, async (services, draft, now) => {
+    await withDraft<void, CardNoLongerOwned>(draftId, async (services, draft, now) => {
       const after = markSeatPresence(draft, actor.userId, here, now);
       // The same object back means "not seated here": nothing to save.
-      if (after !== draft) await settle(services, draft, after, now);
-      return ok();
+      if (after === draft) return ok();
+      return settle(services, draft, after, now);
     });
   }
 
   /**
    * The worker's job (rule 10): every draft with a deadline that has passed gets its grace or its
-   * auto-picks, each draft in its own transaction.
+   * automatic action, each draft in its own transaction.
    */
   async function runTimers(): Promise<TimerReport> {
     const due = await unitOfWork.run<DraftId[], never>(async (services) =>
@@ -321,16 +575,28 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     let autoPicks = 0;
     let extensions = 0;
     for (const draftId of due.ok ? due.value : []) {
-      await withDraft<void, never>(draftId, async (services, draft, now) => {
-        const facts = await loadFacts(services, draft);
-        const outcome = runTableTimers(draft, now, choosingWith(facts));
+      await withDraft<void, CardNoLongerOwned>(draftId, async (services, draft, now) => {
+        const ctx = await contextFor(services, draft, now);
+        const outcome = runTableTimers(draft, ctx, choosingWith(ctx.cards));
         autoPicks += outcome.autoPicks.length;
         extensions += outcome.extensions;
-        await settle(services, draft, await letBotsPick(services, outcome.draft, now), now);
-        return ok();
+        return save(services, draft, outcome.draft, now);
       });
     }
     return { drafts: due.ok ? due.value.length : 0, autoPicks, extensions };
+  }
+
+  /** Makes the draft deck again, for a player who had no room, or deleted it. */
+  async function makeDraftDeck(
+    actor: Actor,
+    draftId: DraftId,
+  ): Promise<Result<DeckId, MakeDraftDeckError>> {
+    return withDraft<DeckId, MakeDraftDeckError>(draftId, async (services, draft, now) => {
+      const seat = seatOf(draft, actor.userId);
+      if (seat === null) return err({ kind: "NotSeated" });
+      if (draft.status !== "finished") return err({ kind: "DraftNotFinished" });
+      return makeDeckFor(services, draft, seat, await loadFacts(services, draft), now);
+    });
   }
 
   /**
@@ -370,17 +636,15 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     });
   }
 
-  /** Makes the draft deck again, for a player who had no room, or deleted it. */
-  async function makeDraftDeck(
-    actor: Actor,
-    draftId: DraftId,
-  ): Promise<Result<DeckId, MakeDraftDeckError>> {
-    return withDraft<DeckId, MakeDraftDeckError>(draftId, async (services, draft, now) => {
-      const seat = seatOf(draft, actor.userId);
-      if (seat === null) return err({ kind: "NotSeated" });
-      if (draft.status !== "finished") return err({ kind: "DraftNotFinished" });
-      return makeDeckFor(services, draft, seat, await loadFacts(services, draft), now);
+  /** The draft as this player may see it (design doc 18, section 4), or null if there's none. */
+  async function view(actor: Actor, draftId: DraftId): Promise<DraftSeen | null> {
+    const seen = await unitOfWork.run<DraftSeen | null, never>(async (services) => {
+      const draft = await services.drafts.find(draftId);
+      if (draft === null) return ok(null);
+      const ctx = await contextFor(services, draft, clock.now());
+      return ok(visibleTo(draft, seatOf(draft, actor.userId)?.seatNumber ?? null, ctx));
     });
+    return seen.ok ? seen.value : null;
   }
 
   return {
@@ -389,12 +653,19 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     leaveDraft,
     startDraft,
     makePick,
+    decideCard,
+    chooseColor,
+    peekWithSneak,
+    watchWithInformant,
+    answerDeal,
+    endDeals,
     pickForAway,
     markPresence,
     runTimers,
     makeDraftDeck,
     addBot,
     removeBot,
+    view,
   };
 }
 

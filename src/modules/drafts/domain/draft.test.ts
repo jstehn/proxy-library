@@ -4,7 +4,6 @@ import { UserId } from "@/shared/kernel";
 import { samplePacks, sampleLobby, samplePrintingId, START } from "../testing/samples";
 import {
   addBot,
-  applyPick,
   checkCanStart,
   checkSeats,
   checkTimer,
@@ -18,6 +17,7 @@ import {
   startDraft,
   type Draft,
 } from "./draft";
+import { applyPick } from "./steps";
 import { passTarget } from "./style";
 
 const at = (seconds: number) => new Date(START.getTime() + seconds * 1000);

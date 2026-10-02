@@ -1,15 +1,28 @@
 import type { UserId } from "@/shared/kernel";
 import { err, ok, type Result } from "@/shared/kernel";
+import { dealWaitsFor, passOnDeal } from "./deals";
 import {
-  applyPick,
+  cardAt,
   currentPack,
+  poolOf,
+  seatAt,
   seatOf,
+  withSeat,
   type Draft,
   type DraftCard,
   type DraftPack,
   type Seat,
 } from "./draft";
 import type { DraftNotRunning, NotAway, NothingToPick } from "./errors";
+import {
+  chooseColor,
+  decideOnCard,
+  draftStep,
+  faceUpWith,
+  owedColor,
+  randomColor,
+  type StepContext,
+} from "./steps";
 
 // Presence, grace and timeouts (design doc 17, rules 9 and 10).
 
@@ -58,26 +71,82 @@ function graceLeft(seat: Seat): number {
   return Math.min(GRACE_SECONDS, GRACE_BUDGET_SECONDS - seat.graceUsedSeconds);
 }
 
+const isDue = (at: Date | null, now: Date) => at !== null && at.getTime() <= now.getTime();
+
 function overdueSeat(draft: Draft, now: Date): Seat | null {
   if (draft.status !== "drafting") return null;
   const overdue = draft.seats
-    .filter((seat) => seat.deadline !== null && seat.deadline.getTime() <= now.getTime())
-    .sort((a, b) => (a.deadline?.getTime() ?? 0) - (b.deadline?.getTime() ?? 0));
+    .filter((seat) => isDue(seat.deadline, now) || isDue(seat.promptDeadline, now))
+    .sort(
+      (a, b) =>
+        Math.min(a.deadline?.getTime() ?? Infinity, a.promptDeadline?.getTime() ?? Infinity) -
+        Math.min(b.deadline?.getTime() ?? Infinity, b.promptDeadline?.getTime() ?? Infinity),
+    );
   return overdue[0] ?? null;
 }
 
 /**
- * Deals with every seat whose deadline has passed (rule 10): an away seat with grace left gets
- * more time; anyone else gets the card `choose` picks. Seats are handled one at a time, earliest
- * deadline first, because each pick passes a pack and can change who is waiting.
+ * Does the one thing a seat is holding the table up with, the way a bot would: chooses an owed
+ * color, makes no choices about a card drawn at random, answers a deal step with "no", or
+ * drafts the card `choose` picks (at random under a face-up Archdemon), using no optional
+ * ability. Returns the drafted card, if a card was drafted; null when there's nothing to do.
  */
-export function runTimers(draft: Draft, now: Date, choose: ChooseCard): TimerOutcome {
+export function actFor(
+  draft: Draft,
+  seatNumber: number,
+  ctx: StepContext,
+  choose: ChooseCard,
+): { draft: Draft; card: DraftCard | null } | null {
+  const owed = owedColor(draft, seatNumber);
+  if (owed !== null) {
+    const chosen = chooseColor(draft, seatNumber, randomColor(owed.note, ctx.rng), ctx);
+    return chosen.ok ? { draft: chosen.value, card: null } : null;
+  }
+  if (seatAt(draft, seatNumber).abilities.awaitingChoices !== null) {
+    const decided = decideOnCard(draft, seatNumber, {}, ctx);
+    return decided.ok ? { draft: decided.value, card: null } : null;
+  }
+  const dealt = passOnDeal(draft, seatNumber, ctx);
+  if (dealt !== null) return { draft: dealt, card: null };
+
+  const pack = currentPack(draft, seatNumber);
+  if (draft.status !== "drafting" || pack === null) return null;
+  const atRandom = faceUpWith(draft, seatNumber, "random", ctx).length > 0;
+  const slot = atRandom ? "random" : choose(pack, poolOf(draft, seatNumber));
+  // A Spire Phantasm drafted this way guesses another card left in the pack.
+  const other = pack.cards.find((card) => card.pick === null && card.slot !== slot);
+  const guess = other === undefined ? undefined : ctx.cards(other.printingId)?.name;
+  const stepped = draftStep(
+    draft,
+    { seatNumber, packNumber: pack.packNumber, slot, auto: true, choices: { guess } },
+    ctx,
+  );
+  if (!stepped.ok)
+    throw new Error(`auto-pick for seat ${seatNumber} failed: ${stepped.error.kind}`);
+  return { draft: stepped.value.draft, card: cardAt(stepped.value.draft, stepped.value.card) };
+}
+
+/**
+ * Deals with every seat whose deadline has passed (rule 10): an away seat with grace left gets
+ * more time; anyone else has the server act for them (actFor). A deal step past its deadline is
+ * answered "no" for whoever it waits for. One seat at a time, earliest deadline first, because
+ * each action can change who is waiting.
+ */
+export function runTimers(draft: Draft, ctx: StepContext, choose: ChooseCard): TimerOutcome {
+  const now = ctx.now;
   let current = draft;
   const autoPicks: Array<{ seatNumber: number; card: DraftCard }> = [];
   let extensions = 0;
-  // Every pass picks a card or uses up grace, so this ends; the cap only guards against a bug.
   const cardCount = draft.packs.reduce((total, pack) => total + pack.cards.length, 0);
-  for (let guard = 0; guard <= cardCount + draft.seats.length * 3; guard += 1) {
+  for (let guard = 0; guard <= (cardCount + draft.seats.length) * 4; guard += 1) {
+    const deal = current.deals?.current;
+    if (current.status === "dealing" && deal != null && isDue(deal.deadline, now)) {
+      const waiting = dealWaitsFor(current)[0];
+      const passed = waiting === undefined ? null : passOnDeal(current, waiting, ctx);
+      if (passed === null) break;
+      current = passed;
+      continue;
+    }
     const seat = overdueSeat(current, now);
     if (seat === null) break;
 
@@ -85,82 +154,70 @@ export function runTimers(draft: Draft, now: Date, choose: ChooseCard): TimerOut
     if (isAway(seat, now) && grace > 0) {
       // From now, not from the old deadline: if the worker was stopped for a while, the old
       // deadline plus the grace could already be in the past.
+      const until = new Date(now.getTime() + grace * 1000);
       const extended: Seat = {
         ...seat,
-        deadline: new Date(now.getTime() + grace * 1000),
+        deadline: isDue(seat.deadline, now) ? until : seat.deadline,
+        promptDeadline: isDue(seat.promptDeadline, now) ? until : seat.promptDeadline,
         graceUsedSeconds: seat.graceUsedSeconds + grace,
       };
-      current = {
-        ...current,
-        seats: current.seats.map((each) => (each.seatNumber === seat.seatNumber ? extended : each)),
-        version: current.version + 1,
-      };
+      current = { ...withSeat(current, extended), version: current.version + 1 };
       extensions += 1;
       continue;
     }
 
-    const picked = autoPick(current, seat.seatNumber, now, choose);
-    if (!picked.ok) throw new Error(`seat ${seat.seatNumber} is overdue with nothing to pick`);
-    current = picked.value.draft;
-    autoPicks.push({ seatNumber: seat.seatNumber, card: picked.value.card });
+    const acted = actFor(current, seat.seatNumber, ctx, choose);
+    if (acted === null) {
+      // Nothing to do after all: clear the stale deadlines so this seat isn't picked again.
+      current = withSeat(current, { ...seat, deadline: null, promptDeadline: null });
+      continue;
+    }
+    current = acted.draft;
+    if (acted.card !== null) autoPicks.push({ seatNumber: seat.seatNumber, card: acted.card });
   }
   return { draft: current, autoPicks, extensions };
 }
 
-/** Picks for a seat with `choose`: used by the timer and by the host's "pick for them". */
-export function autoPick(
-  draft: Draft,
-  seatNumber: number,
-  now: Date,
-  choose: ChooseCard,
-): Result<{ draft: Draft; card: DraftCard }, DraftNotRunning | NothingToPick> {
-  if (draft.status !== "drafting") return err({ kind: "DraftNotRunning" });
-  const pack = currentPack(draft, seatNumber);
-  if (pack === null) return err({ kind: "NothingToPick" });
-  const pool = draft.packs.flatMap((each) => each.cards).filter((c) => c.pick?.seat === seatNumber);
-  const slot = choose(pack, pool);
-  const picked = applyPick(
-    draft,
-    { seatNumber, packNumber: pack.packNumber, slot, auto: true },
-    now,
-  );
-  if (!picked.ok) throw new Error(`auto-pick chose slot ${slot}, which isn't in the pack`);
-  return ok(picked.value);
-}
-
-/** The host picks for a player who has gone (useful with the timer off). */
+/**
+ * The host does it for a player who has gone (useful with the timer off): their pick, their owed
+ * color, or their deal step.
+ */
 export function pickForAway(
   draft: Draft,
   seatNumber: number,
-  now: Date,
+  ctx: StepContext,
   choose: ChooseCard,
-): Result<{ draft: Draft; card: DraftCard }, DraftNotRunning | NotAway | NothingToPick> {
+): Result<{ draft: Draft; card: DraftCard | null }, DraftNotRunning | NotAway | NothingToPick> {
+  if (draft.status !== "drafting" && draft.status !== "dealing")
+    return err({ kind: "DraftNotRunning" });
   const seat = draft.seats.find((each) => each.seatNumber === seatNumber);
-  if (seat === undefined || !isAway(seat, now)) return err({ kind: "NotAway" });
-  return autoPick(draft, seatNumber, now, choose);
+  if (seat === undefined || !isAway(seat, ctx.now)) return err({ kind: "NotAway" });
+  const acted = actFor(draft, seatNumber, ctx, choose);
+  return acted === null ? err({ kind: "NothingToPick" }) : ok(acted);
 }
 
 /**
- * Every bot with a pack in front of it picks, again and again, until no bot has anything to pick
- * (rule 16). Run after anything that can pass a pack: a bot passes to a bot, which picks at once.
+ * Bots act the moment they can (design doc 17, rule 16): they pick, choose colors, and say no to
+ * deals, again and again, until no bot has anything to do. Run after anything that can reach a
+ * bot: a passed pack, a color owed, a deal step.
  */
 export function runBots(
   draft: Draft,
-  now: Date,
+  ctx: StepContext,
   choose: ChooseCard,
 ): Readonly<{ draft: Draft; picks: number }> {
   let current = draft;
   let picks = 0;
   const cardCount = draft.packs.reduce((total, pack) => total + pack.cards.length, 0);
-  for (let guard = 0; guard <= cardCount; guard += 1) {
-    const bot = current.seats.find(
-      (seat) => seat.botNumber !== null && currentPack(current, seat.seatNumber) !== null,
-    );
-    if (bot === undefined) break;
-    const picked = autoPick(current, bot.seatNumber, now, choose);
-    if (!picked.ok) break;
-    current = picked.value.draft;
-    picks += 1;
+  for (let guard = 0; guard <= (cardCount + draft.seats.length) * 4; guard += 1) {
+    let acted: ReturnType<typeof actFor> = null;
+    for (const bot of current.seats.filter((seat) => seat.botNumber !== null)) {
+      acted = actFor(current, bot.seatNumber, ctx, choose);
+      if (acted !== null) break;
+    }
+    if (acted === null) break;
+    current = acted.draft;
+    if (acted.card !== null) picks += 1;
   }
   return { draft: current, picks };
 }

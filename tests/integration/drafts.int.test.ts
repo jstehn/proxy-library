@@ -304,3 +304,130 @@ describe("bots (an admin's test)", () => {
     expect(await count("draft_seats", `user_id = 'alice' and is_active`)).toBe(0);
   });
 });
+
+describe("Conspiracy state survives a round trip through Postgres (design doc 18)", () => {
+  it("saves and loads notes, card states, watchers, turns, reveals, an added pack and deals", async () => {
+    const draftId = await hostAndStart();
+    const changed = await unitOfWork.run<Draft, never>(async (services) => {
+      const before = await services.drafts.lock(draftId);
+      if (before === null) throw new Error("no draft");
+      const [first, second] = before.packs;
+      const at = clock.now();
+      const pick = (
+        seat: number,
+        pickNumber: number,
+        state: "faceUp" | "returned" | "removedFaceDown",
+      ) => ({
+        seat,
+        pickNumber,
+        auto: false,
+        at,
+        round: 1,
+        random: pickNumber === 2,
+        state,
+        poolSeat: seat,
+        notes: [
+          { kind: "count" as const, value: pickNumber },
+          { kind: "colors" as const, choosers: [1, 0, 1], colors: ["W" as const] },
+          { kind: "name" as const, name: "Bear", from: { packNumber: 0, slot: 0 } },
+        ],
+      });
+      const after: Draft = {
+        ...before,
+        status: "dealing",
+        packs: [
+          {
+            ...first,
+            lastPassedBy: 1,
+            watchers: [{ kind: "guess", seat: 0, card: { packNumber: 0, slot: 0 } }],
+            cards: [
+              { ...first.cards[0], pick: pick(0, 1, "faceUp") },
+              { ...first.cards[1], pick: pick(0, 2, "returned") },
+              ...first.cards.slice(2),
+              {
+                slot: first.cards.length,
+                printingId: first.cards[1].printingId,
+                finish: first.cards[1].finish,
+                pick: null,
+                cameFrom: { packNumber: first.packNumber, slot: 1 },
+              },
+            ],
+          },
+          {
+            ...second,
+            cards: [
+              { ...second.cards[0], pick: pick(1, 1, "removedFaceDown") },
+              ...second.cards.slice(1),
+            ],
+          },
+          ...before.packs.slice(2),
+          {
+            ...first,
+            packNumber: 99,
+            addedBy: 0,
+            queuePosition: -5,
+            cards: first.cards.slice(0, 2).map((card) => ({ ...card, pick: null })),
+          },
+        ],
+        seats: before.seats.map((seat, index) =>
+          index === 0
+            ? {
+                ...seat,
+                promptDeadline: at,
+                deadlinePick: 3,
+                abilities: {
+                  skipPacks: 2,
+                  lockedOutRound: 1,
+                  turn: {
+                    packNumber: 0,
+                    extraCards: 1,
+                    librarians: [{ packNumber: 0, slot: 1 }],
+                    operatives: [],
+                    agent: null,
+                  },
+                  armedSearchers: [{ packNumber: 0, slot: 0 }],
+                  awaitingChoices: null,
+                },
+              }
+            : seat,
+        ),
+        watches: [{ watcherSeat: 0, targetSeat: 1, card: { packNumber: 0, slot: 0 } }],
+        reveals: [
+          {
+            at,
+            audience: null,
+            seat: 0,
+            kind: "revealed",
+            cards: [{ printingId: first.cards[0].printingId, finish: "nonfoil" }],
+            about: { packNumber: 0, slot: 0 },
+          },
+          { at, audience: 1, seat: 0, kind: "spied", cards: [], about: null },
+        ],
+        deals: {
+          current: {
+            brokerSeat: 0,
+            brokerCard: { packNumber: 0, slot: 0 },
+            stage: "offers",
+            revealed: { packNumber: 0, slot: 0 },
+            offers: [{ seat: 1, card: null }],
+            deadline: at,
+          },
+          waiting: [],
+        },
+      };
+      await services.drafts.save(before, after);
+      return { ok: true, value: after };
+    });
+    if (!changed.ok) throw new Error("unreachable");
+    const loaded = await load(draftId);
+    const comparable = (draft: Draft) => ({
+      status: draft.status,
+      packs: draft.packs,
+      seats: draft.seats.map(({ lastSeenAt: _seen, ...rest }) => rest),
+      watches: draft.watches,
+      reveals: draft.reveals,
+      deals: draft.deals,
+    });
+    expect(comparable(loaded)).toEqual(comparable(changed.value));
+  });
+});

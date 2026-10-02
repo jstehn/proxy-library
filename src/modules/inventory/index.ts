@@ -2,6 +2,7 @@
 export { discardAllItems } from "./application/discard-all-items";
 export { makeInventory, type Inventory } from "./application/make-inventory";
 export { OPEN_ALL_LIMIT, type Opening, type OpenItemError } from "./application/open";
+export { openPackForDraft } from "./application/open-pack-for-draft";
 export type {
   DeckCardGain,
   DeckContents,
@@ -17,6 +18,7 @@ export type {
   BoosterUnavailable,
   DeckUnavailable,
   ItemNotFound,
+  NotAPack,
   NothingInside,
   ProductUnavailable,
 } from "./domain/errors";

@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { printingCards, type PrintingCard } from "@/modules/catalog";
-import { draftView, type DraftView, type PickedCard, type SeatView } from "@/modules/drafts";
+import {
+  boosterOptions,
+  DraftId,
+  draftView,
+  type DraftSeen,
+  type DraftView,
+  type SeatView,
+  type SeenCard,
+  type YouSeen,
+} from "@/modules/drafts";
+import { unopenedItems } from "@/modules/inventory";
+import { packMsrps } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -18,38 +29,84 @@ import {
   startDraftAction,
 } from "../actions";
 import { boosterLabel, timerLabel } from "../labels";
+import {
+  AnyTimeActions,
+  ColorPrompt,
+  Dealing,
+  RevealLog,
+  SeatAbilities,
+  type Names,
+} from "./conspiracy";
 import { Countdown } from "./countdown";
 import { LiveUpdates } from "./live-updates";
-import { PickGrid } from "./pick-grid";
+import {
+  AwaitingCard,
+  PickGrid,
+  RandomPick,
+  type ChoiceContext,
+  type LoreSources,
+} from "./pick-grid";
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
 
-// One draft (design doc 17): the lobby, the pick screen with the table around it, and the
-// finished pool. Everything shown comes from `draftView`, which only ever returns this player's
-// own cards (rule 13). LiveUpdates reloads it whenever the draft changes.
+// One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
+// Deal Broker stage and the finished pool. Names, deadlines and presence come from `draftView`;
+// everything about cards comes from `drafts.view`, which returns only what this player may see
+// (design doc 18, section 4). LiveUpdates reloads both whenever the draft changes.
 
 const STATUS_TEXT: Record<DraftView["status"], string> = {
   lobby: "Waiting for players",
   drafting: "Drafting",
+  dealing: "Making deals",
   finished: "Finished",
   cancelled: "Cancelled",
 };
+
+const refKey = (card: { ref: { packNumber: number; slot: number } }) =>
+  `${card.ref.packNumber}:${card.ref.slot}`;
+
+/** Every printing the page may need to name or show. */
+function printingIdsIn(seen: DraftSeen): string[] {
+  const cards: SeenCard[] = [
+    ...(seen.you?.pack?.cards ?? []),
+    ...(seen.you?.pile ?? []),
+    ...(seen.you?.awaiting === null || seen.you?.awaiting === undefined ? [] : [seen.you.awaiting]),
+    ...seen.seats.flatMap((seat) => [...seat.faceUp, ...seat.noted, ...seat.removedFaceUp]),
+    ...(seen.deal === null
+      ? []
+      : [seen.deal.revealed, ...seen.deal.offers.map((offer) => offer.card)].filter(
+          (card): card is SeenCard => card !== null,
+        )),
+  ];
+  return [
+    ...cards.map((card) => card.printingId),
+    ...seen.reveals.flatMap((reveal) => reveal.cards.map((card) => card.printingId)),
+  ];
+}
 
 export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
   const actor = await requireActor();
   const draftId = Number((await props.params).id);
   if (!Number.isSafeInteger(draftId) || draftId <= 0) notFound();
-  const { db, clock } = getContainer();
+  const { db, clock, drafts } = getContainer();
   const now = clock.now();
-  const view = await draftView(db, draftId, actor.userId, now);
-  if (view === null) notFound();
+  const [view, seen] = await Promise.all([
+    draftView(db, draftId, actor.userId, now),
+    drafts.view(actor, DraftId.of(draftId)),
+  ]);
+  if (view === null || seen === null) notFound();
   const error = (await props.searchParams).error;
 
-  const ids = [
-    ...(view.you?.pack?.cards.map((card) => card.printingId) ?? []),
-    ...(view.you?.picks.map((pick) => pick.printingId) ?? []),
-  ];
-  const printings = await printingCards(db, ids);
-  const isLive = view.status === "lobby" || view.status === "drafting";
+  const printings = await printingCards(db, printingIdsIn(seen));
+  const names: Names = {
+    seat: (seatNumber) =>
+      seatNumber === null
+        ? "nobody"
+        : (view.seats.find((seat) => seat.seatNumber === seatNumber)?.name ??
+          `seat ${seatNumber + 1}`),
+    printing: (printingId) => printings.get(printingId)?.name ?? "a card",
+    printings,
+  };
+  const isLive = view.status === "lobby" || view.status === "drafting" || view.status === "dealing";
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
@@ -72,16 +129,80 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
 
       {view.status === "lobby" && <Lobby view={view} canAddBots={actor.isAdmin && view.isHost} />}
       {view.status === "drafting" && (
-        <Drafting view={view} printings={printings} serverNow={now.toISOString()} />
+        <Drafting
+          view={view}
+          seen={seen}
+          names={names}
+          serverNow={now.toISOString()}
+          lore={await loreSources(seen, actor.userId)}
+        />
       )}
-      {view.status === "finished" && <Finished view={view} printings={printings} />}
+      {view.status === "dealing" && seen.deal !== null && (
+        <>
+          <Dealing
+            draftId={view.id}
+            deal={seen.deal}
+            you={seen.you}
+            isHost={view.isHost}
+            names={names}
+          />
+          {seen.you !== null && <Picks cards={seen.you.pool} printings={printings} />}
+        </>
+      )}
+      {view.status === "finished" && <Finished view={view} seen={seen} printings={printings} />}
       {view.status === "cancelled" && (
         <p className="text-sm text-zinc-500">
           The host closed this lobby before it started. Everyone got their entry fee back.
         </p>
       )}
+      {view.status !== "lobby" && (
+        <RevealLog reveals={seen.reveals} names={names} you={seen.you?.seatNumber ?? null} />
+      )}
     </main>
   );
+}
+
+/**
+ * Where a Lore Seeker's pack may come from, only worked out when one is in front of the player:
+ * their unopened packs, and every booster with a store price (any set, decision 2).
+ */
+async function loreSources(
+  seen: DraftSeen,
+  userId: Parameters<typeof unopenedItems>[1],
+): Promise<LoreSources | null> {
+  const you = seen.you;
+  if (you === null) return null;
+  const { db } = getContainer();
+  const candidates = [...(you.pack?.cards ?? []), ...(you.awaiting === null ? [] : [you.awaiting])];
+  const cards = await printingCards(
+    db,
+    candidates.map((card) => card.printingId),
+  );
+  if (![...cards.values()].some((card) => card.name === "Lore Seeker")) return null;
+  const [items, options, prices] = await Promise.all([
+    unopenedItems(db, userId),
+    boosterOptions(db),
+    packMsrps(db),
+  ]);
+  return {
+    inventory: items
+      .filter((group) => group.contentKind === "pack")
+      .map((group) => ({
+        itemId: group.itemIds[0],
+        name: `${group.name} (${group.itemIds.length} owned)`,
+      })),
+    buy: options.flatMap((option) => {
+      const price = prices.get(`${option.setCode}/${option.boosterType}`);
+      return price === undefined
+        ? []
+        : [
+            {
+              ...option,
+              label: `${option.setName} ${boosterLabel(option.boosterType)}: ${Cents.format(price)}`,
+            },
+          ];
+    }),
+  };
 }
 
 function Lobby(props: { view: DraftView; canAddBots: boolean }) {
@@ -180,19 +301,43 @@ function Presence(props: { away: boolean }) {
   );
 }
 
+/** The choices the pick screen may offer, with the names it needs. */
+function choiceContext(
+  you: YouSeen,
+  view: DraftView,
+  names: Names,
+  lore: LoreSources | null,
+): ChoiceContext {
+  return {
+    options: you.options,
+    cardNames: Object.fromEntries(
+      you.pile.map((card) => [refKey(card), names.printing(card.printingId)]),
+    ),
+    seatNames: Object.fromEntries(view.seats.map((seat) => [seat.seatNumber, seat.name])),
+    turn: you.turn,
+    lore,
+  };
+}
+
 function Drafting(props: {
   view: DraftView;
-  printings: Map<string, PrintingCard>;
+  seen: DraftSeen;
+  names: Names;
   serverNow: string;
+  lore: LoreSources | null;
 }) {
-  const { view, printings } = props;
-  const you = view.you;
+  const { view, seen, names } = props;
+  const you = seen.you;
   const mySeat = view.seats.find((seat) => seat.isYou);
   const arrow = view.passDirection === "left" ? "→" : "←";
+  const asCard = (card: SeenCard) => {
+    const printing = names.printings.get(card.printingId);
+    return printing === undefined ? [] : [{ slot: card.ref.slot, finish: card.finish, printing }];
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      <Table view={view} serverNow={props.serverNow} />
+      <Table view={view} seen={seen} names={names} serverNow={props.serverNow} />
 
       {you === null || mySeat === undefined ? (
         <p className="text-sm text-zinc-500">
@@ -202,12 +347,12 @@ function Drafting(props: {
         <section className="flex flex-col gap-3">
           <h2 className="flex flex-wrap items-baseline gap-x-3 font-medium">
             <span>
-              Round {view.round} of {view.packsPerPlayer}, pick {you.picks.length + 1}
+              Round {view.round} of {view.packsPerPlayer}, pick {you.pile.length + 1}
             </span>
             <span className="text-sm font-normal text-zinc-500">
               passing {view.passDirection} {arrow}
             </span>
-            {you.pack !== null && mySeat.deadline !== null && (
+            {(you.pack !== null || you.awaiting !== null) && mySeat.deadline !== null && (
               <Countdown
                 key={`${mySeat.deadline}/${props.serverNow}`}
                 deadline={mySeat.deadline}
@@ -216,20 +361,44 @@ function Drafting(props: {
               />
             )}
           </h2>
-          {you.pack === null ? (
+          {you.colorPrompt !== null && (
+            <ColorPrompt draftId={view.id} prompt={you.colorPrompt} names={names} />
+          )}
+          {you.skipPacks > 0 && (
+            <p className="text-sm text-violet-700 dark:text-violet-300">
+              Leovold&apos;s Operative: your next{" "}
+              {you.skipPacks === 1 ? "pack goes" : `${you.skipPacks} packs go`} straight on without
+              you drafting.
+            </p>
+          )}
+          {you.lockedOut && (
+            <p className="text-sm text-violet-700 dark:text-violet-300">
+              Agent of Acquisitions: you draft nothing more this round. Packs pass straight through
+              you.
+            </p>
+          )}
+          {you.awaiting !== null ? (
+            asCard(you.awaiting).map((card) => (
+              <AwaitingCard
+                key={card.slot}
+                draftId={view.id}
+                card={card}
+                context={choiceContext(you, view, names, props.lore)}
+              />
+            ))
+          ) : you.pack === null ? (
             <p className="rounded-md border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
               Waiting for {neighbourName(view, mySeat)} to pass you a pack…
             </p>
+          ) : you.pack.cards === null ? (
+            <RandomPick draftId={view.id} packNumber={you.pack.packNumber} count={you.pack.count} />
           ) : (
             <PickGrid
+              key={`${you.pack.packNumber}/${you.pile.length}`}
               draftId={view.id}
               packNumber={you.pack.packNumber}
-              cards={you.pack.cards.flatMap((card) => {
-                const printing = printings.get(card.printingId);
-                return printing === undefined
-                  ? []
-                  : [{ slot: card.slot, finish: card.finish, printing }];
-              })}
+              cards={you.pack.cards.flatMap(asCard)}
+              context={choiceContext(you, view, names, props.lore)}
             />
           )}
           {mySeat.waiting > 1 && (
@@ -237,19 +406,36 @@ function Drafting(props: {
               {mySeat.waiting - 1} more pack{mySeat.waiting > 2 ? "s" : ""} waiting behind this one.
             </p>
           )}
+          <AnyTimeActions
+            draftId={view.id}
+            options={you.options}
+            names={names}
+            packLabel={(packNumber) => packLabel(view, packNumber)}
+          />
         </section>
       )}
 
-      {you !== null && <Picks picks={you.picks} printings={printings} />}
-      {you !== null && you.basicsReceived.length > 0 && (
+      {you !== null && <Picks cards={you.pool} printings={names.printings} />}
+      {view.you !== null && view.you.basicsReceived.length > 0 && (
         <p className="text-xs text-zinc-500">
-          Basic lands aren&apos;t drafted: {basicCount(you)} from the packs were dealt to you and
-          are in your collection. Your draft deck will use your own basics, topped up if you&apos;re
-          short.
+          Basic lands aren&apos;t drafted: {basicCount(view.you)} from the packs were dealt to you
+          and are in your collection. Your draft deck will use your own basics, topped up if
+          you&apos;re short.
         </p>
       )}
     </div>
   );
+}
+
+/** "Round 2: Alice's pack": how Whispergear Sneak's choices are named. */
+function packLabel(view: DraftView, packNumber: number): string {
+  const seats = view.seats.length;
+  const round = Math.floor(packNumber / seats) + 1;
+  const opener =
+    view.seats.find((seat) => seat.seatNumber === packNumber % seats)?.name ?? "someone";
+  return packNumber >= seats * view.packsPerPlayer
+    ? "an added pack"
+    : `round ${round}: ${opener}'s pack`;
 }
 
 /** Who passes to this seat this round. */
@@ -260,8 +446,8 @@ function neighbourName(view: DraftView, seat: SeatView): string {
   return view.seats.find((each) => each.seatNumber === from)?.name ?? "the next player";
 }
 
-/** Everyone at the table, in seat order, with how many packs wait for them. */
-function Table(props: { view: DraftView; serverNow: string }) {
+/** Everyone at the table, in seat order, with how many packs wait for them and what's public. */
+function Table(props: { view: DraftView; seen: DraftSeen; names: Names; serverNow: string }) {
   const { view } = props;
   return (
     <section aria-label="The table" className="flex flex-col gap-2">
@@ -269,7 +455,7 @@ function Table(props: { view: DraftView; serverNow: string }) {
         {view.seats.map((seat) => (
           <li
             key={seat.seatNumber}
-            className={`flex min-w-36 flex-col gap-0.5 rounded-md border px-3 py-2 text-sm ${
+            className={`flex max-w-64 min-w-36 flex-col gap-0.5 rounded-md border px-3 py-2 text-sm ${
               seat.isYou
                 ? "border-sky-400 bg-sky-50 dark:border-sky-700 dark:bg-sky-950"
                 : "border-zinc-200 dark:border-zinc-800"
@@ -294,12 +480,16 @@ function Table(props: { view: DraftView; serverNow: string }) {
                 className="text-xs"
               />
             )}
-            {view.isHost && !seat.isYou && seat.away && seat.waiting > 0 && (
+            <SeatAbilities
+              seat={props.seen.seats.find((each) => each.seatNumber === seat.seatNumber)}
+              names={props.names}
+            />
+            {view.isHost && !seat.isYou && seat.away && seat.botNumber === null && (
               <form action={pickForAwayAction}>
                 <input type="hidden" name="draftId" value={view.id} />
                 <input type="hidden" name="seatNumber" value={seat.seatNumber} />
                 <button type="submit" className="text-xs underline">
-                  Pick for them
+                  Act for them
                 </button>
               </form>
             )}
@@ -310,21 +500,25 @@ function Table(props: { view: DraftView; serverNow: string }) {
         {view.passDirection === "left"
           ? "This round, packs move along the list (→), from the last player back to the first."
           : "This round, packs move back along the list (←), from the first player to the last."}{" "}
-        A grey dot means the player&apos;s page isn&apos;t open.
+        A grey dot means the player&apos;s page isn&apos;t open. Face-up cards and anything noted
+        are public; purple text is face up.
       </p>
     </section>
   );
 }
 
-function Picks(props: { picks: readonly PickedCard[]; printings: Map<string, PrintingCard> }) {
-  const faceOf = (pick: PickedCard) => props.printings.get(pick.printingId)?.faces[0];
-  const columns = poolColumns(props.picks, faceOf);
-  const curve = curveOf(props.picks, faceOf);
-  if (props.picks.length === 0) return null;
+function Picks(props: {
+  cards: readonly SeenCard[];
+  printings: ReadonlyMap<string, PrintingCard>;
+}) {
+  const faceOf = (card: SeenCard) => props.printings.get(card.printingId)?.faces[0];
+  const columns = poolColumns(props.cards, faceOf);
+  const curve = curveOf(props.cards, faceOf);
+  if (props.cards.length === 0) return null;
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-        <h2 className="font-medium">Your picks ({props.picks.length})</h2>
+        <h2 className="font-medium">Your pool ({props.cards.length})</h2>
         <Curve counts={curve} />
       </div>
       <div className="flex flex-wrap gap-4">
@@ -334,15 +528,22 @@ function Picks(props: { picks: readonly PickedCard[]; printings: Map<string, Pri
               {COLUMN_LABELS[column]} ({cards.length})
             </h3>
             <ul className="flex flex-col gap-0.5 text-sm">
-              {stacksOf(cards, (pick) => `${pick.printingId}/${pick.finish}`).map(
-                ({ card: pick, count, all }) => (
-                  <li key={pick.pickNumber} className="truncate" title={`Pick ${pick.pickNumber}`}>
+              {stacksOf(cards, (card) => `${card.printingId}/${card.finish}`).map(
+                ({ card, count, all }) => (
+                  <li
+                    key={refKey(card)}
+                    className="truncate"
+                    title={`Pick ${card.pick?.pickNumber ?? ""}`}
+                  >
                     {count > 1 && <span className="tabular-nums">{count} × </span>}
-                    {props.printings.get(pick.printingId)?.name ?? "Unknown card"}
-                    {pick.finish !== "nonfoil" && (
-                      <span className="text-xs text-sky-600 dark:text-sky-400"> {pick.finish}</span>
+                    {props.printings.get(card.printingId)?.name ?? "Unknown card"}
+                    {card.finish !== "nonfoil" && (
+                      <span className="text-xs text-sky-600 dark:text-sky-400"> {card.finish}</span>
                     )}
-                    {all.some((each) => each.auto) && (
+                    {all.some((each) => each.pick?.state === "faceUp") && (
+                      <span className="text-xs text-violet-600 dark:text-violet-300"> face up</span>
+                    )}
+                    {all.some((each) => each.pick?.auto) && (
                       <span className="text-xs text-zinc-500"> (auto)</span>
                     )}
                   </li>
@@ -384,12 +585,17 @@ function Curve(props: { counts: readonly number[] }) {
   );
 }
 
-function Finished(props: { view: DraftView; printings: Map<string, PrintingCard> }) {
+function Finished(props: {
+  view: DraftView;
+  seen: DraftSeen;
+  printings: ReadonlyMap<string, PrintingCard>;
+}) {
   const { view, printings } = props;
   const you = view.you;
+  const seen = props.seen.you;
   return (
     <div className="flex flex-col gap-6">
-      {you === null ? (
+      {you === null || seen === null ? (
         <p className="text-sm text-zinc-500">
           {view.seats.map((seat) => seat.name).join(", ")} drafted this one.
         </p>
@@ -397,7 +603,7 @@ function Finished(props: { view: DraftView; printings: Map<string, PrintingCard>
         <>
           <section className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <p className="text-sm">
-              Your {you.picks.length} cards are in your collection
+              Your {seen.pile.length} cards are in your collection
               {you.basicsReceived.length > 0 &&
                 `, with ${basicCount(you)} basic lands dealt from the packs`}
               {you.botPicks > 0 && `, and the ${you.botPicks} cards your bots picked`}.
@@ -419,19 +625,26 @@ function Finished(props: { view: DraftView; printings: Map<string, PrintingCard>
               </form>
             )}
           </section>
-          <Picks picks={you.picks} printings={printings} />
+          <Picks cards={seen.pool} printings={printings} />
           <section className="flex flex-col gap-2">
-            <h2 className="font-medium">Your pool in pick order</h2>
+            <h2 className="font-medium">Everything you drafted, in order</h2>
             <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
-              {you.picks.map((pick) => {
-                const printing = printings.get(pick.printingId);
+              {seen.pile.map((card) => {
+                const printing = printings.get(card.printingId);
+                const state = card.pick?.state;
+                const where =
+                  state === "removedFaceDown" || state === "removedFaceUp"
+                    ? " · removed from the draft"
+                    : state === "returned"
+                      ? " · put back into a pack"
+                      : "";
                 return printing === undefined ? null : (
                   <CardTile
-                    key={pick.pickNumber}
+                    key={refKey(card)}
                     printing={printing}
-                    isFoil={pick.finish !== "nonfoil"}
+                    isFoil={card.finish !== "nonfoil"}
                     href={`/cards/${printing.id}`}
-                    priceLine={`Pick ${pick.pickNumber}${pick.auto ? " (auto)" : ""}`}
+                    priceLine={`Pick ${card.pick?.pickNumber ?? ""}${card.pick?.auto ? " (auto)" : ""}${where}`}
                   />
                 );
               })}

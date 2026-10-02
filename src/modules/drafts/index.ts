@@ -2,7 +2,12 @@
 export {
   makeDrafts,
   type AddBotError,
+  type AnswerError,
   type CreateDraftError,
+  type DealAnswer,
+  type EndDealsError,
+  type LorePackSource,
+  type PickChoices,
   type CreateDraftInput,
   type Drafts,
   type JoinDraftError,
@@ -36,20 +41,30 @@ export {
   type NewDraft,
 } from "./domain/draft";
 export { DRAFTABLE_BOOSTER_TYPES } from "./domain/style";
+export { abilityOf, guessedRight, type CardRef, type Note } from "./domain/abilities";
+export type {
+  DealSeen,
+  DraftSeen,
+  PickOptions,
+  SeatSeen,
+  SeenCard,
+  YouSeen,
+} from "./domain/visibility";
+export type { Reveal } from "./domain/draft";
 export { AWAY_AFTER_SECONDS, GRACE_BUDGET_SECONDS, GRACE_SECONDS } from "./domain/timers";
 export {
   activeDraftOf,
+  boosterOptions,
   draftableBoosters,
   draftsOverview,
   draftVersion,
   draftView,
-  type CardInPack,
+  type BoosterOption,
   type DraftableBooster,
   type DraftStatusName,
   type DraftsOverview,
   type DraftSummary,
   type DraftView,
-  type PickedCard,
   type SeatView,
   type YourSeat,
 } from "./queries/drafts";

@@ -22,6 +22,9 @@ export function inMemoryDraftRepository() {
     async lock(draftId) {
       return drafts.get(draftId) ?? null;
     },
+    async find(draftId) {
+      return drafts.get(draftId) ?? null;
+    },
     async save(_before, after) {
       drafts.set(after.id, after);
     },
@@ -42,8 +45,15 @@ export function inMemoryDraftRepository() {
       return [...drafts.values()]
         .filter(
           (draft) =>
-            draft.status === "drafting" &&
-            draft.seats.some((seat) => seat.deadline !== null && seat.deadline <= now),
+            (draft.status === "drafting" &&
+              draft.seats.some(
+                (seat) =>
+                  (seat.deadline !== null && seat.deadline <= now) ||
+                  (seat.promptDeadline !== null && seat.promptDeadline <= now),
+              )) ||
+            (draft.status === "dealing" &&
+              (draft.deals?.current?.deadline ?? null) !== null &&
+              (draft.deals?.current?.deadline ?? now) <= now),
         )
         .map((draft) => draft.id);
     },

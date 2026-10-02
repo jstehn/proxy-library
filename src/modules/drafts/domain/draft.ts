@@ -13,6 +13,7 @@ import type {
   TimerInvalid,
   TooFewPlayers,
 } from "./errors";
+import type { CardRef, Note } from "./abilities";
 import { DRAFT_STYLES, passTarget, type DraftStyleName } from "./style";
 
 // A live booster draft (design doc 17). The whole table is one aggregate: at most 8 seats × 3
@@ -26,7 +27,8 @@ export const DraftId = {
   },
 };
 
-export type DraftStatus = "lobby" | "drafting" | "finished" | "cancelled";
+/** "dealing": the packs are done, and Deal Broker exchanges happen before pools are final. */
+export type DraftStatus = "lobby" | "drafting" | "dealing" | "finished" | "cancelled";
 
 export type PickTimer =
   Readonly<{ kind: "off" }> | Readonly<{ kind: "on"; secondsPerPick: number }>;
@@ -54,16 +56,114 @@ export type Seat = Readonly<{
   graceUsedSeconds: number;
   /** When the seat's browser was last in touch, or null once it has gone (section 7). */
   lastSeenAt: Date | null;
+  /** How many cards the seat had drafted when its deadline was set (a new card, a new deadline). */
+  deadlinePick: number | null;
+  /** When a color the seat owes (Paliano, Regicide) is chosen for it, if the timer is on. */
+  promptDeadline: Date | null;
+  abilities: SeatAbilities;
 }>;
 
-export type CardPick = Readonly<{ seat: number; pickNumber: number; auto: boolean; at: Date }>;
+/**
+ * A turn with one pack that goes on for more than one card (design doc 18, section 7): extra
+ * cards owed to Librarians or Operatives, or the whole pack (Agent of Acquisitions).
+ */
+export type Turn = Readonly<{
+  packNumber: number;
+  extraCards: number;
+  librarians: readonly CardRef[];
+  operatives: readonly CardRef[];
+  agent: CardRef | null;
+}>;
+
+/** Draft-ability state of one seat. */
+export type SeatAbilities = Readonly<{
+  /** Packs to pass on without drafting (Leovold's Operative). */
+  skipPacks: number;
+  /** The round in which the seat may draft no more cards (Agent of Acquisitions). */
+  lockedOutRound: number | null;
+  turn: Turn | null;
+  /** Aether Searchers waiting to note the next card this seat drafts. */
+  armedSearchers: readonly CardRef[];
+  /** A card drafted at random (Archdemon), waiting for the seat's choices about it. */
+  awaitingChoices: CardRef | null;
+}>;
+
+export const NO_ABILITIES: SeatAbilities = {
+  skipPacks: 0,
+  lockedOutRound: null,
+  turn: null,
+  armedSearchers: [],
+  awaitingChoices: null,
+};
+
+/**
+ * Where a drafted card is: in the drafter's pile face down or face up (CR 905.2c), removed from
+ * the draft (Grinder face down, Animus face up), or put back into a pack (Cogwork Librarian).
+ */
+export type PickState = "faceDown" | "faceUp" | "removedFaceDown" | "removedFaceUp" | "returned";
+
+export type CardPick = Readonly<{
+  seat: number;
+  pickNumber: number;
+  auto: boolean;
+  at: Date;
+  /** The round it was drafted in ("cards drafted this draft round"). */
+  round: number;
+  /** Drafted at random, without looking (Archdemon of Paliano). */
+  random: boolean;
+  state: PickState;
+  /** Whose card pool it's in: its drafter's, unless a Deal Broker exchange moved it. */
+  poolSeat: number;
+  notes: readonly Note[];
+}>;
 
 export type DraftCard = Readonly<{
-  slot: number; // position in the pack as it was opened
+  slot: number; // position in the pack as it was opened (or added, for a Librarian put back)
   printingId: PrintingId;
   finish: Finish;
   pick: CardPick | null;
+  /** A Cogwork Librarian put into this pack: the card it was before. */
+  cameFrom: CardRef | null;
 }>;
+
+/** Someone waiting to see the next card drafted from a pack. */
+export type PackWatcher = Readonly<{ kind: "spy" | "guess"; seat: number; card: CardRef }>;
+
+/** Illusionary Informant: `watcherSeat` sees the next card `targetSeat` drafts. */
+export type PlayerWatch = Readonly<{ watcherSeat: number; targetSeat: number; card: CardRef }>;
+
+/** Something shown during the draft, to everyone (`audience` null) or to one seat. */
+export type Reveal = Readonly<{
+  at: Date;
+  audience: number | null;
+  /** The seat whose action showed it. */
+  seat: number;
+  kind:
+    | "revealed" // a "reveal as you draft" card, or a card revealed to note it
+    | "removed" // removed from the draft face up (Animus)
+    | "guessed" // the card a Spire Phantasm's guess was about
+    | "spied" // Cogwork Spy
+    | "informed" // Illusionary Informant
+    | "peeked" // Whispergear Sneak
+    | "passedOn" // a pack passed on without drafting, which the seat may look at
+    | "dealt"; // Deal Broker: a card revealed or offered
+  cards: ReadonlyArray<Readonly<{ printingId: PrintingId; finish: Finish }>>;
+  /** The card whose ability caused it, if any. */
+  about: CardRef | null;
+}>;
+
+/** One Deal Broker exchange after the draft (design doc 18). */
+export type Deal = Readonly<{
+  brokerSeat: number;
+  brokerCard: CardRef;
+  stage: "reveal" | "offers" | "accept";
+  revealed: CardRef | null;
+  /** One per other seat once it has answered: a card, or null for no offer. */
+  offers: ReadonlyArray<Readonly<{ seat: number; card: CardRef | null }>>;
+  deadline: Date | null;
+}>;
+
+export type Deals = Readonly<{ current: Deal | null; waiting: readonly Deal[] }>;
 
 export type DraftPack = Readonly<{
   packNumber: number;
@@ -75,6 +175,11 @@ export type DraftPack = Readonly<{
   /** Arrival order: the lowest number in a seat's queue is the pack in front. */
   queuePosition: number;
   cards: readonly DraftCard[];
+  /** The seat that last passed it on (Cogwork Tracker), null if nobody has yet. */
+  lastPassedBy: number | null;
+  /** The seat that added it with a Lore Seeker, or null for a pack opened at a round's start. */
+  addedBy: number | null;
+  watchers: readonly PackWatcher[];
 }>;
 
 export type Draft = Readonly<{
@@ -96,6 +201,10 @@ export type Draft = Readonly<{
   packs: readonly DraftPack[];
   /** The basic lands taken out of the packs at the start and dealt to the players (rule 15). */
   basicsHandedOut: readonly HandedOutBasic[];
+  watches: readonly PlayerWatch[];
+  /** Everything shown during the draft, oldest first. */
+  reveals: readonly Reveal[];
+  deals: Deals | null;
   /** Goes up with every change that browsers should see (ADR 0018). */
   version: number;
   createdAt: Date;
@@ -151,8 +260,11 @@ function newSeat(
     packSource: { kind: "entryFee" },
     deadline: null,
     deadlinePack: null,
+    deadlinePick: null,
+    promptDeadline: null,
     graceUsedSeconds: 0,
     lastSeenAt: null,
+    abilities: NO_ABILITIES,
   };
 }
 
@@ -180,6 +292,9 @@ export function newDraft(input: {
     seats: [newSeat(input.hostId, 0, input.entryFee, input.now)],
     packs: [],
     basicsHandedOut: [],
+    watches: [],
+    reveals: [],
+    deals: null,
     version: 1,
     createdAt: input.now,
     startedAt: null,
@@ -207,7 +322,7 @@ const nextSeatNumber = (draft: Draft) =>
 
 /** Whether a draft still holds its players (rule 1: one unfinished draft per player). */
 export function isUnfinished(draft: Pick<Draft, "status">): boolean {
-  return draft.status === "lobby" || draft.status === "drafting";
+  return draft.status === "lobby" || draft.status === "drafting" || draft.status === "dealing";
 }
 
 /** A player takes a seat. The caller has charged them `draft.entryFee`. */
@@ -345,67 +460,108 @@ export function startDraft(
   const packs: DraftPack[] = [];
   for (let round = 1; round <= style.packsPerPlayer; round += 1) {
     seats.forEach((seat, seatIndex) => {
-      const pack = opened[seatIndex][round - 1];
-      packs.push({
-        packNumber: (round - 1) * seats.length + seatIndex,
-        round,
-        openedBySeat: seat.seatNumber,
-        seed: pack.seed,
-        holderSeat: seat.seatNumber,
-        queuePosition: -1, // handed out when its round begins
-        cards: pack.cards.map((card, slot) => ({ ...card, slot, pick: null })),
-      });
+      packs.push(
+        newPack(opened[seatIndex][round - 1], {
+          packNumber: (round - 1) * seats.length + seatIndex,
+          round,
+          seat: seat.seatNumber,
+          queuePosition: -1, // handed out when its round begins
+          addedBy: null,
+        }),
+      );
     });
   }
 
-  const started: Draft = {
-    ...draft,
-    status: "drafting",
-    seats,
-    packs,
-    basicsHandedOut: handedOut,
-    startedAt: now,
-    version: draft.version + 1,
-  };
-  return refreshDeadlines(beginRound(started, 1, now), now);
+  let started: Draft = beginRound(
+    {
+      ...draft,
+      status: "drafting",
+      seats,
+      packs,
+      basicsHandedOut: handedOut,
+      startedAt: now,
+      version: draft.version + 1,
+    },
+    1,
+  );
+  // Packs that came out empty: move on to a round with cards in it (nobody has drafted yet, so
+  // there's nothing for a Deal Broker to do at the end).
+  while (roundIsOver(started)) {
+    started = isLastRound(started)
+      ? { ...started, status: "finished", finishedAt: now }
+      : beginRound(started, started.round + 1);
+    if (started.status === "finished") break;
+  }
+  return refreshDeadlines(started, now);
 }
 
-const cardsLeft = (pack: DraftPack) => pack.cards.filter((card) => card.pick === null).length;
+/** An opened booster as a pack at the table. */
+export function newPack(
+  opened: OpenedPack,
+  where: {
+    packNumber: number;
+    round: number;
+    seat: number;
+    queuePosition: number;
+    addedBy: number | null;
+  },
+): DraftPack {
+  return {
+    packNumber: where.packNumber,
+    round: where.round,
+    openedBySeat: where.seat,
+    seed: opened.seed,
+    holderSeat: where.seat,
+    queuePosition: where.queuePosition,
+    cards: opened.cards.map((card, slot) => ({ ...card, slot, pick: null, cameFrom: null })),
+    lastPassedBy: null,
+    addedBy: where.addedBy,
+    watchers: [],
+  };
+}
 
-/**
- * Puts a round's packs in front of the players who opened them. Packs that came out of the
- * booster empty (a recipe with nothing on its sheets) are skipped; a round with no cards at all
- * moves straight on.
- */
-function beginRound(draft: Draft, round: number, now: Date): Draft {
+export const cardsLeft = (pack: DraftPack) =>
+  pack.cards.filter((card) => card.pick === null).length;
+
+/** Puts a round's packs in front of the players who opened them. */
+export function beginRound(draft: Draft, round: number): Draft {
   let sequence = draft.sequence;
   const packs = draft.packs.map((pack) =>
     pack.round === round ? { ...pack, queuePosition: sequence++ } : pack,
   );
-  const next: Draft = { ...draft, round, sequence, packs };
-  return roundIsOver(next) ? endRound(next, now) : next;
+  return { ...draft, round, sequence, packs };
 }
 
-function roundIsOver(draft: Draft): boolean {
-  return draft.packs.every((pack) => pack.round !== draft.round || cardsLeft(pack) === 0);
-}
+export const isLastRound = (draft: Draft) =>
+  draft.round >= DRAFT_STYLES[draft.style].packsPerPlayer;
 
-/** Rule 7: the next round, or the end of the draft. */
-function endRound(draft: Draft, now: Date): Draft {
-  if (draft.round < DRAFT_STYLES[draft.style].packsPerPlayer) {
-    return beginRound(draft, draft.round + 1, now);
-  }
-  return { ...draft, status: "finished", finishedAt: now };
+/**
+ * Rule 7: a round is over when its packs are empty and nobody is still in the middle of a turn
+ * (extra cards owed, a random card waiting for choices).
+ */
+export function roundIsOver(draft: Draft): boolean {
+  return (
+    draft.packs.every((pack) => pack.round !== draft.round || cardsLeft(pack) === 0) &&
+    draft.seats.every(
+      (seat) => seat.abilities.turn === null && seat.abilities.awaitingChoices === null,
+    )
+  );
 }
 
 /** The packs waiting for a seat this round, front of the queue first. */
 export function queueOf(draft: Draft, seatNumber: number): DraftPack[] {
   if (draft.status !== "drafting") return [];
+  const held = draft.seats.find((seat) => seat.seatNumber === seatNumber)?.abilities.turn;
   return draft.packs
     .filter(
       (pack) => pack.round === draft.round && pack.holderSeat === seatNumber && cardsLeft(pack) > 0,
     )
-    .sort((a, b) => a.queuePosition - b.queuePosition);
+    .sort(
+      // A pack the seat is in the middle of a turn with stays in front.
+      (a, b) =>
+        Number(b.packNumber === held?.packNumber) - Number(a.packNumber === held?.packNumber) ||
+        a.queuePosition - b.queuePosition,
+    );
 }
 
 /** The pack a seat picks from now, or null while it waits for its neighbour. */
@@ -413,80 +569,139 @@ export function currentPack(draft: Draft, seatNumber: number): DraftPack | null 
   return queueOf(draft, seatNumber)[0] ?? null;
 }
 
-/** Every card a seat has picked, in pick order. */
+export const allCards = (draft: Draft) =>
+  draft.packs.flatMap((pack) => pack.cards.map((card) => ({ pack, card })));
+
+export const refOf = (pack: DraftPack, card: DraftCard): CardRef => ({
+  packNumber: pack.packNumber,
+  slot: card.slot,
+});
+
+export function cardAt(draft: Draft, ref: CardRef): DraftCard | null {
+  const pack = draft.packs.find((each) => each.packNumber === ref.packNumber);
+  return pack?.cards.find((card) => card.slot === ref.slot) ?? null;
+}
+
+/**
+ * A seat's card pool: the cards in its drafted pile (face down or face up), counting any a Deal
+ * Broker exchange brought in, in pick order. Removed cards and Librarians put back aren't in it.
+ */
 export function poolOf(draft: Draft, seatNumber: number): DraftCard[] {
+  return draft.packs
+    .flatMap((pack) => pack.cards)
+    .filter(
+      (card) =>
+        card.pick?.poolSeat === seatNumber &&
+        (card.pick.state === "faceDown" || card.pick.state === "faceUp"),
+    )
+    .sort((a, b) => (a.pick?.pickNumber ?? 0) - (b.pick?.pickNumber ?? 0));
+}
+
+/** Every card a seat has drafted, wherever it is now, in order. */
+export function draftedBy(draft: Draft, seatNumber: number): DraftCard[] {
   return draft.packs
     .flatMap((pack) => pack.cards)
     .filter((card) => card.pick?.seat === seatNumber)
     .sort((a, b) => (a.pick?.pickNumber ?? 0) - (b.pick?.pickNumber ?? 0));
 }
 
-export type PickInput = Readonly<{
-  seatNumber: number;
-  packNumber: number;
-  slot: number;
-  auto: boolean;
-}>;
-
-/**
- * A seat takes one card from the pack in front of it (rules 5–7). The rest of the pack goes to
- * the back of the next seat's queue; an emptied round starts the next one or ends the draft.
- */
-export function applyPick(
+/** The draft with one card replaced. */
+export function withCard(
   draft: Draft,
-  input: PickInput,
-  now: Date,
-): Result<{ draft: Draft; card: DraftCard }, DraftNotRunning | StalePick> {
-  if (draft.status !== "drafting") return err({ kind: "DraftNotRunning" });
-  const pack = currentPack(draft, input.seatNumber);
-  if (pack === null || pack.packNumber !== input.packNumber) return err({ kind: "StalePick" });
-  const chosen = pack.cards.find((card) => card.slot === input.slot && card.pick === null);
-  if (chosen === undefined) return err({ kind: "StalePick" });
-
-  const pickNumber = poolOf(draft, input.seatNumber).length + 1;
-  const card: DraftCard = {
-    ...chosen,
-    pick: { seat: input.seatNumber, pickNumber, auto: input.auto, at: now },
-  };
-  const cards = pack.cards.map((each) => (each.slot === card.slot ? card : each));
-  const direction = DRAFT_STYLES[draft.style].passDirection(draft.round);
-  const passed: DraftPack = {
-    ...pack,
-    cards,
-    holderSeat: passTarget(input.seatNumber, direction, draft.seats.length),
-    queuePosition: draft.sequence,
-  };
-
-  let next: Draft = {
+  ref: CardRef,
+  change: (card: DraftCard) => DraftCard,
+): Draft {
+  return {
     ...draft,
-    sequence: draft.sequence + 1,
-    packs: draft.packs.map((each) => (each.packNumber === pack.packNumber ? passed : each)),
-    version: draft.version + 1,
+    packs: draft.packs.map((pack) =>
+      pack.packNumber !== ref.packNumber
+        ? pack
+        : {
+            ...pack,
+            cards: pack.cards.map((card) => (card.slot === ref.slot ? change(card) : card)),
+          },
+    ),
   };
-  if (roundIsOver(next)) next = endRound(next, now);
-  return ok({ draft: refreshDeadlines(next, now), card });
 }
 
+export function withPack(
+  draft: Draft,
+  packNumber: number,
+  change: (pack: DraftPack) => DraftPack,
+): Draft {
+  return {
+    ...draft,
+    packs: draft.packs.map((pack) => (pack.packNumber === packNumber ? change(pack) : pack)),
+  };
+}
+
+export function seatAt(draft: Draft, seatNumber: number): Seat {
+  const seat = draft.seats.find((each) => each.seatNumber === seatNumber);
+  if (seat === undefined) throw new Error(`no seat ${seatNumber} at this table`);
+  return seat;
+}
+
+export function withAbilities(
+  draft: Draft,
+  seatNumber: number,
+  change: (abilities: SeatAbilities) => SeatAbilities,
+): Draft {
+  const seat = seatAt(draft, seatNumber);
+  return withSeat(draft, { ...seat, abilities: change(seat.abilities) });
+}
+
+export const reveal = (draft: Draft, shown: Reveal): Draft => ({
+  ...draft,
+  reveals: [...draft.reveals, shown],
+});
+
 /**
- * Rule 9: a seat's deadline starts when a pack reaches the front of its queue, and stays put while
- * that pack is in front. No pack, no timer, or no running draft: no deadline.
+ * Rule 9: a seat's deadline starts when a pack reaches the front of its queue, and starts again
+ * with every card it drafts. No pack, no timer, or no running draft: no deadline. A seat that
+ * owes a color choice gets a deadline for that too.
  */
-export function refreshDeadlines(draft: Draft, now: Date): Draft {
+export function refreshDeadlines(
+  draft: Draft,
+  now: Date,
+  owesPrompt: (draft: Draft, seatNumber: number) => boolean = () => false,
+): Draft {
   const timer = draft.timer;
+  const later = (seconds: number) => new Date(now.getTime() + seconds * 1000);
   const seats = draft.seats.map((seat): Seat => {
     const front = currentPack(draft, seat.seatNumber);
-    // Bots pick the moment a pack reaches them, so they never wait on a timer.
-    if (timer.kind === "off" || front === null || seat.botNumber !== null) {
-      return seat.deadline === null && seat.deadlinePack === null
-        ? seat
-        : { ...seat, deadline: null, deadlinePack: null };
+    const picks = draftedBy(draft, seat.seatNumber).length;
+    const owes = draft.status === "drafting" && owesPrompt(draft, seat.seatNumber);
+    let next: Seat = seat;
+    // Bots act the moment they can, so they never wait on a timer.
+    if (timer.kind === "off" || seat.botNumber !== null) {
+      next = {
+        ...next,
+        deadline: null,
+        deadlinePack: null,
+        deadlinePick: null,
+        promptDeadline: null,
+      };
+    } else {
+      if (front === null && seat.abilities.awaitingChoices === null) {
+        next = { ...next, deadline: null, deadlinePack: null, deadlinePick: null };
+      } else if (seat.deadlinePack !== (front?.packNumber ?? -1) || seat.deadlinePick !== picks) {
+        next = {
+          ...next,
+          deadline: later(timer.secondsPerPick),
+          deadlinePack: front?.packNumber ?? -1,
+          deadlinePick: picks,
+        };
+      }
+      if (!owes) next = { ...next, promptDeadline: null };
+      else if (seat.promptDeadline === null)
+        next = { ...next, promptDeadline: later(timer.secondsPerPick) };
     }
-    if (seat.deadlinePack === front.packNumber) return seat;
-    return {
-      ...seat,
-      deadline: new Date(now.getTime() + timer.secondsPerPick * 1000),
-      deadlinePack: front.packNumber,
-    };
+    const unchanged =
+      next.deadline === seat.deadline &&
+      next.deadlinePack === seat.deadlinePack &&
+      next.deadlinePick === seat.deadlinePick &&
+      next.promptDeadline === seat.promptDeadline;
+    return unchanged ? seat : next;
   });
   return { ...draft, seats };
 }

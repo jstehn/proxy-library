@@ -11,6 +11,7 @@ import {
   type DraftCardFacts,
   type FactsLookup,
 } from "./auto-pick";
+import { isConspiracyLine } from "./abilities";
 import type { DraftCard } from "./draft";
 
 // The deck each player gets when a draft ends (design doc 17, rule 12): the best 23 cards in the
@@ -87,7 +88,10 @@ export function suggestBuild(pool: readonly DraftCard[], lookup: FactsLookup): S
   });
   const best = (a: Scored, b: Scored) => b.score - a.score || a.card.slot - b.card.slot;
 
-  const spells = withFacts.filter((each) => !isLand(each.facts)).map(score);
+  // Conspiracies start the game in the command zone, not the deck (CR 905.4): sideboard.
+  const spells = withFacts
+    .filter((each) => !isLand(each.facts) && !isConspiracyLine(each.facts.typeLine))
+    .map(score);
   const onColor = spells
     .filter((each) => each.facts.colors.every((color) => colors.includes(color)))
     .sort(best);

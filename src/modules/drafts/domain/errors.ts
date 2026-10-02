@@ -26,3 +26,17 @@ export type PriceUnavailable = Readonly<{ kind: "PriceUnavailable" }>;
 /** Bots are a testing tool: only an admin hosting the lobby can add them. */
 export type BotsForAdminsOnly = Readonly<{ kind: "BotsForAdminsOnly" }>;
 export type BotNotFound = Readonly<{ kind: "BotNotFound" }>;
+/** A card drafted at random is waiting for the player's choices about it (Archdemon). */
+export type AwaitingChoices = Readonly<{ kind: "AwaitingChoices" }>;
+/** The player owes a color choice (Paliano, Regicide) before they can draft again. */
+export type ChooseColorsFirst = Readonly<{ kind: "ChooseColorsFirst" }>;
+/** A face-up Archdemon of Paliano: this pick has to be at random. */
+export type MustDraftAtRandom = Readonly<{ kind: "MustDraftAtRandom" }>;
+/** A choice the player can't make now (no such face-up card, not enough cards left, …). */
+export type AbilityUnavailable = Readonly<{ kind: "AbilityUnavailable"; reason: string }>;
+/** Nothing to choose: no prompt, no such deal step, or not this player's to answer. */
+export type NothingToAnswer = Readonly<{ kind: "NothingToAnswer" }>;
+/** A card that must leave a player's collection (a Librarian put back, a Deal Broker swap) is gone. */
+export type CardNoLongerOwned = Readonly<{ kind: "CardNoLongerOwned" }>;
+/** A Lore Seeker's pack couldn't be added: not an unopened pack of yours, no price, no recipe. */
+export type LorePackUnavailable = Readonly<{ kind: "LorePackUnavailable"; reason: string }>;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Color } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
-import { sampleCardFacts, samplePrintingId } from "../testing/samples";
+import { sampleCardFacts, samplePick, samplePrintingId } from "../testing/samples";
 import {
   cardStrength,
   chooseAutoPick,
@@ -19,7 +19,8 @@ function cardsFrom(facts: readonly DraftCardFacts[], prefix: string, picked = fa
     slot,
     printingId: samplePrintingId(`${prefix}${slot}`),
     finish: "nonfoil",
-    pick: picked ? { seat: 0, pickNumber: slot + 1, auto: false, at: new Date(0) } : null,
+    pick: picked ? samplePick(0, slot + 1) : null,
+    cameFrom: null,
   }));
 }
 
