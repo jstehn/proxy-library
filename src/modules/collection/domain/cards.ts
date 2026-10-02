@@ -6,7 +6,15 @@ import type { Finish, PrintingId } from "@/modules/catalog";
 export type CardGain = Readonly<{ printingId: PrintingId; finish: Finish; quantity: number }>;
 
 /** Where cards came from, or went to, recorded with every change (rule 7). */
-export type AcquisitionSource = "pack" | "deck" | "product" | "store" | "sale" | "trade" | "reset"; // an admin emptied the player's library
+export type AcquisitionSource =
+  | "pack"
+  | "deck"
+  | "product"
+  | "store"
+  | "sale"
+  | "trade"
+  | "reset" // an admin emptied the player's library
+  | "draft"; // picked in a live draft (design doc 17)
 
 /** Why the cards moved: the source, and which thing in that module ("item:12", "store:40"). */
 export type Acquisition = Readonly<{ source: AcquisitionSource; ref: string; at: Date }>;

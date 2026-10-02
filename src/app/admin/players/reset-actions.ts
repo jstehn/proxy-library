@@ -47,7 +47,8 @@ export async function resetLibraryAction(
   return {
     message:
       `Reset: ${summary.copiesRemoved} cards, ${summary.itemsRemoved} sealed items and ` +
-      `${summary.decksDeleted} decks removed, ${summary.tradesClosed} open trades closed. ` +
+      `${summary.decksDeleted} decks removed, ${summary.tradesClosed} open trades closed` +
+      (summary.lobbiesLeft > 0 ? `, ${summary.lobbiesLeft} draft lobbies left. ` : ". ") +
       `Balance is now ${Cents.format(summary.balance)}.`,
     tone: "success",
   };

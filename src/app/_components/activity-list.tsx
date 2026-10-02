@@ -3,7 +3,8 @@ import type { FeedItem } from "@/modules/activity";
 import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 
-// The activity feed (design doc 11): notable pulls, sealed purchases and completed trades.
+// The activity feed (design doc 11): notable pulls, sealed purchases, completed trades and
+// finished drafts (design doc 17).
 
 const RARITY_COLORS: Record<string, string> = {
   rare: "text-amber-600 dark:text-amber-400",
@@ -45,6 +46,12 @@ function Line(props: { item: FeedItem }) {
           <strong>{item.actor}</strong> and <strong>{item.other}</strong> traded
           {item.cardsMoved > 0 ? ` ${item.cardsMoved} card${item.cardsMoved === 1 ? "" : "s"}` : ""}
           {item.moneyChanged ? (item.cardsMoved > 0 ? " and some money" : " money") : ""}
+        </>
+      );
+    case "draft":
+      return (
+        <>
+          <strong>{item.actor}</strong> hosted a {item.setName} draft for {item.players} players
         </>
       );
   }

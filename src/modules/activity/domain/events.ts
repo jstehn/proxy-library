@@ -21,7 +21,9 @@ export type ActivityEvent =
       otherId: UserId;
       cardsMoved: number;
       moneyChanged: boolean;
-    }>;
+    }>
+  // A finished draft (design doc 17). Picks aren't posted: too many, and they'd reveal choices.
+  | Readonly<{ kind: "draft"; actorId: UserId; setName: string; players: number }>;
 
 export const NOTABLE_PRICE_CENTS = 500;
 

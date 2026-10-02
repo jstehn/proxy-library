@@ -29,6 +29,12 @@ import {
   drizzleDeckRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
+import { makeDrafts } from "@/modules/drafts";
+import {
+  drizzleDraftCatalog,
+  drizzleDraftRepository,
+  pgDraftNotifier,
+} from "@/modules/drafts/infrastructure";
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
@@ -96,6 +102,9 @@ export function buildCore(config: Config) {
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
       events: drizzleEventRecorder(transaction),
+      drafts: drizzleDraftRepository(transaction),
+      draftCatalog: drizzleDraftCatalog(transaction),
+      draftNotifier: pgDraftNotifier(transaction),
     };
   }
 
@@ -152,6 +161,7 @@ export function buildCore(config: Config) {
     renderer: pdfLibRenderer(),
   });
   const trades = makeTrades({ unitOfWork, clock });
+  const drafts = makeDrafts({ unitOfWork, clock, seeds });
   const resetPlayer = makeResetPlayer({ unitOfWork, clock });
 
   return {
@@ -168,6 +178,7 @@ export function buildCore(config: Config) {
     decks,
     proxySheet,
     trades,
+    drafts,
     resetPlayer,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,

@@ -10,6 +10,7 @@ export const FORMAT_LABELS: Record<Format, string> = {
   vintage: "Vintage",
   pauper: "Pauper",
   commander: "Commander",
+  limited: "Limited (40 cards)",
 };
 
 /** A deck problem in plain words. */

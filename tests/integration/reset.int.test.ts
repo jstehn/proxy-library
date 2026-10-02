@@ -88,6 +88,7 @@ describe("resetting a player", () => {
         copiesRemoved: jackCopies.rows[0].total,
         decksDeleted: 1,
         eventsForgotten: expect.any(Number) as number,
+        lobbiesLeft: 0,
       },
     });
     expect(await count("collection_cards", "user_id = 'jack'")).toBe(0);

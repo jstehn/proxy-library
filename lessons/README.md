@@ -22,6 +22,7 @@ new ideas are compared to their Python equivalents wherever one exists.
 | 13  | [Reading someone else's website](13-reading-someone-elses-website.md)                   | choosing sources by permission, data embedded in pages, flattened JSON with references, untrusted input and allow-lists, matching names (normalization, precision and recall), fail-safe steps, precedence in TypeScript and SQL                 |
 | 14  | [A search language, a live screen, and paper](14-a-search-language-and-paper.md)        | tokenizing and recursive-descent parsing, syntax trees to parameterized SQL, set comparisons, client-safe imports, optimistic updates and stale responses, debouncing, derived state, page layout in points, mirroring, draw order, worker pools |
 | 15  | [One language, many pages, and a purchase you can trust](15-one-language-many-pages.md) | shared libraries and lint boundaries, tokenizer modes, untrusted regular expressions, context instead of if-chains, quote vs purchase, optimistic concurrency, lazy side effects in transactions, extracting a shared core                       |
+| 17  | [Many players, one state](17-many-players-one-state.md)                                 | aggregates and saving the difference, queues, hidden information in queries, deadlines and presence, LISTEN/NOTIFY, Server-Sent Events and `ReadableStream`, `EventSource` and stale closures, scoring functions, largest remainder              |
 
 New term you don't recognize? Check the [glossary](GLOSSARY.md).
 

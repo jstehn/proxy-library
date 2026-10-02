@@ -26,6 +26,7 @@ export const decks = pgTable(
       .references(() => players.userId),
     name: text("name").notNull(),
     format: text("format").notNull(),
+    origin: text("origin"), // "draft:12" when a finished draft made it (design doc 17), else null
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },
@@ -33,7 +34,7 @@ export const decks = pgTable(
     index("decks_owner_idx").on(table.ownerId),
     check(
       "decks_format_known",
-      sql`${table.format} in ('casual', 'standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander')`,
+      sql`${table.format} in ('casual', 'standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander', 'limited')`,
     ),
   ],
 );

@@ -33,6 +33,7 @@ export {
   type SingleHistoryRow,
   kindPrices,
   packMsrp,
+  packMsrps,
   productPrices,
   storePage,
   storeSets,

@@ -92,12 +92,18 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     if (bad > 0) process.exitCode = 1;
   },
 
-  /** `pnpm worker schedule`: keep running; do the nightly sync and anything admins queue. */
+  /**
+   * `pnpm worker schedule`: keep running; do the nightly sync and anything admins queue, and run
+   * draft pick timers (design doc 17). The two loops run side by side: a sync can take minutes,
+   * and a pick timer can't wait that long.
+   */
   async schedule(container) {
-    const { catalog } = container;
+    const { catalog, drafts } = container;
     const recovered = await catalog.recoverInterruptedRuns();
     if (recovered > 0) console.log(`marked ${recovered} interrupted run(s) as failed`);
-    console.log("worker scheduling: checking for sync work every 30 seconds (Ctrl+C to stop)");
+    console.log(
+      "worker scheduling: sync work every 30 seconds, draft timers every 5 (Ctrl+C to stop)",
+    );
 
     let stopping = false;
     // Ctrl+C in a terminal sends SIGINT; `docker compose stop` sends SIGTERM.
@@ -108,14 +114,41 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
 
-    while (!stopping) {
-      if (await catalog.queueNightlyIfDue()) console.log("queued the nightly prices sync");
-      const result = await catalog.runNextQueuedSync();
-      if (result !== null) {
-        console.log(`sync run ${result.run.id} (${result.run.kind}): ${result.status}`);
+    async function syncLoop() {
+      while (!stopping) {
+        if (await catalog.queueNightlyIfDue()) console.log("queued the nightly prices sync");
+        const result = await catalog.runNextQueuedSync();
+        if (result !== null) {
+          console.log(`sync run ${result.run.id} (${result.run.kind}): ${result.status}`);
+        }
+        await sleepUnlessStopping(30_000, () => stopping);
       }
-      await sleepUnlessStopping(30_000, () => stopping);
     }
+
+    async function draftTimerLoop() {
+      while (!stopping) {
+        try {
+          const report = await drafts.runTimers();
+          if (report.autoPicks > 0 || report.extensions > 0) {
+            console.log(
+              `draft timers: ${report.autoPicks} auto-pick(s), ${report.extensions} extension(s)`,
+            );
+          }
+        } catch (error) {
+          // One bad draft mustn't stop every other table's timer.
+          console.error("draft timers failed:", error);
+        }
+        await sleepUnlessStopping(5_000, () => stopping);
+      }
+    }
+
+    // Like Python's asyncio.gather: both loops run until both have stopped.
+    await Promise.all([syncLoop(), draftTimerLoop()]);
+  },
+
+  /** `pnpm worker draft-timers`: run the draft pick timers once and print what they did. */
+  async "draft-timers"(container) {
+    console.log(JSON.stringify(await container.drafts.runTimers()));
   },
 };
 

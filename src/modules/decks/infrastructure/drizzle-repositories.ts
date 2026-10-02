@@ -4,19 +4,26 @@ import { PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import type { CardLookup, CardQuery, DeckRepository, ResolvedCard } from "../application/ports";
-import { BOARDS, DeckId, FORMATS, type Deck, type Format } from "../domain/deck";
+import { BOARDS, DeckId, DeckOrigin, FORMATS, type Deck, type Format } from "../domain/deck";
 import { deckEntries, decks } from "./schema";
 
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
-  async function create(input: { ownerId: UserId; name: string; format: Format; at: Date }) {
+  async function create(input: {
+    ownerId: UserId;
+    name: string;
+    format: Format;
+    origin?: DeckOrigin | null;
+    at: Date;
+  }) {
     const [row] = await db
       .insert(decks)
       .values({
         ownerId: input.ownerId,
         name: input.name,
         format: input.format,
+        origin: input.origin ? DeckOrigin.toText(input.origin) : null,
         createdAt: input.at,
         updatedAt: input.at,
       })

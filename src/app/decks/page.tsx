@@ -12,8 +12,13 @@ const field =
 
 export default async function DecksPage(props: PageProps<"/decks">) {
   const actor = await requireActor();
-  const decks = await decksFor(getContainer().db, actor.userId);
-  const error = (await props.searchParams).error;
+  const searchParams = await props.searchParams;
+  const allDecks = await decksFor(getContainer().db, actor.userId);
+  // ?show=drafts lists only the decks finished drafts made (design doc 17).
+  const onlyDrafts = searchParams.show === "drafts";
+  const decks = onlyDrafts ? allDecks.filter((deck) => deck.origin !== null) : allDecks;
+  const draftCount = allDecks.filter((deck) => deck.origin !== null).length;
+  const error = searchParams.error;
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
@@ -50,6 +55,25 @@ export default async function DecksPage(props: PageProps<"/decks">) {
         </button>
       </form>
 
+      {draftCount > 0 && (
+        <nav className="flex gap-3 text-sm" aria-label="Which decks">
+          <Link
+            href="/decks"
+            aria-current={onlyDrafts ? undefined : "page"}
+            className={onlyDrafts ? "underline" : "font-semibold"}
+          >
+            All decks ({allDecks.length})
+          </Link>
+          <Link
+            href="/decks?show=drafts"
+            aria-current={onlyDrafts ? "page" : undefined}
+            className={onlyDrafts ? "font-semibold" : "underline"}
+          >
+            Draft decks ({draftCount})
+          </Link>
+        </nav>
+      )}
+
       {decks.length === 0 ? (
         <p className="text-sm text-zinc-500">No decks yet.</p>
       ) : (
@@ -59,6 +83,15 @@ export default async function DecksPage(props: PageProps<"/decks">) {
               <Link href={`/decks/${deck.id}`} className="font-medium underline">
                 {deck.name}
               </Link>
+              {deck.origin?.kind === "draft" && (
+                <Link
+                  href={`/drafts/${deck.origin.draftId}`}
+                  className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  title="Made by a draft: open the draft"
+                >
+                  Draft
+                </Link>
+              )}
               <span className="text-sm text-zinc-500">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards
               </span>

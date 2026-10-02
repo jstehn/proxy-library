@@ -2,7 +2,15 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
-import { BOARDS, DeckId, FORMATS, type Board, type Deck, type Format } from "../domain/deck";
+import {
+  BOARDS,
+  DeckId,
+  DeckOrigin,
+  FORMATS,
+  type Board,
+  type Deck,
+  type Format,
+} from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
@@ -17,6 +25,8 @@ export type DeckSummary = Readonly<{
   cards: number;
   short: number; // copies needed beyond what the player owns
   updatedAt: string;
+  /** Set when the app made the deck: a finished draft (design doc 17). */
+  origin: DeckOrigin | null;
 }>;
 
 /** A player's decks, most recently changed first, with how many cards each is short. */
@@ -28,6 +38,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     cards: number;
     short: number;
     updated_at: Date;
+    origin: string | null;
   }>(sql`
     with owned as (
       select p.oracle_id, sum(c.quantity) as quantity
@@ -42,7 +53,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
        where d.owner_id = ${userId}
        group by e.deck_id, e.oracle_id
     )
-    select d.id, d.name, d.format, d.updated_at,
+    select d.id, d.name, d.format, d.updated_at, d.origin,
            coalesce((select sum(e.quantity) from deck_entries e where e.deck_id = d.id), 0)::int as cards,
            coalesce((select sum(greatest(0, n.quantity - coalesce(o.quantity, 0)))
                        from needs n left join owned o on o.oracle_id = n.oracle_id
@@ -59,6 +70,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     cards: row.cards,
     short: row.short,
     updatedAt: new Date(row.updated_at).toISOString(),
+    origin: DeckOrigin.parse(row.origin),
   }));
 }
 

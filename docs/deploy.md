@@ -14,12 +14,12 @@ docker compose up -d --build
 
 What starts (see `docker-compose.yml`):
 
-| Service   | Does                                                                               |
-| --------- | ---------------------------------------------------------------------------------- |
-| `db`      | Postgres 17, data in the `pgdata` volume                                           |
-| `migrate` | brings the database schema up to date, then exits (the app and worker wait for it) |
-| `app`     | the web app on `http://localhost:${PORT}` (3000 by default)                        |
-| `worker`  | the nightly catalog sync, plus syncs admins queue from **Admin → Catalog**         |
+| Service   | Does                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `db`      | Postgres 17, data in the `pgdata` volume                                                     |
+| `migrate` | brings the database schema up to date, then exits (the app and worker wait for it)           |
+| `app`     | the web app on `http://localhost:${PORT}` (3000 by default)                                  |
+| `worker`  | the nightly catalog sync, syncs admins queue from **Admin → Catalog**, and draft pick timers |
 
 Open the app and **register**: the first account becomes the admin. The worker's **first sync
 starts within a minute** of the first start, because a new install has never synced. It
@@ -58,6 +58,11 @@ docker compose exec worker pnpm worker check-products  # every product for sale 
 The app serves plain HTTP. For access from outside your network, put it behind a reverse proxy
 with TLS (Caddy, nginx, Traefik), and set `APP_URL` to the public `https://` address, since invite
 links and cookies use it.
+
+Live drafts keep a long-lived HTTP response open per player (Server-Sent Events, ADR 0018). The
+app sends `X-Accel-Buffering: no`, which nginx (and Nginx Proxy Manager) honor, so nothing needs
+configuring there. If a proxy buffers the stream anyway, the draft page notices and falls back to
+reloading every 5 seconds, which works but feels less live.
 
 ## Deploying to a Portainer server
 

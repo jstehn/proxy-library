@@ -53,6 +53,8 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                         | ✅ Done |
 | 14  | Deck builder 2.0 and proxy PDFs    | a search language (parser → tree → SQL), client-safe module API (ADR 0016), optimistic UI, pure page layout, PDF rendering  | ✅ Done |
 | 15  | Buy a list; card search everywhere | a shared library (ADR 0017), tokenizer modes, quote vs purchase, optimistic concurrency                                     | ✅ Done |
+| 16  | The real collection                | (design doc 16 approved; not built yet)                                                                                     | Planned |
+| 17  | Live booster drafts                | aggregates, queues, deadlines and presence, LISTEN/NOTIFY + Server-Sent Events (ADR 0018), scoring functions                | ✅ Done |
 
 ### Why this order (changed from the original plan)
 

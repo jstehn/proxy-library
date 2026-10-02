@@ -2,6 +2,7 @@ import type { Actor } from "@/modules/accounts";
 import { forgetPullsAndPurchases } from "@/modules/activity";
 import { giveUpEverything } from "@/modules/collection";
 import { deleteAllDecks } from "@/modules/decks";
+import { removeFromLobbies } from "@/modules/drafts";
 import { discardAllItems } from "@/modules/inventory";
 import { closeOpenTrades } from "@/modules/trades";
 import { resetBalance } from "@/modules/wallet";
@@ -19,6 +20,7 @@ export type ResetSummary = Readonly<{
   copiesRemoved: number;
   decksDeleted: number;
   eventsForgotten: number;
+  lobbiesLeft: number;
 }>;
 
 /**
@@ -43,8 +45,12 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
       const note = isSelf ? "Started over" : `Library reset by ${actor.username}`;
 
       // Locks are taken in the same order as the actions they could meet (a trade being
-      // accepted locks the trade, then wallets; an opening locks the item, then cards), so a
-      // reset waits for them instead of deadlocking.
+      // accepted locks the trade, then wallets; an opening locks the item, then cards; joining a
+      // draft locks the draft, then the wallet), so a reset waits for them instead of
+      // deadlocking. Leaving lobbies first also means the refund is wiped by the balance reset,
+      // like any other money the player had. A draft that has started keeps their seat, and
+      // its timer picks for them so the others can finish.
+      const lobbiesLeft = await removeFromLobbies(services, userId, now);
       const tradesClosed = await closeOpenTrades(services, userId, now);
       const balance = await resetBalance(services, { userId, resetBy: actor.userId, note, now });
       const itemsRemoved = await discardAllItems(services, userId);
@@ -63,6 +69,7 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
         copiesRemoved,
         decksDeleted,
         eventsForgotten,
+        lobbiesLeft,
       });
     });
   }

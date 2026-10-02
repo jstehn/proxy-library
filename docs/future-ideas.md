@@ -97,3 +97,17 @@ design doc (or joins a phase's design) and is removed from this list.
 
 - **Undo last import:** keep each import's changes so the newest one can be reversed in one
   click. Re-importing the right file does the same job until then.
+
+## Drafts (out of scope for design doc 17, 2026-10-01)
+
+- **Bring your own packs:** join with three unopened packs from your inventory instead of paying
+  the fee. A seat's `packSource` already has room for `{ kind: "ownPacks"; itemIds }`; the
+  inventory would need a "reserved" state so committed packs can't be opened elsewhere.
+- **Other draft styles:** cube, Rochester, Winston, sealed. Each is a new row in `DRAFT_STYLES`
+  plus whatever it moves differently (a cube needs a card list instead of boosters).
+- **Bots in empty seats**, using the auto-pick's scoring.
+- **Pairings, match results and prizes** after the draft.
+- **A shrinking pick timer** (fewer seconds as the pack empties, like MTGO) and host-set grace.
+- **Kick a player from a lobby** (with a refund).
+- **A pick-by-pick replay** of a finished draft: every pick, pack and seed is already stored.
+- **Limited ratings** (a ratings table per set) to replace rarity and price in `cardStrength`.

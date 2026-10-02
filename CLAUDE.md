@@ -54,7 +54,8 @@ each lesson.
 - Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
   `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
   (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
-  (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs;
+  (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs
+  and the draft pick timers; `draft-timers` runs the pick timers once;
   `check-packs [n]` opens n packs of every booster recipe and reports rule violations;
   `check-products` checks every product for sale contains something; `check-commanders` checks every
   precon's commander is allowed to lead a deck), `pnpm test:remote` (the only

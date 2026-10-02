@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { activeDraftOf } from "@/modules/drafts";
 import { tradesWaitingForYou } from "@/modules/trades";
 import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
@@ -13,6 +14,7 @@ const MAIN_LINKS = [
   ["/collection", "Collection"],
   ["/decks", "Decks"],
   ["/trades", "Trades"],
+  ["/drafts", "Drafts"],
   ["/sets", "Sets"],
   ["/activity", "Activity"],
 ] as const;
@@ -24,6 +26,8 @@ export async function SiteHeader() {
   const balance = actor === null ? null : await getContainer().wallet.refreshWallet(actor.userId);
   const waitingTrades =
     actor === null ? 0 : await tradesWaitingForYou(getContainer().db, actor.userId);
+  // A lobby or draft you're seated at: the link goes straight back to it (design doc 17).
+  const draft = actor === null ? null : await activeDraftOf(getContainer().db, actor.userId);
 
   // The same links in two layouts: inline on larger screens, in the "Menu" on phones.
   const links =
@@ -31,8 +35,19 @@ export async function SiteHeader() {
       ? null
       : [
           ...MAIN_LINKS.map(([href, label]) => (
-            <Link key={href} href={href}>
+            <Link
+              key={href}
+              href={href === "/drafts" && draft !== null ? `/drafts/${draft.id}` : href}
+            >
               {label}
+              {href === "/drafts" && draft !== null && (
+                <span
+                  className={`ml-1 inline-block h-2 w-2 rounded-full ${draft.status === "drafting" ? "bg-amber-500" : "bg-sky-500"}`}
+                  title={
+                    draft.status === "drafting" ? "Your draft is running" : "You're in a lobby"
+                  }
+                />
+              )}
               {href === "/trades" && waitingTrades > 0 && (
                 <span
                   className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white"

@@ -28,6 +28,14 @@ export type FeedItem =
       other: string;
       cardsMoved: number;
       moneyChanged: boolean;
+    }>
+  | Readonly<{
+      id: number;
+      kind: "draft";
+      at: string;
+      actor: string;
+      setName: string;
+      players: number;
     }>;
 
 export type FeedCard = Readonly<{
@@ -91,6 +99,15 @@ export async function activityFeed(db: DbExecutor, limit = 50): Promise<FeedItem
             other: row.other ?? "someone",
             cardsMoved: Number(payload.cardsMoved),
             moneyChanged: payload.moneyChanged === true,
+          },
+        ];
+      case "draft":
+        return [
+          {
+            ...base,
+            kind: "draft",
+            setName: String(payload.setName),
+            players: Number(payload.players),
           },
         ];
       default:

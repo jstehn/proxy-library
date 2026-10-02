@@ -520,3 +520,93 @@ test("a player starts over from their Account page, after a clear warning", asyn
   await page.getByRole("link", { name: "Collection", exact: true }).click();
   await expect(page.getByText(/^0 cards/)).toBeVisible();
 });
+
+/** Signs in on a page of its own browser context. */
+async function signIn(page: Page, username: string) {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByTitle("Your wallet")).toBeVisible();
+}
+
+/** The pick screen's heading ("Round 1 of 3, pick 4 …"), or "" when there's none. */
+async function pickHeading(page: Page): Promise<string> {
+  const heading = page.getByRole("heading", { name: /^Round \d of 3, pick \d+/ });
+  return (await heading.count()) === 0 ? "" : ((await heading.textContent()) ?? "");
+}
+
+/**
+ * Picks the first card of the pack in front of this player, if there is one, and waits for the
+ * page to move on. Returns whether it picked.
+ */
+async function pickFirstCard(page: Page): Promise<boolean> {
+  const pack = page.getByRole("list", { name: "Your pack" });
+  if (!(await pack.isVisible())) return false;
+  const before = await pickHeading(page);
+  await pack.getByRole("button").first().dblclick();
+  await expect.poll(() => pickHeading(page)).not.toBe(before);
+  return true;
+}
+
+test("two players draft live together, and each gets a draft deck (design doc 17)", async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  // Rin hosts (she has $50 after starting over); the admin joins.
+  const rinContext = await browser.newContext();
+  const rin = await rinContext.newPage();
+  await signIn(rin, "rin");
+  await rin.getByRole("link", { name: "Drafts", exact: true }).click();
+  await expect(rin.getByRole("heading", { name: "Drafts", exact: true })).toBeVisible();
+  await rin.getByLabel("Players, at most").selectOption("2");
+  await rin.getByLabel("Pick timer").selectOption("off");
+  await rin.getByRole("button", { name: "Host and pay the fee" }).click();
+  await expect(rin.getByRole("heading", { name: /Bloomburrow draft/ })).toBeVisible();
+  await expect(rin.getByText("live", { exact: true })).toBeVisible();
+
+  const adminContext = await browser.newContext();
+  const admin = await adminContext.newPage();
+  await signIn(admin, "admin");
+  await admin.getByRole("link", { name: "Drafts", exact: true }).click();
+  await admin.getByRole("button", { name: /^Join for \$/ }).click();
+  await expect(admin.getByRole("heading", { name: /Bloomburrow draft/ })).toBeVisible();
+
+  // Rin's lobby shows the admin arrive without a reload (ADR 0018), and she starts.
+  await expect(rin.getByRole("listitem").filter({ hasText: "Admin" })).toBeVisible();
+  await rin.getByRole("button", { name: "Start the draft" }).click();
+  // The admin's page moves to the first pick by itself.
+  await expect(admin.getByRole("heading", { name: /^Round 1 of 3, pick 1/ })).toBeVisible();
+  await expect(admin.getByRole("list", { name: "Your pack" }).getByRole("button")).toHaveCount(14);
+
+  // Both draft every card. Halfway, Rin reloads the page and carries on where she was.
+  let picks = 0;
+  let reloaded = false;
+  for (let turn = 0; turn < 300; turn += 1) {
+    const finished = await rin.getByText(/Your \d+ cards are in your collection/).isVisible();
+    if (finished && (await admin.getByText(/Your \d+ cards/).isVisible())) break;
+    for (const player of [rin, admin]) if (await pickFirstCard(player)) picks += 1;
+    if (!reloaded && picks >= 40) {
+      reloaded = true;
+      await rin.reload();
+      await expect(rin.getByRole("heading", { name: /^Round 2 of 3/ })).toBeVisible();
+    }
+  }
+  expect(picks).toBe(84); // 2 players × 3 packs × 14 cards
+
+  // Each player's deck is waiting: a 40-card limited deck with a Draft badge.
+  await expect(rin.getByText("Your 42 cards are in your collection.")).toBeVisible();
+  await rin.getByRole("link", { name: "Open your deck" }).click();
+  await expect(rin.getByText(/Limited/).first()).toBeVisible();
+  await rin.goto("/decks?show=drafts");
+  await expect(rin.getByRole("link", { name: "Draft", exact: true })).toBeVisible();
+  await expect(rin.getByText(/Bloomburrow draft, \d+ \w+/)).toBeVisible();
+
+  // The feed tells everyone.
+  await admin.goto("/activity");
+  await expect(admin.getByText("Rin hosted a Bloomburrow draft for 2 players")).toBeVisible();
+
+  await rinContext.close();
+  await adminContext.close();
+});

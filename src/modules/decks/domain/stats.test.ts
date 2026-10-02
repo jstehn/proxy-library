@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colorPips, deckStats, isLand, mainType } from "./stats";
+import { colorPips, deckSize, deckStats, isLand, mainType, suggestedLands } from "./stats";
 
 describe("deckStats", () => {
   it("counts the curve without lands or the sideboard, 7+ together", () => {
@@ -111,5 +111,14 @@ describe("isLand and colorPips", () => {
     expect(colorPips("{2}{G}{G}")).toEqual({ W: 0, U: 0, B: 0, R: 0, G: 2 });
     expect(colorPips("{R/W}{B/P}{C}")).toEqual({ W: 1, U: 0, B: 1, R: 1, G: 0 });
     expect(colorPips(null)).toEqual({ W: 0, U: 0, B: 0, R: 0, G: 0 });
+  });
+});
+
+describe("deck size and lands to aim for", () => {
+  it("is 100 exactly in Commander, 40 or more in limited, 60 or more elsewhere", () => {
+    expect(deckSize("commander")).toEqual({ cards: 100, exact: true });
+    expect(deckSize("limited")).toEqual({ cards: 40, exact: false });
+    expect(deckSize("modern")).toEqual({ cards: 60, exact: false });
+    expect(["commander", "limited", "casual"].map(suggestedLands)).toEqual([37, 17, 24]);
   });
 });

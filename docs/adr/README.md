@@ -25,3 +25,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0015 | [Official product photos and key art from Wizards Play Network pages](0015-wpn-product-imagery.md) | Accepted |
 | 0016 | [A browser-safe public API per module (`client.ts`)](0016-client-safe-module-api.md)               | Accepted |
 | 0017 | [One card search language, shared by every module that searches cards](0017-shared-card-search.md) | Accepted |
+| 0018 | [Live updates: Postgres LISTEN/NOTIFY and Server-Sent Events](0018-live-updates.md)                | Accepted |

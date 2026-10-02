@@ -24,6 +24,10 @@ export function ledgerKindLabel(kind: LedgerKind): string {
       return "Received in a trade";
     case "trade_out":
       return "Given in a trade";
+    case "draft_entry":
+      return "Draft entry fee";
+    case "draft_refund":
+      return "Draft entry fee refunded";
     default:
       return assertNever(kind);
   }

@@ -2,6 +2,7 @@
 // Server code imports index.ts instead.
 export {
   colorPips,
+  deckSize,
   deckStats,
   isLand,
   MANA_COLORS,

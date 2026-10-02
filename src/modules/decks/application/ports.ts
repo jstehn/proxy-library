@@ -1,12 +1,18 @@
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
-import type { Deck, DeckId, Format } from "../domain/deck";
+import type { Deck, DeckId, DeckOrigin, Format } from "../domain/deck";
 import type { ProxyPage } from "../domain/proxy-sheet";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
 export interface DeckRepository {
-  create(input: { ownerId: UserId; name: string; format: Format; at: Date }): Promise<DeckId>;
+  create(input: {
+    ownerId: UserId;
+    name: string;
+    format: Format;
+    origin?: DeckOrigin | null;
+    at: Date;
+  }): Promise<DeckId>;
   countFor(ownerId: UserId): Promise<number>;
   /** The deck, locked until the transaction ends, if it exists and belongs to this player. */
   lockOwned(deckId: DeckId, ownerId: UserId): Promise<Deck | null>;

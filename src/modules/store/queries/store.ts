@@ -323,6 +323,30 @@ export async function packMsrp(
   return row === undefined || row.msrp === null ? null : Cents.of(Number(row.msrp));
 }
 
+/**
+ * The price of one pack of every booster sold as a single pack, keyed "SET/boosterType": the same
+ * rule as `packMsrp`, in one query (a draft's entry fee is three packs, design doc 17).
+ */
+export async function packMsrps(db: DbExecutor): Promise<Map<string, Cents>> {
+  const rows = await db.execute<{ set_code: string; booster_type: string; msrp: number }>(sql`
+    select sp.contents->0->>'setCode' as set_code,
+           sp.contents->0->>'boosterType' as booster_type,
+           min(${MSRP}) as msrp
+      from sealed_products sp
+      ${PRICE_JOINS}
+     where jsonb_array_length(sp.contents) = 1
+       -- exactly one pack and nothing else, like packMsrp's whole-contents comparison
+       and sp.contents->0 = jsonb_build_object('kind', 'pack',
+                                               'setCode', sp.contents->0->>'setCode',
+                                               'boosterType', sp.contents->0->>'boosterType')
+       and ${MSRP} is not null
+     group by 1, 2
+  `);
+  return new Map(
+    rows.rows.map((row) => [`${row.set_code}/${row.booster_type}`, Cents.of(Number(row.msrp))]),
+  );
+}
+
 export type SingleHistoryRow = Readonly<{
   id: number;
   direction: "buy" | "sell";

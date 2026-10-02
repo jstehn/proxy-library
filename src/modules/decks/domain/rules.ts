@@ -37,7 +37,8 @@ export type DeckProblem =
 type FormatRules =
   | Readonly<{ kind: "casual" }>
   | Readonly<{ kind: "constructed"; minimum: number; sideboard: number; copies: number }>
-  | Readonly<{ kind: "commander"; size: number }>;
+  | Readonly<{ kind: "commander"; size: number }>
+  | Readonly<{ kind: "limited"; minimum: number }>;
 
 const FORMAT_RULES: Record<Format, FormatRules> = {
   casual: { kind: "casual" },
@@ -48,6 +49,8 @@ const FORMAT_RULES: Record<Format, FormatRules> = {
   vintage: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
   pauper: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
   commander: { kind: "commander", size: 100 },
+  // Draft and sealed: 40 cards, as many copies as you opened, any card (design doc 17).
+  limited: { kind: "limited", minimum: 40 },
 };
 
 /** Cards with no copy limit: basic lands, and "A deck can have any number of cards named …". */
@@ -195,6 +198,12 @@ export function deckProblems(deck: Deck, rules: RulesLookup, owned: OwnedLookup)
       }
       problems.push(...copyLimitProblems(copies, rules, format.copies));
       problems.push(...legalityProblems(deck.format, copies, rules));
+      return problems;
+    }
+    case "limited": {
+      const main = count(deck.entries.filter((entry) => entry.board !== "side"));
+      if (main < format.minimum)
+        problems.push({ kind: "TooFewCards", minimum: format.minimum, count: main });
       return problems;
     }
     case "commander":

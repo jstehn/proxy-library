@@ -11,7 +11,7 @@ import { bringUpToDate } from "./refresh";
 export type SpendInput = Readonly<{
   userId: UserId;
   amount: Cents;
-  kind: "purchase_sealed" | "purchase_single" | "trade_out";
+  kind: "purchase_sealed" | "purchase_single" | "trade_out" | "draft_entry";
   note: string | null;
   ref: string; // what it paid for, e.g. "store:42"
   now: Date;
@@ -43,7 +43,7 @@ export async function spend(
 export type ReceiveInput = Readonly<{
   userId: UserId;
   amount: Cents;
-  kind: "sellback" | "trade_in";
+  kind: "sellback" | "trade_in" | "draft_refund";
   note: string | null;
   ref: string;
   now: Date;

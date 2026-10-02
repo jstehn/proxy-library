@@ -24,8 +24,23 @@ export const FORMATS = [
   "vintage",
   "pauper",
   "commander",
+  "limited",
 ] as const;
 export type Format = (typeof FORMATS)[number];
+
+/** Where a deck came from, when the app made it for the player: a finished draft (design doc 17). */
+export type DeckOrigin = Readonly<{ kind: "draft"; draftId: number }>;
+
+export const DeckOrigin = {
+  /** Stored as text, like a ledger entry's ref: "draft:12". */
+  toText(origin: DeckOrigin): string {
+    return `${origin.kind}:${origin.draftId}`;
+  },
+  parse(text: string | null): DeckOrigin | null {
+    const match = text === null ? null : /^draft:(\d+)$/.exec(text);
+    return match === null ? null : { kind: "draft", draftId: Number(match[1]) };
+  },
+};
 
 /** A line in a deck: a card (any printing), where it goes, how many, and which version to show. */
 export type DeckEntry = Readonly<{

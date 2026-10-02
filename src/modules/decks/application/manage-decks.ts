@@ -20,6 +20,7 @@ import type {
   TooManyDecks,
 } from "../domain/errors";
 import { parseList } from "@/shared/card-search";
+import { createDeckInTransaction, type DeckCardInput } from "./create-deck-in-transaction";
 import type { DecksDependencies } from "./ports";
 
 // Deck use cases (design doc 09, section 5). Every one works only on the actor's own decks
@@ -39,14 +40,6 @@ export type SetEntryInput = Readonly<{
 }>;
 
 export type ImportReport = Readonly<{ added: number; unreadable: string[]; notFound: string[] }>;
-
-/** One card that came out of a box, for createDeckFromCards. */
-export type DeckCardInput = Readonly<{
-  printingId: PrintingId;
-  finish: Finish;
-  quantity: number;
-  board: Board;
-}>;
 
 export function makeManageDecks(dependencies: DecksDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -177,32 +170,16 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     const format: Format = input.cards.some((card) => card.board === "commander")
       ? "commander"
       : "casual";
-    return unitOfWork.run<DeckId, CreateDeckError>(async ({ decks, cards }) => {
-      if ((await decks.countFor(actor.userId)) >= MAX_DECKS) {
-        return err({ kind: "TooManyDecks", maximum: MAX_DECKS });
-      }
-      const now = clock.now();
-      const id = await decks.create({ ownerId: actor.userId, name: name.value, format, at: now });
-      const oracleIds = await cards.oracleIdsOf(input.cards.map((card) => card.printingId));
-      let deck = await decks.lockOwned(id, actor.userId);
-      if (deck === null) throw new Error(`deck ${id} vanished inside its own transaction`);
-      for (const card of input.cards) {
-        const oracleId = oracleIds.get(card.printingId);
-        if (oracleId === undefined) continue; // not in the catalog: nothing to show for it
-        const existing = deck.entries.find(
-          (entry) => entry.oracleId === oracleId && entry.board === card.board,
-        );
-        deck = withEntry(deck, {
-          oracleId,
-          board: card.board,
-          quantity: Math.min(MAX_QUANTITY, (existing?.quantity ?? 0) + card.quantity),
-          printingId: card.printingId,
-          finish: card.finish,
-        });
-      }
-      await decks.save(deck, now);
-      return ok(id);
-    });
+    return unitOfWork.run<DeckId, CreateDeckError>((services) =>
+      createDeckInTransaction(services, {
+        ownerId: actor.userId,
+        name: name.value,
+        format,
+        origin: null,
+        cards: input.cards,
+        now: clock.now(),
+      }),
+    );
   }
 
   return { createDeck, updateDeck, deleteDeck, setEntry, importList, createDeckFromCards };

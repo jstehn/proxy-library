@@ -3,6 +3,7 @@ import type { DeckLine } from "@/modules/decks";
 import {
   deckStats,
   MANA_COLORS,
+  deckSize,
   suggestedLands,
   TYPE_ORDER,
   type ManaSource,
@@ -24,7 +25,7 @@ const COLOR_BAR: Record<ManaSource, string> = {
 
 export function StatsPanel(props: { lines: readonly DeckLine[]; format: string }) {
   const stats = deckStats(props.lines);
-  const target = props.format === "commander" ? 100 : 60;
+  const target = deckSize(props.format);
   const landGoal = suggestedLands(props.format);
   const tallest = Math.max(...stats.curve, 1);
   const neededColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
@@ -36,9 +37,11 @@ export function StatsPanel(props: { lines: readonly DeckLine[]; format: string }
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
         <Figure
           label="Cards"
-          value={`${stats.cardCount} / ${target}`}
+          value={`${stats.cardCount} / ${target.cards}`}
           tone={
-            stats.cardCount === target || (target === 60 && stats.cardCount > 60) ? "good" : "warn"
+            stats.cardCount === target.cards || (!target.exact && stats.cardCount > target.cards)
+              ? "good"
+              : "warn"
           }
         />
         <Figure label="Average mana value" value={stats.averageManaValue.toFixed(2)} />

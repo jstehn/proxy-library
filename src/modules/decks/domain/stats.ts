@@ -126,7 +126,17 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
   };
 }
 
-/** The usual land count to aim for: about 37 of 100 in Commander, 24 of 60 otherwise. */
+/**
+ * How many cards a deck aims for: exactly 100 in Commander; at least 40 in limited (design doc
+ * 17) and at least 60 in the other formats.
+ */
+export function deckSize(format: string): Readonly<{ cards: number; exact: boolean }> {
+  if (format === "commander") return { cards: 100, exact: true };
+  return { cards: format === "limited" ? 40 : 60, exact: false };
+}
+
+/** The usual land count to aim for: 37 of 100 in Commander, 17 of 40 in limited, else 24 of 60. */
 export function suggestedLands(format: string): number {
-  return format === "commander" ? 37 : 24;
+  if (format === "commander") return 37;
+  return format === "limited" ? 17 : 24;
 }

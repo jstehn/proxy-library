@@ -31,6 +31,7 @@ purpose (see [future-ideas.md](future-ideas.md)).
 | Hover to enlarge cards                                                | ✅     | `app/_components/card-tile.tsx`                                                                   |
 | Dark theme dropdowns readable                                         | ✅     | `color-scheme` in `globals.css`                                                                   |
 | Admin functions in their own section                                  | ✅     | `app/admin/layout.tsx`                                                                            |
+| Draft live with other accounts (2026-10-01)                           | ✅     | `drafts` module, `/drafts`; entry fee, pick timer, rejoin, auto-picks, a deck per player          |
 
 ## Data
 

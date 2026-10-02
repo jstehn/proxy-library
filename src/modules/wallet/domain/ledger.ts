@@ -12,7 +12,9 @@ export type LedgerKind =
   | "purchase_single" // buying a single card from the store (Phase 7)
   | "sellback" // selling a single card to the store (Phase 7)
   | "trade_in" // money received in a trade (Phase 10)
-  | "trade_out"; // money given in a trade (Phase 10)
+  | "trade_out" // money given in a trade (Phase 10)
+  | "draft_entry" // the entry fee for a draft (Phase 17)
+  | "draft_refund"; // an entry fee given back when a draft lobby closes (Phase 17)
 
 /** Each kind goes one way only (design doc 03, rule 4). The database checks this too. */
 export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
@@ -26,6 +28,8 @@ export const DIRECTION: Readonly<Record<LedgerKind, "in" | "out">> = {
   sellback: "in",
   trade_in: "in",
   trade_out: "out",
+  draft_entry: "out",
+  draft_refund: "in",
 };
 
 /** One change to one player's money. Entries are only ever added, never changed (rule 1). */
