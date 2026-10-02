@@ -88,7 +88,12 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Automatic tags** like ramp, card draw, removal and board wipes (from rules text), with counts
   in the deck statistics.
 - **Sharing decks publicly** (a read-only link), and deck comments.
-- **"I have a real copy" per deck line**, so proxy PDFs can leave those cards out (design doc
-  14 listed it as a proxy option; nothing marks real copies yet).
+- ~~**"I have a real copy" per deck line**~~ **Planned (design doc 16):** the real collection,
+  and a proxy option to leave out cards you own for real.
 - **Problems checked in the browser** as cards are added (`deckProblems` is pure), instead of
   when the server answers.
+
+## Real collection (out of scope for design doc 16, 2026-10-01)
+
+- **Undo last import:** keep each import's changes so the newest one can be reversed in one
+  click. Re-importing the right file does the same job until then.
