@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { SetCode } from "@/modules/catalog";
 import {
   DraftId,
+  type AddBotError,
   type CreateDraftError,
   type JoinDraftError,
   type LeaveDraftError,
   type MakeDraftDeckError,
   type PickError,
   type PickForAwayError,
+  type RemoveBotError,
   type StartDraftError,
 } from "@/modules/drafts";
 import { getContainer } from "@/server/container";
@@ -26,7 +28,9 @@ type DraftError =
   | StartDraftError
   | PickError
   | PickForAwayError
-  | MakeDraftDeckError;
+  | MakeDraftDeckError
+  | AddBotError
+  | RemoveBotError;
 
 function errorMessage(error: DraftError): string {
   switch (error.kind) {
@@ -64,6 +68,10 @@ function errorMessage(error: DraftError): string {
       return "The store has no price for that booster, so there's no entry fee to charge.";
     case "InsufficientFunds":
       return `You have ${Cents.format(error.balance)}; the entry fee is ${Cents.format(error.required)}.`;
+    case "BotsForAdminsOnly":
+      return "Only an admin hosting the lobby can add bots.";
+    case "BotNotFound":
+      return "That bot has already left.";
     case "TooManyDecks":
       return `You have ${error.maximum} decks, the most allowed. Delete one first.`;
     default:
@@ -169,4 +177,24 @@ export async function makeDraftDeckAction(formData: FormData): Promise<void> {
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   revalidatePath("/decks");
   redirect(`/decks/${result.value}`);
+}
+
+/** An admin hosting a lobby adds a bot, paying its entry fee (a testing tool). */
+export async function addBotAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  const draftId = draftIdFrom(formData);
+  const result = await getContainer().drafts.addBot(actor, draftId);
+  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
+  refreshDraftPages(draftId);
+}
+
+export async function removeBotAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  const draftId = draftIdFrom(formData);
+  const result = await getContainer().drafts.removeBot(actor, {
+    draftId,
+    botNumber: Number(formData.get("botNumber")),
+  });
+  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
+  refreshDraftPages(draftId);
 }

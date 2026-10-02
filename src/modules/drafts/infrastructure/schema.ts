@@ -68,6 +68,8 @@ export const draftSeats = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => players.userId),
+    /** 0 for a person; 1, 2, … for the bots an admin added (user_id is then that admin). */
+    botNumber: integer("bot_number").notNull().default(0),
     seatNumber: integer("seat_number").notNull(),
     feePaidCents: bigint("fee_paid_cents", { mode: "number" }).notNull(),
     joinedAt: timestamptz("joined_at").notNull(),
@@ -83,11 +85,13 @@ export const draftSeats = pgTable(
     }),
   },
   (table) => [
-    primaryKey({ columns: [table.draftId, table.userId] }),
-    // One unfinished draft per player (rule 1), even if two joins race each other.
+    primaryKey({ columns: [table.draftId, table.userId, table.botNumber] }),
+    // One unfinished draft per player (rule 1), even if two joins race each other. Bots don't
+    // count: they belong to the admin who added them, who is seated too.
     uniqueIndex("draft_seats_one_active_idx")
       .on(table.userId)
-      .where(sql`${table.isActive}`),
+      .where(sql`${table.isActive} and ${table.botNumber} = 0`),
+    check("draft_seats_bot_number", sql`${table.botNumber} >= 0`),
     // The worker looks for passed deadlines every few seconds.
     index("draft_seats_deadline_idx").on(table.deadline),
     check("draft_seats_pack_source_known", sql`${table.packSource} in ('entryFee')`),
@@ -134,4 +138,23 @@ export const draftCards = pgTable(
       sql`(${table.pickedBySeat} is null) = (${table.pickNumber} is null) and (${table.pickNumber} is null) = (${table.pickedAt} is null)`,
     ),
   ],
+);
+
+/** Basic lands taken out of the packs and dealt to the players (design doc 17, rule 15). */
+export const draftBasics = pgTable(
+  "draft_basics",
+  {
+    draftId: bigint("draft_id", { mode: "number" })
+      .notNull()
+      .references(() => drafts.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId),
+    printingId: text("printing_id")
+      .notNull()
+      .references(() => printings.id),
+    finish: text("finish").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.draftId, table.position] })],
 );

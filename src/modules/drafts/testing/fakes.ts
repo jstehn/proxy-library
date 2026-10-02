@@ -3,6 +3,7 @@ import type { DeckId } from "@/modules/decks";
 import { Cents, type UserId } from "@/shared/kernel";
 import type { DraftCatalog, DraftNotifier, DraftRepository } from "../application/ports";
 import type { DraftCardFacts } from "../domain/auto-pick";
+import type { OwnedBasic } from "../domain/basics";
 import { DraftId, isUnfinished, type Draft, type NewDraft } from "../domain/draft";
 
 // In-memory stand-ins for the drafts ports.
@@ -66,7 +67,11 @@ const BASICS: ReadonlyArray<[Color, string]> = [
 ];
 
 /** A catalog where only the sample booster (TST play) can be drafted, at $5.49 a pack. */
-export function inMemoryDraftCatalog(facts: ReadonlyMap<PrintingId, DraftCardFacts>) {
+export function inMemoryDraftCatalog(
+  facts: ReadonlyMap<PrintingId, DraftCardFacts>,
+  /** The basics a player owns; tests usually read them from a collection fake. */
+  ownedBasicsOf: (userId: UserId) => Map<Color, OwnedBasic[]> = () => new Map(),
+) {
   const prices = new Map<string, Cents>([["TST/play", Cents.of(549)]]);
   const catalog: DraftCatalog = {
     async draftable(setCode: SetCode, boosterType: string) {
@@ -89,11 +94,16 @@ export function inMemoryDraftCatalog(facts: ReadonlyMap<PrintingId, DraftCardFac
     async basicLands() {
       return new Map(BASICS.map(([color, id]) => [color, PrintingId.of(id)]));
     },
+    async ownedBasics(userId) {
+      return ownedBasicsOf(userId);
+    },
   };
   return {
     ...catalog,
     /** The basic land printings the fake hands out, so a deck fake can know them. */
     basicPrintings: BASICS.map(([, id]) => id),
+    /** The fake's basic land printing for each color. */
+    basicPrinting: (color: Color) => BASICS.find(([each]) => each === color)?.[1] ?? "",
     removePrice: (setCode: string, boosterType: string) =>
       prices.delete(`${setCode}/${boosterType}`),
   };

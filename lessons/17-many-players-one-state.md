@@ -474,6 +474,60 @@ export const DRAFT_STYLES: Readonly<Record<DraftStyleName, DraftStyle>> = { boos
 Adding a style means adding a row and whatever new questions it needs answered. The draft stores
 its style's name, so old drafts keep their rules.
 
+## D4. Dealing basics: shuffle, then go round the table
+
+Nobody drafts a Forest. When the packs are opened, the basic lands come out and are **dealt**:
+everyone gets the same number, give or take one, and both which basics and who gets the spare ones
+are random. That's how you'd deal cards by hand, and the code does exactly that:
+
+```ts
+// src/modules/drafts/domain/basics.ts
+const order = shuffled(rng, players);
+return shuffled(rng, basics).map((card, index) => ({
+  ...card,
+  userId: order[index % order.length],
+}));
+```
+
+Shuffling the **players** too matters: without it, 7 basics among 3 players would always give the
+spare one to the first player.
+
+`shuffled` is the **Fisher–Yates shuffle** (in `src/shared/kernel/rng.ts`): walk from the end of
+the list and swap each item with a random one at or before it. Every order is equally likely. The
+tempting shortcut, `items.sort(() => rng.next() - 0.5)`, isn't: sorting with a random comparison
+favors some orders. The `rng` is seeded (lesson 05), so a test gets the same deal every time.
+
+**Python comparison:** `random.Random(seed).shuffle(items)`, which is also Fisher–Yates.
+
+## D5. A top-up with a ceiling
+
+A draft deck uses the basics you own. If it needs 10 Forests and you own 4, you get 6 for free,
+but a free top-up never takes you past 30. All of that is one line:
+
+```ts
+export function freeBasicsFor(needed: number, owned: number): number {
+  return Math.max(0, Math.min(needed, FREE_BASICS_CAP) - owned);
+}
+```
+
+Read it from the inside: `Math.min(needed, 30)` is "how many you should end up with", minus what
+you own is "how many are missing", and `Math.max(0, …)` turns "you already have more" into
+nothing. **Clamping** like this (a value held between a floor and a ceiling) is the safest way to
+write a limit: one expression, no `if` branches to get wrong.
+
+## D6. Bots: a test tool that's also a seat
+
+An admin can fill empty seats with bots to try a draft alone. A bot is just a seat with a
+`botNumber`, owned by the admin (who pays its fee and gets its cards). It picks with the same
+`chooseAutoPick` as the timer, the moment a pack reaches it, inside the same transaction as the
+pick that passed it the pack (`runBots`). So nothing ever waits on a bot, and there's no
+background job for them.
+
+One consequence to watch: `userId` stopped being unique per seat (an admin and their bots share
+it). Code that updated "the seat with this user id" would have updated the bots too. Seats are now
+replaced by **seat number**, and the database row is keyed by user _and_ bot number. When an id
+stops being unique, every lookup by it needs a second look.
+
 ---
 
 ## Common mistakes
@@ -493,6 +547,10 @@ its style's name, so old drafts keep their rules.
 - **Turns instead of queues.** Making everyone wait for the slowest player at every pick is a
   design bug, not a performance one.
 - **Rounding parts separately when they must add up.** Use the largest remainder.
+- **Shuffling with `sort(() => Math.random() - 0.5)`.** It's biased. Use Fisher–Yates, with a
+  seeded `Rng` so tests repeat.
+- **Assuming a column is unique because it was until now.** Adding bots made `userId` repeat
+  inside one draft; look up by the key that really is unique.
 
 ## Exercises
 
@@ -619,6 +677,24 @@ message goes out exactly when the change becomes visible, and never for a rollba
 
 </details>
 
+### 7. The ceiling (warm-up)
+
+Without looking at D5, write `freeBasicsFor(needed, owned)` with a cap of 30. What should
+`freeBasicsFor(10, 4)`, `freeBasicsFor(10, 12)` and `freeBasicsFor(40, 25)` give?
+
+<details><summary>Solution</summary>
+
+```ts
+function freeBasicsFor(needed: number, owned: number): number {
+  return Math.max(0, Math.min(needed, 30) - owned);
+}
+// freeBasicsFor(10, 4) → 6;  freeBasicsFor(10, 12) → 0;  freeBasicsFor(40, 25) → 5
+```
+
+These are the cases in `src/modules/drafts/domain/basics.test.ts`.
+
+</details>
+
 ## Recap
 
 - A shared, changing thing is an **aggregate**: lock it, change it with **pure functions**, save
@@ -633,6 +709,9 @@ message goes out exactly when the change becomes visible, and never for a rollba
 - Streams need **cleanup at both ends**: `useEffect`'s return and the request's `abort`.
 - A sensible automatic choice is a **scoring function** built from small, testable parts.
 - Parts that must add up are rounded with the **largest remainder** method.
+- Deal fairly with a **Fisher–Yates shuffle** of both the cards and the players; limit with a
+  **clamp** (`max(0, min(…))`).
+- When an id stops being unique (a person and their bots), **look things up by what is**.
 
 ## Further reading
 

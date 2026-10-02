@@ -1,17 +1,19 @@
 import { recordEvent } from "@/modules/activity";
-import type { Color, PrintingId } from "@/modules/catalog";
+import type { PrintingId } from "@/modules/catalog";
 import { receiveCards, type CardGain } from "@/modules/collection";
 import { createDeckInTransaction, type DeckCardInput } from "@/modules/decks";
 import type { Result, UserId } from "@/shared/kernel";
 import type { DraftCardFacts, FactsLookup } from "../domain/auto-pick";
-import { poolOf, type Draft, type DraftCard, type Seat } from "../domain/draft";
+import { planBasicLands } from "../domain/basics";
+import { isBot, poolOf, type Draft, type DraftCard, type Seat } from "../domain/draft";
 import { suggestBuild } from "../domain/suggested-build";
 import type { DeckId, TooManyDecks } from "@/modules/decks";
 import type { DraftsServices } from "./ports";
 
-// What happens after any change to a draft, in the same transaction: new picks go into players'
-// collections (rule 8), a finished draft makes everyone's deck (rule 12), and browsers hear about
-// it once the transaction commits (rule 14).
+// What happens after any change to a draft, in the same transaction: new picks and dealt basics go
+// into players' collections (rules 8 and 15; a bot's picks go to the admin who added it), a
+// finished draft makes every person's deck (rule 12), and browsers hear about it once the
+// transaction commits (rule 14).
 
 const cardKey = (packNumber: number, slot: number) => `${packNumber}/${slot}`;
 
@@ -62,15 +64,26 @@ export async function makeDeckFor(
   now: Date,
 ): Promise<Result<DeckId, TooManyDecks>> {
   const build = suggestBuild(poolOf(draft, seat.seatNumber), facts);
-  const basics = await services.draftCatalog.basicLands(draft.setCode);
   const setName = await services.draftCatalog.setName(draft.setCode);
+  // Basics come from the player's own collection, topped up for free when short (rule 17).
+  const lands = planBasicLands(
+    build.basics,
+    await services.draftCatalog.ownedBasics(seat.userId),
+    await services.draftCatalog.basicLands(draft.setCode),
+  );
+  if (lands.free.length > 0) {
+    await receiveCards(services, seat.userId, lands.free, {
+      source: "draft",
+      ref: `draft:${draft.id}`,
+      at: now,
+    });
+  }
   const card = (each: DraftCard, board: "main" | "side"): DeckCardInput => ({
     printingId: each.printingId,
     finish: each.finish,
     quantity: 1,
     board,
   });
-  const lands = basicLandCards(build.basics, basics);
   const made = await createDeckInTransaction(services, {
     ownerId: seat.userId,
     name: `${setName} draft, ${DATE_FORMAT.format(draft.startedAt ?? now)}`,
@@ -78,7 +91,7 @@ export async function makeDeckFor(
     origin: { kind: "draft", draftId: draft.id },
     cards: [
       ...build.main.map((each) => card(each, "main")),
-      ...lands,
+      ...lands.deck.map((land) => ({ ...land, board: "main" as const })),
       ...build.side.map((each) => card(each, "side")),
     ],
     now,
@@ -87,38 +100,14 @@ export async function makeDeckFor(
   return made;
 }
 
-/**
- * The suggested basics as deck cards. A color the catalog has no basic printing for (a partly
- * synced catalog) gives its lands to the most-played color that has one, so the deck still has
- * 40 cards.
- */
-function basicLandCards(
-  wanted: ReadonlyArray<{ color: Color; count: number }>,
-  printings: ReadonlyMap<Color, PrintingId>,
-): DeckCardInput[] {
-  const counts = new Map<PrintingId, number>();
-  const available = [...wanted]
-    .filter(({ color }) => printings.has(color))
-    .sort((a, b) => b.count - a.count);
-  const fallback = available[0]?.color ?? [...printings.keys()][0];
-  for (const { color, count } of wanted) {
-    const printingId =
-      printings.get(color) ?? (fallback === undefined ? undefined : printings.get(fallback));
-    if (printingId === undefined || count === 0) continue;
-    counts.set(printingId, (counts.get(printingId) ?? 0) + count);
-  }
-  return [...counts].map(([printingId, quantity]) => ({
-    printingId,
-    finish: "nonfoil",
-    quantity,
-    board: "main",
-  }));
-}
-
 async function finish(services: DraftsServices, draft: Draft, now: Date): Promise<void> {
   const facts = await loadFacts(services, draft);
   // A player at the deck limit gets no deck now; the draft page offers "Make a deck" later.
-  for (const seat of draft.seats) await makeDeckFor(services, draft, seat, facts, now);
+  for (const seat of draft.seats.filter((each) => !isBot(each))) {
+    await makeDeckFor(services, draft, seat, facts, now);
+  }
+  // A draft with bots is an admin's test: the feed doesn't announce it.
+  if (draft.seats.some(isBot)) return;
   await recordEvent(
     services,
     {
@@ -141,12 +130,19 @@ export async function settle(
   const picks = newPicks(before, after);
   const userOf = new Map<number, UserId>(after.seats.map((seat) => [seat.seatNumber, seat.userId]));
   const gains = new Map<UserId, CardGain[]>();
-  for (const { seat, card } of picks) {
-    const userId = userOf.get(seat);
-    if (userId === undefined) throw new Error(`a pick by seat ${seat}, which isn't at the table`);
+  function give(userId: UserId, card: Pick<DraftCard, "printingId" | "finish">) {
     const list = gains.get(userId) ?? [];
     list.push({ printingId: card.printingId, finish: card.finish, quantity: 1 });
     gains.set(userId, list);
+  }
+  for (const { seat, card } of picks) {
+    const userId = userOf.get(seat);
+    if (userId === undefined) throw new Error(`a pick by seat ${seat}, which isn't at the table`);
+    give(userId, card);
+  }
+  // The basics taken out of the packs, dealt when the draft started.
+  if (before.basicsHandedOut.length === 0) {
+    for (const basic of after.basicsHandedOut) give(basic.userId, basic);
   }
   for (const [userId, cards] of gains) {
     await receiveCards(services, userId, cards, {

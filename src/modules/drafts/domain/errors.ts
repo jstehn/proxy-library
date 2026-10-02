@@ -23,3 +23,6 @@ export type TimerInvalid = Readonly<{ kind: "TimerInvalid"; minimum: number; max
 export type BoosterNotDraftable = Readonly<{ kind: "BoosterNotDraftable" }>;
 /** The store has no price for this booster, so there's no entry fee to charge. */
 export type PriceUnavailable = Readonly<{ kind: "PriceUnavailable" }>;
+/** Bots are a testing tool: only an admin hosting the lobby can add them. */
+export type BotsForAdminsOnly = Readonly<{ kind: "BotsForAdminsOnly" }>;
+export type BotNotFound = Readonly<{ kind: "BotNotFound" }>;

@@ -9,10 +9,12 @@ import { Alert, SubmitButton } from "@/ui/form";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "../../_components/card-tile";
 import {
+  addBotAction,
   joinDraftAction,
   leaveDraftAction,
   makeDraftDeckAction,
   pickForAwayAction,
+  removeBotAction,
   startDraftAction,
 } from "../actions";
 import { boosterLabel, timerLabel } from "../labels";
@@ -68,7 +70,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
       </header>
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
 
-      {view.status === "lobby" && <Lobby view={view} />}
+      {view.status === "lobby" && <Lobby view={view} canAddBots={actor.isAdmin && view.isHost} />}
       {view.status === "drafting" && (
         <Drafting view={view} printings={printings} serverNow={now.toISOString()} />
       )}
@@ -82,7 +84,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
   );
 }
 
-function Lobby(props: { view: DraftView }) {
+function Lobby(props: { view: DraftView; canAddBots: boolean }) {
   const { view } = props;
   const isSeated = view.you !== null;
   const hidden = (name: string, value: number) => <input type="hidden" name={name} value={value} />;
@@ -94,10 +96,22 @@ function Lobby(props: { view: DraftView }) {
       <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
         {view.seats.map((seat) => (
           <li key={seat.seatNumber} className="flex items-center gap-2 py-2 text-sm">
-            <Presence away={seat.away} />
+            {seat.botNumber === null ? <Presence away={seat.away} /> : <BotMark />}
             <span className="font-medium">{seat.name}</span>
             {seat.isHost && <span className="text-xs text-zinc-500">host</span>}
             {seat.isYou && <span className="text-xs text-zinc-500">you</span>}
+            {seat.botNumber !== null && (
+              <span className="text-xs text-zinc-500">its picks go to {view.hostName}</span>
+            )}
+            {seat.botNumber !== null && view.isHost && (
+              <form action={removeBotAction} className="ml-auto">
+                {hidden("draftId", view.id)}
+                {hidden("botNumber", seat.botNumber)}
+                <button type="submit" className="text-xs underline">
+                  Remove (refund)
+                </button>
+              </form>
+            )}
           </li>
         ))}
       </ul>
@@ -108,6 +122,14 @@ function Lobby(props: { view: DraftView }) {
             {hidden("draftId", view.id)}
             <SubmitButton pendingText="Joining…">
               Join for {Cents.format(view.entryFee)}
+            </SubmitButton>
+          </form>
+        )}
+        {props.canAddBots && view.seats.length < view.maxSeats && (
+          <form action={addBotAction}>
+            {hidden("draftId", view.id)}
+            <SubmitButton tone="secondary" pendingText="Adding…">
+              Add a bot ({Cents.format(view.entryFee)})
             </SubmitButton>
           </form>
         )}
@@ -130,9 +152,21 @@ function Lobby(props: { view: DraftView }) {
       </div>
       <p className="text-xs text-zinc-500">
         Everyone opens {view.packsPerPlayer} packs, one per round. Packs go left, then right, then
-        left. Keep this page open: when the host starts, your first pack appears here.
+        left. Basic lands are taken out of the packs and dealt out evenly to the players instead.
+        Keep this page open: when the host starts, your first pack appears here.
       </p>
     </section>
+  );
+}
+
+/** Marks a bot's seat where a person's shows here or away. */
+function BotMark() {
+  return (
+    <span
+      title="bot"
+      aria-label="bot"
+      className="inline-block h-2 w-2 shrink-0 rounded-sm bg-violet-500"
+    />
   );
 }
 
@@ -207,6 +241,13 @@ function Drafting(props: {
       )}
 
       {you !== null && <Picks picks={you.picks} printings={printings} />}
+      {you !== null && you.basicsReceived.length > 0 && (
+        <p className="text-xs text-zinc-500">
+          Basic lands aren&apos;t drafted: {basicCount(you)} from the packs were dealt to you and
+          are in your collection. Your draft deck will use your own basics, topped up if you&apos;re
+          short.
+        </p>
+      )}
     </div>
   );
 }
@@ -235,7 +276,7 @@ function Table(props: { view: DraftView; serverNow: string }) {
             }`}
           >
             <span className="flex items-center gap-1.5 font-medium">
-              <Presence away={seat.away} />
+              {seat.botNumber === null ? <Presence away={seat.away} /> : <BotMark />}
               {seat.name}
               {seat.isYou && <span className="text-xs font-normal text-zinc-500">you</span>}
             </span>
@@ -315,6 +356,9 @@ function Picks(props: { picks: readonly PickedCard[]; printings: Map<string, Pri
   );
 }
 
+const basicCount = (you: NonNullable<DraftView["you"]>) =>
+  you.basicsReceived.reduce((sum, basic) => sum + basic.quantity, 0);
+
 const CURVE_LABELS = ["1", "2", "3", "4", "5", "6+"];
 
 /** A small bar chart of how many spells cost 1, 2, … 6 or more. */
@@ -353,7 +397,10 @@ function Finished(props: { view: DraftView; printings: Map<string, PrintingCard>
         <>
           <section className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <p className="text-sm">
-              Your {you.picks.length} cards are in your collection.
+              Your {you.picks.length} cards are in your collection
+              {you.basicsReceived.length > 0 &&
+                `, with ${basicCount(you)} basic lands dealt from the packs`}
+              {you.botPicks > 0 && `, and the ${you.botPicks} cards your bots picked`}.
               {you.deckId !== null
                 ? " Your draft deck has a suggested 40-card build to start from."
                 : ""}

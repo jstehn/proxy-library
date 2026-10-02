@@ -1,8 +1,9 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
-import { samplePacks, sampleLobby, START } from "../testing/samples";
+import { samplePacks, sampleLobby, samplePrintingId, START } from "../testing/samples";
 import {
+  addBot,
   applyPick,
   checkCanStart,
   checkSeats,
@@ -12,6 +13,8 @@ import {
   leaveDraft,
   poolOf,
   queueOf,
+  removeBot,
+  seatOf,
   startDraft,
   type Draft,
 } from "./draft";
@@ -236,5 +239,72 @@ describe("any table, any order of picks", () => {
       }),
       { numRuns: 150 },
     );
+  });
+});
+
+describe("bots (rule 16)", () => {
+  const admin = { userId: alice, isAdmin: true };
+
+  it("only an admin hosting the lobby can add them, while there's room", () => {
+    const lobby = sampleLobby(["alice", "bob"], { maxSeats: 3 });
+    expect(addBot(lobby, { userId: alice, isAdmin: false }, at(5))).toEqual({
+      ok: false,
+      error: { kind: "BotsForAdminsOnly" },
+    });
+    expect(addBot(lobby, { userId: bob, isAdmin: true }, at(5))).toEqual({
+      ok: false,
+      error: { kind: "NotHost" },
+    });
+    const withBot = unwrap(addBot(lobby, admin, at(5)));
+    expect(withBot.seats.map((seat) => [seat.userId, seat.botNumber])).toEqual([
+      ["alice", null],
+      ["bob", null],
+      ["alice", 1],
+    ]);
+    expect(addBot(withBot, admin, at(6))).toMatchObject({
+      ok: false,
+      error: { kind: "DraftFull" },
+    });
+  });
+
+  it("belong to the admin, but don't count as the admin's own seat", () => {
+    const lobby = unwrap(
+      addBot(unwrap(addBot(sampleLobby(["alice"]), admin, at(1))), admin, at(2)),
+    );
+    expect(seatOf(lobby, alice)?.botNumber).toBeNull();
+    expect(lobby.seats.map((seat) => seat.botNumber)).toEqual([null, 1, 2]);
+  });
+
+  it("can be removed for a refund, and the host closing the lobby refunds them with their own fee", () => {
+    const lobby = unwrap(
+      addBot(unwrap(addBot(sampleLobby(["alice", "bob"]), admin, at(1))), admin, at(2)),
+    );
+    const removed = unwrap(removeBot(lobby, alice, 1));
+    expect(removed.refund).toEqual({ userId: alice, amount: 1647 });
+    expect(removed.draft.seats.map((seat) => seat.botNumber)).toEqual([null, null, 2]);
+    expect(removeBot(lobby, alice, 9)).toEqual({ ok: false, error: { kind: "BotNotFound" } });
+    expect(removeBot(lobby, bob, 1)).toEqual({ ok: false, error: { kind: "NotHost" } });
+
+    const closed = unwrap(leaveDraft(lobby, alice));
+    expect(closed.refunds).toEqual([
+      { userId: alice, amount: 3 * 1647 },
+      { userId: bob, amount: 1647 },
+    ]);
+  });
+
+  it("never get a deadline", () => {
+    const lobby = unwrap(addBot(sampleLobby(["alice"]), admin, at(1)));
+    const draft = startDraft(lobby, samplePacks(2, 3), at(60));
+    expect(draft.seats.map((seat) => seat.deadline)).toEqual([at(150), null]);
+  });
+});
+
+describe("dealt basics", () => {
+  it("are kept on the started draft", () => {
+    const basics = [
+      { userId: alice, printingId: samplePrintingId("forest"), finish: "nonfoil" as const },
+    ];
+    const draft = startDraft(sampleLobby(["alice", "bob"]), samplePacks(2, 3), at(60), basics);
+    expect(draft.basicsHandedOut).toEqual(basics);
   });
 });

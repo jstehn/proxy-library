@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
-import { PrintingId, SetCode } from "@/modules/catalog";
+import { PrintingId, SetCode, type Color } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
@@ -10,17 +10,18 @@ import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
 import { Cents, UserId } from "@/shared/kernel";
 import { inMemoryUnitOfWork, manualClock } from "@/shared/kernel/testing";
 import type { DraftCardFacts } from "../domain/auto-pick";
+import type { OwnedBasic } from "../domain/basics";
 import { currentPack, poolOf, type Draft, type DraftId } from "../domain/draft";
 import { inMemoryDraftCatalog, inMemoryDraftRepository, recordingNotifier } from "../testing/fakes";
 import { makeDrafts } from "./drafts";
 import { removeFromLobbies } from "./remove-from-lobbies";
 
-function actor(id: string): Actor {
+function actor(id: string, isAdmin = false): Actor {
   return {
     userId: UserId.of(id),
     username: id as Actor["username"],
     displayName: id as Actor["displayName"],
-    isAdmin: false,
+    isAdmin,
     canSelfFund: false,
     mustChangePassword: false,
   };
@@ -43,7 +44,9 @@ const DRAFT_FACTS = new Map<PrintingId, DraftCardFacts>(
       colors: facts.colors,
       manaCost: `{2}${facts.colors.map((color) => `{${color}}`).join("")}`,
       manaValue: 2 + facts.colors.length,
-      typeLine: facts.isBasicLand ? "Basic Land — Forest" : "Creature — Sample",
+      typeLine: facts.isBasicLand
+        ? `Basic Land — ${facts.name === "l-island" ? "Island" : "Forest"}`
+        : "Creature — Sample",
       producedMana: [],
       marketPrice: facts.marketPrice.nonfoil ?? null,
     },
@@ -62,12 +65,43 @@ let services: Parameters<typeof removeFromLobbies>[0];
 let drafts: ReturnType<typeof makeDrafts>;
 let seedsHandedOut: number;
 
+/** Which basic land each basic printing in these tests is: the sample pack's and the catalog's. */
+const BASIC_COLOR_OF: Readonly<Record<string, Color>> = {
+  "l-forest": "G",
+  "l-island": "U",
+  "basic-plains": "W",
+  "basic-island": "U",
+  "basic-swamp": "B",
+  "basic-mountain": "R",
+  "basic-forest": "G",
+};
+
+/** The basics a player owns, read from the collection fake. */
+function ownedBasicsOf(userId: UserId): Map<Color, OwnedBasic[]> {
+  const owned = new Map<Color, OwnedBasic[]>();
+  for (const [id, color] of Object.entries(BASIC_COLOR_OF)) {
+    for (const finish of ["nonfoil", "foil"] as const) {
+      const quantity = collection.quantity(userId, id, finish);
+      if (quantity === 0) continue;
+      owned.set(color, [
+        ...(owned.get(color) ?? []),
+        { printingId: PrintingId.of(id), finish, quantity },
+      ]);
+    }
+  }
+  return owned;
+}
+
+/** How many of one color's basics a player owns, every printing and finish. */
+const basicsOwned = (userId: UserId, color: Color) =>
+  (ownedBasicsOf(userId).get(color) ?? []).reduce((sum, copy) => sum + copy.quantity, 0);
+
 beforeEach(async () => {
   clock = manualClock(START);
   wallet = inMemoryWalletServices(["alice", "bob", "carol", "broke"]);
   collection = inMemoryCollectionRepository();
   repository = inMemoryDraftRepository();
-  catalog = inMemoryDraftCatalog(DRAFT_FACTS);
+  catalog = inMemoryDraftCatalog(DRAFT_FACTS, ownedBasicsOf);
   notifier = recordingNotifier();
   deckRepository = inMemoryDeckRepository();
   events = inMemoryEventRecorder();
@@ -243,7 +277,18 @@ describe("starting", () => {
       "seed-3",
       "seed-6",
     ]);
-    expect(draft.packs.every((pack) => pack.cards.length === 14)).toBe(true);
+    // The basics left the packs and were dealt out, one each give or take one (rule 15).
+    const isBasic = (id: string) => id in BASIC_COLOR_OF;
+    expect(draft.packs.every((pack) => pack.cards.every((card) => !isBasic(card.printingId)))).toBe(
+      true,
+    );
+    const cardsInPacks = draft.packs.reduce((sum, pack) => sum + pack.cards.length, 0);
+    expect(cardsInPacks + draft.basicsHandedOut.length).toBe(6 * 14);
+    const dealt = [alice, bob].map(
+      (player) => draft.basicsHandedOut.filter((basic) => basic.userId === player.userId).length,
+    );
+    expect(Math.abs(dealt[0] - dealt[1])).toBeLessThanOrEqual(1);
+    expect(collection.quantity(alice.userId, "l-forest", "nonfoil")).toBeGreaterThan(0);
   });
 });
 
@@ -279,7 +324,8 @@ describe("picking", () => {
     }
     const draft = draftOf(draftId);
     expect(draft.status).toBe("finished");
-    expect(poolOf(draft, 0)).toHaveLength(42);
+    const pool = poolOf(draft, 0).length;
+    expect(pool + poolOf(draft, 1).length + draft.basicsHandedOut.length).toBe(84);
 
     for (const player of [alice, bob]) {
       const deckId = repository.deckOf(draftId, player.userId);
@@ -289,7 +335,15 @@ describe("picking", () => {
       const main = (deck?.entries ?? []).filter((entry) => entry.board === "main");
       const side = (deck?.entries ?? []).filter((entry) => entry.board === "side");
       expect(main.reduce((sum, entry) => sum + entry.quantity, 0)).toBe(40);
-      expect(side.reduce((sum, entry) => sum + entry.quantity, 0)).toBe(42 - 23);
+      expect(side.reduce((sum, entry) => sum + entry.quantity, 0)).toBe(
+        poolOf(draft, player === alice ? 0 : 1).length - 23,
+      );
+      // Its basics are ones the player owns: dealt from the packs, or given for free (rule 17).
+      for (const entry of main) {
+        const color = BASIC_COLOR_OF[entry.oracleId.replace("oracle-", "")];
+        if (color === undefined) continue;
+        expect(basicsOwned(player.userId, color)).toBeGreaterThanOrEqual(entry.quantity);
+      }
     }
     expect(events.recorded.map(({ event }) => event)).toEqual([
       { kind: "draft", actorId: "alice", setName: "Test Set", players: 2 },
@@ -312,7 +366,11 @@ describe("the pick timer", () => {
     const draft = draftOf(draftId);
     expect(poolOf(draft, 0).map((card) => card.pick?.auto)).toEqual([true]);
     // The auto-picked card went into the collection like any other.
-    expect(collection.log.filter((entry) => entry.source === "draft")).toHaveLength(2);
+    const [autoPicked] = poolOf(draft, 0);
+    expect(collection.quantity(alice.userId, autoPicked.printingId, autoPicked.finish)).toBe(
+      1 +
+        draft.basicsHandedOut.filter((basic) => basic.printingId === autoPicked.printingId).length,
+    );
   });
 
   it("gives an away player grace first", async () => {
@@ -372,5 +430,63 @@ describe("removeFromLobbies (a reset)", () => {
     await drafts.startDraft(alice, lobby);
     expect(await removeFromLobbies(services, bob.userId, clock.now())).toBe(0);
     expect(draftOf(lobby).seats).toHaveLength(2);
+  });
+});
+
+describe("drafting with bots (an admin's test, rule 16)", () => {
+  const admin = actor("alice", true);
+
+  it("lets an admin host fill seats with bots, paying their fees", async () => {
+    const draftId = await host();
+    expect(await drafts.addBot(bob, draftId)).toEqual({
+      ok: false,
+      error: { kind: "BotsForAdminsOnly" },
+    });
+    expect(await drafts.addBot(admin, draftId)).toEqual({ ok: true, value: undefined });
+    expect(await drafts.addBot(admin, draftId)).toEqual({ ok: true, value: undefined });
+    expect(await balance(alice)).toBe(5000 - 3 * FEE);
+    expect(wallet.services.wallets.entriesFor(alice.userId).at(-1)?.note).toBe(
+      "Test Set draft (Bot 2)",
+    );
+
+    expect(await drafts.removeBot(admin, { draftId, botNumber: 2 })).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(await balance(alice)).toBe(5000 - 2 * FEE);
+  });
+
+  it("drafts alone to the end: bots pick at once, and their cards go to the admin", async () => {
+    const draftId = await host();
+    await drafts.addBot(admin, draftId);
+    await drafts.addBot(admin, draftId);
+    expect((await drafts.startDraft(admin, draftId)).ok).toBe(true);
+
+    for (let turn = 0; turn < 100 && draftOf(draftId).status === "drafting"; turn += 1) {
+      const choice = firstChoice(draftId, alice);
+      if (choice === null) throw new Error("the bots should never keep Alice waiting");
+      await drafts.makePick(admin, choice);
+    }
+    const draft = draftOf(draftId);
+    expect(draft.status).toBe("finished");
+    expect(draft.packs.flatMap((pack) => pack.cards).every((card) => card.pick !== null)).toBe(
+      true,
+    );
+    expect(poolOf(draft, 1).every((card) => card.pick?.auto)).toBe(true);
+
+    // Every card, the bots' picks and all the dealt basics, is now Alice's.
+    const received = collection.log
+      .filter((entry) => entry.userId === alice.userId && entry.ref === `draft:${draftId}`)
+      .flatMap((entry) => entry.gains);
+    const count = (gains: typeof received) => gains.reduce((sum, gain) => sum + gain.quantity, 0);
+    // Free basics for the deck are the catalog's printings ("basic-…"); dealt ones came in packs.
+    const free = received.filter((gain) => gain.printingId.startsWith("basic-"));
+    const fromPacks = draft.packs.reduce((sum, pack) => sum + pack.cards.length, 0);
+    expect(count(received) - count(free)).toBe(fromPacks + draft.basicsHandedOut.length);
+    expect(draft.basicsHandedOut.every((basic) => basic.userId === alice.userId)).toBe(true);
+
+    // One deck, Alice's; and the feed stays quiet about a test.
+    expect(repository.deckOf(draftId, alice.userId)).toBeDefined();
+    expect(events.recorded).toEqual([]);
   });
 });

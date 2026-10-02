@@ -9,6 +9,6 @@ export type { ColorCombination, ManaColor } from "./colors";
 export { Cents } from "./money";
 export { ok, err } from "./result";
 export type { Ok, Err, Result } from "./result";
-export { seededRng, randomInt, weightedPick, weightedSample } from "./rng";
+export { seededRng, randomInt, shuffled, weightedPick, weightedSample } from "./rng";
 export type { Rng, Weighted } from "./rng";
 export type { UnitOfWork } from "./unit-of-work";

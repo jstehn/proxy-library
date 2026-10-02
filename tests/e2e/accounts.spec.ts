@@ -578,7 +578,11 @@ test("two players draft live together, and each gets a draft deck (design doc 17
   await rin.getByRole("button", { name: "Start the draft" }).click();
   // The admin's page moves to the first pick by itself.
   await expect(admin.getByRole("heading", { name: /^Round 1 of 3, pick 1/ })).toBeVisible();
-  await expect(admin.getByRole("list", { name: "Your pack" }).getByRole("button")).toHaveCount(14);
+  // Basic lands were taken out of the packs (and dealt to the players), so a pack has 14 cards
+  // or fewer.
+  const packSize = await admin.getByRole("list", { name: "Your pack" }).getByRole("button").count();
+  expect(packSize).toBeGreaterThanOrEqual(12);
+  expect(packSize).toBeLessThanOrEqual(14);
 
   // Both draft every card. Halfway, Rin reloads the page and carries on where she was.
   let picks = 0;
@@ -593,10 +597,14 @@ test("two players draft live together, and each gets a draft deck (design doc 17
       await expect(rin.getByRole("heading", { name: /^Round 2 of 3/ })).toBeVisible();
     }
   }
-  expect(picks).toBe(84); // 2 players × 3 packs × 14 cards
+  expect(picks).toBeGreaterThan(70); // 2 players × 3 packs × 14 cards, less the basics
 
   // Each player's deck is waiting: a 40-card limited deck with a Draft badge.
-  await expect(rin.getByText("Your 42 cards are in your collection.")).toBeVisible();
+  await expect(
+    rin.getByText(
+      /Your \d+ cards are in your collection, with \d+ basic lands dealt from the packs/,
+    ),
+  ).toBeVisible();
   await rin.getByRole("link", { name: "Open your deck" }).click();
   await expect(rin.getByText(/Limited/).first()).toBeVisible();
   await rin.goto("/decks?show=drafts");
@@ -609,4 +617,35 @@ test("two players draft live together, and each gets a draft deck (design doc 17
 
   await rinContext.close();
   await adminContext.close();
+});
+
+test("an admin tests a draft alone against a bot, which picks at once", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const context = await browser.newContext();
+  const admin = await context.newPage();
+  await signIn(admin, "admin");
+  // Two entry fees (the admin's and the bot's): the admin gives themselves the money.
+  await openAdminPage(admin, "Players");
+  const adminMoney = admin.getByRole("listitem").filter({ hasText: "@admin" });
+  await adminMoney.getByLabel("Amount for @admin").fill("100");
+  await adminMoney.getByLabel("Note for @admin").fill("Testing drafts");
+  await adminMoney.getByRole("button", { name: "Give" }).click();
+  await expect(adminMoney.getByText("Gave $100.00.")).toBeVisible();
+
+  await admin.getByRole("link", { name: "Drafts", exact: true }).click();
+  await admin.getByLabel("Players, at most").selectOption("2");
+  await admin.getByLabel("Pick timer").selectOption("off");
+  await admin.getByRole("button", { name: "Host and pay the fee" }).click();
+  await admin.getByRole("button", { name: /^Add a bot/ }).click();
+  await expect(admin.getByText("Bot 1")).toBeVisible();
+  await admin.getByRole("button", { name: "Start the draft" }).click();
+  await expect(admin.getByRole("heading", { name: /^Round 1 of 3, pick 1/ })).toBeVisible();
+
+  // The bot never keeps the admin waiting: there's always a pack until the draft ends.
+  for (let turn = 0; turn < 100; turn += 1) {
+    if (await admin.getByText(/Your \d+ cards are in your collection/).isVisible()) break;
+    expect(await pickFirstCard(admin)).toBe(true);
+  }
+  await expect(admin.getByText(/and the \d+ cards your bots picked/)).toBeVisible();
+  await context.close();
 });

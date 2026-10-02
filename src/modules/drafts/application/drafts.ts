@@ -3,16 +3,20 @@ import type { SetCode } from "@/modules/catalog";
 import type { DeckId, TooManyDecks } from "@/modules/decks";
 import { openBooster } from "@/modules/packs";
 import { receive, spend, type InsufficientFunds } from "@/modules/wallet";
-import { Cents, err, ok, type Result } from "@/shared/kernel";
-import { chooseAutoPick, type FactsLookup } from "../domain/auto-pick";
+import { Cents, err, ok, seededRng, type Result } from "@/shared/kernel";
+import { chooseAutoPick, isBasicLand, type FactsLookup } from "../domain/auto-pick";
+import { dealBasics, takeOutBasics } from "../domain/basics";
 import {
+  addBot as addBotSeat,
   applyPick,
   checkCanStart,
   checkSeats,
   checkTimer,
   joinDraft as joinTable,
   leaveDraft as leaveTable,
+  isBot,
   newDraft,
+  removeBot as removeBotSeat,
   seatOf,
   seatsInOrder,
   startDraft as startTable,
@@ -23,6 +27,8 @@ import {
 import type {
   AlreadyInADraft,
   BoosterNotDraftable,
+  BotNotFound,
+  BotsForAdminsOnly,
   DraftFull,
   DraftNotFinished,
   DraftNotFound,
@@ -42,6 +48,7 @@ import { DRAFT_STYLES } from "../domain/style";
 import {
   markPresence as markSeatPresence,
   pickForAway as pickForAwaySeat,
+  runBots,
   runTimers as runTableTimers,
   type ChooseCard,
 } from "../domain/timers";
@@ -74,6 +81,9 @@ export type StartDraftError =
 export type PickError = DraftNotFound | NotSeated | DraftNotRunning | StalePick;
 export type PickForAwayError = DraftNotFound | NotHost | DraftNotRunning | NotAway | NothingToPick;
 export type MakeDraftDeckError = DraftNotFound | NotSeated | DraftNotFinished | TooManyDecks;
+export type AddBotError =
+  DraftNotFound | BotsForAdminsOnly | NotHost | DraftNotOpen | DraftFull | InsufficientFunds;
+export type RemoveBotError = DraftNotFound | NotHost | DraftNotOpen | BotNotFound;
 
 export type PickInput = Readonly<{ draftId: DraftId; packNumber: number; slot: number }>;
 export type TimerReport = Readonly<{ drafts: number; autoPicks: number; extensions: number }>;
@@ -84,6 +94,16 @@ const choosingWith =
     chooseAutoPick(pack, pool, facts);
 
 /** Rule 1: one unfinished draft per player. */
+/**
+ * Lets every bot with a pack in front of it pick, until none has (rule 16). Bots answer at once,
+ * so this runs after anything that can pass a pack to one.
+ */
+async function letBotsPick(services: DraftsServices, draft: Draft, now: Date): Promise<Draft> {
+  if (draft.status !== "drafting" || !draft.seats.some(isBot)) return draft;
+  const facts = await loadFacts(services, draft);
+  return runBots(draft, now, choosingWith(facts)).draft;
+}
+
 async function checkNotInADraft(
   services: DraftsServices,
   actor: Actor,
@@ -92,12 +112,18 @@ async function checkNotInADraft(
   return active === null ? ok() : err({ kind: "AlreadyInADraft", draftId: active });
 }
 
-async function chargeFee(services: DraftsServices, draft: Draft, actor: Actor, now: Date) {
+async function chargeFee(
+  services: DraftsServices,
+  draft: Draft,
+  actor: Actor,
+  now: Date,
+  forWhom = "",
+) {
   return spend(services, {
     userId: actor.userId,
     amount: draft.entryFee,
     kind: "draft_entry",
-    note: `${await services.draftCatalog.setName(draft.setCode)} draft`,
+    note: `${await services.draftCatalog.setName(draft.setCode)} draft${forWhom}`,
     ref: `draft:${draft.id}`,
     now,
   });
@@ -216,7 +242,20 @@ export function makeDrafts(dependencies: DraftsDependencies) {
         }
         opened.push(packs);
       }
-      await settle(services, draft, startTable(draft, opened, now), now);
+      // Basic lands leave the packs and are dealt to the people at the table (rule 15).
+      const facts = await services.draftCatalog.cardFacts(
+        opened.flat().flatMap((pack) => pack.cards.map((card) => card.printingId)),
+      );
+      const { packs, basics } = takeOutBasics(opened, (printingId) => {
+        const card = facts.get(printingId);
+        return card !== undefined && isBasicLand(card);
+      });
+      const people = seatsInOrder(draft)
+        .filter((seat) => !isBot(seat))
+        .map((seat) => seat.userId);
+      const dealt = dealBasics(basics, people, seededRng(seeds.newSeed()));
+      const started = startTable(draft, packs, now, dealt);
+      await settle(services, draft, await letBotsPick(services, started, now), now);
       return ok();
     });
   }
@@ -238,7 +277,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
       if (!picked.ok) return picked;
       // Picking also shows the player is here.
       const here = markSeatPresence(picked.value.draft, actor.userId, true, now);
-      await settle(services, draft, here, now);
+      await settle(services, draft, await letBotsPick(services, here, now), now);
       return ok();
     });
   }
@@ -253,7 +292,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
       const facts = await loadFacts(services, draft);
       const picked = pickForAwaySeat(draft, input.seatNumber, now, choosingWith(facts));
       if (!picked.ok) return picked;
-      await settle(services, draft, picked.value.draft, now);
+      await settle(services, draft, await letBotsPick(services, picked.value.draft, now), now);
       return ok();
     });
   }
@@ -287,11 +326,48 @@ export function makeDrafts(dependencies: DraftsDependencies) {
         const outcome = runTableTimers(draft, now, choosingWith(facts));
         autoPicks += outcome.autoPicks.length;
         extensions += outcome.extensions;
-        await settle(services, draft, outcome.draft, now);
+        await settle(services, draft, await letBotsPick(services, outcome.draft, now), now);
         return ok();
       });
     }
     return { drafts: due.ok ? due.value.length : 0, autoPicks, extensions };
+  }
+
+  /**
+   * An admin hosting a lobby adds a bot, paying its entry fee; its picks will go to them
+   * (rule 16). A testing tool: it lets one person try a whole draft.
+   */
+  async function addBot(actor: Actor, draftId: DraftId): Promise<Result<void, AddBotError>> {
+    return withDraft<void, AddBotError>(draftId, async (services, draft, now) => {
+      const added = addBotSeat(draft, actor, now);
+      if (!added.ok) return added;
+      const bot = added.value.seats[added.value.seats.length - 1];
+      const paid = await chargeFee(services, draft, actor, now, ` (Bot ${bot.botNumber})`);
+      if (!paid.ok) return paid;
+      await settle(services, draft, added.value, now);
+      return ok();
+    });
+  }
+
+  /** The host takes a bot out of the lobby, with its fee refunded. */
+  async function removeBot(
+    actor: Actor,
+    input: { draftId: DraftId; botNumber: number },
+  ): Promise<Result<void, RemoveBotError>> {
+    return withDraft<void, RemoveBotError>(input.draftId, async (services, draft, now) => {
+      const removed = removeBotSeat(draft, actor.userId, input.botNumber);
+      if (!removed.ok) return removed;
+      await receive(services, {
+        userId: removed.value.refund.userId,
+        amount: removed.value.refund.amount,
+        kind: "draft_refund",
+        note: `${await services.draftCatalog.setName(draft.setCode)} draft (Bot ${input.botNumber})`,
+        ref: `draft:${draft.id}`,
+        now,
+      });
+      await settle(services, draft, removed.value.draft, now);
+      return ok();
+    });
   }
 
   /** Makes the draft deck again, for a player who had no room, or deleted it. */
@@ -317,6 +393,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     markPresence,
     runTimers,
     makeDraftDeck,
+    addBot,
+    removeBot,
   };
 }
 

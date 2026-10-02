@@ -6,7 +6,8 @@ import { SetCode } from "@/modules/catalog";
 import { DraftId, makeDrafts, removeFromLobbies, type Draft } from "@/modules/drafts";
 import { pgDraftSubscriptions } from "@/modules/drafts/infrastructure";
 import { loadConfig } from "@/shared/config";
-import { err } from "@/shared/kernel";
+import { makeWallet } from "@/modules/wallet";
+import { Cents, err } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import {
   actor,
@@ -100,9 +101,26 @@ describe("a whole draft", () => {
     expect(draft.status).toBe("finished");
     const cardsDealt = await count("draft_cards", `draft_id = ${draftId}`);
     expect(await count("draft_cards", `draft_id = ${draftId} and picked_by_seat is null`)).toBe(0);
-    expect(await count("acquisitions", `source = 'draft' and ref = 'draft:${draftId}'`)).toBe(
-      cardsDealt,
-    );
+    // No basic land was drafted: they were dealt, one each give or take one (rule 15).
+    const basicsInPacks = await db.execute<{ total: number }>(sql`
+      select count(*)::int as total from draft_cards c join printings p on p.id = c.printing_id
+       where c.draft_id = ${draftId} and p.type_line ~ '^Basic\\y.*\\yLand\\y'
+    `);
+    expect(basicsInPacks.rows[0].total).toBe(0);
+    const dealt = await db.execute<{ user_id: string; total: number }>(sql`
+      select user_id, count(*)::int as total from draft_basics
+       where draft_id = ${draftId} group by user_id order by user_id
+    `);
+    const shares = dealt.rows.map((row) => row.total);
+    expect(Math.max(...shares) - Math.min(...shares)).toBeLessThanOrEqual(1);
+
+    // Every pick and every dealt basic reached a collection; free basics for the decks come on top.
+    const received = await db.execute<{ total: number }>(sql`
+      select coalesce(sum(quantity), 0)::int as total from acquisitions
+       where source = 'draft' and ref = ${`draft:${draftId}`}
+    `);
+    const basicsDealt = await count("draft_basics", `draft_id = ${draftId}`);
+    expect(received.rows[0].total).toBeGreaterThanOrEqual(cardsDealt + basicsDealt);
     expect(await count("draft_seats", `draft_id = ${draftId} and is_active`)).toBe(0);
 
     for (const player of ["alice", "bob"]) {
@@ -113,6 +131,25 @@ describe("a whole draft", () => {
          where s.draft_id = ${draftId} and s.user_id = ${player}
       `);
       expect(decks.rows).toEqual([{ format: "limited", origin: `draft:${draftId}`, main: 40 }]);
+      // The deck's basics are ones the player owns (rule 17), never more than 30 of a kind.
+      const basics = await db.execute<{ name: string; needed: number; owned: number }>(sql`
+        select p.name, sum(e.quantity)::int as needed,
+               (select coalesce(sum(c.quantity), 0)::int from collection_cards c
+                  join printings q on q.id = c.printing_id
+                 where c.user_id = ${player} and q.name = p.name) as owned
+          from deck_entries e
+          join decks d on d.id = e.deck_id
+          join draft_seats s on s.deck_id = d.id
+          join printings p on p.id = e.printing_id
+         where s.draft_id = ${draftId} and s.user_id = ${player} and e.board = 'main'
+           and p.type_line ~ '^Basic\\y.*\\yLand\\y'
+         group by p.name
+      `);
+      expect(basics.rows.length).toBeGreaterThan(0);
+      for (const row of basics.rows) {
+        expect(row.owned).toBeGreaterThanOrEqual(row.needed);
+        expect(row.owned).toBeLessThanOrEqual(30);
+      }
     }
     expect(await count("activity_events", "kind = 'draft'")).toBeGreaterThan(0);
   });
@@ -226,5 +263,44 @@ describe("one unfinished draft per player", () => {
     expect(left).toEqual({ ok: true, value: 1 });
     expect(await balance("bob")).toBe(5000);
     expect(await count("draft_seats", `user_id = 'bob'`)).toBe(0);
+  });
+});
+
+describe("bots (an admin's test)", () => {
+  it("sit beside the admin in the database, pick at once, and give the admin their cards", async () => {
+    const admin = actor("alice", true);
+    await makeWallet({ unitOfWork, clock }).grantMoney(admin, {
+      userId: admin.userId,
+      amount: Cents.of(10_000),
+      note: "testing drafts",
+    });
+    const created = await drafts.createDraft(admin, {
+      setCode: SetCode.of("BLB"),
+      boosterType: "play",
+      maxSeats: 3,
+      secondsPerPick: null,
+    });
+    if (!created.ok) throw new Error(created.error.kind);
+    const draftId = created.value;
+    expect((await drafts.addBot(admin, draftId)).ok).toBe(true);
+    expect((await drafts.addBot(admin, draftId)).ok).toBe(true);
+    expect(await count("draft_seats", `draft_id = ${draftId} and user_id = 'alice'`)).toBe(3);
+    expect((await drafts.startDraft(admin, draftId)).ok).toBe(true);
+
+    for (let turn = 0; turn < 100; turn += 1) {
+      const choice = await frontCard(draftId, 0);
+      if (choice === null) break;
+      expect(await drafts.makePick(admin, choice)).toMatchObject({ ok: true });
+    }
+    expect((await load(draftId)).status).toBe("finished");
+    const picked = await count("draft_cards", `draft_id = ${draftId}`);
+    const received = await db.execute<{ total: number }>(sql`
+      select coalesce(sum(quantity), 0)::int as total from acquisitions
+       where user_id = 'alice' and ref = ${`draft:${draftId}`}
+    `);
+    expect(received.rows[0].total).toBeGreaterThanOrEqual(picked);
+    expect(await count("draft_seats", `draft_id = ${draftId} and deck_id is not null`)).toBe(1);
+    // The admin can host again: their bots don't hold them in a finished draft.
+    expect(await count("draft_seats", `user_id = 'alice' and is_active`)).toBe(0);
   });
 });

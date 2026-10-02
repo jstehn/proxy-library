@@ -6,6 +6,7 @@ import type { PacksServices, SeedSource } from "@/modules/packs";
 import type { WalletServices } from "@/modules/wallet";
 import type { Cents, Clock, UnitOfWork, UserId } from "@/shared/kernel";
 import type { DraftCardFacts } from "../domain/auto-pick";
+import type { OwnedBasic } from "../domain/basics";
 import type { Draft, DraftId, NewDraft } from "../domain/draft";
 
 // Ports: what the draft use cases need from outside (design doc 17, section 6).
@@ -37,6 +38,8 @@ export interface DraftCatalog {
   cardFacts(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, DraftCardFacts>>;
   /** A basic land printing per color, preferring the draft's own set (for the suggested build). */
   basicLands(setCode: SetCode): Promise<Map<Color, PrintingId>>;
+  /** The basic lands a player owns, by color (rule 17: their draft deck uses these first). */
+  ownedBasics(userId: UserId): Promise<Map<Color, OwnedBasic[]>>;
 }
 
 /** Tells browsers a draft changed (ADR 0018). Sent only if the transaction commits. */

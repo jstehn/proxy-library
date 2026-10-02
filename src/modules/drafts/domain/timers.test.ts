@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import { samplePacks, sampleLobby, START } from "../testing/samples";
-import { applyPick, currentPack, poolOf, startDraft, type Draft } from "./draft";
+import { addBot, applyPick, currentPack, poolOf, queueOf, startDraft, type Draft } from "./draft";
 import {
   GRACE_BUDGET_SECONDS,
   GRACE_SECONDS,
   isAway,
   markPresence,
   pickForAway,
+  runBots,
   runTimers,
   type ChooseCard,
 } from "./timers";
@@ -117,5 +118,25 @@ describe("runTimers (rule 10)", () => {
     });
     const picked = pickForAway(here, 1, at(200), lastCard); // bob's last heartbeat was 100 s ago
     expect(picked.ok && picked.value.card.slot).toBe(2);
+  });
+});
+
+describe("runBots (rule 16)", () => {
+  it("lets bots pick as soon as a pack reaches them, until a person has to pick", () => {
+    let lobby = sampleLobby(["alice"]);
+    for (let i = 0; i < 3; i += 1) {
+      const added = addBot(lobby, { userId: alice, isAdmin: true }, at(i + 1));
+      if (!added.ok) throw new Error(added.error.kind);
+      lobby = added.value;
+    }
+    const started = startDraft(lobby, samplePacks(4, 3, 3), at(10));
+    const { draft, picks } = runBots(started, at(10), lastCard);
+    // Packs pass left: bot 1 picks from its pack; bot 2 from its own and bot 1's; bot 3 from all
+    // three. Bot 1's pack is then empty, and the two others wait behind Alice's own pack.
+    expect(picks).toBe(1 + 2 + 3);
+    expect(queueOf(draft, 0).map((pack) => pack.openedBySeat)).toEqual([0, 3, 2]);
+    // A bot is never away, however long since anyone heard from it.
+    const bots = draft.seats.filter((seat) => seat.botNumber !== null);
+    expect(bots.some((seat) => isAway(seat, at(9_999)))).toBe(false);
   });
 });

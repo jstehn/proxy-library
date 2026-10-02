@@ -141,6 +141,13 @@
       "when": 1790924644766,
       "tag": "0019_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790927747854,
+      "tag": "0020_draft_bots_and_basics",
+      "breakpoints": true
     }
   ]
 }

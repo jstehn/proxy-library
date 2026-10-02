@@ -29,6 +29,19 @@ export function randomInt(rng: Rng, maxExclusive: number): number {
   return Math.floor(rng.next() * maxExclusive);
 }
 
+/**
+ * A shuffled copy of `items`, every order equally likely (the Fisher–Yates shuffle): walk from the
+ * end, swapping each item with a random one at or before it. The input is left alone.
+ */
+export function shuffled<T>(rng: Rng, items: readonly T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = randomInt(rng, i + 1);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 /** Pick one item with probability proportional to its weight. */
 export function weightedPick<T>(rng: Rng, options: ReadonlyArray<Weighted<T>>): T {
   const total = totalWeight(options);

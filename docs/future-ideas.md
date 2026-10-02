@@ -105,7 +105,8 @@ design doc (or joins a phase's design) and is removed from this list.
   inventory would need a "reserved" state so committed packs can't be opened elsewhere.
 - **Other draft styles:** cube, Rochester, Winston, sealed. Each is a new row in `DRAFT_STYLES`
   plus whatever it moves differently (a cube needs a card list instead of boosters).
-- **Bots in empty seats**, using the auto-pick's scoring.
+- **Bots for everyone** (admins have them for testing since 2026-10-02): would need an answer to
+  "who pays for a bot's packs?" that doesn't make drafting rares cheap.
 - **Pairings, match results and prizes** after the draft.
 - **A shrinking pick timer** (fewer seconds as the pack empties, like MTGO) and host-set grace.
 - **Kick a player from a lobby** (with a refund).

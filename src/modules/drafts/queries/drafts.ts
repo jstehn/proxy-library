@@ -51,8 +51,10 @@ const SUMMARY_COLUMNS = (userId: UserId) => sql`
   h.name as host_name, d.max_seats, d.entry_fee_cents, d.seconds_per_pick, d.created_at,
   d.finished_at,
   (select count(*)::int from draft_seats x where x.draft_id = d.id) as seats,
-  exists (select 1 from draft_seats x where x.draft_id = d.id and x.user_id = ${userId}) as seated,
-  (select x.deck_id from draft_seats x where x.draft_id = d.id and x.user_id = ${userId}) as deck_id`;
+  exists (select 1 from draft_seats x
+           where x.draft_id = d.id and x.user_id = ${userId} and x.bot_number = 0) as seated,
+  (select x.deck_id from draft_seats x
+    where x.draft_id = d.id and x.user_id = ${userId} and x.bot_number = 0) as deck_id`;
 
 function toSummary(row: SummaryRow): DraftSummary {
   return {
@@ -96,7 +98,8 @@ export async function draftsOverview(db: DbExecutor, userId: UserId): Promise<Dr
       join card_sets s on s.code = d.set_code
       join auth_users h on h.id = d.host_id
      where d.status = 'finished'
-       and exists (select 1 from draft_seats x where x.draft_id = d.id and x.user_id = ${userId})
+       and exists (select 1 from draft_seats x
+                    where x.draft_id = d.id and x.user_id = ${userId} and x.bot_number = 0)
      order by d.finished_at desc
      limit 20
   `);
@@ -111,7 +114,7 @@ export async function activeDraftOf(
   const rows = await db.execute<{ id: number; status: DraftStatusName }>(sql`
     select d.id, d.status
       from draft_seats x join drafts d on d.id = x.draft_id
-     where x.user_id = ${userId} and x.is_active
+     where x.user_id = ${userId} and x.bot_number = 0 and x.is_active
      limit 1
   `);
   const row = rows.rows[0];
@@ -163,7 +166,10 @@ export async function draftVersion(db: DbExecutor, draftId: number): Promise<num
 
 export type SeatView = Readonly<{
   seatNumber: number;
+  /** "Bot 1" for a bot. */
   name: string;
+  /** A bot's number (it belongs to the host); null for a person. */
+  botNumber: number | null;
   isHost: boolean;
   isYou: boolean;
   /** Packs waiting in front of this seat this round. */
@@ -185,6 +191,10 @@ export type PickedCard = Readonly<{
 
 export type YourSeat = Readonly<{
   seatNumber: number;
+  /** The basic lands dealt to you from the packs (rule 15). */
+  basicsReceived: Array<Readonly<{ printingId: string; finish: string; quantity: number }>>;
+  /** Cards your bots picked, which went to your collection (rule 16). */
+  botPicks: number;
   /** The pack in front of you, or null while you wait. */
   pack: Readonly<{ packNumber: number; cards: CardInPack[] }> | null;
   picks: PickedCard[];
@@ -248,6 +258,7 @@ export async function draftView(
 
   const seats = await db.execute<{
     seat_number: number;
+    bot_number: number;
     user_id: string;
     name: string;
     deadline: Date | null;
@@ -256,7 +267,9 @@ export async function draftView(
     waiting: number;
     picks: number;
   }>(sql`
-    select x.seat_number, x.user_id, u.name, x.deadline, x.last_seen_at, x.deck_id,
+    select x.seat_number, x.bot_number, x.user_id,
+           case when x.bot_number = 0 then u.name else 'Bot ' || x.bot_number end as name,
+           x.deadline, x.last_seen_at, x.deck_id,
            (select count(*)::int
               from draft_packs p
              where p.draft_id = x.draft_id and p.round = ${draft.round}
@@ -273,7 +286,7 @@ export async function draftView(
   `);
 
   const awayBefore = now.getTime() - AWAY_AFTER_SECONDS * 1000;
-  const mine = seats.rows.find((seat) => seat.user_id === userId);
+  const mine = seats.rows.find((seat) => seat.user_id === userId && seat.bot_number === 0);
   const style = DRAFT_STYLES[DRAFT_STYLE_NAMES.find((name) => name === draft.style) ?? "booster"];
   return {
     id: Number(draft.id),
@@ -294,23 +307,35 @@ export async function draftView(
     seats: seats.rows.map((seat) => ({
       seatNumber: seat.seat_number,
       name: seat.name,
-      isHost: seat.user_id === draft.host_id,
-      isYou: seat.user_id === userId,
+      botNumber: seat.bot_number === 0 ? null : seat.bot_number,
+      isHost: seat.user_id === draft.host_id && seat.bot_number === 0,
+      isYou: seat.user_id === userId && seat.bot_number === 0,
       waiting: draft.status === "drafting" ? seat.waiting : 0,
       picks: seat.picks,
       deadline: seat.deadline === null ? null : new Date(seat.deadline).toISOString(),
-      away: seat.last_seen_at === null || new Date(seat.last_seen_at).getTime() < awayBefore,
+      away:
+        seat.bot_number === 0 &&
+        (seat.last_seen_at === null || new Date(seat.last_seen_at).getTime() < awayBefore),
     })),
     you:
       mine === undefined
         ? null
-        : await yourSeat(db, draftId, draft.status, draft.round, mine.seat_number, mine.deck_id),
+        : await yourSeat(
+            db,
+            draftId,
+            userId,
+            draft.status,
+            draft.round,
+            mine.seat_number,
+            mine.deck_id,
+          ),
   };
 }
 
 async function yourSeat(
   db: DbExecutor,
   draftId: number,
+  userId: UserId,
   status: DraftStatusName,
   round: number,
   seatNumber: number,
@@ -359,8 +384,27 @@ async function yourSeat(
      where c.draft_id = ${draftId} and c.picked_by_seat = ${seatNumber}
      order by c.pick_number
   `);
+  const basics = await db.execute<{ printing_id: string; finish: string; quantity: number }>(sql`
+    select printing_id, finish, count(*)::int as quantity
+      from draft_basics
+     where draft_id = ${draftId} and user_id = ${userId}
+     group by printing_id, finish
+     order by printing_id
+  `);
+  const botPicks = await db.execute<{ total: number }>(sql`
+    select count(*)::int as total
+      from draft_cards c
+      join draft_seats x on x.draft_id = c.draft_id and x.seat_number = c.picked_by_seat
+     where c.draft_id = ${draftId} and x.user_id = ${userId} and x.bot_number > 0
+  `);
   return {
     seatNumber,
+    basicsReceived: basics.rows.map((row) => ({
+      printingId: row.printing_id,
+      finish: row.finish,
+      quantity: row.quantity,
+    })),
+    botPicks: botPicks.rows[0]?.total ?? 0,
     pack,
     picks: picks.rows.map((pick) => ({
       printingId: pick.printing_id,

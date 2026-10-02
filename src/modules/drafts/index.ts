@@ -1,6 +1,7 @@
 // The drafts module's public API: the only file other modules and the app may import.
 export {
   makeDrafts,
+  type AddBotError,
   type CreateDraftError,
   type CreateDraftInput,
   type Drafts,
@@ -10,6 +11,7 @@ export {
   type PickError,
   type PickForAwayError,
   type PickInput,
+  type RemoveBotError,
   type StartDraftError,
   type TimerReport,
 } from "./application/drafts";

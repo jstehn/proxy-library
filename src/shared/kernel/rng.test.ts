@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { randomInt, seededRng, weightedPick, weightedSample, type Weighted } from "./rng";
+import { randomInt, seededRng, shuffled, weightedPick, weightedSample, type Weighted } from "./rng";
 
 const take = (seed: string, n: number) => {
   const rng = seededRng(seed);
@@ -124,5 +124,27 @@ describe("weightedSample", () => {
       { item: "b", weight: 0 },
     ];
     expect(() => weightedSample(seededRng("x"), options, 2)).toThrow(RangeError);
+  });
+});
+
+describe("shuffled", () => {
+  it("keeps every item, leaves the input alone, and repeats for the same seed", () => {
+    fc.assert(
+      fc.property(fc.string(), fc.array(fc.integer()), (seed, items) => {
+        const before = [...items];
+        const result = shuffled(seededRng(seed), items);
+        expect(items).toEqual(before);
+        expect([...result].sort((a, b) => a - b)).toEqual([...items].sort((a, b) => a - b));
+        expect(shuffled(seededRng(seed), items)).toEqual(result);
+      }),
+    );
+  });
+
+  it("puts each item first about equally often", () => {
+    const rng = seededRng("fair");
+    const firsts = [0, 0, 0, 0];
+    for (let i = 0; i < 8000; i++) firsts[shuffled(rng, [0, 1, 2, 3])[0]] += 1;
+    // 2000 expected each; 6 standard deviations (about ±230) can't happen by chance.
+    for (const count of firsts) expect(Math.abs(count - 2000)).toBeLessThan(230);
   });
 });

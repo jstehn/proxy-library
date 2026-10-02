@@ -4,12 +4,14 @@ import { PrintingId, type Color, type SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
 import { packMsrp } from "@/modules/store";
 import type { DbExecutor } from "@/shared/db";
-import { Cents } from "@/shared/kernel";
+import { Cents, type UserId } from "@/shared/kernel";
 import type { DraftCatalog } from "../application/ports";
 import type { DraftCardFacts } from "../domain/auto-pick";
+import type { OwnedBasic } from "../domain/basics";
 import { DRAFTABLE_BOOSTER_TYPES } from "../domain/style";
 
 const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
+const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 const RaritySchema = z.enum(["common", "uncommon", "rare", "mythic", "special", "bonus"]);
 
 const BASIC_COLORS: Readonly<Record<string, Color>> = {
@@ -116,5 +118,35 @@ export function drizzleDraftCatalog(db: DbExecutor): DraftCatalog {
     return lands;
   }
 
-  return { draftable, setName, packPrice, cardFacts, basicLands };
+  async function ownedBasics(userId: UserId): Promise<Map<Color, OwnedBasic[]>> {
+    const rows = await db.execute<{
+      name: string;
+      printing_id: string;
+      finish: string;
+      quantity: number;
+    }>(sql`
+      select p.name, c.printing_id, c.finish, c.quantity
+        from collection_cards c
+        join printings p on p.id = c.printing_id
+       where c.user_id = ${userId} and c.quantity > 0
+         and p.name in ('Plains', 'Island', 'Swamp', 'Mountain', 'Forest')
+         and p.type_line ~ '^Basic\\y.*\\yLand\\y'
+    `);
+    const owned = new Map<Color, OwnedBasic[]>();
+    for (const row of rows.rows) {
+      const color = BASIC_COLORS[row.name];
+      const finish = FinishSchema.safeParse(row.finish);
+      if (color === undefined || !finish.success) continue;
+      const list = owned.get(color) ?? [];
+      list.push({
+        printingId: PrintingId.of(row.printing_id),
+        finish: finish.data,
+        quantity: Number(row.quantity),
+      });
+      owned.set(color, list);
+    }
+    return owned;
+  }
+
+  return { draftable, setName, packPrice, cardFacts, basicLands, ownedBasics };
 }

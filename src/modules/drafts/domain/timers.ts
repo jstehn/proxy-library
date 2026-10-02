@@ -20,7 +20,8 @@ export const GRACE_SECONDS = 120;
 /** …up to this much in one draft. */
 export const GRACE_BUDGET_SECONDS = 300;
 
-export function isAway(seat: Pick<Seat, "lastSeenAt">, now: Date): boolean {
+export function isAway(seat: Pick<Seat, "lastSeenAt" | "botNumber">, now: Date): boolean {
+  if (seat.botNumber !== null) return false; // a bot is always at the table
   if (seat.lastSeenAt === null) return true;
   return now.getTime() - seat.lastSeenAt.getTime() > AWAY_AFTER_SECONDS * 1000;
 }
@@ -38,7 +39,7 @@ export function markPresence(draft: Draft, userId: UserId, here: boolean, now: D
   const changed = wasAway !== isAway(updated, now);
   return {
     ...draft,
-    seats: draft.seats.map((each) => (each.userId === userId ? updated : each)),
+    seats: draft.seats.map((each) => (each.seatNumber === updated.seatNumber ? updated : each)),
     version: changed ? draft.version + 1 : draft.version,
   };
 }
@@ -91,7 +92,7 @@ export function runTimers(draft: Draft, now: Date, choose: ChooseCard): TimerOut
       };
       current = {
         ...current,
-        seats: current.seats.map((each) => (each.userId === seat.userId ? extended : each)),
+        seats: current.seats.map((each) => (each.seatNumber === seat.seatNumber ? extended : each)),
         version: current.version + 1,
       };
       extensions += 1;
@@ -137,4 +138,29 @@ export function pickForAway(
   const seat = draft.seats.find((each) => each.seatNumber === seatNumber);
   if (seat === undefined || !isAway(seat, now)) return err({ kind: "NotAway" });
   return autoPick(draft, seatNumber, now, choose);
+}
+
+/**
+ * Every bot with a pack in front of it picks, again and again, until no bot has anything to pick
+ * (rule 16). Run after anything that can pass a pack: a bot passes to a bot, which picks at once.
+ */
+export function runBots(
+  draft: Draft,
+  now: Date,
+  choose: ChooseCard,
+): Readonly<{ draft: Draft; picks: number }> {
+  let current = draft;
+  let picks = 0;
+  const cardCount = draft.packs.reduce((total, pack) => total + pack.cards.length, 0);
+  for (let guard = 0; guard <= cardCount; guard += 1) {
+    const bot = current.seats.find(
+      (seat) => seat.botNumber !== null && currentPack(current, seat.seatNumber) !== null,
+    );
+    if (bot === undefined) break;
+    const picked = autoPick(current, bot.seatNumber, now, choose);
+    if (!picked.ok) break;
+    current = picked.value.draft;
+    picks += 1;
+  }
+  return { draft: current, picks };
 }

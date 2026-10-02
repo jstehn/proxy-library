@@ -15,7 +15,7 @@ import {
   type Seat,
 } from "../domain/draft";
 import { DRAFT_STYLE_NAMES } from "../domain/style";
-import { draftCards, draftPacks, drafts, draftSeats } from "./schema";
+import { draftBasics, draftCards, draftPacks, drafts, draftSeats } from "./schema";
 
 const StatusSchema = z.enum(["lobby", "drafting", "finished", "cancelled"]);
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
@@ -29,6 +29,7 @@ const sameTime = (a: Date | null, b: Date | null) =>
 function seatFromRow(row: SeatRow): Seat {
   return {
     userId: UserId.of(row.userId),
+    botNumber: row.botNumber === 0 ? null : row.botNumber,
     seatNumber: row.seatNumber,
     feePaid: Cents.of(row.feePaidCents),
     joinedAt: row.joinedAt,
@@ -56,8 +57,24 @@ function seatColumns(seat: Seat, isActive: boolean) {
 }
 
 function seatRow(draftId: DraftId, seat: Seat, isActive: boolean) {
-  return { draftId, userId: seat.userId, ...seatColumns(seat, isActive) };
+  return {
+    draftId,
+    userId: seat.userId,
+    botNumber: seat.botNumber ?? 0,
+    ...seatColumns(seat, isActive),
+  };
 }
+
+/** A seat's key: user ids repeat (an admin and their bots), user + bot number doesn't. */
+const seatKey = (seat: Seat) => `${seat.userId}/${seat.botNumber ?? 0}`;
+
+/** The SQL condition for one seat's row. */
+const isSeat = (draftId: DraftId, seat: Seat) =>
+  and(
+    eq(draftSeats.draftId, draftId),
+    eq(draftSeats.userId, seat.userId),
+    eq(draftSeats.botNumber, seat.botNumber ?? 0),
+  );
 
 function cardFromRow(row: CardRow): DraftCard {
   const picked =
@@ -119,6 +136,11 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     const [row] = await db.select().from(drafts).where(eq(drafts.id, draftId)).for("update");
     if (row === undefined) return null;
     const seats = await db.select().from(draftSeats).where(eq(draftSeats.draftId, draftId));
+    const basics = await db
+      .select()
+      .from(draftBasics)
+      .where(eq(draftBasics.draftId, draftId))
+      .orderBy(asc(draftBasics.position));
     const packs = await db
       .select()
       .from(draftPacks)
@@ -161,6 +183,11 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
         queuePosition: pack.queuePosition,
         cards: cardsByPack.get(pack.packNumber) ?? [],
       })),
+      basicsHandedOut: basics.map((basic) => ({
+        userId: UserId.of(basic.userId),
+        printingId: PrintingId.of(basic.printingId),
+        finish: FinishSchema.parse(basic.finish),
+      })),
       version: row.version,
       createdAt: row.createdAt,
       startedAt: row.startedAt,
@@ -171,25 +198,18 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
   async function saveSeats(before: Draft, after: Draft): Promise<void> {
     const isActive = isUnfinished(after);
     const activeChanged = isActive !== isUnfinished(before);
-    const previous = new Map(before.seats.map((seat) => [seat.userId, seat]));
-    const current = new Set(after.seats.map((seat) => seat.userId));
+    const previous = new Map(before.seats.map((seat) => [seatKey(seat), seat]));
+    const current = new Set(after.seats.map(seatKey));
 
     for (const seat of before.seats) {
-      if (!current.has(seat.userId)) {
-        await db
-          .delete(draftSeats)
-          .where(and(eq(draftSeats.draftId, after.id), eq(draftSeats.userId, seat.userId)));
-      }
+      if (!current.has(seatKey(seat))) await db.delete(draftSeats).where(isSeat(after.id, seat));
     }
     for (const seat of after.seats) {
-      const old = previous.get(seat.userId);
+      const old = previous.get(seatKey(seat));
       if (old === undefined) {
         await db.insert(draftSeats).values(seatRow(after.id, seat, isActive));
       } else if (activeChanged || seatChanged(old, seat)) {
-        await db
-          .update(draftSeats)
-          .set(seatColumns(seat, isActive))
-          .where(and(eq(draftSeats.draftId, after.id), eq(draftSeats.userId, seat.userId)));
+        await db.update(draftSeats).set(seatColumns(seat, isActive)).where(isSeat(after.id, seat));
       }
     }
   }
@@ -267,6 +287,15 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
       })
       .where(eq(drafts.id, after.id));
     await saveSeats(before, after);
+    if (before.basicsHandedOut.length === 0 && after.basicsHandedOut.length > 0) {
+      await db.insert(draftBasics).values(
+        after.basicsHandedOut.map((basic, position) => ({
+          draftId: after.id,
+          position,
+          ...basic,
+        })),
+      );
+    }
     await savePacks(before, after);
   }
 
@@ -274,7 +303,13 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     const [row] = await db
       .select({ draftId: draftSeats.draftId })
       .from(draftSeats)
-      .where(and(eq(draftSeats.userId, userId), eq(draftSeats.isActive, true)))
+      .where(
+        and(
+          eq(draftSeats.userId, userId),
+          eq(draftSeats.botNumber, 0),
+          eq(draftSeats.isActive, true),
+        ),
+      )
       .limit(1);
     return row === undefined ? null : DraftId.of(row.draftId);
   }
@@ -284,7 +319,9 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
       .select({ draftId: draftSeats.draftId })
       .from(draftSeats)
       .innerJoin(drafts, eq(drafts.id, draftSeats.draftId))
-      .where(and(eq(draftSeats.userId, userId), eq(drafts.status, "lobby")))
+      .where(
+        and(eq(draftSeats.userId, userId), eq(draftSeats.botNumber, 0), eq(drafts.status, "lobby")),
+      )
       .orderBy(asc(draftSeats.draftId));
     return rows.map((row) => DraftId.of(row.draftId));
   }
@@ -303,7 +340,13 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     await db
       .update(draftSeats)
       .set({ deckId })
-      .where(and(eq(draftSeats.draftId, draftId), eq(draftSeats.userId, userId)));
+      .where(
+        and(
+          eq(draftSeats.draftId, draftId),
+          eq(draftSeats.userId, userId),
+          eq(draftSeats.botNumber, 0),
+        ),
+      );
   }
 
   return { create, lock, save, activeDraftOf, lobbiesWith, withDeadlineBefore, setDeckOf };

@@ -1,6 +1,8 @@
 import type { Finish, PrintingId, SetCode } from "@/modules/catalog";
 import { Cents, err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
 import type {
+  BotNotFound,
+  BotsForAdminsOnly,
   DraftFull,
   DraftNotOpen,
   DraftNotRunning,
@@ -33,7 +35,13 @@ export type PickTimer =
 export type PackSource = Readonly<{ kind: "entryFee" }>;
 
 export type Seat = Readonly<{
+  /**
+   * The player in the seat; for a bot, the admin who added it, who paid its fee and gets the
+   * cards it picks (design doc 17, section 16).
+   */
   userId: UserId;
+  /** 1, 2, … for bots (shown as "Bot 1"), null for a person. */
+  botNumber: number | null;
   /** Join order in the lobby; 0…n-1 around the table once the draft starts. */
   seatNumber: number;
   feePaid: Cents;
@@ -86,12 +94,17 @@ export type Draft = Readonly<{
   sequence: number;
   seats: readonly Seat[];
   packs: readonly DraftPack[];
+  /** The basic lands taken out of the packs at the start and dealt to the players (rule 15). */
+  basicsHandedOut: readonly HandedOutBasic[];
   /** Goes up with every change that browsers should see (ADR 0018). */
   version: number;
   createdAt: Date;
   startedAt: Date | null;
   finishedAt: Date | null;
 }>;
+
+/** One basic land from the packs, and the player it was dealt to. */
+export type HandedOutBasic = Readonly<{ userId: UserId; printingId: PrintingId; finish: Finish }>;
 
 /** A draft about to be created: everything except what the database assigns. */
 export type NewDraft = Omit<Draft, "id">;
@@ -122,9 +135,16 @@ export function checkTimer(secondsPerPick: number | null): Result<PickTimer, Tim
   return ok({ kind: "on", secondsPerPick });
 }
 
-function newSeat(userId: UserId, seatNumber: number, fee: Cents, now: Date): Seat {
+function newSeat(
+  userId: UserId,
+  seatNumber: number,
+  fee: Cents,
+  now: Date,
+  botNumber: number | null = null,
+): Seat {
   return {
     userId,
+    botNumber,
     seatNumber,
     feePaid: fee,
     joinedAt: now,
@@ -159,6 +179,7 @@ export function newDraft(input: {
     sequence: 0,
     seats: [newSeat(input.hostId, 0, input.entryFee, input.now)],
     packs: [],
+    basicsHandedOut: [],
     version: 1,
     createdAt: input.now,
     startedAt: null,
@@ -166,9 +187,23 @@ export function newDraft(input: {
   };
 }
 
+/** The seat a person sits in (never one of their bots), or null. */
 export function seatOf(draft: Draft, userId: UserId): Seat | null {
-  return draft.seats.find((seat) => seat.userId === userId) ?? null;
+  return draft.seats.find((seat) => seat.userId === userId && seat.botNumber === null) ?? null;
 }
+
+export const isBot = (seat: Pick<Seat, "botNumber">) => seat.botNumber !== null;
+
+/** The draft with one seat replaced (seat numbers are unique, unlike user ids: bots share theirs). */
+export function withSeat(draft: Draft, seat: Seat): Draft {
+  return {
+    ...draft,
+    seats: draft.seats.map((each) => (each.seatNumber === seat.seatNumber ? seat : each)),
+  };
+}
+
+const nextSeatNumber = (draft: Draft) =>
+  Math.max(-1, ...draft.seats.map((seat) => seat.seatNumber)) + 1;
 
 /** Whether a draft still holds its players (rule 1: one unfinished draft per player). */
 export function isUnfinished(draft: Pick<Draft, "status">): boolean {
@@ -186,10 +221,9 @@ export function joinDraft(
   if (draft.seats.length >= draft.maxSeats) {
     return err({ kind: "DraftFull", maxSeats: draft.maxSeats });
   }
-  const seatNumber = Math.max(-1, ...draft.seats.map((seat) => seat.seatNumber)) + 1;
   return ok({
     ...draft,
-    seats: [...draft.seats, newSeat(userId, seatNumber, draft.entryFee, now)],
+    seats: [...draft.seats, newSeat(userId, nextSeatNumber(draft), draft.entryFee, now)],
     version: draft.version + 1,
   });
 }
@@ -209,16 +243,61 @@ export function leaveDraft(
   if (seat === null) return err({ kind: "NotSeated" });
   if (draft.status !== "lobby") return err({ kind: "DraftNotOpen" });
   if (userId === draft.hostId) {
-    const refunds = draft.seats.map((each) => ({ userId: each.userId, amount: each.feePaid }));
+    // One refund per person: the host's covers their own seat and their bots'.
+    const totals = new Map<UserId, Cents>();
+    for (const each of draft.seats) {
+      totals.set(each.userId, Cents.add(totals.get(each.userId) ?? Cents.zero, each.feePaid));
+    }
+    const refunds = [...totals].map(([payer, amount]) => ({ userId: payer, amount }));
     return ok({ draft: { ...draft, status: "cancelled", version: draft.version + 1 }, refunds });
   }
   return ok({
     draft: {
       ...draft,
-      seats: draft.seats.filter((each) => each.userId !== userId),
+      seats: draft.seats.filter((each) => each.seatNumber !== seat.seatNumber),
       version: draft.version + 1,
     },
     refunds: [{ userId, amount: seat.feePaid }],
+  });
+}
+
+/**
+ * An admin hosting a lobby adds a bot to an empty seat (rule 16). The caller has charged the host
+ * `draft.entryFee` for it.
+ */
+export function addBot(
+  draft: Draft,
+  actor: Readonly<{ userId: UserId; isAdmin: boolean }>,
+  now: Date,
+): Result<Draft, BotsForAdminsOnly | NotHost | DraftNotOpen | DraftFull> {
+  if (!actor.isAdmin) return err({ kind: "BotsForAdminsOnly" });
+  if (actor.userId !== draft.hostId) return err({ kind: "NotHost" });
+  if (draft.status !== "lobby") return err({ kind: "DraftNotOpen" });
+  if (draft.seats.length >= draft.maxSeats) {
+    return err({ kind: "DraftFull", maxSeats: draft.maxSeats });
+  }
+  const botNumber = Math.max(0, ...draft.seats.map((seat) => seat.botNumber ?? 0)) + 1;
+  const bot = newSeat(draft.hostId, nextSeatNumber(draft), draft.entryFee, now, botNumber);
+  return ok({ ...draft, seats: [...draft.seats, bot], version: draft.version + 1 });
+}
+
+/** The host takes a bot out of the lobby, and gets its fee back. */
+export function removeBot(
+  draft: Draft,
+  userId: UserId,
+  botNumber: number,
+): Result<{ draft: Draft; refund: Refund }, NotHost | DraftNotOpen | BotNotFound> {
+  if (userId !== draft.hostId) return err({ kind: "NotHost" });
+  if (draft.status !== "lobby") return err({ kind: "DraftNotOpen" });
+  const bot = draft.seats.find((seat) => seat.botNumber === botNumber);
+  if (bot === undefined) return err({ kind: "BotNotFound" });
+  return ok({
+    draft: {
+      ...draft,
+      seats: draft.seats.filter((seat) => seat.seatNumber !== bot.seatNumber),
+      version: draft.version + 1,
+    },
+    refund: { userId: bot.userId, amount: bot.feePaid },
   });
 }
 
@@ -248,12 +327,14 @@ export type OpenedPack = Readonly<{
 
 /**
  * Starts the draft (rule 4). `opened[seat][round - 1]` is the pack that seat opens in that round,
- * with seats in `seatsInOrder` order. The caller has already passed `checkCanStart`.
+ * with seats in `seatsInOrder` order, already without its basic lands; `handedOut` is where those
+ * basics went (rule 15, `dealBasics`). The caller has already passed `checkCanStart`.
  */
 export function startDraft(
   draft: Draft,
   opened: ReadonlyArray<ReadonlyArray<OpenedPack>>,
   now: Date,
+  handedOut: readonly HandedOutBasic[] = [],
 ): Draft {
   const style = DRAFT_STYLES[draft.style];
   const seats = seatsInOrder(draft).map((seat, index) => ({ ...seat, seatNumber: index }));
@@ -282,6 +363,7 @@ export function startDraft(
     status: "drafting",
     seats,
     packs,
+    basicsHandedOut: handedOut,
     startedAt: now,
     version: draft.version + 1,
   };
@@ -393,7 +475,8 @@ export function refreshDeadlines(draft: Draft, now: Date): Draft {
   const timer = draft.timer;
   const seats = draft.seats.map((seat): Seat => {
     const front = currentPack(draft, seat.seatNumber);
-    if (timer.kind === "off" || front === null) {
+    // Bots pick the moment a pack reaches them, so they never wait on a timer.
+    if (timer.kind === "off" || front === null || seat.botNumber !== null) {
       return seat.deadline === null && seat.deadlinePack === null
         ? seat
         : { ...seat, deadline: null, deadlinePack: null };

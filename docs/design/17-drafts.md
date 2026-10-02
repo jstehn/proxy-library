@@ -23,7 +23,7 @@ card is gone, over three rounds (left, right, left). Then everyone plays the dec
   sideboard.
 
 **Out of scope (future-ideas):** bringing your own packs; other draft styles (cube, Rochester,
-Winston, sealed); bots in empty seats; pairings, match results and prizes; a timer that shrinks as
+Winston, sealed); bots for everyone (admins have them for testing, section 16); pairings, match results and prizes; a timer that shrinks as
 the pack empties; kicking a player from a lobby; a pick-by-pick replay screen (the data is kept).
 
 ## 2. Ubiquitous language
@@ -161,6 +161,17 @@ what they return.
     waiting, how many picks it has made, and whether it's away, but **never another seat's
     cards** until the draft is finished.
 14. Every change bumps `version` and notifies browsers **only if the transaction commits**.
+15. **Basic lands aren't drafted.** When the packs are opened, every basic land is taken out and
+    dealt to the people at the table (not bots): shuffled, then one each in a random seat order,
+    so shares differ by at most one and who gets the spare ones is random. They go into
+    collections at once.
+16. **Bots are an admin's testing tool.** Only an admin hosting a lobby can add them, paying each
+    bot's entry fee. A bot picks the moment a pack reaches it (auto-pick), never has a deadline
+    and is never away. Its picks go into the admin's collection. Bots get no deck, and a draft
+    with bots posts nothing to the activity feed.
+17. **Draft decks use your own basics.** The deck shows the basic printing you own most of. If
+    you own fewer than the deck uses, the missing ones are given to you for free, but a free
+    top-up never takes you past **30** of that basic land.
 
 ## 5. Use cases
 
@@ -175,6 +186,8 @@ what they return.
 | `markPresence`  | a seat                   | `draftId`, `here: boolean`                                          | —         | (silently nothing if not seated)                                                                                  | yes           |
 | `makeDraftDeck` | a seat of a finished one | `draftId`                                                           | `DeckId`  | `DraftNotFound`, `NotSeated`, `DraftNotFinished`, `TooManyDecks`                                                  | yes           |
 | `runTimers`     | the worker               | —                                                                   | counts    | —                                                                                                                 | one per draft |
+| `addBot`        | an admin hosting a lobby | `draftId`                                                           | —         | `BotsForAdminsOnly`, `NotHost`, `DraftNotOpen`, `DraftFull`, `InsufficientFunds`                                  | yes           |
+| `removeBot`     | the host                 | `draftId`, `botNumber`                                              | —         | `NotHost`, `DraftNotOpen`, `BotNotFound`                                                                          | yes           |
 
 In-transaction functions for other modules: `removeFromLobbies(services, userId)` (reset).
 
@@ -194,7 +207,8 @@ interface DraftCatalog {
   isDraftable(setCode, boosterType): Promise<{ setName: string } | null>;
   packPrice(setCode, boosterType): Promise<Cents | null>; // MSRP of one pack (ADR 0014)
   cardFacts(printingIds): Promise<Map<PrintingId, DraftCardFacts>>;
-  basicLands(setCode): Promise<Map<Color, PrintingId>>; // for the suggested build
+  basicLands(setCode): Promise<Map<Color, PrintingId>>; // free basics are this set's
+  ownedBasics(userId): Promise<Map<Color, OwnedBasic[]>>; // rule 17
 }
 interface DraftNotifier {
   changed(draftId: DraftId, version: number): Promise<void>; // pg_notify inside the transaction
@@ -323,3 +337,14 @@ None left (section 14).
   to end, because the shortest real timer is 30 seconds. The end-to-end test drafts a whole
   two-player table with the timer off, checks that updates arrive without reloads, and reloads
   one player halfway.
+
+## 16. Changes requested 2026-10-02
+
+1. **Bots, for admins only** (rule 16). The admin pays each bot's fee and gets its picks: an
+   admin can try a whole draft alone. A seat gains `botNumber` (null for a person); a bot seat's
+   `userId` is the admin's. `draft_seats` is keyed by `(draft_id, user_id, bot_number)`, and the
+   one-active-draft index only counts people (`bot_number = 0`).
+2. **Basics out of the packs** (rule 15): `takeOutBasics` and `dealBasics` (a seeded
+   Fisher–Yates `shuffled` in the kernel), stored in `draft_basics`.
+3. **Deck basics from the collection, topped up to at most 30** (rule 17): `planBasicLands` and
+   `freeBasicsFor` in `domain/basics.ts`.
