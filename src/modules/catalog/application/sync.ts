@@ -9,6 +9,7 @@ import {
   withoutBrokenReferences,
   type StandardTally,
   companionsToEnable,
+  isEnabledByDefault,
   isStillSettling,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
@@ -33,7 +34,8 @@ export type SyncSummary = {
   bulkFileUpdatedAt: string;
   bulkFileDownloaded: boolean;
   setsInList: number;
-  enabledAsStandard: string[];
+  /** Sets enabled because they were listed for the first time (rule 13). */
+  enabledByDefault: string[];
   enabledAsCompanions: string[];
   importedSets: string[];
   importedSupportingSets: string[];
@@ -76,7 +78,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       bulkFileUpdatedAt: "",
       bulkFileDownloaded: false,
       setsInList: 0,
-      enabledAsStandard: [],
+      enabledByDefault: [],
       enabledAsCompanions: [],
       importedSets: [],
       importedSupportingSets: [],
@@ -93,29 +95,27 @@ export function makeSync(dependencies: CatalogDependencies) {
     summary.mtgjsonVersion = await mtgjson.metaVersion();
     const paperSets = (await mtgjson.setList()).filter((entry) => !entry.isOnlineOnly);
     summary.setsInList = paperSets.length;
-    await inTransaction(({ catalog }) => catalog.saveSetList(paperSets.map((entry) => entry.set)));
+    // Rule 13: sets listed for the first time are enabled if they're a kind players buy from.
+    // Sets already listed keep their switch, so a set an admin turned off stays off.
+    summary.enabledByDefault = await inTransaction(async ({ catalog }) => {
+      const known = new Set((await catalog.setStates()).map((state) => state.code));
+      await catalog.saveSetList(paperSets.map((entry) => entry.set));
+      const enabledByDefault = paperSets
+        .map((entry) => entry.set)
+        .filter((set) => !known.has(set.code) && isEnabledByDefault(set.type))
+        .map((set) => set.code);
+      await catalog.setEnabled(enabledByDefault, true);
+      return enabledByDefault;
+    });
 
     // 2. Scryfall's bulk file, downloaded only if there is a newer one.
     const bulkFile = await scryfall.latestBulkFile();
     summary.bulkFileUpdatedAt = bulkFile.updatedAt.toISOString();
     summary.bulkFileDownloaded = bulkFile.downloaded;
 
-    // 3. The very first run: enable the current Standard sets.
     let states = await inTransaction(({ catalog }) => catalog.setStates());
-    if (!states.some((state) => state.isEnabled)) {
-      const known = new Set(states.map((state) => state.code));
-      const standard = [...(await findStandardSets(bulkFile.path))].filter((code) =>
-        known.has(code),
-      );
-      await inTransaction(async ({ catalog }) => {
-        await catalog.markStandard(standard);
-        await catalog.setEnabled(standard, true);
-      });
-      summary.enabledAsStandard = standard;
-      states = await inTransaction(({ catalog }) => catalog.setStates());
-    }
 
-    // 3b. Enabled sets bring their Commander companion sets with them (rule 11: precons).
+    // 3. Enabled sets bring their Commander companion sets with them (rule 11: precons).
     const companions = companionsToEnable(states);
     if (companions.length > 0) {
       await inTransaction(({ catalog }) => catalog.setEnabled(companions, true));
@@ -192,12 +192,6 @@ export function makeSync(dependencies: CatalogDependencies) {
       catalog.saveImport(checked.setImport, { printingsOnly: false, importedAt: clock.now() }),
     );
     summary.importedSets.push(code);
-  }
-
-  async function findStandardSets(bulkFilePath: string): Promise<SetCode[]> {
-    const tally: StandardTally = new Map();
-    for await (const card of scryfall.readBulkFile(bulkFilePath)) tallyStandard(tally, card);
-    return standardSetsFromTally(tally);
   }
 
   async function pricePass(bulkFilePath: string, summary: SyncSummary): Promise<void> {

@@ -14,8 +14,9 @@ daily prices and images. Everything else (packs, store, collection, decks) reads
 
 Decided with the user:
 
-- **Sets:** the current **Standard** sets are enabled at first; admins enable or disable any set
-  later.
+- **Sets:** every **expansion, core and Commander** set is enabled when it first appears (rule
+  13, changed 2026-10-01; at first only the current Standard sets were); admins enable or disable
+  any set later.
 - **Sync:** **nightly** in the worker, plus a **"Sync now"** button for admins.
 - **Products:** import **all paper** sealed products (packs, boxes, cases, bundles, prerelease
   kits, preconstructed decks, tins) and the **deck lists** they contain.
@@ -215,6 +216,10 @@ disables sets that have rotated out, because players may still want them.
     the last 120 days, or not released yet, is re-imported on every `prices` run, because MTGJSON
     fills in a new set's booster recipes and precon contents after it first appears. Older sets
     re-import only on a `full` run.
+13. **Expansion, core and Commander sets are enabled by default** (changed 2026-10-01, so that
+    singles of any card can be bought). A set of one of those types is enabled the first time it
+    appears in MTGJSON's set list. Sets already listed keep their switch, so a set an admin turned
+    off stays off. Other types (promos, tokens, Masters, Un-sets, …) stay off unless enabled.
 
 ## 5. Use cases
 
@@ -229,9 +234,9 @@ disables sets that have rotated out, because players may still want them.
 ### What a sync run does
 
 ```
-1. MTGJSON Meta + SetList      → update the list of all sets (names, dates, types)
+1. MTGJSON Meta + SetList      → update the list of all sets (names, dates, types); enable new
+                                  expansion, core and Commander sets (rule 13)
 2. Scryfall bulk file          → download only if newer than the cached copy (~79 MB, gzipped JSON Lines)
-   (first pass)                → work out the current Standard sets; on the very first run, enable them
 3. For each enabled set        → collect its supporting sets
 4. For each set to import      → new sets (or every enabled set on a full run): download the set file (~1 MB),
                                   map it, and save it in ONE transaction (rule 3)
@@ -393,7 +398,8 @@ screens come in Phases 6–7.
   check fires at most once per day.
 - **`shared/http`:** the rate limiter never exceeds N per second (with a manual clock); retry backs
   off and gives up; the user-agent header is present.
-- **Use cases (fakes):** the first sync enables Standard sets and imports supporting sets; an
+- **Use cases (fakes):** the first sync enables expansion, core and Commander sets and imports
+  supporting sets; an
   unchanged version is skipped; a missing referenced card fails that set's import without
   touching others; a second sync request is refused while one is queued; an interrupted run is
   marked failed.
@@ -481,3 +487,7 @@ imported, 62 supporting sets, 25,205 printings, 35,788 price snapshots, 21 produ
 (mostly an upcoming set with no booster data yet), 16 Arena booster types and 15 MTGO redemption
 products and decks skipped. 35 seconds with the bulk file already cached; database 60 MB. Real
 card images: the first request takes about 150 ms, later ones about 1 ms from disk.
+
+**All expansion, core and Commander sets enabled** (2026-10-01, rule 13): 189 sets enabled,
+157 newly imported plus 182 supporting sets, 76,310 printings priced (113,547 snapshots a day),
+no failures; about 11 minutes, almost all of it downloading MTGJSON set files once.

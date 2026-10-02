@@ -72,16 +72,16 @@ beforeEach(async () => {
 });
 
 describe("the first sync", () => {
-  it("enables Standard sets, imports supporting sets first, and prices everything", async () => {
+  it("enables expansion, core and Commander sets, imports supporting sets first, and prices everything", async () => {
     const summary = await buildCatalog().runSync("prices");
 
     // Only paper sets are listed: YBLB (online-only Alchemy) is left out.
     expect(summary.setsInList).toBe(4);
-    expect(summary.enabledAsStandard).toEqual(["BLB"]);
-    // Rule 11: BLB's Commander companion set (its precons) comes with it.
-    expect(summary.enabledAsCompanions).toEqual(["BLC"]);
+    // Rule 13: an expansion, a Commander set and a core set; not SPG (a masterpiece set).
+    expect(summary.enabledByDefault).toEqual(["BLB", "BLC", "FDN"]);
+    expect(summary.enabledAsCompanions).toEqual([]);
     expect(summary.importedSupportingSets).toEqual(["SPG"]);
-    expect(summary.importedSets).toEqual(["BLB", "BLC"]);
+    expect(summary.importedSets).toEqual(["BLB", "FDN", "BLC"]); // FDN's fixture is empty
     expect(summary.failedSets).toEqual([]);
     expect(summary.leftOut).toEqual([]);
     expect(summary.skippedDigital).toEqual({
@@ -104,7 +104,7 @@ describe("the first sync", () => {
     expect(sets.rows).toEqual([
       { code: "BLB", is_enabled: true, is_supporting: false },
       { code: "BLC", is_enabled: true, is_supporting: false },
-      { code: "FDN", is_enabled: false, is_supporting: false },
+      { code: "FDN", is_enabled: true, is_supporting: false },
       { code: "SPG", is_enabled: false, is_supporting: true },
     ]);
   });
@@ -157,7 +157,7 @@ describe("running again", () => {
     await catalog.runSync("prices");
     expect(mtgjson.downloads).toEqual([]);
     await catalog.runSync("full");
-    expect(mtgjson.downloads).toEqual(["BLB", "SPG", "BLC"]);
+    expect(mtgjson.downloads).toEqual(["BLB", "SPG", "FDN", "BLC"]);
   });
 });
 
@@ -165,7 +165,7 @@ describe("rule 5: nothing may refer to a missing card", () => {
   it("leaves out (and reports) what refers to a supporting set that isn't available", async () => {
     const withoutSpg = fixtureMtgjsonGateway({ hideSets: ["SPG"] });
     const summary = await buildCatalog(withoutSpg).runSync("prices");
-    expect(summary.importedSets).toEqual(["BLB", "BLC"]);
+    expect(summary.importedSets).toEqual(["BLB", "FDN", "BLC"]);
     expect(summary.leftOut[0]).toBe("BLB: booster play: sheet specialGuest has 2 unknown card(s)");
     expect(await countRows("booster_configs")).toBe(0);
     expect(await countRows("sealed_products")).toBe(1); // only the starter kit remains
@@ -185,7 +185,7 @@ describe("the sync queue", () => {
     const runs = await db.execute<{ status: string; imported: string }>(
       sql`select status, summary->>'importedSets' as imported from sync_runs`,
     );
-    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB", "BLC"]' }]);
+    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB", "FDN", "BLC"]' }]);
   });
 
   it("marks a run left 'running' by a crash as failed", async () => {
@@ -214,6 +214,10 @@ describe("enabling sets", () => {
   it("enabling a set queues a sync to import it", async () => {
     const catalog = buildCatalog();
     await catalog.runSync("prices");
+    // FDN as if an admin had turned it off before its first import.
+    await db.execute(
+      sql`update card_sets set is_enabled = false, imported_version = null where code = 'FDN'`,
+    );
     await db.execute(sql`truncate sync_runs`);
     expect(
       (await catalog.setSetEnabled(admin, { code: SetCode.of("FDN"), enabled: true })).ok,
@@ -222,6 +226,18 @@ describe("enabling sets", () => {
     expect(await catalog.setSetEnabled(admin, { code: SetCode.of("ZZZ"), enabled: true })).toEqual(
       err({ kind: "SetNotFound" }),
     );
+  });
+
+  it("a later sync leaves a set an admin turned off alone (rule 13)", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    await catalog.setSetEnabled(admin, { code: SetCode.of("FDN"), enabled: false });
+    const summary = await catalog.runSync("prices");
+    expect(summary.enabledByDefault).toEqual([]);
+    const fdn = await db.execute<{ is_enabled: boolean }>(
+      sql`select is_enabled from card_sets where code = 'FDN'`,
+    );
+    expect(fdn.rows).toEqual([{ is_enabled: false }]);
   });
 
   it("'Enable Standard sets' adds only Standard sets that aren't enabled yet", async () => {
@@ -290,11 +306,16 @@ describe("official photos, key art and details from WPN (design doc 13)", () => 
 
     expect(summary.artwork).toMatchObject({
       pagesRead: ["BLB (bloomburrow)"],
-      noPage: [],
+      noPage: ["FDN"], // no WPN page recorded for it
       unreadable: [],
       imageFailures: 0,
     });
-    expect(wpn.pagesRead).toEqual(["bloomburrow"]); // not BLC: a Commander set has no page
+    // Not BLC: a Commander set has no page. FDN's two possible addresses are both tried.
+    expect(wpn.pagesRead).toEqual([
+      "bloomburrow",
+      "foundations",
+      "magic-the-gathering-foundations",
+    ]);
     expect(await links()).toEqual([
       {
         name: "Bloomburrow Bundle",

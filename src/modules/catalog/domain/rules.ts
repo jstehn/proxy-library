@@ -27,6 +27,18 @@ export function isStillSettling(releaseDate: string, now: Date): boolean {
   return now.getTime() - released < SETTLING_DAYS * 86_400_000;
 }
 
+/**
+ * Rule 13: the kinds of set players can buy from as soon as MTGJSON lists them (decision
+ * 2026-10-01: singles of any card, product from every expansion and Commander release). Other
+ * kinds (promos, tokens, Masters, Un-sets, …) stay off until an admin enables them.
+ */
+export const SET_TYPES_ENABLED_BY_DEFAULT: readonly string[] = ["expansion", "core", "commander"];
+
+/** Rule 13: a set of this type is enabled the first time it appears in the set list. */
+export function isEnabledByDefault(setType: string): boolean {
+  return SET_TYPES_ENABLED_BY_DEFAULT.includes(setType);
+}
+
 // --- Variant labels ------------------------------------------------------------------------
 
 // Treatment codes worth showing to players, in display order. Unknown codes are ignored, so a
