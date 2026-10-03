@@ -27,11 +27,16 @@ export const decks = pgTable(
     name: text("name").notNull(),
     format: text("format").notNull(),
     origin: text("origin"), // "draft:12" when a finished draft made it (design doc 17), else null
+    // Who can see it (design doc 21): "private" (the owner) or "shared" (every player).
+    visibility: text("visibility").notNull().default("private"),
+    firstSharedAt: timestamptz("first_shared_at"),
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },
   (table) => [
     index("decks_owner_idx").on(table.ownerId),
+    index("decks_visibility_idx").on(table.visibility),
+    check("decks_visibility_known", sql`${table.visibility} in ('private', 'shared')`),
     check(
       "decks_format_known",
       sql`${table.format} in ('casual', 'standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander', 'limited')`,
@@ -57,5 +62,31 @@ export const deckEntries = pgTable(
     index("deck_entries_oracle_idx").on(table.oracleId),
     check("deck_entries_board_known", sql`${table.board} in ('commander', 'main', 'side')`),
     check("deck_entries_quantity", sql`${table.quantity} between 1 and 99`),
+  ],
+);
+
+/** Comments on decks (design doc 21). A deleted comment keeps its row, without its text. */
+export const deckComments = pgTable(
+  "deck_comments",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    deckId: bigint("deck_id", { mode: "number" })
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => players.userId),
+    body: text("body").notNull(),
+    createdAt: timestamptz("created_at").notNull(),
+    deletedAt: timestamptz("deleted_at"),
+    deletedBy: text("deleted_by").references(() => players.userId),
+  },
+  (table) => [
+    index("deck_comments_deck_idx").on(table.deckId, table.createdAt),
+    // A deleted comment keeps its row, but not its text.
+    check(
+      "deck_comments_body_length",
+      sql`(${table.deletedAt} is not null and ${table.body} = '') or char_length(${table.body}) between 1 and 1000`,
+    ),
   ],
 );

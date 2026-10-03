@@ -36,6 +36,25 @@ export type FeedItem =
       actor: string;
       setName: string;
       players: number;
+    }>
+  | Readonly<{
+      id: number;
+      kind: "deckShared";
+      at: string;
+      actor: string;
+      deckId: number;
+      deckName: string;
+      format: string;
+    }>
+  | Readonly<{
+      id: number;
+      kind: "deckComment";
+      at: string;
+      actor: string;
+      /** The deck's owner. */
+      other: string;
+      deckId: number;
+      deckName: string;
     }>;
 
 export type FeedCard = Readonly<{
@@ -108,6 +127,26 @@ export async function activityFeed(db: DbExecutor, limit = 50): Promise<FeedItem
             kind: "draft",
             setName: String(payload.setName),
             players: Number(payload.players),
+          },
+        ];
+      case "deckShared":
+        return [
+          {
+            ...base,
+            kind: "deckShared",
+            deckId: Number(payload.deckId),
+            deckName: String(payload.deckName),
+            format: String(payload.format),
+          },
+        ];
+      case "deckComment":
+        return [
+          {
+            ...base,
+            kind: "deckComment",
+            other: row.other ?? "someone",
+            deckId: Number(payload.deckId),
+            deckName: String(payload.deckName),
           },
         ];
       default:

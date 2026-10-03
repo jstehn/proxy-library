@@ -41,7 +41,8 @@ In **one transaction** (all or nothing), for one player:
 - A new module, `reset`, owns no tables. Its one use case, `resetPlayer(actor, userId)`, calls
   a function from each module's public API that runs in the caller's transaction:
   `closeOpenTrades`, `resetBalance`, `discardAllItems`, `giveUpEverything`, `deleteAllDecks`,
-  `forgetPullsAndPurchases`. The same pattern as a trade calling `spend` and `giveUpCards`.
+  `forgetPullsAndPurchases` (renamed `forgetLibraryEvents` in phase 21, when it also forgets
+  shared decks). The same pattern as a trade calling `spend` and `giveUpCards`.
 - Each module got one repository method for it (`openInvolving`, `removeAllOf`, `everything`,
   `deleteAllOf`, `forgetPullsAndPurchases`), in both the Drizzle adapter and the in-memory fake.
 - Migration `0014_reset_source` allows the `reset` acquisition source.

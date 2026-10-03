@@ -46,8 +46,12 @@ export type ShortLine = Readonly<{
 }>;
 
 /**
- * The cards a deck is short of, as a list to buy (design doc 15, decision 3): "2 Lightning Bolt",
+ * The cards a deck is short of, as a list to buy (design doc 15, decision 3): "4 Lightning Bolt",
  * with "*F*" or "*E*" when the deck's copy is foil or etched. Basic lands are never short.
+ *
+ * Each line asks for as many as the deck uses, not the difference: Buy a list's "only buy what I
+ * don't already own" (on by default) subtracts your copies itself. Writing the difference made
+ * it subtract them twice (found in phase 21: needing 4 and owning 1 bought 2).
  */
 export function shortList(problems: readonly DeckProblem[], lines: readonly ShortLine[]): string {
   return problems
@@ -55,7 +59,7 @@ export function shortList(problems: readonly DeckProblem[], lines: readonly Shor
       if (problem.kind !== "Short") return [];
       const finish = lines.find((line) => line.oracleId === problem.oracleId)?.finish ?? "nonfoil";
       const marker = finish === "foil" ? " *F*" : finish === "etched" ? " *E*" : "";
-      return [`${problem.needed - problem.owned} ${problem.name}${marker}`];
+      return [`${problem.needed} ${problem.name}${marker}`];
     })
     .join("\n");
 }

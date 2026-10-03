@@ -15,6 +15,12 @@ export const FORMAT_LABELS: Record<Format, string> = {
   limited: "Limited (40 cards)",
 };
 
+/** A format's label from text that might not be a format (an old feed event, say). */
+export function formatLabel(format: string): string {
+  const labels: Readonly<Record<string, string | undefined>> = FORMAT_LABELS;
+  return labels[format] ?? format;
+}
+
 /** A deck problem in plain words. */
 export function problemText(problem: DeckProblem): string {
   switch (problem.kind) {

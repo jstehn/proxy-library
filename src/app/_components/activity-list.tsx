@@ -2,9 +2,10 @@ import Link from "next/link";
 import type { FeedItem } from "@/modules/activity";
 import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
+import { formatLabel } from "../decks/labels";
 
-// The activity feed (design doc 11): notable pulls, sealed purchases, completed trades and
-// finished drafts (design doc 17).
+// The activity feed (design doc 11): notable pulls, sealed purchases, completed trades,
+// finished drafts (design doc 17), and shared decks and comments on them (design doc 21).
 
 const RARITY_COLORS: Record<string, string> = {
   rare: "text-amber-600 dark:text-amber-400",
@@ -52,6 +53,25 @@ function Line(props: { item: FeedItem }) {
       return (
         <>
           <strong>{item.actor}</strong> hosted a {item.setName} draft for {item.players} players
+        </>
+      );
+    case "deckShared":
+      return (
+        <>
+          <strong>{item.actor}</strong> shared a deck:{" "}
+          <Link href={`/decks/${item.deckId}`} className="underline">
+            {item.deckName}
+          </Link>{" "}
+          ({formatLabel(item.format)})
+        </>
+      );
+    case "deckComment":
+      return (
+        <>
+          <strong>{item.actor}</strong> commented on <strong>{item.other}</strong>&apos;s deck{" "}
+          <Link href={`/decks/${item.deckId}#comments`} className="underline">
+            {item.deckName}
+          </Link>
         </>
       );
   }

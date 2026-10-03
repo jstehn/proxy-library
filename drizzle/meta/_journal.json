@@ -169,6 +169,13 @@
       "when": 1791010598346,
       "tag": "0023_card_features",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791012102002,
+      "tag": "0024_deck_sharing",
+      "breakpoints": true
     }
   ]
 }

@@ -53,8 +53,8 @@ design doc (or joins a phase's design) and is removed from this list.
 ## Decks
 
 - **More formats** (brawl, oathbreaker, historic…), and partner and background checks for Commander.
-- **Sharing decks** with the playgroup (read-only links), and a "cards to get" list across all
-  your decks.
+- ~~**Sharing decks** and **"cards to get"**~~ **Done (design doc 21).** Still open: copying a
+  shared deck into your own in one click (pasting its list does it today), and comment replies.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
 
 ## Trades
@@ -86,7 +86,8 @@ design doc (or joins a phase's design) and is removed from this list.
 - ~~**Automatic tags**~~ **Done (design doc 19)**, with counts against targets, a draw simulator,
   and problems checked in the browser. Still open: an **`otag:` search keyword** (needs the tag
   rules in SQL, or tags stored per printing).
-- **Sharing decks publicly** (a read-only link), and deck comments.
+- ~~**Sharing decks** and deck comments~~ **Done for signed-in players (design doc 21).** Still
+  open: a public link that works without an account.
 - ~~**"I have a real copy" per deck line**~~ **Planned (design doc 16):** the real collection,
   and a proxy option to leave out cards you own for real.
 

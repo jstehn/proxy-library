@@ -16,13 +16,13 @@ export async function recordEvent(
 }
 
 /**
- * Deletes a player's pulls and purchases from the feed, inside the caller's transaction (an admin
- * resetting a player: the feed shouldn't boast about cards that are gone). Trades stay, because
- * the other player was part of them. Returns how many events went.
+ * Deletes a player's pulls, purchases and shared decks from the feed, inside the caller's
+ * transaction (a reset: the feed shouldn't boast about cards or decks that are gone). Trades,
+ * drafts and comments stay, because other players were part of them. Returns how many went.
  */
-export async function forgetPullsAndPurchases(
+export async function forgetLibraryEvents(
   services: ActivityServices,
   actorId: UserId,
 ): Promise<number> {
-  return services.events.forgetPullsAndPurchases(actorId);
+  return services.events.forgetLibraryEvents(actorId);
 }

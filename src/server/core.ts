@@ -23,10 +23,11 @@ import {
   httpWpnGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { makeDecks, makeProxySheets } from "@/modules/decks";
+import { makeDecks, makeDeckSharing, makeProxySheets } from "@/modules/decks";
 import {
   drizzleCardLookup,
   drizzleDeckRepository,
+  drizzleDeckSharing,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
 import { makeDrafts } from "@/modules/drafts";
@@ -98,6 +99,7 @@ export function buildCore(config: Config) {
       storeSettings: drizzleStoreSettings(transaction),
       decks: drizzleDeckRepository(transaction),
       cards: drizzleCardLookup(transaction),
+      deckSharing: drizzleDeckSharing(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
@@ -146,6 +148,7 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
+  const deckSharing = makeDeckSharing({ unitOfWork, clock });
   // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3).
   const proxySheet = makeProxySheets({
     images: {
@@ -178,6 +181,7 @@ export function buildCore(config: Config) {
     inventory,
     store,
     decks,
+    deckSharing,
     proxySheet,
     trades,
     drafts,

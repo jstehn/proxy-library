@@ -1,5 +1,5 @@
 import type { Actor } from "@/modules/accounts";
-import { forgetPullsAndPurchases } from "@/modules/activity";
+import { forgetLibraryEvents } from "@/modules/activity";
 import { giveUpEverything } from "@/modules/collection";
 import { deleteAllDecks } from "@/modules/decks";
 import { removeFromLobbies } from "@/modules/drafts";
@@ -60,7 +60,7 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
         at: now,
       });
       const decksDeleted = await deleteAllDecks(services, userId);
-      const eventsForgotten = await forgetPullsAndPurchases(services, userId);
+      const eventsForgotten = await forgetLibraryEvents(services, userId);
 
       return ok({
         tradesClosed,

@@ -23,7 +23,26 @@ export type ActivityEvent =
       moneyChanged: boolean;
     }>
   // A finished draft (design doc 17). Picks aren't posted: too many, and they'd reveal choices.
-  | Readonly<{ kind: "draft"; actorId: UserId; setName: string; players: number }>;
+  | Readonly<{ kind: "draft"; actorId: UserId; setName: string; players: number }>
+  // A deck shared with the playgroup for the first time (design doc 21).
+  | Readonly<{
+      kind: "deckShared";
+      actorId: UserId;
+      deckId: number;
+      deckName: string;
+      format: string;
+    }>
+  // A comment on someone else's deck; `otherId` is the deck's owner (design doc 21).
+  | Readonly<{
+      kind: "deckComment";
+      actorId: UserId;
+      otherId: UserId;
+      deckId: number;
+      deckName: string;
+    }>;
+
+/** Events about a player's own library, which a reset forgets (design docs 12 and 21). */
+export const LIBRARY_EVENT_KINDS = ["pull", "purchase", "deckShared"] as const;
 
 export const NOTABLE_PRICE_CENTS = 500;
 

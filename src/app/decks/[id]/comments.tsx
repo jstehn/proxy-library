@@ -1,0 +1,92 @@
+import type { CommentView } from "@/modules/decks";
+import { MAX_COMMENT_LENGTH } from "@/modules/decks";
+import { LocalTime } from "@/ui/local-time";
+import { deleteCommentAction, postCommentAction } from "../actions";
+
+// A deck's comments (design doc 21): oldest first, a box to add one, and a delete button for
+// those the viewer may remove (their own, any on their deck, or any at all for an admin).
+
+export function DeckComments(props: {
+  deckId: number;
+  comments: readonly CommentView[];
+  viewerId: string;
+  viewerIsAdmin: boolean;
+  isOwner: boolean;
+  isShared: boolean;
+}) {
+  const canDelete = (comment: CommentView) =>
+    props.viewerIsAdmin || props.isOwner || comment.authorId === props.viewerId;
+  return (
+    <section
+      id="comments"
+      aria-label="Comments"
+      className="flex scroll-mt-20 flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+    >
+      <h2 className="font-medium">
+        Comments ({props.comments.filter((c) => c.body !== null).length})
+      </h2>
+      {props.isOwner && !props.isShared && (
+        <p className="text-sm text-zinc-500">
+          This deck is private: only you can read these. Share it to let the playgroup comment.
+        </p>
+      )}
+      {props.comments.length === 0 ? (
+        <p className="text-sm text-zinc-500">No comments yet.</p>
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {props.comments.map((comment) => (
+            <li
+              key={comment.id}
+              id={`comment-${comment.id}`}
+              className="flex scroll-mt-20 flex-col gap-1 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900"
+            >
+              <div className="flex flex-wrap items-baseline gap-2">
+                <strong>{comment.authorName}</strong>
+                <span className="text-xs text-zinc-500">
+                  <LocalTime iso={comment.at} withTime />
+                </span>
+                <span className="flex-1" />
+                {comment.body !== null && canDelete(comment) && (
+                  <form action={deleteCommentAction}>
+                    <input type="hidden" name="deckId" value={props.deckId} />
+                    <input type="hidden" name="commentId" value={comment.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-red-700 underline dark:text-red-400"
+                      aria-label={`Delete ${comment.authorName}'s comment`}
+                    >
+                      Delete
+                    </button>
+                  </form>
+                )}
+              </div>
+              {comment.body === null ? (
+                <p className="text-zinc-500 italic">Comment removed.</p>
+              ) : (
+                <p className="break-words whitespace-pre-wrap">{comment.body}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      <form action={postCommentAction} className="flex flex-col gap-2">
+        <input type="hidden" name="deckId" value={props.deckId} />
+        <textarea
+          name="body"
+          rows={3}
+          required
+          maxLength={MAX_COMMENT_LENGTH}
+          aria-label="Your comment"
+          placeholder={props.isOwner ? "A note about this deck" : "What do you think of this deck?"}
+          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+        />
+        <button
+          type="submit"
+          className="self-start rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          Post comment
+        </button>
+      </form>
+    </section>
+  );
+}

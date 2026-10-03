@@ -58,7 +58,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 18  | Conspiracy drafts                  | draft matters and conspiracies in the command zone (design doc 18)                                                                      | ✅ Done |
 | 19  | Builder insights                   | role tags as a regex table, a draw simulator (hypergeometric odds, a reducer), deck problems checked in the browser                     | ✅ Done |
 | 20  | Deck suggestions and budget        | profiles and scoring with reasons, card features precomputed by the sync (versioned), filter in SQL / rank in TypeScript, greedy budget | ✅ Done |
-| 21  | Sharing decks and comments         | (planned)                                                                                                                               | Planned |
+| 21  | Sharing decks and comments         | pure policies, not found vs forbidden, once-only feed events, soft deletes, max vs sum (cards to get)                                   | ✅ Done |
 
 ### Why this order (changed from the original plan)
 

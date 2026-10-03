@@ -1,7 +1,9 @@
+import type { ActivityServices } from "@/modules/activity";
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
 import type { Deck, DeckId, DeckOrigin, Format } from "../domain/deck";
 import type { ProxyPage } from "../domain/proxy-sheet";
+import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
@@ -60,3 +62,26 @@ export interface ProxyPdfRenderer {
 }
 
 export type ProxySheetsDependencies = { images: ProxyImageSource; renderer: ProxyPdfRenderer };
+
+/** Sharing decks and commenting on them (design doc 21, section 6). */
+export interface DeckSharingRepository {
+  /** The deck, locked until the transaction ends, or null if there's no such deck. */
+  lockDeck(deckId: DeckId): Promise<DeckForSharing | null>;
+  setVisibility(deckId: DeckId, visibility: Visibility, firstSharedAt: Date | null): Promise<void>;
+  addComment(input: {
+    deckId: DeckId;
+    authorId: UserId;
+    body: string;
+    at: Date;
+  }): Promise<CommentId>;
+  /** The comment, locked, with its deck's owner, or null. */
+  lockComment(commentId: CommentId): Promise<(DeckComment & { deckOwnerId: UserId }) | null>;
+  markDeleted(commentId: CommentId, deletedBy: UserId, at: Date): Promise<void>;
+}
+
+export type DeckSharingServices = { deckSharing: DeckSharingRepository } & ActivityServices;
+
+export type DeckSharingDependencies = {
+  unitOfWork: UnitOfWork<DeckSharingServices>;
+  clock: Clock;
+};

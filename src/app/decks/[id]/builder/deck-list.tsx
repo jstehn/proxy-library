@@ -83,6 +83,10 @@ export function DeckList(props: {
   busy: boolean;
   /** Lines with this role are marked (chosen in the statistics). */
   highlighted: Tag | null;
+  /** Someone else's shared deck (design doc 21): no controls. */
+  readOnly?: boolean;
+  /** The viewer's own copies of each card, shown on a shared deck (by oracle id). */
+  yourCopies?: Readonly<Record<string, number>>;
 }) {
   const [view, setView] = useState<View>("list");
   const commanders = props.lines.filter((line) => line.board === "commander");
@@ -120,7 +124,9 @@ export function DeckList(props: {
               return card ? (
                 <div key={line.oracleId} className="flex flex-col gap-1">
                   <CardWithPreview printing={card} />
-                  <LineControls line={line} onChange={props.onChange} busy={props.busy} />
+                  {!props.readOnly && (
+                    <LineControls line={line} onChange={props.onChange} busy={props.busy} />
+                  )}
                 </div>
               ) : (
                 <ListLine
@@ -137,7 +143,9 @@ export function DeckList(props: {
 
       {props.lines.length === 0 && (
         <p className="text-sm text-zinc-500">
-          Empty so far. Select cards from your collection and add them.
+          {props.readOnly
+            ? "Nothing in this deck yet."
+            : "Empty so far. Select cards from your collection and add them."}
         </p>
       )}
 
@@ -198,6 +206,8 @@ function ListLine(props: {
   onSelect: (line: DeckLine) => void;
   busy: boolean;
   highlighted: boolean;
+  readOnly?: boolean;
+  yourCopies?: Readonly<Record<string, number>>;
 }) {
   const { line } = props;
   const problems = props.problemsByName.get(line.name) ?? [];
@@ -235,7 +245,15 @@ function ListLine(props: {
           <ManaText text={line.manaCost} />
         </span>
       )}
-      <LineControls line={line} onChange={props.onChange} busy={props.busy} />
+      {props.yourCopies !== undefined && (
+        <span
+          className={`shrink-0 text-xs tabular-nums ${(props.yourCopies[line.oracleId] ?? 0) > 0 ? "text-green-700 dark:text-green-400" : "text-zinc-500"}`}
+          title="How many you own"
+        >
+          you {props.yourCopies[line.oracleId] ?? 0}
+        </span>
+      )}
+      {!props.readOnly && <LineControls line={line} onChange={props.onChange} busy={props.busy} />}
     </li>
   );
 }

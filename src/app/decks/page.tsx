@@ -28,6 +28,14 @@ export default async function DecksPage(props: PageProps<"/decks">) {
           Build from the cards you own, then print proxies to play with. A deck can use every copy
           you own, even if another deck uses them too.
         </p>
+        <p className="flex flex-wrap gap-3 text-sm">
+          <Link href="/decks/shared" className="underline">
+            Decks shared by the playgroup
+          </Link>
+          <Link href="/decks/to-get" className="underline">
+            Cards to get for all your decks
+          </Link>
+        </p>
       </header>
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
 
@@ -91,6 +99,14 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                 >
                   Draft
                 </Link>
+              )}
+              {deck.visibility === "shared" && (
+                <span
+                  className="rounded bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+                  title="Every player can see this deck"
+                >
+                  Shared
+                </span>
               )}
               <span className="text-sm text-zinc-500">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards

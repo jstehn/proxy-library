@@ -29,14 +29,14 @@ their tables with SQL, but then six modules' rules would live in a seventh place
 Instead, each module offers one function that clears **its own** part, inside the caller's
 transaction (the lesson 06 shape: it takes `services` and returns what it did):
 
-| Module     | Function                  | What it does                                                  |
-| ---------- | ------------------------- | ------------------------------------------------------------- |
-| trades     | `closeOpenTrades`         | cancels proposals the player made, declines ones sent to them |
-| wallet     | `resetBalance`            | one grant or correction back to the starting amount           |
-| inventory  | `discardAllItems`         | deletes their sealed items                                    |
-| collection | `giveUpEverything`        | removes every copy, logged as negative acquisitions           |
-| decks      | `deleteAllDecks`          | deletes their decks                                           |
-| activity   | `forgetPullsAndPurchases` | removes their pulls and purchases from the feed               |
+| Module     | Function              | What it does                                                  |
+| ---------- | --------------------- | ------------------------------------------------------------- |
+| trades     | `closeOpenTrades`     | cancels proposals the player made, declines ones sent to them |
+| wallet     | `resetBalance`        | one grant or correction back to the starting amount           |
+| inventory  | `discardAllItems`     | deletes their sealed items                                    |
+| collection | `giveUpEverything`    | removes every copy, logged as negative acquisitions           |
+| decks      | `deleteAllDecks`      | deletes their decks                                           |
+| activity   | `forgetLibraryEvents` | removes their pulls and purchases from the feed               |
 
 The new `reset` module has **no tables**. Its one use case calls the six in order, from
 [`reset-player.ts`](../src/modules/reset/application/reset-player.ts):

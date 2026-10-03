@@ -14,7 +14,11 @@ import {
   memoryArtworkStore,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { drizzleCardLookup, drizzleDeckRepository } from "@/modules/decks/infrastructure";
+import {
+  drizzleCardLookup,
+  drizzleDeckRepository,
+  drizzleDeckSharing,
+} from "@/modules/decks/infrastructure";
 import {
   drizzleDraftCatalog,
   drizzleDraftRepository,
@@ -65,6 +69,7 @@ export function servicesFor(transaction: DbExecutor) {
     storeSettings: drizzleStoreSettings(transaction),
     decks: drizzleDeckRepository(transaction),
     cards: drizzleCardLookup(transaction),
+    deckSharing: drizzleDeckSharing(transaction),
     trades: drizzleTradeRepository(transaction),
     tradePlayers: drizzleTradePlayers(transaction),
     holdings: drizzleHoldings(transaction),

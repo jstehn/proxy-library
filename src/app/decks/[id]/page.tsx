@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deckView, FORMATS } from "@/modules/decks";
+import { printingCards } from "@/modules/catalog";
+import { deckComments, deckForViewer, EXPORTERS, FORMATS } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
-import { deleteDeckAction, importListAction, updateDeckAction } from "../actions";
+import {
+  deleteDeckAction,
+  importListAction,
+  setVisibilityAction,
+  updateDeckAction,
+} from "../actions";
 import { FORMAT_LABELS } from "../labels";
 import { loadBuilderDeck } from "./builder/actions";
 import { DeckBuilder } from "./builder/deck-builder";
+import { DeckComments } from "./comments";
+import { SharedDeckView } from "./shared-view";
 
 const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
@@ -21,10 +29,57 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { db, seeds } = getContainer();
   const searchParams = await props.searchParams;
 
-  const view = await deckView(db, actor.userId, deckId);
-  const builderDeck = await loadBuilderDeck(deckId);
-  if (view === null || builderDeck === null) notFound();
+  // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
+  const viewed = await deckForViewer(db, actor.userId, deckId);
+  if (viewed === null) notFound();
+  const { view } = viewed;
   const { deck } = view;
+  const comments = await deckComments(db, deckId);
+  const commentSection = (
+    <DeckComments
+      deckId={deck.id}
+      comments={comments}
+      viewerId={actor.userId}
+      viewerIsAdmin={actor.isAdmin}
+      isOwner={viewed.isOwner}
+      isShared={viewed.visibility === "shared"}
+    />
+  );
+
+  if (!viewed.isOwner) {
+    const cards = await printingCards(
+      db,
+      view.lines.map((line) => line.printingId),
+    );
+    return (
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
+        <ManaStylesheet />
+        <header className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold">{deck.name}</h1>
+          <p className="text-sm text-zinc-500">
+            {FORMAT_LABELS[deck.format]} · shared by {viewed.ownerName} ·{" "}
+            <Link href="/decks/shared" className="underline">
+              All shared decks
+            </Link>
+          </p>
+        </header>
+        <SharedDeckView
+          lines={view.lines}
+          rules={view.rules}
+          cards={Object.fromEntries(cards)}
+          format={deck.format}
+          seed={seeds.newSeed()}
+          ownerName={viewed.ownerName}
+          yourCopies={viewed.yourCopies}
+          listText={EXPORTERS.names(view.lines)}
+        />
+        {commentSection}
+      </main>
+    );
+  }
+
+  const builderDeck = await loadBuilderDeck(deckId);
+  if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.entries
     .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}`)
@@ -55,6 +110,25 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             </Link>
           </p>
         </div>
+        <form action={setVisibilityAction} className="flex items-center gap-2 text-sm">
+          <input type="hidden" name="deckId" value={deck.id} />
+          <input
+            type="hidden"
+            name="visibility"
+            value={viewed.visibility === "shared" ? "private" : "shared"}
+          />
+          <span className="text-zinc-500">
+            {viewed.visibility === "shared"
+              ? "Shared: every player can see it and comment."
+              : "Private: only you can see it."}
+          </span>
+          <button
+            type="submit"
+            className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
+          >
+            {viewed.visibility === "shared" ? "Make private" : "Share with the playgroup"}
+          </button>
+        </form>
       </header>
       {typeof searchParams.error === "string" && <Alert tone="error">{searchParams.error}</Alert>}
       {typeof searchParams.imported === "string" && (
@@ -126,6 +200,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           </details>
         </section>
       </div>
+      {commentSection}
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId } from "@/modules/catalog";
+import { deckProblems, deckView, makeDecks, shortList } from "@/modules/decks";
 import { makeStore, quoteShoppingList, type QuoteOptions } from "@/modules/store";
 import { Cents, err } from "@/shared/kernel";
 import {
@@ -51,6 +52,27 @@ describe("quoting a list", () => {
       null,
     ]);
     expect(result.lines[2].totalCents).toBe(82_356);
+  });
+
+  it("buys exactly what a deck is short of, from its list (owned copies counted once)", async () => {
+    // Jack owns 1 Banishing Light; his deck uses 4. "Buy what it's short" must buy 3.
+    await db.execute(sql`
+      insert into collection_cards (user_id, printing_id, finish, quantity)
+      select ${jack.userId}, id, 'nonfoil', 1 from printings where name = 'Banishing Light' limit 1`);
+    const decks = makeDecks({ unitOfWork, clock });
+    const created = await decks.createDeck(jack, { name: "Lights", format: "casual" });
+    if (!created.ok) throw new Error(created.error.kind);
+    await decks.importList(jack, { deckId: created.value, text: "4 Banishing Light" });
+    const view = await deckView(db, jack.userId, created.value);
+    if (view === null) throw new Error("Jack's deck");
+    const owned = (oracleId: string) =>
+      view.lines.find((line) => line.oracleId === oracleId)?.owned ?? 0;
+    const text = shortList(
+      deckProblems(view.deck, (id) => view.rules[id], owned),
+      view.lines,
+    );
+    const result = await quote(text);
+    expect(result.lines.map((line) => line.toBuy)).toEqual([3]);
   });
 
   it("buys only the copies you don't own yet (any printing counts)", async () => {

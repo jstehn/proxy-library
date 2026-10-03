@@ -7,7 +7,7 @@ export const activityEvents = pgTable(
   "activity_events",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    kind: text("kind").notNull(), // "pull" | "purchase" | "trade" | "draft"
+    kind: text("kind").notNull(), // ActivityEvent's kinds: "pull", "purchase", "trade", "draft", …
     actorId: text("actor_id")
       .notNull()
       .references(() => players.userId),

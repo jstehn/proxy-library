@@ -2,6 +2,20 @@
 export { deleteAllDecks } from "./application/delete-all-decks";
 export { makeDecks, type Decks } from "./application/make-decks";
 export {
+  makeDeckSharing,
+  type DeckSharing,
+  type DeleteCommentError,
+  type PostCommentError,
+  type SetVisibilityError,
+} from "./application/sharing";
+export {
+  canViewDeck,
+  CommentId,
+  MAX_COMMENT_LENGTH,
+  VISIBILITIES,
+  type Visibility,
+} from "./domain/sharing";
+export {
   createDeckInTransaction,
   type DeckCardInput,
   type NewDeckInput,
@@ -16,6 +30,8 @@ export type {
 export type {
   CardLookup,
   DeckRepository,
+  DeckSharingRepository,
+  DeckSharingServices,
   DecksDependencies,
   DecksServices,
 } from "./application/ports";
@@ -32,7 +48,10 @@ export {
 } from "./domain/deck";
 export type {
   CardNotFound,
+  CommentInvalid,
+  CommentNotFound,
   DeckNotFound,
+  NotAllowed,
   NameInvalid,
   QuantityInvalid,
   TooManyDecks,
@@ -80,6 +99,17 @@ export {
   type SuggestionList,
 } from "./queries/suggestions";
 export type { DeckProfile, Reason } from "./domain/suggest";
+export {
+  cardsToGetFor,
+  deckComments,
+  deckForViewer,
+  sharedDecks,
+  type CardsToGet,
+  type CardToGetView,
+  type CommentView,
+  type SharedDeck,
+  type ViewedDeck,
+} from "./queries/sharing";
 export { makeProxySheets, type ProxySheet } from "./application/proxy-sheets";
 export type {
   ProxyImageSource,

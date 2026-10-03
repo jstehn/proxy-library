@@ -57,10 +57,11 @@ describe("shortList", () => {
         { oracleId: "ring", name: "The One Ring", finish: "foil" },
       ],
     );
-    expect(text).toBe("3 Lightning Bolt\n1 The One Ring *F*");
+    // The deck's own counts: Buy a list leaves out the copies you own (design doc 15, decision 2).
+    expect(text).toBe("4 Lightning Bolt\n1 The One Ring *F*");
     // …and the store reads it back the same way.
     expect(parseList(text).lines.map((line) => [line.quantity, line.name, line.finish])).toEqual([
-      [3, "Lightning Bolt", null],
+      [4, "Lightning Bolt", null],
       [1, "The One Ring", "foil"],
     ]);
   });

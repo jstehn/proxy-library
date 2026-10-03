@@ -12,6 +12,7 @@ import {
   type Format,
 } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
+import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
 // card across every printing and finish (ADR 0011); basic lands never count as short (rule 1).
@@ -27,6 +28,8 @@ export type DeckSummary = Readonly<{
   updatedAt: string;
   /** Set when the app made the deck: a finished draft (design doc 17). */
   origin: DeckOrigin | null;
+  /** Whether the playgroup can see it (design doc 21). */
+  visibility: Visibility;
 }>;
 
 /** A player's decks, most recently changed first, with how many cards each is short. */
@@ -39,6 +42,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     short: number;
     updated_at: Date;
     origin: string | null;
+    visibility: string;
   }>(sql`
     with owned as (
       select p.oracle_id, sum(c.quantity) as quantity
@@ -53,7 +57,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
        where d.owner_id = ${userId}
        group by e.deck_id, e.oracle_id
     )
-    select d.id, d.name, d.format, d.updated_at, d.origin,
+    select d.id, d.name, d.format, d.updated_at, d.origin, d.visibility,
            coalesce((select sum(e.quantity) from deck_entries e where e.deck_id = d.id), 0)::int as cards,
            coalesce((select sum(greatest(0, n.quantity - coalesce(o.quantity, 0)))
                        from needs n left join owned o on o.oracle_id = n.oracle_id
@@ -71,6 +75,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     short: row.short,
     updatedAt: new Date(row.updated_at).toISOString(),
     origin: DeckOrigin.parse(row.origin),
+    visibility: z.enum(VISIBILITIES).parse(row.visibility),
   }));
 }
 
