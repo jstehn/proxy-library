@@ -25,11 +25,15 @@ describe("pricing", () => {
     expect(msrpFor({ override: null, officialMsrp: null, kindPrice: null })).toBeNull();
   });
 
-  it("never sells a case at its kind's price (several boxes for the price of one)", () => {
+  it("never sells a case, display or set at its kind's price (several for the price of one)", () => {
     expect(kindPriceApplies("Marvel Super Heroes Collector Booster Box Master Case")).toBe(false);
     expect(kindPriceApplies("Foundations Beginner Box Case")).toBe(false);
     expect(kindPriceApplies("Bloomburrow Play Booster Box")).toBe(true);
     expect(kindPriceApplies("Showcase Collector Booster")).toBe(true); // "case" inside a word
+    expect(kindPriceApplies("Scars of Mirrodin Intro Pack Display")).toBe(false);
+    expect(kindPriceApplies("Welcome Deck 2026 Set of 5")).toBe(false);
+    expect(kindPriceApplies("Final Fantasy Scene Box Set of 4")).toBe(false);
+    expect(kindPriceApplies("Welcome Deck 2026 White Deck")).toBe(true);
   });
 
   it("accepts prices from $0.01 to $10,000 (rule 8)", () => {

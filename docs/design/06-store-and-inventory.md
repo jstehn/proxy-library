@@ -214,8 +214,14 @@ card image (so no new image type is fetched), credited to the artist.
 ## 13. Decisions made without review (see decisions-to-review.md)
 
 1. Case products (`booster_case`, `bundle_case`, …) have **no default MSRP**, so they're not for
-   sale until an admin prices them. Most playgroups won't buy six boxes at once.
-2. Welcome decks and promotional or sample packs have no default price. They're free in stores.
+   sale until an admin prices them. Most playgroups won't buy six boxes at once. Cases, displays
+   and "Set of N" products filed under a single product's kind never take that kind's price
+   (`kindPriceApplies`; amended 2026-10-02).
+2. Promotional, sample, box topper and prerelease packs have no default price: they only come
+   inside other products. Welcome decks and boosters, which are free in stores, sell for a token
+   price (amended 2026-10-02, migration `0022_more_msrp_defaults`, which also prices older and
+   specialty kinds: intro, event, Planeswalker and Brawl decks, fat packs, theme boosters,
+   vintage boosters, Secret Lairs, …).
 3. Store transactions cover sealed product too (a small generalization of ADR 0013).
 4. Product art is HTML/CSS rather than SVG, so it can use the Keyrune font and cached card
    images directly.

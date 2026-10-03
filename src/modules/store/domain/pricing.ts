@@ -9,13 +9,15 @@ export function productKind(category: string, subtype: string | null): string {
 }
 
 /**
- * Whether a product may sell at its kind's price. A case never does: MTGJSON files some cases
- * under a single product's kind (a "Collector Booster Box Master Case" is a `booster_box`), so
- * the kind's price would sell several boxes for the price of one. A case sells only at its
- * official MSRP or an admin's own price. The SQL in store queries mirrors this (`IS_CASE`).
+ * Whether a product may sell at its kind's price. Several-in-one products never do: MTGJSON files
+ * some cases, displays and sets under a single product's kind (a "Collector Booster Box Master
+ * Case" is a `booster_box`, an "Intro Pack Display" a `deck/intro`, a "Welcome Deck Set of 5" a
+ * `deck/welcome`), so the kind's price would sell several for the price of one. They sell only at
+ * their official MSRP or an admin's own price. The SQL in store queries mirrors this
+ * (`IS_MULTIPLE`).
  */
 export function kindPriceApplies(productName: string): boolean {
-  return !/\bcase\b/i.test(productName);
+  return !/\b(case|display|set of \d+)\b/i.test(productName);
 }
 
 /**

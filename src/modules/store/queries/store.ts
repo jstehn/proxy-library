@@ -14,11 +14,14 @@ const KIND = sql`sp.category || '/' || coalesce(sp.subtype, 'default')`;
 const MSRP = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
 /** Only listed products with something inside are for sale (design doc 06, rule 2; 11). */
 const HAS_CONTENTS = sql`sp.is_listed and jsonb_array_length(sp.contents) > 0`;
-/** A case never takes its kind's price (mirrors `kindPriceApplies` in domain/pricing.ts). */
-const IS_CASE = sql`sp.name ~* '\\mcase\\M'`;
+/**
+ * A case, display or "Set of N" never takes its kind's price (mirrors `kindPriceApplies` in
+ * domain/pricing.ts).
+ */
+const IS_MULTIPLE = sql`sp.name ~* '\\m(case|display|set of \\d+)\\M'`;
 const PRICE_JOINS = sql`
   left join msrp_overrides o on o.product_id = sp.id
-  left join msrp_prices k on k.kind = ${KIND} and not ${IS_CASE}
+  left join msrp_prices k on k.kind = ${KIND} and not ${IS_MULTIPLE}
   left join product_wpn_links l on l.product_id = sp.id
   left join wpn_products w on w.set_code = l.wpn_set_code and w.name = l.wpn_name`;
 
