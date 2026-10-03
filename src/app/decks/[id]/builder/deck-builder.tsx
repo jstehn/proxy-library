@@ -1,13 +1,28 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Board, BrowseCard, BrowseSort, DeckLine, Format } from "@/modules/decks";
+import type {
+  Board,
+  BrowseCard,
+  BrowseSort,
+  DeckLine,
+  Format,
+  SuggestionCard,
+  SuggestionList,
+} from "@/modules/decks";
 import { mainType } from "@/modules/decks/client";
 import { cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
 import { ManaText } from "@/ui/mana";
-import { browseAction, cardDetailAction, setQuantityAction, type BuilderDeck } from "./actions";
+import {
+  browseAction,
+  cardDetailAction,
+  setQuantityAction,
+  similarAction,
+  type BuilderDeck,
+} from "./actions";
 import { DeckList } from "./deck-list";
 import { commanderColorsOf, problemsOf, provisionalLine } from "./derive";
+import { SuggestionsPanel } from "./suggestions";
 import { TestHandPanel } from "./test-hand";
 import { SelectedCard, type Selection } from "./selected-card";
 import { StatsPanel } from "./stats-panel";
@@ -94,6 +109,17 @@ export function DeckBuilder(props: {
   const problems = problemsOf(format, deck.lines, deck.rules);
   const [showTestHand, setShowTestHand] = useState(false);
   const [highlightedRole, setHighlightedRole] = useState<Tag | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
+  const [similar, setSimilar] = useState<{
+    oracleId: string;
+    list: SuggestionList | "loading" | null;
+  } | null>(null);
+  // Changes whenever the deck's contents do, so suggestions can follow the deck.
+  const deckKey = deck.lines
+    .map((line) => `${line.board}:${line.oracleId}:${line.quantity}`)
+    .sort()
+    .join(",");
 
   // What to browse. A Commander deck starts with its commander's colors (design doc 14,
   // decision 2); every other deck starts with every color, and anyone can pick colors.
@@ -205,6 +231,9 @@ export function DeckBuilder(props: {
       } else if (event.key.toLowerCase() === "h") {
         event.preventDefault();
         setShowTestHand((value) => !value);
+      } else if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        setShowSuggestions((value) => !value);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -247,6 +276,19 @@ export function DeckBuilder(props: {
       otherDecks: card.otherDecks,
       misfit: card.misfit,
       tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
+    });
+  }
+
+  /** A suggestion is selected like a grid card; on a phone, the selected card is on the left tab. */
+  function selectSuggestion(card: SuggestionCard) {
+    selectFromGrid(card);
+    setTab("collection");
+  }
+
+  function showSimilar(oracleId: string) {
+    setSimilar({ oracleId, list: "loading" });
+    void similarAction({ deckId, oracleId }).then((list) => {
+      setSimilar((current) => (current?.oracleId === oracleId ? { oracleId, list } : current));
     });
   }
 
@@ -598,6 +640,9 @@ export function DeckBuilder(props: {
                 onAdd={add}
                 isCommanderDeck={isCommanderDeck}
                 onClose={() => setSelected(null)}
+                similar={similar?.oracleId === selected.oracleId ? similar.list : null}
+                onShowSimilar={() => showSimilar(selected.oracleId)}
+                onSelectSimilar={selectSuggestion}
               />
             </div>
           )}
@@ -634,7 +679,15 @@ export function DeckBuilder(props: {
             highlighted={highlightedRole}
             onHighlight={setHighlightedRole}
           />
-          <div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-expanded={showSuggestions}
+              onClick={() => setShowSuggestions((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showSuggestions ? "Hide suggestions" : "Suggestions"}
+            </button>
             <button
               type="button"
               aria-expanded={showTestHand}
@@ -644,6 +697,14 @@ export function DeckBuilder(props: {
               {showTestHand ? "Hide test hand" : "Test hand"}
             </button>
           </div>
+          {showSuggestions && (
+            <SuggestionsPanel
+              deckId={deckId}
+              deckKey={deckKey}
+              onSelect={selectSuggestion}
+              onClose={() => setShowSuggestions(false)}
+            />
+          )}
           {showTestHand && (
             <TestHandPanel
               lines={deck.lines}

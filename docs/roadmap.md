@@ -35,30 +35,30 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 
 ## Phases
 
-| #   | Phase                              | Key patterns introduced                                                                                                     | Status  |
-| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- |
-| 0   | Dev environment & first TypeScript | —                                                                                                                           | ✅ Done |
-| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                        | ✅ Done |
-| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                             | ✅ Done |
-| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                        | ✅ Done |
-| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)           | ✅ Done |
-| 5   | Pack engine                        | strategy, weighted + rejection sampling, property + statistical tests                                                       | ✅ Done |
-| 6   | Store & inventory                  | UoW across modules, composite (sealed expansion), sealed-item state machine, MSRP table                                     | ✅ Done |
-| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters | ✅ Done |
-| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                | ✅ Done |
-| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                    | ✅ Done |
-| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                    | ✅ Done |
-| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                               | ✅ Done |
-| 12  | Reset a player (admin and self)    | orchestration module over other modules' in-transaction functions                                                           | ✅ Done |
-| 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                         | ✅ Done |
-| 14  | Deck builder 2.0 and proxy PDFs    | a search language (parser → tree → SQL), client-safe module API (ADR 0016), optimistic UI, pure page layout, PDF rendering  | ✅ Done |
-| 15  | Buy a list; card search everywhere | a shared library (ADR 0017), tokenizer modes, quote vs purchase, optimistic concurrency                                     | ✅ Done |
-| 16  | The real collection                | (design doc 16 approved; not built yet)                                                                                     | Planned |
-| 17  | Live booster drafts                | aggregates, queues, deadlines and presence, LISTEN/NOTIFY + Server-Sent Events (ADR 0018), scoring functions                | ✅ Done |
-| 18  | Conspiracy drafts                  | draft matters and conspiracies in the command zone (design doc 18)                                                          | ✅ Done |
-| 19  | Builder insights                   | role tags as a regex table, a draw simulator (hypergeometric odds, a reducer), deck problems checked in the browser         | ✅ Done |
-| 20  | Deck suggestions and budget        | (planned)                                                                                                                   | Planned |
-| 21  | Sharing decks and comments         | (planned)                                                                                                                   | Planned |
+| #   | Phase                              | Key patterns introduced                                                                                                                 | Status  |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 0   | Dev environment & first TypeScript | —                                                                                                                                       | ✅ Done |
+| 1   | Architecture foundation            | kernel types, DI, UoW, lint boundaries, test harness                                                                                    | ✅ Done |
+| 2   | Accounts & roles                   | adapter over Better Auth, `Actor`, policy functions, `proxy.ts`                                                                         | ✅ Done |
+| 3   | Wallet (**reference module**)      | functional core, repository, ledger, locking, Result, contract tests                                                                    | ✅ Done |
+| 4   | Catalog & data sync                | ACL, gateways, decorators (rate limit/retry), streams, bulk upsert, image cache, daily price snapshots (ADR 0013)                       | ✅ Done |
+| 5   | Pack engine                        | strategy, weighted + rejection sampling, property + statistical tests                                                                   | ✅ Done |
+| 6   | Store & inventory                  | UoW across modules, composite (sealed expansion), sealed-item state machine, MSRP table                                                 | ✅ Done |
+| 7   | Collection & singles store         | CQRS-lite queries, sell singles to the store + store transaction ledger, price-history chart (ADR 0013), URL-driven filters             | ✅ Done |
+| 8   | Opening experience ✨              | client state machine, animation orchestration, asset preload                                                                            | ✅ Done |
+| 9   | Deck builder                       | ownership policy, exporter strategies, proxy print sheet                                                                                | ✅ Done |
+| 10  | Trades                             | trade state machine, multi-lock ordering                                                                                                | ✅ Done |
+| 11  | Activity, export & Docker deploy   | outbox-lite feed, exporters, containerization                                                                                           | ✅ Done |
+| 12  | Reset a player (admin and self)    | orchestration module over other modules' in-transaction functions                                                                       | ✅ Done |
+| 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                                     | ✅ Done |
+| 14  | Deck builder 2.0 and proxy PDFs    | a search language (parser → tree → SQL), client-safe module API (ADR 0016), optimistic UI, pure page layout, PDF rendering              | ✅ Done |
+| 15  | Buy a list; card search everywhere | a shared library (ADR 0017), tokenizer modes, quote vs purchase, optimistic concurrency                                                 | ✅ Done |
+| 16  | The real collection                | (design doc 16 approved; not built yet)                                                                                                 | Planned |
+| 17  | Live booster drafts                | aggregates, queues, deadlines and presence, LISTEN/NOTIFY + Server-Sent Events (ADR 0018), scoring functions                            | ✅ Done |
+| 18  | Conspiracy drafts                  | draft matters and conspiracies in the command zone (design doc 18)                                                                      | ✅ Done |
+| 19  | Builder insights                   | role tags as a regex table, a draw simulator (hypergeometric odds, a reducer), deck problems checked in the browser                     | ✅ Done |
+| 20  | Deck suggestions and budget        | profiles and scoring with reasons, card features precomputed by the sync (versioned), filter in SQL / rank in TypeScript, greedy budget | ✅ Done |
+| 21  | Sharing decks and comments         | (planned)                                                                                                                               | Planned |
 
 ### Why this order (changed from the original plan)
 

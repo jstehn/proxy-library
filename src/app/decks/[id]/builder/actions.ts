@@ -5,6 +5,12 @@ import {
   BOARDS,
   BROWSE_SORTS,
   browseCollection,
+  budgetList,
+  deckSuggestions,
+  similarCards,
+  type BudgetList,
+  type DeckSuggestions,
+  type SuggestionList,
   DeckId,
   deckView,
   type BrowsePage,
@@ -108,4 +114,41 @@ export async function setQuantityAction(
   const deck = await loadBuilderDeck(deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
   return { ok: true, deck };
+}
+
+const DeckIdInput = z.number().int().positive();
+
+/** Cards for this deck and for each role it's short of (design doc 20). */
+export async function suggestionsAction(deckId: number): Promise<DeckSuggestions | null> {
+  const actor = await requireActor();
+  const parsed = DeckIdInput.safeParse(deckId);
+  if (!parsed.success) return null;
+  return deckSuggestions(getContainer().db, actor.userId, parsed.data);
+}
+
+const SimilarInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });
+
+/** Cards like the selected one, for this deck. */
+export async function similarAction(
+  input: z.input<typeof SimilarInput>,
+): Promise<SuggestionList | null> {
+  const actor = await requireActor();
+  const parsed = SimilarInput.safeParse(input);
+  if (!parsed.success) return null;
+  return similarCards(getContainer().db, actor.userId, parsed.data.deckId, parsed.data.oracleId);
+}
+
+/** The most a budget list may spend: $1,000. */
+const BUDGET_MAXIMUM_CENTS = 100_000;
+const BudgetInput = z.object({
+  deckId: DeckIdInput,
+  budgetCents: z.number().int().min(1).max(BUDGET_MAXIMUM_CENTS),
+});
+
+/** Store cards for this deck within a budget. */
+export async function budgetAction(input: z.input<typeof BudgetInput>): Promise<BudgetList | null> {
+  const actor = await requireActor();
+  const parsed = BudgetInput.safeParse(input);
+  if (!parsed.success) return null;
+  return budgetList(getContainer().db, actor.userId, parsed.data.deckId, parsed.data.budgetCents);
 }

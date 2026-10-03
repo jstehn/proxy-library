@@ -71,11 +71,25 @@ export const printings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Role tags and themes read from the rules text (design docs 19 and 20), stored by the sync's
+    // tag pass so suggestions can filter by them; worked out again when the rules' version grows.
+    roleTags: text("role_tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    themeTags: text("theme_tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    featuresVersion: integer("features_version").notNull().default(0),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("printings_set_number_idx").on(table.setCode, table.collectorNumber),
     index("printings_oracle_idx").on(table.oracleId),
+    index("printings_role_tags_idx").using("gin", table.roleTags),
+    index("printings_theme_tags_idx").using("gin", table.themeTags),
+    index("printings_features_version_idx").on(table.featuresVersion),
   ],
 );
 

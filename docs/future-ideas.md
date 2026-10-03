@@ -79,10 +79,10 @@ design doc (or joins a phase's design) and is removed from this list.
 
 ## Deck building (out of scope for design doc 14, 2026-09-30)
 
-- **Suggestions:** "cards like this" and "cards that go with your commander", from your own
-  collection first.
-- **Price-based recommendations:** the cheapest singles that would complete a deck, or upgrades
-  within a budget.
+- ~~**Suggestions** and **price-based recommendations**~~ **Done (design doc 20):** cards for the
+  deck's themes and short roles, cards like a selected one, and a list within a budget. Still
+  open: **cards to cut** (swaps, which need a judgment of card strength), and data from other
+  players' decks (EDHREC) if local heuristics fall short.
 - ~~**Automatic tags**~~ **Done (design doc 19)**, with counts against targets, a draw simulator,
   and problems checked in the browser. Still open: an **`otag:` search keyword** (needs the tag
   rules in SQL, or tags stored per printing).

@@ -68,6 +68,18 @@ export {
   type BrowsePage,
   type BrowseSort,
 } from "./queries/browse";
+export {
+  BUDGET_LIST_MAXIMUM,
+  budgetList,
+  deckSuggestions,
+  similarCards,
+  type BudgetList,
+  type DeckSuggestions,
+  type Suggestion,
+  type SuggestionCard,
+  type SuggestionList,
+} from "./queries/suggestions";
+export type { DeckProfile, Reason } from "./domain/suggest";
 export { makeProxySheets, type ProxySheet } from "./application/proxy-sheets";
 export type {
   ProxyImageSource,

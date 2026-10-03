@@ -47,3 +47,4 @@ export {
   type TestHand,
   type TestHandEvent,
 } from "./domain/draws";
+export { creatureTypes, plural, type Reason } from "./domain/suggest";

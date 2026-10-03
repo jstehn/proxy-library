@@ -1,3 +1,4 @@
+import { CARD_FEATURES_VERSION, cardTags, cardThemes } from "@/shared/card-search";
 import { ok } from "@/shared/kernel";
 import {
   isNightlySyncDue,
@@ -50,6 +51,8 @@ export type SyncSummary = {
     decks: string[];
   };
   pricedPrintings: number;
+  /** Printings whose role tags and themes were worked out (design doc 20). */
+  taggedPrintings?: number;
   priceSnapshots: number;
   /** Official product photos, key art, MSRPs and details from WPN (design doc 13). */
   artwork: ArtworkSummary;
@@ -86,6 +89,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       failedSets: [],
       skippedDigital: { printings: 0, boosterTypes: [], products: [], decks: [] },
       pricedPrintings: 0,
+      taggedPrintings: 0,
       priceSnapshots: 0,
       artwork: emptyArtworkSummary(),
       durationMs: 0,
@@ -141,6 +145,10 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // 5. Today's prices, images and legalities for every printing we hold.
     await pricePass(bulkFile.path, summary);
+
+    // 5b. Role tags and themes for printings that are new or tagged by older rules. After the
+    // prices, because ramp reads the mana a card makes (design doc 20, section 8).
+    summary.taggedPrintings = await tagPass();
 
     // 6. Official product photos, key art, MSRPs and details from WPN. Never fails the sync.
     try {
@@ -237,6 +245,26 @@ export function makeSync(dependencies: CatalogDependencies) {
     await inTransaction(({ catalog }) => catalog.markStandard(standardSetsFromTally(tally)));
   }
 
+  /** Works out and stores every out-of-date printing's features, a batch at a time. */
+  async function tagPass(): Promise<number> {
+    let tagged = 0;
+    for (;;) {
+      const batch = await inTransaction(({ catalog }) =>
+        catalog.printingsToTag(CARD_FEATURES_VERSION, BATCH_SIZE),
+      );
+      if (batch.length === 0) return tagged;
+      const features = batch.map((printing) => ({
+        id: printing.id,
+        roleTags: cardTags(printing),
+        themeTags: cardThemes(printing),
+      }));
+      await inTransaction(({ catalog }) =>
+        catalog.saveCardFeatures(features, CARD_FEATURES_VERSION),
+      );
+      tagged += batch.length;
+    }
+  }
+
   /** The worker's main step: run the oldest queued sync, if any. Returns what happened. */
   async function runNextQueuedSync(): Promise<{
     run: SyncRun;
@@ -298,7 +326,14 @@ export function makeSync(dependencies: CatalogDependencies) {
     });
   }
 
-  return { runSync, runNextQueuedSync, recoverInterruptedRuns, queueNightlyIfDue, queueSync };
+  return {
+    runSync,
+    runNextQueuedSync,
+    recoverInterruptedRuns,
+    queueNightlyIfDue,
+    queueSync,
+    tagPass,
+  };
 }
 
 function addSkipped(summary: SyncSummary, setImport: SetImport) {

@@ -153,3 +153,139 @@ export function cardTags(card: TagFacts): Tag[] {
       ((row.facts?.(card) ?? false) || row.patterns.some((pattern) => pattern.test(text))),
   ).map((row) => row.tag);
 }
+
+// Themes (design doc 20, section 3.1): what a deck builds around. A theme has two sides: what a
+// commander says when it leads one ("sacrifice another creature"), and what a card says when it
+// plays into one ("when this dies").
+
+export const THEMES = [
+  "counters",
+  "tokens",
+  "sacrifice",
+  "graveyard",
+  "artifacts",
+  "enchantments",
+  "lifegain",
+  "spells",
+  "landfall",
+  "equipment",
+] as const;
+/** Something a deck builds around. */
+export type Theme = (typeof THEMES)[number];
+
+type ThemeRule = Readonly<{
+  theme: Theme;
+  /** How the builder names it: "+1/+1 counters". */
+  label: string;
+  /** A commander leads this theme if its text matches one of these. */
+  leads: readonly RegExp[];
+  /** A card plays into this theme. */
+  fits: (card: TagFacts, text: string) => boolean;
+}>;
+
+const matchesAny = (patterns: readonly RegExp[], text: string) =>
+  patterns.some((pattern) => pattern.test(text));
+const COUNTERS = [rule(String.raw`\+1/\+1 counters?\b`), rule(String.raw`\bproliferate\b`)];
+const TOKENS = [rule(String.raw`\bcreates? [^.]*\btokens?\b`)];
+const LIFEGAIN = [rule(String.raw`\byou gain [^.]*\blife\b`), rule(String.raw`\blifelink\b`)];
+const firstFace = (card: TagFacts) => card.typeLine.split(" // ")[0];
+
+export const THEME_RULES: readonly ThemeRule[] = [
+  {
+    theme: "counters",
+    label: "+1/+1 counters",
+    leads: COUNTERS,
+    fits: (_card, text) => matchesAny(COUNTERS, text),
+  },
+  {
+    theme: "tokens",
+    label: "Tokens",
+    leads: [...TOKENS, rule(String.raw`\bwhenever [^.]*\btokens? [^.]*\benters?\b`)],
+    fits: (_card, text) => matchesAny(TOKENS, text),
+  },
+  {
+    theme: "sacrifice",
+    label: "Sacrifice",
+    leads: [
+      rule(
+        String.raw`\bsacrifices? (a|an|another|one or more|x|\w+) (other )?(creatures?|artifacts?|permanents?)\b`,
+      ),
+      rule(String.raw`\bwhenever (a|another|one or more) [^.]*creatures? [^.]*\bdies?\b`),
+    ],
+    fits: (_card, text) => /\bsacrifice\b|\bdies\b/i.test(text),
+  },
+  {
+    theme: "graveyard",
+    label: "Graveyard",
+    leads: [rule(String.raw`\b(from|in) your graveyard\b`), rule(String.raw`\bmills?\b`)],
+    fits: (_card, text) => /\bgraveyard\b|\bmills?\b|\bsurveil\b/i.test(text),
+  },
+  {
+    theme: "artifacts",
+    label: "Artifacts",
+    leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\bartifacts?\b`)],
+    fits: (card) => /\bArtifact\b/.test(firstFace(card)),
+  },
+  {
+    theme: "enchantments",
+    label: "Enchantments",
+    leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\benchantments?\b`)],
+    fits: (card) => /\bEnchantment\b/.test(firstFace(card)),
+  },
+  {
+    theme: "lifegain",
+    label: "Lifegain",
+    leads: [rule(String.raw`\bwhenever you gain life\b`), rule(String.raw`\bgained life\b`)],
+    fits: (_card, text) => matchesAny(LIFEGAIN, text),
+  },
+  {
+    theme: "spells",
+    label: "Instants and sorceries",
+    leads: [rule(String.raw`\b(instant (or|and) sorcery|noncreature) spells?\b`)],
+    fits: (card) => /\b(Instant|Sorcery)\b/.test(firstFace(card)),
+  },
+  {
+    theme: "landfall",
+    label: "Landfall",
+    leads: [
+      rule(String.raw`\blandfall\b`),
+      rule(String.raw`\bwhenever (a|one or more) lands? [^.]*\benters?\b`),
+    ],
+    fits: (_card, text) =>
+      /\blandfall\b|\bplay (an|two|\w+) additional lands?\b|\blands? cards? [^.]*onto the battlefield\b/i.test(
+        text,
+      ),
+  },
+  {
+    theme: "equipment",
+    label: "Equipment and Auras",
+    leads: [
+      rule(String.raw`\b(equipped|enchanted) creatures?\b`),
+      rule(String.raw`\b(equipment|auras?)\b`),
+    ],
+    fits: (card) => /\b(Equipment|Aura)\b/.test(firstFace(card)),
+  },
+];
+
+/** The themes a card plays into. */
+export function cardThemes(card: TagFacts): Theme[] {
+  const text = withoutReminders(card.text);
+  return THEME_RULES.filter((row) => row.fits(card, text)).map((row) => row.theme);
+}
+
+/** The themes a commander builds around (read from its text). */
+export function leaderThemes(card: TagFacts): Theme[] {
+  const text = withoutReminders(card.text);
+  return THEME_RULES.filter((row) => matchesAny(row.leads, text)).map((row) => row.theme);
+}
+
+/** How the builder names each theme. */
+export const THEME_LABELS: Readonly<Record<Theme, string>> = Object.fromEntries(
+  THEME_RULES.map((row) => [row.theme, row.label]),
+) as Record<Theme, string>;
+
+/**
+ * Bumped whenever TAG_RULES or THEME_RULES change: the catalog sync then works out every
+ * printing's stored features again (design doc 20, invariant 1).
+ */
+export const CARD_FEATURES_VERSION = 1;

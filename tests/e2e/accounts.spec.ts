@@ -407,6 +407,59 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   ).toBeVisible();
 });
 
+test("the admin asks for suggestions, adds one, and turns a budget into a list (design doc 20)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByLabel("Deck name").fill("Beza Suggests");
+  await page.getByLabel("Format").selectOption("commander");
+  await page.getByRole("button", { name: "Create deck" }).click();
+  await page.getByLabel("Paste a deck list").fill("Commander\n1 Beza, the Bounding Spring");
+  await page.getByRole("button", { name: "Add these cards" }).click();
+  await expect(page.getByText(/Added 1 card/)).toBeVisible();
+
+  // Beza makes Treasure: the deck builds around tokens, and is short of every role.
+  await page.getByRole("button", { name: "Suggestions" }).click();
+  const panel = page.getByRole("region", { name: "Suggestions" });
+  await expect(panel.getByText(/Builds around Tokens\. Short of ramp, card draw/)).toBeVisible();
+  const forDeck = panel.getByRole("list", { name: "For this deck" });
+  const first = forDeck.getByRole("button").first();
+  await expect(first).toBeVisible();
+  const name = (await first.getAttribute("aria-label"))?.split(":")[0] ?? "";
+
+  // A suggestion is selected like a grid card, and added the same way.
+  await first.click();
+  const selected = page.getByRole("region", { name: `Selected: ${name}` });
+  await selected.getByRole("button", { name: "Add to deck" }).click();
+  await expect(page.getByText(`Added 1 ${name} (now 1).`)).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Deck list" }).getByRole("button", { name, exact: true }),
+  ).toBeVisible();
+
+  // Cards like the selected one.
+  await selected.getByRole("button", { name: "Cards like this" }).click();
+  await expect(
+    selected.getByRole("list", { name: "Cards like this" }).getByRole("button").first(),
+  ).toBeVisible();
+
+  // A budget becomes a list for Buy a list, which checks prices again before buying.
+  await panel.getByLabel("Budget in dollars").fill("5");
+  await panel.getByRole("button", { name: "Make a list" }).click();
+  const budget = panel.getByRole("list", { name: "Budget list" });
+  await expect(budget.getByRole("listitem").first()).toBeVisible();
+  await expect(panel.getByText(/^\d+ cards? for \$\d\.\d\d/)).toBeVisible();
+  await panel.getByRole("link", { name: "Buy these" }).click();
+  await expect(page).toHaveURL(/\/singles\/list\?list=/);
+  await expect(page.getByText("Filled in with the list you made.")).toBeVisible();
+  await expect(page.getByLabel("Cards to buy")).toHaveValue(/^1 .+ \([A-Z0-9]+\) \S+/);
+});
+
 test("the admin searches the store with Scryfall syntax and buys a list of singles", async ({
   page,
 }) => {

@@ -19,4 +19,17 @@ export {
   type SearchTerm,
 } from "./parse";
 export { parseList, type ListLine, type ListSection, type ParsedList } from "./list";
-export { cardTags, TAG_RULES, TAGS, type Tag, type TagFacts } from "./tags";
+export {
+  CARD_FEATURES_VERSION,
+  cardTags,
+  cardThemes,
+  leaderThemes,
+  TAG_RULES,
+  TAGS,
+  THEME_LABELS,
+  THEME_RULES,
+  THEMES,
+  type Tag,
+  type TagFacts,
+  type Theme,
+} from "./tags";

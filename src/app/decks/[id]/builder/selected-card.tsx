@@ -1,9 +1,10 @@
 "use client";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Board } from "@/modules/decks";
+import type { Board, SuggestionCard, SuggestionList } from "@/modules/decks";
 import type { Tag } from "@/shared/card-search";
 import { TAG_LABELS } from "../../labels";
+import { SuggestionRow } from "./suggestions";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -33,6 +34,10 @@ export function SelectedCard(props: {
   onAdd: (board: Board) => void;
   isCommanderDeck: boolean;
   onClose: () => void;
+  /** Cards like this one: null until asked for (design doc 20). */
+  similar: SuggestionList | "loading" | null;
+  onShowSimilar: () => void;
+  onSelectSimilar: (card: SuggestionCard) => void;
 }) {
   const { selection, detail } = props;
   const inDeck = Object.values(selection.inDeck).reduce((sum, value) => sum + (value ?? 0), 0);
@@ -143,6 +148,36 @@ export function SelectedCard(props: {
           That&apos;s more than you own ({selection.owned}). You can add them; the deck marks it.
         </p>
       )}
+      <div className="flex flex-col gap-1 text-sm">
+        {props.similar === null ? (
+          <button
+            type="button"
+            onClick={props.onShowSimilar}
+            className="self-start text-xs underline"
+          >
+            Cards like this
+          </button>
+        ) : props.similar === "loading" ? (
+          <p className="text-xs text-zinc-500">Looking for cards like this…</p>
+        ) : props.similar.owned.length + props.similar.store.length === 0 ? (
+          <p className="text-xs text-zinc-500">Nothing like it in your collection or the store.</p>
+        ) : (
+          <>
+            <h4 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+              Cards like this
+            </h4>
+            <ul aria-label="Cards like this" className="flex flex-col">
+              {[...props.similar.owned, ...props.similar.store].map((suggestion) => (
+                <SuggestionRow
+                  key={`${suggestion.card.pool}-${suggestion.card.oracleId}`}
+                  suggestion={suggestion}
+                  onSelect={props.onSelectSimilar}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </section>
   );
 }

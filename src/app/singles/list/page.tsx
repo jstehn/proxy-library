@@ -3,10 +3,14 @@ import { deckProblems, deckView, shortList } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { ManaStylesheet } from "@/ui/mana";
+import { MAX_LIST_LINES } from "@/modules/store";
 import { ListBuyer } from "./list-buyer";
 
+/** Characters accepted from `?list=`: plenty for MAX_LIST_LINES lines. */
+const MAX_LIST_TEXT = 20_000;
+
 // Singles → Buy a list (design doc 15, section 3). From a deck ("?deck=12"), the list starts as
-// the cards that deck is short of.
+// the cards that deck is short of; from a budget list ("?list=…", design doc 20), as that list.
 
 export default async function BuyListPage(props: PageProps<"/singles/list">) {
   const actor = await requireActor();
@@ -28,6 +32,12 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
       );
     }
   }
+  // A list handed over in the address: kept to what the box would accept anyway.
+  const givenList =
+    typeof searchParams.list === "string"
+      ? searchParams.list.slice(0, MAX_LIST_TEXT).split("\n").slice(0, MAX_LIST_LINES).join("\n")
+      : null;
+  if (givenList !== null && startingText === "") startingText = givenList;
   const balance = await wallet.refreshWallet(actor.userId);
 
   return (
@@ -43,6 +53,9 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
             Back to singles
           </Link>
         </p>
+        {givenList !== null && deckName === null && (
+          <p className="text-sm">Filled in with the list you made. Check it, then buy.</p>
+        )}
         {deckName !== null && (
           <p className="text-sm">
             {startingText === ""

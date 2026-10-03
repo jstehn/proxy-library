@@ -32,6 +32,15 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
+   * `pnpm worker tag-cards`: work out the role tags and themes of every printing whose stored ones
+   * are missing or out of date (design doc 20). Every sync does this too; this runs it alone.
+   */
+  async "tag-cards"(container) {
+    const tagged = await container.catalog.tagPass();
+    console.log(`${tagged} printings tagged`);
+  },
+
+  /**
    * `pnpm worker check-packs [packs]`: open that many packs (default 1,000) of every booster
    * recipe in the catalog and report anything that breaks the recipe's rules (design doc 05).
    */

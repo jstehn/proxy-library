@@ -77,6 +77,22 @@ export type CardExtras = Readonly<{
   keywords: readonly string[];
 }>;
 
+/** What the tag pass reads from a printing (design doc 20, section 8). */
+export type TaggablePrinting = Readonly<{
+  id: PrintingId;
+  typeLine: string;
+  /** Every face's rules text, joined with spaces (as the deck queries join it). */
+  text: string;
+  producedMana: readonly string[];
+}>;
+
+/** A printing's role tags and themes, as the tag pass works them out. */
+export type CardFeatures = Readonly<{
+  id: PrintingId;
+  roleTags: readonly string[];
+  themeTags: readonly string[];
+}>;
+
 export interface CatalogRepository {
   /** Adds new sets and updates names and dates of known ones. Never removes a set. */
   saveSetList(sets: readonly CardSetInfo[]): Promise<void>;
@@ -99,6 +115,10 @@ export interface CatalogRepository {
   printingsForPricing(): Promise<Map<string, PricingPrinting>>;
   savePriceSnapshots(snapshots: readonly PriceSnapshot[]): Promise<void>;
   saveCardExtras(extras: readonly CardExtras[]): Promise<void>;
+  /** Up to `limit` printings whose stored features are older than `version`. */
+  printingsToTag(version: number, limit: number): Promise<TaggablePrinting[]>;
+  /** Stores features worked out at `version`. */
+  saveCardFeatures(features: readonly CardFeatures[], version: number): Promise<void>;
   imageSource(printingId: PrintingId): Promise<ImageSource | null>;
 }
 

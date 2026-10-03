@@ -109,6 +109,33 @@ describe("the first sync", () => {
     ]);
   });
 
+  it("tags every printing's roles and themes once per rules version (design doc 20)", async () => {
+    const catalog = buildCatalog();
+    const summary = await catalog.runSync("prices");
+    expect(summary.taggedPrintings).toBe(31);
+
+    const banishingLight = await db.execute<{ role_tags: string[]; theme_tags: string[] }>(sql`
+      select role_tags, theme_tags from printings where name = 'Banishing Light' limit 1
+    `);
+    expect(banishingLight.rows[0]).toEqual({
+      role_tags: ["removal"],
+      theme_tags: ["enchantments"],
+    });
+    const stale = await db.execute<{ stale: number }>(sql`
+      select count(*)::int as stale from printings where features_version = 0
+    `);
+    expect(stale.rows[0].stale).toBe(0);
+
+    // Nothing to do until the rules change; then everything is tagged again.
+    expect(await catalog.tagPass()).toBe(0);
+    await db.execute(sql`update printings set features_version = 0, role_tags = '{}'`);
+    expect(await catalog.tagPass()).toBe(31);
+    const again = await db.execute<{ role_tags: string[] }>(sql`
+      select role_tags from printings where name = 'Banishing Light' limit 1
+    `);
+    expect(again.rows[0].role_tags).toEqual(["removal"]);
+  });
+
   it("stores images and legalities from Scryfall on each printing", async () => {
     await buildCatalog().runSync("prices");
     const rows = await db.execute<{ with_images: number }>(

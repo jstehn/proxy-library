@@ -1,5 +1,6 @@
-import type { DeckProblem, Format } from "@/modules/decks";
-import type { Tag } from "@/shared/card-search";
+import type { DeckProblem, Format, Reason } from "@/modules/decks";
+import { plural } from "@/modules/decks/client";
+import { THEME_LABELS, type Tag } from "@/shared/card-search";
 import { assertNever } from "@/shared/kernel";
 
 export const FORMAT_LABELS: Record<Format, string> = {
@@ -52,3 +53,21 @@ export const TAG_LABELS: Record<Tag, string> = {
   tutor: "Tutors",
   protection: "Protection",
 };
+
+/** Why a card is suggested, in words (design doc 20). */
+export function reasonText(reason: Reason): string {
+  switch (reason.kind) {
+    case "theme":
+      return THEME_LABELS[reason.theme];
+    case "tribe":
+      return plural(reason.tribe);
+    case "role":
+      return reason.count === undefined || reason.target === undefined
+        ? TAG_LABELS[reason.tag]
+        : `${TAG_LABELS[reason.tag]} (${reason.count} of ${reason.target})`;
+    case "keyword":
+      return reason.keyword;
+    default:
+      return assertNever(reason);
+  }
+}
