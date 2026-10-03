@@ -2,6 +2,8 @@
 // details (design doc 13). Pure: the gateway turns a page into a WpnSetPage, and this file
 // decides which of our products each WPN product belongs to.
 
+import type { SetCode } from "./types";
+
 /** One image on Wizards' image host, identified by its asset (stable across sizes). */
 export type WpnImage = Readonly<{
   /** `<asset id>-<version>`, safe in a file name and a URL. */
@@ -172,13 +174,44 @@ function isPlainly(wpnName: string, productName: string): boolean {
 }
 
 /**
+ * Our other sets a set's WPN page names in its product names, e.g. Reality Fracture's page sells
+ * "Foundations Commander Decks – Calling All Angels" from Foundations Commander. Their products
+ * may match those names too (`matchWpnProducts`).
+ */
+export function setsNamedOnPage(
+  page: WpnSetPage,
+  setName: string,
+  otherSets: readonly Readonly<{ code: SetCode; name: string }>[],
+): SetCode[] {
+  const wpnNames = page.products.map((product) => normalizeName(product.name, setName));
+  return otherSets
+    .filter((set) => wpnNames.some((wpnName) => namesSet(wpnName, set.name)))
+    .map((set) => set.code);
+}
+
+/** Whether a normalized WPN name contains a set's name ("foundation commander deck …"). */
+function namesSet(wpnName: string, setName: string): boolean {
+  const words = normalizeName(setName, "");
+  return words !== "" && ` ${wpnName} `.includes(` ${words} `);
+}
+
+/** Another set the page names, with its products. */
+export type NamedSet = Readonly<{ name: string; products: readonly ProductForMatching[] }>;
+
+/**
  * Links our products to the WPN products on their set's page. `products` are the set's own
- * products and its Commander companion sets' (whose decks WPN lists on the main set's page).
+ * products and its Commander companion sets' (whose decks WPN lists on the main set's page);
+ * `namedSets` are other sets the page names (`setsNamedOnPage`), with their products.
  *
- * 1. Specific names first, by name ("Scene Box – Camp Comrades", "Pizza Bundle", "Codex
- *    Bundle"), so a generic name can't take their products.
- * 2. Then WPN's standard names by kind ("Play Booster" → every `booster_pack/play` left).
- * 3. A photo is shown when a WPN product matched exactly one of ours, or plainly one of several
+ * 1. Specific names first, by name, longest first ("Scene Box – Camp Comrades", "Pizza
+ *    Bundle", "Codex Bundle"), so a generic name can't take their products. Another set's products
+ *    only ever match this way, and only names that name their set.
+ * 2. A specific name that matched nothing is tried again without the words none of our products
+ *    use (never a product-type word: "Display 10-Pack (Japan Only)" stays unmatched), and links
+ *    only if exactly one product then matches: "FINAL FANTASY VII Commander Deck –
+ *    Game Edition" is our "Commander Deck Limit Break Game Edition".
+ * 3. Then WPN's standard names by kind ("Play Booster" → every `booster_pack/play` left).
+ * 4. A photo is shown when a WPN product matched exactly one of ours, or plainly one of several
  *    ("Collector Booster" ↔ "Collector Booster Pack", not its "Minimal Packaging" version). Its
  *    photos aren't labeled, so a group ("Commander Decks", five prerelease packs) can't say
  *    which is which, and keeps the generated art.
@@ -189,41 +222,41 @@ export function matchWpnProducts(
   page: WpnSetPage,
   setName: string,
   products: readonly ProductForMatching[],
+  namedSets: readonly NamedSet[] = [],
 ): WpnLink[] {
+  const setNameOf = new Map<string, string>(
+    namedSets.flatMap((set) => set.products.map((product) => [product.id, set.name] as const)),
+  );
+  const allProducts = [...products, ...namedSets.flatMap((set) => set.products)];
   const normalizedNames = new Map(
-    products.map((product) => [product.id, normalizeName(product.name, setName)]),
+    allProducts.map((product) => [product.id, normalizeName(product.name, setName)]),
   );
-  const candidates = products.filter(
-    (product) =>
-      !NEVER_MATCHED_CATEGORIES.some((pattern) => pattern.test(product.category)) &&
-      !NEVER_MATCHED_NAMES.test(normalizedNames.get(product.id) ?? ""),
-  );
+  const nameOf = (product: ProductForMatching) => normalizedNames.get(product.id) ?? "";
+  const isCandidate = (product: ProductForMatching) =>
+    !NEVER_MATCHED_CATEGORIES.some((pattern) => pattern.test(product.category)) &&
+    !NEVER_MATCHED_NAMES.test(nameOf(product));
+  const ownCandidates = products.filter(isCandidate);
+  const allCandidates = allProducts.filter(isCandidate);
+  const wordsInOurNames = new Set(allCandidates.flatMap((product) => nameOf(product).split(" ")));
+
   const named = page.products.map((wpnProduct) => ({
     wpnProduct,
     wpnName: normalizeName(wpnProduct.name, setName),
   }));
-  const specificFirst = [
-    ...named.filter(({ wpnName }) => KINDS_BY_WPN_NAME[wpnName] === undefined),
-    ...named.filter(({ wpnName }) => KINDS_BY_WPN_NAME[wpnName] !== undefined),
-  ];
+  const wordCount = (name: string) => name.split(" ").length;
+  const specific = named
+    .filter(({ wpnName }) => KINDS_BY_WPN_NAME[wpnName] === undefined)
+    .sort((a, b) => wordCount(b.wpnName) - wordCount(a.wpnName));
+  const standard = named.filter(({ wpnName }) => KINDS_BY_WPN_NAME[wpnName] !== undefined);
 
   const claimed = new Set<string>();
   const links: WpnLink[] = [];
-  for (const { wpnProduct, wpnName } of specificFirst) {
-    const kinds = KINDS_BY_WPN_NAME[wpnName];
-    const match: WpnLink["match"] = kinds === undefined ? "by_name" : "by_kind";
-    const matched = candidates.filter(
-      (product) =>
-        !claimed.has(product.id) &&
-        (kinds === undefined
-          ? nameMatches(wpnName, normalizedNames.get(product.id) ?? "")
-          : kinds.includes(kindOf(product))),
-    );
-    const plain = matched.filter((product) =>
-      isPlainly(wpnName, normalizedNames.get(product.id) ?? ""),
-    );
-    const photoFor = matched.length === 1 ? matched[0] : plain.length === 1 ? plain[0] : null;
 
+  function link(wpnProduct: WpnProduct, wpnName: string, matched: ProductForMatching[]) {
+    const match: WpnLink["match"] =
+      KINDS_BY_WPN_NAME[wpnName] === undefined ? "by_name" : "by_kind";
+    const plain = matched.filter((product) => isPlainly(wpnName, nameOf(product)));
+    const photoFor = matched.length === 1 ? matched[0] : plain.length === 1 ? plain[0] : null;
     for (const product of matched) {
       claimed.add(product.id);
       const showsPhoto =
@@ -237,6 +270,44 @@ export function matchWpnProducts(
         photo: showsPhoto ? "variants" : "none",
       });
     }
+  }
+  function unclaimedNamed(wpnName: string): ProductForMatching[] {
+    return allCandidates.filter((product) => {
+      const otherSetName = setNameOf.get(product.id);
+      return (
+        !claimed.has(product.id) &&
+        (otherSetName === undefined || namesSet(wpnName, otherSetName)) &&
+        nameMatches(wpnName, nameOf(product))
+      );
+    });
+  }
+
+  const unmatched: typeof specific = [];
+  for (const { wpnProduct, wpnName } of specific) {
+    const matched = unclaimedNamed(wpnName);
+    if (matched.length > 0) link(wpnProduct, wpnName, matched);
+    else unmatched.push({ wpnProduct, wpnName });
+  }
+  for (const { wpnProduct, wpnName } of unmatched) {
+    const unknownWords = wpnName.split(" ").filter((word) => !wordsInOurNames.has(word));
+    // A product-type word says what the product is ("Display 10-Pack"): never ignore one.
+    if (unknownWords.length === 0 || unknownWords.some((word) => PRODUCT_TYPE_WORDS.has(word))) {
+      continue;
+    }
+    const known = wpnName
+      .split(" ")
+      .filter((word) => wordsInOurNames.has(word))
+      .join(" ");
+    if (wordCount(known) < 2) continue;
+    const matched = unclaimedNamed(known);
+    if (matched.length === 1) link(wpnProduct, known, matched);
+  }
+  for (const { wpnProduct, wpnName } of standard) {
+    const kinds = KINDS_BY_WPN_NAME[wpnName] ?? [];
+    const matched = ownCandidates.filter(
+      (product) => !claimed.has(product.id) && kinds.includes(kindOf(product)),
+    );
+    link(wpnProduct, wpnName, matched);
   }
   return links;
 }

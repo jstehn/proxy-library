@@ -240,3 +240,16 @@ kind's price**. None of them means not for sale, as before. The admin store page
 - **Commander decks' generated art now features their own commander** (it showed the set's
   most valuable card before), from the deck list's commander.
 - The data's product order differs slightly from the page's visual order; nothing depends on it.
+- **More Wizards prices reach their products (2026-10-02).** Six official MSRPs on the pages
+  were going unused, so those products sold at their kind's price instead:
+  1. Reality Fracture's page sells Foundations Commander's five decks ($29.99), which belong to
+     another set's page. A page's specific names may now match products of **other sets they
+     name** (`setsNamedOnPage`), by name only, and only names that mention that set.
+  2. "FINAL FANTASY **VII** Commander Deck – Game Edition" ($99.99) matched nothing, because none
+     of our names has "VII", so our Game Edition took the generic "Commander Decks" price
+     ($69.99). A specific name that matches nothing is tried again without the words none of
+     our products use, never a product-type word, and links only if exactly one product fits.
+     Specific names now also match longest first. Re-run on all stored pages, the only links that
+     changed are those six.
+- `IS_CASE` is now `IS_MULTIPLE`: displays and "Set of N" products never take their kind's price
+  either (design doc 06, section 13).

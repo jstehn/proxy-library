@@ -3,12 +3,14 @@ import {
   matchWpnProducts,
   normalizeName,
   parseMsrp,
+  setsNamedOnPage,
   slugCandidates,
   variantFor,
   type ProductForMatching,
   type WpnProduct,
   type WpnSetPage,
 } from "./wpn";
+import type { SetCode } from "./types";
 
 describe("slugCandidates", () => {
   it("makes WPN's page address from the set name, then with the brand in front", () => {
@@ -182,5 +184,103 @@ describe("matchWpnProducts", () => {
         photo: "variants",
       },
     ]);
+  });
+
+  it("matches a name with a word none of our products use, when only one product fits", () => {
+    // Real names from Final Fantasy's WPN page and our catalog (2026-10-02): "VII" is in none.
+    const fin: WpnSetPage = {
+      slug: "final-fantasy",
+      keyArt: null,
+      products: [
+        wpn("Magic: The Gathering®—FINAL FANTASY Commander Decks", 4),
+        wpn("Magic: The Gathering® FINAL FANTASY™ VII Commander Deck – Game Edition"),
+      ],
+    };
+    const matched = matchWpnProducts(fin, "Final Fantasy", [
+      ours("game", "Final Fantasy Commander Deck Limit Break Game Edition", "deck", "commander"),
+      ours("limit", "Final Fantasy Commander Deck Limit Break", "deck", "commander", "FIC"),
+      ours("trance", "Final Fantasy Commander Deck Revival Trance", "deck", "commander", "FIC"),
+    ]);
+    const wpnNameOf = (id: string) => matched.find((link) => link.productId === id)?.wpnName;
+    expect(wpnNameOf("game")).toBe(
+      "Magic: The Gathering® FINAL FANTASY™ VII Commander Deck – Game Edition",
+    );
+    expect(wpnNameOf("limit")).toBe("Magic: The Gathering®—FINAL FANTASY Commander Decks");
+    expect(wpnNameOf("trance")).toBe("Magic: The Gathering®—FINAL FANTASY Commander Decks");
+  });
+
+  it("never ignores a product-type word: a Japanese display isn't our pack", () => {
+    const page: WpnSetPage = {
+      slug: "x",
+      keyArt: null,
+      products: [wpn("Set Booster"), wpn("Set Booster Display 10-Pack (Japan Only)")],
+    };
+    const matched = matchWpnProducts(page, "X", [
+      ours("pack", "X Set Booster Pack", "booster_pack", "set"),
+    ]);
+    expect(matched).toEqual([
+      expect.objectContaining({ productId: "pack", wpnName: "Set Booster" }),
+    ]);
+  });
+
+  it("doesn't guess when a name's known words fit several products", () => {
+    const page: WpnSetPage = { slug: "x", keyArt: null, products: [wpn("Mystery Scene Box")] };
+    const matched = matchWpnProducts(page, "X", [
+      ours("a", "X Scene Box Alpha", "box_set", "other"),
+      ours("b", "X Scene Box Beta", "box_set", "other"),
+    ]);
+    expect(matched).toEqual([]);
+  });
+
+  describe("products of other sets the page names", () => {
+    // Reality Fracture's WPN page sells Foundations Commander's decks (2026-10-02).
+    const fra: WpnSetPage = {
+      slug: "reality-fracture",
+      keyArt: null,
+      products: [
+        wpn("Reality Fracture Commander Deck"),
+        wpn("Foundations Commander Decks", 5),
+        wpn("Foundations Commander Decks - Calling All Angels"),
+        wpn("Foundations Commander Decks - Keen Engineering"),
+        wpn("Reality Fracture Draft Night"),
+      ],
+    };
+    const sets = [
+      { code: "FDC" as SetCode, name: "Foundations Commander" },
+      { code: "FDN" as SetCode, name: "Foundations" },
+      { code: "TMT" as SetCode, name: "Teenage Mutant Ninja Turtles" },
+    ];
+
+    it("finds the sets a page names", () => {
+      expect(setsNamedOnPage(fra, "Reality Fracture", sets)).toEqual(["FDC", "FDN"]);
+    });
+
+    it("matches them by name, the most specific name first, but never by kind", () => {
+      const matched = matchWpnProducts(
+        fra,
+        "Reality Fracture",
+        [ours("fra", "Reality Fracture Commander Deck Multiverse Reforged", "deck", "commander")],
+        [
+          {
+            name: "Foundations Commander",
+            products: [
+              ours("angels", "Foundations Commander Deck Calling All Angels", "deck", "commander"),
+              ours("keen", "Foundations Commander Deck Keen Engineering", "deck", "commander"),
+              ours("ranks", "Foundations Commander Deck Wretched Ranks", "deck", "commander"),
+            ],
+          },
+          {
+            name: "Foundations",
+            products: [ours("night", "Foundations Draft Night", "limited_aid_tool", "draft")],
+          },
+        ],
+      );
+      const wpnNameOf = (id: string) => matched.find((link) => link.productId === id)?.wpnName;
+      expect(wpnNameOf("fra")).toBe("Reality Fracture Commander Deck");
+      expect(wpnNameOf("angels")).toBe("Foundations Commander Decks - Calling All Angels");
+      expect(wpnNameOf("keen")).toBe("Foundations Commander Decks - Keen Engineering");
+      expect(wpnNameOf("ranks")).toBe("Foundations Commander Decks");
+      expect(wpnNameOf("night")).toBeUndefined();
+    });
   });
 });

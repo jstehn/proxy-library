@@ -1,6 +1,13 @@
 import { isStillSettling } from "../domain/rules";
 import type { SetCode } from "../domain/types";
-import { ARTWORK_WIDTHS, matchWpnProducts, slugCandidates, type ArtworkSize } from "../domain/wpn";
+import {
+  ARTWORK_WIDTHS,
+  matchWpnProducts,
+  setsNamedOnPage,
+  slugCandidates,
+  type ArtworkSize,
+  type NamedSet,
+} from "../domain/wpn";
 import type { CatalogDependencies, CatalogServices, SetState, SyncKind } from "./ports";
 
 // The WPN step of the sync (design doc 13): official product photos, key art, MSRPs and product
@@ -68,9 +75,23 @@ export function makeArtworkPass(dependencies: CatalogDependencies, inTransaction
           const companions = states
             .filter((other) => other.parentCode === state.code && other.type === "commander")
             .map((other) => other.code);
+          // Other imported sets the page sells from ("Foundations Commander Decks" on Reality
+          // Fracture's page).
+          const ownCodes = [state.code, ...companions];
+          const otherSets = states.filter(
+            (other) => other.importedVersion !== null && !ownCodes.includes(other.code),
+          );
+          const namedCodes = setsNamedOnPage(page, state.name, otherSets);
           await inTransaction(async ({ artwork }) => {
-            const products = await artwork.productsOf([state.code, ...companions]);
-            const links = matchWpnProducts(page, state.name, products);
+            const products = await artwork.productsOf(ownCodes);
+            const namedSets: NamedSet[] = [];
+            for (const other of otherSets.filter((set) => namedCodes.includes(set.code))) {
+              namedSets.push({
+                name: other.name,
+                products: await artwork.productsOf([other.code]),
+              });
+            }
+            const links = matchWpnProducts(page, state.name, products, namedSets);
             await artwork.savePage(state.code, page, links, now);
             summary.productsLinked += links.length;
           });
