@@ -89,6 +89,8 @@ export type DeckLine = Readonly<{
   manaCost: string | null;
   /** Colors of mana it can make, for the deck statistics. */
   producedMana: string[];
+  /** Rules text of every face, for role tags (design doc 19). */
+  text: string;
   /** Latest market price of one copy in its finish, in cents, if known. */
   priceCents: number | null;
   setCode: string;
@@ -211,6 +213,7 @@ export async function deckView(
       manaValue: Number(row.mana_value),
       manaCost: row.mana_cost,
       producedMana: row.produced_mana ?? [],
+      text: row.face_text,
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,
       collectorNumber: row.collector_number,

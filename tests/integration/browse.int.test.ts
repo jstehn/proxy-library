@@ -2,7 +2,14 @@
 // Postgres and the fixture catalog.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { browseCollection, makeDecks, type BrowseInput, type DeckId } from "@/modules/decks";
+import {
+  browseCollection,
+  deckView,
+  makeDecks,
+  type BrowseInput,
+  type DeckId,
+} from "@/modules/decks";
+import { PrintingId } from "@/modules/catalog";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -112,5 +119,45 @@ describe("browsing the collection for a deck", () => {
       page: 1,
     });
     expect(others).toBeNull();
+  });
+
+  it("gives each card what the builder needs to show it before the server answers (design doc 19)", async () => {
+    const deckId = await newDeck("commander", "Commander\n1 Bria, Riptide Rogue");
+    const page = await browse(deckId, { onlyLegal: false });
+    const card = page.cards.find((candidate) => candidate.name === "Banishing Light");
+    if (card === undefined) throw new Error("Banishing Light should be in the grid");
+
+    // Add it the way the builder does, then compare its guess with the server's deck line.
+    const added = await decks.setEntry(jack, {
+      deckId,
+      oracleId: card.oracleId,
+      board: "main",
+      quantity: 1,
+      printingId: PrintingId.of(card.printingId),
+    });
+    expect(added.ok).toBe(true);
+    const view = await deckView(db, jack.userId, deckId);
+    const line = view?.lines.find((candidate) => candidate.oracleId === card.oracleId);
+    expect(line).toMatchObject({
+      printingId: card.printingId,
+      finish: card.finish,
+      text: card.text,
+      producedMana: card.producedMana,
+      setCode: card.setCode,
+      collectorNumber: card.collectorNumber,
+      priceCents: card.priceCents,
+    });
+    expect(card.text).toMatch(/exile target nonland permanent/i);
+    const rules = view?.rules[card.oracleId];
+    expect(card.rules).toMatchObject({
+      name: rules?.name,
+      typeLine: rules?.typeLine,
+      text: rules?.text,
+      colorIdentity: rules?.colorIdentity,
+      isBasicLand: rules?.isBasicLand,
+      hasPowerToughness: rules?.hasPowerToughness,
+    });
+    // Only the deck's format, as the server has it.
+    expect(card.rules.legalities).toEqual({ commander: rules?.legalities.commander });
   });
 });

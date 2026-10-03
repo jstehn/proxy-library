@@ -19,3 +19,4 @@ export {
   type SearchTerm,
 } from "./parse";
 export { parseList, type ListLine, type ListSection, type ParsedList } from "./list";
+export { cardTags, TAG_RULES, TAGS, type Tag, type TagFacts } from "./tags";

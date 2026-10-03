@@ -18,7 +18,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { id } = await props.params;
   const deckId = Number(id);
   if (!Number.isSafeInteger(deckId) || deckId <= 0) notFound();
-  const { db } = getContainer();
+  const { db, seeds } = getContainer();
   const searchParams = await props.searchParams;
 
   const view = await deckView(db, actor.userId, deckId);
@@ -66,6 +66,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         deckId={deck.id}
         format={deck.format}
         initialDeck={builderDeck}
+        seed={seeds.newSeed()}
       />
 
       <div className="grid gap-8 border-t border-zinc-200 pt-6 md:grid-cols-2 dark:border-zinc-800">

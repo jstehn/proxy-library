@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { colorPips, deckSize, deckStats, isLand, mainType, suggestedLands } from "./stats";
+import {
+  colorPips,
+  deckSize,
+  deckStats,
+  isLand,
+  mainType,
+  roleTargets,
+  suggestedLands,
+} from "./stats";
 
 describe("deckStats", () => {
   it("counts the curve without lands or the sideboard, 7+ together", () => {
@@ -27,6 +35,7 @@ describe("deckStats", () => {
       pips: { W: 0, U: 0, B: 0, R: 0, G: 0 },
       sources: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
       priceCents: 0,
+      tags: { ramp: 0, draw: 0, removal: 0, wipe: 0, counter: 0, tutor: 0, protection: 0 },
     });
   });
 
@@ -120,5 +129,62 @@ describe("deck size and lands to aim for", () => {
     expect(deckSize("limited")).toEqual({ cards: 40, exact: false });
     expect(deckSize("modern")).toEqual({ cards: 60, exact: false });
     expect(["commander", "limited", "casual"].map(suggestedLands)).toEqual([37, 17, 24]);
+  });
+});
+
+describe("role tags in the statistics (design doc 19)", () => {
+  it("counts copies per role, overlapping roles in both, never the sideboard", () => {
+    const stats = deckStats([
+      {
+        quantity: 1,
+        manaValue: 1,
+        typeLine: "Artifact",
+        board: "main",
+        text: "{T}: Add {C}{C}.",
+        producedMana: ["C"],
+      },
+      {
+        quantity: 2,
+        manaValue: 2,
+        typeLine: "Sorcery",
+        board: "main",
+        text: "Destroy target creature. Draw a card.",
+      },
+      {
+        quantity: 3,
+        manaValue: 2,
+        typeLine: "Instant",
+        board: "side",
+        text: "Counter target spell.",
+      },
+      {
+        quantity: 1,
+        manaValue: 4,
+        typeLine: "Legendary Creature — Elf",
+        board: "commander",
+        text: "Whenever you cast a spell, draw a card.",
+      },
+      // No text: no tags (a line from before this phase).
+      { quantity: 4, manaValue: 1, typeLine: "Instant", board: "main" },
+    ]);
+    expect(stats.tags).toEqual({
+      ramp: 1,
+      draw: 3,
+      removal: 2,
+      wipe: 0,
+      counter: 0,
+      tutor: 0,
+      protection: 0,
+    });
+  });
+
+  it("aims for more of each role in bigger decks", () => {
+    const commander = roleTargets("commander");
+    const modern = roleTargets("modern");
+    const limited = roleTargets("limited");
+    for (const tag of ["ramp", "draw", "removal", "wipe"] as const) {
+      expect(commander[tag]).toBeGreaterThanOrEqual(modern[tag]);
+      expect(modern[tag]).toBeGreaterThanOrEqual(limited[tag]);
+    }
   });
 });

@@ -4,12 +4,16 @@ import {
   deckStats,
   MANA_COLORS,
   deckSize,
+  roleTargets,
+  TARGETED_TAGS,
   suggestedLands,
   TYPE_ORDER,
   type ManaSource,
 } from "@/modules/decks/client";
+import { TAGS, type Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
+import { TAG_LABELS } from "../../labels";
 
 // Live deck statistics (design doc 14, section 2.5): recomputed in the browser from the deck in
 // hand, so they change the moment a card goes in or out.
@@ -23,8 +27,21 @@ const COLOR_BAR: Record<ManaSource, string> = {
   C: "bg-stone-400",
 };
 
-export function StatsPanel(props: { lines: readonly DeckLine[]; format: string }) {
+export function StatsPanel(props: {
+  lines: readonly DeckLine[];
+  format: string;
+  /** The role whose cards the deck list highlights, if any. */
+  highlighted: Tag | null;
+  onHighlight: (tag: Tag | null) => void;
+}) {
   const stats = deckStats(props.lines);
+  const targets = roleTargets(props.format);
+  const untargeted = TAGS.filter(
+    (tag) => !(TARGETED_TAGS as readonly Tag[]).includes(tag) && stats.tags[tag] > 0,
+  );
+  const roleButton = (tag: Tag) =>
+    `text-left underline-offset-2 hover:underline ${props.highlighted === tag ? "font-semibold underline" : ""}`;
+  const toggle = (tag: Tag) => props.onHighlight(props.highlighted === tag ? null : tag);
   const target = deckSize(props.format);
   const landGoal = suggestedLands(props.format);
   const tallest = Math.max(...stats.curve, 1);
@@ -123,6 +140,57 @@ export function StatsPanel(props: { lines: readonly DeckLine[]; format: string }
           </p>
         </div>
       )}
+
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Roles</h3>
+        {TARGETED_TAGS.map((tag) => {
+          const count = stats.tags[tag];
+          const target = targets[tag];
+          return (
+            <div key={tag} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={props.highlighted === tag}
+                onClick={() => toggle(tag)}
+                className={roleButton(tag)}
+              >
+                {TAG_LABELS[tag]}
+              </button>
+              <div className="h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+                <div
+                  className={`h-full ${count >= target ? "bg-green-600 dark:bg-green-500" : "bg-amber-500"}`}
+                  style={{ width: `${Math.min(1, count / target) * 100}%` }}
+                />
+              </div>
+              <span
+                className={`text-right tabular-nums ${count >= target ? "" : "text-amber-700 dark:text-amber-400"}`}
+                aria-label={`${count} of about ${target}`}
+              >
+                {count} / {target}
+              </span>
+            </div>
+          );
+        })}
+        {untargeted.length > 0 && (
+          <p className="flex flex-wrap gap-x-3">
+            {untargeted.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={props.highlighted === tag}
+                onClick={() => toggle(tag)}
+                className={roleButton(tag)}
+              >
+                {TAG_LABELS[tag]} {stats.tags[tag]}
+              </button>
+            ))}
+          </p>
+        )}
+        <p className="text-[10px] text-zinc-500">
+          Read from each card&apos;s rules text, so a few may be missed or miscounted. The targets
+          are a common guide for this deck size. Click a role to mark its cards in the list.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-1">
         <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Types</h3>

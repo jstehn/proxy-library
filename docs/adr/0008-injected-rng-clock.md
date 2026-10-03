@@ -25,6 +25,12 @@ accrual must be testable, which requires deterministic randomness and time.
 is the same generator tests use, so every opening can be replayed from its stored seed.
 `weightedSampleWithoutReplacement` shipped as `weightedSample`.
 
+**Implementation note (Phase 19, design doc 19):** randomness that **decides nothing** (no money,
+no cards, nothing stored) may run in the browser, still through an `Rng`. The deck builder's test
+hands are the first case. The page asks the container for a seed (`seeds.newSeed()`), and the
+browser shuffles with ``seededRng(`${seed}:${n}`)``, so no code calls `Math.random()` and the lint
+rule stays the same. Anything that decides an outcome still happens on the server.
+
 ## Consequences
 
 - ✅ Reproducible Monte Carlo tests of pack odds, and exact replays of any opening.

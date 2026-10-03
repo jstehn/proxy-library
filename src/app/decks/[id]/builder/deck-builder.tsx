@@ -1,12 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Board, BrowseCard, BrowseSort, DeckLine } from "@/modules/decks";
+import type { Board, BrowseCard, BrowseSort, DeckLine, Format } from "@/modules/decks";
 import { mainType } from "@/modules/decks/client";
-import { hasTerm, toggleTerm } from "@/shared/card-search";
+import { cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
 import { ManaText } from "@/ui/mana";
 import { browseAction, cardDetailAction, setQuantityAction, type BuilderDeck } from "./actions";
 import { DeckList } from "./deck-list";
+import { commanderColorsOf, problemsOf, provisionalLine } from "./derive";
+import { TestHandPanel } from "./test-hand";
 import { SelectedCard, type Selection } from "./selected-card";
 import { StatsPanel } from "./stats-panel";
 
@@ -74,21 +76,32 @@ const EMPTY_BROWSE: BrowseState = {
   loadingMore: false,
 };
 
-export function DeckBuilder(props: { deckId: number; format: string; initialDeck: BuilderDeck }) {
+export function DeckBuilder(props: {
+  deckId: number;
+  format: Format;
+  initialDeck: BuilderDeck;
+  /** Seeds the test hands' shuffles (made by the server: ADR 0008's implementation note). */
+  seed: string;
+}) {
   const { deckId, format } = props;
   const isCommanderDeck = format === "commander";
   const [deck, setDeck] = useState(props.initialDeck);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [isSaving, startSaving] = useTransition();
   const latestChange = useRef(0);
+  // Worked out from the deck in hand, so they change the moment a card goes in (design doc 19).
+  const commanderColors = commanderColorsOf(format, deck.lines, deck.rules);
+  const problems = problemsOf(format, deck.lines, deck.rules);
+  const [showTestHand, setShowTestHand] = useState(false);
+  const [highlightedRole, setHighlightedRole] = useState<Tag | null>(null);
 
   // What to browse. A Commander deck starts with its commander's colors (design doc 14,
   // decision 2); every other deck starts with every color, and anyone can pick colors.
-  const startingColors = (colors: BuilderDeck["commanderColors"]): Color[] =>
+  const startingColors = (colors: Color[] | null): Color[] =>
     isCommanderDeck && colors !== null ? colors : [...COLORS];
   const [search, setSearch] = useState("");
   const [waitedSearch, setWaitedSearch] = useState("");
-  const [colors, setColors] = useState<Color[]>(() => startingColors(deck.commanderColors));
+  const [colors, setColors] = useState<Color[]>(() => startingColors(commanderColors));
   const [includeColorless, setIncludeColorless] = useState(true);
   const [showEverything, setShowEverything] = useState(false);
   const [sort, setSort] = useState<BrowseSort>("name");
@@ -98,14 +111,16 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
 
   // When the commander changes, its colors become the filter (adjusting state while rendering,
   // React's pattern for "reset when a prop changes", rather than in an effect).
-  const commanderKey = (deck.commanderColors ?? []).join("");
+  const commanderKey = (commanderColors ?? []).join("");
   const [seenCommanderKey, setSeenCommanderKey] = useState(commanderKey);
   if (commanderKey !== seenCommanderKey) {
     setSeenCommanderKey(commanderKey);
-    setColors(startingColors(deck.commanderColors));
+    setColors(startingColors(commanderColors));
   }
 
   const [selected, setSelected] = useState<Selection | null>(null);
+  /** The grid card behind the selection, to show a new card before the server answers. */
+  const selectedCard = useRef<BrowseCard | null>(null);
   const selectedPrinting = useRef<string | null>(null);
   const [detail, setDetail] = useState<PrintingCard | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -177,14 +192,19 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
     return () => observer.disconnect();
   }, [browse.page, browse.pageCount, browse.loadingMore, isFirstPageLoading, loadPage]);
 
-  // "/" jumps to the search box from anywhere on the page, as on Scryfall and GitHub.
+  // "/" jumps to the search box from anywhere on the page, as on Scryfall and GitHub; "H" opens
+  // or closes the test hand.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       const typing = target?.closest("input, textarea, select") !== null;
-      if (event.key === "/" && !typing) {
+      if (typing || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === "/") {
         event.preventDefault();
         searchRef.current?.focus();
+      } else if (event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        setShowTestHand((value) => !value);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -217,6 +237,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
   }
 
   function selectFromGrid(card: BrowseCard) {
+    selectedCard.current = card;
     select({
       oracleId: card.oracleId,
       printingId: card.printingId,
@@ -225,10 +246,12 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
       inDeck: inDeck(card.oracleId),
       otherDecks: card.otherDecks,
       misfit: card.misfit,
+      tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
     });
   }
 
   function selectFromDeck(line: DeckLine) {
+    selectedCard.current = null;
     select({
       oracleId: line.oracleId,
       printingId: line.printingId,
@@ -237,6 +260,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
       inDeck: inDeck(line.oracleId),
       otherDecks: line.otherDecks.length,
       misfit: null,
+      tags: cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana }),
     });
   }
 
@@ -246,18 +270,31 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
     done: string,
   ) {
     const request = ++latestChange.current;
-    // Show the change straight away for cards already in the deck; new cards appear when the
-    // server answers (it knows their details).
-    setDeck((current) => ({
-      ...current,
-      lines: current.lines
-        .map((line) =>
-          line.oracleId === change.oracleId && line.board === change.board
-            ? { ...line, quantity: change.quantity }
-            : line,
-        )
-        .filter((line) => line.quantity > 0),
-    }));
+    // Show the change straight away. A card new to the deck gets a provisional line made from its
+    // grid card, so its problems and statistics show before the server answers (design doc 19).
+    const card = selectedCard.current?.oracleId === change.oracleId ? selectedCard.current : null;
+    setDeck((current) => {
+      const exists = current.lines.some(
+        (line) => line.oracleId === change.oracleId && line.board === change.board,
+      );
+      if (!exists && card !== null && change.quantity > 0) {
+        return {
+          ...current,
+          lines: [...current.lines, provisionalLine(card, change.board, change.quantity)],
+          rules: { [card.oracleId]: card.rules, ...current.rules },
+        };
+      }
+      return {
+        ...current,
+        lines: current.lines
+          .map((line) =>
+            line.oracleId === change.oracleId && line.board === change.board
+              ? { ...line, quantity: change.quantity }
+              : line,
+          )
+          .filter((line) => line.quantity > 0),
+      };
+    });
     startSaving(async () => {
       const result = await setQuantityAction({ deckId, ...change });
       if (request !== latestChange.current) return; // a later change will bring the fresh deck
@@ -328,12 +365,12 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
   }
 
   const problemsByName = new Map<string, string[]>();
-  for (const problem of deck.problems) {
+  for (const problem of problems) {
     if (problem.name !== null) {
       problemsByName.set(problem.name, [...(problemsByName.get(problem.name) ?? []), problem.text]);
     }
   }
-  const deckProblems = deck.problems.filter((problem) => problem.name === null);
+  const deckProblems = problems.filter((problem) => problem.name === null);
   const cardTotal = deck.lines.reduce((sum, line) => sum + line.quantity, 0);
   const pill = (pressed: boolean) =>
     `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`;
@@ -438,13 +475,13 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
               >
                 <ManaText text="{C}" />
               </button>
-              {isCommanderDeck && deck.commanderColors !== null && (
+              {isCommanderDeck && commanderColors !== null && (
                 <button
                   type="button"
                   className="text-xs underline"
                   onClick={() => {
                     setShowEverything(false);
-                    setColors(startingColors(deck.commanderColors));
+                    setColors(startingColors(commanderColors));
                   }}
                 >
                   Commander&apos;s colors
@@ -571,7 +608,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
           className={`w-full flex-col gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[26rem] lg:overflow-y-auto lg:pr-1 ${tab === "deck" ? "flex" : "hidden lg:flex"}`}
         >
           <section aria-label="Problems" className="flex flex-col gap-1 text-sm">
-            {deck.problems.length === 0 ? (
+            {problems.length === 0 ? (
               <p className="text-green-700 dark:text-green-400">
                 {cardTotal === 0
                   ? "Empty so far."
@@ -591,7 +628,31 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
               </ul>
             )}
           </section>
-          <StatsPanel lines={deck.lines} format={format} />
+          <StatsPanel
+            lines={deck.lines}
+            format={format}
+            highlighted={highlightedRole}
+            onHighlight={setHighlightedRole}
+          />
+          <div>
+            <button
+              type="button"
+              aria-expanded={showTestHand}
+              onClick={() => setShowTestHand((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showTestHand ? "Hide test hand" : "Test hand"}
+            </button>
+          </div>
+          {showTestHand && (
+            <TestHandPanel
+              lines={deck.lines}
+              format={format}
+              seed={props.seed}
+              cards={deck.cards}
+              onClose={() => setShowTestHand(false)}
+            />
+          )}
           <DeckList
             lines={deck.lines}
             cards={deck.cards}
@@ -602,6 +663,7 @@ export function DeckBuilder(props: { deckId: number; format: string; initialDeck
               setTab("collection");
             }}
             busy={isSaving}
+            highlighted={highlightedRole}
           />
         </aside>
       </div>

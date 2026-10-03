@@ -5,20 +5,18 @@ import {
   BOARDS,
   BROWSE_SORTS,
   browseCollection,
-  deckBrowseContext,
   DeckId,
-  deckProblems,
   deckView,
   type BrowsePage,
+  type CardRules,
   type DeckLine,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { problemText } from "../../labels";
 
 // The deck builder's server side (design doc 14). The browser holds the deck in memory for
-// instant statistics; every change goes through the decks module (which re-checks it), and the
-// fresh deck comes back.
+// instant statistics and problems (design doc 19); every change goes through the decks module,
+// and the fresh deck comes back.
 
 const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
@@ -48,13 +46,11 @@ export async function cardDetailAction(printingId: string): Promise<PrintingCard
   return cards.get(printingId) ?? null;
 }
 
-/** The deck as the builder shows it, and the problems with it in words. */
+/** The deck as the builder shows it, with what the browser needs to check its rules. */
 export type BuilderDeck = Readonly<{
   lines: DeckLine[];
-  /** Each problem in words, with the card's name when it's about one card. */
-  problems: Array<{ text: string; name: string | null }>;
-  /** The commanders' combined color identity (null without a commander or outside Commander). */
-  commanderColors: Array<"W" | "U" | "B" | "R" | "G"> | null;
+  /** The rules facts of every card in the deck, for `deckProblems` in the browser. */
+  rules: Record<string, CardRules>;
   /** Card details for every line, for name previews. */
   cards: Record<string, PrintingCard>;
 }>;
@@ -63,27 +59,15 @@ export type BuilderDeck = Readonly<{
 export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | null> {
   const actor = await requireActor();
   const { db } = getContainer();
-  const [view, context] = await Promise.all([
-    deckView(db, actor.userId, deckId),
-    deckBrowseContext(db, actor.userId, deckId),
-  ]);
-  if (view === null || context === null) return null;
-  const problems = deckProblems(
-    view.deck,
-    (oracleId) => view.rules[oracleId],
-    (oracleId) => view.lines.find((line) => line.oracleId === oracleId)?.owned ?? 0,
-  );
+  const view = await deckView(db, actor.userId, deckId);
+  if (view === null) return null;
   const cards = await printingCards(
     db,
     view.lines.map((line) => line.printingId),
   );
   return {
     lines: view.lines,
-    problems: problems.map((problem) => ({
-      text: problemText(problem),
-      name: "name" in problem ? problem.name : null,
-    })),
-    commanderColors: context.commanderColors,
+    rules: { ...view.rules },
     cards: Object.fromEntries(cards),
   };
 }

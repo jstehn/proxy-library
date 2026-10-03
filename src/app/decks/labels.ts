@@ -1,4 +1,5 @@
 import type { DeckProblem, Format } from "@/modules/decks";
+import type { Tag } from "@/shared/card-search";
 import { assertNever } from "@/shared/kernel";
 
 export const FORMAT_LABELS: Record<Format, string> = {
@@ -40,3 +41,14 @@ export function problemText(problem: DeckProblem): string {
       return assertNever(problem);
   }
 }
+
+/** Role tags as the builder names them (design doc 19). */
+export const TAG_LABELS: Record<Tag, string> = {
+  ramp: "Ramp",
+  draw: "Card draw",
+  removal: "Removal",
+  wipe: "Board wipes",
+  counter: "Counterspells",
+  tutor: "Tutors",
+  protection: "Protection",
+};

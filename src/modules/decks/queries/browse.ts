@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
+import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 
@@ -10,6 +11,7 @@ import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 // card you own (shown as the printing you have most copies of), with what the deck needs to know.
 
 const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
+const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 /** A color of Magic: "W", "U", "B", "R" or "G". */
 type Color = z.infer<typeof ColorSchema>;
 
@@ -46,6 +48,18 @@ export type BrowseCard = Readonly<{
   otherDecks: number;
   /** Why it doesn't fit this deck, or null if it does. */
   misfit: "color" | "legality" | null;
+  /**
+   * What the deck rules need, so the builder can check a card the moment it's added (design doc
+   * 19, section 5.3). Legalities hold only the deck's format.
+   */
+  rules: CardRules;
+  /** The rest of a provisional deck line, shown until the server answers. */
+  producedMana: string[];
+  text: string;
+  setCode: string;
+  collectorNumber: string;
+  finish: "nonfoil" | "foil" | "etched";
+  priceCents: number | null;
 }>;
 
 export type BrowsePage = Readonly<{
@@ -146,6 +160,16 @@ export async function browseCollection(
     other_decks: number;
     fits_identity: boolean;
     is_legal: boolean;
+    color_identity: string[];
+    legality: string | null;
+    face_text: string;
+    has_power_toughness: boolean;
+    is_basic_land: boolean;
+    produced_mana: string[] | null;
+    set_code: string;
+    collector_number: string;
+    finish: string;
+    price_cents: number | null;
     total: number;
   }>(sql`
     with owned as (
@@ -168,8 +192,26 @@ export async function browseCollection(
                and e.oracle_id = owned.oracle_id)::int as other_decks,
            ${identityFits} as fits_identity,
            ${legal} as is_legal,
+           p.color_identity, p.legalities->>${context.format} as legality,
+           coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
+           exists (select 1 from jsonb_array_elements(p.faces) f
+                    where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
+           p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
+           p.produced_mana, p.set_code, p.collector_number, shown.finish,
+           (select s.usd_cents from price_snapshots s
+             where s.printing_id = p.id and s.finish = shown.finish
+             order by s.day desc limit 1) as price_cents,
            count(*) over ()::int as total
       from owned join printings p on p.id = owned.printing_id
+      -- The finish a new deck line shows, as the deck view picks it when nothing is pinned.
+      cross join lateral (
+        select coalesce(
+                 (select c.finish from collection_cards c
+                   where c.user_id = ${userId} and c.printing_id = p.id
+                   order by c.quantity desc limit 1),
+                 case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
+               ) as finish
+      ) shown
      where ${searchCondition(parsed.node, { userId, foil: foilOwnedBy(userId) })} and ${colorFilter}
        and (${!input.onlyLegal} or ${legal})
      order by ${ORDER[input.sort]}
@@ -189,6 +231,21 @@ export async function browseCollection(
       inThisDeck: row.in_this_deck,
       otherDecks: row.other_decks,
       misfit: !row.fits_identity ? "color" : !row.is_legal ? "legality" : null,
+      rules: {
+        name: row.name,
+        typeLine: row.type_line,
+        text: row.face_text,
+        colorIdentity: row.color_identity.map((color) => ColorSchema.parse(color)),
+        legalities: row.legality === null ? {} : { [context.format]: row.legality },
+        isBasicLand: row.is_basic_land,
+        hasPowerToughness: row.has_power_toughness,
+      },
+      producedMana: row.produced_mana ?? [],
+      text: row.face_text,
+      setCode: row.set_code,
+      collectorNumber: row.collector_number,
+      finish: FinishSchema.parse(row.finish),
+      priceCents: row.price_cents === null ? null : Number(row.price_cents),
     })),
     total,
     pageCount: Math.max(1, Math.ceil(total / BROWSE_PAGE_SIZE)),

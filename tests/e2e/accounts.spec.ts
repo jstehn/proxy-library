@@ -327,6 +327,57 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await deckList.getByRole("button", { name: "Plains", exact: true }).hover();
   await expect(page.locator("[data-card-preview]")).toBeVisible();
 
+  // Problems are worked out in the browser (design doc 19): with every save held back for a few
+  // seconds, the problem still shows at once.
+  await page.mouse.move(0, 0);
+  await page.route("**/decks/**", async (route) => {
+    if (route.request().method() === "POST" && route.request().headers()["next-action"]) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    await route.continue();
+  });
+  await deckList.getByRole("button", { name: "One fewer Plains" }).click();
+  await expect(problems.getByText("The deck has 99 cards; it needs exactly 100.")).toBeVisible({
+    timeout: 1500,
+  });
+  const lastSave = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      (response.request().postData() ?? "").includes('"quantity":99'),
+    { timeout: 15_000 },
+  );
+  await deckList.getByRole("button", { name: "One more Plains" }).click();
+  await expect(problems.getByText(/The deck has \d+ cards/)).toHaveCount(0, { timeout: 1500 });
+  await lastSave; // the held-back saves still reach the server
+  await page.unroute("**/decks/**");
+
+  // Roles: counted against the format's targets; a role marks its cards; a view by role.
+  const ramp = stats.getByRole("button", { name: "Ramp" });
+  await expect(stats.getByText("Roles")).toBeVisible();
+  await ramp.click();
+  await expect(ramp).toHaveAttribute("aria-pressed", "true");
+  await deckList.getByRole("button", { name: "By role" }).click();
+  await expect(deckList.getByRole("heading", { name: "Lands (99)" })).toBeVisible();
+  await deckList.getByRole("button", { name: "By type" }).click();
+
+  // A test hand: 7 cards; Commander's first mulligan is free, the second puts one on the bottom.
+  await page.getByRole("button", { name: "Test hand" }).click();
+  const testHand = page.getByRole("region", { name: "Test hand" });
+  const inHand = testHand.getByRole("list", { name: "Cards in hand" }).getByRole("listitem");
+  await expect(inHand).toHaveCount(7);
+  await testHand.getByRole("button", { name: "Mulligan" }).click();
+  await expect(testHand.getByText("Mulligans: 1 (first free)")).toBeVisible();
+  await expect(testHand.getByText(/to put on the bottom/)).toHaveCount(0);
+  await testHand.getByRole("button", { name: "Mulligan" }).click();
+  await expect(testHand.getByText("Choose 1 card to put on the bottom.")).toBeVisible();
+  await testHand.getByRole("button", { name: "Put Plains on the bottom" }).first().click();
+  await expect(inHand).toHaveCount(6);
+  await testHand.getByRole("button", { name: "Draw" }).click();
+  await expect(inHand).toHaveCount(7);
+  await expect(testHand.getByText(/turn 1/)).toBeVisible();
+  await expect(testHand.getByRole("definition").first()).toHaveText(/^\d+%$/);
+  await testHand.getByRole("button", { name: "Close" }).click();
+
   // Proxies: choose options, see what they make, and download the PDF.
   await page.getByRole("link", { name: "Print proxies" }).click();
   await expect(page.getByText(/^1 card on 1 page, 9 to a page\./)).toBeVisible(); // Beza; Plains skipped

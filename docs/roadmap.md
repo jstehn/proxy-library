@@ -55,6 +55,10 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 15  | Buy a list; card search everywhere | a shared library (ADR 0017), tokenizer modes, quote vs purchase, optimistic concurrency                                     | ✅ Done |
 | 16  | The real collection                | (design doc 16 approved; not built yet)                                                                                     | Planned |
 | 17  | Live booster drafts                | aggregates, queues, deadlines and presence, LISTEN/NOTIFY + Server-Sent Events (ADR 0018), scoring functions                | ✅ Done |
+| 18  | Conspiracy drafts                  | draft matters and conspiracies in the command zone (design doc 18)                                                          | ✅ Done |
+| 19  | Builder insights                   | role tags as a regex table, a draw simulator (hypergeometric odds, a reducer), deck problems checked in the browser         | ✅ Done |
+| 20  | Deck suggestions and budget        | (planned)                                                                                                                   | Planned |
+| 21  | Sharing decks and comments         | (planned)                                                                                                                   | Planned |
 
 ### Why this order (changed from the original plan)
 

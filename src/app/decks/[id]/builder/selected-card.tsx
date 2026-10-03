@@ -2,6 +2,8 @@
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board } from "@/modules/decks";
+import type { Tag } from "@/shared/card-search";
+import { TAG_LABELS } from "../../labels";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -14,6 +16,8 @@ export type Selection = Readonly<{
   inDeck: Readonly<Partial<Record<Board, number>>>;
   otherDecks: number;
   misfit: "color" | "legality" | null;
+  /** The card's roles, read from its rules text (design doc 19). */
+  tags: readonly Tag[];
 }>;
 
 const MISFIT_TEXT = {
@@ -78,6 +82,18 @@ export function SelectedCard(props: {
               <Fact label="Other decks using it" value={String(selection.otherDecks)} />
             )}
           </dl>
+          {selection.tags.length > 0 && (
+            <ul aria-label="Roles" className="flex flex-wrap gap-1">
+              {selection.tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-900 dark:bg-sky-950 dark:text-sky-200"
+                >
+                  {TAG_LABELS[tag]}
+                </li>
+              ))}
+            </ul>
+          )}
           {selection.misfit && (
             <p className="text-amber-700 dark:text-amber-400">{MISFIT_TEXT[selection.misfit]}</p>
           )}

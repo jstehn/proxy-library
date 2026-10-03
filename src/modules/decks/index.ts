@@ -46,7 +46,7 @@ export {
   type CardRules,
   type DeckProblem,
 } from "./domain/rules";
-export { deckStats, mainType, TYPE_ORDER, type DeckStats } from "./domain/stats";
+export { deckStats, mainType, roleTargets, TYPE_ORDER, type DeckStats } from "./domain/stats";
 export {
   decksUsing,
   deckView,

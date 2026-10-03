@@ -168,6 +168,8 @@ export function buildCore(config: Config) {
     config,
     db,
     clock,
+    /** Fresh seeds, e.g. for the deck builder's test hands (design doc 19). */
+    seeds,
     unitOfWork,
     accounts,
     wallet,

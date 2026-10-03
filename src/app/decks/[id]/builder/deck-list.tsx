@@ -4,12 +4,51 @@ import { CardWithPreview, NamePreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, DeckLine } from "@/modules/decks";
 import { mainType, TYPE_ORDER } from "@/modules/decks/client";
+import { cardTags, TAGS, type Tag } from "@/shared/card-search";
 import { ManaText } from "@/ui/mana";
+import { TAG_LABELS } from "../../labels";
 
 // The deck as Moxfield shows one (design doc 14, section 2.4): the commander as its card, then
-// the cards grouped by type with counts and mana costs. Every name previews its card.
+// the cards grouped by type (or by role, design doc 19) with counts and mana costs. Every name
+// previews its card.
 
 type Group = Readonly<{ title: string; lines: DeckLine[] }>;
+
+/** A line's roles, read from its rules text. */
+function tagsOf(line: DeckLine): Tag[] {
+  return cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana });
+}
+
+const sortedByCost = (group: readonly DeckLine[]) =>
+  [...group].sort((a, b) => a.manaValue - b.manaValue || a.name.localeCompare(b.name));
+
+function sideboardGroup(lines: readonly DeckLine[]): Group[] {
+  const side = lines.filter((line) => line.board === "side");
+  return side.length > 0 ? [{ title: "Sideboard", lines: sortedByCost(side) }] : [];
+}
+
+/**
+ * The main deck by role, then the sideboard. A card with two roles shows under both; the counts
+ * then add up to more than the deck, as the role statistics do.
+ */
+function groupsByRole(lines: readonly DeckLine[]): Group[] {
+  const main = lines.filter((line) => line.board === "main");
+  const groups: Group[] = TAGS.map((tag) => ({
+    title: TAG_LABELS[tag],
+    lines: sortedByCost(main.filter((line) => tagsOf(line).includes(tag))),
+  }));
+  const lands = main.filter(
+    (line) => mainType(line.typeLine) === "Land" && tagsOf(line).length === 0,
+  );
+  const other = main.filter(
+    (line) => mainType(line.typeLine) !== "Land" && tagsOf(line).length === 0,
+  );
+  groups.push(
+    { title: "Other", lines: sortedByCost(other) },
+    { title: "Lands", lines: sortedByCost(lands) },
+  );
+  return [...groups.filter((group) => group.lines.length > 0), ...sideboardGroup(lines)];
+}
 
 /** The deck in display order: commander, the main deck by type, then the sideboard. */
 function groupsOf(lines: readonly DeckLine[]): Group[] {
@@ -20,18 +59,17 @@ function groupsOf(lines: readonly DeckLine[]): Group[] {
     byType.set(type, [...(byType.get(type) ?? []), line]);
   }
   const plural = (type: string) => (type === "Sorcery" ? "Sorceries" : `${type}s`);
-  const sorted = (group: DeckLine[]) =>
-    [...group].sort((a, b) => a.manaValue - b.manaValue || a.name.localeCompare(b.name));
   const groups: Group[] = [...TYPE_ORDER, "Other"]
     .filter((type) => byType.has(type))
     .map((type) => ({
       title: type === "Other" ? "Other" : plural(type),
-      lines: sorted(byType.get(type) ?? []),
+      lines: sortedByCost(byType.get(type) ?? []),
     }));
-  const side = lines.filter((line) => line.board === "side");
-  if (side.length > 0) groups.push({ title: "Sideboard", lines: sorted(side) });
-  return groups;
+  return [...groups, ...sideboardGroup(lines)];
 }
+
+const VIEWS = { list: "By type", roles: "By role", visual: "Visual" } as const;
+type View = keyof typeof VIEWS;
 
 const count = (lines: readonly DeckLine[]) => lines.reduce((sum, line) => sum + line.quantity, 0);
 
@@ -43,17 +81,21 @@ export function DeckList(props: {
   onChange: (line: DeckLine, quantity: number) => void;
   onSelect: (line: DeckLine) => void;
   busy: boolean;
+  /** Lines with this role are marked (chosen in the statistics). */
+  highlighted: Tag | null;
 }) {
-  const [view, setView] = useState<"list" | "visual">("list");
+  const [view, setView] = useState<View>("list");
   const commanders = props.lines.filter((line) => line.board === "commander");
-  const groups = groupsOf(props.lines);
+  const groups = view === "roles" ? groupsByRole(props.lines) : groupsOf(props.lines);
+  const isHighlighted = (line: DeckLine) =>
+    props.highlighted !== null && tagsOf(line).includes(props.highlighted);
 
   return (
     <section aria-label="Deck list" className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Deck</h2>
         <div role="group" aria-label="Deck view" className="flex gap-1 text-xs">
-          {(["list", "visual"] as const).map((option) => (
+          {(Object.keys(VIEWS) as View[]).map((option) => (
             <button
               key={option}
               type="button"
@@ -61,7 +103,7 @@ export function DeckList(props: {
               onClick={() => setView(option)}
               className={`rounded px-2 py-0.5 ${view === option ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
             >
-              {option === "list" ? "List" : "Visual"}
+              {VIEWS[option]}
             </button>
           ))}
         </div>
@@ -81,7 +123,12 @@ export function DeckList(props: {
                   <LineControls line={line} onChange={props.onChange} busy={props.busy} />
                 </div>
               ) : (
-                <ListLine key={line.oracleId} line={line} {...props} />
+                <ListLine
+                  key={line.oracleId}
+                  line={line}
+                  {...props}
+                  highlighted={isHighlighted(line)}
+                />
               );
             })}
           </div>
@@ -99,10 +146,15 @@ export function DeckList(props: {
           <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
             {group.title} ({count(group.lines)})
           </h3>
-          {view === "list" ? (
+          {view !== "visual" ? (
             <ul className="flex flex-col">
               {group.lines.map((line) => (
-                <ListLine key={`${line.board}-${line.oracleId}`} line={line} {...props} />
+                <ListLine
+                  key={`${line.board}-${line.oracleId}`}
+                  line={line}
+                  {...props}
+                  highlighted={isHighlighted(line)}
+                />
               ))}
             </ul>
           ) : (
@@ -120,7 +172,7 @@ export function DeckList(props: {
                       src={`/api/images/${line.printingId}/small/front`}
                       alt=""
                       loading="lazy"
-                      className={`aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800 ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : ""}`}
+                      className={`aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800 ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
                     />
                   </button>
                   {line.quantity > 1 && (
@@ -145,11 +197,15 @@ function ListLine(props: {
   onChange: (line: DeckLine, quantity: number) => void;
   onSelect: (line: DeckLine) => void;
   busy: boolean;
+  highlighted: boolean;
 }) {
   const { line } = props;
   const problems = props.problemsByName.get(line.name) ?? [];
   return (
-    <li className="group flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900">
+    <li
+      data-highlighted={props.highlighted || undefined}
+      className={`group flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
+    >
       <span className="w-5 text-right tabular-nums">{line.quantity}</span>
       <NamePreview
         printing={props.cards[line.printingId]}

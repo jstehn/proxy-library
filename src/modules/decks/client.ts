@@ -2,6 +2,9 @@
 // Server code imports index.ts instead.
 export {
   colorPips,
+  roleTargets,
+  TARGETED_TAGS,
+  type TargetedTag,
   deckSize,
   deckStats,
   isLand,
@@ -24,3 +27,23 @@ export {
   type ProxySummary,
 } from "./domain/proxy-sheet";
 export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
+export {
+  deckProblems,
+  canBeCommander,
+  type CardRules,
+  type DeckProblem,
+  type DeckToCheck,
+} from "./domain/rules";
+export {
+  deckOdds,
+  hypergeometricAtLeast,
+  library,
+  nextHand,
+  OPENING_HAND,
+  startHand,
+  type DrawLine,
+  type LibraryCard,
+  type OddsRow,
+  type TestHand,
+  type TestHandEvent,
+} from "./domain/draws";

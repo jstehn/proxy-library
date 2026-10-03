@@ -19,6 +19,8 @@ export type CardRules = Readonly<{
 }>;
 
 export type RulesLookup = (oracleId: string) => CardRules;
+/** What the rules read from a deck: its format and lines (the builder has no more than this). */
+export type DeckToCheck = Pick<Deck, "format" | "entries">;
 export type OwnedLookup = (oracleId: string) => number;
 
 export type DeckProblem =
@@ -153,7 +155,7 @@ function copyLimitProblems(
   return problems;
 }
 
-function commanderProblems(deck: Deck, rules: RulesLookup, size: number): DeckProblem[] {
+function commanderProblems(deck: DeckToCheck, rules: RulesLookup, size: number): DeckProblem[] {
   const problems: DeckProblem[] = [];
   const commanders = deck.entries.filter((entry) => entry.board === "commander");
   const commanderCount = count(commanders);
@@ -180,7 +182,11 @@ function commanderProblems(deck: Deck, rules: RulesLookup, size: number): DeckPr
 }
 
 /** Everything wrong with a deck, ownership first. An empty list means it's ready to play. */
-export function deckProblems(deck: Deck, rules: RulesLookup, owned: OwnedLookup): DeckProblem[] {
+export function deckProblems(
+  deck: DeckToCheck,
+  rules: RulesLookup,
+  owned: OwnedLookup,
+): DeckProblem[] {
   const copies = copiesByCard(deck.entries);
   const problems = ownershipProblems(copies, rules, owned);
   const format = FORMAT_RULES[deck.format];

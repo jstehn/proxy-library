@@ -1,5 +1,7 @@
+import { cardTags, TAGS, type Tag } from "@/shared/card-search";
+
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
-// exercise 5 became this). Pure: lines in, numbers out.
+// exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.
 
 export type StatsLine = Readonly<{
   quantity: number;
@@ -12,6 +14,8 @@ export type StatsLine = Readonly<{
   producedMana?: readonly string[];
   /** Market price of one copy, in cents, if known. */
   priceCents?: number | null;
+  /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
+  text?: string;
 }>;
 
 export const MANA_COLORS = ["W", "U", "B", "R", "G"] as const;
@@ -51,6 +55,8 @@ export type DeckStats = Readonly<{
   sources: Readonly<Record<ManaSource, number>>;
   /** The whole deck's market value, sideboard included, in cents (unknown prices count 0). */
   priceCents: number;
+  /** Cards (main deck and commander) with each role; a card with two roles counts in both. */
+  tags: Readonly<Record<Tag, number>>;
 }>;
 
 /** The first matching type, in TYPE_ORDER ("Artifact Creature" is a Creature). */
@@ -88,6 +94,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
   let lands = 0;
   let otherManaSources = 0;
   let priceCents = 0;
+  const tags = Object.fromEntries(TAGS.map((tag) => [tag, 0])) as Record<Tag, number>;
 
   for (const line of lines) {
     priceCents += (line.priceCents ?? 0) * line.quantity;
@@ -96,6 +103,14 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     const type = mainType(line.typeLine);
     types[type] = (types[type] ?? 0) + line.quantity;
     const produced = line.producedMana ?? [];
+    if (line.text !== undefined) {
+      for (const tag of cardTags({
+        typeLine: line.typeLine,
+        text: line.text,
+        producedMana: produced,
+      }))
+        tags[tag] += line.quantity;
+    }
     for (const color of produced) {
       if (color in sources) sources[color as ManaSource] += line.quantity;
     }
@@ -123,6 +138,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     pips,
     sources,
     priceCents,
+    tags,
   };
 }
 
@@ -139,4 +155,18 @@ export function deckSize(format: string): Readonly<{ cards: number; exact: boole
 export function suggestedLands(format: string): number {
   if (format === "commander") return 37;
   return format === "limited" ? 17 : 24;
+}
+
+/** The roles that have a target to aim for; the rest are only counted. */
+export const TARGETED_TAGS = ["ramp", "draw", "removal", "wipe"] as const satisfies readonly Tag[];
+export type TargetedTag = (typeof TARGETED_TAGS)[number];
+
+/**
+ * Role counts to aim for (design doc 19, decision 2): a guide, not a rule. Commander uses a common
+ * community guide; 60- and 40-card decks scale it down, with more removal than ramp.
+ */
+export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> {
+  if (format === "commander") return { ramp: 10, draw: 10, removal: 8, wipe: 3 };
+  if (format === "limited") return { ramp: 2, draw: 3, removal: 5, wipe: 1 };
+  return { ramp: 4, draw: 6, removal: 8, wipe: 2 };
 }
