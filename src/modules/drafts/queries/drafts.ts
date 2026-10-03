@@ -355,6 +355,8 @@ export async function boosterOptions(db: DbExecutor): Promise<BoosterOption[]> {
     select b.set_code, s.name as set_name, b.booster_type
       from booster_configs b
       join card_sets s on s.code = b.set_code
+     -- Only enabled sets have their cards in the catalog: a pack of anything else can't open.
+     where s.is_enabled
      order by s.release_date desc, s.code, b.booster_type
   `);
   return rows.rows.map((row) => ({

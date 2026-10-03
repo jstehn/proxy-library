@@ -635,7 +635,12 @@ function passOnSkipped(draft: Draft, ctx: StepContext): Draft {
       audience: seat.seatNumber,
       seat: seat.seatNumber,
       kind: "passedOn",
-      cards: front.cards.filter((card) => card.pick === null).flatMap(shown),
+      // "You may look at that booster pack", unless a face-up Archdemon of Paliano says you
+      // can't look at packs ("can't" beats "may").
+      cards:
+        faceUpWith(next, seat.seatNumber, "random", ctx).length > 0
+          ? []
+          : front.cards.filter((card) => card.pick === null).flatMap(shown),
       about: null,
     });
     // A skip is used up by any pack passed on without drafting, even during a lockout.

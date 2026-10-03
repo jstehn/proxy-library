@@ -13,6 +13,7 @@ import {
   refOf,
   seatAt,
   withAbilities,
+  withCard,
   type Draft,
   type DraftCard,
 } from "./draft";
@@ -25,6 +26,7 @@ import {
   type StepContext,
 } from "./steps";
 import { actFor, runTimers } from "./timers";
+import { visibleTo } from "./visibility";
 
 const ctx = contextAt();
 const names = (cards: readonly DraftCard[]) => cards.map((card) => nameOf(card.printingId));
@@ -688,3 +690,47 @@ describe("any table, with bots taking every turn", () => {
 
 // Keeps `atSecond` in use for readers looking for the clock used above.
 void atSecond;
+
+describe("edge cases from the rulings", () => {
+  it("offers a Librarian's extra card only when the pack has one to give", () => {
+    let draft = conspiracyTable([
+      [["Cogwork Librarian", "Bear"], ["Elf", "Bolt"], ["Bear"]],
+      [["Bear", "Bear"], ["Bear", "Bear"], ["Bear"]],
+    ]);
+    draft = pick(pick(draft, 0, "Cogwork Librarian"), 1, "Bear");
+    // One card left in front of p0: drafting it leaves nothing for an extra card.
+    expect(frontNames(draft, 0)).toEqual(["Bear"]);
+    expect(visibleTo(draft, 0, ctx).you?.options.librarians).toBe(0);
+    draft = pick(pick(draft, 0, "Bear"), 1, "Bear");
+    expect(frontNames(draft, 0)).toEqual(["Elf", "Bolt"]);
+    expect(visibleTo(draft, 0, ctx).you?.options.librarians).toBe(1);
+  });
+
+  it("a face-up Archdemon of Paliano stops you looking at packs: no Sneak, no peek at packs passed on", () => {
+    let draft = conspiracyTable([
+      [["Whispergear Sneak", "Archdemon of Paliano", "Bear", "Bear"], fillers(4), fillers(4)],
+      [["Bear", "Leovold's Operative", "Bear", "Bear"], fillers(4), fillers(4)],
+    ]);
+    draft = pick(draft, 0, "Whispergear Sneak");
+    draft = pick(draft, 1, "Bear");
+    draft = pick(draft, 0, "Leovold's Operative"); // from p1's pack
+    draft = pick(draft, 1, "Archdemon of Paliano"); // p1 now drafts blind
+    const sneak = drafted(draft, 0, "Whispergear Sneak");
+    expect(visibleTo(draft, 0, ctx).you?.options.sneak).not.toBeNull(); // p0 has no Archdemon
+    expect(visibleTo(draft, 1, ctx).you?.pack?.cards).toBeNull();
+    // Give p1 a skip: the pack they pass on is not shown to them.
+    draft = withAbilities(draft, 1, (abilities) => ({ ...abilities, skipPacks: 1 }));
+    draft = pick(draft, 0, "Bear"); // p0 passes 1 card to p1 … who must pass it on
+    const passed = draft.reveals.filter((each) => each.audience === 1 && each.kind === "passedOn");
+    expect(passed.at(-1)?.cards).toEqual([]);
+    // And p0 can't peek either once they're blind.
+    const blind = withCard(draft, drafted(draft, 1, "Archdemon of Paliano"), (each) =>
+      each.pick === null ? each : { ...each, pick: { ...each.pick, seat: 0, poolSeat: 0 } },
+    );
+    const unopened = blind.packs.find((pack) => pack.round === 2)?.packNumber ?? -1;
+    expect(peekAtPack(blind, 0, sneak, unopened, ctx)).toMatchObject({
+      ok: false,
+      error: { kind: "AbilityUnavailable" },
+    });
+  });
+});

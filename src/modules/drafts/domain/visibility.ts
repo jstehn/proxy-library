@@ -132,6 +132,12 @@ function piled(draft: Draft, seatNumber: number): SeenCard[] {
 function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOptions {
   const seat = seatAt(draft, seatNumber);
   const turn = seat.abilities.turn;
+  // An extra card has to come from this pack: what's left after this pick and the extras owed.
+  const front = currentPack(draft, seatNumber);
+  const left = front?.cards.filter((card) => card.pick === null).length ?? 0;
+  const room = Math.max(0, left - 1 - (turn?.extraCards ?? 0));
+  // Archdemon of Paliano: "you can't look at booster packs", and "can't" beats "may".
+  const blind = faceUpWith(draft, seatNumber, "random", ctx).length > 0;
   const kindOf = (ref: CardRef) => {
     const card = cardAt(draft, ref);
     return card === null ? null : (abilityOfCard(ctx, card)?.ability ?? null);
@@ -161,11 +167,11 @@ function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOpt
         ? [{ ref, what: kind.what, creaturesOnly: kind.creaturesOnly }]
         : [];
     }),
-    librarians: turn?.agent ? 0 : countExtras("intoPack"),
-    operatives: turn?.agent ? 0 : countExtras("skipPack"),
+    librarians: turn?.agent ? 0 : Math.min(countExtras("intoPack"), room),
+    operatives: turn?.agent ? 0 : Math.min(countExtras("skipPack"), room),
     wholePack: turn === null && faceUpWith(draft, seatNumber, "wholePack", ctx).length > 0,
     lastCardTo: dredgers.length > 1 ? dredgers : [],
-    sneak: sneak === undefined ? null : { card: sneak, packs: sneakablePacks(draft) },
+    sneak: sneak === undefined || blind ? null : { card: sneak, packs: sneakablePacks(draft) },
     informant:
       informant === undefined
         ? null

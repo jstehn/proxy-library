@@ -23,6 +23,7 @@ import {
   randomColor,
   type StepContext,
 } from "./steps";
+import { pickScore, topColors, factsOf } from "./auto-pick";
 
 // Presence, grace and timeouts (design doc 17, rules 9 and 10).
 
@@ -85,6 +86,33 @@ function overdueSeat(draft: Draft, now: Date): Seat | null {
   return overdue[0] ?? null;
 }
 
+function smartColor(
+  draft: Draft,
+  seatNumber: number,
+  note: Extract<import("./abilities").Note, { kind: "colors" }>,
+  ctx: StepContext,
+): import("@/modules/catalog").Color {
+  const pool = poolOf(draft, seatNumber).map((c) => factsOf(ctx.cards, c.printingId));
+  const top = topColors(pool);
+  const openTop = top.filter((c) => !note.colors.includes(c));
+  if (openTop.length > 0) return openTop[0];
+  return randomColor(note, ctx.rng);
+}
+
+function smartDeal(
+  draft: Draft,
+  seatNumber: number,
+  ctx: StepContext,
+): { draft: Draft; card: null } | null {
+  const deal = draft.deals?.current;
+  if (draft.status !== "dealing" || deal == null) return null;
+
+  // Simplified: just pass. Deals for bots would require evaluating offers which is complex here.
+  // For now, bots don't participate heavily in deals, per design.
+  const dealt = passOnDeal(draft, seatNumber, ctx);
+  return dealt !== null ? { draft: dealt, card: null } : null;
+}
+
 /**
  * Does the one thing a seat is holding the table up with, the way a bot would: chooses an owed
  * color, makes no choices about a card drawn at random, answers a deal step with "no", or
@@ -99,26 +127,75 @@ export function actFor(
 ): { draft: Draft; card: DraftCard | null } | null {
   const owed = owedColor(draft, seatNumber);
   if (owed !== null) {
-    const chosen = chooseColor(draft, seatNumber, randomColor(owed.note, ctx.rng), ctx);
+    const chosen = chooseColor(
+      draft,
+      seatNumber,
+      smartColor(draft, seatNumber, owed.note, ctx),
+      ctx,
+    );
     return chosen.ok ? { draft: chosen.value, card: null } : null;
   }
   if (seatAt(draft, seatNumber).abilities.awaitingChoices !== null) {
     const decided = decideOnCard(draft, seatNumber, {}, ctx);
     return decided.ok ? { draft: decided.value, card: null } : null;
   }
-  const dealt = passOnDeal(draft, seatNumber, ctx);
-  if (dealt !== null) return { draft: dealt, card: null };
+  const dealt = smartDeal(draft, seatNumber, ctx);
+  if (dealt !== null) return dealt;
 
   const pack = currentPack(draft, seatNumber);
   if (draft.status !== "drafting" || pack === null) return null;
   const atRandom = faceUpWith(draft, seatNumber, "random", ctx).length > 0;
   const slot = atRandom ? "random" : choose(pack, poolOf(draft, seatNumber));
   // A Spire Phantasm drafted this way guesses another card left in the pack.
-  const other = pack.cards.find((card) => card.pick === null && card.slot !== slot);
+  const poolFacts = poolOf(draft, seatNumber).map((c) => factsOf(ctx.cards, c.printingId));
+  let other = pack.cards.find((card) => card.pick === null && card.slot !== slot);
+  if (!atRandom) {
+    const others = pack.cards.filter((c) => c.pick === null && c.slot !== slot);
+    if (others.length > 0) {
+      other = others.reduce((best, c) =>
+        pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >
+        pickScore(factsOf(ctx.cards, best.printingId), poolFacts)
+          ? c
+          : best,
+      );
+    }
+  }
   const guess = other === undefined ? undefined : ctx.cards(other.printingId)?.name;
+
+  let wholePack = false;
+  const agents = faceUpWith(draft, seatNumber, "wholePack", ctx);
+  if (agents.length > 0 && !atRandom) {
+    const goodCards = pack.cards.filter(
+      (c) => c.pick === null && pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >= 1.5,
+    );
+    if (goodCards.length >= 3) wholePack = true;
+  }
+
+  let librarians = 0;
+  const libs = faceUpWith(draft, seatNumber, "extraCard", ctx).filter((c) => {
+    const pId = cardAt(draft, c)?.printingId;
+    return pId ? ctx.cards(pId)?.name === "Cogwork Librarian" : false;
+  });
+  if (libs.length > 0 && !wholePack && !atRandom) {
+    const goodCards = pack.cards.filter(
+      (c) => c.pick === null && pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >= 2.0,
+    );
+    if (goodCards.length >= 2) librarians = 1;
+  }
+
   const stepped = draftStep(
     draft,
-    { seatNumber, packNumber: pack.packNumber, slot, auto: true, choices: { guess } },
+    {
+      seatNumber,
+      packNumber: pack.packNumber,
+      slot,
+      auto: true,
+      choices: {
+        guess,
+        wholePack: wholePack ? true : undefined,
+        librarians: librarians > 0 ? librarians : undefined,
+      },
+    },
     ctx,
   );
   if (!stepped.ok)

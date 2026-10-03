@@ -201,7 +201,13 @@ export function deckProblems(deck: Deck, rules: RulesLookup, owned: OwnedLookup)
       return problems;
     }
     case "limited": {
-      const main = count(deck.entries.filter((entry) => entry.board !== "side"));
+      // Conspiracies start the game in the command zone, not the deck (CR 905.4).
+      const main = count(
+        deck.entries.filter(
+          (entry) =>
+            entry.board !== "side" && !/\bConspiracy\b/.test(rules(entry.oracleId).typeLine),
+        ),
+      );
       if (main < format.minimum)
         problems.push({ kind: "TooFewCards", minimum: format.minimum, count: main });
       return problems;

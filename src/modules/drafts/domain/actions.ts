@@ -58,6 +58,9 @@ export function peekAtPack(
   if (draft.status !== "drafting") return err({ kind: "DraftNotRunning" });
   if (!hasFaceUp(draft, seatNumber, sneak, "peekPack", ctx))
     return err(unavailable("no such face-up Whispergear Sneak"));
+  if (faceUpWith(draft, seatNumber, "random", ctx).length > 0) {
+    return err(unavailable("your face-up Archdemon of Paliano says you can't look at packs"));
+  }
   if (!sneakablePacks(draft).includes(packNumber))
     return err(unavailable("someone is looking at that pack"));
   const pack = draft.packs.find((each) => each.packNumber === packNumber);

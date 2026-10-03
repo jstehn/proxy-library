@@ -13,6 +13,15 @@ const legalEverywhere = {
   pauper: "legal",
 };
 const CARDS: Record<string, CardRules> = {
+  brago: {
+    name: "Brago's Favor",
+    typeLine: "Conspiracy",
+    text: "Hidden agenda",
+    colorIdentity: [],
+    legalities: {},
+    isBasicLand: false,
+    hasPowerToughness: false,
+  },
   bolt: {
     name: "Lightning Bolt",
     typeLine: "Instant",
@@ -156,6 +165,28 @@ describe("ownership (rule 1)", () => {
 });
 
 describe("constructed (rule 2)", () => {
+  it("limited needs 40, and a conspiracy in the main deck doesn't count (CR 905.4)", () => {
+    const short = deckProblems(
+      deck("limited", [
+        ["mountain", 39],
+        ["brago", 1],
+      ]),
+      rules,
+      ownAll,
+    );
+    expect(short).toEqual([{ kind: "TooFewCards", minimum: 40, count: 39 }]);
+    expect(
+      deckProblems(
+        deck("limited", [
+          ["mountain", 40],
+          ["brago", 1],
+        ]),
+        rules,
+        ownAll,
+      ),
+    ).toEqual([]);
+  });
+
   it("needs 60 cards, at most 15 in the sideboard", () => {
     const problems = deckProblems(
       deck("modern", [
