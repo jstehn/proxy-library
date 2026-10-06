@@ -4,7 +4,8 @@
 - **Status:** **Approved** (2026-10-06, after review; self-approved during the overnight run of
   2026-10-02 → 03, judgement calls in [decisions-to-review.md](../decisions-to-review.md))
 - **Related:** design doc 14 (deck builder), design doc 15 (buy a list), design doc 19 (role
-  tags), ADR 0006 (cross-module reads), ADR 0016 (client-safe API), ADR 0017 (shared card search)
+  tags), ADR 0006 (cross-module reads), ADR 0016 (client-safe API), ADR 0017 (shared card
+  search), ADR 0019 (stored card features)
 
 ## 1. Purpose & scope
 
