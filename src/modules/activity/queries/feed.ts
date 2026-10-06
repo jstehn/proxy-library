@@ -74,12 +74,21 @@ type Row = {
   payload: Record<string, unknown>;
 };
 
+/**
+ * The newest events, newest first. A deck's events ("shared a deck", "commented on") show only
+ * while the deck exists and is shared: a deleted deck, a reset player's deck, or one made private
+ * again drops out, so the feed never links to a deck you can't open or names a private one
+ * (design doc 21, rule 9). Checked when reading, so the events themselves are never changed.
+ */
 export async function activityFeed(db: DbExecutor, limit = 50): Promise<FeedItem[]> {
   const rows = await db.execute<Row>(sql`
     select e.id, e.kind, e.occurred_at, a.name as actor, o.name as other, e.payload
       from activity_events e
       join auth_users a on a.id = e.actor_id
       left join auth_users o on o.id = e.payload->>'otherId'
+     where e.kind not in ('deckShared', 'deckComment')
+        or exists (select 1 from decks d
+                    where d.id = (e.payload->>'deckId')::bigint and d.visibility = 'shared')
      order by e.occurred_at desc, e.id desc
      limit ${limit}
   `);

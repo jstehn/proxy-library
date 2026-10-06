@@ -22,6 +22,7 @@ removed from the list. Changes made from the review:
 | Reset a player   | **Spent, self-funded and the other totals start again from zero** at a reset                                        | `wallet_accounts.totals_since` (migration `0025`) |
 | Phase 19         | **Role targets only in Commander**: there's no good common guide for 60-card or limited decks                       | `roleTargets` in `decks/domain/stats.ts`          |
 | Phases 20 and 21 | Design docs **approved by you**                                                                                     | design docs 20 and 21                             |
+| Phase 21 (fix)   | The feed shows a deck's events only while it exists and is shared: no links to deleted decks, no private deck names | `activityFeed` in `activity/queries/feed.ts`      |
 
 Not reviewed yet: "Changes from your testing (2026-09-27)", "Fixes from your testing",
 "Launch preparation" and "Deck builder 2.0 and proxy PDFs".

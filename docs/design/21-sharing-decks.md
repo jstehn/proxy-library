@@ -93,6 +93,10 @@ New errors: `CommentInvalid { maximum }`, `CommentNotFound`, `NotAllowed`.
 7. Resetting a player deletes their decks (comments on those decks go with them) and the feed's
    "shared a deck" events for them. Their comments on **other** players' decks stay: like trades,
    they're part of someone else's conversation.
+8. **The feed shows a deck's events only while the deck exists and is shared** (added after
+   review, 2026-10-06). Otherwise "commented on Jack's deck" survived Jack's reset and linked to a
+   deleted deck, and a deck made private again still showed its name. `activityFeed` checks this
+   when reading, so making the deck shared again brings its events back.
 
 ## 5. Use cases
 

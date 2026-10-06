@@ -75,6 +75,24 @@ describe("sharing a deck", () => {
     const feed = await activityFeed(db);
     expect(feed[0]).toMatchObject({ kind: "deckShared", actor: "jack", deckName: "Lights" });
   });
+
+  it("drops the deck's feed items while it's private, and brings them back when shared again", async () => {
+    const deckId = await deck("Lights", "4 Banishing Light");
+    await sharing.setVisibility(jack, { deckId, visibility: "shared" });
+    await sharing.postComment(sam, { deckId, body: "Nice" });
+    const aboutLights = async () =>
+      (await activityFeed(db)).filter(
+        (item) =>
+          (item.kind === "deckShared" || item.kind === "deckComment") && item.deckId === deckId,
+      );
+    expect((await aboutLights()).map((item) => item.kind)).toEqual(["deckComment", "deckShared"]);
+
+    await sharing.setVisibility(jack, { deckId, visibility: "private" });
+    expect(await aboutLights()).toEqual([]);
+
+    await sharing.setVisibility(jack, { deckId, visibility: "shared" });
+    expect(await aboutLights()).toHaveLength(2);
+  });
 });
 
 describe("comments", () => {
@@ -160,5 +178,13 @@ describe("resetting a player (invariant 7)", () => {
     const feed = await activityFeed(db);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "jack")).toBe(false);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "sam")).toBe(true);
+    // Sam's comment on Jack's deleted deck would link nowhere, so it's gone from the feed too;
+    // Jack's comment on Sam's deck stays.
+    expect(feed.some((item) => item.kind === "deckComment" && item.deckId === jacksDeck)).toBe(
+      false,
+    );
+    expect(feed.some((item) => item.kind === "deckComment" && item.deckId === samsDeck.value)).toBe(
+      true,
+    );
   });
 });
