@@ -33,7 +33,11 @@ export function drizzleWalletRepository(db: DbExecutor): WalletRepository {
         .where(eq(walletAccounts.userId, userId))
         .for("update");
       if (row === undefined) throw new Error(`no wallet account for ${userId}`);
-      return { ...row, userId: UserId.of(row.userId) };
+      return {
+        userId: UserId.of(row.userId),
+        allowancePaidThrough: row.allowancePaidThrough,
+        openedAt: row.openedAt,
+      };
     },
 
     async updateAccount(account) {
@@ -64,6 +68,13 @@ export function drizzleWalletRepository(db: DbExecutor): WalletRepository {
         .from(ledgerEntries)
         .where(eq(ledgerEntries.userId, userId));
       return Cents.of(row.total);
+    },
+
+    async restartTotals(userId, at) {
+      await db
+        .update(walletAccounts)
+        .set({ totalsSince: at })
+        .where(eq(walletAccounts.userId, userId));
     },
   };
 }

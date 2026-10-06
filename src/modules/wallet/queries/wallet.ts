@@ -4,7 +4,7 @@ import { Cents, type UserId } from "@/shared/kernel";
 import { authUsers, players } from "../../accounts/infrastructure/schema";
 import type { EconomySettings } from "../domain/economy";
 import type { LedgerKind } from "../domain/ledger";
-import { economySettings, ledgerEntries } from "../infrastructure/schema";
+import { economySettings, ledgerEntries, walletAccounts } from "../infrastructure/schema";
 
 // Read models (ADR 0006): one query each, SQL aggregates, plain objects out.
 
@@ -15,6 +15,16 @@ const SPENDING_KINDS = sql`('purchase_sealed', 'purchase_single')`;
 const totalWhere = (condition: ReturnType<typeof sql>) =>
   sql`coalesce(sum(${ledgerEntries.amountCents}) filter (where ${condition}), 0)`.mapWith(Number);
 
+/**
+ * Entries after the player's last library reset (design doc 12): totals start again from zero
+ * then, while the balance still sums everything. Needs `wallet_accounts` joined.
+ */
+const AFTER_RESET = sql`(${walletAccounts.totalsSince} is null or ${ledgerEntries.effectiveAt} > ${walletAccounts.totalsSince})`;
+
+/** Like `totalWhere`, counting only entries since the last reset. */
+const totalSinceReset = (condition: ReturnType<typeof sql>) =>
+  totalWhere(sql`${condition} and ${AFTER_RESET}`);
+
 export type WalletSummary = Readonly<{
   balance: Cents;
   received: Cents; // starting grant + allowances + grants
@@ -22,20 +32,29 @@ export type WalletSummary = Readonly<{
   spent: Cents; // shown as a positive number
   sold: Cents; // paid by the store for cards sold to it
   corrected: Cents; // shown as a positive number
+  /** When the totals above restarted (the last library reset), or null: they count everything. */
+  totalsSince: string | null;
 }>;
 
 export async function walletSummary(db: DbExecutor, userId: UserId): Promise<WalletSummary> {
   const [row] = await db
     .select({
       balance: sql`coalesce(sum(${ledgerEntries.amountCents}), 0)`.mapWith(Number),
-      received: totalWhere(sql`${ledgerEntries.kind} in ('starting_grant', 'allowance', 'grant')`),
-      selfFunded: totalWhere(sql`${ledgerEntries.kind} = 'self_fund'`),
-      spent: totalWhere(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
-      sold: totalWhere(sql`${ledgerEntries.kind} = 'sellback'`),
-      corrected: totalWhere(sql`${ledgerEntries.kind} = 'correction'`),
+      received: totalSinceReset(
+        sql`${ledgerEntries.kind} in ('starting_grant', 'allowance', 'grant')`,
+      ),
+      selfFunded: totalSinceReset(sql`${ledgerEntries.kind} = 'self_fund'`),
+      spent: totalSinceReset(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
+      sold: totalSinceReset(sql`${ledgerEntries.kind} = 'sellback'`),
+      corrected: totalSinceReset(sql`${ledgerEntries.kind} = 'correction'`),
     })
     .from(ledgerEntries)
+    .leftJoin(walletAccounts, eq(walletAccounts.userId, ledgerEntries.userId))
     .where(eq(ledgerEntries.userId, userId));
+  const [account] = await db
+    .select({ totalsSince: walletAccounts.totalsSince })
+    .from(walletAccounts)
+    .where(eq(walletAccounts.userId, userId));
 
   return {
     balance: Cents.of(row.balance),
@@ -44,6 +63,7 @@ export async function walletSummary(db: DbExecutor, userId: UserId): Promise<Wal
     spent: Cents.of(-row.spent),
     sold: Cents.of(row.sold),
     corrected: Cents.of(-row.corrected),
+    totalsSince: account?.totalsSince?.toISOString() ?? null,
   };
 }
 
@@ -102,12 +122,13 @@ export async function playerMoney(db: DbExecutor): Promise<PlayerMoney[]> {
       userId: players.userId,
       entryCount: sql`count(${ledgerEntries.id})`.mapWith(Number),
       balance: sql`coalesce(sum(${ledgerEntries.amountCents}), 0)`.mapWith(Number),
-      spent: totalWhere(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
-      sold: totalWhere(sql`${ledgerEntries.kind} = 'sellback'`),
-      selfFunded: totalWhere(sql`${ledgerEntries.kind} = 'self_fund'`),
+      spent: totalSinceReset(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
+      sold: totalSinceReset(sql`${ledgerEntries.kind} = 'sellback'`),
+      selfFunded: totalSinceReset(sql`${ledgerEntries.kind} = 'self_fund'`),
     })
     .from(players)
     .leftJoin(ledgerEntries, eq(ledgerEntries.userId, players.userId))
+    .leftJoin(walletAccounts, eq(walletAccounts.userId, players.userId))
     .groupBy(players.userId);
 
   return rows.map((row) => ({

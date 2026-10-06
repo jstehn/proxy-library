@@ -176,6 +176,13 @@
       "when": 1791012102002,
       "tag": "0024_deck_sharing",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791275563835,
+      "tag": "0025_wallet_totals_since",
+      "breakpoints": true
     }
   ]
 }

@@ -50,6 +50,10 @@ export default async function AccountPage() {
             {startingAmount} (saved allowances, sales, trades) is lost. You have{" "}
             <strong>{Cents.format(wallet.balance)}</strong> now.
           </li>
+          <li>
+            Your money totals (spent, self-funded, …) start again from zero. Your history keeps
+            everything.
+          </li>
           <li>Your weekly allowance carries on as before.</li>
         </ul>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">

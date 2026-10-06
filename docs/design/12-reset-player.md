@@ -33,8 +33,11 @@ In **one transaction** (all or nothing), for one player:
 3. **Locks follow the order other actions use** (trade → wallet → item → cards), so a reset
    waits for a trade being accepted or a pack being opened instead of deadlocking with it.
 4. **The screen asks the admin to type the username** before resetting: it can't be undone.
-5. **Totals stay historical.** "Spent" and "Self-funded" on the Players page still count
-   spending before the reset.
+5. **Totals start again from zero.** "Spent", "Self-funded" and the wallet page's other totals
+   count only money after the latest reset (`wallet_accounts.totals_since`, set by
+   `resetBalance`); the balance and the history still include everything. Changed in your review
+   (2026-10-06): the totals used to count spending before the reset too. Migration `0025` fills in
+   the date for players reset before then.
 
 ## 4. Design
 

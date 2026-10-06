@@ -1,8 +1,8 @@
 # Design: sharing decks, comments, and cards to get
 
 - **Phase:** 21
-- **Status:** **Self-approved** (2026-10-03, overnight run; judgement calls in
-  [decisions-to-review.md](../decisions-to-review.md))
+- **Status:** **Approved** (2026-10-06, after review; self-approved during the overnight run of
+  2026-10-02 → 03, judgement calls in [decisions-to-review.md](../decisions-to-review.md))
 - **Related:** design doc 09 (decks, ownership shared between decks), design doc 11 (activity
   feed), design doc 12 (reset), design doc 15 (buy a list), ADR 0006 (cross-module reads)
 
@@ -179,7 +179,7 @@ Visibility: `private ⇄ shared` (owner only). A comment: `posted → removed` (
   sees "you own", comments; the admin sees the comment and the feed item and deletes it; Cards to
   get lists the short cards. Screenshots in dark mode and at phone width.
 
-## 13. Decisions (self-approved; see decisions-to-review.md)
+## 13. Decisions (self-approved, then approved by you on 2026-10-06; see decisions-to-review.md)
 
 1. Signed-in players only (decided before the run).
 2. Shared decks show the **owner's** problems and ownership, plus "you own" for the viewer.

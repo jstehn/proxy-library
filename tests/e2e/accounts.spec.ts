@@ -448,12 +448,15 @@ test("the admin asks for suggestions, adds one, and turns a budget into a list (
     selected.getByRole("list", { name: "Cards like this" }).getByRole("button").first(),
   ).toBeVisible();
 
-  // A budget becomes a list for Buy a list, which checks prices again before buying.
-  await panel.getByLabel("Budget in dollars").fill("5");
+  // A budget becomes a list for Buy a list, which checks prices again before buying. $20, not
+  // less: the fixture catalog has two store cards for this deck (about $1 and $11), the
+  // suggestion added above may be the cheap one, and which it is depends on the packs opened
+  // earlier, whose seeds are random.
+  await panel.getByLabel("Budget in dollars").fill("20");
   await panel.getByRole("button", { name: "Make a list" }).click();
   const budget = panel.getByRole("list", { name: "Budget list" });
   await expect(budget.getByRole("listitem").first()).toBeVisible();
-  await expect(panel.getByText(/^\d+ cards? for \$\d\.\d\d/)).toBeVisible();
+  await expect(panel.getByText(/^\d+ cards? for \$\d+\.\d\d/)).toBeVisible();
   await panel.getByRole("link", { name: "Buy these" }).click();
   await expect(page).toHaveURL(/\/singles\/list\?list=/);
   await expect(page.getByText("Filled in with the list you made.")).toBeVisible();

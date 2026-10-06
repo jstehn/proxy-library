@@ -24,6 +24,9 @@ export const walletAccounts = pgTable("wallet_accounts", {
     .references(() => players.userId),
   allowancePaidThrough: timestamptz("allowance_paid_through").notNull(),
   openedAt: timestamptz("opened_at").notNull(),
+  // When the player's library was last reset: the wallet's totals count from here (design doc
+  // 12). Null if it never was. The ledger itself keeps every entry.
+  totalsSince: timestamptz("totals_since"),
 });
 
 /** The ledger: rows are only ever inserted (design doc 03, rule 1). */

@@ -90,7 +90,7 @@ function sellMessage(error: SellSingleError): string {
     case "NotEnoughCopies":
       return `You only have ${error.owned}.`;
     case "WorthNothing":
-      return "The store would pay less than a cent for this card.";
+      return "This card has no market value, so the store can't pay for it.";
     case "NotBuying":
       return "The store isn't buying cards right now.";
     default:

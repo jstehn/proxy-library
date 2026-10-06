@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
+import { isNotable } from "@/modules/activity";
 import { SealedProductId } from "@/modules/catalog";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
@@ -95,17 +96,12 @@ describe("openItem", () => {
     ]);
     const total = collection.log[0].gains.reduce((sum, gain) => sum + gain.quantity, 0);
     expect(total).toBe(14);
-    // Every sample pack has a rare or mythic: the feed hears about it (design doc 11).
-    expect(events.recorded).toEqual([
-      expect.objectContaining({
-        event: expect.objectContaining({ kind: "pull", itemName: "Test Play Booster Pack" }),
-      }),
-    ]);
-    const pull = events.recorded[0].event;
-    expect(
-      pull.kind === "pull" &&
-        pull.cards.every((card) => card.rarity !== "common" || (card.priceCents ?? 0) >= 500),
-    ).toBe(true);
+    // The feed hears only about mythics and cards worth $5+ (design doc 11), never a plain rare.
+    expect(events.recorded.length).toBeLessThanOrEqual(1);
+    for (const { event } of events.recorded) {
+      expect(event).toMatchObject({ kind: "pull", itemName: "Test Play Booster Pack" });
+      expect(event.kind === "pull" && event.cards.every((card) => isNotable(card))).toBe(true);
+    }
   });
 
   it("refuses to open the same pack twice", async () => {

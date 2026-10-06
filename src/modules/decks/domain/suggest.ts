@@ -159,14 +159,17 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
     if (count >= TRIBE_MINIMUM && count >= creatureCount * TRIBE_SHARE) tribes.add(type);
   }
 
-  // Gaps: roles below the format's target.
+  // Gaps: roles below the format's target. Formats without targets have none.
   const counts = deckStats(lines).tags;
   const targets = roleTargets(format);
-  const gaps = TARGETED_TAGS.filter((tag) => counts[tag] < targets[tag]).map((tag) => ({
-    tag,
-    count: counts[tag],
-    target: targets[tag],
-  }));
+  const gaps =
+    targets === null
+      ? []
+      : TARGETED_TAGS.filter((tag) => counts[tag] < targets[tag]).map((tag) => ({
+          tag,
+          count: counts[tag],
+          target: targets[tag],
+        }));
 
   const keywords = [...new Set(commanders.flatMap((line) => line.keywords ?? []))];
   return { themes: [...themes], tribes: [...tribes], gaps, keywords };

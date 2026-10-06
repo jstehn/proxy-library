@@ -46,8 +46,9 @@ type ActivityEvent =
   "transactional outbox-lite"): if the opening rolls back, so does its event.
 - The activity module offers `recordEvent(services, event)` and an `ActivityServices` port. The
   inventory, store and trades modules call it, like `spend` or `receiveCards`.
-- **A notable pull** is the opener's "hit": rare or better, or worth $5 or more. One event per
-  pack, listing its notable cards. Packs with none record nothing.
+- **A notable pull** is mythic or better, or worth $5 or more. One event per pack, listing its
+  notable cards. Packs with none record nothing. (It was the opener's "hit", rare or better, until
+  your review on 2026-10-06: a plain rare is in every pack, so it isn't news.)
 - `activity_events(id, kind, actor_id, occurred_at, payload jsonb)`, with an index on
   `occurred_at desc`.
 - Feed: the newest 50 at `/activity`, the newest 5 on the home page, with names and card links.

@@ -45,7 +45,9 @@ type CardLoss = CardGain; // copies leaving, positive quantities
 3. **Selling is one transaction:** the copies are removed (the player must own that many of that
    printing and finish), a store transaction (`single`, `sell`, with the rate used), a wallet
    `sellback` entry, and a negative acquisition with source `sale`.
-4. **Payout rounds down**, per copy, then × quantity. A card whose payout is $0.00 can't be sold.
+4. **Payout rounds down**, per copy, then × quantity, but is **never less than 1¢** for a card
+   with a price, so bulk commons can always be cleared out (your review, 2026-10-06). Only a card
+   whose market price is $0.00 can't be sold (`WorthNothing`).
    (Selling it would give nothing, and a ledger entry can't be $0.)
 5. **The buylist rate** is 0–100% (0–10,000 basis points), default 50%, admin-editable. At 0% the
    store isn't buying.

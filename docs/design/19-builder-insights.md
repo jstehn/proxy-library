@@ -105,10 +105,10 @@ export type DeckStats = Readonly<{
   tags: Readonly<Record<Tag, number>>;
 }>;
 
-/** The usual counts to aim for in a format (decision 2: every format has targets). */
-export function roleTargets(format: string): Readonly<Partial<Record<Tag, number>>>;
+/** The usual counts to aim for in a format (decision 2: Commander only), or null. */
+export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> | null;
 // Commander (100): ramp 10, draw 10, removal 8, wipe 3 (a common community guide).
-// 60-card decks: ramp 4, draw 6, removal 8, wipe 2. Limited (40): ramp 2, draw 3, removal 5, wipe 1.
+// Other formats: null. There's no common guide, so their roles are counted without targets.
 ```
 
 `DeckLine` gets `text: string`. The deck query already reads it as `face_text`.
@@ -313,8 +313,10 @@ None.
 ## 13. Decisions from review (2026-10-02)
 
 1. **The tag set:** the seven in section 3.2.
-2. **Role targets for every format**, not only Commander (section 3.3 has the numbers; the
-   60-card and limited ones are judgement calls, listed in decisions-to-review.md).
+2. **Role targets for Commander only.** Approved first as "every format", with 60-card and
+   limited numbers scaled down from Commander's. Changed in your review (2026-10-06): there's no
+   good common guide for those decks, so they show counts without targets, and the suggestions
+   (design doc 20) find no role gaps for them.
 3. **`otag:` waits** for a later phase. The tag rules are plain JavaScript regular expressions
    for now; a search keyword would need the same rules in SQL (or tags stored per printing).
 4. **A third deck-list view, "By role".**

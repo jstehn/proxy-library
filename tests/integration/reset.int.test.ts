@@ -7,7 +7,7 @@ import { makeInventory } from "@/modules/inventory";
 import { makeResetPlayer } from "@/modules/reset";
 import { makeStore } from "@/modules/store";
 import { makeTrades } from "@/modules/trades";
-import { makeWallet } from "@/modules/wallet";
+import { makeWallet, playerMoney, walletSummary } from "@/modules/wallet";
 import { Cents, UserId } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import {
@@ -118,6 +118,29 @@ describe("resetting a player", () => {
     // Bob is untouched.
     expect(await count("collection_cards", "user_id = 'bob'")).toBe(1);
     expect(await balance("bob")).toBe(bobBalance);
+  });
+
+  it("starts the money totals again from zero, keeping the whole history", async () => {
+    const card = await cheapCard();
+    await store.buySingle(jack, { printingId: card, finish: "nonfoil", quantity: 1 });
+    expect((await walletSummary(db, jack.userId)).spent).toBeGreaterThan(0);
+
+    expect(await resetPlayer(admin, jack.userId)).toMatchObject({ ok: true });
+    const afterReset = await walletSummary(db, jack.userId);
+    expect(afterReset).toMatchObject({ balance: 5000, spent: 0, selfFunded: 0, received: 0 });
+    expect(afterReset.totalsSince).not.toBeNull();
+    const adminView = (await playerMoney(db)).find((row) => row.userId === jack.userId);
+    expect(adminView).toMatchObject({ spent: 0, selfFunded: 0 });
+    expect(await count("ledger_entries", "user_id = 'jack' and kind = 'purchase_single'")).toBe(1);
+
+    // Spending after the reset counts again.
+    const bought = await store.buySingle(jack, {
+      printingId: card,
+      finish: "nonfoil",
+      quantity: 1,
+    });
+    if (!bought.ok) throw new Error(bought.error.kind);
+    expect((await walletSummary(db, jack.userId)).spent).toBe(bought.value.total);
   });
 
   it("takes extra money away with a correction", async () => {

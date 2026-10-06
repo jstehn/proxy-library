@@ -12,9 +12,7 @@ export function CardBack() {
     >
       <div className="flex h-[70%] w-[62%] items-center justify-center rounded-[50%] border-2 border-amber-300/70 bg-black/30">
         <span className="text-center text-[10px] leading-tight font-bold tracking-widest text-amber-200/90 uppercase">
-          TCG
-          <br />
-          Virtual
+          Proxy
           <br />
           Library
         </span>

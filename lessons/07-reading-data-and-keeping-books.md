@@ -135,13 +135,21 @@ From [`singles.test.ts`](../src/modules/store/domain/singles.test.ts):
 ```ts
 const payout = payoutPerCopy(Cents.of(market), rate);
 expect(payout).toBeLessThanOrEqual(market); // never more than the card is worth
-expect(payout * 10_000).toBeLessThanOrEqual(market * rate); // never more than the exact share
-expect((payout + 1) * 10_000).toBeGreaterThan(market * rate); // and not a cent less than it could be
+if (payout > 1) {
+  expect(payout * 10_000).toBeLessThanOrEqual(market * rate); // never more than the exact share
+  expect((payout + 1) * 10_000).toBeGreaterThan(market * rate); // and not a cent less than it could be
+}
 ```
 
-The last two lines together say "the largest whole number of cents not above the exact value". In
-other words, the payout is exactly the floor. All the arithmetic is in whole numbers, so there's
-no float anywhere.
+The two lines inside the `if` together say "the largest whole number of cents not above the exact
+value". In other words, the payout is exactly the floor. All the arithmetic is in whole numbers,
+so there's no float anywhere.
+
+The `if` is there because of one business rule on top of the rounding: the store pays **at least
+1¢** for any card that has a price, so a 1¢ common (worth half a cent at 50%) can still be sold.
+A property test states rules for _every_ input, so when a rule has an exception, the test has to
+say where the exception applies. Here, a payout of exactly 1¢ may be the minimum rather than the
+floor. A separate example test pins the exception down: `payoutPerCopy(Cents.of(1), 5000)` is 1.
 
 ## B2. Lock, check, then change
 

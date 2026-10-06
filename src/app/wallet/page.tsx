@@ -35,13 +35,21 @@ export default async function WalletPage() {
         )}
       </header>
 
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Stat label="Received" value={summary.received} />
-        <Stat label="Self-funded" value={summary.selfFunded} />
-        <Stat label="Spent" value={summary.spent} />
-        <Stat label="Sold to the store" value={summary.sold} />
-        <Stat label="Corrected" value={summary.corrected} />
-      </dl>
+      <section className="flex flex-col gap-2">
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+          <Stat label="Received" value={summary.received} />
+          <Stat label="Self-funded" value={summary.selfFunded} />
+          <Stat label="Spent" value={summary.spent} />
+          <Stat label="Sold to the store" value={summary.sold} />
+          <Stat label="Corrected" value={summary.corrected} />
+        </dl>
+        {summary.totalsSince !== null && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Totals since your library was reset on <LocalTime iso={summary.totalsSince} />. The
+            history below still shows everything.
+          </p>
+        )}
+      </section>
 
       {actor.canSelfFund && (
         <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">

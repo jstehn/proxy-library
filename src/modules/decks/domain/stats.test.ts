@@ -178,13 +178,9 @@ describe("role tags in the statistics (design doc 19)", () => {
     });
   });
 
-  it("aims for more of each role in bigger decks", () => {
-    const commander = roleTargets("commander");
-    const modern = roleTargets("modern");
-    const limited = roleTargets("limited");
-    for (const tag of ["ramp", "draw", "removal", "wipe"] as const) {
-      expect(commander[tag]).toBeGreaterThanOrEqual(modern[tag]);
-      expect(modern[tag]).toBeGreaterThanOrEqual(limited[tag]);
-    }
+  it("has role targets only in Commander, the one format with a common guide", () => {
+    expect(roleTargets("commander")).toEqual({ ramp: 10, draw: 10, removal: 8, wipe: 3 });
+    expect(roleTargets("modern")).toBeNull();
+    expect(roleTargets("limited")).toBeNull();
   });
 });

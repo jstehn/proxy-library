@@ -145,6 +145,22 @@ export function StatsPanel(props: {
         <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Roles</h3>
         {TARGETED_TAGS.map((tag) => {
           const count = stats.tags[tag];
+          if (targets === null) {
+            // No common guide for this format: the count alone, without a bar.
+            return (
+              <div key={tag} className="grid grid-cols-[6.5rem_1fr] items-center gap-2">
+                <button
+                  type="button"
+                  aria-pressed={props.highlighted === tag}
+                  onClick={() => toggle(tag)}
+                  className={roleButton(tag)}
+                >
+                  {TAG_LABELS[tag]}
+                </button>
+                <span className="tabular-nums">{count}</span>
+              </div>
+            );
+          }
           const target = targets[tag];
           return (
             <div key={tag} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2">
@@ -187,8 +203,11 @@ export function StatsPanel(props: {
           </p>
         )}
         <p className="text-[10px] text-zinc-500">
-          Read from each card&apos;s rules text, so a few may be missed or miscounted. The targets
-          are a common guide for this deck size. Click a role to mark its cards in the list.
+          Read from each card&apos;s rules text, so a few may be missed or miscounted.{" "}
+          {targets === null
+            ? "Only Commander has a common guide to aim for, so other formats show counts alone."
+            : "The targets are a common Commander guide."}{" "}
+          Click a role to mark its cards in the list.
         </p>
       </div>
 

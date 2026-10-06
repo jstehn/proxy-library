@@ -77,6 +77,27 @@ describe("deckProfile", () => {
   });
 
   it("adds themes and tribes most of the deck already has, and the roles it's short of", () => {
+    const lines = [
+      line({
+        quantity: 6,
+        typeLine: "Creature — Rabbit Soldier",
+        text: "When this enters, create a 1/1 Rabbit creature token.",
+      }),
+      line({ quantity: 4, typeLine: "Creature — Bird", text: "Flying" }),
+      line({ quantity: 1, typeLine: "Instant", text: "Destroy target creature." }),
+      line({ quantity: 20, typeLine: "Basic Land — Plains", manaValue: 0 }),
+    ];
+    // Only Commander has role targets, so only a Commander deck can be short of a role.
+    expect(deckProfile(lines, "standard").gaps).toEqual([]);
+    expect(deckProfile(lines, "commander").gaps.map((gap) => gap.tag)).toEqual([
+      "ramp",
+      "draw",
+      "removal",
+      "wipe",
+    ]);
+  });
+
+  it("finds themes and tribes in a deck without a commander", () => {
     const profile = deckProfile(
       [
         line({
@@ -93,12 +114,6 @@ describe("deckProfile", () => {
     expect(profile.themes).toEqual(["tokens"]);
     // 6 of 10 creatures are Rabbit Soldiers: both types count, as the rule says.
     expect(profile.tribes).toEqual(["Rabbit", "Soldier"]);
-    expect(profile.gaps.map((gap) => gap.tag)).toEqual(["ramp", "draw", "removal", "wipe"]);
-    expect(profile.gaps.find((gap) => gap.tag === "removal")).toEqual({
-      tag: "removal",
-      count: 1,
-      target: 8,
-    });
   });
 });
 

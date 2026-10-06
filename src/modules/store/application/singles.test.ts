@@ -151,11 +151,15 @@ describe("sellSingle", () => {
     expect(kinds().at(-1)?.[0]).toBe("purchase_single");
   });
 
-  it("refuses a card worth less than a cent to the store (rule 4)", async () => {
-    await store.buySingle(jack, { printingId: penny, finish: "nonfoil", quantity: 1 });
-    expect(
-      await store.sellSingle(jack, { printingId: penny, finish: "nonfoil", quantity: 1 }),
-    ).toEqual(err({ kind: "WorthNothing" }));
+  it("pays at least 1¢ for a card worth less than that to the store (rule 4)", async () => {
+    await store.buySingle(jack, { printingId: penny, finish: "nonfoil", quantity: 2 });
+    const sold = await store.sellSingle(jack, {
+      printingId: penny,
+      finish: "nonfoil",
+      quantity: 2,
+    });
+    expect(sold.ok && sold.value.unitPrice).toBe(1);
+    expect(sold.ok && sold.value.total).toBe(2);
   });
 
   it("uses the current rate, and buys nothing at 0% (rule 5)", async () => {

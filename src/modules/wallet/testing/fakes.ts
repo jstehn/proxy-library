@@ -14,6 +14,7 @@ import type { LedgerEntry } from "../domain/ledger";
 export function inMemoryWalletRepository() {
   const accounts = new Map<UserId, WalletAccount>();
   const entries: LedgerEntry[] = [];
+  const totalsSince = new Map<UserId, Date>();
 
   const repository: WalletRepository = {
     async openAccountIfMissing(account) {
@@ -38,6 +39,9 @@ export function inMemoryWalletRepository() {
     async balance(userId) {
       return Cents.sum(entries.filter((entry) => entry.userId === userId).map((e) => e.amount));
     },
+    async restartTotals(userId, at) {
+      totalsSince.set(userId, at);
+    },
   };
 
   return {
@@ -45,6 +49,10 @@ export function inMemoryWalletRepository() {
     /** Every entry for one player, oldest first (for test assertions). */
     entriesFor(userId: UserId): LedgerEntry[] {
       return entries.filter((entry) => entry.userId === userId);
+    },
+    /** When the player's totals were last restarted, if ever (for test assertions). */
+    totalsSinceFor(userId: UserId): Date | undefined {
+      return totalsSince.get(userId);
     },
   };
 }

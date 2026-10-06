@@ -1,8 +1,8 @@
 # Design: deck suggestions and a budget shopping list
 
 - **Phase:** 20
-- **Status:** **Self-approved** (2026-10-02, overnight run: you asked for decisions without
-  interruptions; every judgement call is in [decisions-to-review.md](../decisions-to-review.md))
+- **Status:** **Approved** (2026-10-06, after review; self-approved during the overnight run of
+  2026-10-02 → 03, judgement calls in [decisions-to-review.md](../decisions-to-review.md))
 - **Related:** design doc 14 (deck builder), design doc 15 (buy a list), design doc 19 (role
   tags), ADR 0006 (cross-module reads), ADR 0016 (client-safe API), ADR 0017 (shared card search)
 
@@ -263,7 +263,7 @@ None.
   make a budget list and follow "Buy these" to a filled-in Buy a list. Screenshots in dark mode
   and at phone width.
 
-## 13. Decisions (self-approved; see decisions-to-review.md)
+## 13. Decisions (self-approved, then approved by you on 2026-10-06; see decisions-to-review.md)
 
 1. Features are stored per printing by the sync (not computed per request).
 2. Suggestions are **additions**; nothing suggests a card to cut.

@@ -46,8 +46,14 @@ export const LIBRARY_EVENT_KINDS = ["pull", "purchase", "deckShared"] as const;
 
 export const NOTABLE_PRICE_CENTS = 500;
 
-/** A pull worth telling everyone about: rare or better, or worth $5 or more (the opener's "hit"). */
+/** Rarities too common for the feed: every pack has a rare, so a plain rare isn't news. */
+const EVERYDAY_RARITIES: readonly string[] = ["common", "uncommon", "rare"];
+
+/**
+ * A pull worth telling everyone about: mythic or better, or worth $5 or more. Stricter than the
+ * opener's "hit" (rare or better), which still celebrates a rare in your own pack.
+ */
 export function isNotable(card: Pick<PulledCard, "rarity" | "priceCents">): boolean {
-  const isRareOrBetter = card.rarity !== "common" && card.rarity !== "uncommon";
-  return isRareOrBetter || (card.priceCents ?? 0) >= NOTABLE_PRICE_CENTS;
+  const isMythicOrBetter = !EVERYDAY_RARITIES.includes(card.rarity);
+  return isMythicOrBetter || (card.priceCents ?? 0) >= NOTABLE_PRICE_CENTS;
 }

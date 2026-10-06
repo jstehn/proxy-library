@@ -18,6 +18,11 @@ export interface WalletRepository {
   updateAccount(account: WalletAccount): Promise<void>;
   appendEntries(entries: readonly LedgerEntry[]): Promise<void>;
   balance(userId: UserId): Promise<Cents>;
+  /**
+   * Restart the player's totals (spent, self-funded, …) from this moment, as a library reset
+   * does. Nothing is deleted: the totals only count ledger entries after it.
+   */
+  restartTotals(userId: UserId, at: Date): Promise<void>;
 }
 
 export interface EconomySettingsRepository {

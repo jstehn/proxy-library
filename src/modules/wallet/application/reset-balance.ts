@@ -13,7 +13,8 @@ export type ResetBalanceInput = Readonly<{
 /**
  * Sets a player's balance back to the starting grant, inside the caller's transaction (an admin
  * resetting a player). Nothing is deleted (rule 1): one grant or correction makes up the
- * difference, with a note. Returns the new balance.
+ * difference, with a note. The totals (spent, self-funded, …) restart after it. Returns the new
+ * balance.
  */
 export async function resetBalance(
   services: WalletServices,
@@ -33,5 +34,6 @@ export async function resetBalance(
     });
     await services.wallets.appendEntries([entry]);
   }
+  await services.wallets.restartTotals(input.userId, input.now);
   return target;
 }

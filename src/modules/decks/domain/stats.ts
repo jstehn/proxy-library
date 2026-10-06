@@ -162,11 +162,11 @@ export const TARGETED_TAGS = ["ramp", "draw", "removal", "wipe"] as const satisf
 export type TargetedTag = (typeof TARGETED_TAGS)[number];
 
 /**
- * Role counts to aim for (design doc 19, decision 2): a guide, not a rule. Commander uses a common
- * community guide; 60- and 40-card decks scale it down, with more removal than ramp.
+ * Role counts to aim for (design doc 19, decision 2): a guide, not a rule. Only Commander has a
+ * common community guide; other formats have none, so they get null and their roles are only
+ * counted (your review, 2026-10-06).
  */
-export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> {
+export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> | null {
   if (format === "commander") return { ramp: 10, draw: 10, removal: 8, wipe: 3 };
-  if (format === "limited") return { ramp: 2, draw: 3, removal: 5, wipe: 1 };
-  return { ramp: 4, draw: 6, removal: 8, wipe: 2 };
+  return null;
 }
