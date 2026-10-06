@@ -5,11 +5,14 @@ TypeScript and to practice software engineering the way a team would, from desig
 to deployment.
 
 > **How this was built, up front:** most of the code was written by an AI coding assistant
-> (Claude Code). It was _vibe coded_, but not unattended. I set the requirements, reviewed and
-> approved a design document before every phase was built, made the final call on every design
-> decision, tested the app against real data, and sent back what was wrong. The goal was to
-> learn: to read, question and understand every part of a real codebase, and to practice the
-> engineering process around it, not to type every line myself.
+> (Claude Code). It was _vibe coded_, but not watched every minute. I set the requirements,
+> approved a design document before most phases were built, tested the app against real data,
+> and sent back what was wrong. Two batches of phases (6–11, and 20–21) were built in overnight
+> runs, where the assistant approved its own design documents so work could continue and listed
+> every decision it made without me in [docs/decisions-to-review.md](docs/decisions-to-review.md).
+> I reviewed those afterwards and changed several. The goal was to learn: to read, question and
+> understand every part of a real codebase, and to practice the engineering process around it,
+> not to type every line myself.
 
 ## What it is
 
@@ -22,7 +25,10 @@ you own. Proxy Library brings it back for a group of friends:
 - **Keep a collection**, buy and sell **singles** at market price, and **trade** cards and money
   with other players.
 - **Build decks only from cards you own**, with Scryfall-style search, live statistics and
-  Commander rules, then **print the deck as proxies** in a PDF with cutting guides.
+  Commander rules, test hands and suggestions, then **print the deck as proxies** in a PDF with
+  cutting guides.
+- **Draft together** live, with bots for empty seats, and **share decks** with the group for
+  comments.
 
 Card data comes from [MTGJSON](https://mtgjson.com) and [Scryfall](https://scryfall.com), synced
 nightly and cached. Official product photos come from Wizards Play Network. It runs on my home
@@ -37,12 +43,13 @@ architecture boundaries honest, and shipping to a real environment.
 
 So every build phase produced three things besides code:
 
-1. A **design document** I reviewed and approved before any implementation started
-   ([docs/design/](docs/design/)), with my decisions written into it.
+1. A **design document** approved before any implementation started
+   ([docs/design/](docs/design/)), with the decisions written into it. I approved most of them
+   before the build; the overnight ones were self-approved and reviewed by me afterwards.
 2. **Architecture Decision Records** for choices that cut across the codebase
-   ([docs/adr/](docs/adr/README.md), 16 so far).
+   ([docs/adr/](docs/adr/README.md), 19 so far).
 3. A **lesson** that teaches the concepts the phase used, compared with Python, with exercises
-   whose solutions are verified to compile and pass ([lessons/](lessons/README.md), 15 so far).
+   whose solutions are verified to compile and pass ([lessons/](lessons/README.md), 20 so far).
    The lessons are how I made sure I understood the code instead of only accepting it.
 
 ## My role
@@ -51,8 +58,8 @@ What I decided and did, rather than delegated:
 
 - **Requirements and scope:** what the app should do, phase by phase, and what's out of scope
   ([roadmap](docs/roadmap.md), [future ideas](docs/future-ideas.md)).
-- **Design approval:** no phase was built before I approved its design document. Each one ends
-  with open questions, and I answered them: for example, the starting money and weekly
+- **Design approval:** each design document ends with open questions, and I answered them
+  before the build, except in the two overnight runs, where I reviewed the answers afterwards: for example, the starting money and weekly
   allowance, when a deck's color filter applies, how double-faced cards print on proxy sheets,
   and whether foils print on their own pages.
 - **Testing on real data and pushing back:** I used the app and reported what was wrong:
@@ -79,8 +86,8 @@ What I decided and did, rather than delegated:
 | Reproducible dev environment (Nix flakes + direnv)                      | [ADR 0010](docs/adr/0010-nix-dev-environment.md)                                                              |
 | Design docs and decision records for every phase                        | [docs/design/](docs/design/), [docs/adr/](docs/adr/README.md)                                                 |
 
-**Testing** is layered by cost: about 450 fast unit tests (pure domain logic, fakes for every
-port), about 80 integration tests against a real Postgres, and browser tests (Playwright) for
+**Testing** is layered by cost: about 680 fast unit tests (pure domain logic, fakes for every
+port), about 115 integration tests against a real Postgres, and browser tests (Playwright) for
 whole journeys. **No automated test touches the network:** external data comes from recorded
 fixtures, and a small opt-in suite checks the real services by hand. Checks against real data
 also run as commands, e.g. opening 1,000 packs of every booster recipe and reporting any rule
@@ -96,9 +103,9 @@ development, Docker Compose and Portainer for deployment.
 
 This is a **learning project, not a product**. It serves one invite-only playgroup on a home
 server. It hasn't been load-tested or security-audited for the open internet, and features are
-added when they teach something or my group asks for them. It's roughly 25,000 lines of
-TypeScript (excluding tests), built in phases 0–14 of the [roadmap](docs/roadmap.md); phase 15
-is in design.
+added when they teach something or my group asks for them. It's roughly 39,000 lines of
+TypeScript (excluding tests), built in phases 0–21 of the [roadmap](docs/roadmap.md) except
+phase 16, which is designed but not built.
 
 ## Repository tour
 
@@ -145,6 +152,7 @@ Ctrl+C stops the app and the worker; Postgres keeps running until `pnpm db:stop`
 | `pnpm worker check-packs`      | opens 1,000 packs of every booster recipe and reports problems |
 | `pnpm worker check-products`   | checks every product for sale contains something               |
 | `pnpm worker check-commanders` | checks every precon's commander may lead a Commander deck      |
+| `pnpm worker tag-cards`        | stores role tags and themes for printings missing them         |
 
 ## Legal
 
