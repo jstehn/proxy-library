@@ -11,7 +11,8 @@ import {
   type ProxyOptions,
 } from "@/modules/decks/client";
 
-// The proxy options (design doc 14, section 3), with what they'll produce shown as you choose.
+// The proxy options (design doc 14, section 3, and the playtest style of design doc 22), with
+// what they'll produce shown as you choose.
 
 type Choice<Key extends keyof ProxyOptions> = Readonly<{
   value: ProxyOptions[Key];
@@ -24,6 +25,36 @@ type Question<Key extends keyof ProxyOptions> = Readonly<{
   choices: readonly Choice<Key>[];
   help?: string;
 }>;
+
+const STYLE: Question<"style"> = {
+  key: "style",
+  title: "Card style",
+  choices: [
+    { value: "scan", label: "Card scans" },
+    { value: "playtest", label: "Playtest (low ink)" },
+  ],
+  help: "Playtest cards are drawn from each card's text on white: name, cost, art, type, rules and stats, with stripes in the card's colours. They use far less ink than scans.",
+};
+const ART_FILTER: Question<"artFilter"> = {
+  key: "artFilter",
+  title: "Art",
+  choices: [
+    { value: "color", label: "Full colour" },
+    { value: "grayscale", label: "Black and white" },
+    { value: "edges", label: "Edges only (Sobel)" },
+    { value: "none", label: "No art" },
+  ],
+  help: "Edges only prints the art's outlines, like a pencil sketch: the least ink of the three.",
+};
+const STRIPES: Question<"stripes"> = {
+  key: "stripes",
+  title: "Colour stripes",
+  choices: [
+    { value: "on", label: "On" },
+    { value: "off", label: "Off (plain white)" },
+  ],
+  help: "Light stripes in the card's colours behind its frame; lands show the colours of mana they make, colourless cards grey.",
+};
 
 const PAPER: Question<"paper"> = {
   key: "paper",
@@ -87,7 +118,7 @@ const BLEED: Question<"bleed"> = {
     { value: "none", label: "None" },
     { value: "eighthInch", label: "1/8 inch (3 mm)" },
   ],
-  help: "Extra image around each card, so a slightly-off cut still shows no white edge. Fewer cards fit on a page.",
+  help: "Extra image around each card, so a slightly-off cut still shows no white edge (playtest cards are white there anyway). Fewer cards fit on a page.",
 };
 
 const FOILS: Question<"foils"> = {
@@ -99,6 +130,9 @@ const FOILS: Question<"foils"> = {
   ],
   help: "For printing foils on foil paper: they come after everything else, so the foil paper goes in once. A card is foil when the deck's copy is (foil or etched).",
 };
+
+/** Only asked for playtest cards. */
+const PLAYTEST_QUESTIONS = [ART_FILTER, STRIPES] as const;
 
 const QUESTIONS = [
   PAPER,
@@ -175,6 +209,16 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
         >
           Download PDF
         </a>
+        {options.style === "playtest" && summary.cards > 0 && (
+          <a
+            href={`/decks/${props.deckId}/proxies.pdf?${query}&preview=1`}
+            target="_blank"
+            rel="noopener"
+            className="rounded-md border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
+          >
+            Preview one card
+          </a>
+        )}
         <p className="text-xs text-zinc-500">
           Print at &quot;actual size&quot; (100%), not &quot;fit to page&quot;. Big decks take a few
           seconds: each image is fetched once and then kept.
@@ -182,6 +226,23 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
       </aside>
 
       <form className="flex flex-1 flex-col gap-5" onSubmit={(event) => event.preventDefault()}>
+        <OptionGroup
+          question={STYLE}
+          selected={options.style}
+          onChoose={(value) => choose("style", value)}
+        />
+        {options.style === "playtest" && (
+          <div className="flex flex-col gap-5 border-l-2 border-zinc-300 pl-4 dark:border-zinc-700">
+            {PLAYTEST_QUESTIONS.map((question) => (
+              <OptionGroup
+                key={question.key}
+                question={question}
+                selected={options[question.key]}
+                onChoose={(value) => choose(question.key, value)}
+              />
+            ))}
+          </div>
+        )}
         {QUESTIONS.map((question) => (
           <OptionGroup
             key={question.key}

@@ -9,6 +9,7 @@ import type {
   SlugInvalid,
   SyncAlreadyQueued,
 } from "../domain/errors";
+import { imageUrl } from "../domain/images";
 import { companionsToEnable } from "../domain/rules";
 import type { PrintingId, SetCode } from "../domain/types";
 import type { ArtworkSize } from "../domain/wpn";
@@ -119,7 +120,7 @@ export function makeCatalogAdmin(dependencies: CatalogDependencies) {
     const cached = await images.get(key);
     if (cached !== null) return ok(cached);
 
-    const bytes = await imageFetcher.fetch(faceUris[input.size]);
+    const bytes = await imageFetcher.fetch(imageUrl(faceUris, input.size));
     await images.put(key, bytes);
     return ok(bytes);
   }

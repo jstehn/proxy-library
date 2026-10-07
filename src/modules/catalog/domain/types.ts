@@ -162,9 +162,17 @@ export type SkippedDigital = Readonly<{
 /** One card's daily market prices from Scryfall, per finish (null = no price for that finish). */
 export type ScryfallPrices = Readonly<Record<Finish, Cents | null>>;
 
+/** One face's image addresses. `artCrop` (just the illustration) is stored since phase 22. */
+export type FaceImageUris = Readonly<{
+  small: string;
+  normal: string;
+  large: string;
+  artCrop?: string;
+}>;
+
 export type ImageUris = Readonly<{
-  front: Readonly<{ small: string; normal: string; large: string }>;
-  back: Readonly<{ small: string; normal: string; large: string }> | null; // double-faced cards
+  front: FaceImageUris;
+  back: FaceImageUris | null; // double-faced cards
 }>;
 
 /** The parts of a Scryfall card the catalog uses, after translation. */

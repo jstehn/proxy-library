@@ -1,4 +1,5 @@
 import type { Board } from "./deck";
+import type { PrintedCard } from "./playtest-card";
 
 // Proxy sheets (design doc 14, section 3): which cards to print and where each one goes on the
 // page. Pure, so every position can be unit-tested; drawing the PDF is infrastructure's job.
@@ -38,6 +39,12 @@ export type ProxyOptions = Readonly<{
   copies: "deck" | "one";
   /** Foils mixed in with the rest, or on their own pages (to print on foil paper). */
   foils: "mixed" | "ownPages";
+  /** Each card's scan, or a low-ink card drawn from its text (design doc 22). */
+  style: "scan" | "playtest";
+  /** Playtest only: the art as it is, in shades of grey, as edges only (Sobel), or none. */
+  artFilter: "color" | "grayscale" | "edges" | "none";
+  /** Playtest only: stripes in the card's colours behind the frame. */
+  stripes: "on" | "off";
 }>;
 
 /** The defaults agreed in design doc 14 (section 3 and decision 4). */
@@ -51,6 +58,10 @@ export const DEFAULT_PROXY_OPTIONS: ProxyOptions = {
   guides: "corners",
   copies: "deck",
   foils: "mixed",
+  // Design doc 22, decision 1: scans stay the default; playtest defaults to colour art and stripes.
+  style: "scan",
+  artFilter: "color",
+  stripes: "on",
 };
 
 /** What the sheet needs to know about one deck line. */
@@ -64,6 +75,8 @@ export type ProxyLine = Readonly<{
   hasBack: boolean;
   /** Whether the deck's copy is foil (foil or etched): the line's finish. */
   isFoil: boolean;
+  /** The printing's text, for playtest proxies. */
+  printed: PrintedCard;
 }>;
 
 /** One copy to print. */
@@ -72,6 +85,7 @@ export type ProxyCard = Readonly<{
   name: string;
   hasBack: boolean;
   isFoil: boolean;
+  printed: PrintedCard;
 }>;
 
 /** The copies to print, in deck order, following the options. */
@@ -86,6 +100,7 @@ export function cardsToPrint(lines: readonly ProxyLine[], options: ProxyOptions)
         name: line.name,
         hasBack: line.hasBack && options.backFaces === "pages",
         isFoil: line.isFoil,
+        printed: line.printed,
       };
       return Array.from({ length: copies }, () => card);
     });
@@ -103,6 +118,7 @@ export type Placement = Readonly<{
   card: Box;
   /** Where the image is drawn: the card, plus the bleed around it when there is one. */
   image: Box;
+  printed: PrintedCard;
 }>;
 
 export type ProxyPage = Readonly<{
@@ -199,7 +215,14 @@ export function proxyPages(cards: readonly ProxyCard[], options: ProxyOptions): 
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     };
-    return { printingId: card.printingId, name: card.name, face, card: cardBox, image };
+    return {
+      printingId: card.printingId,
+      name: card.name,
+      face,
+      card: cardBox,
+      image,
+      printed: card.printed,
+    };
   }
 
   function page(side: "front" | "back", foil: boolean, placements: Placement[]): ProxyPage {

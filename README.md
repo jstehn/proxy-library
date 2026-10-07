@@ -49,7 +49,7 @@ So every build phase produced three things besides code:
 2. **Architecture Decision Records** for choices that cut across the codebase
    ([docs/adr/](docs/adr/README.md), 19 so far).
 3. A **lesson** that teaches the concepts the phase used, compared with Python, with exercises
-   whose solutions are verified to compile and pass ([lessons/](lessons/README.md), 20 so far).
+   whose solutions are verified to compile and pass ([lessons/](lessons/README.md), 21 so far).
    The lessons are how I made sure I understood the code instead of only accepting it.
 
 ## My role
@@ -86,8 +86,8 @@ What I decided and did, rather than delegated:
 | Reproducible dev environment (Nix flakes + direnv)                      | [ADR 0010](docs/adr/0010-nix-dev-environment.md)                                                              |
 | Design docs and decision records for every phase                        | [docs/design/](docs/design/), [docs/adr/](docs/adr/README.md)                                                 |
 
-**Testing** is layered by cost: about 680 fast unit tests (pure domain logic, fakes for every
-port), about 115 integration tests against a real Postgres, and browser tests (Playwright) for
+**Testing** is layered by cost: about 720 fast unit tests (pure domain logic, fakes for every
+port), about 120 integration tests against a real Postgres, and browser tests (Playwright) for
 whole journeys. **No automated test touches the network:** external data comes from recorded
 fixtures, and a small opt-in suite checks the real services by hand. Checks against real data
 also run as commands, e.g. opening 1,000 packs of every booster recipe and reporting any rule
@@ -103,8 +103,8 @@ development, Docker Compose and Portainer for deployment.
 
 This is a **learning project, not a product**. It serves one invite-only playgroup on a home
 server. It hasn't been load-tested or security-audited for the open internet, and features are
-added when they teach something or my group asks for them. It's roughly 39,000 lines of
-TypeScript (excluding tests), built in phases 0–21 of the [roadmap](docs/roadmap.md) except
+added when they teach something or my group asks for them. It's roughly 40,000 lines of
+TypeScript (excluding tests), built in phases 0–22 of the [roadmap](docs/roadmap.md) except
 phase 16, which is designed but not built.
 
 ## Repository tour

@@ -149,17 +149,20 @@ export function buildCore(config: Config) {
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
   const deckSharing = makeDeckSharing({ unitOfWork, clock });
-  // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3).
+  // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3);
+  // playtest proxies use the art crops (design doc 22).
+  async function cachedImage(
+    printingId: string,
+    face: "front" | "back",
+    size: "large" | "artCrop",
+  ) {
+    const found = await catalog.imageFor({ printingId: PrintingId.of(printingId), size, face });
+    return found.ok ? found.value : null;
+  }
   const proxySheet = makeProxySheets({
     images: {
-      async image(printingId, face) {
-        const found = await catalog.imageFor({
-          printingId: PrintingId.of(printingId),
-          size: "large",
-          face,
-        });
-        return found.ok ? found.value : null;
-      },
+      image: (printingId, face) => cachedImage(printingId, face, "large"),
+      artCrop: (printingId, face) => cachedImage(printingId, face, "artCrop"),
     },
     renderer: pdfLibRenderer(),
   });

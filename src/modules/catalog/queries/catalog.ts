@@ -92,6 +92,12 @@ export type PrintingCard = Readonly<{
   /** What's printed on each face (front first), for the hover overlay. */
   faces: CardFace[];
   artist: string | null;
+  setCode: string;
+  /** Scryfall's layout: "normal", "split", "adventure", "transform", … */
+  layout: string;
+  colors: string[];
+  /** Colors of mana it makes ("W", …, "C"), e.g. for a land's colour on a playtest proxy. */
+  producedMana: string[];
   /** Latest market price per finish; a finish is missing when there's no price. */
   prices: Partial<Record<Finish, Cents>>;
 }>;
@@ -107,6 +113,10 @@ type PrintingCardRow = {
   has_back_image: boolean;
   faces: CardFace[];
   artist: string | null;
+  set_code: string;
+  layout: string;
+  colors: string[];
+  produced_mana: string[];
   prices: Record<string, number> | null;
 };
 
@@ -115,7 +125,7 @@ const PRINTING_CARD_COLUMNS = sql`
   p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
   p.image_uris is not null as has_image,
   coalesce(jsonb_typeof(p.image_uris->'back') = 'object', false) as has_back_image,
-  p.faces, p.artist,
+  p.faces, p.artist, p.set_code, p.layout, p.colors, p.produced_mana,
   -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
   (select jsonb_object_agg(latest.finish, latest.usd_cents)
      from (select distinct on (s.finish) s.finish, s.usd_cents
@@ -135,6 +145,10 @@ function toPrintingCard(row: PrintingCardRow): PrintingCard {
     hasBackImage: row.has_back_image,
     faces: row.faces,
     artist: row.artist,
+    setCode: row.set_code,
+    layout: row.layout,
+    colors: row.colors,
+    producedMana: row.produced_mana,
     prices: Object.fromEntries(
       Object.entries(row.prices ?? {}).map(([finish, cents]) => [finish, Cents.of(Number(cents))]),
     ),

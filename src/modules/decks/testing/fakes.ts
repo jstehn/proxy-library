@@ -111,6 +111,10 @@ export function fakeProxyImages(withBacks: readonly string[] = []) {
       requests.push(`${printingId}/${face}`);
       return face === "front" || withBacks.includes(printingId) ? TINY_JPEG : null;
     },
+    async artCrop(printingId, face) {
+      requests.push(`art:${printingId}/${face}`);
+      return face === "front" || withBacks.includes(printingId) ? TINY_JPEG : null;
+    },
   };
   return { images, requests };
 }

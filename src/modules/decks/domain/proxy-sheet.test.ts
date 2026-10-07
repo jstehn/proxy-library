@@ -16,6 +16,9 @@ import {
   type ProxyLine,
   type ProxyOptions,
 } from "./proxy-sheet";
+import { printedCard } from "../testing/printed-cards";
+
+const printed = printedCard();
 
 const options = (changes: Partial<ProxyOptions> = {}): ProxyOptions => ({
   ...DEFAULT_PROXY_OPTIONS,
@@ -30,6 +33,7 @@ const line = (name: string, changes: Partial<ProxyLine> = {}): ProxyLine => ({
   isBasicLand: false,
   hasBack: false,
   isFoil: false,
+  printed: printedCard(),
   ...changes,
 });
 
@@ -39,6 +43,7 @@ const singles = (count: number): ProxyCard[] =>
     name: `Card ${index}`,
     hasBack: false,
     isFoil: false,
+    printed,
   }));
 
 const overlaps = (a: Box, b: Box) =>
@@ -127,8 +132,14 @@ describe("proxyPages", () => {
   it("puts double-faced cards last, each page of fronts followed by their mirrored backs", () => {
     const cards: ProxyCard[] = [
       ...singles(2),
-      { printingId: "delver", name: "Delver of Secrets", hasBack: true, isFoil: false },
-      { printingId: "huntmaster", name: "Huntmaster of the Fells", hasBack: true, isFoil: false },
+      { printingId: "delver", name: "Delver of Secrets", hasBack: true, isFoil: false, printed },
+      {
+        printingId: "huntmaster",
+        name: "Huntmaster of the Fells",
+        hasBack: true,
+        isFoil: false,
+        printed,
+      },
     ];
     const pages = proxyPages(cards, options());
     expect(pages.map((page) => page.side)).toEqual(["front", "front", "back"]);

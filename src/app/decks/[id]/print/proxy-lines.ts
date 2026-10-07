@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { printingCards } from "@/modules/catalog";
 import {
+  cardsToPrint,
   DEFAULT_PROXY_OPTIONS,
   deckView,
   GAPS_IN_MILLIMETERS,
@@ -29,6 +30,9 @@ const OptionsSchema = z.object({
   guides: z.enum(["corners", "lines", "none"]).catch(defaults.guides),
   copies: z.enum(["deck", "one"]).catch(defaults.copies),
   foils: z.enum(["mixed", "ownPages"]).catch(defaults.foils),
+  style: z.enum(["scan", "playtest"]).catch(defaults.style),
+  artFilter: z.enum(["color", "grayscale", "edges", "none"]).catch(defaults.artFilter),
+  stripes: z.enum(["on", "off"]).catch(defaults.stripes),
 });
 
 /** The options in a query string such as `?paper=a4&bleed=eighthInch`. */
@@ -48,14 +52,46 @@ export async function proxyDeck(
     db,
     view.lines.map((line) => line.printingId),
   );
-  const lines = view.lines.map((line) => ({
-    printingId: line.printingId,
-    name: line.name,
-    quantity: line.quantity,
-    board: line.board,
-    isBasicLand: line.isBasicLand,
-    hasBack: cards.get(line.printingId)?.hasBackImage ?? false,
-    isFoil: line.finish !== "nonfoil", // foil and etched both print on foil paper
-  }));
+  const lines = view.lines.map((line): ProxyLine => {
+    const card = cards.get(line.printingId);
+    return {
+      printingId: line.printingId,
+      name: line.name,
+      quantity: line.quantity,
+      board: line.board,
+      isBasicLand: line.isBasicLand,
+      hasBack: card?.hasBackImage ?? false,
+      isFoil: line.finish !== "nonfoil", // foil and etched both print on foil paper
+      // What a playtest proxy prints (design doc 22). A printing missing from the catalog
+      // still gets a card with its name, rather than stopping the sheet.
+      printed: {
+        faces: card?.faces ?? [
+          {
+            name: line.name,
+            manaCost: null,
+            typeLine: "",
+            text: "",
+            power: null,
+            toughness: null,
+            loyalty: null,
+            defense: null,
+          },
+        ],
+        doubleFaced: card?.hasBackImage ?? false,
+        colors: card?.colors ?? [],
+        producedMana: card?.producedMana ?? [],
+        setCode: card?.setCode ?? "",
+        collectorNumber: card?.collectorNumber ?? "",
+        artist: card?.artist ?? null,
+      },
+    };
+  });
   return { view, lines };
+}
+
+/** The first card these options would print, as a one-copy deck: the "Preview one card" PDF. */
+export function previewLines(lines: readonly ProxyLine[], options: ProxyOptions): ProxyLine[] {
+  const [first] = cardsToPrint(lines, options);
+  const line = lines.find((candidate) => candidate.printingId === first?.printingId);
+  return line === undefined ? [] : [{ ...line, quantity: 1 }];
 }

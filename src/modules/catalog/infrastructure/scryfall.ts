@@ -3,7 +3,14 @@ import { z } from "zod";
 import { Cents } from "@/shared/kernel";
 import { SetCode, type ImageUris, type ScryfallCard } from "../domain/types";
 
-const ImageSizes = z.object({ small: z.string(), normal: z.string(), large: z.string() });
+const ImageSizes = z
+  .object({
+    small: z.string(),
+    normal: z.string(),
+    large: z.string(),
+    art_crop: z.string().optional(),
+  })
+  .transform(({ art_crop, ...sizes }) => ({ ...sizes, artCrop: art_crop }));
 
 export const ScryfallCardSchema = z.object({
   id: z.string(),

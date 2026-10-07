@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PROXY_OPTIONS, type ProxyLine, type ProxyPage } from "../domain/proxy-sheet";
 import { fakeProxyImages } from "../testing/fakes";
+import { printedCard } from "../testing/printed-cards";
 import { makeProxySheets } from "./proxy-sheets";
 
 const line = (name: string, quantity: number, hasBack = false): ProxyLine => ({
@@ -11,6 +12,7 @@ const line = (name: string, quantity: number, hasBack = false): ProxyLine => ({
   isBasicLand: false,
   hasBack,
   isFoil: false,
+  printed: printedCard(),
 });
 
 describe("proxySheet", () => {

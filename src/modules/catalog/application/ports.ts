@@ -1,3 +1,4 @@
+import type { ImageSize } from "../domain/images";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
 import type {
   CardSetInfo,
@@ -31,7 +32,7 @@ export interface ScryfallGateway {
   readBulkFile(path: string): AsyncIterable<ScryfallCard>;
 }
 
-export type ImageSize = "small" | "normal" | "large";
+export type { ImageSize };
 export type ImageFace = "front" | "back";
 export type ImageKey = Readonly<{ size: ImageSize; scryfallId: string; face: ImageFace }>;
 

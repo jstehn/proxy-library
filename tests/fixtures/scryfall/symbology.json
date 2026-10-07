@@ -1,0 +1,511 @@
+{
+  "object": "list",
+  "recorded": "2026-10-06",
+  "source": "GET https://api.scryfall.com/symbology (only the fields tests use)",
+  "data": [
+    {
+      "symbol": "{T}",
+      "english": "tap this permanent",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{Q}",
+      "english": "untap this permanent",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{E}",
+      "english": "an energy counter",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{P}",
+      "english": "modal budget pawprint",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{PW}",
+      "english": "planeswalker",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{CHAOS}",
+      "english": "chaos",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{A}",
+      "english": "an acorn counter",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{TK}",
+      "english": "a ticket counter",
+      "represents_mana": false,
+      "colors": []
+    },
+    {
+      "symbol": "{X}",
+      "english": "X generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{Y}",
+      "english": "Y generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{Z}",
+      "english": "Z generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{0}",
+      "english": "zero mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{½}",
+      "english": "one-half generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{1}",
+      "english": "one generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{2}",
+      "english": "two generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{3}",
+      "english": "three generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{4}",
+      "english": "four generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{5}",
+      "english": "five generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{6}",
+      "english": "six generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{7}",
+      "english": "seven generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{8}",
+      "english": "eight generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{9}",
+      "english": "nine generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{10}",
+      "english": "ten generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{11}",
+      "english": "eleven generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{12}",
+      "english": "twelve generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{13}",
+      "english": "thirteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{14}",
+      "english": "fourteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{15}",
+      "english": "fifteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{16}",
+      "english": "sixteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{17}",
+      "english": "seventeen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{18}",
+      "english": "eighteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{19}",
+      "english": "nineteen generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{20}",
+      "english": "twenty generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{100}",
+      "english": "one hundred generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{1000000}",
+      "english": "one million generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{∞}",
+      "english": "infinite generic mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{W/U}",
+      "english": "one white or blue mana",
+      "represents_mana": true,
+      "colors": ["W", "U"]
+    },
+    {
+      "symbol": "{W/B}",
+      "english": "one white or black mana",
+      "represents_mana": true,
+      "colors": ["W", "B"]
+    },
+    {
+      "symbol": "{B/R}",
+      "english": "one black or red mana",
+      "represents_mana": true,
+      "colors": ["B", "R"]
+    },
+    {
+      "symbol": "{B/G}",
+      "english": "one black or green mana",
+      "represents_mana": true,
+      "colors": ["B", "G"]
+    },
+    {
+      "symbol": "{U/B}",
+      "english": "one blue or black mana",
+      "represents_mana": true,
+      "colors": ["U", "B"]
+    },
+    {
+      "symbol": "{U/R}",
+      "english": "one blue or red mana",
+      "represents_mana": true,
+      "colors": ["U", "R"]
+    },
+    {
+      "symbol": "{R/G}",
+      "english": "one red or green mana",
+      "represents_mana": true,
+      "colors": ["R", "G"]
+    },
+    {
+      "symbol": "{R/W}",
+      "english": "one red or white mana",
+      "represents_mana": true,
+      "colors": ["W", "R"]
+    },
+    {
+      "symbol": "{G/W}",
+      "english": "one green or white mana",
+      "represents_mana": true,
+      "colors": ["W", "G"]
+    },
+    {
+      "symbol": "{G/U}",
+      "english": "one green or blue mana",
+      "represents_mana": true,
+      "colors": ["U", "G"]
+    },
+    {
+      "symbol": "{B/G/P}",
+      "english": "one black mana, one green mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["B", "G"]
+    },
+    {
+      "symbol": "{B/R/P}",
+      "english": "one black mana, one red mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["B", "R"]
+    },
+    {
+      "symbol": "{G/U/P}",
+      "english": "one green mana, one blue mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["U", "G"]
+    },
+    {
+      "symbol": "{G/W/P}",
+      "english": "one green mana, one white mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["W", "G"]
+    },
+    {
+      "symbol": "{R/G/P}",
+      "english": "one red mana, one green mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["R", "G"]
+    },
+    {
+      "symbol": "{R/W/P}",
+      "english": "one red mana, one white mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["W", "R"]
+    },
+    {
+      "symbol": "{U/B/P}",
+      "english": "one blue mana, one black mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["U", "B"]
+    },
+    {
+      "symbol": "{U/R/P}",
+      "english": "one blue mana, one red mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["U", "R"]
+    },
+    {
+      "symbol": "{W/B/P}",
+      "english": "one white mana, one black mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["W", "B"]
+    },
+    {
+      "symbol": "{W/U/P}",
+      "english": "one white mana, one blue mana, or 2 life",
+      "represents_mana": true,
+      "colors": ["W", "U"]
+    },
+    {
+      "symbol": "{C/W}",
+      "english": "one colorless mana or one white mana",
+      "represents_mana": true,
+      "colors": ["W"]
+    },
+    {
+      "symbol": "{C/U}",
+      "english": "one colorless mana or one blue mana",
+      "represents_mana": true,
+      "colors": ["U"]
+    },
+    {
+      "symbol": "{C/B}",
+      "english": "one colorless mana or one black mana",
+      "represents_mana": true,
+      "colors": ["B"]
+    },
+    {
+      "symbol": "{C/R}",
+      "english": "one colorless mana or one red mana",
+      "represents_mana": true,
+      "colors": ["R"]
+    },
+    {
+      "symbol": "{C/G}",
+      "english": "one colorless mana or one green mana",
+      "represents_mana": true,
+      "colors": ["G"]
+    },
+    {
+      "symbol": "{2/W}",
+      "english": "two generic mana or one white mana",
+      "represents_mana": true,
+      "colors": ["W"]
+    },
+    {
+      "symbol": "{2/U}",
+      "english": "two generic mana or one blue mana",
+      "represents_mana": true,
+      "colors": ["U"]
+    },
+    {
+      "symbol": "{2/B}",
+      "english": "two generic mana or one black mana",
+      "represents_mana": true,
+      "colors": ["B"]
+    },
+    {
+      "symbol": "{2/R}",
+      "english": "two generic mana or one red mana",
+      "represents_mana": true,
+      "colors": ["R"]
+    },
+    {
+      "symbol": "{2/G}",
+      "english": "two generic mana or one green mana",
+      "represents_mana": true,
+      "colors": ["G"]
+    },
+    {
+      "symbol": "{H}",
+      "english": "one colored mana or two life",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{W/P}",
+      "english": "one white mana or two life",
+      "represents_mana": true,
+      "colors": ["W"]
+    },
+    {
+      "symbol": "{U/P}",
+      "english": "one blue mana or two life",
+      "represents_mana": true,
+      "colors": ["U"]
+    },
+    {
+      "symbol": "{B/P}",
+      "english": "one black mana or two life",
+      "represents_mana": true,
+      "colors": ["B"]
+    },
+    {
+      "symbol": "{R/P}",
+      "english": "one red mana or two life",
+      "represents_mana": true,
+      "colors": ["R"]
+    },
+    {
+      "symbol": "{G/P}",
+      "english": "one green mana or two life",
+      "represents_mana": true,
+      "colors": ["G"]
+    },
+    {
+      "symbol": "{C/P}",
+      "english": "one colorless mana or two life",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{HW}",
+      "english": "one-half white mana",
+      "represents_mana": true,
+      "colors": ["W"]
+    },
+    {
+      "symbol": "{HR}",
+      "english": "one-half red mana",
+      "represents_mana": true,
+      "colors": ["R"]
+    },
+    {
+      "symbol": "{W}",
+      "english": "one white mana",
+      "represents_mana": true,
+      "colors": ["W"]
+    },
+    {
+      "symbol": "{U}",
+      "english": "one blue mana",
+      "represents_mana": true,
+      "colors": ["U"]
+    },
+    {
+      "symbol": "{B}",
+      "english": "one black mana",
+      "represents_mana": true,
+      "colors": ["B"]
+    },
+    {
+      "symbol": "{R}",
+      "english": "one red mana",
+      "represents_mana": true,
+      "colors": ["R"]
+    },
+    {
+      "symbol": "{G}",
+      "english": "one green mana",
+      "represents_mana": true,
+      "colors": ["G"]
+    },
+    {
+      "symbol": "{C}",
+      "english": "one colorless mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{S}",
+      "english": "one snow mana",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{L}",
+      "english": "one mana from a legendary source",
+      "represents_mana": true,
+      "colors": []
+    },
+    {
+      "symbol": "{D}",
+      "english": "one potential land drop",
+      "represents_mana": false,
+      "colors": []
+    }
+  ]
+}
