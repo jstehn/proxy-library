@@ -375,6 +375,8 @@ const PADDING = 4;
 export type PlaytestDrawing = Readonly<{
   /** The card's edge: a thin outline. */
   outline: Box;
+  /** The card and its bleed: the stripes reach this far, so an off cut shows stripes. */
+  bleed: Box;
   stripes: readonly Stripe[];
   /** White boxes with a thin border: title, type line, text box, stats. */
   panels: readonly Box[];
@@ -388,13 +390,17 @@ export type PlaytestDrawing = Readonly<{
 
 export type PlaytestStyle = Readonly<{ art: boolean; stripes: boolean }>;
 
-/** Everything to draw for one side of a card in `frame` (the card's cut lines). */
+/**
+ * Everything to draw for one side of a card in `frame` (the card's cut lines). `bleed` is the
+ * card plus its bleed (the frame itself when there's none).
+ */
 export function playtestCard(
   card: PrintedCard,
   side: CardSide,
   frame: Box,
   style: PlaytestStyle,
   measure: Measure,
+  bleed: Box = frame,
 ): PlaytestDrawing {
   const faces = facesOnSide(card, side);
   const face = faces[0] ?? card.faces[0];
@@ -562,7 +568,8 @@ export function playtestCard(
 
   return {
     outline: frame,
-    stripes: style.stripes ? stripes(frame, stripeColors(card, side)) : [],
+    bleed,
+    stripes: style.stripes ? stripes(bleed, stripeColors(card, side)) : [],
     panels,
     art,
     texts,

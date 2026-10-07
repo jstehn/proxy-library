@@ -12,11 +12,9 @@ export const POINTS_PER_MILLIMETER = POINTS_PER_INCH / 25.4;
 /** A real Magic card: 2.5 × 3.5 inches (63.5 × 88.9 mm). */
 export const CARD_WIDTH = 2.5 * POINTS_PER_INCH;
 export const CARD_HEIGHT = 3.5 * POINTS_PER_INCH;
-/** Extra image around each card for professional cutting: 1/8 inch. */
-export const BLEED = POINTS_PER_INCH / 8;
 /** Home printers can't print right to the edge: nothing goes closer than 1/8 inch. */
 export const PAGE_MARGIN = POINTS_PER_INCH / 8;
-/** How far a corner mark reaches beyond the card (and its bleed). */
+/** How far a corner mark reaches past the bleed at the sheet's edges. */
 export const MARK_LENGTH = 3 * POINTS_PER_MILLIMETER;
 
 export const PAPER_SIZES = {
@@ -34,7 +32,12 @@ export type ProxyOptions = Readonly<{
   backFaces: "pages" | "skip";
   cards: "all" | "noSideboard";
   gapMillimeters: (typeof GAPS_IN_MILLIMETERS)[number];
-  bleed: "none" | "eighthInch";
+  /**
+   * Bleed: none, or each card's image extended to the middle of the gap around it (and into the
+   * page margin at the sheet's edges), so a slightly-off cut shows no white. The grid never
+   * changes for it (changed 2026-10-07; it used to add 1/8 inch and fit fewer cards).
+   */
+  bleed: "none" | "fillGap";
   guides: "corners" | "lines" | "none";
   copies: "deck" | "one";
   /** Foils mixed in with the rest, or on their own pages (to print on foil paper). */
@@ -129,7 +132,7 @@ export type ProxyPage = Readonly<{
   /** Whether this page is for foil paper (only when foils get their own pages). */
   foil: boolean;
   placements: Placement[];
-  /** Cut guides, drawn underneath the cards so they only show between and around them. */
+  /** Cut guides, drawn on top in grey; they never cross a card's face. */
   guides: GuideLine[];
 }>;
 
@@ -147,26 +150,23 @@ function fitting(length: number, slot: number, gap: number): number {
 }
 
 /**
- * The grid with the most cards per page: upright, or sideways when that fits more (with bleed,
- * 3 × 3 no longer fits on Letter or A4).
+ * The grid with the most cards per page: upright, or sideways when that fits more. Bleed
+ * doesn't count: it only uses the gaps and margins.
  */
 export function sheetGrid(options: ProxyOptions): SheetGrid {
   const paper = PAPER_SIZES[options.paper];
-  const bleed = options.bleed === "eighthInch" ? BLEED : 0;
   const gap = options.gapMillimeters * POINTS_PER_MILLIMETER;
-  const slotWidth = CARD_WIDTH + 2 * bleed;
-  const slotHeight = CARD_HEIGHT + 2 * bleed;
   const upright = {
     width: paper.width,
     height: paper.height,
-    columns: fitting(paper.width, slotWidth, gap),
-    rows: fitting(paper.height, slotHeight, gap),
+    columns: fitting(paper.width, CARD_WIDTH, gap),
+    rows: fitting(paper.height, CARD_HEIGHT, gap),
   };
   const sideways = {
     width: paper.height,
     height: paper.width,
-    columns: fitting(paper.height, slotWidth, gap),
-    rows: fitting(paper.width, slotHeight, gap),
+    columns: fitting(paper.height, CARD_WIDTH, gap),
+    rows: fitting(paper.width, CARD_HEIGHT, gap),
   };
   return sideways.columns * sideways.rows > upright.columns * upright.rows ? sideways : upright;
 }
@@ -189,31 +189,38 @@ export function proxyPages(cards: readonly ProxyCard[], options: ProxyOptions): 
   const grid = sheetGrid(options);
   const perPage = grid.columns * grid.rows;
   if (perPage === 0) return [];
-  const bleed = options.bleed === "eighthInch" ? BLEED : 0;
   const gap = options.gapMillimeters * POINTS_PER_MILLIMETER;
-  const slotWidth = CARD_WIDTH + 2 * bleed;
-  const slotHeight = CARD_HEIGHT + 2 * bleed;
+  // Bleed fills half the gap on each side, so neighbours' images meet in the middle.
+  const bleed = options.bleed === "fillGap" ? gap / 2 : 0;
   // The grid is centered on the page.
-  const gridWidth = grid.columns * slotWidth + (grid.columns - 1) * gap;
-  const gridHeight = grid.rows * slotHeight + (grid.rows - 1) * gap;
+  const gridWidth = grid.columns * CARD_WIDTH + (grid.columns - 1) * gap;
+  const gridHeight = grid.rows * CARD_HEIGHT + (grid.rows - 1) * gap;
   const left = (grid.width - gridWidth) / 2;
   const top = (grid.height + gridHeight) / 2;
+  // At the sheet's edges, bleed goes into the page margin, but never closer than PAGE_MARGIN
+  // to the paper's edge.
+  const outerX = Math.max(0, Math.min(bleed, left - PAGE_MARGIN));
+  const outerY = Math.max(0, Math.min(bleed, grid.height - top - PAGE_MARGIN));
 
   function placement(card: ProxyCard, index: number, face: "front" | "back"): Placement {
     const row = Math.floor(index / grid.columns);
     const frontColumn = index % grid.columns;
     const column = face === "front" ? frontColumn : grid.columns - 1 - frontColumn;
-    const image: Box = {
-      x: left + column * (slotWidth + gap),
-      y: top - row * (slotHeight + gap) - slotHeight,
-      width: slotWidth,
-      height: slotHeight,
-    };
     const cardBox: Box = {
-      x: image.x + bleed,
-      y: image.y + bleed,
+      x: left + column * (CARD_WIDTH + gap),
+      y: top - row * (CARD_HEIGHT + gap) - CARD_HEIGHT,
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
+    };
+    const leftBleed = column === 0 ? outerX : bleed;
+    const rightBleed = column === grid.columns - 1 ? outerX : bleed;
+    const topBleed = row === 0 ? outerY : bleed;
+    const bottomBleed = row === grid.rows - 1 ? outerY : bleed;
+    const image: Box = {
+      x: cardBox.x - leftBleed,
+      y: cardBox.y - bottomBleed,
+      width: CARD_WIDTH + leftBleed + rightBleed,
+      height: CARD_HEIGHT + topBleed + bottomBleed,
     };
     return {
       printingId: card.printingId,
@@ -232,7 +239,7 @@ export function proxyPages(cards: readonly ProxyCard[], options: ProxyOptions): 
       side,
       foil,
       placements,
-      guides: guidesFor(placements, options.guides, bleed, grid),
+      guides: guidesFor(placements, options.guides, gap, grid),
     };
   }
 
@@ -277,16 +284,23 @@ export function proxyPages(cards: readonly ProxyCard[], options: ProxyOptions): 
   ];
 }
 
-/** The cut guides for the cards on one page. */
+/**
+ * The cut guides for the cards on one page, drawn on top of everything in grey. Corner marks
+ * belong to each card: they start at its real-size corners and run outwards along its edges over
+ * its own bleed (or, with bleed off, the space its bleed would use: half the gap), so neighbours'
+ * marks meet in the middle and never cross a card. At the sheet's edges they go on past the
+ * bleed by MARK_LENGTH, so they show in the margin.
+ */
 function guidesFor(
   placements: readonly Placement[],
   style: ProxyOptions["guides"],
-  bleed: number,
+  gap: number,
   page: { width: number; height: number },
 ): GuideLine[] {
   if (style === "none") return [];
   if (style === "lines") {
-    // A line across the whole page along every card edge: cut from edge to edge.
+    // A line across the whole page along every card edge: cut from edge to edge. Cards in a row
+    // or column share their edges, so a line only ever runs along a card's edge.
     const xs = new Set(placements.flatMap(({ card }) => [card.x, card.x + card.width]));
     const ys = new Set(placements.flatMap(({ card }) => [card.y, card.y + card.height]));
     return [
@@ -294,27 +308,56 @@ function guidesFor(
       ...[...ys].map((y) => ({ from: { x: 0, y }, to: { x: page.width, y } })),
     ];
   }
-  // Corner marks: from each corner, outwards along both edges. The part under the card's own
-  // bleed (and any neighbor) is covered when the cards are drawn on top.
-  const reach = bleed + MARK_LENGTH;
-  return placements.flatMap(({ card }) => {
+  const near = (one: number, other: number) => Math.abs(one - other) < 0.01;
+  /** Whether a card sits next to this one, `columns` across and `rows` up. */
+  function hasNeighbour(card: Box, columns: number, rows: number): boolean {
+    return placements.some(
+      (other) =>
+        near(other.card.x, card.x + columns * (card.width + gap)) &&
+        near(other.card.y, card.y + rows * (card.height + gap)),
+    );
+  }
+  return placements.flatMap(({ card, image }) => {
     const right = card.x + card.width;
     const top = card.y + card.height;
+    // This card's own bleed on each side (zero when bleed is off).
+    const bleed = {
+      left: card.x - image.x,
+      right: image.x + image.width - right,
+      down: card.y - image.y,
+      up: image.y + image.height - top,
+    };
+    /** How far a mark runs on one side: over the card's bleed, or past it at the sheet's edge. */
+    const reach = (side: keyof typeof bleed, columns: number, rows: number) =>
+      hasNeighbour(card, columns, rows)
+        ? bleed[side] > 0
+          ? bleed[side]
+          : gap / 2
+        : bleed[side] + MARK_LENGTH;
+    const left = reach("left", -1, 0);
+    const rightward = reach("right", 1, 0);
+    const down = reach("down", 0, -1);
+    const up = reach("up", 0, 1);
     const corners = [
-      { x: card.x, y: card.y, outX: -1, outY: -1 },
-      { x: right, y: card.y, outX: 1, outY: -1 },
-      { x: card.x, y: top, outX: -1, outY: 1 },
-      { x: right, y: top, outX: 1, outY: 1 },
+      { x: card.x, y: card.y, across: -left, along: -down },
+      { x: right, y: card.y, across: rightward, along: -down },
+      { x: card.x, y: top, across: -left, along: up },
+      { x: right, y: top, across: rightward, along: up },
     ];
     return corners.flatMap((corner) => [
-      {
-        from: { x: corner.x, y: corner.y },
-        to: { x: corner.x + corner.outX * reach, y: corner.y },
-      },
-      {
-        from: { x: corner.x, y: corner.y },
-        to: { x: corner.x, y: corner.y + corner.outY * reach },
-      },
+      ...(corner.across === 0
+        ? []
+        : [
+            {
+              from: { x: corner.x, y: corner.y },
+              to: { x: corner.x + corner.across, y: corner.y },
+            },
+          ]),
+      ...(corner.along === 0
+        ? []
+        : [
+            { from: { x: corner.x, y: corner.y }, to: { x: corner.x, y: corner.y + corner.along } },
+          ]),
     ]);
   });
 }

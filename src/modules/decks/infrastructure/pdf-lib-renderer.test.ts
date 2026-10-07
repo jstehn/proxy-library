@@ -40,7 +40,7 @@ describe("pdfLibRenderer", () => {
     expect(images).toHaveLength(3);
   });
 
-  it("turns pages sideways for bleed, and draws a labelled box when an image is missing", async () => {
+  it("draws bleed, and a labelled box when an image is missing", async () => {
     // "Æther" needs a character the standard font can't encode; it's simplified, not an error.
     const { images } = fakeProxyImages();
     const proxySheet = makeProxySheets({
@@ -54,11 +54,11 @@ describe("pdfLibRenderer", () => {
     });
     const bytes = await proxySheet(
       [line("bolt", 1), { ...line("missing", 1), name: "Æther Vial ✦" }],
-      { ...DEFAULT_PROXY_OPTIONS, bleed: "eighthInch" },
+      { ...DEFAULT_PROXY_OPTIONS, bleed: "fillGap" },
     );
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getPageCount()).toBe(1);
-    expect(pdf.getPage(0).getSize()).toEqual({ width: 792, height: 612 });
+    expect(pdf.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
   });
 });
 

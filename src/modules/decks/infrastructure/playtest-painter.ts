@@ -284,7 +284,7 @@ export async function makePlaytestPainter(
     art: Uint8Array | null,
     artKey: string,
   ) {
-    page.drawRectangle({ ...drawing.outline, color: WHITE });
+    page.drawRectangle({ ...drawing.bleed, color: WHITE });
     for (const stripe of drawing.stripes)
       polygon(page, stripe.points, color(STRIPE_TINTS[stripe.color]));
     for (const panel of drawing.panels) {

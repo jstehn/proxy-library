@@ -181,6 +181,21 @@ describe("playtestCard", () => {
     }
   });
 
+  it("runs the stripes into the bleed, and nothing else", () => {
+    const bleed: Box = {
+      x: frame.x - 3,
+      y: frame.y - 3,
+      width: frame.width + 6,
+      height: frame.height + 6,
+    };
+    const card = printedCard({}, [{ manaCost: "{U}{R}" }]);
+    const drawing = playtestCard(card, "front", frame, both, measure, bleed);
+    const points = drawing.stripes.flatMap((stripe) => stripe.points);
+    for (const point of points) expect(inside(point, bleed)).toBe(true);
+    expect(points.some((point) => !inside(point, frame))).toBe(true);
+    for (const panel of drawing.panels) expect(inside(panel, frame)).toBe(true);
+  });
+
   it("puts the mana cost on the right of the title bar at real-card size", () => {
     const card = printedCard({}, [{ name: "Kitchen Finks", manaCost: "{1}{G/W}{G/W}" }]);
     const drawing = playtestCard(card, "front", frame, both, measure);

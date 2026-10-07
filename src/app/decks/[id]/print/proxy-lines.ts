@@ -26,7 +26,7 @@ const OptionsSchema = z.object({
     .number()
     .pipe(z.union(GAPS_IN_MILLIMETERS.map((gap) => z.literal(gap))))
     .catch(defaults.gapMillimeters),
-  bleed: z.enum(["none", "eighthInch"]).catch(defaults.bleed),
+  bleed: z.enum(["none", "fillGap"]).catch(defaults.bleed),
   guides: z.enum(["corners", "lines", "none"]).catch(defaults.guides),
   copies: z.enum(["deck", "one"]).catch(defaults.copies),
   foils: z.enum(["mixed", "ownPages"]).catch(defaults.foils),
@@ -35,7 +35,7 @@ const OptionsSchema = z.object({
   stripes: z.enum(["on", "off"]).catch(defaults.stripes),
 });
 
-/** The options in a query string such as `?paper=a4&bleed=eighthInch`. */
+/** The options in a query string such as `?paper=a4&bleed=fillGap`. */
 export function proxyOptionsFrom(parameters: URLSearchParams): ProxyOptions {
   return OptionsSchema.parse(Object.fromEntries(parameters));
 }

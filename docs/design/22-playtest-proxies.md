@@ -128,7 +128,7 @@ Llanowar Elves (M19) were the measured examples.
 
 ## 4. Invariants
 
-1. A playtest card never draws outside its 2.5 × 3.5 in box (bleed, when on, is plain white).
+1. A playtest card never draws outside its 2.5 × 3.5 in box, except its stripes in the bleed (section 15).
 2. All rules text is printed: if it doesn't fit at 5 pt, the text box takes space from the art box
    (down to none) rather than cutting text.
 3. Stripe colours come only from the card's colours, or for lands from the mana they make; a card
@@ -272,3 +272,21 @@ None.
   Scryfall art crops (Fire // Ice, Reaper King, Atraxa, Delver, Esika's Chariot, …).
 - **Sizes and speed:** a 43-card sheet takes about 2 s; per card about 90 KB in colour, 150 KB
   greyscale, 95 KB edges, 2.5 KB without art.
+
+## 15. Bleed and guides, changed 2026-10-07 (your review)
+
+- **Bleed fills the gap.** It used to add 1/8 inch (3 mm) round each card, which made 3 × 3 too
+  big and cost three cards a page. Now the options are **None** and **Fill the gap**: each
+  card's image (or a playtest card's stripes) reaches halfway into the gap around it, meeting its
+  neighbour's, so the gap setting sets the bleed (2 mm gap → 1 mm each side). At the sheet's
+  edges it goes into the margin, but never closer than 1/8 inch to the paper. The grid never
+  changes. Old addresses with `bleed=eighthInch` fall back to no bleed.
+- **Guides go on top, in mid grey.** Drawn underneath, the marks between cards were hidden by
+  bleed. Now each card's corner marks start at its real 2.5 × 3.5 in corners and run outwards
+  over its own bleed (half the gap; the same space when bleed is off), so they never cross a
+  card; at the sheet's edges they continue 3 mm past the bleed into the margin. Full-line guides
+  are drawn on top too.
+- **Playtest bleed shows the stripes** rather than white, so an off cut shows stripes.
+- **Deploy:** checked the production image (built as `scripts/deploy.sh` builds it) against the
+  dev database: health, the worker, and playtest PDFs in every art filter from the production
+  bundle.

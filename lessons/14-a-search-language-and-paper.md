@@ -447,13 +447,17 @@ function fitting(length: number, slot: number, gap: number): number {
 
 Why `+ gap`? _n_ cards need _n_ slots but only _n − 1_ gaps: `n·slot + (n − 1)·gap ≤ available`.
 Add one gap to both sides and it becomes `n·(slot + gap) ≤ available + gap`, which divides
-neatly. On Letter with no bleed, three columns and three rows fit. With 1/8 inch of **bleed**
-(extra image around each card so a slightly-off cut shows no white), each slot grows by a
-quarter inch and three rows no longer fit. So `sheetGrid` also tries the page **sideways** and
-keeps whichever holds more.
+neatly. On Letter, three columns and three rows fit. `sheetGrid` also tries the page
+**sideways** and keeps whichever holds more (for real cards on Letter or A4, upright wins).
 
-> **Try it:** in the proxy options, switch bleed on and watch the summary change from "9 to a
-> page" to "6 to a page (sideways)".
+**Bleed** is extra image around each card, so a slightly-off cut shows no white. It used to add
+1/8 inch to every slot, which made three rows too tall and cost three cards a page. Since design
+doc 22 it only uses space that's already empty: each card's image reaches halfway into the gap
+on each side, meeting its neighbour's, and at the sheet's edges reaches into the margin, but
+never closer than `PAGE_MARGIN` to the paper. The grid doesn't change at all.
+
+> **Try it:** in the proxy options, switch bleed to "Fill the gap" and watch the summary stay at
+> "9 to a page".
 
 ## C3. Mirroring for the back of the sheet
 
@@ -470,14 +474,25 @@ The rows don't change, because the flip is around the vertical middle (flip on t
 an upright page). Because the grid is centered, mirroring the column is the same as mirroring
 the x position: `back.x = pageWidth − front.x − cardWidth`. A unit test checks exactly that.
 
-## C4. Draw order as a tool
+## C4. Draw order as a tool, and when it stops working
 
-Corner marks show where to cut. They must never be printed **on** a card. Working out every
-mark's length so it stops before the neighboring card is fiddly, and wrong as soon as bleed or
-the gap changes. Instead, the renderer draws all guides **first** and the cards **on top**. A
-mark that reaches under a card is simply covered, so only the parts outside cards show. The
-layout stays simple, and the test checks the property that matters: no guide runs across a
-card's face.
+Corner marks show where to cut. They must never be printed **on** a card. The first version
+avoided working out each mark's length: the renderer drew all guides **first** and the cards
+**on top**, so any part of a mark that reached under a card was simply covered. Draw order did
+the geometry.
+
+That trick only works while the space the marks need is **empty**. When bleed started filling
+the gaps (design doc 22), every mark between two cards ended up under someone's bleed and
+disappeared, which is exactly where you need them. So the marks are now worked out after all,
+and drawn **last**, in mid grey:
+
+- each mark belongs to one card, starts at its real-size corner and runs outwards along its edge
+  over **its own** bleed, so neighbours' marks meet in the middle of the gap;
+- at the sheet's edges, a mark runs on past the bleed by `MARK_LENGTH`, into the margin.
+
+Grey keeps them visible over the bleed without standing out. The tests check the same property
+as before, no guide runs across a card's face, plus the new lengths. Draw order is a fine tool,
+but when the thing on top changes, check that what it hides is still meant to be hidden.
 
 ## C5. A pure layout and a thin renderer
 
@@ -536,7 +551,8 @@ every printing, so the PDF route finds every image already "downloaded".
   client-safe entry point, or the database driver ends up in the bundle (or the build fails).
 - **Mixing coordinate systems.** Pick one (PDF's, here) for all the maths, and convert once at the
   edge.
-- **Calculating your way around overlaps** that draw order can solve.
+- **Calculating your way around overlaps** that draw order can solve, or the opposite: relying on
+  draw order to hide something after the layout changed what's on top (bleed hid the marks).
 
 ## Exercises
 
@@ -569,24 +585,29 @@ matches everything.
 
 </details>
 
-### 2. A4 with bleed
+### 2. Bleed at the edge of the sheet
 
-Using `sheetGrid`, how many cards fit on A4 with 1/8 inch bleed and the default 2 mm gap? Is the
-page upright or sideways? Work it out with `fitting` by hand first (A4 is 595.3 × 841.9 points;
-a slot with bleed is 198 × 270), then check in `tsx`.
+With "Fill the gap" bleed on Letter, how much bleed does the top row get **above** it, with a
+2 mm gap and with a 3 mm gap? The grid is centred; the cards are 252 points tall; 1 mm is
+2.835 points; `PAGE_MARGIN` is 9 points. Work it out by hand, then check with `proxyPages`
+(the top card's `image` minus its `card`).
 
-Hint: try both orientations, as `sheetGrid` does.
+Hint: the bleed is half the gap, unless the space between the grid and the margin is smaller.
 
 <details><summary>Solution</summary>
 
-Upright: columns `floor((595.3 − 18 + 5.67) / (198 + 5.67)) = 2`, rows
-`floor((841.9 − 18 + 5.67) / (270 + 5.67)) = 3`, so 6. Sideways: columns
-`floor((841.9 − 18 + 5.67) / 203.67) = 4`, rows `floor((595.3 − 18 + 5.67) / 275.67) = 2`, so 8.
-Sideways wins: **4 × 2 = 8 cards**, two more than Letter's 6.
+2 mm gap (5.67 pt): the grid is `3 × 252 + 2 × 5.67 = 767.34` tall, leaving
+`(792 − 767.34) / 2 = 12.33` above it. Minus the 9-point margin, 3.33 points are free, more than
+the 2.83 (1 mm) of bleed: **the full 1 mm**.
+
+3 mm gap (8.50 pt): the grid is `756 + 17.01 = 773.01` tall, leaving 9.50 above it, only 0.50
+past the margin. The top row gets **0.5 points** above it, though the cards in the middle get
+4.25 on every side.
 
 ```ts
-sheetGrid({ ...DEFAULT_PROXY_OPTIONS, paper: "a4", bleed: "eighthInch" });
-// { width: 841.88…, height: 595.27…, columns: 4, rows: 2 }
+const [page] = proxyPages(cards, { ...DEFAULT_PROXY_OPTIONS, gapMillimeters: 3, bleed: "fillGap" });
+const top = page.placements[0];
+top.image.y + top.image.height - (top.card.y + top.card.height); // 0.496…
 ```
 
 </details>

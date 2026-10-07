@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  BLEED,
   CARD_HEIGHT,
   CARD_WIDTH,
   cardsToPrint,
+  MARK_LENGTH,
   DEFAULT_PROXY_OPTIONS,
   PAGE_MARGIN,
   pageList,
@@ -88,9 +88,13 @@ describe("sheetGrid", () => {
     expect(sheetGrid(options({ paper: "a4" }))).toMatchObject({ columns: 3, rows: 3 });
   });
 
-  it("turns the page sideways when bleed makes 3 × 3 too big", () => {
-    const grid = sheetGrid(options({ bleed: "eighthInch" }));
-    expect(grid).toMatchObject({ columns: 3, rows: 2, width: 792, height: 612 });
+  it("keeps 3 × 3 with bleed, at every gap, on both papers", () => {
+    for (const paper of ["letter", "a4"] as const) {
+      for (const gapMillimeters of [0, 1, 2, 3] as const) {
+        const grid = sheetGrid(options({ paper, gapMillimeters, bleed: "fillGap" }));
+        expect(grid).toMatchObject({ columns: 3, rows: 3 });
+      }
+    }
   });
 });
 
@@ -114,19 +118,54 @@ describe("proxyPages", () => {
     expect(fourth.card.y).toBeLessThan(first.card.y);
   });
 
-  it("draws bleed as extra image around each card, without the images overlapping", () => {
-    const [page] = proxyPages(singles(6), options({ bleed: "eighthInch", gapMillimeters: 0 }));
-    const { card, image } = page.placements[0];
-    expect(image).toEqual({
-      x: card.x - BLEED,
-      y: card.y - BLEED,
-      width: CARD_WIDTH + 2 * BLEED,
-      height: CARD_HEIGHT + 2 * BLEED,
-    });
+  it("fills the gap with bleed: images meet in the middle, cards stay where they were", () => {
+    const [plain] = proxyPages(singles(9), options({ gapMillimeters: 2 }));
+    const [page] = proxyPages(singles(9), options({ gapMillimeters: 2, bleed: "fillGap" }));
+    const half = POINTS_PER_MILLIMETER;
+    expect(page.placements.map((placement) => placement.card)).toEqual(
+      plain.placements.map((placement) => placement.card),
+    );
+    // The middle card has a neighbour on every side: 1 mm of bleed all round.
+    const middle = page.placements[4];
+    expect(middle.image.x).toBeCloseTo(middle.card.x - half);
+    expect(middle.image.y).toBeCloseTo(middle.card.y - half);
+    expect(middle.image.width).toBeCloseTo(CARD_WIDTH + 2 * half);
+    expect(middle.image.height).toBeCloseTo(CARD_HEIGHT + 2 * half);
+    // Neighbours touch, never overlap.
+    const [first, second] = page.placements;
+    expect(first.image.x + first.image.width).toBeCloseTo(second.image.x);
     const images = page.placements.map((placement) => placement.image);
     for (const [index, one] of images.entries()) {
-      for (const other of images.slice(index + 1)) expect(overlaps(one, other)).toBe(false);
+      for (const other of images.slice(index + 1)) {
+        const shrunk = {
+          x: one.x + 0.01,
+          y: one.y + 0.01,
+          width: one.width - 0.02,
+          height: one.height - 0.02,
+        };
+        expect(overlaps(shrunk, other)).toBe(false);
+      }
     }
+  });
+
+  it("lets bleed into the page margin at the edges, but not closer than 1/8 inch to the paper", () => {
+    for (const paper of ["letter", "a4"] as const) {
+      for (const gapMillimeters of [1, 2, 3] as const) {
+        const grid = sheetGrid(options({ paper, gapMillimeters }));
+        const [page] = proxyPages(singles(9), options({ paper, gapMillimeters, bleed: "fillGap" }));
+        for (const { image } of page.placements) {
+          expect(image.x).toBeGreaterThanOrEqual(PAGE_MARGIN - 1e-9);
+          expect(image.y).toBeGreaterThanOrEqual(PAGE_MARGIN - 1e-9);
+          expect(image.x + image.width).toBeLessThanOrEqual(grid.width - PAGE_MARGIN + 1e-9);
+          expect(image.y + image.height).toBeLessThanOrEqual(grid.height - PAGE_MARGIN + 1e-9);
+        }
+      }
+    }
+  });
+
+  it("has nothing to bleed into without a gap", () => {
+    const [page] = proxyPages(singles(9), options({ gapMillimeters: 0, bleed: "fillGap" }));
+    for (const { card, image } of page.placements) expect(image).toEqual(card);
   });
 
   it("puts double-faced cards last, each page of fronts followed by their mirrored backs", () => {
@@ -159,8 +198,37 @@ describe("proxyPages", () => {
     }
   });
 
+  it("starts each card's marks at its real-size corners and keeps them over its own bleed", () => {
+    for (const bleed of ["none", "fillGap"] as const) {
+      const [page] = proxyPages(singles(9), options({ bleed, gapMillimeters: 2 }));
+      const halfGap = POINTS_PER_MILLIMETER; // 1 mm: the card's share of a 2 mm gap
+      const middle = page.placements[4]; // a neighbour on every side
+      const corners = [middle.card.x, middle.card.x + CARD_WIDTH].flatMap((x) =>
+        [middle.card.y, middle.card.y + CARD_HEIGHT].map((y) => ({ x, y })),
+      );
+      const own = page.guides.filter((guide) =>
+        corners.some((corner) => guide.from.x === corner.x && guide.from.y === corner.y),
+      );
+      expect(own).toHaveLength(8);
+      for (const guide of own) {
+        const length = Math.hypot(guide.to.x - guide.from.x, guide.to.y - guide.from.y);
+        expect(length).toBeCloseTo(halfGap); // to the middle of the gap, no further
+      }
+    }
+  });
+
+  it("runs marks at the sheet's edges past the bleed into the margin", () => {
+    const [page] = proxyPages(singles(9), options({ bleed: "fillGap", gapMillimeters: 2 }));
+    const first = page.placements[0]; // top-left card
+    const top = first.card.y + CARD_HEIGHT;
+    const upward = page.guides.find(
+      (guide) => guide.from.x === first.card.x && guide.from.y === top && guide.to.y > top,
+    );
+    expect(upward?.to.y).toBeCloseTo(first.image.y + first.image.height + MARK_LENGTH);
+  });
+
   it("draws corner marks only outside the cards", () => {
-    for (const bleed of ["none", "eighthInch"] as const) {
+    for (const bleed of ["none", "fillGap"] as const) {
       const [page] = proxyPages(singles(9), options({ bleed }));
       expect(page.guides).toHaveLength(page.placements.length * 8); // two per corner
       // A mark that reaches into a card must run along its edge, never across its face.

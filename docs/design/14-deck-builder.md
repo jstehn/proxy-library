@@ -222,9 +222,11 @@ search keyword `is:commander` uses the same rule.
 - **The builder keeps the deck in the browser** and saves each change through a server action that
   returns the fresh deck; problems update when that answer arrives. A pasted list or new settings
   start the builder afresh (keyed on the deck's contents).
-- **Proxy layout:** nothing prints closer than 1/8 inch to the paper's edge. With bleed, 3 × 3
+- **Proxy layout:** nothing prints closer than 1/8 inch to the paper's edge. ~~With bleed, 3 × 3
   doesn't fit on Letter or A4, so the sheet turns sideways when that fits more (Letter: 3 × 2).
-  Guides are drawn first and the cards on top, so corner marks only show outside the cards.
+  Guides are drawn first and the cards on top, so corner marks only show outside the cards.~~
+  **Changed 2026-10-07 (design doc 22, section 15):** bleed now fills the gap between cards
+  (3 × 3 always), and guides are drawn on top in grey, over each card's own bleed.
 - **Double-faced cards print last**, each page of fronts followed by a page of only their backs in
   mirrored columns. "Double-faced" means the printing has a back image (split and adventure
   cards have two faces but one image).

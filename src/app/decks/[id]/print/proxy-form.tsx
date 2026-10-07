@@ -116,9 +116,9 @@ const BLEED: Question<"bleed"> = {
   title: "Bleed",
   choices: [
     { value: "none", label: "None" },
-    { value: "eighthInch", label: "1/8 inch (3 mm)" },
+    { value: "fillGap", label: "Fill the gap" },
   ],
-  help: "Extra image around each card, so a slightly-off cut still shows no white edge (playtest cards are white there anyway). Fewer cards fit on a page.",
+  help: "Each card's image (or a playtest card's stripes) reaches into the gap around it, meeting its neighbour's in the middle, so a slightly-off cut shows no white edge. The gap sets how much: a 2 mm gap gives 1 mm on each side. Same number of cards per page.",
 };
 
 const FOILS: Question<"foils"> = {
@@ -201,6 +201,9 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
             (summary.foilPages.length > 0
               ? ` Foils are on ${pageList(summary.foilPages)}: print those on foil paper.`
               : " This deck has no foils.")}
+          {options.bleed === "fillGap" &&
+            options.gapMillimeters === 0 &&
+            " With no gap between cards, bleed has nothing to fill: choose a gap."}
         </p>
         <a
           href={`/decks/${props.deckId}/proxies.pdf?${query}`}

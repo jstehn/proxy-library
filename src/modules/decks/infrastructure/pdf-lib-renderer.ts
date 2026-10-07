@@ -5,11 +5,11 @@ import { proxyImageKey, type Placement } from "../domain/proxy-sheet";
 import { drawable, makePlaytestPainter, readManaFont } from "./playtest-painter";
 
 // Draws proxy pages with pdf-lib (design doc 14, decision 5). The layout is already decided
-// (domain/proxy-sheet.ts); this only paints it: guides first, then the cards on top. Each card is
+// (domain/proxy-sheet.ts); this only paints it: the cards, then the guides on top. Each card is
 // its scan, or for the playtest style (design doc 22) a card drawn from its text.
 
 const GUIDE_THICKNESS = 0.5; // points: thin enough to cut along precisely
-const GUIDE_COLOR = rgb(0, 0, 0);
+const GUIDE_COLOR = rgb(0.5, 0.5, 0.5); // mid grey
 const MISSING_FILL = rgb(0.92, 0.92, 0.92);
 
 export type PdfLibRendererDependencies = {
@@ -49,14 +49,6 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
 
     for (const page of pages) {
       const pdfPage = document.addPage([page.width, page.height]);
-      for (const guide of page.guides) {
-        pdfPage.drawLine({
-          start: guide.from,
-          end: guide.to,
-          thickness: GUIDE_THICKNESS,
-          color: GUIDE_COLOR,
-        });
-      }
       for (const placement of page.placements) {
         if (painter !== null) {
           const drawing = playtestCard(
@@ -65,6 +57,7 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
             placement.card,
             { art: options.artFilter !== "none", stripes: options.stripes === "on" },
             painter.measure,
+            placement.image,
           );
           const key = proxyImageKey(placement);
           await painter.paint(pdfPage, drawing, images.get(key) ?? null, key);
@@ -84,12 +77,25 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
           });
           continue;
         }
-        if (placement.image.width > placement.card.width) {
+        if (
+          placement.image.width > placement.card.width ||
+          placement.image.height > placement.card.height
+        ) {
           // Bleed: the card's image stretched over the bleed area, then the card itself exactly
           // on top. What shows around the card is its own border, a little enlarged.
           pdfPage.drawImage(image, placement.image);
         }
         pdfPage.drawImage(image, placement.card);
+      }
+      // Guides last, on top: grey, so where they cross the bleed they're easy to see but don't
+      // stand out; they never cross a card's face (domain/proxy-sheet.ts).
+      for (const guide of page.guides) {
+        pdfPage.drawLine({
+          start: guide.from,
+          end: guide.to,
+          thickness: GUIDE_THICKNESS,
+          color: GUIDE_COLOR,
+        });
       }
     }
     return document.save();
