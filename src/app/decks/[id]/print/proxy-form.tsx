@@ -10,6 +10,7 @@ import {
   type ProxyLine,
   type ProxyOptions,
 } from "@/modules/decks/client";
+import { DownloadButton } from "./download-button";
 
 // The proxy options (design doc 14, section 3, and the playtest style of design doc 22), with
 // what they'll produce shown as you choose.
@@ -205,13 +206,10 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
             options.gapMillimeters === 0 &&
             " With no gap between cards, bleed has nothing to fill: choose a gap."}
         </p>
-        <a
+        <DownloadButton
           href={`/decks/${props.deckId}/proxies.pdf?${query}`}
-          aria-disabled={summary.cards === 0}
-          className={`rounded-md bg-zinc-900 px-4 py-2 text-center text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 ${summary.cards === 0 ? "pointer-events-none opacity-40" : ""}`}
-        >
-          Download PDF
-        </a>
+          disabled={summary.cards === 0}
+        />
         {options.style === "playtest" && summary.cards > 0 && (
           <a
             href={`/decks/${props.deckId}/proxies.pdf?${query}&preview=1`}
@@ -224,7 +222,7 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
         )}
         <p className="text-xs text-zinc-500">
           Print at &quot;actual size&quot; (100%), not &quot;fit to page&quot;. Big decks take a few
-          seconds: each image is fetched once and then kept.
+          seconds the first time: each image is fetched once and then kept.
         </p>
       </aside>
 

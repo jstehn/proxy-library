@@ -21,6 +21,8 @@ By the end of this lesson you will be able to:
    shrink text until it fits.
 6. **Clip** a polygon to a box, one half-plane at a time.
 7. Use an **icon font**: glyphs at private code points, centred by their bounding box.
+8. Report **progress** from slow work with a callback, and stream it to the browser as lines of
+   JSON, without being caught out by half-lines or buffering.
 
 ---
 
@@ -313,6 +315,61 @@ font for each one. If Scryfall adds a symbol, a test fails, rather than a card p
 
 ---
 
+# Part E: Showing progress
+
+## E1. A callback, then a stream of lines
+
+A big deck takes a while: every image is fetched (from Scryfall the first time), then every page
+drawn. With a plain link, the browser shows nothing until the file arrives. To show a bar, the
+slow code has to **say how far it's got**, and the browser has to hear it while it's working.
+
+Saying it is a **callback**: the use case takes an optional function and calls it after each
+step. It doesn't know or care what the caller does with it:
+
+```ts
+// src/modules/decks/application/proxy-sheets.ts
+onProgress: (progress: ProxyProgress) => void = () => undefined,
+// …after each image:
+done++;
+onProgress({ stage: "images", done, total: wanted.size });
+```
+
+The default, a function that does nothing, means every other caller (and every older test) is
+unchanged. Python would use the same idea: a `progress=None` parameter, or tqdm's `update()`.
+
+Hearing it in the browser needs a response that arrives **in pieces**. The route answers with a
+`ReadableStream` (lesson 17) of **JSON lines**: one small JSON object per line, flushed as each
+step finishes, with the PDF (as base64 text) as the last line. On the page, `fetch` reads the
+body chunk by chunk.
+
+## E2. Chunks aren't lines
+
+The network delivers **chunks**, and a chunk boundary can fall anywhere, including the middle of
+a line. Splitting each chunk on its own would hand `JSON.parse` half an object. So the leftover
+end of each chunk is kept and joined to the next:
+
+```ts
+// src/modules/decks/domain/proxy-progress.ts
+export function completeLines(pending: string, chunk: string): { lines: string[]; rest: string } {
+  const parts = (pending + chunk).split("\n");
+  const rest = parts.pop() ?? "";
+  return { lines: parts.filter((line) => line !== ""), rest };
+}
+```
+
+The last part after the final `\n` is never complete (it's empty if the chunk ended exactly on a
+newline), so it becomes `rest`. **Python comparison:** the same care as reading a socket with
+`recv()`, which also returns arbitrary pieces; `asyncio.StreamReader.readline()` does this
+buffering for you.
+
+One more trap is something in between holding the pieces back. Compression waits until it has
+enough to squeeze, and a reverse proxy like nginx may collect the whole answer before passing
+it on. The response says `Cache-Control: no-transform` (don't compress or change this) and
+`X-Accel-Buffering: no` (nginx: pass it straight through), the same as the draft page's live
+updates.
+
+---
+
 ## Common mistakes
 
 - **Wrapping where you meant to clamp.** `Uint8Array` and numpy's `uint8` wrap: 255 + 1 is 0.
@@ -329,6 +386,7 @@ font for each one. If Scryfall adds a symbol, a test fails, rather than a card p
   upwards; ems are relative to the font size.
 - **Keeping an optimization without measuring it.** The predictor shrank one kind of image and
   grew the other.
+- **Treating a network chunk as a line.** Keep the unfinished end and join it to the next chunk.
 
 ## Exercises
 
@@ -489,6 +547,34 @@ read. Same answer, different trade-off.
 
 </details>
 
+### 6. Events from chunks
+
+Write `eventsFrom(chunks: readonly string[]): unknown[]` that parses every JSON line across the
+chunks, using `completeLines`. Check it on `['{"done":1}\n{"do', 'ne":2}\n', '{"done":3}\n']`,
+which should give three objects. What goes wrong if you split each chunk on its own instead?
+
+<details><summary>Hint</summary>Carry <code>rest</code> from one call to the next.</details>
+
+<details><summary>Solution</summary>
+
+```ts
+function eventsFrom(chunks: readonly string[]): unknown[] {
+  const events: unknown[] = [];
+  let pending = "";
+  for (const chunk of chunks) {
+    const { lines, rest } = completeLines(pending, chunk);
+    pending = rest;
+    for (const line of lines) events.push(JSON.parse(line));
+  }
+  return events;
+}
+```
+
+Split on their own, the first chunk gives `{"do` and the second `ne":2}`, and `JSON.parse`
+throws on both halves.
+
+</details>
+
 ## Recap
 
 - An image is a typed array; `Uint8ClampedArray` clamps where `Uint8Array` and numpy wrap.
@@ -503,6 +589,8 @@ read. Same answer, different trade-off.
 - Clip to a half-plane twice and a band becomes a stripe that stays inside the card.
 - Icon fonts keep glyphs in the Private Use Area; their stylesheet is the spec, and a fixture
   test keeps the symbol table complete.
+- Slow work reports progress through an optional callback; a stream of JSON lines carries it to
+  the browser, which must join chunks into whole lines, and nothing in between may buffer it.
 
 ## Further reading
 

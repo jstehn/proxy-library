@@ -113,3 +113,22 @@ describe("pdfLibRenderer, playtest style (design doc 22)", () => {
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
 });
+
+describe("pdfLibRenderer progress", () => {
+  it("reports each page, then saving", async () => {
+    const { images } = fakeProxyImages();
+    const proxySheet = makeProxySheets({ images, renderer: pdfLibRenderer() });
+    const seen: string[] = [];
+    await proxySheet([line("bolt", 10)], DEFAULT_PROXY_OPTIONS, (progress) =>
+      seen.push(`${progress.stage} ${progress.done}/${progress.total}`),
+    );
+    expect(seen).toEqual([
+      "images 0/1",
+      "images 1/1",
+      "pages 0/2",
+      "pages 1/2",
+      "pages 2/2",
+      "saving 0/1",
+    ]);
+  });
+});

@@ -28,6 +28,13 @@ export {
 } from "./domain/proxy-sheet";
 export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
 export {
+  completeLines,
+  progressFraction,
+  progressLabel,
+  type ProxyProgress,
+  type ProxyStreamEvent,
+} from "./domain/proxy-progress";
+export {
   deckProblems,
   canBeCommander,
   type CardRules,

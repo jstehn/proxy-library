@@ -24,6 +24,7 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
     pages: Parameters<ProxyPdfRenderer["render"]>[0],
     images: ReadonlyMap<string, Uint8Array>,
     options: Parameters<ProxyPdfRenderer["render"]>[2],
+    onProgress: Parameters<ProxyPdfRenderer["render"]>[3] = () => undefined,
   ): Promise<Uint8Array> {
     const document = await PDFDocument.create();
     document.setTitle("Proxies");
@@ -47,7 +48,8 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
       return embedded.get(key) ?? null;
     }
 
-    for (const page of pages) {
+    for (const [index, page] of pages.entries()) {
+      onProgress({ stage: "pages", done: index, total: pages.length });
       const pdfPage = document.addPage([page.width, page.height]);
       for (const placement of page.placements) {
         if (painter !== null) {
@@ -98,6 +100,8 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
         });
       }
     }
+    onProgress({ stage: "pages", done: pages.length, total: pages.length });
+    onProgress({ stage: "saving", done: 0, total: 1 });
     return document.save();
   }
 

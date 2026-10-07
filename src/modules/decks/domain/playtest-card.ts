@@ -69,7 +69,7 @@ export function stripeColors(card: PrintedCard, side: CardSide): ManaColor[] {
  * a pale cream so it shows on white paper; black is a mid grey, darker than colourless.
  */
 export const STRIPE_TINTS: Readonly<Record<StripeColor, string>> = {
-  W: "#f3e6b0",
+  W: "#e8d27e",
   U: "#b9d4ef",
   B: "#9c9692",
   R: "#f2ab96",
@@ -100,14 +100,19 @@ function clipPolygon(polygon: readonly Point[], side: (point: Point) => number):
   return kept;
 }
 
-/** Width of each stripe, measured across it. */
-export const STRIPE_WIDTH = 5;
+/**
+ * Each coloured stripe, measured across it, and the white space before the next: thin stripes,
+ * far apart, cover about a fifth of the background (changed 2026-10-07 to save ink; they were
+ * 5 pt with 5 pt gaps, half the background).
+ */
+export const STRIPE_WIDTH = 1.5;
+export const STRIPE_GAP = 6;
 
 export type Stripe = Readonly<{ color: StripeColor; points: readonly Point[] }>;
 
 /**
- * Diagonal stripes (rising to the right) filling the box: each colour, then a white gap, in
- * turn. Every stripe is clipped to the box, so nothing is drawn outside the card (invariant 1).
+ * Diagonal stripes (rising to the right) filling the box: each colour in turn, with white space
+ * between. Every stripe is clipped to the box, so nothing is drawn outside it (invariant 1).
  */
 export function stripes(box: Box, colors: readonly ManaColor[]): Stripe[] {
   const palette: StripeColor[] = colors.length === 0 ? ["C"] : [...colors];
@@ -119,17 +124,17 @@ export function stripes(box: Box, colors: readonly ManaColor[]): Stripe[] {
   ];
   // A stripe holds the points whose x − y lies between two values; that difference changes by
   // √2 for each point of distance across the stripe.
-  const step = STRIPE_WIDTH * Math.SQRT2;
-  const lowest = box.x - (box.y + box.height);
+  const width = STRIPE_WIDTH * Math.SQRT2;
+  const step = (STRIPE_WIDTH + STRIPE_GAP) * Math.SQRT2;
+  const lowest = box.x - (box.y + box.height) - width;
   const highest = box.x + box.width - box.y;
   const result: Stripe[] = [];
   for (let index = 0; lowest + index * step < highest; index++) {
-    if (index % 2 === 1) continue; // the white gap between colours
     const from = lowest + index * step;
-    const color = palette[(index / 2) % palette.length] ?? "C";
+    const color = palette[index % palette.length] ?? "C";
     const inside = clipPolygon(
       clipPolygon(corners, (point) => point.x - point.y - from),
-      (point) => from + step - (point.x - point.y),
+      (point) => from + width - (point.x - point.y),
     );
     if (inside.length >= 3) result.push({ color, points: inside });
   }
@@ -373,8 +378,6 @@ const SMALLEST_ART = 30;
 const PADDING = 4;
 
 export type PlaytestDrawing = Readonly<{
-  /** The card's edge: a thin outline. */
-  outline: Box;
   /** The card and its bleed: the stripes reach this far, so an off cut shows stripes. */
   bleed: Box;
   stripes: readonly Stripe[];
@@ -567,7 +570,6 @@ export function playtestCard(
   }));
 
   return {
-    outline: frame,
     bleed,
     stripes: style.stripes ? stripes(bleed, stripeColors(card, side)) : [],
     panels,

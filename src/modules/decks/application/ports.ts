@@ -2,6 +2,7 @@ import type { ActivityServices } from "@/modules/activity";
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
 import type { Deck, DeckId, DeckOrigin, Format } from "../domain/deck";
+import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
 
@@ -67,6 +68,8 @@ export interface ProxyPdfRenderer {
     pages: readonly ProxyPage[],
     images: ReadonlyMap<string, Uint8Array>,
     options: ProxyOptions,
+    /** Called after each page is drawn, and before the file is saved. */
+    onProgress?: (progress: ProxyProgress) => void,
   ): Promise<Uint8Array>;
 }
 

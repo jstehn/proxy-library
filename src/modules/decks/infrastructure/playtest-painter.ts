@@ -50,7 +50,6 @@ const INK = rgb(0x11 / 255, 0x11 / 255, 0x11 / 255);
 const PANEL_BORDER = rgb(0.35, 0.35, 0.35);
 const WHITE = rgb(1, 1, 1);
 const PANEL_LINE = 0.5;
-const OUTLINE_LINE = 0.75;
 /** Quality of re-encoded colour art: high, since it's printed. */
 const JPEG_QUALITY = 90;
 
@@ -303,7 +302,6 @@ export async function makePlaytestPainter(
       artObjects.get(key)?.(page, box);
       page.drawRectangle({ ...box, borderColor: PANEL_BORDER, borderWidth: PANEL_LINE });
     }
-    page.drawRectangle({ ...drawing.outline, borderColor: INK, borderWidth: OUTLINE_LINE });
     for (const text of drawing.texts) {
       const font = fonts[text.font];
       page.drawText(drawable(font, text.text), {

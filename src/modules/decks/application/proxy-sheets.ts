@@ -5,6 +5,7 @@ import {
   type ProxyLine,
   type ProxyOptions,
 } from "../domain/proxy-sheet";
+import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxySheetsDependencies } from "./ports";
 
 // Proxy PDFs (design doc 14, section 3): lay the deck out, fetch each image once, draw the PDF.
@@ -21,6 +22,7 @@ export function makeProxySheets(dependencies: ProxySheetsDependencies) {
   async function proxySheet(
     lines: readonly ProxyLine[],
     options: ProxyOptions,
+    onProgress: (progress: ProxyProgress) => void = () => undefined,
   ): Promise<Uint8Array> {
     const pages = proxyPages(cardsToPrint(lines, options), options);
     // Four Lightning Bolts share one image: fetch each printing's face once.
@@ -35,6 +37,8 @@ export function makeProxySheets(dependencies: ProxySheetsDependencies) {
     );
     const fetched = new Map<string, Uint8Array>();
     const queue = [...wanted.entries()];
+    let done = 0;
+    onProgress({ stage: "images", done, total: wanted.size });
     async function worker() {
       for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
         const [key, placement] = next;
@@ -42,10 +46,12 @@ export function makeProxySheets(dependencies: ProxySheetsDependencies) {
           ? await images.artCrop(placement.printingId, placement.face)
           : await images.image(placement.printingId, placement.face);
         if (bytes !== null) fetched.set(key, bytes);
+        done++;
+        onProgress({ stage: "images", done, total: wanted.size });
       }
     }
     await Promise.all(Array.from({ length: IMAGES_AT_ONCE }, worker));
-    return renderer.render(pages, fetched, options);
+    return renderer.render(pages, fetched, options, onProgress);
   }
 
   return proxySheet;

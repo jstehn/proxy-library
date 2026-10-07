@@ -290,3 +290,23 @@ None.
 - **Deploy:** checked the production image (built as `scripts/deploy.sh` builds it) against the
   dev database: health, the worker, and playtest PDFs in every art filter from the production
   bundle.
+
+## 16. Download progress, added 2026-10-07 (your review)
+
+**Download PDF** shows a progress bar: "Card images: 12 of 75", then "Drawing pages: 3 of 9",
+then "Saving the PDF". The button asks for `proxies.pdf?…&progress=1`, which answers with a
+stream of JSON lines (`ProxyStreamEvent`: progress, then the PDF in base64, or an error). The use
+case reports each image fetched and the renderer each page, through an optional `onProgress`
+callback; the share of the bar per stage (images 65%, pages 32%, saving 3%) and the line
+splitting are pure (`decks/domain/proxy-progress.ts`). The response says `no-transform` (so
+compression doesn't hold lines back) and `X-Accel-Buffering: no` (so nginx doesn't). Without
+JavaScript, or with "Save link as", the same link downloads the PDF directly. Base64 makes the
+transfer a third bigger, which on a home network costs less than a second for a big deck.
+
+## 17. Less ink, no outline, changed 2026-10-07 (your review)
+
+- **Stripes:** 1.5 pt wide with 6 pt of white between them (they were 5 pt and 5 pt), so they
+  cover about a fifth of the background instead of half. The white tint is a deeper cream
+  (`#e8d27e`), since a pale one disappears at that width.
+- **No outline round the card.** An off cut would leave a black line on the card's edge; the
+  cut guides (grey, section 15) show where to cut instead.

@@ -126,7 +126,7 @@ describe("stripes", () => {
     expect(new Set(stripes(box, []).map((stripe) => stripe.color))).toEqual(new Set(["C"]));
   });
 
-  it("covers about half the box (a white gap between stripes)", () => {
+  it("covers about a fifth of the box (thin stripes, wide gaps, to save ink)", () => {
     const area = (points: readonly Point[]) =>
       Math.abs(
         points.reduce((sum, point, index) => {
@@ -135,8 +135,8 @@ describe("stripes", () => {
         }, 0),
       ) / 2;
     const covered = stripes(box, ["G"]).reduce((sum, stripe) => sum + area(stripe.points), 0);
-    expect(covered / (box.width * box.height)).toBeGreaterThan(0.4);
-    expect(covered / (box.width * box.height)).toBeLessThan(0.6);
+    expect(covered / (box.width * box.height)).toBeGreaterThan(0.15);
+    expect(covered / (box.width * box.height)).toBeLessThan(0.25);
   });
 });
 

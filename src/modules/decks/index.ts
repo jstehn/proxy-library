@@ -126,3 +126,4 @@ export {
   type ProxyLine,
   type ProxyOptions,
 } from "./domain/proxy-sheet";
+export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
