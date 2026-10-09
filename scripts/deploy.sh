@@ -65,6 +65,20 @@ docker build --tag "$IMAGE" --tag proxy-library:latest .
 echo "==> Copying the image to $HOST (compressed)"
 docker save "$IMAGE" | gzip -1 | ssh "$HOST" 'gunzip | docker load'
 
+APP_CONTAINER="$STACK_NAME-app-1"
+# The image running now: kept, with the new one, when old images are removed below.
+PREVIOUS_IMAGE="$(ssh "$HOST" "docker inspect --format '{{.Config.Image}}' '$APP_CONTAINER'" 2>/dev/null || true)"
+
+# Remove the commit-tagged proxy-library images except the new one and the one it replaced (for
+# rollback). Other tags (latest, hand-made ones) are left alone, and plain `docker rmi` refuses
+# an image a container still uses.
+remove_old_images() {
+  local keep=("$IMAGE" "$PREVIOUS_IMAGE") old
+  mapfile -t old < <(docker images proxy-library --format '{{.Repository}}:{{.Tag}}' |
+    grep -E -x 'proxy-library:[0-9a-f]{7,40}' | grep -v -x -F "${keep[@]/#/-e}" || true)
+  ((${#old[@]} == 0)) || docker rmi "${old[@]}" >/dev/null || true
+}
+
 ENDPOINT_ID="$(portainer GET /endpoints | jq -r '(map(select(.Name == "local")) + .)[0].Id')"
 STACK_ID="$(portainer GET /stacks | jq -r --arg name "$STACK_NAME" '.[] | select(.Name == $name) | .Id')"
 
@@ -101,10 +115,12 @@ fi
 # Portainer replaces the containers after the API call returns, and until then the old version
 # still answers. So wait until the app container runs the new image and is healthy.
 echo "==> Waiting for $IMAGE to be running and healthy"
-APP_CONTAINER="$STACK_NAME-app-1"
 for _ in $(seq 1 90); do
   STATE="$(ssh "$HOST" "docker inspect --format '{{.Config.Image}} {{.State.Health.Status}}' '$APP_CONTAINER'" 2>/dev/null || true)"
   if [[ "$STATE" == "$IMAGE healthy" ]]; then
+    echo "==> Removing old images here and on $HOST (keeping $IMAGE${PREVIOUS_IMAGE:+ and $PREVIOUS_IMAGE})"
+    remove_old_images
+    ssh "$HOST" bash -s <<<"$(declare -p IMAGE PREVIOUS_IMAGE; declare -f remove_old_images); remove_old_images"
     echo "Deployed $IMAGE. Open $APP_URL"
     exit 0
   fi

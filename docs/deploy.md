@@ -101,9 +101,11 @@ values, sent straight to Portainer. Later deploys keep every setting and only ch
 **Right after the first deploy, register your account**: on a new database, the first account
 becomes the admin, and anyone who can reach the site could otherwise take that role.
 
-**Roll back**: in Portainer, open the stack, set `IMAGE_TAG` to an earlier commit
-(`docker images proxy-library` on the server lists them), and update the stack. Old images stay
-on the server until something prunes them, so pruning limits how far back you can go.
+**Roll back**: in Portainer, open the stack, set `IMAGE_TAG` to the previous commit
+(`docker images proxy-library` on the server lists it), and update the stack. After a healthy
+deploy, the script removes every other `proxy-library` image both here and on the server, keeping
+only the new one and the one it replaced (plus `:latest` here). To go further back, check out
+the older commit and deploy it.
 
 **Change a setting** (for example `SYNC_TIME`): edit the environment variable in Portainer and
 update the stack. Don't change `AUTH_SECRET` (it signs everyone out) or `POSTGRES_PASSWORD`
