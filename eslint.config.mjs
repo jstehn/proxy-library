@@ -111,6 +111,18 @@ const policies = [
     layer("queries", { sameModule: true }),
   ),
 
+  // Design doc 16, rule 1: real cards never touch the game. Of the modules, only decks may use
+  // the real collection (its public API, or its tables through schema.ts).
+  {
+    from: { element: { type: "module-layer", captured: { module: "!(decks|real-collection)" } } },
+    disallow: {
+      to: [
+        { element: { type: "module", captured: { module: "real-collection" } } },
+        { element: { type: "module-layer", captured: { module: "real-collection" } } },
+      ],
+    },
+  },
+
   // composition roots: the only places that see infrastructure (via its index.ts)
   from(
     el("server"),

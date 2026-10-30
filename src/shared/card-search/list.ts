@@ -27,12 +27,16 @@ const HEADERS: ReadonlyArray<[RegExp, ListSection]> = [
   [/^(sideboard|side|sb)\s*:?$/i, "side"],
 ];
 
+/** How a list is read. A deck needs at most 99 copies of a card; a real collection more. */
+export type ListOptions = Readonly<{ maxQuantity?: number }>;
+
 /**
  * Reads a pasted list ("parse, don't validate"): each line becomes a typed ListLine, or is
  * returned as unreadable. Section headers ("Sideboard", "Commander") switch the board, and so
  * does "SB: 2 Duress".
  */
-export function parseList(text: string): ParsedList {
+export function parseList(text: string, options: ListOptions = {}): ParsedList {
+  const maxQuantity = options.maxQuantity ?? 99;
   const lines: ListLine[] = [];
   const unreadable: string[] = [];
   let board: ListSection = "main";
@@ -67,7 +71,7 @@ export function parseList(text: string): ParsedList {
     const match = LINE.exec(line);
     const quantity = match?.[1] === undefined ? 1 : Number(match[1]);
     const name = match?.[2]?.trim() ?? "";
-    if (match === null || name === "" || quantity < 1 || quantity > 99) {
+    if (match === null || name === "" || quantity < 1 || quantity > maxQuantity) {
       unreadable.push(raw.trim());
       continue;
     }

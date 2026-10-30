@@ -28,6 +28,7 @@ const TINY_JPEG = new Uint8Array(readFileSync("tests/fixtures/images/card.jpg"))
 function catalogRecordingFetches() {
   const fetched: string[] = [];
   const catalog = makeCatalog({
+    extraPricedPrintings: { printingIds: async () => [] },
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),

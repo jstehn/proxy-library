@@ -30,6 +30,9 @@ export const cardSets = pgTable("card_sets", {
   isStandard: boolean("is_standard").notNull().default(false),
   importedVersion: text("imported_version"),
   importedAt: timestamptz("imported_at"),
+  // When the set's printings were last imported, by any kind of import: full, supporting or
+  // reference (design doc 16). Null means the sync has never read its set file.
+  printingsImportedAt: timestamptz("printings_imported_at"),
 });
 
 export const printings = pgTable(

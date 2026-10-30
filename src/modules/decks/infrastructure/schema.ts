@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   bigserial,
+  boolean,
   check,
   index,
   integer,
@@ -30,6 +31,9 @@ export const decks = pgTable(
     // Who can see it (design doc 21): "private" (the owner) or "shared" (every player).
     visibility: text("visibility").notNull().default("private"),
     firstSharedAt: timestamptz("first_shared_at"),
+    // "Use my real cards" (design doc 16): real copies count as owned in this deck. New decks
+    // turn it on; decks made before the real collection existed keep it off.
+    usesRealCards: boolean("uses_real_cards").notNull().default(false),
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },

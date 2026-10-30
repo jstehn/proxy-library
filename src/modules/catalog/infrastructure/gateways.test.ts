@@ -58,8 +58,8 @@ describe("httpScryfallGateway", () => {
 
     const setCodes: string[] = [];
     for await (const card of gateway.readBulkFile(path)) setCodes.push(card.setCode);
-    expect(setCodes).toHaveLength(32);
-    expect(new Set(setCodes)).toEqual(new Set(["BLB", "SPG"]));
+    expect(setCodes).toHaveLength(34);
+    expect(new Set(setCodes)).toEqual(new Set(["BLB", "SPG", "PBLB"]));
   });
 });
 

@@ -183,6 +183,13 @@
       "when": 1791275563835,
       "tag": "0025_wallet_totals_since",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793325470407,
+      "tag": "0026_real_collection",
+      "breakpoints": true
     }
   ]
 }

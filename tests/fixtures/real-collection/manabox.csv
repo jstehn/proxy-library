@@ -1,0 +1,6 @@
+Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Misprint,Altered,Condition,Language,Purchase price currency
+"Beza, the Bounding Spring",BLB,Bloomburrow,2,foil,mythic,1,101234,fc310a26-b6a0-4e42-98ab-bdfd7b06cb63,12.50,false,false,near_mint,en,USD
+Banishing Light,BLB,Bloomburrow,1,normal,common,4,101235,25a06f82-ebdb-4dd6-bfe8-958018ce557c,0.10,false,false,lightly_played,en,USD
+"Beza, the Bounding Spring",PBLB,Bloomburrow Promos,2p,normal,mythic,1,101236,ff94a960-f9f4-4787-a844-b02837a2ec0b,4.00,false,false,near_mint,ja,USD
+Not A Real Card,BLB,Bloomburrow,999,normal,common,1,101237,00000000-0000-4000-8000-000000000000,,false,false,near_mint,en,USD
+Carrot Cake,BLB,Bloomburrow,7,normal,common,lots,101238,eb03bb4f-8b4b-417e-bfc6-294cd2186b2e,,false,false,near_mint,en,USD

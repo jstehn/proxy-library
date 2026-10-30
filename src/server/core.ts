@@ -39,6 +39,11 @@ import {
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
+import { makeRealCollection, realPrintingIds } from "@/modules/real-collection";
+import {
+  drizzleRealCollectionRepository,
+  sqlPrintingMatcher,
+} from "@/modules/real-collection/infrastructure";
 import { makeResetPlayer } from "@/modules/reset";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
@@ -107,6 +112,10 @@ export function buildCore(config: Config) {
       drafts: drizzleDraftRepository(transaction),
       draftCatalog: drizzleDraftCatalog(transaction),
       draftNotifier: pgDraftNotifier(transaction),
+      realCollection: drizzleRealCollectionRepository(transaction),
+      printingMatcher: sqlPrintingMatcher(transaction),
+      // A real product's contents are read exactly as inventory reads a game product's.
+      productContents: drizzleProductCatalog(transaction),
     };
   }
 
@@ -132,6 +141,10 @@ export function buildCore(config: Config) {
 
   const catalog = makeCatalog({
     unitOfWork,
+    // Printings owned for real get nightly prices too (design doc 16, section 7).
+    extraPricedPrintings: {
+      printingIds: async () => (await realPrintingIds(db)).map(PrintingId.of),
+    },
     mtgjson: httpMtgjsonGateway(politeFetch(4)),
     scryfall: httpScryfallGateway(politeFetch(8), config.syncCacheDir),
     images: diskImageStore(config.imageCacheDir),
@@ -169,6 +182,7 @@ export function buildCore(config: Config) {
   const trades = makeTrades({ unitOfWork, clock });
   const drafts = makeDrafts({ unitOfWork, clock, seeds });
   const resetPlayer = makeResetPlayer({ unitOfWork, clock });
+  const realCollection = makeRealCollection({ unitOfWork, clock });
 
   return {
     config,
@@ -189,6 +203,7 @@ export function buildCore(config: Config) {
     trades,
     drafts,
     resetPlayer,
+    realCollection,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

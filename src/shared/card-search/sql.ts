@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import type { UserId } from "@/shared/kernel";
+import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import {
   manaSymbols,
   parseColors,
@@ -315,4 +315,68 @@ function commanderCondition(): SQL {
     or exists (select 1 from jsonb_array_elements(p.faces) face
                 where face->>'text' ~* 'can be your commander')
   )`;
+}
+
+/** SQL: printing "p" has exactly these colors. */
+function hasExactly(colors: readonly ManaColor[]): SQL {
+  const array = sql.join(
+    colors.map((color) => sql`${color}`),
+    sql`, `,
+  );
+  return sql`(cardinality(p.colors) = ${colors.length} and p.colors @> array[${array}]::text[])`;
+}
+
+/** SQL: a multicolored printing's combination, as `pick` gives it (its position or its label). */
+function combinationOf(pick: (index: number, label: string) => SQL): SQL {
+  const whens = COLOR_COMBINATIONS.map(
+    (combination, index) =>
+      sql`when ${hasExactly(combination.colors)} then ${pick(index, combination.label)}`,
+  );
+  return sql`(case ${sql.join(whens, sql` `)} end)`;
+}
+
+/**
+ * How a collection page can be divided into sections, in SQL on printings aliased "p" and sets
+ * aliased "s": [order, label] for each way (the game and real collections, design docs 7 and 16).
+ */
+export const COLLECTION_SECTIONS = {
+  none: [sql`0`, sql`''`],
+  // Binder order: each color, then each multicolored combination (guilds, shards, wedges, four
+  // and five colors), colorless, and lands.
+  color: [
+    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 60
+             when cardinality(p.colors) > 1 then ${combinationOf((index) => sql.raw(String(10 + index)))}
+             when cardinality(p.colors) = 0 then 50
+             else array_position(array['W','U','B','R','G'], p.colors[1]) end`,
+    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 'Lands'
+             when cardinality(p.colors) > 1 then ${combinationOf((_, label) => sql`${label}::text`)}
+             when cardinality(p.colors) = 0 then 'Colorless'
+             else (array['White','Blue','Black','Red','Green'])[array_position(array['W','U','B','R','G'], p.colors[1])] end`,
+  ],
+  // The first matching type, in the order players usually sort a collection.
+  type: [
+    sql`coalesce(array_position(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land'],
+          (select t from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
+            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1)), 9)`,
+    sql`coalesce((select t || 's' from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
+            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1), 'Other')`,
+  ],
+  rarity: [
+    sql`coalesce(array_position(array['mythic','rare','uncommon','common'], p.rarity), 5)`,
+    sql`initcap(p.rarity)`,
+  ],
+  set: [sql`0`, sql`s.name`],
+} as const;
+
+/**
+ * SQL: printing "p" matches a collection page's color filter: "W", "U", "B", "R", "G" (includes
+ * that color), "C" (colorless), "M" (multicolored), or a combination's code such as "GU" (exactly
+ * those colors).
+ */
+export function colorFilter(color: string): SQL {
+  const combination = colorCombination(color);
+  if (color === "C") return sql`cardinality(p.colors) = 0`;
+  if (color === "M") return sql`cardinality(p.colors) > 1`;
+  if (combination) return hasExactly(combination.colors);
+  return sql`${color} = any(p.colors)`;
 }

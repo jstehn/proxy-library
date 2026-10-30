@@ -60,6 +60,18 @@
       "releaseDate": "2024-08-20",
       "totalSetSize": 30,
       "type": "alchemy"
+    },
+    {
+      "baseSetSize": 160,
+      "code": "PBLB",
+      "isFoilOnly": false,
+      "isOnlineOnly": false,
+      "keyruneCode": "BLB",
+      "name": "Bloomburrow Promos",
+      "parentCode": "BLB",
+      "releaseDate": "2024-08-02",
+      "totalSetSize": 160,
+      "type": "promo"
     }
   ]
 }

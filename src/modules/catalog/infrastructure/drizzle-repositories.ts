@@ -60,6 +60,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           isEnabled: cardSets.isEnabled,
           isSupporting: cardSets.isSupporting,
           importedVersion: cardSets.importedVersion,
+          printingsImportedAt: cardSets.printingsImportedAt,
           printingCount: count(printings.id),
         })
         .from(cardSets)
@@ -156,10 +157,14 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           });
       }
 
-      if (options.printingsOnly) {
+      await db
+        .update(cardSets)
+        .set({ printingsImportedAt: options.importedAt })
+        .where(eq(cardSets.code, code));
+      if (options.kind === "supporting") {
         await db.update(cardSets).set({ isSupporting: true }).where(eq(cardSets.code, code));
-        return;
       }
+      if (options.kind !== "full") return;
 
       for (const booster of setImport.boosters) {
         const row = {
@@ -251,12 +256,18 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           id: printings.id,
           scryfallId: printings.scryfallId,
           finishes: printings.finishes,
+          isPriced: sql<boolean>`${cardSets.isEnabled} or ${cardSets.isSupporting}`,
         })
-        .from(printings);
+        .from(printings)
+        .innerJoin(cardSets, eq(cardSets.code, printings.setCode));
       return new Map(
         rows.map((row): [string, PricingPrinting] => [
           row.scryfallId,
-          { id: PrintingId.of(row.id), finishes: row.finishes as Finish[] },
+          {
+            id: PrintingId.of(row.id),
+            finishes: row.finishes as Finish[],
+            isPriced: row.isPriced,
+          },
         ]),
       );
     },

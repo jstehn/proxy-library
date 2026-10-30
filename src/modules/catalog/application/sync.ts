@@ -12,6 +12,7 @@ import {
   companionsToEnable,
   isEnabledByDefault,
   isStillSettling,
+  referenceSetsToImport,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
 import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
@@ -40,6 +41,8 @@ export type SyncSummary = {
   enabledAsCompanions: string[];
   importedSets: string[];
   importedSupportingSets: string[];
+  /** Sets imported printings-only for real collections, a few dozen per run (design doc 16). */
+  importedReferenceSets?: string[];
   /** Boosters, products and decks left out because they refer to something missing (rule 5). */
   leftOut: string[];
   /** Sets whose import failed with an unexpected error. The other sets still import. */
@@ -85,6 +88,7 @@ export function makeSync(dependencies: CatalogDependencies) {
       enabledAsCompanions: [],
       importedSets: [],
       importedSupportingSets: [],
+      importedReferenceSets: [],
       leftOut: [],
       failedSets: [],
       skippedDigital: { printings: 0, boosterTypes: [], products: [], decks: [] },
@@ -143,7 +147,22 @@ export function makeSync(dependencies: CatalogDependencies) {
       }
     }
 
-    // 5. Today's prices, images and legalities for every printing we hold.
+    // 4b. Every other paper set's printings, once, for real collections (design doc 16). After
+    // the enabled sets, which may have just claimed some of these as supporting sets.
+    const afterImports = await inTransaction(({ catalog }) => catalog.setStates());
+    for (const code of referenceSetsToImport(afterImports)) {
+      try {
+        const setImport = await mtgjson.setFile(code);
+        await inTransaction(({ catalog }) =>
+          catalog.saveImport(setImport, { kind: "reference", importedAt: clock.now() }),
+        );
+        summary.importedReferenceSets?.push(code);
+      } catch (error) {
+        summary.failedSets.push({ code, error: describeError(error) });
+      }
+    }
+
+    // 5. Today's prices for sold sets and real copies; images and legalities for every printing.
     await pricePass(bulkFile.path, summary);
 
     // 5b. Role tags and themes for printings that are new or tagged by older rules. After the
@@ -174,11 +193,13 @@ export function makeSync(dependencies: CatalogDependencies) {
     for (const supportCode of supportingSetCodes(setImport)) {
       const support = statesByCode.get(supportCode);
       if (support === undefined) continue; // not a paper set; the reference check below reports it
-      const needsPrintings = support.printingCount === 0 || kind === "full";
+      // A reference set that an enabled set now draws from becomes a supporting set.
+      const needsPrintings =
+        support.printingCount === 0 || kind === "full" || !support.isSupporting;
       if (!needsPrintings || summary.importedSupportingSets.includes(supportCode)) continue;
       const supportImport = await mtgjson.setFile(supportCode);
       await inTransaction(({ catalog }) =>
-        catalog.saveImport(supportImport, { printingsOnly: true, importedAt: clock.now() }),
+        catalog.saveImport(supportImport, { kind: "supporting", importedAt: clock.now() }),
       );
       summary.importedSupportingSets.push(supportCode);
     }
@@ -197,13 +218,14 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // Rule 3: the whole set in one transaction.
     await inTransaction(({ catalog }) =>
-      catalog.saveImport(checked.setImport, { printingsOnly: false, importedAt: clock.now() }),
+      catalog.saveImport(checked.setImport, { kind: "full", importedAt: clock.now() }),
     );
     summary.importedSets.push(code);
   }
 
   async function pricePass(bulkFilePath: string, summary: SyncSummary): Promise<void> {
     const printings = await inTransaction(({ catalog }) => catalog.printingsForPricing());
+    const extraPriced = new Set<string>(await dependencies.extraPricedPrintings.printingIds());
     const day = snapshotDay(clock.now());
     const tally: StandardTally = new Map();
     let snapshots: PriceSnapshot[] = [];
@@ -228,7 +250,10 @@ export function makeSync(dependencies: CatalogDependencies) {
 
       const printing = printings.get(card.scryfallId);
       if (printing === undefined) continue;
-      const todays = priceSnapshots(printing, card, day);
+      // Snapshots only for sold sets and real copies, so reference sets don't fill the price
+      // table every night (design doc 16, section 7); images and legalities for every printing.
+      const isPriced = printing.isPriced || extraPriced.has(printing.id);
+      const todays = isPriced ? priceSnapshots(printing, card, day) : [];
       snapshots.push(...todays);
       extras.push({
         scryfallId: card.scryfallId,
@@ -237,7 +262,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         producedMana: card.producedMana,
         keywords: card.keywords,
       });
-      summary.pricedPrintings++;
+      if (isPriced) summary.pricedPrintings++;
       summary.priceSnapshots += todays.length;
       if (extras.length >= BATCH_SIZE) await flush();
     }

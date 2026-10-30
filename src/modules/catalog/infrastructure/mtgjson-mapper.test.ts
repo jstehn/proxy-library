@@ -188,7 +188,7 @@ describe("mapSetSummary", () => {
   it("reads SetList entries, including online-only ones (filtered later)", () => {
     const list = MtgjsonSetListFile.parse(readFixture("SetList.json"));
     const codes = list.data.map((entry) => mapSetSummary(entry).code);
-    expect(codes.sort()).toEqual(["BLB", "BLC", "FDN", "SPG", "YBLB"]);
+    expect(codes.sort()).toEqual(["BLB", "BLC", "FDN", "PBLB", "SPG", "YBLB"]);
     expect(list.data.find((entry) => entry.code === "YBLB")?.isOnlineOnly).toBe(true);
   });
 });

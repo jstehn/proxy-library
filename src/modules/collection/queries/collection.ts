@@ -1,8 +1,13 @@
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
-import { foilCopy, searchCondition } from "@/shared/card-search/sql";
-import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
+import {
+  COLLECTION_SECTIONS,
+  colorFilter,
+  foilCopy,
+  searchCondition,
+} from "@/shared/card-search/sql";
+import type { UserId } from "@/shared/kernel";
 import type { ExportRow } from "../domain/export";
 import { acquisitions, collectionCards } from "../infrastructure/schema";
 
@@ -66,54 +71,6 @@ export type CollectionFilter = Readonly<{
   page: number; // from 1
 }>;
 
-/** SQL: printing "p" has exactly these colors. */
-function hasExactly(colors: readonly ManaColor[]): SQL {
-  const array = sql.join(
-    colors.map((color) => sql`${color}`),
-    sql`, `,
-  );
-  return sql`(cardinality(p.colors) = ${colors.length} and p.colors @> array[${array}]::text[])`;
-}
-
-/** SQL: a multicolored printing's combination, as `pick` gives it (its position or its label). */
-function combinationOf(pick: (index: number, label: string) => SQL): SQL {
-  const whens = COLOR_COMBINATIONS.map(
-    (combination, index) =>
-      sql`when ${hasExactly(combination.colors)} then ${pick(index, combination.label)}`,
-  );
-  return sql`(case ${sql.join(whens, sql` `)} end)`;
-}
-
-/** Section keys in SQL, on printings aliased "p": [order, label] for each way of dividing. */
-const SECTIONS = {
-  none: [sql`0`, sql`''`],
-  // Binder order: each color, then each multicolored combination (guilds, shards, wedges, four
-  // and five colors), colorless, and lands.
-  color: [
-    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 60
-             when cardinality(p.colors) > 1 then ${combinationOf((index) => sql.raw(String(10 + index)))}
-             when cardinality(p.colors) = 0 then 50
-             else array_position(array['W','U','B','R','G'], p.colors[1]) end`,
-    sql`case when p.type_line ~ '\\yLand\\y' and cardinality(p.colors) = 0 then 'Lands'
-             when cardinality(p.colors) > 1 then ${combinationOf((_, label) => sql`${label}::text`)}
-             when cardinality(p.colors) = 0 then 'Colorless'
-             else (array['White','Blue','Black','Red','Green'])[array_position(array['W','U','B','R','G'], p.colors[1])] end`,
-  ],
-  // The first matching type, in the order players usually sort a collection.
-  type: [
-    sql`coalesce(array_position(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land'],
-          (select t from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
-            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1)), 9)`,
-    sql`coalesce((select t || 's' from unnest(array['Creature','Planeswalker','Instant','Sorcery','Artifact','Enchantment','Battle','Land']) with ordinality as types(t, n)
-            where p.type_line ~ ('\\y' || t || '\\y') order by n limit 1), 'Other')`,
-  ],
-  rarity: [
-    sql`coalesce(array_position(array['mythic','rare','uncommon','common'], p.rarity), 5)`,
-    sql`initcap(p.rarity)`,
-  ],
-  set: [sql`0`, sql`s.name`],
-} as const;
-
 export const COLLECTION_PAGE_SIZE = 60;
 
 export type CollectionRow = Readonly<{
@@ -153,15 +110,11 @@ export async function collectionPage(
   if (filter.setCode) conditions.push(sql`p.set_code = ${filter.setCode.toUpperCase()}`);
   if (filter.rarity) conditions.push(sql`p.rarity = ${filter.rarity}`);
   if (filter.finish) conditions.push(sql`c.finish = ${filter.finish}`);
-  const combination = filter.color ? colorCombination(filter.color) : undefined;
-  if (filter.color === "C") conditions.push(sql`cardinality(p.colors) = 0`);
-  else if (filter.color === "M") conditions.push(sql`cardinality(p.colors) > 1`);
-  else if (combination) conditions.push(hasExactly(combination.colors));
-  else if (filter.color) conditions.push(sql`${filter.color} = any(p.colors)`);
+  if (filter.color) conditions.push(colorFilter(filter.color));
   const where = sql.join(conditions, sql` and `);
 
   // The newest price of this finish, and the newest arrival of this stack.
-  const [sectionOrder, sectionLabel] = SECTIONS[filter.sections];
+  const [sectionOrder, sectionLabel] = COLLECTION_SECTIONS[filter.sections];
   const owned = sql`
     select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
            s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,

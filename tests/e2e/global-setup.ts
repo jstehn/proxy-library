@@ -41,6 +41,7 @@ export default async function globalSetup() {
     );
 
     const catalog = makeCatalog({
+      extraPricedPrintings: { printingIds: async () => [] },
       unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
         catalog: drizzleCatalogRepository(transaction),
         syncRuns: drizzleSyncRunRepository(transaction),

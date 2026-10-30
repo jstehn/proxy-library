@@ -34,6 +34,34 @@ export function isStillSettling(releaseDate: string, now: Date): boolean {
  */
 export const SET_TYPES_ENABLED_BY_DEFAULT: readonly string[] = ["expansion", "core", "commander"];
 
+/** How many reference sets one sync run imports, so no single run is long (design doc 16). */
+export const REFERENCE_SETS_PER_RUN = 40;
+
+/** What `referenceSetsToImport` needs to know about a set. */
+export type ReferenceCandidate = Readonly<{
+  code: SetCode;
+  releaseDate: string;
+  isEnabled: boolean;
+  isSupporting: boolean;
+  printingsImportedAt: Date | null;
+}>;
+
+/**
+ * Design doc 16, section 7: every paper set's printings are imported once, so real collections
+ * can hold any card. These are the sets still waiting, newest first (newer cards are more likely
+ * to be in someone's hands), at most `limit` of them.
+ */
+export function referenceSetsToImport(
+  sets: readonly ReferenceCandidate[],
+  limit = REFERENCE_SETS_PER_RUN,
+): SetCode[] {
+  return sets
+    .filter((set) => !set.isEnabled && !set.isSupporting && set.printingsImportedAt === null)
+    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || a.code.localeCompare(b.code))
+    .slice(0, limit)
+    .map((set) => set.code);
+}
+
 /** Rule 13: a set of this type is enabled the first time it appears in the set list. */
 export function isEnabledByDefault(setType: string): boolean {
   return SET_TYPES_ENABLED_BY_DEFAULT.includes(setType);

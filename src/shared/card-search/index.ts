@@ -18,7 +18,13 @@ export {
   type SearchNode,
   type SearchTerm,
 } from "./parse";
-export { parseList, type ListLine, type ListSection, type ParsedList } from "./list";
+export {
+  parseList,
+  type ListLine,
+  type ListOptions,
+  type ListSection,
+  type ParsedList,
+} from "./list";
 export {
   CARD_FEATURES_VERSION,
   cardTags,

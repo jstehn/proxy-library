@@ -32,6 +32,10 @@ import {
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import {
+  drizzleRealCollectionRepository,
+  sqlPrintingMatcher,
+} from "@/modules/real-collection/infrastructure";
+import {
   drizzleMarketPrices,
   drizzlePriceList,
   drizzleStoreLedger,
@@ -77,6 +81,9 @@ export function servicesFor(transaction: DbExecutor) {
     drafts: drizzleDraftRepository(transaction),
     draftCatalog: drizzleDraftCatalog(transaction),
     draftNotifier: pgDraftNotifier(transaction),
+    realCollection: drizzleRealCollectionRepository(transaction),
+    printingMatcher: sqlPrintingMatcher(transaction),
+    productContents: drizzleProductCatalog(transaction),
   };
 }
 
@@ -88,6 +95,7 @@ export async function loadFixtureCatalog(): Promise<void> {
     sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
   );
   const catalog = makeCatalog({
+    extraPricedPrintings: { printingIds: async () => [] },
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),

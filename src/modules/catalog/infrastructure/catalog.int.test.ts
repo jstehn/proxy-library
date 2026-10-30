@@ -34,8 +34,9 @@ let imageFetcher: ReturnType<typeof fakeImageFetcher>;
 let wpn: ReturnType<typeof fixtureWpnGateway>;
 let artworkFiles: ReturnType<typeof memoryArtworkStore>;
 
-function buildCatalog(gateway: MtgjsonGateway = mtgjson) {
+function buildCatalog(gateway: MtgjsonGateway = mtgjson, ownedForReal: string[] = []) {
   return makeCatalog({
+    extraPricedPrintings: { printingIds: async () => ownedForReal.map(PrintingId.of) },
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
@@ -76,12 +77,14 @@ describe("the first sync", () => {
     const summary = await buildCatalog().runSync("prices");
 
     // Only paper sets are listed: YBLB (online-only Alchemy) is left out.
-    expect(summary.setsInList).toBe(4);
+    expect(summary.setsInList).toBe(5);
     // Rule 13: an expansion, a Commander set and a core set; not SPG (a masterpiece set).
     expect(summary.enabledByDefault).toEqual(["BLB", "BLC", "FDN"]);
     expect(summary.enabledAsCompanions).toEqual([]);
     expect(summary.importedSupportingSets).toEqual(["SPG"]);
     expect(summary.importedSets).toEqual(["BLB", "FDN", "BLC"]); // FDN's fixture is empty
+    // Design doc 16: every other paper set's printings, for real collections.
+    expect(summary.importedReferenceSets).toEqual(["PBLB"]);
     expect(summary.failedSets).toEqual([]);
     expect(summary.leftOut).toEqual([]);
     expect(summary.skippedDigital).toEqual({
@@ -91,7 +94,8 @@ describe("the first sync", () => {
       decks: ["BLB: Bloomburrow Redemption"],
     });
 
-    expect(await countRows("printings")).toBe(29 + 2); // Wick has no Scryfall entry: unpriced
+    // Wick has no Scryfall entry: unpriced. PBLB's two promos are reference printings: unpriced.
+    expect(await countRows("printings")).toBe(29 + 2 + 2);
     expect(await countRows("booster_configs")).toBe(1);
     expect(await countRows("sealed_products")).toBe(5);
     expect(await countRows("deck_lists")).toBe(2);
@@ -105,6 +109,7 @@ describe("the first sync", () => {
       { code: "BLB", is_enabled: true, is_supporting: false },
       { code: "BLC", is_enabled: true, is_supporting: false },
       { code: "FDN", is_enabled: true, is_supporting: false },
+      { code: "PBLB", is_enabled: false, is_supporting: false },
       { code: "SPG", is_enabled: false, is_supporting: true },
     ]);
   });
@@ -112,7 +117,7 @@ describe("the first sync", () => {
   it("tags every printing's roles and themes once per rules version (design doc 20)", async () => {
     const catalog = buildCatalog();
     const summary = await catalog.runSync("prices");
-    expect(summary.taggedPrintings).toBe(31);
+    expect(summary.taggedPrintings).toBe(33);
 
     const banishingLight = await db.execute<{ role_tags: string[]; theme_tags: string[] }>(sql`
       select role_tags, theme_tags from printings where name = 'Banishing Light' limit 1
@@ -129,7 +134,7 @@ describe("the first sync", () => {
     // Nothing to do until the rules change; then everything is tagged again.
     expect(await catalog.tagPass()).toBe(0);
     await db.execute(sql`update printings set features_version = 0, role_tags = '{}'`);
-    expect(await catalog.tagPass()).toBe(31);
+    expect(await catalog.tagPass()).toBe(33);
     const again = await db.execute<{ role_tags: string[] }>(sql`
       select role_tags from printings where name = 'Banishing Light' limit 1
     `);
@@ -141,7 +146,7 @@ describe("the first sync", () => {
     const rows = await db.execute<{ with_images: number }>(
       sql`select count(*)::int as with_images from printings where image_uris is not null`,
     );
-    expect(rows.rows[0].with_images).toBe(30);
+    expect(rows.rows[0].with_images).toBe(32);
   });
 
   it("prices a printing that exists only in another language, but never swaps in a translation", async () => {
@@ -155,7 +160,7 @@ describe("the first sync", () => {
     `);
     expect(japanese.rows).toEqual([{ has_images: true, foil_cents: 480 }]);
     // The Spanish copy of the English Beza has its own Scryfall id, so it matches nothing.
-    expect(await countRows("printings")).toBe(31);
+    expect(await countRows("printings")).toBe(33);
   });
 });
 
@@ -165,7 +170,7 @@ describe("running again", () => {
     const first = await catalog.runSync("prices");
     const second = await catalog.runSync("prices");
     expect(second.importedSets).toEqual([]); // already imported, same version
-    expect(await countRows("printings")).toBe(31);
+    expect(await countRows("printings")).toBe(33);
     expect(await countRows("price_snapshots")).toBe(first.priceSnapshots);
   });
 
@@ -185,6 +190,45 @@ describe("running again", () => {
     expect(mtgjson.downloads).toEqual([]);
     await catalog.runSync("full");
     expect(mtgjson.downloads).toEqual(["BLB", "SPG", "FDN", "BLC"]);
+  });
+});
+
+describe("reference sets (design doc 16, section 7)", () => {
+  /** The promo Beza from the PBLB fixture. */
+  async function promoId(): Promise<string> {
+    const result = await db.execute<{ id: string }>(
+      sql`select id from printings where set_code = 'PBLB' and collector_number = '2p'`,
+    );
+    return result.rows[0].id;
+  }
+
+  it("imports a reference set's printings once, with images but no prices, and sells nothing from it", async () => {
+    await buildCatalog().runSync("prices");
+    const id = await promoId();
+    const snapshots = await db.execute<{ total: number }>(
+      sql`select count(*)::int as total from price_snapshots where printing_id = ${id}`,
+    );
+    expect(snapshots.rows[0].total).toBe(0);
+    const printing = await db.execute<{ image_uris: unknown }>(
+      sql`select image_uris from printings where id = ${id}`,
+    );
+    expect(printing.rows[0].image_uris).not.toBeNull();
+    expect(await countRows("sealed_products")).toBe(5); // nothing from PBLB
+
+    mtgjson.downloads.length = 0;
+    await buildCatalog().runSync("full");
+    expect(mtgjson.downloads).not.toContain("PBLB");
+  });
+
+  it("prices a reference printing once someone owns it for real", async () => {
+    await buildCatalog().runSync("prices");
+    const id = await promoId();
+    clock.advanceBy(24 * 60 * 60 * 1000);
+    await buildCatalog(mtgjson, [id]).runSync("prices");
+    const snapshots = await db.execute<{ finish: string }>(
+      sql`select finish from price_snapshots where printing_id = ${id} order by finish`,
+    );
+    expect(snapshots.rows.map((row) => row.finish)).toEqual(["foil", "nonfoil"]);
   });
 });
 

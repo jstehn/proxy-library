@@ -54,8 +54,17 @@ export type SetState = Readonly<{
   isEnabled: boolean;
   isSupporting: boolean;
   importedVersion: string | null; // last FULL import
+  /** When its printings were last imported, by any kind of import (design doc 16). */
+  printingsImportedAt: Date | null;
   printingCount: number;
 }>;
+
+/**
+ * How a set file is imported: everything (an enabled set), or printings only, for a set whose
+ * cards an enabled set uses (supporting) or that is there only for real collections (reference,
+ * design doc 16).
+ */
+export type ImportKind = "full" | "supporting" | "reference";
 
 /** Everything already in the catalog, for checking a new set's references (rule 5). */
 export type KnownReferences = Readonly<{
@@ -68,7 +77,12 @@ export type KnownReferences = Readonly<{
 /** Where a printing's images come from (Scryfall's addresses), or null if unknown. */
 export type ImageSource = Readonly<{ scryfallId: string; images: ImageUris | null }>;
 
-export type PricingPrinting = Readonly<{ id: PrintingId; finishes: readonly Finish[] }>;
+export type PricingPrinting = Readonly<{
+  id: PrintingId;
+  finishes: readonly Finish[];
+  /** In an enabled or supporting set: gets a price snapshot every night (design doc 16). */
+  isPriced: boolean;
+}>;
 
 export type CardExtras = Readonly<{
   scryfallId: string;
@@ -103,16 +117,13 @@ export interface CatalogRepository {
   markStandard(codes: readonly SetCode[]): Promise<void>;
   standardSetCodes(): Promise<SetCode[]>;
   /**
-   * Saves one set import in the caller's transaction. Never deletes anything (rule 2).
-   * `printingsOnly` is for supporting sets: just their printings, marked as supporting.
+   * Saves one set import in the caller's transaction. Never deletes anything (rule 2). A
+   * supporting or reference import saves just the printings; a supporting one marks the set.
    */
-  saveImport(
-    setImport: SetImport,
-    options: { printingsOnly: boolean; importedAt: Date },
-  ): Promise<void>;
+  saveImport(setImport: SetImport, options: { kind: ImportKind; importedAt: Date }): Promise<void>;
   /** What already exists, not counting the old contents of the set being imported. */
   knownReferences(importingSet: SetCode): Promise<KnownReferences>;
-  /** Every printing we hold, keyed by Scryfall id, for matching bulk-file prices. */
+  /** Every printing we hold, keyed by Scryfall id, for matching bulk-file prices and images. */
   printingsForPricing(): Promise<Map<string, PricingPrinting>>;
   savePriceSnapshots(snapshots: readonly PriceSnapshot[]): Promise<void>;
   saveCardExtras(extras: readonly CardExtras[]): Promise<void>;
@@ -217,8 +228,18 @@ export type CatalogServices = {
   artwork: ArtworkRepository;
 };
 
+/**
+ * Printings to price every night although their set isn't sold: the ones someone owns for real
+ * (design doc 16, section 7). The catalog says what it needs; the composition root fills it from
+ * the real collection, so neither module imports the other.
+ */
+export interface ExtraPricedPrintings {
+  printingIds(): Promise<PrintingId[]>;
+}
+
 export type CatalogDependencies = {
   unitOfWork: UnitOfWork<CatalogServices>;
+  extraPricedPrintings: ExtraPricedPrintings;
   mtgjson: MtgjsonGateway;
   scryfall: ScryfallGateway;
   images: ImageStore;
