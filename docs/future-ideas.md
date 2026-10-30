@@ -95,6 +95,8 @@ design doc (or joins a phase's design) and is removed from this list.
 
 - **Undo last import:** keep each import's changes so the newest one can be reversed in one
   click. Re-importing the right file does the same job until then.
+- **Real booster contents:** a real product's boosters aren't modelled (design doc 16, section 15).
+  You paste what you pulled into the import page instead.
 
 ## Drafts (out of scope for design doc 17, 2026-10-01)
 

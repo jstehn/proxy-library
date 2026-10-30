@@ -1,7 +1,8 @@
 # Design: the real collection
 
 - **Phase:** 16
-- **Status:** **Approved** (2026-10-01, with the decisions in section 14)
+- **Status:** **Approved** (2026-10-01, with the decisions in section 14; amendment in section 15
+  approved 2026-10-29)
 - **Related:** design doc 04 (catalog sync, rule 13), design doc 07 (collection screens), design
   doc 09 and 14 (decks, proxy PDFs), design doc 15 (list parsing and card search), ADR 0006
   (cross-module reads), ADR 0009 (lint boundaries), ADR 0011 (printing × finish)
@@ -189,7 +190,7 @@ Un-sets, …) hold printings that real collections contain too. So:
   composition root fills from the real collection, so the catalog doesn't import the new module.
 
 This changes what the catalog is for (from "what can be sold" to "every paper card"), so it gets
-an **ADR (0018): reference sets**.
+an **ADR (0020): reference sets**.
 
 ## 8. Ports
 
@@ -232,7 +233,7 @@ itself doesn't change.
 
 ## 9. Persistence
 
-Migration 0019:
+Migration 0026:
 
 ```
 real_cards (
@@ -305,13 +306,15 @@ None. Changing your real collection isn't a game event, so it stays out of the a
 
 ## 13. Order of work
 
-Builds on design doc 15 (the list parser and card search in `@/shared/card-search`, migration 0018) and on design doc 04's rule 13 (expansion, core and Commander sets enabled by default).
+Builds on design doc 15 (the list parser and card search in `@/shared/card-search`) and on design
+doc 04's rule 13 (expansion, core and Commander sets enabled by default). Both are done.
 
 1. Catalog: reference sets, `printings_imported_at`, `ExtraPricedPrintings` (and the ADR).
 2. Real collection: domain, readers, use cases, repository, matcher.
 3. Screens: Real tab, import, card page box, sharing.
 4. Decks: the switch, ownership, proxy option, `real` search keyword.
-5. Lesson 16 and commit.
+5. Real products and "also make a deck" (section 15).
+6. Lesson 16 and commit.
 
 ## 14. Decisions from review (2026-10-01)
 
@@ -327,3 +330,112 @@ Builds on design doc 15 (the list parser and card search in `@/shared/card-searc
    can choose or change the printing in the preview and later.
 7. **Resetting a player** leaves the real collection alone.
 8. **Undo last import** goes in future-ideas.
+
+## 15. Amendment: real products and "also make a deck" (2026-10-29)
+
+Requested 2026-10-29: "I have the Silverquill Influence deck in real life", so a player can mark
+a **product** as owned for real. A pasted deck list can also become a deck in the same step as
+it goes into the real collection.
+
+### 15.1 Real products
+
+| Term             | Meaning                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| **Real product** | A sealed product (a precon, a bundle, …) a player owns physically. Recording one adds its known cards.   |
+| **Known cards**  | The cards a product always contains: its decks' lists and its loose cards. Boosters inside aren't known. |
+
+```ts
+// real-collection/domain
+type ProductCards = Readonly<{
+  copies: RealCopy[]; // summed by printing + finish across every deck and loose card
+  decks: Array<Readonly<{ name: string; deckType: string; cards: DeckCardInput[] }>>; // to make decks from
+  notAdded: string[]; // "Strixhaven Set Booster", "Spindown": unknown or not cards
+}>;
+
+/** Which option the player got for each "variable" node, in the order they're met. */
+type VariableChoices = readonly number[];
+
+function realProductCards(
+  contents: readonly SealedContent[],
+  products: ProductLookup, // nested products
+  decks: DeckLookup, // a precon's list, by set code + deck name
+  choices: VariableChoices,
+): Result<ProductCards, ProductProblem>;
+// ProductProblem: { kind: "ProductUnavailable" } | { kind: "ChoiceNeeded"; options: string[][] }
+```
+
+It walks the same tree as inventory's `unpack` (design doc 06), but all at once and without an
+`Rng`: a real product's contents are what's in your hands, not a random draw.
+
+- `card` → one copy. `deck` → that deck's cards (every board). `sealed` → its contents,
+  `count` times, all the way down. `pack` and `other` → `notAdded`.
+- `variable` ("one of these five decks"): the player says which one they got. Until every
+  choice is made, the result is `ChoiceNeeded` with the options' names, and the page asks.
+- The catalog's decks and products reach the module through a port, `ProductContents`
+  (`products(ids)`, `deckCards(setCode, deckName)`). The composition root connects it to the
+  same catalog queries inventory uses, so `real-collection` doesn't import `inventory`.
+
+**Rules:**
+
+10. **Recording a real product adds its known cards** to the real collection (an `add` import of
+    those copies: one transaction, through `planImport`) and records the product.
+11. **Each precon deck in it becomes a deck** (only the deck types `becomesADeck` accepts, as
+    when opening a game precon), with **real cards on**, so it's complete straight away. Making
+    the decks happens after the cards are saved; if a deck can't be made (too many decks), the
+    cards stay and the page says so.
+12. **Boosters aren't guessed.** The confirmation lists what wasn't added, with a link to the
+    import page to paste what you pulled.
+13. **Removing a real product** deletes its record. With **"Also remove its cards"** ticked, its
+    known cards (from the stored choices) are subtracted, never below 0. Decks made from it are
+    left alone.
+14. Owning two copies of a product is two records. Only **for sale** products show the button
+    (the same products as `/store/[code]`).
+
+| Use case            | Who   | Input                               | Output                                   | Errors (`kind`)                                         | Transaction? |
+| ------------------- | ----- | ----------------------------------- | ---------------------------------------- | ------------------------------------------------------- | ------------ |
+| `addRealProduct`    | owner | productId, choices                  | the copies added, decks made, `notAdded` | `ProductNotFound`, `ProductUnavailable`, `ChoiceNeeded` | yes          |
+| `removeRealProduct` | owner | realProductId, removeCards: boolean | the copies removed                       | `NotOwned`                                              | yes          |
+
+**Persistence (migration 0026):**
+
+```
+real_products (
+  id           serial primary key,
+  user_id      text not null references players(user_id) on delete cascade,
+  product_id   text not null references sealed_products(id),
+  choices      jsonb not null default '[]',   -- VariableChoices
+  added_at     timestamptz not null
+)
+index real_products_user_idx on (user_id)
+```
+
+**Screens:**
+
+| Place                | What                                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `/store/[code]`      | **"I own this for real"** next to Buy, with "You own 1 for real" once recorded. A variable product asks which option first |
+| after recording      | a confirmation: N cards added, the decks made (links), and what wasn't added (boosters → link to the import page)          |
+| `/collection/real`   | a **Real products** list (name, date, count), each with **Remove** and the "Also remove its cards" box                     |
+| `/players/[id]/real` | the real products too, when shared                                                                                         |
+
+### 15.2 "Also make a deck from this list"
+
+On `/collection/real/import`, a **pasted list** (not a collection file, which isn't a deck) has an
+**"Also make a deck from this list"** box with a deck name. On Import, the real copies are saved
+first (rule 6 unchanged), then a deck is made from the **matched** lines with the printings as
+chosen in the preview, through `decks.createDeckFromCards`, with **real cards on**. Section
+headers in the list (`Commander`, `Sideboard`) put cards on those boards, as the deck import
+already does. If the deck can't be made, the import still stands and the page says why.
+
+### 15.3 Tests (added to section 12)
+
+- **`realProductCards`** (unit): a precon (deck list, all boards), a bundle with nested products
+  (counts multiply), a variable node (`ChoiceNeeded` without a choice, the chosen option with
+  one), packs and `other` in `notAdded`, a missing nested product.
+- **Use cases (fakes):** adding a product adds exactly its known cards and makes its decks with
+  real cards on; adding the same product twice doubles the cards; removing with "also remove"
+  subtracts and stops at 0; removing without it keeps the cards; too many decks keeps the cards.
+- **Import:** "also make a deck" makes a deck from the matched lines, on the right boards, and
+  isn't offered for collection files.
+- **Browser test:** record a Strixhaven Commander precon for real; its cards appear on the Real
+  tab, and its deck is complete with real cards on.
