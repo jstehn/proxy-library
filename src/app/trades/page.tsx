@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { sharedRealCollections } from "@/modules/real-collection";
 import { tradesFor, type TradeView } from "@/modules/trades";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
 
-function TradeLine(props: { trade: TradeView }) {
+function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }) {
   const { trade } = props;
   const other = trade.yourSide === "proposer" ? trade.recipient : trade.proposer;
   const yours = trade.items.filter((item) => item.from === trade.yourSide);
@@ -15,6 +16,11 @@ function TradeLine(props: { trade: TradeView }) {
       <Link href={`/trades/${trade.id}`} className="font-medium underline">
         {trade.yourSide === "proposer" ? `To ${other.displayName}` : `From ${other.displayName}`}
       </Link>
+      {props.sharingReal.has(other.userId) && (
+        <Link href={`/players/${other.userId}/real`} className="text-xs text-zinc-500 underline">
+          {other.displayName}&apos;s real collection
+        </Link>
+      )}
       <span className="text-sm">
         You give: {yours.map(itemText).join(", ") || "nothing"} · You get:{" "}
         {theirs.map(itemText).join(", ") || "nothing"}
@@ -29,7 +35,13 @@ function TradeLine(props: { trade: TradeView }) {
 
 export default async function TradesPage() {
   const actor = await requireActor();
-  const trades = await tradesFor(getContainer().db, actor.userId);
+  const { db } = getContainer();
+  const [trades, shared] = await Promise.all([
+    tradesFor(db, actor.userId),
+    sharedRealCollections(db),
+  ]);
+  // Players who share their real collection get a link next to their name (design doc 16).
+  const sharingReal = new Set(shared.map((player) => player.userId));
   const forYou = trades.filter(
     (trade) => trade.status === "proposed" && trade.yourSide === "recipient",
   );
@@ -46,7 +58,7 @@ export default async function TradesPage() {
       ) : (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
           {list.map((trade) => (
-            <TradeLine key={trade.id} trade={trade} />
+            <TradeLine key={trade.id} trade={trade} sharingReal={sharingReal} />
           ))}
         </ul>
       )}

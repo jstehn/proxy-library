@@ -88,8 +88,8 @@ design doc (or joins a phase's design) and is removed from this list.
   rules in SQL, or tags stored per printing).
 - ~~**Sharing decks** and deck comments~~ **Done for signed-in players (design doc 21).** Still
   open: a public link that works without an account.
-- ~~**"I have a real copy" per deck line**~~ **Planned (design doc 16):** the real collection,
-  and a proxy option to leave out cards you own for real.
+- ~~**"I have a real copy" per deck line**~~ **Done (design doc 16):** the real collection,
+  decks that count real cards, and a proxy option to leave out cards you own for real.
 
 ## Real collection (out of scope for design doc 16, 2026-10-01)
 

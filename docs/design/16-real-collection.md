@@ -439,3 +439,33 @@ already does. If the deck can't be made, the import still stands and the page sa
   isn't offered for collection files.
 - **Browser test:** record a Strixhaven Commander precon for real; its cards appear on the Real
   tab, and its deck is complete with real cards on.
+
+## 16. As built (2026-10-29)
+
+Built as designed, with these differences:
+
+1. **Full syncs import every waiting reference set.** A nightly prices run imports at most 40
+   (`REFERENCE_SETS_PER_RUN`), newest first; a full run (an admin's, or
+   `pnpm worker sync full`) imports all that are left, so a real collection doesn't wait two
+   weeks for older sets. ADR 0020 says so.
+2. **Buy a list doesn't read real cards.** Section 7 said "only buy what I don't already own"
+   counts real copies for a deck with real cards on. The store would then have to read
+   `real_cards`, against rule 1. Instead, a deck's list for Buy a list is its short list, which
+   already counts real copies when the deck uses them, and the store keeps counting game copies
+   only.
+3. **"Use my real cards" is part of `updateDeck`** (`usesRealCards`), not a use case of its own.
+   The switch is on the deck page; the deck list shows a "real cards" badge.
+4. **Links to a shared real collection** are on the trades page (next to the other player's
+   name) and in a list on the Real tab, not on activity entries: the feed stores names, not
+   player ids.
+5. **Import lines carry an `index`** (their place in the import) rather than a line number,
+   and the preview gives printing menus to the first 300 matched lines; longer imports bring
+   the rest in as matched, to change later on each card's page. Changing a printing after import
+   is on the card page's Real copies box ("Wrong printing? Move them…").
+6. **Proxies leave real cards out by default** (`realCards: "leaveOut"`). The option is asked
+   only for a deck that counts real copies.
+7. **The card search** gained `real` (real copies only). In a deck that uses real cards, `own`
+   and `is:foil` count real copies too.
+8. Matching uses the catalog's printings in one query per import, by name (full or front face)
+   and Scryfall id; `parseList` gained a `maxQuantity` option so a pasted collection can hold
+   more than 99 of a card.

@@ -382,15 +382,16 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   await page.getByRole("link", { name: "Print proxies" }).click();
   await expect(page.getByText(/^1 card on 1 page, 9 to a page\./)).toBeVisible(); // Beza; Plains skipped
   await page.getByText("Include them").click();
-  await page.getByText("1/8 inch (3 mm)").click();
-  await expect(page.getByText(/^100 cards on 17 pages, 6 to a page \(sideways\)\./)).toBeVisible();
+  // Bleed fills the gap between cards, so the grid stays 3 × 3 (changed 2026-10-07).
+  await page.getByText("Fill the gap").click();
+  await expect(page.getByText(/^100 cards on 12 pages, 9 to a page\./)).toBeVisible();
   const downloading = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download PDF" }).click();
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("Bezas Bounty proxies.pdf");
   const pdf = readFileSync(await download.path());
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
-  expect((await PDFDocument.load(pdf)).getPageCount()).toBe(17);
+  expect((await PDFDocument.load(pdf)).getPageCount()).toBe(12);
   await page.getByRole("link", { name: "Back to the deck" }).click();
 
   await page.getByRole("link", { name: "Export" }).click();
@@ -806,8 +807,76 @@ test("the admin shares a deck; another player reads it and comments (design doc 
   await admin.getByRole("link", { name: "Cards to get for all your decks" }).click();
   await expect(admin.getByRole("heading", { name: "Cards to get" })).toBeVisible();
   await expect(
-    admin.getByText(/(copies? of \d+ cards?, about \$|you own every card your decks use)/),
+    admin.getByText(/(cop(y|ies) of \d+ cards?, about \$|you own every card your decks use)/),
   ).toBeVisible();
   await adminContext.close();
   await rinContext.close();
+});
+
+test("a player records real cards from a file and a product, and builds with them (design doc 16)", async ({
+  browser,
+}) => {
+  test.setTimeout(90_000); // a long journey, through several pages compiled on first visit
+  const context = await browser.newContext();
+  const rin = await context.newPage();
+  await signIn(rin, "rin");
+
+  // Import a ManaBox file: preview, change a line's printing, import.
+  await rin.goto("/collection/real");
+  await rin.getByRole("link", { name: "Import cards" }).click();
+  await rin.getByLabel("Or a file:").setInputFiles("tests/fixtures/real-collection/manabox.csv");
+  await expect(
+    rin.getByText(/Read as a ManaBox file: 3 lines matched \(6 cards\), 2 skipped/),
+  ).toBeVisible();
+  await expect(rin.getByText("Not A Real Card (BLB 999): no card has that name")).toBeVisible();
+  const bezaFoil = rin.getByLabel("Printing of Beza, the Bounding Spring").first();
+  const option900 = bezaFoil.locator("option", { hasText: "#900" });
+  await bezaFoil.selectOption((await option900.getAttribute("value")) ?? "");
+  await rin.getByRole("button", { name: "Import" }).click();
+  await expect(rin.getByText(/Imported: 3 new, 0 changed, 0 removed\./)).toBeVisible();
+
+  // The Real tab shows them with their value; the Game tab is untouched.
+  await rin.getByRole("link", { name: "See your real collection" }).click();
+  await expect(
+    rin.getByText(/The cards you own for real: 6 cards \(3 different\) worth \$/),
+  ).toBeVisible();
+
+  // A product owned for real: its cards go in, and its precon becomes a deck using real cards.
+  await rin.goto("/store/BLB");
+  const kit = rin.getByRole("listitem").filter({ hasText: "Bloomburrow Starter Kit" });
+  await kit.getByRole("button", { name: "I own this for real" }).click();
+  await expect(
+    kit.getByText(/Added \d+ cards to your real collection\. New deck: Hare Raising\./),
+  ).toBeVisible();
+  await kit.getByRole("link", { name: "Hare Raising" }).click();
+  await expect(
+    rin.getByText("Using your real cards: cards you own for real count as owned here."),
+  ).toBeVisible();
+  await rin.goto("/decks");
+  const hare = rin.getByRole("listitem").filter({ hasText: "Hare Raising" });
+  await expect(hare.getByText("real cards")).toBeVisible();
+  await expect(hare.getByText("all owned")).toBeVisible();
+
+  // Its proxies leave out the cards Rin owns for real: there's nothing left to print.
+  await hare.getByRole("link", { name: "Hare Raising" }).click();
+  await rin.getByRole("link", { name: "Print proxies" }).click();
+  await expect(rin.getByText("Cards you own for real")).toBeVisible();
+  await expect(rin.getByText("Nothing to print with these options.")).toBeVisible();
+  await rin.getByText("Print them too").click();
+  await expect(rin.getByText(/^\d+ cards on \d+ pages?/)).toBeVisible();
+
+  // Screenshots for review: dark mode, and a phone's width (user preference).
+  await rin.emulateMedia({ colorScheme: "dark" });
+  await rin.goto("/collection/real");
+  await rin.screenshot({ path: "test-results/real-collection-dark.png", fullPage: true });
+  await rin.setViewportSize({ width: 390, height: 844 });
+  await rin.goto("/collection/real/import");
+  await rin
+    .getByLabel("Cards to import")
+    .fill(readFileSync("tests/fixtures/real-collection/list.txt", "utf8"));
+  await rin.getByRole("button", { name: "Preview" }).click();
+  await expect(rin.getByText(/Read as a pasted list/)).toBeVisible();
+  await rin.getByLabel("Also make a deck from this list").check();
+  await rin.screenshot({ path: "test-results/real-import-phone-dark.png", fullPage: true });
+  await context.close();
 });

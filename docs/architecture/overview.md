@@ -44,20 +44,21 @@ root.
 
 ## Modules (bounded contexts)
 
-| Module       | Owns                                                                                                                                                                                                     | Kind                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `accounts`   | users, roles, permissions (`canSelfFund`), sessions (via Better Auth), `Actor`                                                                                                                           | adapter-heavy, thin domain        |
-| `wallet`     | append-only ledger, balance, allowance accrual, grants, self-funding, public stats                                                                                                                       | **reference module**, rich domain |
-| `catalog`    | sets, **printings** (set, number, finishes, treatments: full art, borderless, showcase…), prices per finish with **daily price history** (ADR 0013), booster configs, sealed product definitions, images | read-mostly; sync = ACL           |
-| `packs`      | pack generation engine: booster config + Rng → cards                                                                                                                                                     | **pure library**, no I/O          |
-| `inventory`  | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                         | domain + persistence              |
-| `collection` | owned cards at exact **printing × finish** (ADR 0011) + acquisition log                                                                                                                                  | domain + persistence              |
-| `store`      | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                       | orchestration only                |
-| `decks`      | decks, ownership check, format legality, export formats                                                                                                                                                  | rich domain                       |
-| `trades`     | proposals, trade lifecycle, atomic execution                                                                                                                                                             | rich domain + orchestration       |
-| `activity`   | feed of domain events ("X opened a mythic")                                                                                                                                                              | read model                        |
-| `reset`      | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                              | orchestration only (no tables)    |
-| `drafts`     | live booster drafts: lobbies, entry fees, packs passed around the table, pick timers, a deck for each player at the end                                                                                  | rich domain + orchestration       |
+| Module            | Owns                                                                                                                                                                                                     | Kind                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `accounts`        | users, roles, permissions (`canSelfFund`), sessions (via Better Auth), `Actor`                                                                                                                           | adapter-heavy, thin domain        |
+| `wallet`          | append-only ledger, balance, allowance accrual, grants, self-funding, public stats                                                                                                                       | **reference module**, rich domain |
+| `catalog`         | sets, **printings** (set, number, finishes, treatments: full art, borderless, showcase…), prices per finish with **daily price history** (ADR 0013), booster configs, sealed product definitions, images | read-mostly; sync = ACL           |
+| `packs`           | pack generation engine: booster config + Rng → cards                                                                                                                                                     | **pure library**, no I/O          |
+| `inventory`       | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                         | domain + persistence              |
+| `collection`      | owned cards at exact **printing × finish** (ADR 0011) + acquisition log                                                                                                                                  | domain + persistence              |
+| `store`           | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                       | orchestration only                |
+| `decks`           | decks, ownership check, format legality, export formats                                                                                                                                                  | rich domain                       |
+| `trades`          | proposals, trade lifecycle, atomic execution                                                                                                                                                             | rich domain + orchestration       |
+| `activity`        | feed of domain events ("X opened a mythic")                                                                                                                                                              | read model                        |
+| `reset`           | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                              | orchestration only (no tables)    |
+| `drafts`          | live booster drafts: lobbies, entry fees, packs passed around the table, pick timers, a deck for each player at the end                                                                                  | rich domain + orchestration       |
+| `real-collection` | cards and sealed products a player owns physically (design doc 16): imports, sharing; never touches the game (only `decks` reads it, lint-enforced)                                                      | domain + persistence              |
 
 ### Module dependency graph (allowed directions only)
 
@@ -75,6 +76,9 @@ flowchart TD
   reset --> trades & wallet & inventory & collection & decks & activity & drafts
   drafts --> wallet & collection & decks & packs & activity
   drafts -. pack price .-> store
+  decks -. real_cards, when a deck uses real cards .-> realCollection[real-collection]
+  realCollection --> catalog_types
+  catalog -. ExtraPricedPrintings port, filled in core.ts .-> realCollection
 ```
 
 As built (2026-09-28): modules share each other's **types** freely (`import type`), and call each

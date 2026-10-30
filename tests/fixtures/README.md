@@ -14,6 +14,20 @@ Trimming kept everything consistent: every booster sheet, product and deck only 
 that are in the fixtures. Sheet `totalWeight`s were recomputed. Heavy fields the app never reads
 (translations, rulings, purchase links) were removed.
 
+`mtgjson/PBLB.json` is MTGJSON's `PBLB.json` (Bloomburrow Promos, 2026-10-29), trimmed to the
+two promos of **Beza, the Bounding Spring** (#2p, #2s), with their Scryfall lines (from
+`POST /cards/collection`, 2026-10-29) added to `scryfall/default-cards.jsonl`. It's a promo set,
+so the sync imports it as a **reference set** (design doc 16): printings only, unpriced until
+someone owns one for real. `SetList.json` lists it too.
+
+`real-collection/*` are small collection files in the formats the real collection imports
+(design doc 16), written by hand in each app's real format (header names and column values as
+ManaBox and Moxfield export them) with cards from the fixtures: `manabox.csv` (quoted names, a
+promo by Scryfall id, an unknown card, a broken quantity), `moxfield.csv` (condition and language
+columns, a foil borderless printing, a line without a number, a nonfoil-only card marked foil),
+`ours.csv` (our own full export), `list.txt` (a pasted deck list with sections, markers, 250
+Plains and an unreadable line) and `unknown.csv` (a CSV in no format we read).
+
 `mtgjson/BLC.json` is Bloomburrow Commander's real identity (code, type, parent set) with its
 cards, decks and products **trimmed to nothing**. It exists because enabling BLB now enables its
 Commander companion set (design doc 04, rule 11), and the fixture sync needs a file to read.

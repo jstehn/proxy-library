@@ -34,7 +34,7 @@ export function isStillSettling(releaseDate: string, now: Date): boolean {
  */
 export const SET_TYPES_ENABLED_BY_DEFAULT: readonly string[] = ["expansion", "core", "commander"];
 
-/** How many reference sets one sync run imports, so no single run is long (design doc 16). */
+/** How many reference sets a nightly sync imports, so no single night is long (design doc 16). */
 export const REFERENCE_SETS_PER_RUN = 40;
 
 /** What `referenceSetsToImport` needs to know about a set. */

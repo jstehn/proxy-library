@@ -27,3 +27,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0017 | [One card search language, shared by every module that searches cards](0017-shared-card-search.md)           | Accepted |
 | 0018 | [Live updates: Postgres LISTEN/NOTIFY and Server-Sent Events](0018-live-updates.md)                          | Accepted |
 | 0019 | [Store what each card does, worked out by the catalog sync and versioned](0019-precomputed-card-features.md) | Accepted |
+| 0020 | [Import every paper set's printings, as reference sets, for real collections](0020-reference-sets.md)        | Accepted |

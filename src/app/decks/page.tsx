@@ -111,6 +111,14 @@ export default async function DecksPage(props: PageProps<"/decks">) {
               <span className="text-sm text-zinc-500">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards
               </span>
+              {deck.usesRealCards && (
+                <span
+                  className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                  title="Cards you own for real count as owned in this deck"
+                >
+                  real cards
+                </span>
+              )}
               {deck.short > 0 ? (
                 <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200">
                   short {deck.short}

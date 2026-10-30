@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FINISHES, priceHistory, printingDetail, type Finish } from "@/modules/catalog";
 import { ownedCopies } from "@/modules/collection";
 import { decksUsing } from "@/modules/decks";
+import { printingsOfSameCard, realCopiesOf } from "@/modules/real-collection";
 import {
   currentBuylistRate,
   MAX_QUANTITY,
@@ -17,6 +18,7 @@ import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { PriceChart, type ChartMarker } from "@/ui/price-chart";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { RealCopiesBox } from "./real-copies";
 import { BuyForm, SellForm } from "./trade-forms";
 
 // One card: what it is, what it's worth over time, what you own, and buying or selling it
@@ -40,13 +42,17 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
   const detail = await printingDetail(db, id);
   if (detail === null) notFound();
 
-  const [history, owned, trades, rateBps, inDecks] = await Promise.all([
+  const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings] = await Promise.all([
     priceHistory(db, id),
     ownedCopies(db, actor.userId, id),
     singleHistory(db, actor.userId, id),
     currentBuylistRate(db),
     decksUsing(db, actor.userId, [id]),
+    realCopiesOf(db, actor.userId, id),
+    printingsOfSameCard(db, id),
   ]);
+  const searchParams = await props.searchParams;
+  const realError = typeof searchParams.realError === "string" ? searchParams.realError : null;
   const decks = inDecks.get(id) ?? [];
   const { card } = detail;
   const finishes = FINISHES.filter((finish) => card.finishes.includes(finish));
@@ -165,6 +171,14 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
               The store buys cards at {rateBps / 100}% of market price, rounded down.
             </p>
           </section>
+
+          <RealCopiesBox
+            printingId={card.id}
+            finishes={finishes}
+            copies={realCopies}
+            printings={samePrintings}
+            error={realError}
+          />
         </div>
       </div>
 

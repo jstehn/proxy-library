@@ -9,45 +9,14 @@ import {
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
 import { enabledSets, printingCards } from "@/modules/catalog";
-import { collectionPage, type CollectionRow } from "@/modules/collection";
+import { collectionPage } from "@/modules/collection";
 import { decksUsing, type DeckRef } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
-
-const SORTS = [
-  ["mana", "Mana value"],
-  ["name", "Name"],
-  ["value", "Most valuable"],
-  ["newest", "Newest first"],
-  ["set", "Set and number"],
-] as const;
-const SORT_VALUES = SORTS.map(([value]) => value);
-
-// Sections divide the page, and the sort orders cards within each (any combination).
-const SECTIONS = [
-  ["color", "Sections: colors"],
-  ["type", "Sections: card types"],
-  ["rarity", "Sections: rarity"],
-  ["set", "Sections: sets"],
-  ["none", "No sections"],
-] as const;
-const SECTION_VALUES = SECTIONS.map(([value]) => value);
-const FINISH_NAMES = { nonfoil: "", foil: "Foil ", etched: "Etched " };
-
-/** Consecutive rows with the same section label, in order (the query already sorted them). */
-function sectionsOf(
-  rows: readonly CollectionRow[],
-): Array<{ label: string; rows: CollectionRow[] }> {
-  const sections: Array<{ label: string; rows: CollectionRow[] }> = [];
-  for (const row of rows) {
-    const last = sections.at(-1);
-    if (last !== undefined && last.label === row.section) last.rows.push(row);
-    else sections.push({ label: row.section, rows: [row] });
-  }
-  return sections;
-}
+import { FINISH_NAMES, SECTION_VALUES, SECTIONS, sectionsOf, SORT_VALUES, SORTS } from "./shared";
+import { CollectionTabs } from "./tabs";
 
 /** "In: Burn (4), Mono Red (2)", so you know which deck to pull a copy from. */
 function deckNote(decks: readonly DeckRef[] | undefined): string | undefined {
@@ -87,7 +56,10 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Collection</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold">Collection</h1>
+          <CollectionTabs current="game" />
+        </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {result.totals.copies} cards ({result.totals.different} different) worth{" "}
           <strong className="tabular-nums">

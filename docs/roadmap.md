@@ -53,7 +53,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 13  | Official product photos (WPN)      | a second anti-corruption layer (Nuxt data), fail-safe sync step, pricing precedence                                                     | ✅ Done |
 | 14  | Deck builder 2.0 and proxy PDFs    | a search language (parser → tree → SQL), client-safe module API (ADR 0016), optimistic UI, pure page layout, PDF rendering              | ✅ Done |
 | 15  | Buy a list; card search everywhere | a shared library (ADR 0017), tokenizer modes, quote vs purchase, optimistic concurrency                                                 | ✅ Done |
-| 16  | The real collection                | (design doc 16 approved, amended 2026-10-29; building)                                                                                  | Planned |
+| 16  | The real collection                | a separate bounded context, file readers as strategies, preview then confirm with a version, a consumer-owned port, reference sets      | ✅ Done |
 | 17  | Live booster drafts                | aggregates, queues, deadlines and presence, LISTEN/NOTIFY + Server-Sent Events (ADR 0018), scoring functions                            | ✅ Done |
 | 18  | Conspiracy drafts                  | draft matters and conspiracies in the command zone (design doc 18)                                                                      | ✅ Done |
 | 19  | Builder insights                   | role tags as a regex table, a draw simulator (hypergeometric odds, a reducer), deck problems checked in the browser                     | ✅ Done |

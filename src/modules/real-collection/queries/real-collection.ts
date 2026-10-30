@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/shared/card-search/sql";
 import type { UserId } from "@/shared/kernel";
 import { realCards, realCollectionSettings, realProducts } from "../infrastructure/schema";
+import { authUsers } from "../../accounts/infrastructure/schema";
 import { sealedProducts } from "../../catalog/infrastructure/schema";
 
 // Read models for the real collection's screens (design doc 16, section 7; ADR 0006).
@@ -197,13 +198,18 @@ export async function isRealCollectionShared(db: DbExecutor, userId: UserId): Pr
   return row?.isShared ?? false;
 }
 
-/** Which of these players share their real collection (for linking their names). */
-export async function playersSharingReal(db: DbExecutor): Promise<Set<string>> {
+/** A player who lets the others see their real collection (rule 5). */
+export type SharedRealCollection = Readonly<{ userId: string; displayName: string }>;
+
+/** Every player sharing their real collection, by name. */
+export async function sharedRealCollections(db: DbExecutor): Promise<SharedRealCollection[]> {
   const rows = await db
-    .select({ userId: realCollectionSettings.userId })
+    .select({ userId: realCollectionSettings.userId, displayName: authUsers.name })
     .from(realCollectionSettings)
-    .where(eq(realCollectionSettings.isShared, true));
-  return new Set(rows.map((row) => row.userId));
+    .innerJoin(authUsers, eq(authUsers.id, realCollectionSettings.userId))
+    .where(eq(realCollectionSettings.isShared, true))
+    .orderBy(authUsers.name);
+  return rows;
 }
 
 /** A product the player owns for real, as the Real tab lists it. */
@@ -232,17 +238,33 @@ export async function realProductsOf(db: DbExecutor, userId: UserId): Promise<Re
   return rows.map((row) => ({ ...row, addedAt: row.addedAt.toISOString() }));
 }
 
-/** How many copies of a product the player owns for real (the store page's "You own 1"). */
-export async function realProductCount(
+/** How many copies of each product the player owns for real (the store page's "You own 1"). */
+export async function realProductCounts(
   db: DbExecutor,
   userId: UserId,
-  productId: string,
-): Promise<number> {
-  const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
+  productIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (productIds.length === 0) return new Map();
+  const rows = await db
+    .select({ productId: realProducts.productId, count: sql<number>`count(*)::int` })
     .from(realProducts)
-    .where(and(eq(realProducts.userId, userId), eq(realProducts.productId, productId)));
-  return row?.count ?? 0;
+    .where(and(eq(realProducts.userId, userId), inArray(realProducts.productId, [...productIds])))
+    .groupBy(realProducts.productId);
+  return new Map(rows.map((row) => [row.productId, row.count]));
+}
+
+/** The sets a player's real cards are from, newest first, for the Real tab's set filter. */
+export async function realCollectionSets(
+  db: DbExecutor,
+  userId: UserId,
+): Promise<Array<{ code: string; name: string }>> {
+  const rows = await db.execute<{ code: string; name: string }>(sql`
+    select s.code, s.name from card_sets s
+     where exists (select 1 from real_cards c join printings p on p.id = c.printing_id
+                    where c.user_id = ${userId} and p.set_code = s.code)
+     order by s.release_date desc, s.code
+  `);
+  return rows.rows;
 }
 
 /** One printing a preview line could be changed to (the printing menu). */
@@ -300,4 +322,18 @@ export async function printingChoices(
     choices.set(row.oracle_id, [...(choices.get(row.oracle_id) ?? []), choice]);
   }
   return choices;
+}
+
+/** Every printing of the same card as this one, for moving real copies between printings. */
+export async function printingsOfSameCard(
+  db: DbExecutor,
+  printingId: string,
+): Promise<PrintingChoice[]> {
+  const [row] = (
+    await db.execute<{ oracle_id: string }>(
+      sql`select oracle_id from printings where id = ${printingId}`,
+    )
+  ).rows;
+  if (row === undefined) return [];
+  return (await printingChoices(db, [row.oracle_id])).get(row.oracle_id) ?? [];
 }

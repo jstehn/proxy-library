@@ -12,6 +12,7 @@ import {
   companionsToEnable,
   isEnabledByDefault,
   isStillSettling,
+  REFERENCE_SETS_PER_RUN,
   referenceSetsToImport,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
@@ -150,7 +151,10 @@ export function makeSync(dependencies: CatalogDependencies) {
     // 4b. Every other paper set's printings, once, for real collections (design doc 16). After
     // the enabled sets, which may have just claimed some of these as supporting sets.
     const afterImports = await inTransaction(({ catalog }) => catalog.setStates());
-    for (const code of referenceSetsToImport(afterImports)) {
+    // A nightly run takes a few dozen, so no single night is long; a full run (an admin asked for
+    // it) takes every one still waiting.
+    const limit = kind === "full" ? Infinity : REFERENCE_SETS_PER_RUN;
+    for (const code of referenceSetsToImport(afterImports, limit)) {
       try {
         const setImport = await mtgjson.setFile(code);
         await inTransaction(({ catalog }) =>

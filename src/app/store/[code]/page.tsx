@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CardWithPreview } from "@/app/_components/card-preview";
 import { printingCards, type PrintingCard } from "@/modules/catalog";
+import { realProductCounts } from "@/modules/real-collection";
 import { storePage, type ProductForSale } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -10,9 +11,10 @@ import { KeyArt, ProductImage } from "@/ui/product-image";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
+import { RealProductForm } from "./real-product-form";
 
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
-  await requireActor();
+  const actor = await requireActor();
   const { code } = await props.params;
   const { db, clock } = getContainer();
   const page = await storePage(db, code);
@@ -28,6 +30,11 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   );
   if (page === null) notFound();
   const { set } = page;
+  const ownedForReal = await realProductCounts(
+    db,
+    actor.userId,
+    page.products.map((product) => product.id),
+  );
 
   // Group the products by category, keeping the query's order.
   const groups = new Map<string, ProductForSale[]>();
@@ -94,6 +101,11 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     </span>
                   )}
                   <BuyForm productId={product.id} productName={product.name} />
+                  <RealProductForm
+                    productId={product.id}
+                    productName={product.name}
+                    ownedForReal={ownedForReal.get(product.id) ?? 0}
+                  />
                   <ProductDetails product={product} />
                 </li>
               );
