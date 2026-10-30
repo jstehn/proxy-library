@@ -26,6 +26,8 @@ const options = (changes: Partial<ProxyOptions> = {}): ProxyOptions => ({
 });
 
 const line = (name: string, changes: Partial<ProxyLine> = {}): ProxyLine => ({
+  oracleId: `oracle-${name}`,
+  ownedReal: 0,
   printingId: `id-${name}`,
   name,
   quantity: 1,
@@ -66,6 +68,19 @@ describe("cardsToPrint", () => {
       "Delver of Secrets",
     ]);
     expect(cards.at(-1)?.hasBack).toBe(true);
+  });
+
+  it("leaves out copies your real cards cover, by card across its boards (design doc 16)", () => {
+    const withReal = [
+      line("Lightning Bolt", { quantity: 4, ownedReal: 2 }),
+      line("Duress", { quantity: 2, ownedReal: 3, board: "main" }),
+      line("Duress", { quantity: 2, ownedReal: 3, board: "side" }),
+    ];
+    const names = (options: ProxyOptions) =>
+      cardsToPrint(withReal, options).map((card) => card.name);
+    expect(names(DEFAULT_PROXY_OPTIONS)).toEqual(["Lightning Bolt", "Lightning Bolt", "Duress"]);
+    expect(names(options({ realCards: "print" }))).toHaveLength(8);
+    expect(names(options({ copies: "one" }))).toEqual([]);
   });
 
   it("follows the options: basics, one of each, no sideboard, fronts only", () => {

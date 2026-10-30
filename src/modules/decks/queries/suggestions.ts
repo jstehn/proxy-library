@@ -19,6 +19,7 @@ import {
 } from "../domain/suggest";
 import type { BrowseCard } from "./browse";
 import { deckView } from "./decks";
+import { ownedCopies } from "./owned";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each
@@ -52,6 +53,8 @@ export type SuggestionList = Readonly<{ owned: Suggestion[]; store: Suggestion[]
 type SuggestionContext = Readonly<{
   deckId: number;
   format: Format;
+  /** Whether real copies count as owned here (design doc 16). */
+  usesRealCards: boolean;
   /** Colors a suggestion's identity must stay within, or null for any. */
   colorLimit: Array<z.infer<typeof ColorSchema>> | null;
   /** Oracle cards already in the deck, never suggested. */
@@ -110,6 +113,7 @@ export async function suggestionContext(
   return {
     deckId,
     format: view.deck.format,
+    usesRealCards: view.deck.usesRealCards,
     colorLimit,
     inDeck: [...new Set(view.lines.map((line) => line.oracleId))],
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
@@ -168,6 +172,7 @@ type CandidateRow = {
   finish: string;
   price_cents: number | null;
   owned: number;
+  owned_real: number;
   other_decks: number;
 };
 
@@ -193,13 +198,13 @@ async function ownedCandidates(
   const rows = await db.execute<CandidateRow>(sql`
     with owned as (
       select p.oracle_id, sum(c.quantity)::int as owned,
+             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
              (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
              (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
-        from collection_cards c join printings p on p.id = c.printing_id
-       where c.user_id = ${userId}
+        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
        group by p.oracle_id
     )
-    select ${candidateColumns(context)}, owned.finish, owned.owned,
+    select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = p.id and s.finish = owned.finish
              order by s.day desc limit 1) as price_cents,
@@ -231,8 +236,9 @@ async function storeCandidates(
                as rarity_rank
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
        where ${fitsDeck(context)} and ${sharedCount(want)} > 0
-         and not exists (select 1 from collection_cards c join printings op on op.id = c.printing_id
-                          where c.user_id = ${userId} and op.oracle_id = p.oracle_id)
+         and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
+                           join printings op on op.id = c.printing_id
+                          where op.oracle_id = p.oracle_id)
        order by p.oracle_id, rarity_rank desc
     ),
     kept as (
@@ -255,7 +261,7 @@ async function storeCandidates(
         ) best on true
     )
     select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
-           0 as owned, 0 as other_decks
+           0 as owned, 0 as owned_real, 0 as other_decks
       from cheapest join printings p on p.id = cheapest.printing_id
   `);
   return rows.rows.map((row) => toCard(row, "store", context.format));
@@ -270,6 +276,7 @@ function toCard(row: CandidateRow, pool: "owned" | "store", format: Format): Sug
     manaValue: Number(row.mana_value),
     typeLine: row.type_line,
     owned: Number(row.owned),
+    ownedReal: Number(row.owned_real),
     inThisDeck: 0,
     otherDecks: Number(row.other_decks),
     misfit: null,
@@ -377,7 +384,7 @@ export async function similarCards(
   const [targetRow] = (
     await db.execute<CandidateRow>(sql`
       select ${candidateColumns(context)}, 'nonfoil' as finish, null as price_cents,
-             0 as owned, 0 as other_decks
+             0 as owned, 0 as owned_real, 0 as other_decks
         from printings p join card_sets s on s.code = p.set_code
        where p.oracle_id = ${oracleId}
        order by s.release_date desc limit 1

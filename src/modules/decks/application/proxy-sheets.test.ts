@@ -5,6 +5,8 @@ import { printedCard } from "../testing/printed-cards";
 import { makeProxySheets } from "./proxy-sheets";
 
 const line = (name: string, quantity: number, hasBack = false): ProxyLine => ({
+  oracleId: name,
+  ownedReal: 0,
   printingId: name,
   name,
   quantity,

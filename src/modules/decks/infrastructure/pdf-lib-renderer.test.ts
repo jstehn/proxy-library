@@ -11,6 +11,8 @@ import { pdfLibRenderer } from "./pdf-lib-renderer";
 import { readManaFont } from "./playtest-painter";
 
 const line = (printingId: string, quantity: number, hasBack = false): ProxyLine => ({
+  oracleId: printingId,
+  ownedReal: 0,
   printingId,
   name: printingId,
   quantity,

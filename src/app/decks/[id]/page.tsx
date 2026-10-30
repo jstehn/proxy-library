@@ -9,6 +9,7 @@ import { ManaStylesheet } from "@/ui/mana";
 import {
   deleteDeckAction,
   importListAction,
+  setUsesRealCardsAction,
   setVisibilityAction,
   updateDeckAction,
 } from "../actions";
@@ -81,7 +82,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const builderDeck = await loadBuilderDeck(deckId);
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
-  const builderKey = `${deck.format}|${deck.entries
+  const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
     .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}`)
     .join(",")}`;
 
@@ -130,6 +131,21 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           </button>
         </form>
       </header>
+      <form action={setUsesRealCardsAction} className="flex flex-wrap items-center gap-2 text-sm">
+        <input type="hidden" name="deckId" value={deck.id} />
+        <input type="hidden" name="usesRealCards" value={deck.usesRealCards ? "off" : "on"} />
+        <span className="text-zinc-500">
+          {deck.usesRealCards
+            ? "Using your real cards: cards you own for real count as owned here."
+            : "Game cards only: cards you own for real don't count here."}
+        </span>
+        <button
+          type="submit"
+          className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
+        >
+          {deck.usesRealCards ? "Stop using my real cards" : "Use my real cards"}
+        </button>
+      </form>
       {typeof searchParams.error === "string" && <Alert tone="error">{searchParams.error}</Alert>}
       {typeof searchParams.imported === "string" && (
         <Alert tone="success">{searchParams.imported}</Alert>

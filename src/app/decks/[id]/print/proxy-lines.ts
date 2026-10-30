@@ -33,6 +33,7 @@ const OptionsSchema = z.object({
   style: z.enum(["scan", "playtest"]).catch(defaults.style),
   artFilter: z.enum(["color", "grayscale", "edges", "none"]).catch(defaults.artFilter),
   stripes: z.enum(["on", "off"]).catch(defaults.stripes),
+  realCards: z.enum(["print", "leaveOut"]).catch(defaults.realCards),
 });
 
 /** The options in a query string such as `?paper=a4&bleed=fillGap`. */
@@ -55,9 +56,12 @@ export async function proxyDeck(
   const lines = view.lines.map((line): ProxyLine => {
     const card = cards.get(line.printingId);
     return {
+      oracleId: line.oracleId,
       printingId: line.printingId,
       name: line.name,
       quantity: line.quantity,
+      // Counted only when the deck uses real cards (design doc 16).
+      ownedReal: line.ownedReal,
       board: line.board,
       isBasicLand: line.isBasicLand,
       hasBack: card?.hasBackImage ?? false,

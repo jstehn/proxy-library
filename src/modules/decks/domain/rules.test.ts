@@ -135,7 +135,14 @@ function deck(
   return entries.reduce(
     (built, [oracleId, quantity, board = "main"]) =>
       withEntry(built, { oracleId, board, quantity }),
-    { id: DeckId.of(1), ownerId: UserId.of("jack"), name: "Test", format, entries: [] } as Deck,
+    {
+      id: DeckId.of(1),
+      ownerId: UserId.of("jack"),
+      name: "Test",
+      format,
+      usesRealCards: false,
+      entries: [],
+    } as Deck,
   );
 }
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import {

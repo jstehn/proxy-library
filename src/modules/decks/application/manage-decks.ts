@@ -67,7 +67,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
 
   async function updateDeck(
     actor: Actor,
-    input: { deckId: DeckId; name?: string; format?: Format },
+    input: { deckId: DeckId; name?: string; format?: Format; usesRealCards?: boolean },
   ): Promise<Result<void, UpdateDeckError>> {
     const name = input.name === undefined ? ok(undefined) : checkName(input.name);
     if (!name.ok) return name;
@@ -75,7 +75,13 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
       await decks.save(
-        { ...deck, name: name.value ?? deck.name, format: input.format ?? deck.format },
+        {
+          ...deck,
+          name: name.value ?? deck.name,
+          format: input.format ?? deck.format,
+          // "Use my real cards" (design doc 16): only this deck's counting changes.
+          usesRealCards: input.usesRealCards ?? deck.usesRealCards,
+        },
         clock.now(),
       );
       return ok();

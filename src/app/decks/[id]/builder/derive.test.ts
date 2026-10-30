@@ -16,6 +16,7 @@ const rules = (name: string, overrides: Partial<CardRules> = {}): CardRules => (
 const gridCard = (name: string, card: Partial<CardRules> = {}): BrowseCard => ({
   oracleId: name,
   printingId: `printing-${name}`,
+  ownedReal: 0,
   name,
   manaCost: "{1}{G}",
   manaValue: 2,

@@ -98,6 +98,16 @@ const COPIES: Question<"copies"> = {
     { value: "one", label: "One of each" },
   ],
 };
+/** Asked when the deck counts real copies (design doc 16). */
+const REAL_CARDS: Question<"realCards"> = {
+  key: "realCards",
+  title: "Cards you own for real",
+  choices: [
+    { value: "leaveOut", label: "Leave them out" },
+    { value: "print", label: "Print them too" },
+  ],
+  help: "A deck needing 4 copies of a card when you own 2 for real prints 2, counting every printing of it.",
+};
 const GAP: Question<"gapMillimeters"> = {
   key: "gapMillimeters",
   title: "Gap between cards",
@@ -150,6 +160,7 @@ const QUESTIONS = [
 export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }) {
   const [options, setOptions] = useState<ProxyOptions>(DEFAULT_PROXY_OPTIONS);
   const summary = proxySummary(props.lines, options);
+  const hasRealCards = props.lines.some((line) => line.ownedReal > 0);
   const firstPage = proxyPages(cardsToPrint(props.lines, options), options)[0];
   const query = new URLSearchParams(
     Object.entries(options).map(([key, value]) => [key, String(value)]),
@@ -243,6 +254,13 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
               />
             ))}
           </div>
+        )}
+        {hasRealCards && (
+          <OptionGroup
+            question={REAL_CARDS}
+            selected={options.realCards}
+            onChoose={(value) => choose("realCards", value)}
+          />
         )}
         {QUESTIONS.map((question) => (
           <OptionGroup

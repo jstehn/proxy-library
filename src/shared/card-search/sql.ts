@@ -22,6 +22,11 @@ export type SearchContext = Readonly<{
   userId: UserId;
   /** The SQL that answers `is:foil` here: one of the FOIL_* helpers below. */
   foil: SQL;
+  /**
+   * A deck with "Use my real cards" on (design doc 16): `own` counts real copies too. `real`
+   * always counts only real copies.
+   */
+  ownIncludesReal?: boolean;
 }>;
 
 /** Store: the printing is sold in foil or etched. */
@@ -32,12 +37,25 @@ export function foilCopy(column: SQL): SQL {
   return sql`${column} in ('foil', 'etched')`;
 }
 
-/** Deck builder: the player owns a foil or etched copy of this printing. */
-export function foilOwnedBy(userId: UserId): SQL {
-  return sql`exists (select 1 from collection_cards owned_foil
+/**
+ * Deck builder: the player owns a foil or etched copy of this printing (a real copy counts in a
+ * deck that uses real cards, design doc 16).
+ */
+export function foilOwnedBy(userId: UserId, options: { includeReal?: boolean } = {}): SQL {
+  const owns = (table: SQL) => sql`exists (select 1 from ${table} owned_foil
                       where owned_foil.user_id = ${userId}
                         and owned_foil.printing_id = p.id
                         and owned_foil.finish in ('foil', 'etched'))`;
+  if (!options.includeReal) return owns(sql`collection_cards`);
+  return sql`(${owns(sql`collection_cards`)} or ${owns(sql`real_cards`)})`;
+}
+
+/** SQL: how many copies of printing "p"'s card (any printing) the player has in `table`. */
+function copiesOfCard(table: SQL, userId: UserId): SQL {
+  return sql`(select coalesce(sum(owned.quantity), 0) from ${table} owned
+               join printings owned_printing on owned_printing.id = owned.printing_id
+              where owned.user_id = ${userId}
+                and owned_printing.oracle_id = p.oracle_id)`;
 }
 
 /** The search as one SQL condition. */
@@ -154,11 +172,15 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
         comparison,
       );
     }
-    case "own":
-      return sql`(select coalesce(sum(owned.quantity), 0) from collection_cards owned
-                    join printings owned_printing on owned_printing.id = owned.printing_id
-                   where owned.user_id = ${context.userId}
-                     and owned_printing.oracle_id = p.oracle_id)
+    case "own": {
+      const game = copiesOfCard(sql`collection_cards`, context.userId);
+      const total = context.ownIncludesReal
+        ? sql`(${game} + ${copiesOfCard(sql`real_cards`, context.userId)})`
+        : game;
+      return sql`${total} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+    }
+    case "real":
+      return sql`${copiesOfCard(sql`real_cards`, context.userId)}
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "color":
       // Scryfall's default for colors is "at least these" (c:rw finds Boros and Mardu cards).

@@ -48,6 +48,8 @@ export type ProxyOptions = Readonly<{
   artFilter: "color" | "grayscale" | "edges" | "none";
   /** Playtest only: stripes in the card's colours behind the frame. */
   stripes: "on" | "off";
+  /** Print every copy, or only the copies your real cards don't cover (design doc 16). */
+  realCards: "print" | "leaveOut";
 }>;
 
 /** The defaults agreed in design doc 14 (section 3 and decision 4). */
@@ -65,10 +67,14 @@ export const DEFAULT_PROXY_OPTIONS: ProxyOptions = {
   style: "scan",
   artFilter: "color",
   stripes: "on",
+  // Proxies stand in for cards you don't have, so real copies are left out (design doc 16).
+  realCards: "leaveOut",
 };
 
 /** What the sheet needs to know about one deck line. */
 export type ProxyLine = Readonly<{
+  /** The card (any printing), so real copies count across printings and boards. */
+  oracleId: string;
   printingId: string;
   name: string;
   quantity: number;
@@ -80,6 +86,8 @@ export type ProxyLine = Readonly<{
   isFoil: boolean;
   /** The printing's text, for playtest proxies. */
   printed: PrintedCard;
+  /** Real copies of this card the deck counts (the same number on each of its lines). */
+  ownedReal: number;
 }>;
 
 /** One copy to print. */
@@ -91,13 +99,21 @@ export type ProxyCard = Readonly<{
   printed: PrintedCard;
 }>;
 
-/** The copies to print, in deck order, following the options. */
+/**
+ * The copies to print, in deck order, following the options. Leaving out real cards takes them
+ * off by card, across its lines: a deck needing 4 Bolts when you have 2 real prints 2.
+ */
 export function cardsToPrint(lines: readonly ProxyLine[], options: ProxyOptions): ProxyCard[] {
+  const realLeft = new Map(lines.map((line) => [line.oracleId, line.ownedReal]));
   return lines
     .filter((line) => options.basicLands === "include" || !line.isBasicLand)
     .filter((line) => options.cards === "all" || line.board !== "side")
     .flatMap((line) => {
-      const copies = options.copies === "one" ? 1 : line.quantity;
+      const wanted = options.copies === "one" ? 1 : line.quantity;
+      const covered =
+        options.realCards === "leaveOut" ? Math.min(wanted, realLeft.get(line.oracleId) ?? 0) : 0;
+      realLeft.set(line.oracleId, (realLeft.get(line.oracleId) ?? 0) - covered);
+      const copies = wanted - covered;
       const card: ProxyCard = {
         printingId: line.printingId,
         name: line.name,

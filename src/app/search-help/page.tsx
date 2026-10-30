@@ -67,7 +67,16 @@ const KEYWORDS: readonly Row[] = [
     finds: `${FRAME_VERSIONS.join(", ")}, or an effect such as showcase, extendedart, inverted`,
     example: "frame:showcase",
   },
-  { write: "own owned", finds: "how many copies you own (any printing)", example: "own=0  own>=4" },
+  {
+    write: "own owned",
+    finds: "how many copies you own (any printing); in a deck using your real cards, real ones too",
+    example: "own=0  own>=4",
+  },
+  {
+    write: "real",
+    finds: "how many copies you own for real (any printing)",
+    example: "real>=1  real=0",
+  },
 ];
 
 const IS_GROUPS = ["finish", "layout", "treatment", "kind"] as const;

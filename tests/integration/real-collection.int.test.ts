@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId, SealedProductId } from "@/modules/catalog";
+import { browseCollection, decksFor, deckView, makeDecks } from "@/modules/decks";
 import { makeResetPlayer } from "@/modules/reset";
+import { makeStore } from "@/modules/store";
 import {
   isRealCollectionShared,
   makeRealCollection,
@@ -184,5 +186,81 @@ describe("isolation (rule 9)", () => {
     await importText(fixture("ours.csv"));
     await db.execute(sql`delete from players where user_id = 'jack'`);
     expect(await count("real_cards", "user_id = 'jack'")).toBe(0);
+  });
+});
+
+describe("decks with real cards (rule 2)", () => {
+  const decks = makeDecks({ unitOfWork, clock });
+  const store = makeStore({ unitOfWork, clock });
+
+  async function deckOf(text: string) {
+    const created = await decks.createDeck(jack, { name: "Real", format: "casual" });
+    if (!created.ok) throw new Error(created.error.kind);
+    const imported = await decks.importList(jack, { deckId: created.value, text });
+    if (!imported.ok) throw new Error(imported.error.kind);
+    return created.value;
+  }
+
+  it("new decks use real cards; turned off, a deck is short exactly as before", async () => {
+    const deckId = await deckOf("4 Carrot Cake");
+    const shortBy = async () => (await decksFor(db, jack.userId))[0].short;
+    expect((await decksFor(db, jack.userId))[0].usesRealCards).toBe(true);
+    expect(await shortBy()).toBe(4);
+
+    await realCollection.setRealCopies(jack, {
+      printingId: await printing("BLB", "7"),
+      finish: "nonfoil",
+      quantity: 3,
+    });
+    expect(await shortBy()).toBe(1);
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines[0]).toMatchObject({ owned: 3, ownedReal: 3 });
+
+    await decks.updateDeck(jack, { deckId, usesRealCards: false });
+    expect(await shortBy()).toBe(4);
+    expect((await deckView(db, jack.userId, deckId))?.lines[0]).toMatchObject({
+      owned: 0,
+      ownedReal: 0,
+    });
+  });
+
+  it("the card pool shows real cards, and `real` / `own` search them", async () => {
+    const deckId = await deckOf("1 Banishing Light");
+    await realCollection.setRealCopies(jack, {
+      printingId: await printing("BLB", "7"),
+      finish: "nonfoil",
+      quantity: 2,
+    });
+    const browse = (search: string) =>
+      browseCollection(db, jack.userId, {
+        deckId,
+        search,
+        colors: null,
+        includeColorless: true,
+        onlyLegal: false,
+        sort: "name",
+        page: 1,
+      });
+    expect(
+      (await browse(""))?.cards.map((card) => [card.name, card.owned, card.ownedReal]),
+    ).toEqual([["Carrot Cake", 2, 2]]);
+    expect((await browse("real>=2"))?.total).toBe(1);
+    expect((await browse("own>=2"))?.total).toBe(1);
+  });
+
+  it("a real card can't be sold to the store: it only sees game copies", async () => {
+    const carrot = await printing("BLB", "7");
+    await realCollection.setRealCopies(jack, {
+      printingId: carrot,
+      finish: "nonfoil",
+      quantity: 2,
+    });
+    const sold = await store.sellSingle(jack, {
+      printingId: carrot,
+      finish: "nonfoil",
+      quantity: 1,
+    });
+    expect(sold.ok).toBe(false);
+    expect(await count("real_cards", "user_id = 'jack'")).toBe(1);
   });
 });

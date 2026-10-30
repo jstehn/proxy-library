@@ -15,6 +15,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
     name: string;
     format: Format;
     origin?: DeckOrigin | null;
+    usesRealCards?: boolean;
     at: Date;
   }) {
     const [row] = await db
@@ -24,6 +25,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         name: input.name,
         format: input.format,
         origin: input.origin ? DeckOrigin.toText(input.origin) : null,
+        // On for every new deck (design doc 16, section 7); decks made before it stay off.
+        usesRealCards: input.usesRealCards ?? true,
         createdAt: input.at,
         updatedAt: input.at,
       })
@@ -49,6 +52,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
       ownerId: UserId.of(row.ownerId),
       name: row.name,
       format: z.enum(FORMATS).parse(row.format),
+      usesRealCards: row.usesRealCards,
       entries: entries.map((entry) => ({
         oracleId: entry.oracleId,
         board: z.enum(BOARDS).parse(entry.board),
@@ -62,7 +66,12 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
   async function save(deck: Deck, at: Date): Promise<void> {
     await db
       .update(decks)
-      .set({ name: deck.name, format: deck.format, updatedAt: at })
+      .set({
+        name: deck.name,
+        format: deck.format,
+        usesRealCards: deck.usesRealCards,
+        updatedAt: at,
+      })
       .where(eq(decks.id, deck.id));
     // Replace the entries: simpler than working out what changed, and a deck is small.
     await db.delete(deckEntries).where(eq(deckEntries.deckId, deck.id));

@@ -98,6 +98,8 @@ describe("playtest proxies", () => {
       const card = cards.get(id);
       if (card === undefined) throw new Error(`no card ${id}`);
       return {
+        oracleId: id,
+        ownedReal: 0,
         printingId: id,
         name: card.name,
         quantity: 2,

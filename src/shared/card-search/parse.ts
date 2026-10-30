@@ -43,7 +43,8 @@ export type SearchField =
   | "date"
   | "border"
   | "frame"
-  | "own";
+  | "own"
+  | "real";
 
 export type Comparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | ":";
 
@@ -120,6 +121,7 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   frame: "frame",
   own: "own",
   owned: "own",
+  real: "real",
 };
 
 const NUMERIC_FIELDS = new Set<SearchField>([
@@ -131,6 +133,7 @@ const NUMERIC_FIELDS = new Set<SearchField>([
   "usd",
   "year",
   "own",
+  "real",
 ]);
 /** Text fields that accept a /regular expression/ instead of words. */
 const PATTERN_FIELDS = new Set<SearchField>(["name", "oracle", "type", "artist"]);

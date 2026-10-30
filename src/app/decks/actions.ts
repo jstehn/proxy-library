@@ -51,6 +51,20 @@ export async function updateDeckAction(formData: FormData): Promise<void> {
   redirect(deckPath(deckId));
 }
 
+/** "Use my real cards" (design doc 16): whether real copies count as owned in this deck. */
+export async function setUsesRealCardsAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  const deckId = Number(formData.get("deckId"));
+  const result = await getContainer().decks.updateDeck(actor, {
+    deckId: DeckId.of(deckId),
+    usesRealCards: formData.get("usesRealCards") === "on",
+  });
+  if (!result.ok) redirect("/decks");
+  revalidatePath("/decks");
+  revalidatePath(deckPath(deckId));
+  redirect(deckPath(deckId));
+}
+
 export async function deleteDeckAction(formData: FormData): Promise<void> {
   const actor = await requireActor();
   await getContainer().decks.deleteDeck(actor, DeckId.of(Number(formData.get("deckId"))));

@@ -14,6 +14,8 @@ export interface DeckRepository {
     name: string;
     format: Format;
     origin?: DeckOrigin | null;
+    /** Defaults to on (design doc 16). */
+    usesRealCards?: boolean;
     at: Date;
   }): Promise<DeckId>;
   countFor(ownerId: UserId): Promise<number>;

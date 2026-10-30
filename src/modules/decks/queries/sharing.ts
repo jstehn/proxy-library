@@ -161,14 +161,20 @@ export async function cardsToGetFor(db: DbExecutor, userId: UserId): Promise<Car
     deck_name: string;
     oracle_id: string;
     quantity: number;
+    real_copies: number;
   }>(sql`
-    select e.deck_id, d.name as deck_name, e.oracle_id, sum(e.quantity)::int as quantity
+    select e.deck_id, d.name as deck_name, e.oracle_id, sum(e.quantity)::int as quantity,
+           -- Real copies this deck counts (design doc 16, rule 2): none unless its switch is on.
+           case when d.uses_real_cards then
+             coalesce((select sum(r.quantity) from real_cards r join printings rp on rp.id = r.printing_id
+                        where r.user_id = ${userId} and rp.oracle_id = e.oracle_id), 0)
+           else 0 end::int as real_copies
       from deck_entries e join decks d on d.id = e.deck_id
      where d.owner_id = ${userId}
        -- Basic lands are never short (design doc 09, rule 1).
        and not exists (select 1 from printings p
                         where p.oracle_id = e.oracle_id and p.type_line ~ '^Basic\\y.*\\yLand\\y')
-     group by e.deck_id, d.name, e.oracle_id
+     group by e.deck_id, d.name, d.uses_real_cards, e.oracle_id
   `);
   if (needs.rows.length === 0) return { cards: [], totalCents: 0, listText: "" };
   const oracleIds = [...new Set(needs.rows.map((row) => row.oracle_id))];
@@ -198,11 +204,13 @@ export async function cardsToGetFor(db: DbExecutor, userId: UserId): Promise<Car
   const owned = new Map(ownedRows.rows.map((row) => [row.oracle_id, row.owned]));
   const cardInfo = new Map(cardRows.rows.map((row) => [row.oracle_id, row]));
   const deckNames = new Map(needs.rows.map((row) => [Number(row.deck_id), row.deck_name]));
+  // A deck that uses real cards needs only what its real copies don't cover; the rest is bought
+  // as game copies, which every deck shares.
   const missing = cardsToGet(
     needs.rows.map((row) => ({
       deckId: Number(row.deck_id),
       oracleId: row.oracle_id,
-      quantity: row.quantity,
+      quantity: Math.max(0, row.quantity - row.real_copies),
     })),
     owned,
   );

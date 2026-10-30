@@ -27,6 +27,7 @@ export function inMemoryDeckRepository() {
         ownerId: input.ownerId,
         name: input.name,
         format: input.format,
+        usesRealCards: input.usesRealCards ?? true,
         entries: [],
       });
       return id;

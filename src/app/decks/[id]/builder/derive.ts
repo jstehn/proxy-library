@@ -39,6 +39,11 @@ export function problemsOf(
   }));
 }
 
+/** "4", or "3 game · 1 real" when some of the copies are real (design doc 16). */
+export function ownedWords(owned: number, ownedReal: number): string {
+  return ownedReal === 0 ? String(owned) : `${owned - ownedReal} game · ${ownedReal} real`;
+}
+
 /** The commanders' combined color identity, or null outside Commander or without one. */
 export function commanderColorsOf(
   format: Format,
@@ -73,6 +78,7 @@ export function provisionalLine(
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,
     owned: card.owned,
+    ownedReal: card.ownedReal,
     isBasicLand: card.rules.isBasicLand,
     otherDecks: [],
   };

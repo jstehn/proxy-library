@@ -56,6 +56,8 @@ export type Deck = Readonly<{
   ownerId: UserId;
   name: string;
   format: Format;
+  /** "Use my real cards" (design doc 16, rule 2): real copies count as owned in this deck. */
+  usesRealCards: boolean;
   entries: readonly DeckEntry[];
 }>;
 

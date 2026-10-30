@@ -6,6 +6,7 @@ import { FORMATS } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { ownedCopies } from "./owned";
 
 // Browsing your collection while building a deck (design doc 14, section 2.1): one entry per
 // card you own (shown as the printing you have most copies of), with what the deck needs to know.
@@ -42,7 +43,10 @@ export type BrowseCard = Readonly<{
   manaCost: string | null;
   manaValue: number;
   typeLine: string;
+  /** Copies counted as owned in this deck: game copies, plus real ones when it uses them. */
   owned: number;
+  /** How many of `owned` are real copies (design doc 16). */
+  ownedReal: number;
   inThisDeck: number;
   /** How many of your other decks use this card (ownership is shared between decks). */
   otherDecks: number;
@@ -75,10 +79,19 @@ export async function deckBrowseContext(
   db: DbExecutor,
   userId: UserId,
   deckId: number,
-): Promise<{ format: (typeof FORMATS)[number]; commanderColors: Color[] | null } | null> {
+): Promise<{
+  format: (typeof FORMATS)[number];
+  commanderColors: Color[] | null;
+  usesRealCards: boolean;
+} | null> {
   const [row] = (
-    await db.execute<{ format: string; colors: string[] | null; commanders: number }>(sql`
-      select d.format,
+    await db.execute<{
+      format: string;
+      colors: string[] | null;
+      commanders: number;
+      uses_real_cards: boolean;
+    }>(sql`
+      select d.format, d.uses_real_cards,
              (select array_agg(distinct color) from deck_entries e
                 join lateral (select p.color_identity from printings p
                                where p.oracle_id = e.oracle_id limit 1) card on true
@@ -95,7 +108,7 @@ export async function deckBrowseContext(
     format === "commander" && row.commanders > 0
       ? (row.colors ?? []).map((color) => ColorSchema.parse(color))
       : null;
-  return { format, commanderColors };
+  return { format, commanderColors, usesRealCards: row.uses_real_cards };
 }
 
 const ORDER: Readonly<Record<BrowseSort, SQL>> = {
@@ -147,6 +160,8 @@ export async function browseCollection(
       ? sql`true`
       : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
   const offset = (Math.max(1, input.page) - 1) * BROWSE_PAGE_SIZE;
+  // The cards you own for this deck: real ones too when it uses them (design doc 16, rule 2).
+  const owned = ownedCopies(userId, sql`${context.usesRealCards}`);
 
   const rows = await db.execute<{
     oracle_id: string;
@@ -156,6 +171,7 @@ export async function browseCollection(
     mana_value: number;
     type_line: string;
     owned: number;
+    owned_real: number;
     in_this_deck: number;
     other_decks: number;
     fits_identity: boolean;
@@ -174,16 +190,16 @@ export async function browseCollection(
   }>(sql`
     with owned as (
       select p.oracle_id, sum(c.quantity)::int as owned,
+             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
              (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
              (select max(a.created_at) from acquisitions a
                join printings ap on ap.id = a.printing_id
               where a.user_id = ${userId} and ap.oracle_id = p.oracle_id) as newest
-        from collection_cards c join printings p on p.id = c.printing_id
-       where c.user_id = ${userId}
+        from ${owned} c join printings p on p.id = c.printing_id
        group by p.oracle_id
     )
     select owned.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-           owned.owned,
+           owned.owned, owned.owned_real,
            coalesce((select sum(e.quantity) from deck_entries e
                       where e.deck_id = ${input.deckId} and e.oracle_id = owned.oracle_id), 0)::int
              as in_this_deck,
@@ -206,13 +222,17 @@ export async function browseCollection(
       -- The finish a new deck line shows, as the deck view picks it when nothing is pinned.
       cross join lateral (
         select coalesce(
-                 (select c.finish from collection_cards c
-                   where c.user_id = ${userId} and c.printing_id = p.id
+                 (select c.finish from ${owned} c
+                   where c.printing_id = p.id
                    order by c.quantity desc limit 1),
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown
-     where ${searchCondition(parsed.node, { userId, foil: foilOwnedBy(userId) })} and ${colorFilter}
+     where ${searchCondition(parsed.node, {
+       userId,
+       foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
+       ownIncludesReal: context.usesRealCards,
+     })} and ${colorFilter}
        and (${!input.onlyLegal} or ${legal})
      order by ${ORDER[input.sort]}
      limit ${BROWSE_PAGE_SIZE} offset ${offset}
@@ -228,6 +248,7 @@ export async function browseCollection(
       manaValue: Number(row.mana_value),
       typeLine: row.type_line,
       owned: row.owned,
+      ownedReal: row.owned_real,
       inThisDeck: row.in_this_deck,
       otherDecks: row.other_decks,
       misfit: !row.fits_identity ? "color" : !row.is_legal ? "legality" : null,

@@ -5,6 +5,7 @@ import type { Board, SuggestionCard, SuggestionList } from "@/modules/decks";
 import type { Tag } from "@/shared/card-search";
 import { TAG_LABELS } from "../../labels";
 import { SuggestionRow } from "./suggestions";
+import { ownedWords } from "./derive";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -13,6 +14,8 @@ export type Selection = Readonly<{
   printingId: string;
   name: string;
   owned: number;
+  /** How many of `owned` are real copies (design doc 16). */
+  ownedReal: number;
   /** Copies in this deck per board. */
   inDeck: Readonly<Partial<Record<Board, number>>>;
   otherDecks: number;
@@ -81,7 +84,7 @@ export function SelectedCard(props: {
             )}
           </div>
           <dl className="flex flex-wrap gap-x-3 gap-y-0.5">
-            <Fact label="You own" value={String(selection.owned)} />
+            <Fact label="You own" value={ownedWords(selection.owned, selection.ownedReal)} />
             <Fact label="In this deck" value={String(inDeck)} />
             {selection.otherDecks > 0 && (
               <Fact label="Other decks using it" value={String(selection.otherDecks)} />

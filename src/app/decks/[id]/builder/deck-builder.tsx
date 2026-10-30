@@ -21,7 +21,7 @@ import {
   type BuilderDeck,
 } from "./actions";
 import { DeckList } from "./deck-list";
-import { commanderColorsOf, problemsOf, provisionalLine } from "./derive";
+import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { TestHandPanel } from "./test-hand";
 import { SelectedCard, type Selection } from "./selected-card";
@@ -272,6 +272,7 @@ export function DeckBuilder(props: {
       printingId: card.printingId,
       name: card.name,
       owned: card.owned,
+      ownedReal: card.ownedReal,
       inDeck: inDeck(card.oracleId),
       otherDecks: card.otherDecks,
       misfit: card.misfit,
@@ -299,6 +300,7 @@ export function DeckBuilder(props: {
       printingId: line.printingId,
       name: line.name,
       owned: line.owned,
+      ownedReal: line.ownedReal,
       inDeck: inDeck(line.oracleId),
       otherDecks: line.otherDecks.length,
       misfit: null,
@@ -799,7 +801,7 @@ function GridCard(props: {
             )}
           </span>
           <span className="block text-xs text-zinc-500">
-            own {card.owned}
+            own {ownedWords(card.owned, card.ownedReal)}
             {card.otherDecks > 0 &&
               ` · in ${card.otherDecks} other ${card.otherDecks === 1 ? "deck" : "decks"}`}
           </span>

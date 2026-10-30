@@ -12,6 +12,7 @@ import {
   type Format,
 } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
+import { ownedCopies } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
@@ -30,6 +31,8 @@ export type DeckSummary = Readonly<{
   origin: DeckOrigin | null;
   /** Whether the playgroup can see it (design doc 21). */
   visibility: Visibility;
+  /** "Use my real cards" (design doc 16). */
+  usesRealCards: boolean;
 }>;
 
 /** A player's decks, most recently changed first, with how many cards each is short. */
@@ -43,11 +46,13 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     updated_at: Date;
     origin: string | null;
     visibility: string;
+    uses_real_cards: boolean;
   }>(sql`
     with owned as (
-      select p.oracle_id, sum(c.quantity) as quantity
-        from collection_cards c join printings p on p.id = c.printing_id
-       where c.user_id = ${userId}
+      select p.oracle_id,
+             sum(c.quantity) filter (where not c.is_real) as game,
+             sum(c.quantity) filter (where c.is_real) as real
+        from ${ownedCopies(userId, sql`true`)} c join printings p on p.id = c.printing_id
        group by p.oracle_id
     ),
     basics as (select distinct p.oracle_id from printings p where ${IS_BASIC_LAND}),
@@ -57,9 +62,11 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
        where d.owner_id = ${userId}
        group by e.deck_id, e.oracle_id
     )
-    select d.id, d.name, d.format, d.updated_at, d.origin, d.visibility,
+    select d.id, d.name, d.format, d.updated_at, d.origin, d.visibility, d.uses_real_cards,
            coalesce((select sum(e.quantity) from deck_entries e where e.deck_id = d.id), 0)::int as cards,
-           coalesce((select sum(greatest(0, n.quantity - coalesce(o.quantity, 0)))
+           -- Real copies count only in decks with the switch on (design doc 16, rule 2).
+           coalesce((select sum(greatest(0, n.quantity - coalesce(o.game, 0)
+                                            - case when d.uses_real_cards then coalesce(o.real, 0) else 0 end))
                        from needs n left join owned o on o.oracle_id = n.oracle_id
                       where n.deck_id = d.id
                         and n.oracle_id not in (select oracle_id from basics)), 0)::int as short
@@ -76,6 +83,7 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     updatedAt: new Date(row.updated_at).toISOString(),
     origin: DeckOrigin.parse(row.origin),
     visibility: z.enum(VISIBILITIES).parse(row.visibility),
+    usesRealCards: row.uses_real_cards,
   }));
 }
 
@@ -100,7 +108,10 @@ export type DeckLine = Readonly<{
   priceCents: number | null;
   setCode: string;
   collectorNumber: string;
+  /** Copies counted as owned: game copies, plus real ones when the deck uses them. */
   owned: number;
+  /** How many of `owned` are real copies (design doc 16: "3 game · 1 real"). */
+  ownedReal: number;
   isBasicLand: boolean;
   /** Your other decks that also use this card (shared ownership, decided before the run). */
   otherDecks: string[];
@@ -122,11 +133,19 @@ export async function deckView(
   deckId: number,
 ): Promise<DeckView | null> {
   const [deckRow] = (
-    await db.execute<{ id: number; owner_id: string; name: string; format: string }>(sql`
-      select id, owner_id, name, format from decks where id = ${deckId} and owner_id = ${userId}
+    await db.execute<{
+      id: number;
+      owner_id: string;
+      name: string;
+      format: string;
+      uses_real_cards: boolean;
+    }>(sql`
+      select id, owner_id, name, format, uses_real_cards from decks
+       where id = ${deckId} and owner_id = ${userId}
     `)
   ).rows;
   if (deckRow === undefined) return null;
+  const owned = ownedCopies(userId, sql`${deckRow.uses_real_cards}`);
 
   const rows = await db.execute<{
     oracle_id: string;
@@ -150,6 +169,7 @@ export async function deckView(
     color_identity: string[];
     legalities: Record<string, string> | null;
     owned: number;
+    owned_real: number;
     other_decks: string[] | null;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
@@ -165,8 +185,10 @@ export async function deckView(
            shown.set_code, shown.collector_number,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
            newest.color_identity, newest.legalities,
-           coalesce((select sum(c.quantity) from collection_cards c join printings p on p.id = c.printing_id
-                      where c.user_id = ${userId} and p.oracle_id = e.oracle_id), 0)::int as owned,
+           coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
+                      where p.oracle_id = e.oracle_id), 0)::int as owned,
+           coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
+                      where c.is_real and p.oracle_id = e.oracle_id), 0)::int as owned_real,
            (select array_agg(distinct d2.name) from deck_entries e2 join decks d2 on d2.id = e2.deck_id
              where d2.owner_id = ${userId} and e2.oracle_id = e.oracle_id and d2.id <> e.deck_id) as other_decks
       from deck_entries e
@@ -182,8 +204,8 @@ export async function deckView(
          order by p.legalities is not null desc, s.release_date desc limit 1
       ) newest on true
       left join lateral (
-        select c.printing_id, c.finish from collection_cards c join printings p on p.id = c.printing_id
-         where c.user_id = ${userId} and p.oracle_id = e.oracle_id
+        select c.printing_id, c.finish from ${owned} c join printings p on p.id = c.printing_id
+         where p.oracle_id = e.oracle_id
          order by c.quantity desc limit 1
       ) owned_printing on true
       join lateral (
@@ -223,6 +245,7 @@ export async function deckView(
       setCode: row.set_code,
       collectorNumber: row.collector_number,
       owned: row.owned,
+      ownedReal: row.owned_real,
       isBasicLand: row.is_basic_land,
       otherDecks: row.other_decks ?? [],
     };
@@ -233,6 +256,7 @@ export async function deckView(
     ownerId: UserId.of(deckRow.owner_id),
     name: deckRow.name,
     format: z.enum(FORMATS).parse(deckRow.format),
+    usesRealCards: deckRow.uses_real_cards,
     entries: rows.rows.map((row) => ({
       oracleId: row.oracle_id,
       board: z.enum(BOARDS).parse(row.board),
