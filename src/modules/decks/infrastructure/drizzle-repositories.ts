@@ -3,7 +3,14 @@ import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
-import type { CardLookup, CardQuery, DeckRepository, ResolvedCard } from "../application/ports";
+import type {
+  CardLookup,
+  CardQuery,
+  DeckRepository,
+  ResolvedCard,
+  ResolveOptions,
+} from "../application/ports";
+import { MOST_SPECIAL_FIRST, ownedCopies } from "../queries/owned";
 import { BOARDS, DeckId, DeckOrigin, FORMATS, type Deck, type Format } from "../domain/deck";
 import { deckEntries, decks } from "./schema";
 
@@ -108,28 +115,51 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
   async function resolve(
     ownerId: UserId,
     queries: readonly CardQuery[],
+    options: ResolveOptions,
   ): Promise<Map<number, ResolvedCard>> {
     const found = new Map<number, ResolvedCard>();
+    // The copies that count as this player's in the deck (real ones only if it uses them).
+    const owned = ownedCopies(ownerId, sql`${options.includeReal}`);
     // One small query per line: a pasted deck is at most about a hundred lines.
     for (const [index, query] of queries.entries()) {
+      const setCode = query.setCode ?? "";
+      const collectorNumber = query.collectorNumber ?? "";
       const [row] = (
-        await db.execute<{ oracle_id: string; id: string; finish: string }>(sql`
-          select p.oracle_id, p.id,
-                 coalesce(owned.finish, case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end) as finish
-            from printings p
-            join card_sets s on s.code = p.set_code
-            left join lateral (
-              select c.finish, c.quantity from collection_cards c
-               where c.user_id = ${ownerId} and c.printing_id = p.id
-               order by c.quantity desc limit 1
-            ) owned on true
-           where lower(p.name) = lower(${query.name})
-              or lower(split_part(p.name, ' // ', 1)) = lower(${query.name})
-           order by (p.set_code = ${query.setCode ?? ""} and p.collector_number = ${query.collectorNumber ?? ""}) desc,
-                    p.set_code = ${query.setCode ?? ""} desc,
-                    owned.quantity is not null desc,
-                    s.release_date desc, p.id
-           limit 1
+        await db.execute<{ oracle_id: string; id: string; finish: string; named: boolean }>(sql`
+          with candidates as (
+            select p.* from printings p
+             where lower(p.name) = lower(${query.name})
+                or lower(split_part(p.name, ' // ', 1)) = lower(${query.name})
+          ),
+          -- The printing the line names: set and number, or just the set.
+          named as (
+            select p.id from candidates p join card_sets s on s.code = p.set_code
+             where p.set_code = ${setCode}
+             order by (p.collector_number = ${collectorNumber}) desc, s.release_date desc, p.id
+             limit 1
+          ),
+          -- Otherwise your most special copy (design doc 23, section 14).
+          special as (
+            select c.printing_id as id, c.finish from ${owned} c
+              join candidates p on p.id = c.printing_id
+             order by ${MOST_SPECIAL_FIRST} limit 1
+          ),
+          -- Otherwise the newest printing.
+          newest as (
+            select p.id from candidates p join card_sets s on s.code = p.set_code
+             order by s.release_date desc, p.id limit 1
+          ),
+          chosen as (
+            select coalesce((select id from named), (select id from special), (select id from newest)) as id
+          )
+          select p.oracle_id, p.id, (select id from named) is not null as named,
+                 coalesce(
+                   -- your most special copy of the chosen printing, then its usual finish
+                   (select c.finish from ${owned} c where c.printing_id = p.id
+                     order by ${MOST_SPECIAL_FIRST} limit 1),
+                   case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
+                 ) as finish
+            from chosen join printings p on p.id = chosen.id
         `)
       ).rows;
       if (row !== undefined) {
@@ -137,6 +167,7 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
           oracleId: row.oracle_id,
           printingId: PrintingId.of(row.id),
           finish: FinishSchema.parse(row.finish),
+          namedPrinting: row.named,
         });
       }
     }

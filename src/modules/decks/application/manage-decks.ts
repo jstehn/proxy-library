@@ -6,20 +6,27 @@ import {
   checkQuantity,
   MAX_DECKS,
   MAX_NAME_LENGTH,
+  MAX_LIST_LINES,
   MAX_QUANTITY,
+  replacedEntries,
   withEntry,
   type Board,
   type DeckId,
   type Format,
+  type MatchedLine,
 } from "../domain/deck";
 import type {
   CardNotFound,
+  DeckChanged,
   DeckNotFound,
+  ListProblems,
+  ListTooLong,
   NameInvalid,
   QuantityInvalid,
   TooManyDecks,
 } from "../domain/errors";
 import { parseList } from "@/shared/card-search";
+import { fingerprint } from "../domain/list-format";
 import { createDeckInTransaction, type DeckCardInput } from "./create-deck-in-transaction";
 import type { DecksDependencies } from "./ports";
 
@@ -29,6 +36,7 @@ import type { DecksDependencies } from "./ports";
 export type CreateDeckError = NameInvalid | TooManyDecks;
 export type UpdateDeckError = DeckNotFound | NameInvalid;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
+export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 
 export type SetEntryInput = Readonly<{
   deckId: DeckId;
@@ -40,6 +48,16 @@ export type SetEntryInput = Readonly<{
 }>;
 
 export type ImportReport = Readonly<{ added: number; unreadable: string[]; notFound: string[] }>;
+
+export type ReplaceListInput = Readonly<{
+  deckId: DeckId;
+  text: string;
+  /** The fingerprint of the deck when its text box was filled (design doc 23, rule 5). */
+  fingerprint: string;
+}>;
+
+/** How many cards the deck holds after the save. */
+export type ReplaceReport = Readonly<{ cards: number }>;
 
 export function makeManageDecks(dependencies: DecksDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -133,7 +151,9 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     return unitOfWork.run<ImportReport, DeckNotFound>(async ({ decks, cards }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
-      const found = await cards.resolve(actor.userId, parsed.lines);
+      const found = await cards.resolve(actor.userId, parsed.lines, {
+        includeReal: deck.usesRealCards,
+      });
 
       const notFound: string[] = [];
       let added = 0;
@@ -164,6 +184,57 @@ export function makeManageDecks(dependencies: DecksDependencies) {
   }
 
   /**
+   * Replaces a deck's whole list with a pasted or edited text (design doc 23). All or nothing:
+   * if any line can't be read or isn't in the catalog, nothing is saved and every problem line
+   * is reported. Refused if the deck changed since the text box was filled.
+   */
+  async function replaceList(
+    actor: Actor,
+    input: ReplaceListInput,
+  ): Promise<Result<ReplaceReport, ReplaceListError>> {
+    // Counting newlines first, so a huge paste is refused before it's read.
+    if (input.text.split("\n").length > MAX_LIST_LINES) {
+      return err({ kind: "ListTooLong", maximumLines: MAX_LIST_LINES });
+    }
+    const parsed = parseList(input.text);
+    return unitOfWork.run<ReplaceReport, ReplaceListError>(async ({ decks, cards }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      // The lock is held, so nothing can change the deck between this check and the save.
+      if (fingerprint(deck.entries) !== input.fingerprint) return err({ kind: "DeckChanged" });
+
+      const found = await cards.resolve(actor.userId, parsed.lines, {
+        includeReal: deck.usesRealCards,
+      });
+      const lines: MatchedLine[] = [];
+      const notFound: string[] = [];
+      for (const [index, line] of parsed.lines.entries()) {
+        const card = found.get(index);
+        if (card === undefined) {
+          notFound.push(line.name);
+          continue;
+        }
+        lines.push({
+          oracleId: card.oracleId,
+          board: line.board,
+          quantity: line.quantity,
+          printingId: card.printingId,
+          finish: card.finish,
+          namesPrinting: card.namedPrinting,
+          finishMarker: line.finish,
+        });
+      }
+      if (notFound.length > 0 || parsed.unreadable.length > 0) {
+        return err({ kind: "ListProblems", unreadable: parsed.unreadable, notFound });
+      }
+
+      const entries = replacedEntries(deck.entries, lines);
+      await decks.save({ ...deck, entries }, clock.now());
+      return ok({ cards: entries.reduce((total, entry) => total + entry.quantity, 0) });
+    });
+  }
+
+  /**
    * Makes a deck from cards that came out of a box (an opened precon), keeping each card's
    * printing, finish and board. Commander if it has a commander, otherwise casual.
    */
@@ -188,5 +259,13 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     );
   }
 
-  return { createDeck, updateDeck, deleteDeck, setEntry, importList, createDeckFromCards };
+  return {
+    createDeck,
+    updateDeck,
+    deleteDeck,
+    setEntry,
+    importList,
+    replaceList,
+    createDeckFromCards,
+  };
 }

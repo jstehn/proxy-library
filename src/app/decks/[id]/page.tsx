@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { printingCards } from "@/modules/catalog";
-import { deckComments, deckForViewer, EXPORTERS, FORMATS } from "@/modules/decks";
+import {
+  deckComments,
+  deckForViewer,
+  deckText,
+  EXPORTERS,
+  fingerprint,
+  FORMATS,
+  type DeckTextLine,
+} from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
@@ -17,6 +25,7 @@ import { FORMAT_LABELS } from "../labels";
 import { loadBuilderDeck } from "./builder/actions";
 import { DeckBuilder } from "./builder/deck-builder";
 import { DeckComments } from "./comments";
+import { EditAsText } from "./edit-as-text";
 import { SharedDeckView } from "./shared-view";
 
 const field =
@@ -85,6 +94,24 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
     .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}`)
     .join(",")}`;
+
+  // The Edit as text box (design doc 23): printings only where pinned, so saving the text
+  // unchanged leaves the deck as it was. The fingerprint is of what's stored.
+  const textLines: DeckTextLine[] = view.lines.map((line) => ({
+    quantity: line.quantity,
+    name: line.name,
+    board: line.board,
+    setCode: line.pinnedPrintingId === null ? null : line.setCode,
+    collectorNumber: line.pinnedPrintingId === null ? null : line.collectorNumber,
+    finish: line.pinnedFinish,
+  }));
+  const deckFingerprint = fingerprint(
+    view.lines.map((line) => ({
+      ...line,
+      printingId: line.pinnedPrintingId,
+      finish: line.pinnedFinish,
+    })),
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
@@ -157,6 +184,14 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         format={deck.format}
         initialDeck={builderDeck}
         seed={seeds.newSeed()}
+      />
+
+      {/* Keyed by the fingerprint, so a saved or changed deck starts the box afresh. */}
+      <EditAsText
+        key={deckFingerprint}
+        deckId={deck.id}
+        text={deckText(textLines)}
+        fingerprint={deckFingerprint}
       />
 
       <div className="grid gap-8 border-t border-zinc-200 pt-6 md:grid-cols-2 dark:border-zinc-800">

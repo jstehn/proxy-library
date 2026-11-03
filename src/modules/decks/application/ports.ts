@@ -29,7 +29,16 @@ export interface DeckRepository {
 }
 
 /** A card named in a pasted list, found in the catalog. */
-export type ResolvedCard = Readonly<{ oracleId: string; printingId: PrintingId; finish: Finish }>;
+export type ResolvedCard = Readonly<{
+  oracleId: string;
+  printingId: PrintingId;
+  finish: Finish;
+  /** True when this is the printing the line asked for ("(C21) 263"), not a stand-in. */
+  namedPrinting: boolean;
+}>;
+
+/** Whose copies count when choosing a printing: game ones, plus real ones if the deck uses them. */
+export type ResolveOptions = Readonly<{ includeReal: boolean }>;
 
 export type CardQuery = Readonly<{
   name: string;
@@ -44,9 +53,14 @@ export interface CardLookup {
   oracleIdsOf(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, string>>;
   /**
    * Finds each named card (matching front-face names too), preferring the exact printing asked
-   * for, then a printing this player owns, then the newest. Missing names are left out.
+   * for, then this player's most special copy (design doc 23, section 14), then the newest
+   * printing. Missing names are left out.
    */
-  resolve(ownerId: UserId, queries: readonly CardQuery[]): Promise<Map<number, ResolvedCard>>;
+  resolve(
+    ownerId: UserId,
+    queries: readonly CardQuery[],
+    options: ResolveOptions,
+  ): Promise<Map<number, ResolvedCard>>;
 }
 
 export type DecksServices = { decks: DeckRepository; cards: CardLookup };

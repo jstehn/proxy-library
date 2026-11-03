@@ -6,7 +6,7 @@ import { FORMATS } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
-import { ownedCopies } from "./owned";
+import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
 
 // Browsing your collection while building a deck (design doc 14, section 2.1): one entry per
 // card you own (shown as the printing you have most copies of), with what the deck needs to know.
@@ -191,7 +191,8 @@ export async function browseCollection(
     with owned as (
       select p.oracle_id, sum(c.quantity)::int as owned,
              coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
+             -- Your most special copy is the one shown and added (design doc 23, section 14).
+             (array_agg(c.printing_id order by ${MOST_SPECIAL_FIRST}))[1] as printing_id,
              (select max(a.created_at) from acquisitions a
                join printings ap on ap.id = a.printing_id
               where a.user_id = ${userId} and ap.oracle_id = p.oracle_id) as newest
@@ -224,7 +225,7 @@ export async function browseCollection(
         select coalesce(
                  (select c.finish from ${owned} c
                    where c.printing_id = p.id
-                   order by c.quantity desc limit 1),
+                   order by ${MOST_SPECIAL_FIRST} limit 1),
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown

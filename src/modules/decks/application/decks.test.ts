@@ -3,6 +3,7 @@ import type { Actor } from "@/modules/accounts";
 import { err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
+import { fingerprint } from "../domain/list-format";
 import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "../testing/fakes";
 import { makeDecks } from "./make-decks";
 
@@ -28,6 +29,15 @@ beforeEach(() => {
   const cards = inMemoryCardLookup([
     { oracleId: "bolt", name: "Lightning Bolt", printingId: "bolt-m11" },
     { oracleId: "duress", name: "Duress", printingId: "duress-1" },
+    // Two printings of one card: the first is this player's most special copy (a foil).
+    { oracleId: "ring", name: "Sol Ring", printingId: "ring-foil", finish: "foil" },
+    {
+      oracleId: "ring",
+      name: "Sol Ring",
+      printingId: "ring-c21",
+      setCode: "C21",
+      collectorNumber: "263",
+    },
     {
       oracleId: "delver",
       name: "Delver of Secrets // Insectile Aberration",
@@ -122,6 +132,91 @@ describe("decks (design doc 09)", () => {
         },
       ]),
     );
+  });
+});
+
+// Design doc 23: Edit as text.
+describe("replaceList", () => {
+  async function deckWith(
+    ...entries: Array<{ oracleId: string; board?: "main" | "side"; quantity: number }>
+  ) {
+    const id = await newDeck();
+    for (const entry of entries) {
+      await decks.setEntry(jack, { deckId: id, board: "main", ...entry });
+    }
+    return id;
+  }
+  const currentFingerprint = (id: DeckId) => fingerprint(repository.get(id)?.entries ?? []);
+
+  it("replaces the list: removed cards go, quantities change, new cards come in", async () => {
+    const id = await deckWith(
+      { oracleId: "bolt", quantity: 4 },
+      { oracleId: "duress", quantity: 2 },
+    );
+    const result = await decks.replaceList(jack, {
+      deckId: id,
+      text: "Deck (3)\n3 Lightning Bolt\nSideboard (1)\n1 Sol Ring",
+      fingerprint: currentFingerprint(id),
+    });
+    expect(result).toEqual({ ok: true, value: { cards: 4 } });
+    expect(repository.get(id)?.entries).toEqual([
+      { oracleId: "bolt", board: "main", quantity: 3, printingId: null, finish: null },
+      // A card new to the deck gets your most special copy (rule 10).
+      { oracleId: "ring", board: "side", quantity: 1, printingId: "ring-foil", finish: "foil" },
+    ]);
+  });
+
+  it("uses a printing the line names", async () => {
+    const id = await deckWith();
+    await decks.replaceList(jack, {
+      deckId: id,
+      text: "1 Sol Ring (C21) 263",
+      fingerprint: currentFingerprint(id),
+    });
+    expect(repository.get(id)?.entries[0]).toMatchObject({
+      printingId: "ring-c21",
+      finish: "nonfoil",
+    });
+  });
+
+  it("saves nothing when any line can't be used, and lists every problem (rule 1)", async () => {
+    const id = await deckWith({ oracleId: "bolt", quantity: 4 });
+    const before = repository.get(id);
+    const result = await decks.replaceList(jack, {
+      deckId: id,
+      text: "1 Lightning Bolt\n1 Black Lotus\n0 Nothing\n1 Ingenious Artillerist",
+      fingerprint: currentFingerprint(id),
+    });
+    expect(result).toEqual(
+      err({
+        kind: "ListProblems",
+        unreadable: ["0 Nothing"],
+        notFound: ["Black Lotus", "Ingenious Artillerist"],
+      }),
+    );
+    expect(repository.get(id)).toBe(before);
+  });
+
+  it("refuses a save when the deck changed since the box was filled (rule 5)", async () => {
+    const id = await deckWith({ oracleId: "bolt", quantity: 4 });
+    const stale = currentFingerprint(id);
+    await decks.setEntry(jack, { deckId: id, oracleId: "duress", board: "main", quantity: 1 });
+    const result = await decks.replaceList(jack, {
+      deckId: id,
+      text: "1 Lightning Bolt",
+      fingerprint: stale,
+    });
+    expect(result).toEqual(err({ kind: "DeckChanged" }));
+    expect(repository.get(id)?.entries).toHaveLength(2);
+  });
+
+  it("only works on your own decks, and refuses very long lists", async () => {
+    const id = await deckWith();
+    const input = { deckId: id, text: "1 Lightning Bolt", fingerprint: currentFingerprint(id) };
+    expect(await decks.replaceList(mallory, input)).toEqual(err({ kind: "DeckNotFound" }));
+    expect(
+      await decks.replaceList(jack, { ...input, text: "1 Lightning Bolt\n".repeat(1000) }),
+    ).toEqual(err({ kind: "ListTooLong", maximumLines: 1000 }));
   });
 });
 

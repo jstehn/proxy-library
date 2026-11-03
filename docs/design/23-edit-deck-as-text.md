@@ -147,8 +147,11 @@ Because errors must keep the typed text, this is a small client component using 
 check `node_modules/next/dist/docs/` for this Next version's form and action guidance before
 writing it.
 
-`deckView` gains each line's finish so `deckText` can write "\*F\*" / "\*E\*". The export page
-stays as it is.
+Each `deckView` line gains `pinnedPrintingId` and `pinnedFinish` (what the deck stores, null
+when not pinned), so `deckText` writes printings and "\*F\*" / "\*E\*" only where pinned, and the
+page fingerprints what's stored. (Found while building: `deckView`'s `deck.entries` have no
+printings, since read models don't make `PrintingId` brands, so `fingerprint` takes plain
+strings.) The export page stays as it is.
 
 ## 10. Events emitted
 
@@ -227,7 +230,8 @@ One SQL ordering, written once and used by all three, ranks the copies you own o
    always the same).
 
 A `rankOwnedCopies` SQL fragment in `decks/queries/owned.ts`, beside `ownedCopies`, holds this.
-If lint doesn't let the infrastructure `resolve` import it, it goes in a file both may use. The
+Lint didn't let infrastructure import queries, so `eslint.config.mjs` now allows exactly one
+file, the same module's `queries/owned.ts`, with a reason comment. The
 finish chosen comes with the printing, so a foil copy is pinned as foil.
 
 ### 14.3 Rules

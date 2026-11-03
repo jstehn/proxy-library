@@ -107,6 +107,71 @@ export function withEntry(
   return { ...deck, entries: [...others, entry] };
 }
 
+/** The most lines one list save may have (design doc 23, rule 8). */
+export const MAX_LIST_LINES = 1000;
+
+/** One line of a saved list, matched to a card by the catalog (design doc 23). */
+export type MatchedLine = Readonly<{
+  oracleId: string;
+  board: Board;
+  quantity: number;
+  /** The printing and finish the catalog chose: the named one, or your most special copy. */
+  printingId: PrintingId;
+  finish: Finish;
+  /** True when the line said which printing: "1 Sol Ring (C21) 263". */
+  namesPrinting: boolean;
+  /** "*F*" or "*E*" on the line, which always wins. */
+  finishMarker: Finish | null;
+}>;
+
+/**
+ * The entries a deck holds after replacing its list with `lines` (design doc 23, rules 2-4). Two
+ * lines for the same card on the same board are added together (at most 99). A card the deck
+ * already has keeps its printing and finish unless the line names a different printing; a
+ * finish marker always wins. A new card takes the printing and finish the catalog chose.
+ */
+export function replacedEntries(
+  current: readonly DeckEntry[],
+  lines: readonly MatchedLine[],
+): DeckEntry[] {
+  // A Map keeps insertion order, so the entries come out in the order of the text.
+  const entries = new Map<string, DeckEntry>();
+  for (const line of lines) {
+    const key = `${line.board}:${line.oracleId}`;
+    const already = entries.get(key);
+    if (already !== undefined) {
+      entries.set(key, {
+        ...already,
+        quantity: Math.min(MAX_QUANTITY, already.quantity + line.quantity),
+      });
+      continue;
+    }
+    entries.set(key, {
+      ...chosenVersion(current, line),
+      quantity: Math.min(MAX_QUANTITY, line.quantity),
+    });
+  }
+  return [...entries.values()];
+}
+
+/** Which printing and finish one new list line gets (the rules above `replacedEntries`). */
+function chosenVersion(current: readonly DeckEntry[], line: MatchedLine): DeckEntry {
+  // The same card on the same board first, then the same card on any board.
+  const existing =
+    current.find((entry) => entry.oracleId === line.oracleId && entry.board === line.board) ??
+    current.find((entry) => entry.oracleId === line.oracleId);
+  const base = { oracleId: line.oracleId, board: line.board, quantity: line.quantity };
+
+  if (existing !== undefined && (!line.namesPrinting || existing.printingId === line.printingId)) {
+    return {
+      ...base,
+      printingId: existing.printingId,
+      finish: line.finishMarker ?? existing.finish,
+    };
+  }
+  return { ...base, printingId: line.printingId, finish: line.finishMarker ?? line.finish };
+}
+
 /**
  * Which deck lists become decks in your deck list when you open them (feedback 2026-09-27: "buy a
  * precon and have it in my decks"). Precons, starter and welcome decks do; a bundle's land pack

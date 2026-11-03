@@ -408,6 +408,53 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
   ).toBeVisible();
 });
 
+test("the admin edits a deck as text; a bad line saves nothing (design doc 23)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByRole("link", { name: "Beza's Bounty" }).click();
+
+  // The box starts with the whole list; printings pinned when cards were added are named.
+  await page.getByText("Edit as text").click();
+  const box = page.getByLabel("The deck's list as text");
+  await expect(box).toHaveValue(
+    /^Commander\n1 Beza, the Bounding Spring.*\n\nDeck\n99 Plains( \(\w+\) \S+)?$/,
+  );
+
+  // Category headings, as Archidekt exports them; one card the catalog doesn't have.
+  const edited = [
+    "Commander (1)",
+    "1 Beza, the Bounding Spring",
+    "Lands (90)",
+    "90 Plains",
+    "Removal & Board Wipes (1)",
+    "1 Ingenious Artillerist",
+  ].join("\n");
+  await box.fill(edited);
+  await page.getByRole("button", { name: "Save list" }).click();
+  const alert = page.getByRole("alert").filter({ hasText: "Nothing was saved" });
+  await expect(alert.getByText("Not in the catalog: Ingenious Artillerist")).toBeVisible();
+  await expect(box).toHaveValue(edited); // the text is kept, to fix
+
+  // Without that line it saves, and the builder shows the new list.
+  await box.fill(edited.split("\n").slice(0, 4).join("\n"));
+  await page.getByRole("button", { name: "Save list" }).click();
+  await expect(page.getByText("Saved: 91 cards.")).toBeVisible();
+  const problems = page.getByRole("region", { name: "Problems" });
+  await expect(problems.getByText("The deck has 91 cards; it needs exactly 100.")).toBeVisible();
+
+  // Back to 99 Plains for the tests after this one.
+  await page.getByText("Edit as text").click();
+  await box.fill((await box.inputValue()).replace("90 Plains", "99 Plains"));
+  await page.getByRole("button", { name: "Save list" }).click();
+  await expect(page.getByText("Saved: 100 cards.")).toBeVisible();
+});
+
 test("the admin asks for suggestions, adds one, and turns a budget into a list (design doc 20)", async ({
   page,
 }) => {

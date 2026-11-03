@@ -58,3 +58,8 @@ image, like a card Scryfall hasn't caught up with.
 
 Regenerate with `scripts/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
 `BLB.json.gz`, `SPG.json.gz` and `SetList.json.gz`).
+
+`lists/archidekt-categories.txt` is a real Commander deck list (Jolene, the Plunder Queen) as a
+player pasted it on 2026-11-03, grouped under category headings with counts ("Commander (1)",
+"Lands (36)", "Ramp & Mana Fixers (9)"), the way Archidekt and Moxfield export by category
+(design doc 23).

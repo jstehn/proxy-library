@@ -23,6 +23,9 @@ export {
 export type {
   CreateDeckError,
   ImportReport,
+  ReplaceListError,
+  ReplaceListInput,
+  ReplaceReport,
   SetEntryError,
   SetEntryInput,
   UpdateDeckError,
@@ -41,6 +44,7 @@ export {
   DeckId,
   DeckOrigin,
   FORMATS,
+  MAX_LIST_LINES,
   MAX_QUANTITY,
   type Board,
   type Deck,
@@ -50,13 +54,25 @@ export type {
   CardNotFound,
   CommentInvalid,
   CommentNotFound,
+  DeckChanged,
   DeckNotFound,
+  ListProblems,
+  ListTooLong,
   NotAllowed,
   NameInvalid,
   QuantityInvalid,
   TooManyDecks,
 } from "./domain/errors";
-export { EXPORTERS, shortList, type ExportLine, type ShortLine } from "./domain/list-format";
+export {
+  deckText,
+  EXPORTERS,
+  fingerprint,
+  shortList,
+  type DeckTextLine,
+  type ExportLine,
+  type FingerprintEntry,
+  type ShortLine,
+} from "./domain/list-format";
 export {
   canBeCommander,
   deckProblems,

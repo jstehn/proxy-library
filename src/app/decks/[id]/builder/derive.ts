@@ -68,6 +68,9 @@ export function provisionalLine(
     quantity,
     printingId: card.printingId,
     finish: card.finish,
+    // Adding from the grid pins the printing shown, not its finish (as the server will store).
+    pinnedPrintingId: card.printingId,
+    pinnedFinish: null,
     name: card.name,
     typeLine: card.typeLine,
     manaValue: card.manaValue,

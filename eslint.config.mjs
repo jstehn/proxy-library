@@ -84,6 +84,9 @@ const policies = [
     layer("infrastructure", { sameModule: true }),
     layer("infrastructure", { file: "schema.ts" }), // foreign keys to other modules' tables
     publicApi, // other modules' public types (e.g. Actor), never their internals
+    // Design doc 23: which copies are yours, and which is most special, are one SQL definition
+    // shared by the read side and the decks' card lookup, so a pasted list and the builder agree.
+    layer("queries", { sameModule: true, file: "owned.ts" }),
   ),
   from(
     layer("queries"),

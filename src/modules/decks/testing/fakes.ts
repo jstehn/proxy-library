@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PrintingId } from "@/modules/catalog";
+import { PrintingId, type Finish } from "@/modules/catalog";
 import type { UserId } from "@/shared/kernel";
 import type {
   CardLookup,
@@ -54,7 +54,16 @@ export function inMemoryDeckRepository() {
   return { ...repository, get: (deckId: DeckId) => decks.get(deckId) };
 }
 
-export type SampleCard = { oracleId: string; name: string; printingId: string };
+export type SampleCard = {
+  oracleId: string;
+  name: string;
+  printingId: string;
+  /** For lines that name a printing: "(M11) 149". */
+  setCode?: string;
+  collectorNumber?: string;
+  /** The finish this player's most special copy has (default nonfoil). */
+  finish?: Finish;
+};
 
 /** Cards the catalog "has", found by exact name (front face of "A // B" too). */
 export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
@@ -73,16 +82,25 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
     async resolve(_ownerId: UserId, queries: readonly CardQuery[]) {
       const found = new Map<number, ResolvedCard>();
       queries.forEach((query, index) => {
-        const card = cards.find(
+        const named = cards.filter(
           (candidate) =>
             candidate.name.toLowerCase() === query.name.toLowerCase() ||
             candidate.name.split(" // ")[0].toLowerCase() === query.name.toLowerCase(),
         );
+        // The printing asked for if there is one, otherwise the first sample (the "special" one).
+        const exact = named.find(
+          (candidate) =>
+            query.setCode !== null &&
+            candidate.setCode === query.setCode &&
+            (query.collectorNumber === null || candidate.collectorNumber === query.collectorNumber),
+        );
+        const card = exact ?? named[0];
         if (card !== undefined) {
           found.set(index, {
             oracleId: card.oracleId,
             printingId: PrintingId.of(card.printingId),
-            finish: "nonfoil",
+            finish: card.finish ?? "nonfoil",
+            namedPrinting: exact !== undefined,
           });
         }
       });

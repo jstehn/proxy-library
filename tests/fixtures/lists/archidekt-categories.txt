@@ -1,0 +1,108 @@
+Commander (1)
+1 Jolene, the Plunder Queen
+
+Lands (36)
+1 Cinder Glade
+1 Command Tower
+1 Copperline Gorge
+1 Game Trail
+1 Karplusan Forest
+1 Kessig Wolf Run
+1 Mossfire Valley
+1 Mosswort Bridge
+1 Mountain Valley
+1 Oran-Rief, the Vastwood
+1 Path of Ancestry
+1 Raging Ravine
+1 Reflecting Pool
+1 Riveteers Overlook
+1 Rogue's Passage
+1 Rootbound Crag
+1 Rugged Highlands
+1 Sheltered Thicket
+1 Temple of Abandon
+1 Thriving Bluff
+1 Thriving Grove
+1 Witch's Clinic
+1 Wooded Ridgeline
+7 Forest
+6 Mountain
+
+Ramp & Mana Fixers (9)
+1 Arcane Signet
+1 Domri, Anarch of Bolas
+1 Farseek
+1 Gruul Signet
+1 Llanowar Elves
+1 Nature's Lore
+1 Ruby, Daring Tracker
+1 Sol Ring
+1 Talisman of Impulse
+
+Treasure Generators & Multipliers (9)
+1 Academy Manufactor
+1 Atsushi, the Blazing Sky
+1 Goldlust Triad
+1 Goldspan Dragon
+1 Professional Face-Breaker
+1 Prosperous Bandit
+1 Rain of Riches
+1 Rapacious Dragon
+1 Xorn
+
+Voltron & Evasion (11)
+1 Basilisk Collar
+1 Crash Through
+1 Gimli of the Glittering Caves
+1 Hazoret's Monument
+1 Nettlecyst
+1 Sticky Fingers
+1 Swiftfoot Boots
+1 Tarrian's Soulcleaver
+1 Trailblazer's Boots
+1 Two-Handed Axe
+1 Whispersilk Cloak
+
+Pingers, Aristocrats & Utility (7)
+1 Crime Novelist
+1 Fangren Marauder
+1 Hedron Detonator
+1 Ingenious Artillerist
+1 Reckless Fireweaver
+1 Scavenging Ooze
+1 Viridian Revel
+
+Political Enablers (2)
+1 Agitator Ant
+1 Bloodthirsty Blade
+
+Card Advantage & Top-End (8)
+1 Alchemist's Talent
+1 Big Score
+1 Etali, Primal Storm
+1 Garruk's Uprising
+1 Hit the Mother Lode
+1 Idol of Oblivion
+1 Omnath, Locus of Rage
+1 Thickest in the Thicket
+
+Protection & Combat Support (9)
+1 Anger
+1 Deflecting Swat
+1 Guardian Augmenter
+1 Halana and Alena, Partners
+1 Heroic Intervention
+1 Tamiyo's Safekeeping
+1 Tyvar's Stand
+1 Veil of Summer
+1 Vexing Shusher
+
+Removal & Board Wipes (8)
+1 Beast Within
+1 Chain Reaction
+1 Chandra's Ignition
+1 Chaos Warp
+1 Decimate
+1 Lightning Bolt
+1 Prizefight
+1 Vandalblast

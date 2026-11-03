@@ -12,7 +12,7 @@ import {
   type Format,
 } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
-import { ownedCopies } from "./owned";
+import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
@@ -92,9 +92,12 @@ export type DeckLine = Readonly<{
   oracleId: string;
   board: Board;
   quantity: number;
-  /** The printing to show and export: the pinned one, else one you own, else the newest. */
+  /** The printing to show and export: the pinned one, else your most special copy, else the newest. */
   printingId: string;
   finish: "nonfoil" | "foil" | "etched";
+  /** What the deck stores (null when not pinned): for Edit as text (design doc 23). */
+  pinnedPrintingId: string | null;
+  pinnedFinish: "nonfoil" | "foil" | "etched" | null;
   name: string;
   typeLine: string;
   manaValue: number;
@@ -174,12 +177,12 @@ export async function deckView(
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
            shown.id as printing_id,
-           coalesce(e.finish, owned_printing.finish,
+           coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = shown.id
-               and s.finish = coalesce(e.finish, owned_printing.finish,
+               and s.finish = coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
              order by s.day desc limit 1) as price_cents,
            shown.set_code, shown.collector_number,
@@ -203,10 +206,11 @@ export async function deckView(
          where p.oracle_id = e.oracle_id
          order by p.legalities is not null desc, s.release_date desc limit 1
       ) newest on true
+      -- Unpinned: show your most special copy of the card (design doc 23, section 14).
       left join lateral (
         select c.printing_id, c.finish from ${owned} c join printings p on p.id = c.printing_id
          where p.oracle_id = e.oracle_id
-         order by c.quantity desc limit 1
+         order by ${MOST_SPECIAL_FIRST} limit 1
       ) owned_printing on true
       join lateral (
         select p.* from printings p join card_sets s on s.code = p.set_code
@@ -214,6 +218,13 @@ export async function deckView(
             or (e.printing_id is null and owned_printing.printing_id is null and p.oracle_id = e.oracle_id)
          order by s.release_date desc limit 1
       ) shown on true
+      -- The finish of the copy shown: your most special copy of that printing, so a pinned
+      -- printing never borrows the finish of another one.
+      left join lateral (
+        select c.finish from ${owned} c join printings p on p.id = c.printing_id
+         where c.printing_id = shown.id
+         order by ${MOST_SPECIAL_FIRST} limit 1
+      ) owned_finish on true
      where e.deck_id = ${deckId}
      order by shown.mana_value, shown.name
   `);
@@ -235,6 +246,8 @@ export async function deckView(
       quantity: row.quantity,
       printingId: row.printing_id,
       finish: FinishSchema.parse(row.finish),
+      pinnedPrintingId: row.pinned_printing,
+      pinnedFinish: row.pinned_finish === null ? null : FinishSchema.parse(row.pinned_finish),
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),
@@ -261,6 +274,8 @@ export async function deckView(
       oracleId: row.oracle_id,
       board: z.enum(BOARDS).parse(row.board),
       quantity: row.quantity,
+      // Brands are made at the edges, not in read models: the stored printing and finish are on
+      // each line as `pinnedPrintingId` and `pinnedFinish`.
       printingId: null,
       finish: null,
     })),
