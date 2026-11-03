@@ -56,6 +56,10 @@ design doc (or joins a phase's design) and is removed from this list.
 - ~~**Sharing decks** and **"cards to get"**~~ **Done (design doc 21).** Still open: copying a
   shared deck into your own in one click (pasting its list does it today), and comment replies.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
+- **Choose a card's variant in the builder** (requested 2026-11-03): when you own several
+  printings or finishes of a card, pick which one the deck uses, from the selected card's panel.
+  Lists them in design doc 23's "most special first" order. Variants of one card (basic land
+  arts included) stay one deck line; only the picture and finish change.
 
 ## Trades
 
