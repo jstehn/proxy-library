@@ -48,10 +48,12 @@ line and leaves its quantity alone.
    1. **not Universes Beyond** (no `universesbeyond` promo type): Magic's own art first, so
       a reprint from a Fallout or Warhammer 40,000 deck, or a Universes Beyond card that also
       has a Universes Within version, shows the Magic version when there is one;
-   2. normal border (black or white) and not full art, with no showcase or extended art frame
+   2. **not Secret Lair** (a set whose name starts "Secret Lair": Drop, Countdown, Promo,
+      Ultimate Edition, Showcase Planes, and any later ones);
+   3. normal border (black or white) and not full art, with no showcase or extended art frame
       effect, and no promo types other than `universesbeyond`;
-   3. set type expansion, then core, then Commander, then any other;
-   4. newest set first; then the lowest collector number (the main-set number, not the
+   4. set type expansion, then core, then Commander, then any other;
+   5. newest set first; then the lowest collector number (the main-set number, not the
       variants that come after it); then printing id.
 
    A card printed only in Universes Beyond gets its most ordinary Universes Beyond printing.
@@ -66,9 +68,11 @@ line and leaves its quantity alone.
 5. **Ownership counts are per card, not per printing** (unchanged): pinning a printing you
    don't own doesn't make a card you own show as short. The picker shows which printings you
    own so you can choose one of yours.
-6. **Universes Beyond isn't "special"** in your most special copy (design doc 23, section
-   14): `universesbeyond` no longer counts as a promo type in `MOST_SPECIAL_FIRST`'s frame
-   step. Price still comes first, so a pricier Universes Beyond copy you own is still shown.
+6. **Your most special copy, amended** (design doc 23, section 14): the **most valuable copy
+   you own comes first**, as before. At equal value (or with no prices), **Universes Within
+   before Universes Beyond** comes next, then the existing steps (finish, frame, …), and
+   `universesbeyond` no longer counts as a "special" promo type in the frame step. Secret Lair
+   copies you own aren't ranked down: when you own one, its value decides.
 7. **Owner only**, like every other deck change. It's refused while the deck is shown read-only.
 
 ## 5. Use cases
@@ -176,3 +180,5 @@ None (deck changes emit none today).
    wherever the card has a Magic-universe printing: rule 2, step 1, and rule 6. Scryfall marks
    every Universes Beyond printing with the promo type `universesbeyond`, which printings
    already store.
+6. **Secret Lair?** (Asked during the build.) **Never the default art** for a card you don't
+   own, unless it has no other printing (rule 2, step 2). Copies you own: value first (rule 6).
