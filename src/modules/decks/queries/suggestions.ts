@@ -19,7 +19,7 @@ import {
 } from "../domain/suggest";
 import type { BrowseCard } from "./browse";
 import { deckView } from "./decks";
-import { ownedCopies } from "./owned";
+import { ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each
@@ -387,7 +387,7 @@ export async function similarCards(
              0 as owned, 0 as owned_real, 0 as other_decks
         from printings p join card_sets s on s.code = p.set_code
        where p.oracle_id = ${oracleId}
-       order by s.release_date desc limit 1
+       order by ${STANDARD_FIRST} limit 1
     `)
   ).rows;
   if (targetRow === undefined) return { owned: [], store: [] };

@@ -12,7 +12,7 @@ import {
   type Format,
 } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
-import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
+import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
@@ -92,7 +92,10 @@ export type DeckLine = Readonly<{
   oracleId: string;
   board: Board;
   quantity: number;
-  /** The printing to show and export: the pinned one, else your most special copy, else the newest. */
+  /**
+   * The printing to show and export: the pinned one, else your most special copy, else the
+   * card's standard printing (design doc 24).
+   */
   printingId: string;
   finish: "nonfoil" | "foil" | "etched";
   /** What the deck stores (null when not pinned): for Edit as text (design doc 23). */
@@ -212,11 +215,12 @@ export async function deckView(
          where p.oracle_id = e.oracle_id
          order by ${MOST_SPECIAL_FIRST} limit 1
       ) owned_printing on true
+      -- Else the card's standard printing (design doc 24, rule 2).
       join lateral (
         select p.* from printings p join card_sets s on s.code = p.set_code
          where p.id = coalesce(e.printing_id, owned_printing.printing_id)
             or (e.printing_id is null and owned_printing.printing_id is null and p.oracle_id = e.oracle_id)
-         order by s.release_date desc limit 1
+         order by ${STANDARD_FIRST} limit 1
       ) shown on true
       -- The finish of the copy shown: your most special copy of that printing, so a pinned
       -- printing never borrows the finish of another one.

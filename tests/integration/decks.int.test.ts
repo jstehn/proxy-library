@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId } from "@/modules/catalog";
 import {
   browseCollection,
+  cardPrintings,
   deckProblems,
   deckView,
   decksFor,
@@ -237,3 +238,198 @@ describe("your most special copy", () => {
     expect(plain).not.toBe(promo);
   });
 });
+
+// Design doc 24: the standard printing for cards you don't own, Universes Within before Universes
+// Beyond, no Secret Lair by default, and choosing a printing. Beza's four printings are given
+// known looks here (and put back afterwards): BLB #2 plain, BLB #900 borderless, PBLB #2p and
+// #2s promos.
+describe("the standard printing, and choosing one", () => {
+  const BEZA = "Beza, the Bounding Spring";
+  // A day after every fixture price, so these are the latest.
+  const DAY = "2099-01-01";
+  type Look = { border_color: string; frame_version: string; promo_types: string[] };
+  const LOOKS: Record<string, Look> = {
+    "BLB 2": { border_color: "black", frame_version: "2015", promo_types: [] },
+    "BLB 900": { border_color: "borderless", frame_version: "2015", promo_types: [] },
+    "PBLB 2p": { border_color: "black", frame_version: "2015", promo_types: ["promopack"] },
+    "PBLB 2s": { border_color: "black", frame_version: "2015", promo_types: ["prerelease"] },
+  };
+  let saved: Array<{ id: string } & Look & { frame_effects: string[]; is_full_art: boolean }> = [];
+  let savedSetName = "";
+  const ids: Record<string, string> = {};
+
+  async function setLook(key: string, look: Partial<Look>) {
+    const [set, number] = key.split(" ");
+    const promoTypes = look.promo_types ?? LOOKS[key].promo_types;
+    await db.execute(sql`
+      update printings
+         set border_color = ${look.border_color ?? LOOKS[key].border_color},
+             frame_version = ${look.frame_version ?? LOOKS[key].frame_version},
+             promo_types = ${`{${promoTypes.join(",")}}`}::text[],
+             frame_effects = '{}', is_full_art = false
+       where set_code = ${set} and collector_number = ${number}`);
+  }
+
+  beforeAll(async () => {
+    saved = (
+      await db.execute<(typeof saved)[number]>(sql`
+        select id, border_color, frame_version, promo_types, frame_effects, is_full_art
+          from printings where name = ${BEZA}`)
+    ).rows;
+    savedSetName = (
+      await db.execute<{ name: string }>(sql`select name from card_sets where code = 'BLB'`)
+    ).rows[0].name;
+    for (const key of Object.keys(LOOKS)) {
+      const [set, number] = key.split(" ");
+      ids[key] = (
+        await db.execute<{ id: string }>(
+          sql`select id from printings where set_code = ${set} and collector_number = ${number}`,
+        )
+      ).rows[0].id;
+    }
+  });
+  beforeEach(async () => {
+    for (const key of Object.keys(LOOKS)) await setLook(key, {});
+    await db.execute(sql`update card_sets set name = ${savedSetName} where code = 'BLB'`);
+  });
+  afterAll(async () => {
+    for (const row of saved) {
+      await db.execute(sql`
+        update printings
+           set border_color = ${row.border_color}, frame_version = ${row.frame_version},
+               promo_types = ${`{${row.promo_types.join(",")}}`}::text[],
+               frame_effects = ${`{${row.frame_effects.join(",")}}`}::text[],
+               is_full_art = ${row.is_full_art}
+         where id = ${row.id}`);
+    }
+    await db.execute(sql`update card_sets set name = ${savedSetName} where code = 'BLB'`);
+  });
+
+  async function own(key: string, finish: string) {
+    await db.execute(sql`insert into collection_cards (user_id, printing_id, finish, quantity)
+                         values ('jack', ${ids[key]}, ${finish}, 1)`);
+  }
+  /** What a pasted line and the deck view pick for Beza. */
+  async function picks() {
+    const resolved = (
+      await drizzleCardLookup(db).resolve(
+        jack.userId,
+        [{ name: BEZA, setCode: null, collectorNumber: null }],
+        { includeReal: false },
+      )
+    ).get(0);
+    const deckId = await newDeck();
+    await decks.setEntry(jack, {
+      deckId,
+      oracleId: resolved?.oracleId ?? "",
+      board: "main",
+      quantity: 1,
+    });
+    const view = await deckView(db, jack.userId, deckId);
+    return { resolved: resolved?.printingId, deckView: view?.lines[0]?.printingId };
+  }
+  const both = (key: string) => ({ resolved: ids[key], deckView: ids[key] });
+
+  it("shows the standard printing of a card you don't own, not a borderless or promo one", async () => {
+    expect(await picks()).toEqual(both("BLB 2"));
+  });
+
+  it("puts Universes Within before Universes Beyond", async () => {
+    await setLook("BLB 2", { promo_types: ["universesbeyond"] });
+    // The borderless one isn't ordinary, but it's Magic's own and from the expansion.
+    expect(await picks()).toEqual(both("BLB 900"));
+  });
+
+  it("never picks Secret Lair by default, unless there's nothing else", async () => {
+    await db.execute(sql`update card_sets set name = 'Secret Lair Drop' where code = 'BLB'`);
+    expect(await picks()).toEqual(both("PBLB 2p"));
+  });
+
+  it("leaves old frames for when there's no modern one", async () => {
+    await setLook("BLB 2", { frame_version: "1997" });
+    // BLB #900 and the promos aren't ordinary either; the expansion comes first.
+    expect(await picks()).toEqual(both("BLB 2"));
+    await setLook("PBLB 2p", { promo_types: [] });
+    expect(await picks()).toEqual(both("PBLB 2p"));
+  });
+
+  it("ranks your copies value first, then Universes Within before Universes Beyond", async () => {
+    await own("BLB 2", "nonfoil");
+    await own("BLB 900", "foil");
+    const price = (key: string, finish: string, cents: number) =>
+      db.execute(sql`insert into price_snapshots (printing_id, finish, day, usd_cents)
+                     values (${ids[key]}, ${finish}, ${DAY}, ${cents})`);
+    try {
+      // At equal value the foil wins (design doc 23)…
+      await price("BLB 2", "nonfoil", 500);
+      await price("BLB 900", "foil", 500);
+      expect(await picks()).toEqual(both("BLB 900"));
+      // …unless it's Universes Beyond…
+      await setLook("BLB 900", { promo_types: ["universesbeyond"] });
+      expect(await picks()).toEqual(both("BLB 2"));
+      // …but value still comes first.
+      await db.execute(sql`update price_snapshots set usd_cents = 900
+                            where day = ${DAY} and printing_id = ${ids["BLB 900"]}`);
+      expect(await picks()).toEqual(both("BLB 900"));
+    } finally {
+      await db.execute(sql`delete from price_snapshots where day = ${DAY}`);
+    }
+  });
+
+  it("lists every printing for the picker: yours first, then standard first", async () => {
+    await own("PBLB 2s", "foil");
+    const deckId = await newDeck();
+    const printings = await cardPrintings(db, jack.userId, deckId, await oracleOf(BEZA));
+    expect(printings.map((p) => `${p.setCode} ${p.collectorNumber}`)).toEqual([
+      "PBLB 2s",
+      "BLB 2",
+      "BLB 900",
+      "PBLB 2p",
+    ]);
+    expect(printings[0]).toMatchObject({ owned: 1, labels: ["Promo"] });
+    expect(printings[0].finishes.find((f) => f.finish === "foil")).toMatchObject({ owned: 1 });
+    expect(printings[2].labels).toEqual(["Borderless"]);
+    // Someone else's deck: nothing.
+    expect(await cardPrintings(db, UserId.of("mallory"), deckId, await oracleOf(BEZA))).toEqual([]);
+  });
+
+  it("pins a chosen printing and finish, and unpins it again", async () => {
+    const deckId = await newDeck();
+    const oracleId = await oracleOf(BEZA);
+    await decks.setEntry(jack, { deckId, oracleId, board: "main", quantity: 1 });
+    const line = { deckId, oracleId, board: "main" } as const;
+
+    const pinned = await decks.choosePrinting(jack, {
+      ...line,
+      pinned: { printingId: PrintingId.of(ids["BLB 900"]), finish: "foil" },
+    });
+    expect(pinned.ok).toBe(true);
+    let view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines[0]).toMatchObject({
+      printingId: ids["BLB 900"],
+      finish: "foil",
+      pinnedPrintingId: ids["BLB 900"],
+      quantity: 1,
+    });
+
+    expect(
+      await decks.choosePrinting(jack, {
+        ...line,
+        pinned: { printingId: PrintingId.of(ids["BLB 900"]), finish: "nonfoil" },
+      }),
+    ).toEqual({ ok: false, error: { kind: "FinishNotAvailable" } });
+
+    await decks.choosePrinting(jack, { ...line, pinned: null });
+    view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines[0]).toMatchObject({ printingId: ids["BLB 2"], pinnedPrintingId: null });
+  });
+});
+
+async function oracleOf(name: string): Promise<string> {
+  const [row] = (
+    await db.execute<{ oracle_id: string }>(
+      sql`select oracle_id from printings where name = ${name} limit 1`,
+    )
+  ).rows;
+  return row.oracle_id;
+}

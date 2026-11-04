@@ -125,7 +125,19 @@ export function DeckList(props: {
                 <div key={line.oracleId} className="flex flex-col gap-1">
                   <CardWithPreview printing={card} />
                   {!props.readOnly && (
-                    <LineControls line={line} onChange={props.onChange} busy={props.busy} />
+                    <div className="flex flex-wrap items-center justify-between gap-1">
+                      {/* The picture only shows the card's text; this opens it in the panel
+                          (to change its printing, design doc 24). */}
+                      <button
+                        type="button"
+                        onClick={() => props.onSelect(line)}
+                        aria-label={`Select ${line.name}`}
+                        className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-700"
+                      >
+                        Select
+                      </button>
+                      <LineControls line={line} onChange={props.onChange} busy={props.busy} />
+                    </div>
                   )}
                 </div>
               ) : (

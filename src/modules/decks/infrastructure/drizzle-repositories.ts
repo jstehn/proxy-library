@@ -1,6 +1,6 @@
 import { and, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { PrintingId } from "@/modules/catalog";
+import { PrintingId, type Finish } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import type {
@@ -10,8 +10,16 @@ import type {
   ResolvedCard,
   ResolveOptions,
 } from "../application/ports";
-import { MOST_SPECIAL_FIRST, ownedCopies } from "../queries/owned";
-import { BOARDS, DeckId, DeckOrigin, FORMATS, type Deck, type Format } from "../domain/deck";
+import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "../queries/owned";
+import {
+  BOARDS,
+  DeckId,
+  DeckOrigin,
+  FORMATS,
+  type Deck,
+  type Format,
+  type PrintingFacts,
+} from "../domain/deck";
 import { deckEntries, decks } from "./schema";
 
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
@@ -144,13 +152,13 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
               join candidates p on p.id = c.printing_id
              order by ${MOST_SPECIAL_FIRST} limit 1
           ),
-          -- Otherwise the newest printing.
-          newest as (
+          -- Otherwise the card's standard printing (design doc 24, rule 2).
+          standard as (
             select p.id from candidates p join card_sets s on s.code = p.set_code
-             order by s.release_date desc, p.id limit 1
+             order by ${STANDARD_FIRST} limit 1
           ),
           chosen as (
-            select coalesce((select id from named), (select id from special), (select id from newest)) as id
+            select coalesce((select id from named), (select id from special), (select id from standard)) as id
           )
           select p.oracle_id, p.id, (select id from named) is not null as named,
                  coalesce(
@@ -182,5 +190,14 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
     return new Map(rows.rows.map((row) => [PrintingId.of(row.id), row.oracle_id]));
   }
 
-  return { exists, resolve, oracleIdsOf };
+  async function printingFacts(printingId: PrintingId): Promise<PrintingFacts | null> {
+    const [row] = (
+      await db.execute<{ oracle_id: string; finishes: Finish[] }>(
+        sql`select oracle_id, finishes from printings where id = ${printingId}`,
+      )
+    ).rows;
+    return row === undefined ? null : { oracleId: row.oracle_id, finishes: row.finishes };
+  }
+
+  return { exists, printingFacts, resolve, oracleIdsOf };
 }

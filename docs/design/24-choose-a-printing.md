@@ -1,7 +1,7 @@
 # Design: standard art for cards you don't own, and choosing a card's printing
 
 - **Phase:** 24
-- **Status:** **Approved** (2026-11-03). Decisions: section 13, all as recommended, plus
+- **Status:** **Done** (2026-11-03). Approved the same day. Decisions: section 13, all as recommended, plus
   "Universes Within before Universes Beyond" (section 13, question 5).
 - **Related:** design doc 23 (edit as text; section 14, your most special copy), design doc 14
   (deck builder 2.0, the selected-card panel), design doc 16 (real cards),
@@ -50,8 +50,9 @@ line and leaves its quantity alone.
       has a Universes Within version, shows the Magic version when there is one;
    2. **not Secret Lair** (a set whose name starts "Secret Lair": Drop, Countdown, Promo,
       Ultimate Edition, Showcase Planes, and any later ones);
-   3. normal border (black or white) and not full art, with no showcase or extended art frame
-      effect, and no promo types other than `universesbeyond`;
+   3. a modern frame (2003 or 2015), normal border (black or white) and not full art, with
+      no showcase or extended art frame effect, and no promo types other than
+      `universesbeyond`;
    4. set type expansion, then core, then Commander, then any other;
    5. newest set first; then the lowest collector number (the main-set number, not the
       variants that come after it); then printing id.
@@ -182,3 +183,19 @@ None (deck changes emit none today).
    already store.
 6. **Secret Lair?** (Asked during the build.) **Never the default art** for a card you don't
    own, unless it has no other printing (rule 2, step 2). Copies you own: value first (rule 6).
+
+## 14. Implementation notes (what changed while building)
+
+- **Old frames count as not ordinary** (rule 2, step 3: modern frame). With the Masters and
+  Remastered sets enabled, many cards have both a 1990s printing from an expansion and a
+  modern one; without this the old frame won on set type. Decision 3 ("not the original
+  printing, it often has old frames") asked for this.
+- **The commander can be selected.** Its picture in the deck list only showed its text, so it
+  couldn't reach the panel the picker lives in. It now has a **Select** button next to its
+  quantity buttons.
+- **The picker sits under the selected-card panel**, in the same sticky sheet, and appears only
+  when the card is in the deck. It loads the printings the first time it opens.
+- **Pasted lists already pin a printing**, so a pasted card's picker starts on that printing,
+  not on "Follow my copies".
+- `cardPrintings` returns nothing for someone else's deck, so the action needs no separate
+  ownership check.

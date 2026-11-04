@@ -24,6 +24,7 @@ import { DeckList } from "./deck-list";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { TestHandPanel } from "./test-hand";
+import { PrintingPicker } from "./printing-picker";
 import { SelectedCard, type Selection } from "./selected-card";
 import { StatsPanel } from "./stats-panel";
 
@@ -372,6 +373,18 @@ export function DeckBuilder(props: {
     );
   }
 
+  /** A printing was chosen (design doc 24): show the fresh deck and the new picture. */
+  function printingChosen(fresh: BuilderDeck, text: string) {
+    setDeck(fresh);
+    setMessage({ tone: "ok", text });
+    if (selected === null) return;
+    const line = fresh.lines.find((each) => each.oracleId === selected.oracleId);
+    if (line !== undefined && line.printingId !== selected.printingId) {
+      selectedCard.current = null;
+      select({ ...selected, printingId: line.printingId });
+    }
+  }
+
   /** Arrow keys move the selection through the grid by position, so rows of any width work. */
   function onGridKey(event: React.KeyboardEvent) {
     const buttons = [...(gridRef.current?.querySelectorAll<HTMLElement>("[data-card]") ?? [])];
@@ -646,6 +659,17 @@ export function DeckBuilder(props: {
                 onShowSimilar={() => showSimilar(selected.oracleId)}
                 onSelectSimilar={selectSuggestion}
               />
+              {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
+                <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                  <PrintingPicker
+                    key={selected.oracleId}
+                    deckId={deckId}
+                    lines={deck.lines.filter((line) => line.oracleId === selected.oracleId)}
+                    onChosen={printingChosen}
+                    onError={(text) => setMessage({ tone: "error", text })}
+                  />
+                </div>
+              )}
             </div>
           )}
         </section>

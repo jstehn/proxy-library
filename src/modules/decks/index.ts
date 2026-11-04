@@ -21,6 +21,8 @@ export {
   type NewDeckInput,
 } from "./application/create-deck-in-transaction";
 export type {
+  ChoosePrintingError,
+  ChoosePrintingInput,
   CreateDeckError,
   ImportReport,
   ReplaceListError,
@@ -56,10 +58,13 @@ export type {
   CommentNotFound,
   DeckChanged,
   DeckNotFound,
+  EntryNotFound,
+  FinishNotAvailable,
   ListProblems,
   ListTooLong,
   NotAllowed,
   NameInvalid,
+  PrintingNotOfCard,
   QuantityInvalid,
   TooManyDecks,
 } from "./domain/errors";
@@ -103,6 +108,12 @@ export {
   type BrowsePage,
   type BrowseSort,
 } from "./queries/browse";
+export {
+  cardPrintings,
+  type PrintingFinish,
+  type PrintingFinishOption,
+  type PrintingOption,
+} from "./queries/printings";
 export {
   BUDGET_LIST_MAXIMUM,
   budgetList,

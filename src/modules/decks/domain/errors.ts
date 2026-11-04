@@ -18,3 +18,9 @@ export type ListProblems = Readonly<{
   notFound: string[];
 }>;
 export type ListTooLong = Readonly<{ kind: "ListTooLong"; maximumLines: number }>;
+/** The deck has no line for this card on this board (design doc 24). */
+export type EntryNotFound = Readonly<{ kind: "EntryNotFound" }>;
+/** The printing chosen is of another card, or isn't in the catalog (design doc 24, rule 3). */
+export type PrintingNotOfCard = Readonly<{ kind: "PrintingNotOfCard" }>;
+/** The printing doesn't come in the finish chosen (design doc 24, rule 3). */
+export type FinishNotAvailable = Readonly<{ kind: "FinishNotAvailable" }>;

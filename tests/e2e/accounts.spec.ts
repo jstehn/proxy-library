@@ -455,6 +455,47 @@ test("the admin edits a deck as text; a bad line saves nothing (design doc 23)",
   await expect(page.getByText("Saved: 100 cards.")).toBeVisible();
 });
 
+test("the admin changes a card's printing, then lets it follow their copies (design doc 24)", async ({
+  page,
+}) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByRole("link", { name: "Beza's Bounty" }).click();
+
+  const name = "Beza, the Bounding Spring";
+  await page
+    .getByRole("region", { name: "Deck list" })
+    .getByRole("button", { name: `Select ${name}` })
+    .click();
+  await page.getByRole("button", { name: "Change printing" }).click();
+  const picker = page.getByRole("group", { name: "Choose a printing" });
+  // Pasting the list pinned a printing, so "Follow my copies" isn't the choice yet.
+  await expect(picker.getByRole("radio", { name: /Follow my copies/ })).not.toBeChecked();
+
+  // The borderless foil: chosen at once, and Edit as text names it.
+  await picker.getByRole("radio", { name: "Bloomburrow #900, Foil" }).check();
+  await expect(page.getByText(`${name}: Bloomburrow #900, foil.`)).toBeVisible();
+  await expect(picker.getByRole("radio", { name: "Bloomburrow #900, Foil" })).toBeChecked();
+  await page.reload();
+  await page.getByRole("link", { name: "Edit as text" }).click();
+  await expect(page.getByLabel("The deck's list as text")).toHaveValue(
+    new RegExp(`^Commander\n1 ${name} \\(BLB\\) 900 \\*F\\*\n`),
+  );
+
+  // Back to automatic.
+  await page
+    .getByRole("region", { name: "Deck list" })
+    .getByRole("button", { name: `Select ${name}` })
+    .click();
+  await page.getByRole("button", { name: "Change printing" }).click();
+  await picker.getByRole("radio", { name: /Follow my copies/ }).check();
+  await expect(page.getByText(`${name} follows your copies again.`)).toBeVisible();
+  await expect(picker.getByRole("radio", { name: /Follow my copies/ })).toBeChecked();
+});
+
 test("the admin asks for suggestions, adds one, and turns a budget into a list (design doc 20)", async ({
   page,
 }) => {

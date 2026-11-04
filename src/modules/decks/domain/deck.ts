@@ -1,6 +1,12 @@
 import type { Finish, PrintingId } from "@/modules/catalog";
 import { err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
-import type { NameInvalid, QuantityInvalid } from "./errors";
+import type {
+  EntryNotFound,
+  FinishNotAvailable,
+  NameInvalid,
+  PrintingNotOfCard,
+  QuantityInvalid,
+} from "./errors";
 
 // The deck builder's vocabulary (design doc 09, section 3).
 
@@ -105,6 +111,54 @@ export function withEntry(
     finish: change.finish ?? existing?.finish ?? null,
   };
   return { ...deck, entries: [...others, entry] };
+}
+
+/** A printing chosen for a deck line, and what the catalog says about it (design doc 24). */
+export type PrintingChoice = Readonly<{
+  oracleId: string;
+  board: Board;
+  /** The printing to pin, or null to follow your copies again (rule 4). */
+  pinned: Readonly<{
+    printingId: PrintingId;
+    finish: Finish;
+    /** The catalog's facts about that printing, or null if it isn't in the catalog. */
+    facts: PrintingFacts | null;
+  }> | null;
+}>;
+
+export type PrintingFacts = Readonly<{ oracleId: string; finishes: readonly Finish[] }>;
+
+export type ChoosePrintingError = EntryNotFound | PrintingNotOfCard | FinishNotAvailable;
+
+/**
+ * Pins one line to a printing and finish, or unpins it. The quantity never changes
+ * (design doc 24, rules 3 and 4).
+ */
+export function withPrinting(
+  deck: Deck,
+  choice: PrintingChoice,
+): Result<Deck, ChoosePrintingError> {
+  const existing = deck.entries.find(
+    (entry) => entry.oracleId === choice.oracleId && entry.board === choice.board,
+  );
+  if (existing === undefined) return err({ kind: "EntryNotFound" });
+
+  const { pinned } = choice;
+  if (pinned !== null) {
+    if (pinned.facts === null || pinned.facts.oracleId !== choice.oracleId)
+      return err({ kind: "PrintingNotOfCard" });
+    if (!pinned.facts.finishes.includes(pinned.finish)) return err({ kind: "FinishNotAvailable" });
+  }
+
+  const changed: DeckEntry = {
+    ...existing,
+    printingId: pinned?.printingId ?? null,
+    finish: pinned?.finish ?? null,
+  };
+  return ok({
+    ...deck,
+    entries: deck.entries.map((entry) => (entry === existing ? changed : entry)),
+  });
 }
 
 /** The most lines one list save may have (design doc 23, rule 8). */

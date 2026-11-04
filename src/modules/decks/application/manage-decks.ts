@@ -10,6 +10,8 @@ import {
   MAX_QUANTITY,
   replacedEntries,
   withEntry,
+  withPrinting,
+  type ChoosePrintingError as PrintingRuleError,
   type Board,
   type DeckId,
   type Format,
@@ -37,6 +39,15 @@ export type CreateDeckError = NameInvalid | TooManyDecks;
 export type UpdateDeckError = DeckNotFound | NameInvalid;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
+export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
+
+export type ChoosePrintingInput = Readonly<{
+  deckId: DeckId;
+  oracleId: string;
+  board: Board;
+  /** The printing and finish to pin, or null to follow your copies again (design doc 24). */
+  pinned: Readonly<{ printingId: PrintingId; finish: Finish }> | null;
+}>;
 
 export type SetEntryInput = Readonly<{
   deckId: DeckId;
@@ -235,6 +246,32 @@ export function makeManageDecks(dependencies: DecksDependencies) {
   }
 
   /**
+   * Pins one deck line to a printing and finish, or unpins it (design doc 24). The printing must
+   * be of the line's card, in a finish it comes in; the quantity doesn't change.
+   */
+  async function choosePrinting(
+    actor: Actor,
+    input: ChoosePrintingInput,
+  ): Promise<Result<void, ChoosePrintingError>> {
+    return unitOfWork.run<void, ChoosePrintingError>(async ({ decks, cards }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const pinned =
+        input.pinned === null
+          ? null
+          : { ...input.pinned, facts: await cards.printingFacts(input.pinned.printingId) };
+      const changed = withPrinting(deck, {
+        oracleId: input.oracleId,
+        board: input.board,
+        pinned,
+      });
+      if (!changed.ok) return changed;
+      await decks.save(changed.value, clock.now());
+      return ok();
+    });
+  }
+
+  /**
    * Makes a deck from cards that came out of a box (an opened precon), keeping each card's
    * printing, finish and board. Commander if it has a commander, otherwise casual.
    */
@@ -266,6 +303,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     setEntry,
     importList,
     replaceList,
+    choosePrinting,
     createDeckFromCards,
   };
 }

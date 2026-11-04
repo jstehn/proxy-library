@@ -63,6 +63,8 @@ export type SampleCard = {
   collectorNumber?: string;
   /** The finish this player's most special copy has (default nonfoil). */
   finish?: Finish;
+  /** The finishes the printing comes in (default nonfoil and foil). */
+  finishes?: Finish[];
 };
 
 /** Cards the catalog "has", found by exact name (front face of "A // B" too). */
@@ -70,6 +72,11 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
   return {
     async exists(oracleId) {
       return cards.some((card) => card.oracleId === oracleId);
+    },
+    async printingFacts(printingId) {
+      const card = cards.find((candidate) => candidate.printingId === printingId);
+      if (card === undefined) return null;
+      return { oracleId: card.oracleId, finishes: card.finishes ?? ["nonfoil", "foil"] };
     },
     async oracleIdsOf(printingIds) {
       const found = new Map<PrintingId, string>();

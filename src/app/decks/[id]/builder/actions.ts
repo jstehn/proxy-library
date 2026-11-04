@@ -6,6 +6,8 @@ import {
   BROWSE_SORTS,
   browseCollection,
   budgetList,
+  cardPrintings,
+  type PrintingOption,
   deckSuggestions,
   similarCards,
   type BudgetList,
@@ -117,6 +119,59 @@ export async function setQuantityAction(
 }
 
 const DeckIdInput = z.number().int().positive();
+
+const PrintingsInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });
+
+/** Every printing of a card, for the printing picker (design doc 24). */
+export async function printingsAction(
+  input: z.input<typeof PrintingsInput>,
+): Promise<PrintingOption[] | null> {
+  const actor = await requireActor();
+  const parsed = PrintingsInput.safeParse(input);
+  if (!parsed.success) return null;
+  return cardPrintings(getContainer().db, actor.userId, parsed.data.deckId, parsed.data.oracleId);
+}
+
+const ChoosePrintingInput = z.object({
+  deckId: DeckIdInput,
+  oracleId: z.string().min(1),
+  board: z.enum(BOARDS),
+  /** null: follow my copies again. */
+  pinned: z
+    .object({ printingId: z.string().uuid(), finish: z.enum(["nonfoil", "foil", "etched"]) })
+    .nullable(),
+});
+
+/** Pins a deck line to a printing and finish, or unpins it; returns the fresh deck. */
+export async function choosePrintingAction(
+  input: z.input<typeof ChoosePrintingInput>,
+): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = ChoosePrintingInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const { deckId, oracleId, board, pinned } = parsed.data;
+  const result = await getContainer().decks.choosePrinting(actor, {
+    deckId: DeckId.of(deckId),
+    oracleId,
+    board,
+    pinned:
+      pinned === null
+        ? null
+        : { printingId: PrintingId.of(pinned.printingId), finish: pinned.finish },
+  });
+  if (!result.ok) {
+    const messages: Record<(typeof result.error)["kind"], string> = {
+      DeckNotFound: "That deck isn't yours.",
+      EntryNotFound: "That card isn't in the deck any more.",
+      PrintingNotOfCard: "That printing isn't of this card.",
+      FinishNotAvailable: "That printing doesn't come in that finish.",
+    };
+    return { ok: false, message: messages[result.error.kind] };
+  }
+  const deck = await loadBuilderDeck(deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
 
 /** Cards for this deck and for each role it's short of (design doc 20). */
 export async function suggestionsAction(deckId: number): Promise<DeckSuggestions | null> {

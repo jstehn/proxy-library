@@ -1,7 +1,7 @@
 import type { ActivityServices } from "@/modules/activity";
 import type { Finish, PrintingId } from "@/modules/catalog";
 import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
-import type { Deck, DeckId, DeckOrigin, Format } from "../domain/deck";
+import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
 import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
@@ -49,12 +49,14 @@ export type CardQuery = Readonly<{
 export interface CardLookup {
   /** Whether the catalog has this oracle card. */
   exists(oracleId: string): Promise<boolean>;
+  /** A printing's card and the finishes it comes in, or null if the catalog lacks it. */
+  printingFacts(printingId: PrintingId): Promise<PrintingFacts | null>;
   /** The oracle card of each printing (unknown printings are missing from the map). */
   oracleIdsOf(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, string>>;
   /**
    * Finds each named card (matching front-face names too), preferring the exact printing asked
-   * for, then this player's most special copy (design doc 23, section 14), then the newest
-   * printing. Missing names are left out.
+   * for, then this player's most special copy (design doc 23, section 14), then the card's
+   * standard printing (design doc 24). Missing names are left out.
    */
   resolve(
     ownerId: UserId,

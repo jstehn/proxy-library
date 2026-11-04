@@ -37,6 +37,7 @@ beforeEach(() => {
       printingId: "ring-c21",
       setCode: "C21",
       collectorNumber: "263",
+      finishes: ["nonfoil", "etched"],
     },
     {
       oracleId: "delver",
@@ -271,5 +272,68 @@ describe("becomesADeck", () => {
     expect(becomesADeck("Commander Deck")).toBe(true);
     expect(becomesADeck("Starter Kit")).toBe(true);
     expect(becomesADeck("Bundle Land Pack")).toBe(false);
+  });
+});
+
+// Design doc 24: choosing a line's printing.
+describe("choosePrinting", () => {
+  async function deckWithRing() {
+    const id = await newDeck();
+    await decks.setEntry(jack, { deckId: id, oracleId: "ring", board: "main", quantity: 2 });
+    return id;
+  }
+  const ring = (id: DeckId) => repository.get(id)?.entries.find((e) => e.oracleId === "ring");
+
+  it("pins a printing and finish, and keeps the quantity (rule 3)", async () => {
+    const id = await deckWithRing();
+    const result = await decks.choosePrinting(jack, {
+      deckId: id,
+      oracleId: "ring",
+      board: "main",
+      pinned: { printingId: samplePrintingId("ring-c21"), finish: "etched" },
+    });
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(ring(id)).toMatchObject({ quantity: 2, printingId: "ring-c21", finish: "etched" });
+  });
+
+  it("unpins: the line follows your copies again (rule 4)", async () => {
+    const id = await deckWithRing();
+    const line = { deckId: id, oracleId: "ring", board: "main" } as const;
+    await decks.choosePrinting(jack, {
+      ...line,
+      pinned: { printingId: samplePrintingId("ring-c21"), finish: "nonfoil" },
+    });
+    await decks.choosePrinting(jack, { ...line, pinned: null });
+    expect(ring(id)).toMatchObject({ quantity: 2, printingId: null, finish: null });
+  });
+
+  it("refuses another card's printing, a missing finish, a missing line, and others' decks", async () => {
+    const id = await deckWithRing();
+    const line = { deckId: id, oracleId: "ring", board: "main" } as const;
+    expect(
+      await decks.choosePrinting(jack, {
+        ...line,
+        pinned: { printingId: samplePrintingId("bolt-m11"), finish: "nonfoil" },
+      }),
+    ).toEqual(err({ kind: "PrintingNotOfCard" }));
+    expect(
+      await decks.choosePrinting(jack, {
+        ...line,
+        pinned: { printingId: samplePrintingId("not-in-catalog"), finish: "nonfoil" },
+      }),
+    ).toEqual(err({ kind: "PrintingNotOfCard" }));
+    expect(
+      await decks.choosePrinting(jack, {
+        ...line,
+        pinned: { printingId: samplePrintingId("ring-c21"), finish: "foil" },
+      }),
+    ).toEqual(err({ kind: "FinishNotAvailable" }));
+    expect(await decks.choosePrinting(jack, { ...line, board: "side", pinned: null })).toEqual(
+      err({ kind: "EntryNotFound" }),
+    );
+    expect(await decks.choosePrinting(mallory, { ...line, pinned: null })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+    expect(ring(id)).toMatchObject({ printingId: null, finish: null });
   });
 });
