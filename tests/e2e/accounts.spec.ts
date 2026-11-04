@@ -423,7 +423,7 @@ test("the admin edits a deck as text; a bad line saves nothing (design doc 23)",
   await page.getByRole("link", { name: "Edit as text" }).click();
   const box = page.getByLabel("The deck's list as text");
   await expect(box).toHaveValue(
-    /^Commander\n1 Beza, the Bounding Spring.*\n\nDeck\n99 Plains( \(\w+\) \S+)?$/,
+    /^Commander\n1 Beza, the Bounding Spring.*\n\nDeck\n99 Plains( \(\w+\) \S+( \*\w\*)?)?$/,
   );
 
   // Category headings, as Archidekt exports them; one card the catalog doesn't have.

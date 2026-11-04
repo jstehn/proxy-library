@@ -53,6 +53,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       viewerIsAdmin={actor.isAdmin}
       isOwner={viewed.isOwner}
       isShared={viewed.visibility === "shared"}
+      asBox={viewed.isOwner}
     />
   );
 
@@ -190,18 +191,15 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         fingerprint={deckFingerprint}
       />
 
-      <DeckBuilder
-        key={builderKey}
-        deckId={deck.id}
-        format={deck.format}
-        initialDeck={builderDeck}
-        seed={seeds.newSeed()}
-      />
-
-      <div className="grid gap-8 border-t border-zinc-200 pt-6 md:grid-cols-2 dark:border-zinc-800">
-        <section className="flex flex-col gap-2">
-          <h2 className="font-medium">Paste a list</h2>
-          <form action={importListAction} className="flex flex-col gap-2">
+      {/* Above the builder: its collection grid loads more as you scroll, so nothing below it
+          can be reached (a pasted list is how you add a card you don't own). */}
+      <div className="grid items-start gap-3 md:grid-cols-3">
+        <details
+          open={deck.entries.length === 0}
+          className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+        >
+          <summary className="cursor-pointer font-medium">Paste a list</summary>
+          <form action={importListAction} className="mt-3 flex flex-col gap-2">
             <input type="hidden" name="deckId" value={deck.id} />
             <textarea
               name="list"
@@ -217,11 +215,10 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           <p className="text-xs text-zinc-500">
             Cards you don&apos;t own are added too, and show as short.
           </p>
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <h2 className="font-medium">Deck settings</h2>
-          <form action={updateDeckAction} className="flex flex-col gap-2">
+        </details>
+        <details className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <summary className="cursor-pointer font-medium">Deck settings</summary>
+          <form action={updateDeckAction} className="mt-3 flex flex-col gap-2">
             <input type="hidden" name="deckId" value={deck.id} />
             <input
               name="name"
@@ -242,7 +239,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             </button>
           </form>
           {/* A second click to confirm, so a slip doesn't delete a deck. */}
-          <details className="text-sm">
+          <details className="mt-2 text-sm">
             <summary className="cursor-pointer text-red-700 dark:text-red-400">
               Delete this deck…
             </summary>
@@ -253,9 +250,17 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
               </button>
             </form>
           </details>
-        </section>
+        </details>
+        {commentSection}
       </div>
-      {commentSection}
+
+      <DeckBuilder
+        key={builderKey}
+        deckId={deck.id}
+        format={deck.format}
+        initialDeck={builderDeck}
+        seed={seeds.newSeed()}
+      />
     </main>
   );
 }

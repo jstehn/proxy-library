@@ -5,6 +5,7 @@ import { deleteCommentAction, postCommentAction } from "../actions";
 
 // A deck's comments (design doc 21): oldest first, a box to add one, and a delete button for
 // those the viewer may remove (their own, any on their deck, or any at all for an admin).
+// `asBox` shows them in a box you open, for the owner's page, where they sit above the builder.
 
 export function DeckComments(props: {
   deckId: number;
@@ -13,18 +14,14 @@ export function DeckComments(props: {
   viewerIsAdmin: boolean;
   isOwner: boolean;
   isShared: boolean;
+  asBox?: boolean;
 }) {
   const canDelete = (comment: CommentView) =>
     props.viewerIsAdmin || props.isOwner || comment.authorId === props.viewerId;
-  return (
-    <section
-      id="comments"
-      aria-label="Comments"
-      className="flex scroll-mt-20 flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
-    >
-      <h2 className="font-medium">
-        Comments ({props.comments.filter((c) => c.body !== null).length})
-      </h2>
+  const shownCount = props.comments.filter((comment) => comment.body !== null).length;
+  const title = `Comments (${shownCount})`;
+  const contents = (
+    <>
       {props.isOwner && !props.isShared && (
         <p className="text-sm text-zinc-500">
           This deck is private: only you can read these. Share it to let the playgroup comment.
@@ -87,6 +84,32 @@ export function DeckComments(props: {
           Post comment
         </button>
       </form>
+    </>
+  );
+  if (props.asBox) {
+    // Open when there's something to read. A link to #comments (or to one comment) opens it
+    // too: browsers open a closed <details> when the address points inside it.
+    return (
+      <details
+        id="comments"
+        open={props.comments.length > 0}
+        className="scroll-mt-20 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+      >
+        <summary className="cursor-pointer font-medium">{title}</summary>
+        <section aria-label="Comments" className="mt-3 flex flex-col gap-3">
+          {contents}
+        </section>
+      </details>
+    );
+  }
+  return (
+    <section
+      id="comments"
+      aria-label="Comments"
+      className="flex scroll-mt-20 flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+    >
+      <h2 className="font-medium">{title}</h2>
+      {contents}
     </section>
   );
 }

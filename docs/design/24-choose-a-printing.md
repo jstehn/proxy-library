@@ -205,3 +205,8 @@ None (deck changes emit none today).
   2027-04-09, because "newest first" saw it as the newest. Preview cards from an unreleased set
   are nobody's standard art. That set's printings also aren't tagged `universesbeyond` yet;
   MTGJSON adds that later, and the nightly sync re-imports recent sets.
+- **Paste a list, Deck settings and Comments moved above the builder** (found in use). They
+  were below the collection grid, which loads more as you scroll, so they couldn't be reached
+  (and pasting is how you add a card you don't own). They're now boxes you open, in a row under
+  Edit as text: Paste a list starts open on an empty deck, Comments when the deck has any. A
+  shared deck seen by someone else keeps its comments at the bottom (no grid there).
