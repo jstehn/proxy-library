@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { replaceListAction, type EditAsTextState } from "../actions";
 
 // Edit as text (design doc 23): the deck's whole list in a text box; saving replaces the deck.
@@ -18,13 +18,37 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
   const [list, setList] = useState(text);
   const details = useRef<HTMLDetailsElement>(null);
 
+  // The header's "Edit as text" link points at #edit-as-text: open the box and bring it into
+  // view. A click listener, not "hashchange", so the link still works when the address already
+  // ends in #edit-as-text (after the box was closed again).
+  useEffect(() => {
+    function show() {
+      if (details.current === null) return;
+      details.current.open = true;
+      details.current.scrollIntoView({ block: "start" });
+    }
+    function onClick(event: MouseEvent) {
+      if (event.target instanceof Element && event.target.closest('a[href="#edit-as-text"]')) {
+        event.preventDefault();
+        show();
+      }
+    }
+    if (window.location.hash === "#edit-as-text") show();
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
   function cancel() {
     setList(text);
     if (details.current !== null) details.current.open = false;
   }
 
   return (
-    <details ref={details} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+    <details
+      ref={details}
+      id="edit-as-text"
+      className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+    >
       <summary className="cursor-pointer font-medium">Edit as text</summary>
       <form action={formAction} className="mt-3 flex flex-col gap-2">
         <input type="hidden" name="deckId" value={deckId} />

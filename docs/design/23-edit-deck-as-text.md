@@ -259,3 +259,10 @@ finish chosen comes with the printing, so a foil copy is pinned as foil.
    several printings in one line is the later variant feature.
 5. **Price or foil first?** **Decided: price first.** A $40 nonfoil beats a $2 foil, and a foil
    usually costs more anyway. If you'd rather foil always win, swap steps 1 and 2.
+
+### 14.6 After release (2026-11-03)
+
+- **Placement.** The section was first below the builder, after every deck section, and was
+  hard to find on a long deck. It now sits above the builder, and the header's links
+  (Export, Print proxies, …) start with **Edit as text**, which opens the section and scrolls to
+  it (`#edit-as-text`).

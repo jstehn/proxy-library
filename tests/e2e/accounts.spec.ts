@@ -420,7 +420,7 @@ test("the admin edits a deck as text; a bad line saves nothing (design doc 23)",
   await page.getByRole("link", { name: "Beza's Bounty" }).click();
 
   // The box starts with the whole list; printings pinned when cards were added are named.
-  await page.getByText("Edit as text").click();
+  await page.getByRole("link", { name: "Edit as text" }).click();
   const box = page.getByLabel("The deck's list as text");
   await expect(box).toHaveValue(
     /^Commander\n1 Beza, the Bounding Spring.*\n\nDeck\n99 Plains( \(\w+\) \S+)?$/,
@@ -449,7 +449,7 @@ test("the admin edits a deck as text; a bad line saves nothing (design doc 23)",
   await expect(problems.getByText("The deck has 91 cards; it needs exactly 100.")).toBeVisible();
 
   // Back to 99 Plains for the tests after this one.
-  await page.getByText("Edit as text").click();
+  await page.getByRole("link", { name: "Edit as text" }).click();
   await box.fill((await box.inputValue()).replace("90 Plains", "99 Plains"));
   await page.getByRole("button", { name: "Save list" }).click();
   await expect(page.getByText("Saved: 100 cards.")).toBeVisible();

@@ -121,6 +121,10 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           <h1 className="text-2xl font-semibold">{deck.name}</h1>
           <p className="text-sm text-zinc-500">
             {FORMAT_LABELS[deck.format]} ·{" "}
+            <a href="#edit-as-text" className="underline">
+              Edit as text
+            </a>{" "}
+            ·{" "}
             <Link href={`/decks/${deck.id}/export`} className="underline">
               Export
             </Link>{" "}
@@ -178,20 +182,20 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         <Alert tone="success">{searchParams.imported}</Alert>
       )}
 
-      <DeckBuilder
-        key={builderKey}
-        deckId={deck.id}
-        format={deck.format}
-        initialDeck={builderDeck}
-        seed={seeds.newSeed()}
-      />
-
       {/* Keyed by the fingerprint, so a saved or changed deck starts the box afresh. */}
       <EditAsText
         key={deckFingerprint}
         deckId={deck.id}
         text={deckText(textLines)}
         fingerprint={deckFingerprint}
+      />
+
+      <DeckBuilder
+        key={builderKey}
+        deckId={deck.id}
+        format={deck.format}
+        initialDeck={builderDeck}
+        seed={seeds.newSeed()}
       />
 
       <div className="grid gap-8 border-t border-zinc-200 pt-6 md:grid-cols-2 dark:border-zinc-800">
