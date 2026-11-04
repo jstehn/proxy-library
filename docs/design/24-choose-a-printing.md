@@ -44,7 +44,8 @@ line and leaves its quantity alone.
    newest". It applies everywhere that order is used: pasting a list, Edit as text, the deck
    view, Export, Print proxies, and suggestions' "add this card" preview.
 2. **The standard printing ranking** (one shared SQL fragment, `STANDARD_FIRST`, next to
-   `MOST_SPECIAL_FIRST`):
+   `MOST_SPECIAL_FIRST`): 0. **released already**: an upcoming set's preview cards only when there's nothing else
+   (added after release, see section 14);
    1. **not Universes Beyond** (no `universesbeyond` promo type): Magic's own art first, so
       a reprint from a Fallout or Warhammer 40,000 deck, or a Universes Beyond card that also
       has a Universes Within version, shows the Magic version when there is one;
@@ -199,3 +200,8 @@ None (deck changes emit none today).
   not on "Follow my copies".
 - `cardPrintings` returns nothing for someone else's deck, so the action needs no separate
   ownership check.
+- **Upcoming sets rank last** (rule 2, step 0; found on the live catalog after deploying).
+  Forest's standard printing came out as a preview from Marvel: Darkhold Destiny, released
+  2027-04-09, because "newest first" saw it as the newest. Preview cards from an unreleased set
+  are nobody's standard art. That set's printings also aren't tagged `universesbeyond` yet;
+  MTGJSON adds that later, and the nightly sync re-imports recent sets.

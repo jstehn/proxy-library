@@ -41,6 +41,8 @@ looked random. The player's rules, in their words:
 Each rule becomes one **tier**, most important first, exactly like lesson 23's comparator
 chain:
 
+0. released already (found after deploying: a preview from a set out next year had become
+   the "newest" Forest);
 1. not Universes Beyond;
 2. not Secret Lair;
 3. an ordinary card: modern frame, normal border, not full art, no showcase or extended art,
@@ -104,6 +106,7 @@ printing with the promo type `universesbeyond`, so the rule is one `CASE`:
 const IS_UNIVERSES_BEYOND = sql`case when 'universesbeyond' = any(p.promo_types) then 1 else 0 end`;
 
 export const STANDARD_FIRST = sql`
+  case when s.release_date > to_char(current_date, 'YYYY-MM-DD') then 1 else 0 end,
   ${IS_UNIVERSES_BEYOND},
   case when s.name ilike 'Secret Lair%' then 1 else 0 end,
   case when p.frame_version in ('2003', '2015')

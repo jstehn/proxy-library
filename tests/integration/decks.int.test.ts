@@ -345,6 +345,20 @@ describe("the standard printing, and choosing one", () => {
     expect(await picks()).toEqual(both("PBLB 2p"));
   });
 
+  it("doesn't show an upcoming set's preview while a released printing exists", async () => {
+    const [{ release_date: released }] = (
+      await db.execute<{ release_date: string }>(
+        sql`select release_date from card_sets where code = 'BLB'`,
+      )
+    ).rows;
+    try {
+      await db.execute(sql`update card_sets set release_date = '2999-01-01' where code = 'BLB'`);
+      expect(await picks()).toEqual(both("PBLB 2p"));
+    } finally {
+      await db.execute(sql`update card_sets set release_date = ${released} where code = 'BLB'`);
+    }
+  });
+
   it("leaves old frames for when there's no modern one", async () => {
     await setLook("BLB 2", { frame_version: "1997" });
     // BLB #900 and the promos aren't ordinary either; the expansion comes first.

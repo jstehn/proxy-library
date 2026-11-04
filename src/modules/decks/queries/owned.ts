@@ -58,15 +58,17 @@ export const MOST_SPECIAL_FIRST = sql`
  * SQL: an ORDER BY list that ranks a card's printings, **standard first** (design doc 24,
  * rule 2): the art a deck shows for a card you don't own. `p` is a printing and `s` its set.
  *
- * 1. Universes Within before Universes Beyond;
- * 2. not Secret Lair;
- * 3. an ordinary card: modern frame, black or white border, not full art, no showcase or
+ * 1. released already (an upcoming set's previews only if there's nothing else);
+ * 2. Universes Within before Universes Beyond;
+ * 3. not Secret Lair;
+ * 4. an ordinary card: modern frame, black or white border, not full art, no showcase or
  *    extended art, no promo type;
- * 4. from an expansion, then a core set, then a Commander set, then anything else;
- * 5. the newest set, the lowest collector number (the main card, not its variants after it),
+ * 5. from an expansion, then a core set, then a Commander set, then anything else;
+ * 6. the newest set, the lowest collector number (the main card, not its variants after it),
  *    and the printing id.
  */
 export const STANDARD_FIRST = sql`
+  case when s.release_date > to_char(current_date, 'YYYY-MM-DD') then 1 else 0 end,
   ${IS_UNIVERSES_BEYOND},
   case when s.name ilike 'Secret Lair%' then 1 else 0 end,
   case when p.frame_version in ('2003', '2015')
