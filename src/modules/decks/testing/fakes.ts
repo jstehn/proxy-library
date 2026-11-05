@@ -7,11 +7,13 @@ import type {
   CardQuery,
   DeckRepository,
   DeckSharingRepository,
+  DeckTokenRepository,
   ProxyImageSource,
   ResolvedCard,
 } from "../application/ports";
 import { DeckId, type Deck } from "../domain/deck";
 import { CommentId, type DeckForSharing } from "../domain/sharing";
+import type { TokenChoice } from "../domain/token-proxies";
 
 // In-memory stand-ins for the decks ports.
 
@@ -52,6 +54,35 @@ export function inMemoryDeckRepository() {
     },
   };
   return { ...repository, get: (deckId: DeckId) => decks.get(deckId) };
+}
+
+/** A token printing the fake catalog has, and the cards (oracle ids) that make it. */
+export type SampleToken = Readonly<{ tokenId: string; tokenOracleId: string; madeBy: string[] }>;
+
+/** Tokens the catalog "has", and the choices saved, readable with `choicesOf`. */
+export function inMemoryDeckTokens(tokens: readonly SampleToken[]) {
+  const choices = new Map<DeckId, Map<string, TokenChoice>>();
+  const repository: DeckTokenRepository = {
+    async tokenOracleOf(tokenId) {
+      return tokens.find((token) => token.tokenId === tokenId)?.tokenOracleId ?? null;
+    },
+    async anyMakes(cardOracleIds, tokenOracleId) {
+      return tokens.some(
+        (token) =>
+          token.tokenOracleId === tokenOracleId &&
+          token.madeBy.some((oracleId) => cardOracleIds.includes(oracleId)),
+      );
+    },
+    async saveChoice(deckId, choice) {
+      const forDeck = choices.get(deckId) ?? new Map<string, TokenChoice>();
+      forDeck.set(choice.tokenOracleId, choice);
+      choices.set(deckId, forDeck);
+    },
+  };
+  return {
+    ...repository,
+    choicesOf: (deckId: DeckId) => [...(choices.get(deckId)?.values() ?? [])],
+  };
 }
 
 export type SampleCard = {

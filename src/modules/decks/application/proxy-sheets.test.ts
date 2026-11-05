@@ -32,7 +32,10 @@ describe("proxySheet", () => {
       },
     });
 
-    const pdf = await proxySheet([line("bolt", 4), line("delver", 1, true)], DEFAULT_PROXY_OPTIONS);
+    const pdf = await proxySheet(
+      { lines: [line("bolt", 4), line("delver", 1, true)], tokens: [] },
+      DEFAULT_PROXY_OPTIONS,
+    );
     expect(pdf).toEqual(new Uint8Array([1]));
     expect(requests.sort()).toEqual(["bolt/front", "delver/back", "delver/front"]);
     expect(renders).toHaveLength(1);
@@ -54,7 +57,7 @@ describe("proxySheet", () => {
       },
     });
     await proxySheet(
-      [line("bolt", 4), line("delver", 1, true)],
+      { lines: [line("bolt", 4), line("delver", 1, true)], tokens: [] },
       DEFAULT_PROXY_OPTIONS,
       (progress) => seen.push(`${progress.stage} ${progress.done}/${progress.total}`),
     );
@@ -69,7 +72,7 @@ describe("proxySheet", () => {
       renderer: { render: async () => new Uint8Array([1]) },
     });
     await proxySheet(
-      [line("bolt", 2)],
+      { lines: [line("bolt", 2)], tokens: [] },
       { ...DEFAULT_PROXY_OPTIONS, style: "playtest", artFilter: "none" },
       (progress) => seen.push(`${progress.stage} ${progress.done}/${progress.total}`),
     );

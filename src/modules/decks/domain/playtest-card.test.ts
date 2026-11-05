@@ -265,3 +265,62 @@ describe("playtestCard", () => {
     expect(drawing.art).toBeNull();
   });
 });
+
+describe("playtest tokens (design doc 25)", () => {
+  const style = { art: true, stripes: true };
+  const goblin = printedCard({ isToken: true, colors: ["R"] }, [
+    { name: "Goblin", manaCost: null, typeLine: "Token Creature — Goblin", text: "" },
+  ]);
+  const treasure = printedCard({ isToken: true }, [
+    {
+      name: "Treasure",
+      manaCost: null,
+      typeLine: "Token Artifact — Treasure",
+      text: "{T}, Sacrifice this token: Add one mana of any color.",
+      power: null,
+      toughness: null,
+    },
+  ]);
+  const card = printedCard({}, [{ text: "" }]);
+
+  it("gives a token without text art down to its type line, and no text box", () => {
+    const drawing = playtestCard(goblin, "front", frame, style, measure);
+    const cardDrawing = playtestCard(card, "front", frame, style, measure);
+    expect(drawing.art?.height).toBeGreaterThan((cardDrawing.art?.height ?? 0) + 60);
+    // Title, type line and the stats box: no text box.
+    expect(drawing.panels).toHaveLength(3);
+    expect(cardDrawing.panels).toHaveLength(4);
+  });
+
+  it("gives a token with text taller art, leaving its text room at a real card's size", () => {
+    const drawing = playtestCard(treasure, "front", frame, style, measure);
+    const asCard = playtestCard({ ...treasure, isToken: false }, "front", frame, style, measure);
+    expect(drawing.art?.height).toBeGreaterThan(asCard.art?.height ?? 0);
+    // Title, type line and text box (a Treasure has no stats).
+    expect(drawing.panels).toHaveLength(3);
+    const ruleTexts = drawing.texts.filter((text) => text.font === "regular" && text.size > 6);
+    expect(ruleTexts.length).toBeGreaterThan(0);
+    for (const text of ruleTexts) expect(text.size).toBeGreaterThanOrEqual(7.5);
+  });
+
+  it("keeps a card's layout, and a token's when the art is off", () => {
+    const noArt = { art: false, stripes: true };
+    expect(playtestCard(goblin, "front", frame, noArt, measure).art).toBeNull();
+    expect(playtestCard(goblin, "front", frame, noArt, measure).panels).toHaveLength(4);
+  });
+
+  it("draws nothing outside the card", () => {
+    for (const token of [goblin, treasure]) {
+      const drawing = playtestCard(token, "front", frame, style, measure);
+      for (const box of [...drawing.panels, ...(drawing.art === null ? [] : [drawing.art])]) {
+        expect(inside(box, frame)).toBe(true);
+        expect(inside({ x: box.x + box.width, y: box.y + box.height }, frame)).toBe(true);
+      }
+    }
+  });
+
+  it("stripes a token in its own colours, and a colourless one grey", () => {
+    expect(stripeColors(goblin, "front")).toEqual(["R"]);
+    expect(stripeColors(treasure, "front")).toEqual([]);
+  });
+});

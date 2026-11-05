@@ -29,6 +29,7 @@ export function printedCard(
     setCode: "tst",
     collectorNumber: "1",
     artist: "Test Artist",
+    isToken: false,
     ...changes,
   };
 }

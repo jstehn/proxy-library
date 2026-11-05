@@ -26,7 +26,7 @@ const line = (printingId: string, quantity: number, hasBack = false): ProxyLine 
 async function pdfFor(lines: readonly ProxyLine[], options: Partial<ProxyOptions> = {}) {
   const { images } = fakeProxyImages(["delver"]);
   const proxySheet = makeProxySheets({ images, renderer: pdfLibRenderer() });
-  const bytes = await proxySheet(lines, { ...DEFAULT_PROXY_OPTIONS, ...options });
+  const bytes = await proxySheet({ lines, tokens: [] }, { ...DEFAULT_PROXY_OPTIONS, ...options });
   return PDFDocument.load(bytes);
 }
 
@@ -55,7 +55,7 @@ describe("pdfLibRenderer", () => {
       renderer: pdfLibRenderer(),
     });
     const bytes = await proxySheet(
-      [line("bolt", 1), { ...line("missing", 1), name: "Æther Vial ✦" }],
+      { lines: [line("bolt", 1), { ...line("missing", 1), name: "Æther Vial ✦" }], tokens: [] },
       { ...DEFAULT_PROXY_OPTIONS, bleed: "fillGap" },
     );
     const pdf = await PDFDocument.load(bytes);
@@ -108,10 +108,13 @@ describe("pdfLibRenderer, playtest style (design doc 22)", () => {
       images: { image: async () => null, artCrop: async () => null },
       renderer: pdfLibRenderer(),
     });
-    const bytes = await proxySheet(lines.slice(0, 1), {
-      ...DEFAULT_PROXY_OPTIONS,
-      style: "playtest",
-    });
+    const bytes = await proxySheet(
+      { lines: lines.slice(0, 1), tokens: [] },
+      {
+        ...DEFAULT_PROXY_OPTIONS,
+        style: "playtest",
+      },
+    );
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
 });
@@ -121,7 +124,7 @@ describe("pdfLibRenderer progress", () => {
     const { images } = fakeProxyImages();
     const proxySheet = makeProxySheets({ images, renderer: pdfLibRenderer() });
     const seen: string[] = [];
-    await proxySheet([line("bolt", 10)], DEFAULT_PROXY_OPTIONS, (progress) =>
+    await proxySheet({ lines: [line("bolt", 10)], tokens: [] }, DEFAULT_PROXY_OPTIONS, (progress) =>
       seen.push(`${progress.stage} ${progress.done}/${progress.total}`),
     );
     expect(seen).toEqual([

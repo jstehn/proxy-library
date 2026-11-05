@@ -4,11 +4,15 @@ import { printingCards } from "@/modules/catalog";
 import {
   cardsToPrint,
   DEFAULT_PROXY_OPTIONS,
+  deckTokenLines,
   deckView,
   GAPS_IN_MILLIMETERS,
+  TOKEN_COPIES,
   type DeckView,
   type ProxyLine,
   type ProxyOptions,
+  type ProxySheetInput,
+  type TokenLine,
 } from "@/modules/decks";
 import type { UserId } from "@/shared/kernel";
 import { getContainer } from "@/server/container";
@@ -34,6 +38,10 @@ const OptionsSchema = z.object({
   artFilter: z.enum(["color", "grayscale", "edges", "none"]).catch(defaults.artFilter),
   stripes: z.enum(["on", "off"]).catch(defaults.stripes),
   realCards: z.enum(["print", "leaveOut"]).catch(defaults.realCards),
+  tokenCopies: z.coerce
+    .number()
+    .pipe(z.union(TOKEN_COPIES.map((copies) => z.literal(copies))))
+    .catch(defaults.tokenCopies),
 });
 
 /** The options in a query string such as `?paper=a4&bleed=fillGap`. */
@@ -41,11 +49,11 @@ export function proxyOptionsFrom(parameters: URLSearchParams): ProxyOptions {
   return OptionsSchema.parse(Object.fromEntries(parameters));
 }
 
-/** The player's deck and its lines as the proxy sheet needs them, or null if it isn't theirs. */
-export async function proxyDeck(
-  userId: UserId,
-  deckId: number,
-): Promise<{ view: DeckView; lines: ProxyLine[] } | null> {
+/** A deck's proxy sheet: the deck, its lines and the tokens its cards make (design doc 25). */
+export type ProxyDeck = Readonly<{ view: DeckView; lines: ProxyLine[]; tokens: TokenLine[] }>;
+
+/** The player's deck as the proxy sheet needs it, or null if it isn't theirs. */
+export async function proxyDeck(userId: UserId, deckId: number): Promise<ProxyDeck | null> {
   const { db } = getContainer();
   const view = Number.isSafeInteger(deckId) ? await deckView(db, userId, deckId) : null;
   if (view === null) return null;
@@ -87,15 +95,31 @@ export async function proxyDeck(
         setCode: card?.setCode ?? "",
         collectorNumber: card?.collectorNumber ?? "",
         artist: card?.artist ?? null,
+        isToken: false,
       },
     };
   });
-  return { view, lines };
+  const tokens = await deckTokenLines(
+    db,
+    view.deck.id,
+    view.lines.map((line) => ({
+      oracleId: line.oracleId,
+      printingId: line.printingId,
+      name: line.name,
+      board: line.board,
+    })),
+  );
+  return { view, lines, tokens };
 }
 
-/** The first card these options would print, as a one-copy deck: the "Preview one card" PDF. */
-export function previewLines(lines: readonly ProxyLine[], options: ProxyOptions): ProxyLine[] {
-  const [first] = cardsToPrint(lines, options);
-  const line = lines.find((candidate) => candidate.printingId === first?.printingId);
-  return line === undefined ? [] : [{ ...line, quantity: 1 }];
+/**
+ * The "Preview one card" PDF: the first card these options print, once. A deck whose cards are
+ * all left out (all real, say) previews its first token instead.
+ */
+export function previewSheet(deck: ProxyDeck, options: ProxyOptions): ProxySheetInput {
+  const [first] = cardsToPrint(deck.lines, options);
+  const line = deck.lines.find((candidate) => candidate.printingId === first?.printingId);
+  if (line !== undefined) return { lines: [{ ...line, quantity: 1 }], tokens: [] };
+  const token = deck.tokens.find((candidate) => candidate.included);
+  return { lines: [], tokens: token === undefined ? [] : [token] };
 }

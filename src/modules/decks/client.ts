@@ -22,10 +22,17 @@ export {
   GAPS_IN_MILLIMETERS,
   pageList,
   proxySummary,
+  TOKEN_COPIES,
   type ProxyLine,
   type ProxyOptions,
   type ProxySummary,
 } from "./domain/proxy-sheet";
+export {
+  sheetCards,
+  tokenDescription,
+  type TokenArt,
+  type TokenLine,
+} from "./domain/token-proxies";
 export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
 export {
   completeLines,

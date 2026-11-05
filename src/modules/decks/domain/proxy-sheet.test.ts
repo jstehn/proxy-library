@@ -275,7 +275,7 @@ describe("proxyPages", () => {
 describe("proxySummary", () => {
   it("counts cards and pages, and which pages print two-sided", () => {
     const deck = [line("Opt", { quantity: 10 }), line("Delver of Secrets", { hasBack: true })];
-    expect(proxySummary(deck, DEFAULT_PROXY_OPTIONS)).toEqual({
+    expect(proxySummary(cardsToPrint(deck, DEFAULT_PROXY_OPTIONS), DEFAULT_PROXY_OPTIONS)).toEqual({
       cards: 11,
       pages: 4, // 9 + 1 singles, then Delver's front and back
       twoSidedPages: [3, 4],
@@ -311,7 +311,7 @@ describe("foils on their own pages", () => {
       ["Delver of Secrets"],
     ]);
     expect(pages.map((page) => page.foil)).toEqual([false, true, true, true]);
-    expect(proxySummary(deck, foilOptions)).toMatchObject({
+    expect(proxySummary(cardsToPrint(deck, foilOptions), foilOptions)).toMatchObject({
       pages: 4,
       foilPages: [2, 3, 4],
       twoSidedPages: [3, 4],

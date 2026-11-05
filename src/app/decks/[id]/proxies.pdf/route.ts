@@ -1,10 +1,11 @@
 import type { ProxyStreamEvent } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { previewLines, proxyDeck, proxyOptionsFrom } from "../print/proxy-lines";
+import { previewSheet, proxyDeck, proxyOptionsFrom } from "../print/proxy-lines";
 
 /**
- * The deck's proxies as a PDF, with the options in the address (design doc 14, section 3).
+ * The deck's proxies as a PDF, with the options in the address (design doc 14, section 3), its
+ * tokens after its cards (design doc 25).
  * With `progress=1` the answer is a stream of JSON lines instead (design doc 22, section 16):
  * progress as the images are fetched and the pages drawn, then the PDF itself, so the print page
  * can show a progress bar.
@@ -16,10 +17,12 @@ export async function GET(request: Request, context: RouteContext<"/decks/[id]/p
   if (deck === null) return new Response("Not found", { status: 404 });
 
   const parameters = new URL(request.url).searchParams;
-  const options = proxyOptionsFrom(parameters);
+  const chosen = proxyOptionsFrom(parameters);
   // A preview (design doc 22) is the first card the options print, once, shown in the browser.
   const preview = parameters.get("preview") === "1";
-  const lines = preview ? previewLines(deck.lines, options) : deck.lines;
+  const sheet = preview ? previewSheet(deck, chosen) : { lines: deck.lines, tokens: deck.tokens };
+  // A token preview prints that token once (design doc 25).
+  const options = preview ? { ...chosen, tokenCopies: 1 as const } : chosen;
   // A file name without characters that upset browsers or file systems.
   const fileName = `${deck.view.deck.name.replace(/[^\w -]+/g, "").trim() || "deck"} proxies.pdf`;
   const { proxySheet } = getContainer();
@@ -38,7 +41,7 @@ export async function GET(request: Request, context: RouteContext<"/decks/[id]/p
           }
         }
         try {
-          const pdf = await proxySheet(lines, options, (progress) =>
+          const pdf = await proxySheet(sheet, options, (progress) =>
             send({ kind: "progress", progress }),
           );
           send({ kind: "pdf", fileName, base64: Buffer.from(pdf).toString("base64") });
@@ -60,7 +63,7 @@ export async function GET(request: Request, context: RouteContext<"/decks/[id]/p
     });
   }
 
-  const pdf = await proxySheet(lines, options);
+  const pdf = await proxySheet(sheet, options);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

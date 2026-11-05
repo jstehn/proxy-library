@@ -9,6 +9,7 @@ import type {
   ScryfallCard,
   SetCode,
   SetImport,
+  TokenPrinting,
 } from "../domain/types";
 import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
 
@@ -92,6 +93,9 @@ export type CardExtras = Readonly<{
   keywords: readonly string[];
 }>;
 
+/** "This printing makes that token printing", from the printing's Scryfall `all_parts`. */
+export type TokenLink = Readonly<{ printingId: PrintingId; tokenId: string }>;
+
 /** What the tag pass reads from a printing (design doc 20, section 8). */
 export type TaggablePrinting = Readonly<{
   id: PrintingId;
@@ -127,6 +131,11 @@ export interface CatalogRepository {
   printingsForPricing(): Promise<Map<string, PricingPrinting>>;
   savePriceSnapshots(snapshots: readonly PriceSnapshot[]): Promise<void>;
   saveCardExtras(extras: readonly CardExtras[]): Promise<void>;
+  /**
+   * Replaces the stored tokens and token links with these (design doc 25). Tokens no longer
+   * listed are removed; links to tokens not in `tokens` are skipped.
+   */
+  replaceTokens(tokens: readonly TokenPrinting[], links: readonly TokenLink[]): Promise<void>;
   /** Up to `limit` printings whose stored features are older than `version`. */
   printingsToTag(version: number, limit: number): Promise<TaggablePrinting[]>;
   /** Stores features worked out at `version`. */

@@ -36,6 +36,11 @@ export type PrintedCard = Readonly<{
   setCode: string;
   collectorNumber: string;
   artist: string | null;
+  /**
+   * A token (design doc 25): its art grows into the space its text doesn't need, as on a real
+   * token, and a token without text has no text box at all.
+   */
+  isToken: boolean;
 }>;
 
 export type CardSide = "front" | "back";
@@ -376,6 +381,8 @@ const ART_HEIGHT = 105;
 /** Below this the art is too small to be worth printing, and the text gets its space. */
 const SMALLEST_ART = 30;
 const PADDING = 4;
+/** The text size a token's art leaves room for: about a real card's. */
+const TOKEN_TEXT_SIZE = 7.5;
 
 export type PlaytestDrawing = Readonly<{
   /** The card and its bleed: the stripes reach this far, so an off cut shows stripes. */
@@ -504,14 +511,28 @@ export function playtestCard(
     bodyTop - bodyBottom - TYPE_HEIGHT - GAP - (artHeight > 0 ? artHeight + GAP : 0) - 2 * PADDING;
 
   let artHeight = style.art ? ART_HEIGHT : 0;
-  let flowed = fittingFlow(
-    paragraphs,
-    textWidth,
-    textHeightWith(artHeight),
-    measure,
-    TEXT_SIZES.largest,
-    TEXT_SIZES.smallest,
-  );
+  // Everything between the title and the footer except the type line: the art and text share it.
+  const artAndText = bodyTop - bodyBottom - TYPE_HEIGHT - GAP;
+  const textless = paragraphs.length === 0;
+  if (card.isToken && style.art) {
+    // Room for the text at a real card's size (none without text); the art takes the rest,
+    // and never less than a card's art.
+    const textNeeds = textless
+      ? 0
+      : GAP + flow(paragraphs, textWidth, TOKEN_TEXT_SIZE, measure).height + 2 * PADDING;
+    artHeight = Math.max(artHeight, artAndText - textNeeds);
+  }
+  const hasTextBox = !(card.isToken && textless && artHeight > 0);
+  let flowed = hasTextBox
+    ? fittingFlow(
+        paragraphs,
+        textWidth,
+        textHeightWith(artHeight),
+        measure,
+        TEXT_SIZES.largest,
+        TEXT_SIZES.smallest,
+      )
+    : flow(paragraphs, textWidth, TEXT_SIZES.largest, measure);
   if (flowed === null) {
     const needed = flow(paragraphs, textWidth, TEXT_SIZES.smallest, measure);
     const shrunk = artHeight - (needed.height - textHeightWith(artHeight));
@@ -554,7 +575,7 @@ export function playtestCard(
     width: innerWidth,
     height: typeBox.y - GAP - bodyBottom,
   };
-  panels.push(textBox);
+  if (hasTextBox) panels.push(textBox);
   // Short text sits in the middle of the box, as on real cards; long text starts at the top.
   const areaHeight = textBox.height - 2 * PADDING;
   const areaTop =

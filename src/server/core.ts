@@ -23,11 +23,12 @@ import {
   httpWpnGateway,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { makeDecks, makeDeckSharing, makeProxySheets } from "@/modules/decks";
+import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
 import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleDeckTokenRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
 import { makeDrafts } from "@/modules/drafts";
@@ -104,6 +105,7 @@ export function buildCore(config: Config) {
       storeSettings: drizzleStoreSettings(transaction),
       decks: drizzleDeckRepository(transaction),
       cards: drizzleCardLookup(transaction),
+      deckTokens: drizzleDeckTokenRepository(transaction),
       deckSharing: drizzleDeckSharing(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
@@ -162,6 +164,8 @@ export function buildCore(config: Config) {
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
   const deckSharing = makeDeckSharing({ unitOfWork, clock });
+  // Token art and "print it" choices for a deck's proxies (design doc 25).
+  const chooseToken = makeTokenChoices({ unitOfWork });
   // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3);
   // playtest proxies use the art crops (design doc 22).
   async function cachedImage(
@@ -199,6 +203,7 @@ export function buildCore(config: Config) {
     store,
     decks,
     deckSharing,
+    chooseToken,
     proxySheet,
     trades,
     drafts,

@@ -191,6 +191,35 @@ export type ScryfallCard = Readonly<{
   producedMana: readonly string[];
   /** Keyword abilities and actions ("Flying", "Ward", "Scry"), for `kw:` searches. */
   keywords: readonly string[];
+  /**
+   * Scryfall ids from its `all_parts` that may be tokens it makes (tokens, emblems, The Monarch)
+   * alongside ordinary related cards; the sync keeps those that are token printings.
+   */
+  tokenIds: readonly string[];
+  /** When this card is itself a paper token, emblem or helper card: what we store of it. */
+  token: TokenPrinting | null;
+}>;
+
+/**
+ * One printing of a token (design doc 25): a Goblin, a Treasure, an emblem, The Monarch. Tokens
+ * aren't printings (they're never sold, owned or searched), so they live in their own table.
+ */
+export type TokenPrinting = Readonly<{
+  /** Scryfall's id: tokens have no MTGJSON printing. */
+  id: string;
+  /** The same for every art of one token: all 1/1 red Goblins share it. */
+  oracleId: string;
+  name: string;
+  setCode: string;
+  collectorNumber: string;
+  /** "token", "double_faced_token", "emblem", or a token set's ordinary card ("normal"). */
+  layout: string;
+  colors: readonly string[];
+  faces: readonly CardFace[];
+  artist: string | null;
+  images: ImageUris | null;
+  /** "2024-08-02", for newest-first lists. */
+  releasedAt: string;
 }>;
 
 export type PriceSnapshot = Readonly<{

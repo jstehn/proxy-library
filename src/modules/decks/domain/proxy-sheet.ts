@@ -24,6 +24,8 @@ export const PAPER_SIZES = {
 export type Paper = keyof typeof PAPER_SIZES;
 
 export const GAPS_IN_MILLIMETERS = [0, 1, 2, 3] as const;
+/** Copies of each token the sheet can print (design doc 25). */
+export const TOKEN_COPIES = [0, 1, 2, 3, 4] as const;
 
 export type ProxyOptions = Readonly<{
   paper: Paper;
@@ -50,6 +52,8 @@ export type ProxyOptions = Readonly<{
   stripes: "on" | "off";
   /** Print every copy, or only the copies your real cards don't cover (design doc 16). */
   realCards: "print" | "leaveOut";
+  /** Copies of each token the deck's cards make, after the cards; 0 prints none (design doc 25). */
+  tokenCopies: (typeof TOKEN_COPIES)[number];
 }>;
 
 /** The defaults agreed in design doc 14 (section 3 and decision 4). */
@@ -69,6 +73,8 @@ export const DEFAULT_PROXY_OPTIONS: ProxyOptions = {
   stripes: "on",
   // Proxies stand in for cards you don't have, so real copies are left out (design doc 16).
   realCards: "leaveOut",
+  // Two of each token: enough for most games (design doc 25, decision 1).
+  tokenCopies: 2,
 };
 
 /** What the sheet needs to know about one deck line. */
@@ -390,8 +396,8 @@ export type ProxySummary = Readonly<{
   sideways: boolean;
 }>;
 
-export function proxySummary(lines: readonly ProxyLine[], options: ProxyOptions): ProxySummary {
-  const cards = cardsToPrint(lines, options);
+/** What the sheet for these copies (`sheetCards`: the cards, then the tokens) comes to. */
+export function proxySummary(cards: readonly ProxyCard[], options: ProxyOptions): ProxySummary {
   const pages = proxyPages(cards, options);
   const grid = sheetGrid(options);
   // A page is two-sided when it holds backs, or when the page after it does (its fronts).

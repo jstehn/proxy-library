@@ -23,7 +23,7 @@ export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
           </Link>
         </p>
       </header>
-      <ProxyForm deckId={deck.view.deck.id} lines={deck.lines} />
+      <ProxyForm deckId={deck.view.deck.id} lines={deck.lines} tokens={deck.tokens} />
     </main>
   );
 }

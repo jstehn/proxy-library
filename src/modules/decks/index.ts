@@ -37,6 +37,8 @@ export type {
   DeckRepository,
   DeckSharingRepository,
   DeckSharingServices,
+  DeckTokenRepository,
+  TokenChoiceServices,
   DecksDependencies,
   DecksServices,
 } from "./application/ports";
@@ -137,7 +139,7 @@ export {
   type SharedDeck,
   type ViewedDeck,
 } from "./queries/sharing";
-export { makeProxySheets, type ProxySheet } from "./application/proxy-sheets";
+export { makeProxySheets, type ProxySheet, type ProxySheetInput } from "./application/proxy-sheets";
 export type {
   ProxyImageSource,
   ProxyPdfRenderer,
@@ -150,7 +152,24 @@ export {
   PAPER_SIZES,
   proxyPages,
   proxySummary,
+  TOKEN_COPIES,
   type ProxyLine,
   type ProxyOptions,
 } from "./domain/proxy-sheet";
+export {
+  makeTokenChoices,
+  type ChooseToken,
+  type ChooseTokenError,
+  type ChooseTokenInput,
+} from "./application/token-choices";
+export { deckTokenLines, tokenArtOptions } from "./queries/tokens";
+export {
+  deckTokens,
+  sheetCards,
+  tokenDescription,
+  tokensToPrint,
+  type TokenArt,
+  type TokenLine,
+  type TokenMaker,
+} from "./domain/token-proxies";
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";

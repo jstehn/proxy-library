@@ -107,7 +107,7 @@ describe("playtest proxies", () => {
         isBasicLand: false,
         hasBack: card.hasBackImage,
         isFoil: false,
-        printed: { ...card, doubleFaced: card.hasBackImage },
+        printed: { ...card, doubleFaced: card.hasBackImage, isToken: false },
       };
     });
     const proxySheet = makeProxySheets({
@@ -115,11 +115,14 @@ describe("playtest proxies", () => {
       renderer: pdfLibRenderer(),
     });
     for (const artFilter of ["color", "grayscale", "edges", "none"] as const) {
-      const bytes = await proxySheet(lines, {
-        ...DEFAULT_PROXY_OPTIONS,
-        style: "playtest",
-        artFilter,
-      });
+      const bytes = await proxySheet(
+        { lines, tokens: [] },
+        {
+          ...DEFAULT_PROXY_OPTIONS,
+          style: "playtest",
+          artFilter,
+        },
+      );
       expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
     }
   });

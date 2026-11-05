@@ -5,6 +5,7 @@ import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/
 import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
+import type { TokenChoice } from "../domain/token-proxies";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
@@ -68,6 +69,18 @@ export interface CardLookup {
 export type DecksServices = { decks: DeckRepository; cards: CardLookup };
 
 export type DecksDependencies = { unitOfWork: UnitOfWork<DecksServices>; clock: Clock };
+
+/** Tokens a deck's cards make, and the deck's choices for them (design doc 25). */
+export interface DeckTokenRepository {
+  /** The token a token printing is of, or null if the catalog doesn't have it. */
+  tokenOracleOf(tokenId: string): Promise<string | null>;
+  /** Whether any printing of any of these cards makes this token. */
+  anyMakes(cardOracleIds: readonly string[], tokenOracleId: string): Promise<boolean>;
+  /** Saves (or replaces) the deck's choice for one token. */
+  saveChoice(deckId: DeckId, choice: TokenChoice): Promise<void>;
+}
+
+export type TokenChoiceServices = { decks: DeckRepository; deckTokens: DeckTokenRepository };
 
 /** Card images for proxy sheets (the catalog's image cache, wired in core.ts). */
 export interface ProxyImageSource {

@@ -14,8 +14,10 @@ import {
   deckLists,
   priceSnapshots,
   printings,
+  printingTokens,
   sealedProducts,
   syncRuns,
+  tokenPrintings,
 } from "./schema";
 
 // Postgres allows at most 65535 parameters per statement; 500 rows keeps well under that.
@@ -306,6 +308,59 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       }
     },
 
+    async replaceTokens(tokens, links) {
+      // Upserted rather than replaced, so a deck's chosen art (a foreign key) survives the sync.
+      const byId = new Map(tokens.map((token) => [token.id, token]));
+      for (const batch of chunks([...byId.values()])) {
+        await db
+          .insert(tokenPrintings)
+          .values(
+            batch.map((token) => ({
+              id: token.id,
+              oracleId: token.oracleId,
+              name: token.name,
+              setCode: token.setCode,
+              collectorNumber: token.collectorNumber,
+              layout: token.layout,
+              colors: [...token.colors],
+              faces: token.faces,
+              artist: token.artist,
+              imageUris: token.images,
+              releasedAt: token.releasedAt,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: tokenPrintings.id,
+            set: {
+              oracleId: excluded("oracle_id"),
+              name: excluded("name"),
+              setCode: excluded("set_code"),
+              collectorNumber: excluded("collector_number"),
+              layout: excluded("layout"),
+              colors: excluded("colors"),
+              faces: excluded("faces"),
+              artist: excluded("artist"),
+              imageUris: excluded("image_uris"),
+              releasedAt: excluded("released_at"),
+            },
+          });
+      }
+      const ids = [...byId.keys()];
+      await db.execute(sql`delete from token_printings where id <> all(${sql.param(ids)}::text[])`);
+
+      await db.delete(printingTokens);
+      // A printing can list one token twice (both halves of a split card make it), and a link
+      // can point at a token we don't keep (a digital-only one).
+      const unique = new Map(
+        links
+          .filter((link) => byId.has(link.tokenId))
+          .map((link) => [`${link.printingId}/${link.tokenId}`, link]),
+      );
+      for (const batch of chunks([...unique.values()])) {
+        await db.insert(printingTokens).values(batch);
+      }
+    },
+
     async printingsToTag(version, limit) {
       const rows = await db.execute<{
         id: string;
@@ -352,9 +407,17 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
         .select({ scryfallId: printings.scryfallId, imageUris: printings.imageUris })
         .from(printings)
         .where(eq(printings.id, printingId));
-      if (row === undefined) return null;
       // Written by this module from Scryfall's parsed data, so its shape is known.
-      return { scryfallId: row.scryfallId, images: row.imageUris as ImageUris | null };
+      if (row !== undefined) {
+        return { scryfallId: row.scryfallId, images: row.imageUris as ImageUris | null };
+      }
+      // Not a card printing: maybe a token (design doc 25), whose id is its Scryfall id.
+      const [token] = await db
+        .select({ id: tokenPrintings.id, imageUris: tokenPrintings.imageUris })
+        .from(tokenPrintings)
+        .where(eq(tokenPrintings.id, printingId));
+      if (token === undefined) return null;
+      return { scryfallId: token.id, images: token.imageUris as ImageUris | null };
     },
   };
 }

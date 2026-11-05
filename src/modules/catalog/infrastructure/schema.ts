@@ -252,3 +252,43 @@ export const artworkFiles = pgTable("artwork_files", {
   imageId: text("image_id").primaryKey(),
   downloadedAt: timestamptz("downloaded_at").notNull(),
 });
+
+/**
+ * Paper token printings in English (design doc 25), from Scryfall's bulk file: tokens, emblems
+ * and helper cards (The Monarch). Not printings: never sold, owned or searched. Updated in place
+ * on each sync, so a deck's chosen art keeps pointing at the same row.
+ */
+export const tokenPrintings = pgTable(
+  "token_printings",
+  {
+    id: text("id").primaryKey(), // Scryfall id
+    oracleId: text("oracle_id").notNull(),
+    name: text("name").notNull(),
+    setCode: text("set_code").notNull(), // Scryfall's code ("tblb"), not a card_sets row
+    collectorNumber: text("collector_number").notNull(),
+    layout: text("layout").notNull(),
+    colors: text("colors").array().notNull(),
+    faces: jsonb("faces").notNull(), // CardFace[]
+    artist: text("artist"),
+    imageUris: jsonb("image_uris"),
+    releasedAt: text("released_at").notNull(), // "2024-08-02"; Scryfall leaves some empty
+  },
+  (table) => [index("token_printings_oracle_idx").on(table.oracleId)],
+);
+
+/** "This printing makes that token printing", from Scryfall's `all_parts` (design doc 25). */
+export const printingTokens = pgTable(
+  "printing_tokens",
+  {
+    printingId: text("printing_id")
+      .notNull()
+      .references(() => printings.id, { onDelete: "cascade" }),
+    tokenId: text("token_id")
+      .notNull()
+      .references(() => tokenPrintings.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.printingId, table.tokenId] }),
+    index("printing_tokens_token_idx").on(table.tokenId),
+  ],
+);

@@ -37,6 +37,12 @@ Commander companion set (design doc 04, rule 11), and the fixture sync needs a f
 `scryfall/default-cards.jsonl` also carries each card's real `keywords` and `produced_mana`
 (added 2026-10-01 from Scryfall's bulk file of that day, for the card search tests; design doc 15).
 
+**Tokens** (design doc 25, added 2026-11-04 from the cached bulk file of 2026-11-03): every
+fixture card's `all_parts` links, and 11 real token lines: the 7 Bloomburrow tokens the fixture
+cards make (Treasure, Fish, Wall, Rabbit, Food, and the Offspring tokens Intrepid Rabbit and
+Thundertrap Trainer), two more Rabbit arts (TCLB, TFDN), a double-faced token (Incubator //
+Phyrexian, TMOM) and an emblem (Elspeth, Knight-Errant, TMMA).
+
 `images/card.jpg` is a made-up 8 × 8 JPEG (a blue square, drawn by Chromium). It stands in for
 card images: in the proxy PDF unit tests, and in the browser tests' image cache, so making a proxy
 PDF there never downloads an image.

@@ -7,13 +7,17 @@ import {
   proxyPages,
   pageList,
   proxySummary,
+  sheetCards,
+  TOKEN_COPIES,
   type ProxyLine,
   type ProxyOptions,
+  type TokenLine,
 } from "@/modules/decks/client";
 import { DownloadButton } from "./download-button";
+import { TokenList } from "./token-section";
 
-// The proxy options (design doc 14, section 3, and the playtest style of design doc 22), with
-// what they'll produce shown as you choose.
+// The proxy options (design doc 14, section 3, the playtest style of design doc 22 and the
+// tokens of design doc 25), with what they'll produce shown as you choose.
 
 type Choice<Key extends keyof ProxyOptions> = Readonly<{
   value: ProxyOptions[Key];
@@ -142,6 +146,16 @@ const FOILS: Question<"foils"> = {
   help: "For printing foils on foil paper: they come after everything else, so the foil paper goes in once. A card is foil when the deck's copy is (foil or etched).",
 };
 
+const TOKEN_COPIES_QUESTION: Question<"tokenCopies"> = {
+  key: "tokenCopies",
+  title: "Copies of each token",
+  choices: TOKEN_COPIES.map((copies) => ({
+    value: copies,
+    label: copies === 0 ? "None" : `${copies}`,
+  })),
+  help: "Tokens print after the cards, in the same style. Cards you leave out as real still get their tokens.",
+};
+
 /** Only asked for playtest cards. */
 const PLAYTEST_QUESTIONS = [ART_FILTER, STRIPES] as const;
 
@@ -157,11 +171,22 @@ const QUESTIONS = [
   BLEED,
 ] as const;
 
-export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }) {
+type ProxyFormProps = Readonly<{
+  deckId: number;
+  lines: readonly ProxyLine[];
+  tokens: readonly TokenLine[];
+}>;
+
+export function ProxyForm(props: ProxyFormProps) {
   const [options, setOptions] = useState<ProxyOptions>(DEFAULT_PROXY_OPTIONS);
-  const summary = proxySummary(props.lines, options);
+  // Your token choices are saved as you make them; this is the fresh list the server sent back.
+  const [tokens, setTokens] = useState<readonly TokenLine[]>(props.tokens);
+  const copies = sheetCards(props.lines, tokens, options);
+  const summary = proxySummary(copies, options);
+  const cardCount = cardsToPrint(props.lines, options).length;
+  const tokenCount = copies.length - cardCount;
   const hasRealCards = props.lines.some((line) => line.ownedReal > 0);
-  const firstPage = proxyPages(cardsToPrint(props.lines, options), options)[0];
+  const firstPage = proxyPages(copies, options)[0];
   const query = new URLSearchParams(
     Object.entries(options).map(([key, value]) => [key, String(value)]),
   );
@@ -205,7 +230,7 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
         <p className="text-sm" aria-live="polite">
           {summary.cards === 0
             ? "Nothing to print with these options."
-            : `${summary.cards} ${summary.cards === 1 ? "card" : "cards"} on ${summary.pages} ${summary.pages === 1 ? "page" : "pages"}, ${summary.perPage} to a page${summary.sideways ? " (sideways)" : ""}.`}
+            : `${countWords(cardCount, tokenCount)} on ${summary.pages} ${summary.pages === 1 ? "page" : "pages"}, ${summary.perPage} to a page${summary.sideways ? " (sideways)" : ""}.`}
           {summary.twoSidedPages.length > 0 &&
             ` Double-faced cards are on ${pageList(summary.twoSidedPages)}: print those two-sided.`}
           {options.foils === "ownPages" &&
@@ -228,7 +253,7 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
             rel="noopener"
             className="rounded-md border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
           >
-            Preview one card
+            {cardCount === 0 ? "Preview one token" : "Preview one card"}
           </a>
         )}
         <p className="text-xs text-zinc-500">
@@ -270,9 +295,31 @@ export function ProxyForm(props: { deckId: number; lines: readonly ProxyLine[] }
             onChoose={(value) => choose(question.key, value)}
           />
         ))}
+        <section aria-labelledby="tokens-heading" className="flex flex-col gap-3">
+          <h2 id="tokens-heading" className="text-lg font-semibold">
+            Tokens
+          </h2>
+          {tokens.length > 0 && (
+            <OptionGroup
+              question={TOKEN_COPIES_QUESTION}
+              selected={options.tokenCopies}
+              onChoose={(value) => choose("tokenCopies", value)}
+            />
+          )}
+          <TokenList deckId={props.deckId} tokens={tokens} onTokensChange={setTokens} />
+        </section>
       </form>
     </div>
   );
+}
+
+/** "12 cards and 6 tokens", "1 card", "4 tokens". */
+function countWords(cards: number, tokens: number): string {
+  const parts = [
+    cards > 0 ? `${cards} ${cards === 1 ? "card" : "cards"}` : null,
+    tokens > 0 ? `${tokens} ${tokens === 1 ? "token" : "tokens"}` : null,
+  ].filter((part) => part !== null);
+  return parts.join(" and ");
 }
 
 function OptionGroup<Key extends keyof ProxyOptions>(props: {

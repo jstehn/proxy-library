@@ -15,7 +15,7 @@ import {
   REFERENCE_SETS_PER_RUN,
   referenceSetsToImport,
 } from "../domain/rules";
-import type { PriceSnapshot, SetCode, SetImport } from "../domain/types";
+import type { PriceSnapshot, SetCode, SetImport, TokenPrinting } from "../domain/types";
 import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
 import type {
   CardExtras,
@@ -24,6 +24,7 @@ import type {
   SetState,
   SyncKind,
   SyncRun,
+  TokenLink,
 } from "./ports";
 
 // The data sync (design doc 04, section 5). It runs in the worker and takes minutes, so it is
@@ -55,6 +56,8 @@ export type SyncSummary = {
     decks: string[];
   };
   pricedPrintings: number;
+  /** Token printings stored by the bulk-file pass (design doc 25). */
+  tokenPrintings?: number;
   /** Printings whose role tags and themes were worked out (design doc 20). */
   taggedPrintings?: number;
   priceSnapshots: number;
@@ -245,8 +248,14 @@ export function makeSync(dependencies: CatalogDependencies) {
       });
     }
 
+    // Tokens and the links to them (design doc 25): a few thousand rows, kept until the end and
+    // saved in one go, so links never point at tokens that aren't stored yet.
+    const tokens: TokenPrinting[] = [];
+    const tokenLinks: TokenLink[] = [];
+
     for await (const card of scryfall.readBulkFile(bulkFilePath)) {
       tallyStandard(tally, card);
+      if (card.token !== null) tokens.push(card.token);
       // Paper cards only (rule 9). Any language: a card is matched by its exact Scryfall id, so
       // a non-English entry only matches a printing that exists only in that language, like the
       // Japanese Mystical Archive cards in Secrets of Strixhaven Collector Boosters (rule 8).
@@ -254,6 +263,7 @@ export function makeSync(dependencies: CatalogDependencies) {
 
       const printing = printings.get(card.scryfallId);
       if (printing === undefined) continue;
+      for (const tokenId of card.tokenIds) tokenLinks.push({ printingId: printing.id, tokenId });
       // Snapshots only for sold sets and real copies, so reference sets don't fill the price
       // table every night (design doc 16, section 7); images and legalities for every printing.
       const isPriced = printing.isPriced || extraPriced.has(printing.id);
@@ -272,6 +282,12 @@ export function makeSync(dependencies: CatalogDependencies) {
     }
     await flush();
     await inTransaction(({ catalog }) => catalog.markStandard(standardSetsFromTally(tally)));
+    // No tokens at all means the file didn't have them (an old fixture, a cut-down file): keep
+    // the ones we have rather than forget every deck's token art.
+    if (tokens.length > 0) {
+      await inTransaction(({ catalog }) => catalog.replaceTokens(tokens, tokenLinks));
+    }
+    summary.tokenPrintings = tokens.length;
   }
 
   /** Works out and stores every out-of-date printing's features, a batch at a time. */

@@ -18,6 +18,7 @@ import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleDeckTokenRepository,
 } from "@/modules/decks/infrastructure";
 import {
   drizzleDraftCatalog,
@@ -73,6 +74,7 @@ export function servicesFor(transaction: DbExecutor) {
     storeSettings: drizzleStoreSettings(transaction),
     decks: drizzleDeckRepository(transaction),
     cards: drizzleCardLookup(transaction),
+    deckTokens: drizzleDeckTokenRepository(transaction),
     deckSharing: drizzleDeckSharing(transaction),
     trades: drizzleTradeRepository(transaction),
     tradePlayers: drizzleTradePlayers(transaction),
@@ -92,7 +94,7 @@ export const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
 /** A fresh catalog from the recorded fixtures: Bloomburrow, enabled as a Standard set. */
 export async function loadFixtureCatalog(): Promise<void> {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, token_printings cascade`,
   );
   const catalog = makeCatalog({
     extraPricedPrintings: { printingIds: async () => [] },

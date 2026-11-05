@@ -24,3 +24,7 @@ export type EntryNotFound = Readonly<{ kind: "EntryNotFound" }>;
 export type PrintingNotOfCard = Readonly<{ kind: "PrintingNotOfCard" }>;
 /** The printing doesn't come in the finish chosen (design doc 24, rule 3). */
 export type FinishNotAvailable = Readonly<{ kind: "FinishNotAvailable" }>;
+/** None of the deck's cards makes this token (design doc 25). */
+export type TokenNotInDeck = Readonly<{ kind: "TokenNotInDeck" }>;
+/** The art chosen is a printing of another token, or isn't in the catalog (design doc 25). */
+export type NotThatToken = Readonly<{ kind: "NotThatToken" }>;

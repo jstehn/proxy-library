@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
-import { printings } from "../../catalog/infrastructure/schema";
+import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -93,4 +93,23 @@ export const deckComments = pgTable(
       sql`(${table.deletedAt} is not null and ${table.body} = '') or char_length(${table.body}) between 1 and 1000`,
     ),
   ],
+);
+
+/**
+ * Per deck, per token: the art to print and whether it prints at all (design doc 25). No row
+ * means the default art, printed. A choice for a token the deck no longer makes is kept but
+ * ignored, so it's back if the card comes back.
+ */
+export const deckTokenChoices = pgTable(
+  "deck_token_choices",
+  {
+    deckId: bigint("deck_id", { mode: "number" })
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    tokenOracleId: text("token_oracle_id").notNull(),
+    // null: the default art. A token that leaves the catalog falls back to the default.
+    tokenId: text("token_id").references(() => tokenPrintings.id, { onDelete: "set null" }),
+    included: boolean("included").notNull().default(true),
+  },
+  (table) => [primaryKey({ columns: [table.deckId, table.tokenOracleId] })],
 );
