@@ -47,6 +47,7 @@ import {
   drizzlePlayerDirectory,
   drizzleWalletRepository,
 } from "@/modules/wallet/infrastructure";
+import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
 import { loadConfig } from "@/shared/config";
 import { createDatabase, makeDrizzleUnitOfWork, type DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
@@ -86,6 +87,8 @@ export function servicesFor(transaction: DbExecutor) {
     realCollection: drizzleRealCollectionRepository(transaction),
     printingMatcher: sqlPrintingMatcher(transaction),
     productContents: drizzleProductCatalog(transaction),
+    wishes: drizzleWishRepository(transaction),
+    wishCatalog: drizzleWishCatalog(transaction),
   };
 }
 

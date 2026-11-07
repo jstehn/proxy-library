@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { activeDraftOf } from "@/modules/drafts";
 import { tradesWaitingForYou } from "@/modules/trades";
+import { wishesAtTarget } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -10,6 +11,7 @@ import { signOutAction } from "./actions";
 const MAIN_LINKS = [
   ["/store", "Store"],
   ["/singles", "Singles"],
+  ["/wishlist", "Wishlist"],
   ["/inventory", "Inventory"],
   ["/collection", "Collection"],
   ["/decks", "Decks"],
@@ -26,6 +28,8 @@ export async function SiteHeader() {
   const balance = actor === null ? null : await getContainer().wallet.refreshWallet(actor.userId);
   const waitingTrades =
     actor === null ? 0 : await tradesWaitingForYou(getContainer().db, actor.userId);
+  // Wishes at or under their target price (design doc 26, section 9).
+  const wishesOnTarget = actor === null ? 0 : await wishesAtTarget(getContainer().db, actor.userId);
   // A lobby or draft you're seated at: the link goes straight back to it (design doc 17).
   const draft = actor === null ? null : await activeDraftOf(getContainer().db, actor.userId);
 
@@ -47,6 +51,14 @@ export async function SiteHeader() {
                     draft.status === "drafting" ? "Your draft is running" : "You're in a lobby"
                   }
                 />
+              )}
+              {href === "/wishlist" && wishesOnTarget > 0 && (
+                <span
+                  className="ml-1 rounded-full bg-emerald-600 px-1.5 text-xs font-semibold text-white"
+                  title={`${wishesOnTarget} at or under your target price`}
+                >
+                  {wishesOnTarget}
+                </span>
               )}
               {href === "/trades" && waitingTrades > 0 && (
                 <span

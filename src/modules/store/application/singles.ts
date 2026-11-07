@@ -8,6 +8,7 @@ import type {
   NoPrice,
   NotBuying,
   NotForSale,
+  PricesChanged,
   QuantityInvalid,
   RateInvalid,
   WorthNothing,
@@ -85,6 +86,57 @@ export async function buyCopies(
   return ok({ transactionId, unitPrice: quote.price, total, priceDay: quote.day });
 }
 
+/** Today's price of a printing the store sells (rule 1: only from enabled sets). */
+async function quoteForSale(
+  services: StoreServices,
+  line: SingleInput,
+): Promise<Result<CheckedQuote, NoPrice | NotForSale>> {
+  const quote = await services.marketPrices.quote(line.printingId, line.finish);
+  if (quote === null) return err({ kind: "NoPrice" });
+  if (!quote.isSetEnabled) return err({ kind: "NotForSale" });
+  return ok(quote);
+}
+
+/** Buys singles inside the caller's transaction, at no more than a price the player saw. */
+export type BuySingleInInput = Readonly<{
+  actor: Actor;
+  line: SingleInput;
+  /**
+   * Refuse if the price per copy is now above this (design doc 26, rule 7), or null to buy at
+   * whatever the market price is.
+   */
+  maxUnitPrice: Cents | null;
+  now: Date;
+}>;
+
+export type BuySingleInError = BuySingleError | PricesChanged;
+
+/**
+ * Buying one printing at market price, for another module's transaction (the wishlist's "Buy",
+ * design doc 26): it checks the quantity, the price and that the set is for sale, then buys.
+ * An error leaves the caller to return it, which rolls everything back.
+ */
+export async function buySingleIn(
+  services: StoreServices,
+  input: BuySingleInInput,
+): Promise<Result<SingleReceipt, BuySingleInError>> {
+  const quantity = checkQuantity(input.line.quantity);
+  if (!quantity.ok) return quantity;
+  const checked = await quoteForSale(services, input.line);
+  if (!checked.ok) return checked;
+  const quote = checked.value;
+  if (input.maxUnitPrice !== null && quote.price > input.maxUnitPrice) {
+    return err({ kind: "PricesChanged", total: totalPrice(quote.price, quantity.value) });
+  }
+  // The store record rolls back too when the wallet can't pay.
+  return buyCopies(services, {
+    actor: input.actor,
+    line: { ...input.line, quantity: quantity.value },
+    quote,
+    now: input.now,
+  });
+}
+
 /** A player buys copies of one printing, in one finish, at market price (rules 1, 2, 7). */
 export function makeBuySingle(dependencies: StoreDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -97,14 +149,13 @@ export function makeBuySingle(dependencies: StoreDependencies) {
     if (!quantity.ok) return quantity;
 
     return unitOfWork.run<SingleReceipt, BuySingleError>(async (services) => {
-      const quote = await services.marketPrices.quote(input.printingId, input.finish);
-      if (quote === null) return err({ kind: "NoPrice" });
-      if (!quote.isSetEnabled) return err({ kind: "NotForSale" });
+      const quote = await quoteForSale(services, input);
+      if (!quote.ok) return quote;
       // The store record rolls back too when the wallet can't pay.
       return buyCopies(services, {
         actor,
         line: { ...input, quantity: quantity.value },
-        quote,
+        quote: quote.value,
         now: clock.now(),
       });
     });

@@ -87,6 +87,9 @@ const policies = [
     // Design doc 23: which copies are yours, and which is most special, are one SQL definition
     // shared by the read side and the decks' card lookup, so a pasted list and the builder agree.
     layer("queries", { sameModule: true, file: "owned.ts" }),
+    // Design doc 26: what's for sale and what you own of a wished card are one SQL definition,
+    // shared by the Wishlist page and the wishlist's use cases, so "cheapest" means the same.
+    layer("queries", { sameModule: true, file: "for-sale.ts" }),
   ),
   from(
     layer("queries"),

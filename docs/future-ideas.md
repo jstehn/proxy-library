@@ -48,7 +48,9 @@ design doc (or joins a phase's design) and is removed from this list.
   0011's option (b). Today they're ordinary stacks.
 - **Bulk selling:** "sell everything above 4 copies" or "sell all commons under $0.10", with a
   preview of the payout.
-- **Wishlist and price alerts** from the price history.
+- ~~**Wishlist**~~ **Done (design doc 26).** Still open: price alerts outside the app (e-mail
+  isn't set up), "add a deck's missing cards to the wishlist" from its cards-to-get panel, and
+  sharing a wishlist with the playgroup for trades.
 
 ## Decks
 

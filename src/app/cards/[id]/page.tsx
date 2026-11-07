@@ -11,6 +11,7 @@ import {
   singleHistory,
   type SingleHistoryRow,
 } from "@/modules/store";
+import { wishesForCard } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -18,6 +19,7 @@ import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { PriceChart, type ChartMarker } from "@/ui/price-chart";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { AddWishForm } from "@/app/wishlist/wish-forms";
 import { RealCopiesBox } from "./real-copies";
 import { BuyForm, SellForm } from "./trade-forms";
 
@@ -29,6 +31,7 @@ const FINISH_LABELS: Record<Finish, string> = {
   foil: "Foil",
   etched: "Etched",
 };
+const WISH_FINISHES = { nonfoil: "nonfoil", foil: "foil", cheapest: "either finish" };
 const FINISH_COLORS: Record<Finish, string> = {
   nonfoil: "#52525b",
   foil: "#0ea5e9",
@@ -42,15 +45,17 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
   const detail = await printingDetail(db, id);
   if (detail === null) notFound();
 
-  const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings] = await Promise.all([
-    priceHistory(db, id),
-    ownedCopies(db, actor.userId, id),
-    singleHistory(db, actor.userId, id),
-    currentBuylistRate(db),
-    decksUsing(db, actor.userId, [id]),
-    realCopiesOf(db, actor.userId, id),
-    printingsOfSameCard(db, id),
-  ]);
+  const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings, wishes] =
+    await Promise.all([
+      priceHistory(db, id),
+      ownedCopies(db, actor.userId, id),
+      singleHistory(db, actor.userId, id),
+      currentBuylistRate(db),
+      decksUsing(db, actor.userId, [id]),
+      realCopiesOf(db, actor.userId, id),
+      printingsOfSameCard(db, id),
+      wishesForCard(db, actor.userId, id),
+    ]);
   const searchParams = await props.searchParams;
   const realError = typeof searchParams.realError === "string" ? searchParams.realError : null;
   const decks = inDecks.get(id) ?? [];
@@ -170,6 +175,44 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
             <p className="text-xs text-zinc-500">
               The store buys cards at {rateBps / 100}% of market price, rounded down.
             </p>
+          </section>
+
+          <section className="flex flex-col gap-2 text-sm">
+            <h2 className="font-medium">Wishlist</h2>
+            {wishes.length > 0 && (
+              <ul className="flex flex-col gap-0.5">
+                {wishes.map((wish) => (
+                  <li key={wish.id}>
+                    ★ On your{" "}
+                    <Link href="/wishlist" className="underline">
+                      wishlist
+                    </Link>
+                    : {wish.quantity} {wish.quantity === 1 ? "copy" : "copies"},{" "}
+                    {wish.target.kind === "anyPrinting"
+                      ? `any printing (${WISH_FINISHES[wish.target.finish]})`
+                      : wish.target.printingId === card.id
+                        ? `this printing (${wish.target.finish})`
+                        : `another printing (${wish.target.finish})`}
+                    {wish.targetPrice !== null && `, target ${Cents.format(wish.targetPrice)}`}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <details className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+              <summary className="cursor-pointer font-medium">
+                {wishes.length > 0 ? "Add or change a wish" : "Add to wishlist"}
+              </summary>
+              <div className="mt-3">
+                <AddWishForm
+                  printingId={card.id}
+                  finishes={finishes}
+                  printingLabel={`${detail.setCode.toUpperCase()} #${card.collectorNumber}${card.variantLabel ? `, ${card.variantLabel}` : ""}`}
+                />
+              </div>
+              <p className="mt-2 text-xs text-zinc-500">
+                Wishing for the same thing again changes that wish instead of adding another.
+              </p>
+            </details>
           </section>
 
           <RealCopiesBox

@@ -11,12 +11,16 @@ export type {
   StoreServices,
 } from "./application/ports";
 export { MAX_QUANTITY, productKind } from "./domain/pricing";
-export type {
-  BuySingleError,
-  SellSingleError,
-  SingleInput,
-  SingleReceipt,
+export {
+  buySingleIn,
+  type BuySingleError,
+  type BuySingleInError,
+  type BuySingleInInput,
+  type SellSingleError,
+  type SingleInput,
+  type SingleReceipt,
 } from "./application/singles";
+export type { PricesChanged } from "./domain/errors";
 export { DEFAULT_BUYLIST_RATE_BPS, payoutPerCopy } from "./domain/singles";
 export {
   MAX_LIST_LINES,

@@ -41,7 +41,7 @@ export default async function AccountPage() {
         <ul className="list-disc pl-5 text-sm text-zinc-700 dark:text-zinc-300">
           <li>
             <strong>Every card is wiped</strong>: your whole collection, your sealed product (opened
-            or not) and your decks.
+            or not), your decks and your wishlist.
           </li>
           <li>Trades waiting for an answer are cancelled or declined.</li>
           <li>

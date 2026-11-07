@@ -61,6 +61,8 @@ import {
   drizzleTradeRepository,
 } from "@/modules/trades/infrastructure";
 import { makeWallet } from "@/modules/wallet";
+import { makeWishlist } from "@/modules/wishlist";
+import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
 import {
   drizzleEconomySettingsRepository,
   drizzlePlayerDirectory,
@@ -118,6 +120,8 @@ export function buildCore(config: Config) {
       printingMatcher: sqlPrintingMatcher(transaction),
       // A real product's contents are read exactly as inventory reads a game product's.
       productContents: drizzleProductCatalog(transaction),
+      wishes: drizzleWishRepository(transaction),
+      wishCatalog: drizzleWishCatalog(transaction),
     };
   }
 
@@ -187,6 +191,7 @@ export function buildCore(config: Config) {
   const drafts = makeDrafts({ unitOfWork, clock, seeds });
   const resetPlayer = makeResetPlayer({ unitOfWork, clock });
   const realCollection = makeRealCollection({ unitOfWork, clock });
+  const wishlist = makeWishlist({ unitOfWork, clock });
 
   return {
     config,
@@ -209,6 +214,7 @@ export function buildCore(config: Config) {
     drafts,
     resetPlayer,
     realCollection,
+    wishlist,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

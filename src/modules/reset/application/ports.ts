@@ -5,6 +5,7 @@ import type { DraftsServices } from "@/modules/drafts";
 import type { InventoryServices } from "@/modules/inventory";
 import type { TradesServices } from "@/modules/trades";
 import type { WalletServices } from "@/modules/wallet";
+import type { WishlistServices } from "@/modules/wishlist";
 import type { Clock, UnitOfWork } from "@/shared/kernel";
 
 // Ports: a reset owns no tables. It asks each module to clear its own part, all in one
@@ -16,6 +17,7 @@ export type ResetServices = Pick<TradesServices, "trades"> &
   CollectionServices &
   Pick<DecksServices, "decks"> &
   ActivityServices &
-  DraftsServices;
+  DraftsServices &
+  Pick<WishlistServices, "wishes">;
 
 export type ResetDependencies = { unitOfWork: UnitOfWork<ResetServices>; clock: Clock };

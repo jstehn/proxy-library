@@ -9,6 +9,7 @@ import {
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
 import { enabledSets, FINISHES, printingCards, searchPrintings } from "@/modules/catalog";
+import { wishedPrintings } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -45,7 +46,10 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
     }),
     enabledSets(db),
   ]);
-  const cards = await printingCards(db, result.printingIds);
+  const [cards, wished] = await Promise.all([
+    printingCards(db, result.printingIds),
+    wishedPrintings(db, actor.userId, result.printingIds),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
@@ -81,6 +85,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
               printing={printing}
               href={`/cards/${id}`}
               priceLine={prices.length === 0 ? "no price" : prices.join(" · ")}
+              note={wished.has(id) ? "★ On your wishlist" : undefined}
             />
           );
         })}

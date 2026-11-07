@@ -59,6 +59,7 @@ root.
 | `reset`           | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                              | orchestration only (no tables)    |
 | `drafts`          | live booster drafts: lobbies, entry fees, packs passed around the table, pick timers, a deck for each player at the end                                                                                  | rich domain + orchestration       |
 | `real-collection` | cards and sealed products a player owns physically (design doc 16): imports, sharing; never touches the game (only `decks` reads it, lint-enforced)                                                      | domain + persistence              |
+| `wishlist`        | cards a player wants, any printing or one exact printing (design doc 26): today's best offer, affordability, buying through the store                                                                    | domain + persistence              |
 
 ### Module dependency graph (allowed directions only)
 
@@ -73,7 +74,8 @@ flowchart TD
   wallet --> accounts
   store & trades & inventory & decks --> accounts
   store & trades & inventory --> activity[activity: recordEvent in the same transaction]
-  reset --> trades & wallet & inventory & collection & decks & activity & drafts
+  reset --> trades & wallet & inventory & collection & decks & activity & drafts & wishlist
+  wishlist --> store
   drafts --> wallet & collection & decks & packs & activity
   drafts -. pack price .-> store
   decks -. real_cards, when a deck uses real cards .-> realCollection[real-collection]

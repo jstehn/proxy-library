@@ -6,6 +6,7 @@ import { removeFromLobbies } from "@/modules/drafts";
 import { discardAllItems } from "@/modules/inventory";
 import { closeOpenTrades } from "@/modules/trades";
 import { resetBalance } from "@/modules/wallet";
+import { deleteWishlist } from "@/modules/wishlist";
 import { err, ok, type Cents, type Result, type UserId } from "@/shared/kernel";
 import type { Forbidden, PlayerNotFound } from "../domain/errors";
 import type { ResetDependencies } from "./ports";
@@ -19,12 +20,13 @@ export type ResetSummary = Readonly<{
   itemsRemoved: number;
   copiesRemoved: number;
   decksDeleted: number;
+  wishesDeleted: number;
   eventsForgotten: number;
   lobbiesLeft: number;
 }>;
 
 /**
- * Empties a player's library (design doc 12): cards, sealed items and decks go, open trades
+ * Empties a player's library (design doc 12): cards, sealed items, decks and wishes go, open trades
  * close, and the balance goes back to the starting grant, as when the account was new. All or
  * nothing, in one transaction. The money and card histories keep a record of it. An admin may
  * reset anyone; a player may reset themselves ("Start over" on their Account page).
@@ -60,6 +62,8 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
         at: now,
       });
       const decksDeleted = await deleteAllDecks(services, userId);
+      // Decided for design doc 26: starting over empties the wishlist too.
+      const wishesDeleted = await deleteWishlist(services, userId);
       const eventsForgotten = await forgetLibraryEvents(services, userId);
 
       return ok({
@@ -68,6 +72,7 @@ export function makeResetPlayer(dependencies: ResetDependencies) {
         itemsRemoved,
         copiesRemoved,
         decksDeleted,
+        wishesDeleted,
         eventsForgotten,
         lobbiesLeft,
       });

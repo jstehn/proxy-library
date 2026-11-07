@@ -62,6 +62,8 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 22  | Playtest proxies                       | pixels as typed arrays, convolution kernels (Sobel), PDF predictors, layout with an injected measurer, polygon clipping, an icon font                 | ✅ Done |
 | 23  | Edit a deck as text; most special copy | replace vs add (idempotence), all-or-nothing saves, round-trip property tests, a content fingerprint for stale forms, a ranking shared by every query | ✅ Done |
 | 24  | Standard art; choose a printing        | one ranking fragment reused across queries, controlled radio groups, waiting for the server vs optimistic UI, validating through a port               | ✅ Done |
+| 25  | Token proxies                          | link tables for many-to-many, grouping with a `Map`, replace vs upsert under `on delete set null`, storing intent                                     | ✅ Done |
+| 26  | Wishlist                               | partial unique indexes, one use case composing another module's in-transaction step, a price guard, deciding in TypeScript what SQL gathered          | ✅ Done |
 
 ### Why this order (changed from the original plan)
 

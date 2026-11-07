@@ -8,6 +8,7 @@ import { makeResetPlayer } from "@/modules/reset";
 import { makeStore } from "@/modules/store";
 import { makeTrades } from "@/modules/trades";
 import { makeWallet, playerMoney, walletSummary } from "@/modules/wallet";
+import { makeWishlist } from "@/modules/wishlist";
 import { Cents, UserId } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import {
@@ -30,6 +31,7 @@ const decks = makeDecks({ unitOfWork, clock });
 const trades = makeTrades({ unitOfWork, clock });
 const wallet = makeWallet({ unitOfWork, clock });
 const resetPlayer = makeResetPlayer({ unitOfWork, clock });
+const wishlist = makeWishlist({ unitOfWork, clock });
 
 const PLAY_PACK = SealedProductId.of("1370435e-4972-553f-9dac-dc72408625ea");
 const jack = actor("jack");
@@ -61,6 +63,14 @@ describe("resetting a player", () => {
     await store.buySingle(jack, { printingId: card, finish: "nonfoil", quantity: 1 });
     await store.buySingle(bob, { printingId: card, finish: "nonfoil", quantity: 1 });
     await decks.createDeck(jack, { name: "Test deck", format: "casual" });
+    const wish = { quantity: 1, targetPrice: null, note: "" };
+    for (const player of [jack, bob]) {
+      const wished = await wishlist.addWish(player, {
+        request: { kind: "anyPrinting", printingId: card, finish: "nonfoil" },
+        details: wish,
+      });
+      if (!wished.ok) throw new Error(wished.error.kind);
+    }
     const fromJack = await trades.proposeTrade(jack, {
       recipientId: bob.userId,
       items: [{ kind: "card", from: "proposer", printingId: card, finish: "nonfoil", quantity: 1 }],
@@ -87,6 +97,7 @@ describe("resetting a player", () => {
         itemsRemoved: 2,
         copiesRemoved: jackCopies.rows[0].total,
         decksDeleted: 1,
+        wishesDeleted: 1,
         eventsForgotten: expect.any(Number) as number,
         lobbiesLeft: 0,
       },
@@ -95,6 +106,9 @@ describe("resetting a player", () => {
     expect(await count("sealed_items", "owner_id = 'jack'")).toBe(0);
     expect(await count("item_openings")).toBe(0);
     expect(await count("decks", "owner_id = 'jack'")).toBe(0);
+    // Decided for design doc 26: the wishlist goes too, and only Jack's.
+    expect(await count("wishes", "user_id = 'jack'")).toBe(0);
+    expect(await count("wishes", "user_id = 'bob'")).toBe(1);
     expect(await count("activity_events", "actor_id = 'jack'")).toBe(0);
     expect(await count("trades", `id = ${fromJack.value} and status = 'cancelled'`)).toBe(1);
     expect(await count("trades", `id = ${fromBob.value} and status = 'declined'`)).toBe(1);

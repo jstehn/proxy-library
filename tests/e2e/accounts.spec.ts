@@ -380,11 +380,12 @@ test("the admin builds a Commander deck from a pasted list and exports it", asyn
 
   // Proxies: choose options, see what they make, and download the PDF.
   await page.getByRole("link", { name: "Print proxies" }).click();
-  await expect(page.getByText(/^1 card on 1 page, 9 to a page\./)).toBeVisible(); // Beza; Plains skipped
+  // Beza (Plains skipped), and 2 copies each of the 2 tokens Beza makes (design doc 25).
+  await expect(page.getByText(/^1 card and 4 tokens on 1 page, 9 to a page\./)).toBeVisible();
   await page.getByText("Include them").click();
   // Bleed fills the gap between cards, so the grid stays 3 × 3 (changed 2026-10-07).
   await page.getByText("Fill the gap").click();
-  await expect(page.getByText(/^100 cards on 12 pages, 9 to a page\./)).toBeVisible();
+  await expect(page.getByText(/^100 cards and 4 tokens on 12 pages, 9 to a page\./)).toBeVisible();
   const downloading = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download PDF" }).click();
   const download = await downloading;
@@ -691,6 +692,77 @@ test("on a phone, the main menu folds into a Menu button", async ({ browser }) =
   await phone.close();
 });
 
+test("a player wishes for cards, sees what they can afford, and buys one (design doc 26)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("rin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByTitle("Your wallet")).toHaveText("$45.00");
+
+  // Dawn's Truce, any printing, with a $10 target: the cheapest is $9.82, so it's at target.
+  await page.goto("/singles?q=%21%22Dawn%27s+Truce%22");
+  await page.getByRole("link", { name: "Dawn's Truce" }).first().click();
+  await page.locator("summary", { hasText: "Add to wishlist" }).click();
+  await page.getByLabel("Target price").fill("10");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/wishlist-add-phone-dark.png", fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.getByRole("button", { name: "Add to wishlist" }).click();
+  await expect(page.getByText("Added to your wishlist.")).toBeVisible();
+  await expect(page.getByText(/★ On your wishlist: 1 copy, any printing/)).toBeVisible();
+  await expect(page.locator('[title="1 at or under your target price"]:visible')).toBeVisible();
+
+  // Lumra, only this printing in foil: far more than Rin has.
+  await page.goto("/singles?q=%21%22Lumra%2C+Bellow+of+the+Woods%22");
+  await page.getByRole("link", { name: "Lumra, Bellow of the Woods" }).first().click();
+  await page.locator("summary", { hasText: "Add to wishlist" }).click();
+  await page.getByLabel("Only this printing").check();
+  await page.getByLabel("Finish").selectOption("foil");
+  await page.getByRole("button", { name: "Add to wishlist" }).click();
+  await expect(page.getByText("Added to your wishlist.")).toBeVisible();
+
+  // The list: the one at target first, then the one she's short of.
+  await page.getByRole("link", { name: /^Wishlist\s*\d*$/ }).click();
+  const rows = page.getByRole("main").getByRole("listitem");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Dawn's Truce");
+  await expect(rows.nth(0)).toContainText("You can afford this");
+  await expect(rows.nth(1)).toContainText("Lumra, Bellow of the Woods");
+  await expect(rows.nth(1)).toContainText(/\$[\d,.]+ short/);
+
+  // Screenshots for review: dark mode, and a phone's width (user preference).
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({ path: "test-results/wishlist-dark.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/wishlist-phone-dark.png", fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // Buying the Truce fills the wish, so it leaves the list and lands in her collection.
+  await rows.nth(0).getByRole("button", { name: "Buy ($9.82)" }).click();
+  await expect(
+    page.getByText("Bought Dawn's Truce for $9.82. That was every copy you wanted"),
+  ).toBeVisible();
+  await expect(rows).toHaveCount(1);
+  await expect(page.getByTitle("Your wallet")).toHaveText("$35.18");
+
+  // Remove takes a wish off without buying.
+  await rows.nth(0).getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Your wishlist is empty.")).toBeVisible();
+
+  // A wish for Starting over to clear (next test).
+  await page.goto("/singles?q=%21%22Dawn%27s+Truce%22");
+  await page.getByRole("link", { name: "Dawn's Truce" }).first().click();
+  await page.locator("summary", { hasText: /Add (to wishlist|or change a wish)/ }).click();
+  await page.getByRole("button", { name: "Add to wishlist" }).click();
+  await expect(page.getByText("Added to your wishlist.")).toBeVisible();
+});
+
 test("a player starts over from their Account page, after a clear warning", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Username").fill("rin");
@@ -700,6 +772,7 @@ test("a player starts over from their Account page, after a clear warning", asyn
   await page.locator('header a[href="/account"]:visible').click();
   await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
   await expect(page.getByText("Every card is wiped")).toBeVisible();
+  await expect(page.getByText(/your decks and your wishlist/)).toBeVisible();
   await expect(page.getByText("It does not recover all your funds")).toBeVisible();
 
   const confirmation = page.getByLabel("Type START OVER to confirm");
@@ -715,6 +788,9 @@ test("a player starts over from their Account page, after a clear warning", asyn
   await expect(page.getByTitle("Your wallet")).toHaveText("$50.00");
   await page.getByRole("link", { name: "Collection", exact: true }).click();
   await expect(page.getByText(/^0 cards/)).toBeVisible();
+  // Starting over empties the wishlist too (design doc 26, decision 4).
+  await page.goto("/wishlist");
+  await expect(page.getByText("Your wishlist is empty.")).toBeVisible();
 });
 
 /** Signs in on a page of its own browser context. */
@@ -945,13 +1021,14 @@ test("a player records real cards from a file and a product, and builds with the
   await expect(hare.getByText("real cards")).toBeVisible();
   await expect(hare.getByText("all owned")).toBeVisible();
 
-  // Its proxies leave out the cards Rin owns for real: there's nothing left to print.
+  // Its proxies leave out the cards Rin owns for real; only their tokens are left to print
+  // (design doc 25: cards left out as real still get their tokens).
   await hare.getByRole("link", { name: "Hare Raising" }).click();
   await rin.getByRole("link", { name: "Print proxies" }).click();
   await expect(rin.getByText("Cards you own for real")).toBeVisible();
-  await expect(rin.getByText("Nothing to print with these options.")).toBeVisible();
+  await expect(rin.getByText(/^2 tokens on 1 page/)).toBeVisible();
   await rin.getByText("Print them too").click();
-  await expect(rin.getByText(/^\d+ cards on \d+ pages?/)).toBeVisible();
+  await expect(rin.getByText(/^\d+ cards and 2 tokens on \d+ pages?/)).toBeVisible();
 
   // Screenshots for review: dark mode, and a phone's width (user preference).
   await rin.emulateMedia({ colorScheme: "dark" });
