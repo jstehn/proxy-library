@@ -6,11 +6,21 @@ export type { SetKindPriceError, SetProductPriceError } from "./application/mana
 export type {
   Listing,
   PriceList,
+  ProductValue,
+  ProductValues,
   StoreDependencies,
   StoreLedger,
   StoreServices,
 } from "./application/ports";
-export { MAX_QUANTITY, productKind } from "./domain/pricing";
+export {
+  MAX_QUANTITY,
+  productKind,
+  resaleFloor,
+  storePrice,
+  type PriceInputs,
+  type StorePrice,
+} from "./domain/pricing";
+export type { ValuationReport } from "./application/value-products";
 export {
   buySingleIn,
   type BuySingleError,
@@ -38,6 +48,8 @@ export {
   kindPrices,
   packMsrp,
   packMsrps,
+  packPrice,
+  type PackPrice,
   productPrices,
   storePage,
   storeSets,

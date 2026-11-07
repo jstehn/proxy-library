@@ -195,8 +195,19 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
     .getByRole("link", { name: /Bloomburrow/ })
     .first()
     .click();
-  await expect(page.getByText("$5.49")).toBeVisible();
   const pack = page.getByRole("listitem").filter({ hasText: "Bloomburrow Play Booster Pack" });
+  // In the fixture catalog its cards sell back for more than its $5.49 MSRP, so the store asks
+  // that instead (design doc 27), and says why.
+  await expect(pack.getByText("$7.24")).toBeVisible();
+  await expect(pack.getByText("$5.49")).toBeVisible();
+  await expect(pack.getByText("Priced at what its contents sell back for")).toBeVisible();
+  // Screenshots for review: dark mode, and a phone's width (user preference).
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await pack.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/store-raised-phone-dark.png" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
 
   // Wizards' official photo (design doc 13), served from our disk, and WPN's product details.
   const photo = pack.locator('img[src^="/api/artwork/"]');
@@ -220,7 +231,7 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
   ).toBeVisible();
   await pack.getByRole("button", { name: "Buy" }).click();
   await expect(pack.getByText(/waiting in your inventory/)).toBeVisible();
-  await expect(page.getByTitle("Your wallet")).toHaveText("$44.51");
+  await expect(page.getByTitle("Your wallet")).toHaveText("$42.76");
 
   await page.getByRole("link", { name: "Inventory", exact: true }).click();
   await page.getByRole("button", { name: "Open Bloomburrow Play Booster Pack" }).click();

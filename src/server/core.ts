@@ -52,6 +52,7 @@ import {
   drizzleMarketPrices,
   drizzlePriceList,
   drizzleStoreLedger,
+  drizzleProductValues,
   drizzleStoreSettings,
 } from "@/modules/store/infrastructure";
 import { makeTrades } from "@/modules/trades";
@@ -105,6 +106,7 @@ export function buildCore(config: Config) {
       storeLedger: drizzleStoreLedger(transaction),
       marketPrices: drizzleMarketPrices(transaction),
       storeSettings: drizzleStoreSettings(transaction),
+      productValues: drizzleProductValues(transaction),
       decks: drizzleDeckRepository(transaction),
       cards: drizzleCardLookup(transaction),
       deckTokens: drizzleDeckTokenRepository(transaction),

@@ -12,6 +12,7 @@ import {
   inMemoryMarketPrices,
   inMemoryPriceList,
   inMemoryStoreLedger,
+  inMemoryProductValues,
   inMemoryStoreSettings,
 } from "../testing/fakes";
 import { makeStore } from "./make-store";
@@ -63,6 +64,7 @@ beforeEach(() => {
       "tarmo/nonfoil": { price: Cents.of(3000), day: "2026-01-06", isSetEnabled: true },
     }),
     storeSettings: inMemoryStoreSettings(),
+    productValues: inMemoryProductValues(),
     events,
   };
   store = makeStore({ unitOfWork: inMemoryUnitOfWork(services), clock: fixedClock(now) });

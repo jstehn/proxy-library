@@ -2,6 +2,7 @@
 export {
   drizzleMarketPrices,
   drizzlePriceList,
+  drizzleProductValues,
   drizzleStoreLedger,
   drizzleStoreSettings,
 } from "./drizzle-repositories";

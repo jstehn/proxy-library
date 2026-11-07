@@ -2,16 +2,30 @@ import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
 
-// Read models for the store screens (ADR 0006). Prices follow design doc 06, rule 1: a product's
-// own override, else its kind's price; no price means not for sale.
+// Read models for the store screens (ADR 0006). Prices follow design doc 06, rule 1 (a product's
+// own override, else its official MSRP, else its kind's price; no price means not for sale),
+// raised to what the contents sell back for (design doc 27, ADR 0021).
 
 /** The kind key of a sealed product row aliased "sp", in SQL (matches productKind()). */
 const KIND = sql`sp.category || '/' || coalesce(sp.subtype, 'default')`;
 /**
- * A product's MSRP in SQL: its override, else Wizards' official MSRP, else its kind's price
- * (null = not for sale). ADR 0014, amended by ADR 0015.
+ * A product's list price in SQL: its override, else Wizards' official MSRP, else its kind's
+ * price (null = no price). ADR 0014, amended by ADR 0015.
  */
-const MSRP = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
+const LIST_PRICE = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
+/** What its contents sell back for, rounded up (ADR 0021); null before the first valuation. */
+const RESALE_FLOOR = sql`ceil(v.value_cents * ss.buylist_rate_bps / 10000.0)::bigint`;
+/**
+ * The store price in SQL (design doc 27): an override as typed; otherwise the list price,
+ * raised to the resale floor. A product priced only by its kind waits for its first valuation.
+ * The same rule as `storePrice` in domain/pricing.ts; an integration test checks they agree.
+ */
+const MSRP = sql`(case
+  when o.cents is not null then o.cents
+  when coalesce(w.msrp_cents, k.cents) is null then null
+  when w.msrp_cents is null and v.value_cents is null then null
+  else greatest(coalesce(w.msrp_cents, k.cents), coalesce(${RESALE_FLOOR}, 0))
+end)`;
 /** Only listed products with something inside are for sale (design doc 06, rule 2; 11). */
 const HAS_CONTENTS = sql`sp.is_listed and jsonb_array_length(sp.contents) > 0`;
 /**
@@ -23,7 +37,9 @@ const PRICE_JOINS = sql`
   left join msrp_overrides o on o.product_id = sp.id
   left join msrp_prices k on k.kind = ${KIND} and not ${IS_MULTIPLE}
   left join product_wpn_links l on l.product_id = sp.id
-  left join wpn_products w on w.set_code = l.wpn_set_code and w.name = l.wpn_name`;
+  left join wpn_products w on w.set_code = l.wpn_set_code and w.name = l.wpn_name
+  left join product_values v on v.product_id = sp.id
+  left join store_settings ss on ss.id = 1`;
 
 /**
  * A set's key art (from WPN), once downloaded: an artwork image id, or null. A Commander
@@ -152,7 +168,10 @@ export type ProductForSale = Readonly<{
   name: string;
   category: string;
   subtype: string | null;
+  /** The store price: the MSRP, or more when the contents sell back for more (design doc 27). */
   msrp: Cents;
+  /** The price before the resale floor; less than `msrp` when the floor raised it. */
+  listPrice: Cents;
 }> &
   ProductPresentation;
 
@@ -185,6 +204,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
     category: string;
     subtype: string | null;
     msrp: number;
+    list_price: number;
     photo_ids: string[];
     commander_printing_id: string | null;
     commander_artist: string | null;
@@ -193,7 +213,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
     wpn_release_date: string | null;
   }>(sql`
     select sp.id, sp.name, sp.category, sp.subtype, ${MSRP} as msrp,
-           ${PHOTO_IDS} as photo_ids,
+           ${LIST_PRICE} as list_price, ${PHOTO_IDS} as photo_ids,
            cp.id as commander_printing_id, cp.artist as commander_artist,
            w.description, w.contents, w.release_date as wpn_release_date
       from sealed_products sp
@@ -219,6 +239,7 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       category: row.category,
       subtype: row.subtype,
       msrp: Cents.of(Number(row.msrp)),
+      listPrice: Cents.of(Number(row.list_price)),
       photoIds: row.photo_ids,
       featured:
         row.commander_printing_id === null
@@ -270,6 +291,14 @@ export type ProductPriceRow = Readonly<{
   override: Cents | null;
   /** Wizards' official MSRP from WPN, if it lists one (ADR 0015). */
   officialMsrp: Cents | null;
+  /** The contents' average value from the last valuation, or null (design doc 27). */
+  contentsValue: Cents | null;
+  /** Some contents couldn't be valued and count as $0. */
+  isPartial: boolean;
+  /** What the store charges, or null when it isn't for sale. */
+  storePrice: Cents | null;
+  /** The resale floor raised the price above the list price. */
+  isRaised: boolean;
 }>;
 
 /** Every product in one enabled set with its kind price and override, for the admin page. */
@@ -282,9 +311,15 @@ export async function productPrices(db: DbExecutor, setCode: string): Promise<Pr
     kind_cents: number | null;
     override_cents: number | null;
     official_cents: number | null;
+    value_cents: number | null;
+    is_partial: boolean | null;
+    store_cents: number | null;
+    list_cents: number | null;
   }>(sql`
     select sp.id, sp.set_code, sp.name, ${KIND} as kind,
-           k.cents as kind_cents, o.cents as override_cents, w.msrp_cents as official_cents
+           k.cents as kind_cents, o.cents as override_cents, w.msrp_cents as official_cents,
+           v.value_cents, v.is_partial,
+           case when ${HAS_CONTENTS} then ${MSRP} end as store_cents, ${LIST_PRICE} as list_cents
       from sealed_products sp
       join card_sets s on s.code = sp.set_code and s.is_enabled
       ${PRICE_JOINS}
@@ -300,22 +335,32 @@ export async function productPrices(db: DbExecutor, setCode: string): Promise<Pr
     kindPrice: toCents(row.kind_cents),
     override: toCents(row.override_cents),
     officialMsrp: toCents(row.official_cents),
+    contentsValue: toCents(row.value_cents),
+    isPartial: row.is_partial ?? false,
+    storePrice: toCents(row.store_cents),
+    isRaised:
+      row.store_cents !== null &&
+      row.list_cents !== null &&
+      Number(row.store_cents) > Number(row.list_cents),
   }));
 }
 
+export type PackPrice = Readonly<{ price: Cents; listPrice: Cents }>;
+
 /**
- * The MSRP of a single booster pack of this set and type (for the Pack lab), or null. Looks for
- * a product whose whole contents are exactly that pack.
+ * The store price of a single booster pack of this set and type, and its list price before the
+ * resale floor (for the Pack lab), or null. Looks for a product whose whole contents are
+ * exactly that pack.
  */
-export async function packMsrp(
+export async function packPrice(
   db: DbExecutor,
   setCode: string,
   boosterType: string,
-): Promise<Cents | null> {
+): Promise<PackPrice | null> {
   const contents = JSON.stringify([{ kind: "pack", setCode, boosterType }]);
   const [row] = (
-    await db.execute<{ msrp: number | null }>(sql`
-      select ${MSRP} as msrp
+    await db.execute<{ msrp: number; list_price: number }>(sql`
+      select ${MSRP} as msrp, ${LIST_PRICE} as list_price
         from sealed_products sp
         ${PRICE_JOINS}
        where sp.contents = ${contents}::jsonb and ${MSRP} is not null
@@ -323,7 +368,18 @@ export async function packMsrp(
        limit 1
     `)
   ).rows;
-  return row === undefined || row.msrp === null ? null : Cents.of(Number(row.msrp));
+  return row === undefined
+    ? null
+    : { price: Cents.of(Number(row.msrp)), listPrice: Cents.of(Number(row.list_price)) };
+}
+
+/** The store price of a single booster pack of this set and type, or null (a draft's packs). */
+export async function packMsrp(
+  db: DbExecutor,
+  setCode: string,
+  boosterType: string,
+): Promise<Cents | null> {
+  return (await packPrice(db, setCode, boosterType))?.price ?? null;
 }
 
 /**

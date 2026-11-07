@@ -63,7 +63,8 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
         <div>
           <h1 className="text-2xl font-semibold">{set.name}</h1>
           <p className="text-sm text-zinc-500">
-            {set.code} · released {set.releaseDate} · prices are MSRP
+            {set.code} · released {set.releaseDate} · prices are MSRP, or more when the cards inside
+            sell back for more
           </p>
         </div>
       </header>
@@ -94,7 +95,19 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     />
                   )}
                   <span className="text-sm leading-tight font-medium">{product.name}</span>
-                  <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                  {product.msrp > product.listPrice ? (
+                    <span className="flex flex-col text-sm tabular-nums">
+                      <span>
+                        {Cents.format(product.msrp)}{" "}
+                        <s className="text-zinc-500">{Cents.format(product.listPrice)}</s>
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        Priced at what its contents sell back for
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                  )}
                   {isUpcoming(product.releaseDate, today) && (
                     <span className="text-xs text-amber-700 dark:text-amber-400">
                       Releases {formatDay(product.releaseDate)}

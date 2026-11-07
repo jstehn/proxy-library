@@ -1,6 +1,7 @@
 // Runs once before the browser tests: bring the e2e database up to date, empty it, and load the
 // card catalog from the recorded fixtures (the real sync code, with file-based gateways, so no
 // network is used).
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { makeCatalog } from "@/modules/catalog";
@@ -67,6 +68,13 @@ export default async function globalSetup() {
     await catalog.queueSync("prices");
     const result = await catalog.runNextQueuedSync();
     if (result?.status !== "succeeded") throw new Error("fixture catalog sync failed");
+
+    // Kind-priced products are for sale only once valued (design doc 27): the worker does this
+    // after every sync, so run its command here too, against the e2e database.
+    execFileSync("pnpm", ["worker", "value-products"], {
+      env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL },
+      stdio: "inherit",
+    });
 
     // Card images the server itself reads (proxy PDFs) are placeholders already in the cache,
     // so it never downloads one. (The browser's own image requests are stubbed in each test.)

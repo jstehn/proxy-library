@@ -3,10 +3,12 @@ import { makeBuySealed } from "./buy-sealed";
 import { makeManagePrices } from "./manage-prices";
 import type { StoreDependencies } from "./ports";
 import { makeBuySingle, makeSellSingle, makeSetBuylistRate } from "./singles";
+import { makeValueProducts } from "./value-products";
 
 /** Builds every store use case from one set of dependencies. */
 export function makeStore(dependencies: StoreDependencies) {
   const { setKindPrice, setProductPrice } = makeManagePrices(dependencies);
+  const { valueProducts, valueProductsIfStale } = makeValueProducts(dependencies);
   return {
     buySealed: makeBuySealed(dependencies),
     setKindPrice,
@@ -15,6 +17,8 @@ export function makeStore(dependencies: StoreDependencies) {
     buyList: makeBuyList(dependencies),
     sellSingle: makeSellSingle(dependencies),
     setBuylistRate: makeSetBuylistRate(dependencies),
+    valueProducts,
+    valueProductsIfStale,
   };
 }
 

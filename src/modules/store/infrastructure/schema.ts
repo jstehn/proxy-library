@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   bigserial,
+  boolean,
   check,
   date,
   index,
@@ -97,4 +98,22 @@ export const storeSettings = pgTable(
     check("store_settings_single_row", sql`${table.id} = 1`),
     check("store_settings_rate", sql`${table.buylistRateBps} between 0 and 10000`),
   ],
+);
+
+/**
+ * Each listed product's contents value from the last valuation (design doc 27, ADR 0021): the
+ * average market value of what's inside, for the resale floor. Replaced whole by each valuation.
+ */
+export const productValues = pgTable(
+  "product_values",
+  {
+    productId: text("product_id")
+      .primaryKey()
+      .references(() => sealedProducts.id, { onDelete: "cascade" }),
+    valueCents: cents("value_cents").notNull(),
+    isPartial: boolean("is_partial").notNull(),
+    priceDay: date("price_day", { mode: "string" }).notNull(),
+    valuedAt: timestamptz("valued_at").notNull(),
+  },
+  (table) => [check("product_values_value", sql`${table.valueCents} >= 0`)],
 );

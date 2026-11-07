@@ -18,6 +18,7 @@ import {
   inMemoryMarketPrices,
   inMemoryPriceList,
   inMemoryStoreLedger,
+  inMemoryProductValues,
   inMemoryStoreSettings,
 } from "../testing/fakes";
 import { makeStore } from "./make-store";
@@ -49,6 +50,7 @@ const packListing: Listing = {
   kindPrice: Cents.of(549),
   officialMsrp: null,
   override: null,
+  contentsValue: Cents.of(700), // sells back for $3.50, under the $5.49 price
 };
 const boxListing: Listing = {
   ...packListing,
@@ -79,6 +81,7 @@ beforeEach(() => {
     storeLedger,
     marketPrices: inMemoryMarketPrices({}),
     storeSettings: inMemoryStoreSettings(),
+    productValues: inMemoryProductValues(),
     events,
   };
   store = makeStore({ unitOfWork: inMemoryUnitOfWork(services), clock: fixedClock(now) });

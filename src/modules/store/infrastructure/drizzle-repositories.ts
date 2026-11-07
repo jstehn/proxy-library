@@ -9,6 +9,7 @@ import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog
 import type { DbExecutor } from "@/shared/db";
 import { Cents, type UserId } from "@/shared/kernel";
 import type {
+  ProductValues,
   Listing,
   MarketPrices,
   MarketQuote,
@@ -20,7 +21,13 @@ import type {
   StoreSettings,
 } from "../application/ports";
 import { kindPriceApplies, productKind } from "../domain/pricing";
-import { msrpOverrides, msrpPrices, storeSettings, storeTransactions } from "./schema";
+import {
+  msrpOverrides,
+  msrpPrices,
+  productValues,
+  storeSettings,
+  storeTransactions,
+} from "./schema";
 
 export function drizzlePriceList(db: DbExecutor): PriceList {
   async function listing(productId: SealedProductId): Promise<Listing | null> {
@@ -34,10 +41,12 @@ export function drizzlePriceList(db: DbExecutor): PriceList {
         isSetEnabled: sql<boolean>`${cardSets.isEnabled} and ${sealedProducts.isListed} and jsonb_array_length(${sealedProducts.contents}) > 0`,
         override: msrpOverrides.cents,
         officialMsrp: wpnProducts.msrpCents,
+        contentsValue: productValues.valueCents,
       })
       .from(sealedProducts)
       .innerJoin(cardSets, eq(cardSets.code, sealedProducts.setCode))
       .leftJoin(msrpOverrides, eq(msrpOverrides.productId, sealedProducts.id))
+      .leftJoin(productValues, eq(productValues.productId, sealedProducts.id))
       .leftJoin(productWpnLinks, eq(productWpnLinks.productId, sealedProducts.id))
       .leftJoin(
         wpnProducts,
@@ -63,6 +72,7 @@ export function drizzlePriceList(db: DbExecutor): PriceList {
         kindRow === undefined || !kindPriceApplies(product.name) ? null : Cents.of(kindRow.cents),
       override: product.override === null ? null : Cents.of(product.override),
       officialMsrp: product.officialMsrp === null ? null : Cents.of(product.officialMsrp),
+      contentsValue: product.contentsValue === null ? null : Cents.of(product.contentsValue),
     };
   }
 
@@ -176,4 +186,52 @@ export function drizzleStoreSettings(db: DbExecutor): StoreSettings {
   }
 
   return { buylistRate, setBuylistRate };
+}
+
+export function drizzleProductValues(db: DbExecutor): ProductValues {
+  return {
+    async listedProductIds() {
+      const rows = await db.execute<{ id: string }>(sql`
+        select sp.id from sealed_products sp
+          join card_sets s on s.code = sp.set_code and s.is_enabled
+         where sp.is_listed and jsonb_array_length(sp.contents) > 0
+         order by sp.id
+      `);
+      return rows.rows.map((row) => SealedProductId.of(row.id));
+    },
+
+    async newestPriceDay() {
+      const [row] = (
+        await db.execute<{ day: string | null }>(
+          sql`select max(day)::text as day from price_snapshots`,
+        )
+      ).rows;
+      return row?.day ?? null;
+    },
+
+    async valuedPriceDay() {
+      const [row] = (
+        await db.execute<{ day: string | null }>(
+          sql`select max(price_day)::text as day from product_values`,
+        )
+      ).rows;
+      return row?.day ?? null;
+    },
+
+    async replaceAll(values, priceDay, at) {
+      await db.delete(productValues);
+      // Postgres takes at most 65,535 parameters per statement; 5 per row, 1,000 rows at a time.
+      for (let start = 0; start < values.length; start += 1000) {
+        await db.insert(productValues).values(
+          values.slice(start, start + 1000).map((value) => ({
+            productId: value.productId,
+            valueCents: value.value,
+            isPartial: value.isPartial,
+            priceDay,
+            valuedAt: at,
+          })),
+        );
+      }
+    },
+  };
 }

@@ -4,7 +4,8 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SealedProductId } from "@/modules/catalog";
 import { makeInventory, type Item } from "@/modules/inventory";
-import { makeStore, storePage } from "@/modules/store";
+import { makeStore, productPrices, storePage, storePrice } from "@/modules/store";
+import { drizzlePriceList } from "@/modules/store/infrastructure";
 import { Cents } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import {
@@ -30,7 +31,12 @@ const jack = actor("jack");
 const admin = actor("admin", true);
 
 beforeAll(loadFixtureCatalog);
-beforeEach(() => resetPlayers(["jack", "admin"]));
+beforeEach(async () => {
+  await resetPlayers(["jack", "admin"]);
+  // These tests are about MSRPs. With the store not buying (0%), there's no resale floor
+  // (design doc 27, rule 5); "the resale floor" below turns it back on.
+  await db.execute(sql`update store_settings set buylist_rate_bps = 0 where id = 1`);
+});
 
 async function buy(productId: SealedProductId, quantity = 1): Promise<Item[]> {
   const result = await store.buySealed(jack, { productId, quantity });
@@ -142,5 +148,63 @@ describe("official photos, MSRPs and details from WPN (design doc 13)", () => {
     expect(await balance("jack")).toBe(5000 - 599 - 450);
     await store.setProductPrice(admin, { productId: PLAY_PACK, price: null });
     await db.execute(sql`update wpn_products set msrp_cents = null`);
+  });
+});
+
+describe("the resale floor (design doc 27)", () => {
+  beforeEach(() => db.execute(sql`update store_settings set buylist_rate_bps = 5000 where id = 1`));
+
+  it("charges what the contents sell back for when that's more than the MSRP", async () => {
+    // In the fixture catalog a Bloomburrow play pack's cards sell back for more than $5.49.
+    const [row] = (
+      await db.execute<{ value_cents: number }>(
+        sql`select value_cents from product_values where product_id = ${PLAY_PACK}`,
+      )
+    ).rows;
+    const floor = Math.ceil((Number(row.value_cents) * 5000) / 10_000);
+    expect(floor).toBeGreaterThan(549);
+
+    const shown = (await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK);
+    expect(shown).toMatchObject({ msrp: floor, listPrice: 549 });
+    await buy(PLAY_PACK);
+    expect(await balance("jack")).toBe(5000 - floor);
+  });
+
+  it("agrees with storePrice for every product, in every place that shows a price", async () => {
+    const listings = await db.execute<{ id: string; set_code: string }>(sql`
+      select sp.id, sp.set_code from sealed_products sp
+        join card_sets s on s.code = sp.set_code and s.is_enabled
+       where sp.is_listed and jsonb_array_length(sp.contents) > 0`);
+    const priceList = drizzlePriceList(db);
+    const pages = new Map<string, Awaited<ReturnType<typeof storePage>>>();
+    let raised = 0;
+    for (const row of listings.rows) {
+      if (!pages.has(row.set_code)) pages.set(row.set_code, await storePage(db, row.set_code));
+      const listing = await priceList.listing(SealedProductId.of(row.id));
+      if (listing === null) throw new Error(`no listing for ${row.id}`);
+      const expected = storePrice({ ...listing, buylistRateBps: 5000 });
+      const shown = pages.get(row.set_code)?.products.find((p) => p.id === row.id);
+      expect(shown?.msrp ?? null).toBe(expected?.price ?? null);
+      const adminRow = (await productPrices(db, row.set_code)).find((p) => p.id === row.id);
+      expect(adminRow?.storePrice ?? null).toBe(expected?.price ?? null);
+      if (expected?.isRaised) raised++;
+    }
+    expect(raised).toBeGreaterThan(0);
+  });
+
+  it("is gone when the store stops buying, and an admin's own price is never raised", async () => {
+    await store.setProductPrice(admin, { productId: PLAY_PACK, price: Cents.of(100) });
+    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp).toBe(100);
+    await db.execute(sql`delete from msrp_overrides`);
+    await db.execute(sql`update store_settings set buylist_rate_bps = 0 where id = 1`);
+    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp).toBe(549);
+  });
+
+  it("keeps kind-priced products off sale until they're valued, and values them again", async () => {
+    await db.execute(sql`delete from product_values`);
+    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)).toBeUndefined();
+    expect(await store.valueProductsIfStale()).toMatchObject({ partial: 0 });
+    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)).toBeDefined();
+    expect(await store.valueProductsIfStale()).toBeNull();
   });
 });

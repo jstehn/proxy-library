@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { Cents, err, ok } from "@/shared/kernel";
 import {
@@ -6,6 +7,8 @@ import {
   kindPriceApplies,
   msrpFor,
   productKind,
+  resaleFloor,
+  storePrice,
   totalPrice,
 } from "./pricing";
 
@@ -53,5 +56,82 @@ describe("pricing", () => {
 
   it("multiplies in whole cents", () => {
     expect(totalPrice(Cents.of(549), 3)).toBe(1647);
+  });
+});
+
+describe("storePrice (design doc 27)", () => {
+  const cents = (value: number) => Cents.of(value);
+  const base = {
+    override: null,
+    officialMsrp: null,
+    kindPrice: cents(399),
+    contentsValue: cents(127_627),
+    buylistRateBps: 5000,
+  };
+
+  it("raises a pack whose contents sell back for more than it costs: Alpha's $3.99 to $638.14", () => {
+    expect(storePrice(base)).toEqual({ price: 63_814, listPrice: 399, isRaised: true });
+  });
+
+  it("keeps the list price when the contents sell back for less", () => {
+    expect(storePrice({ ...base, contentsValue: cents(700) })).toEqual({
+      price: 399,
+      listPrice: 399,
+      isRaised: false,
+    });
+  });
+
+  it("raises an official MSRP too, but never an admin's override (decision 2)", () => {
+    expect(storePrice({ ...base, officialMsrp: cents(499) })?.price).toBe(63_814);
+    expect(storePrice({ ...base, override: cents(100) })).toEqual({
+      price: 100,
+      listPrice: 100,
+      isRaised: false,
+    });
+  });
+
+  it("sells nothing priced only by its kind until it's been valued (decision 3)", () => {
+    expect(storePrice({ ...base, contentsValue: null })).toBeNull();
+    expect(storePrice({ ...base, contentsValue: null, officialMsrp: cents(499) })?.price).toBe(499);
+  });
+
+  it("never makes a product without a list price for sale", () => {
+    expect(storePrice({ ...base, kindPrice: null })).toBeNull();
+  });
+
+  it("rounds the floor up, and has none when the store isn't buying (rule 5)", () => {
+    expect(resaleFloor(cents(1001), 5000)).toBe(501);
+    expect(storePrice({ ...base, buylistRateBps: 0 })?.price).toBe(399);
+  });
+
+  const money = fc.integer({ min: 1, max: 10_000_000 }).map(cents);
+  const maybe = fc.option(money, { nil: null });
+  const inputs = fc.record({
+    override: maybe,
+    officialMsrp: maybe,
+    kindPrice: maybe,
+    contentsValue: fc.option(fc.integer({ min: 0, max: 100_000_000 }).map(cents), { nil: null }),
+    buylistRateBps: fc.integer({ min: 0, max: 10_000 }),
+  });
+
+  it("never sells below the resale value without an override (rule 1)", () => {
+    fc.assert(
+      fc.property(inputs, (input) => {
+        const result = storePrice(input);
+        if (result === null || input.override !== null || input.contentsValue === null) return true;
+        return result.price * 10_000 >= input.contentsValue * input.buylistRateBps;
+      }),
+    );
+  });
+
+  it("never lowers a list price, and never creates one (rule 2)", () => {
+    fc.assert(
+      fc.property(inputs, (input) => {
+        const result = storePrice(input);
+        const listPrice = msrpFor(input);
+        if (listPrice === null) return result === null;
+        return result === null || (result.price >= listPrice && result.listPrice === listPrice);
+      }),
+    );
   });
 });

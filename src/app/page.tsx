@@ -6,7 +6,11 @@ import { ActivityList } from "./_components/activity-list";
 
 // The home page: where to go, and what the playgroup has been up to.
 const sections = [
-  { name: "Store", href: "/store", blurb: "Boosters, bundles, boxes and precons at MSRP." },
+  {
+    name: "Store",
+    href: "/store",
+    blurb: "Boosters, bundles, boxes and precons, at MSRP or more.",
+  },
   { name: "Singles", href: "/singles", blurb: "Any card from an enabled set at market price." },
   { name: "Inventory", href: "/inventory", blurb: "Your unopened product. Tear something open." },
   {

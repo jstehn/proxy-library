@@ -15,6 +15,8 @@ export type Listing = Readonly<{
   override: Cents | null;
   /** Wizards' official MSRP from its WPN product page, if it lists one (ADR 0015). */
   officialMsrp: Cents | null;
+  /** Its contents' average value from the last valuation, or null if not valued (ADR 0021). */
+  contentsValue: Cents | null;
 }>;
 
 export type PriceChange = Readonly<{ price: Cents | null; by: UserId; at: Date }>;
@@ -74,6 +76,25 @@ export interface StoreSettings {
   setBuylistRate(rateBps: number, by: UserId, at: Date): Promise<void>;
 }
 
+/** A product's contents value, as one valuation stores it (design doc 27, section 8). */
+export type ProductValue = Readonly<{
+  productId: SealedProductId;
+  value: Cents;
+  isPartial: boolean;
+}>;
+
+/** The store's contents values, and what a valuation reads to make them. */
+export interface ProductValues {
+  /** Every listed product with contents, in an enabled set: what can be for sale. */
+  listedProductIds(): Promise<SealedProductId[]>;
+  /** The newest day in the price history, or null when there are no prices yet. */
+  newestPriceDay(): Promise<string | null>;
+  /** The price day the stored values were made from, or null before the first valuation. */
+  valuedPriceDay(): Promise<string | null>;
+  /** Replaces every stored value with these (rule 6: all or nothing, in the caller's transaction). */
+  replaceAll(values: readonly ProductValue[], priceDay: string, at: Date): Promise<void>;
+}
+
 /** Everything a purchase touches, in one transaction: the store's own records, the wallet
  * and the inventory. */
 export type StoreServices = {
@@ -81,6 +102,7 @@ export type StoreServices = {
   storeLedger: StoreLedger;
   marketPrices: MarketPrices;
   storeSettings: StoreSettings;
+  productValues: ProductValues;
 } & WalletServices &
   InventoryServices;
 

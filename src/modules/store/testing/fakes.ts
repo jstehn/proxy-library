@@ -1,10 +1,12 @@
-import type { Finish, PrintingId, SealedProductId } from "@/modules/catalog";
+import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog";
 import type { Cents } from "@/shared/kernel";
 import type {
   Listing,
   MarketPrices,
   MarketQuote,
   PriceList,
+  ProductValue,
+  ProductValues,
   SealedPurchase,
   SingleTrade,
   StoreLedger,
@@ -75,4 +77,35 @@ export function inMemoryStoreSettings(rateBps = DEFAULT_BUYLIST_RATE_BPS): Store
       rate = newRate;
     },
   };
+}
+
+/**
+ * The store's contents values in memory. `listed` are the products a valuation values; the
+ * newest price day is in `state`, so a test can move it on.
+ */
+export function inMemoryProductValues(
+  listed: readonly string[] = [],
+  newestPriceDay: string | null = null,
+) {
+  const state = {
+    newestPriceDay,
+    valuedPriceDay: null as string | null,
+    values: [] as ProductValue[],
+  };
+  const productValues: ProductValues = {
+    async listedProductIds() {
+      return listed.map((id) => SealedProductId.of(id));
+    },
+    async newestPriceDay() {
+      return state.newestPriceDay;
+    },
+    async valuedPriceDay() {
+      return state.valuedPriceDay;
+    },
+    async replaceAll(values, priceDay) {
+      state.values = [...values];
+      state.valuedPriceDay = priceDay;
+    },
+  };
+  return { ...productValues, state };
 }

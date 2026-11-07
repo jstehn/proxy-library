@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import { makeCatalog } from "@/modules/catalog";
+import { makeStore } from "@/modules/store";
 import {
   drizzleArtworkRepository,
   drizzleCatalogRepository,
@@ -40,6 +41,7 @@ import {
   drizzleMarketPrices,
   drizzlePriceList,
   drizzleStoreLedger,
+  drizzleProductValues,
   drizzleStoreSettings,
 } from "@/modules/store/infrastructure";
 import {
@@ -73,6 +75,7 @@ export function servicesFor(transaction: DbExecutor) {
     storeLedger: drizzleStoreLedger(transaction),
     marketPrices: drizzleMarketPrices(transaction),
     storeSettings: drizzleStoreSettings(transaction),
+    productValues: drizzleProductValues(transaction),
     decks: drizzleDeckRepository(transaction),
     cards: drizzleCardLookup(transaction),
     deckTokens: drizzleDeckTokenRepository(transaction),
@@ -116,6 +119,8 @@ export async function loadFixtureCatalog(): Promise<void> {
     syncTime: { hour: 4, minute: 0 },
   });
   await catalog.runSync("prices");
+  // Kind-priced products are for sale only once valued (design doc 27, decision 3).
+  await makeStore({ unitOfWork, clock }).valueProducts();
 }
 
 /**

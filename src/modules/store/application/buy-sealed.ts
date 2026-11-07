@@ -5,7 +5,7 @@ import { receiveItems, type Item } from "@/modules/inventory";
 import { spend, type InsufficientFunds } from "@/modules/wallet";
 import { err, ok, type Result } from "@/shared/kernel";
 import type { ProductNotForSale, QuantityInvalid } from "../domain/errors";
-import { checkQuantity, msrpFor, totalPrice } from "../domain/pricing";
+import { checkQuantity, storePrice, totalPrice } from "../domain/pricing";
 import type { StoreDependencies } from "./ports";
 
 export type BuySealedError = ProductNotForSale | QuantityInvalid | InsufficientFunds;
@@ -15,7 +15,8 @@ export type BuySealedInput = Readonly<{ productId: SealedProductId; quantity: nu
 export type SealedReceipt = Readonly<{ transactionId: number; items: readonly Item[] }>;
 
 /**
- * Buys sealed product at MSRP (design doc 06, rules 1–4). The store transaction, the wallet
+ * Buys sealed product at its store price: the MSRP, raised to what the contents sell back for
+ * when that's more (design doc 06, rules 1–4; design doc 27). The store transaction, the wallet
  * debit and the new items are saved in one transaction: if the wallet can't pay, nothing is.
  */
 export function makeBuySealed(dependencies: StoreDependencies) {
@@ -30,10 +31,12 @@ export function makeBuySealed(dependencies: StoreDependencies) {
 
     return unitOfWork.run<SealedReceipt, BuySealedError>(async (services) => {
       const listing = await services.priceList.listing(input.productId);
-      const unitPrice = listing === null ? null : msrpFor(listing);
-      if (listing === null || !listing.isSetEnabled || unitPrice === null) {
-        return err({ kind: "ProductNotForSale" });
-      }
+      if (listing === null || !listing.isSetEnabled) return err({ kind: "ProductNotForSale" });
+      // Never less than the contents sell back for (design doc 27, ADR 0021).
+      const buylistRateBps = await services.storeSettings.buylistRate();
+      const price = storePrice({ ...listing, buylistRateBps });
+      if (price === null) return err({ kind: "ProductNotForSale" });
+      const unitPrice = price.price;
 
       const now = clock.now();
       const total = totalPrice(unitPrice, quantity.value);

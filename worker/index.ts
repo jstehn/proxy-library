@@ -32,6 +32,15 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
+   * `pnpm worker value-products`: value every sealed product's contents from today's prices now,
+   * for the resale floor (design doc 27). The schedule does this after each sync by itself.
+   */
+  async "value-products"(container) {
+    const report = await container.store.valueProducts();
+    console.log(report === null ? "no prices yet: nothing to value" : JSON.stringify(report));
+  },
+
+  /**
    * `pnpm worker tag-cards`: work out the role tags and themes of every printing whose stored ones
    * are missing or out of date (design doc 20). Every sync does this too; this runs it alone.
    */
@@ -107,7 +116,7 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
    * and a pick timer can't wait that long.
    */
   async schedule(container) {
-    const { catalog, drafts } = container;
+    const { catalog, drafts, store } = container;
     const recovered = await catalog.recoverInterruptedRuns();
     if (recovered > 0) console.log(`marked ${recovered} interrupted run(s) as failed`);
     console.log(
@@ -129,6 +138,18 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
         const result = await catalog.runNextQueuedSync();
         if (result !== null) {
           console.log(`sync run ${result.run.id} (${result.run.kind}): ${result.status}`);
+        }
+        // New prices (or a first start): value sealed products for the resale floor (design
+        // doc 27). Kind-priced products aren't for sale until this has run once.
+        try {
+          const valued = await store.valueProductsIfStale();
+          if (valued !== null) {
+            console.log(
+              `valued ${valued.products} products from ${valued.priceDay}'s prices (${valued.partial} partial)`,
+            );
+          }
+        } catch (error) {
+          console.error("valuing products failed:", error);
         }
         await sleepUnlessStopping(30_000, () => stopping);
       }

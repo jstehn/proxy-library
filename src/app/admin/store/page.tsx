@@ -116,7 +116,9 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
         <h2 className="font-medium">Price for one product</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           A product sells at its own price if it has one, else Wizards&apos; official MSRP (from its
-          WPN product page), else its kind&apos;s price.
+          WPN product page), else its kind&apos;s price. The last two are raised to what its
+          contents sell back for when that&apos;s more, so buying it to sell the cards never pays
+          (worked out after each nightly price sync). Its own price is never raised.
         </p>
         <form method="get" className="flex items-center gap-2 text-sm">
           <select
@@ -139,42 +141,64 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           </button>
         </form>
         {products.length > 0 && (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
-                <th className="py-1 font-medium">Product</th>
-                <th className="py-1 font-medium">Kind price</th>
-                <th className="py-1 font-medium">Official MSRP</th>
-                <th className="py-1 font-medium">Own price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id} className="border-b border-zinc-100 dark:border-zinc-900">
-                  <td className="py-1.5">
-                    {product.name}
-                    <div className="text-xs text-zinc-500">
-                      <code>{product.kind}</code>
-                    </div>
-                  </td>
-                  <td className="py-1.5 tabular-nums">
-                    {product.kindPrice === null ? "not sold" : Cents.format(product.kindPrice)}
-                  </td>
-                  <td className="py-1.5 tabular-nums">
-                    {product.officialMsrp === null ? "—" : Cents.format(product.officialMsrp)}
-                  </td>
-                  <td className="py-1.5">
-                    <PriceForm
-                      action={setProductPriceAction}
-                      hidden={{ productId: product.id, back }}
-                      price={product.override}
-                      label={`Own MSRP for ${product.name}`}
-                    />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[40rem] text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+                  <th className="py-1 font-medium">Product</th>
+                  <th className="py-1 font-medium">Kind price</th>
+                  <th className="py-1 font-medium">Official MSRP</th>
+                  <th className="py-1 font-medium">Own price</th>
+                  <th className="py-1 font-medium">Contents worth</th>
+                  <th className="py-1 font-medium">Store price</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-b border-zinc-100 dark:border-zinc-900">
+                    <td className="py-1.5">
+                      {product.name}
+                      <div className="text-xs text-zinc-500">
+                        <code>{product.kind}</code>
+                      </div>
+                    </td>
+                    <td className="py-1.5 tabular-nums">
+                      {product.kindPrice === null ? "not sold" : Cents.format(product.kindPrice)}
+                    </td>
+                    <td className="py-1.5 tabular-nums">
+                      {product.officialMsrp === null ? "—" : Cents.format(product.officialMsrp)}
+                    </td>
+                    <td className="py-1.5">
+                      <PriceForm
+                        action={setProductPriceAction}
+                        hidden={{ productId: product.id, back }}
+                        price={product.override}
+                        label={`Own MSRP for ${product.name}`}
+                      />
+                    </td>
+                    <td className="py-1.5 tabular-nums">
+                      {product.contentsValue === null
+                        ? "not valued"
+                        : Cents.format(product.contentsValue)}
+                      {product.isPartial && (
+                        <div className="text-xs text-amber-700 dark:text-amber-400">
+                          some contents couldn&apos;t be valued
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1.5 tabular-nums">
+                      {product.storePrice === null
+                        ? "not for sale"
+                        : Cents.format(product.storePrice)}
+                      {product.isRaised && (
+                        <div className="text-xs text-zinc-500">raised to the resale value</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

@@ -16,8 +16,9 @@ export default async function StorePage() {
       <header>
         <h1 className="text-2xl font-semibold">Store</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Sealed product at its suggested retail price (MSRP). What you buy waits unopened in your
-          inventory.
+          Sealed product at its suggested retail price (MSRP), or at what its cards sell back for
+          when that&apos;s more, so buying a pack to sell its cards never pays. What you buy waits
+          unopened in your inventory.
         </p>
       </header>
       {sets.length === 0 ? (

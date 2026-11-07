@@ -9,6 +9,7 @@ import {
   inMemoryMarketPrices,
   inMemoryPriceList,
   inMemoryStoreLedger,
+  inMemoryProductValues,
   inMemoryStoreSettings,
 } from "@/modules/store/testing/fakes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
@@ -106,6 +107,7 @@ beforeEach(() => {
       new Proxy({}, { get: (_target, key: string) => prices[key] }),
     ),
     storeSettings: inMemoryStoreSettings(),
+    productValues: inMemoryProductValues(),
     events: inMemoryEventRecorder(),
     wishes,
     wishCatalog: inMemoryWishCatalog({

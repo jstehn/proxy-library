@@ -1,5 +1,5 @@
 import type { BoosterConfig, BoosterSheet, PrintingId, Rarity } from "@/modules/catalog";
-import { finishFor, type FactsLookup, type PackCard } from "./pack";
+import { finishFor, type FactsLookup, type PackCard, type PrintingFacts } from "./pack";
 
 // What a recipe promises, and what a pile of opened packs actually delivered (design doc 05,
 // section 3). The Pack lab shows the two side by side; the statistical tests compare them.
@@ -87,4 +87,33 @@ export function observedPerPack(
   }
   for (const key of COUNT_KEYS) observed[key] /= packs.length;
   return observed;
+}
+
+/** Facts that may be missing: a recipe can name a printing the catalog doesn't have. */
+export type MaybeFacts = (printingId: PrintingId) => PrintingFacts | undefined;
+
+/**
+ * The average market value of one pack, in cents (not rounded), calculated exactly from the
+ * recipe's weights, as `expectedPerPack` counts cards (design doc 27, section 3.1). An average
+ * is linear, so this is exact whatever duplicate or colour rules do to single packs. Each card
+ * counts at its price in the finish its sheet gives; an unpriced or unknown card counts as $0,
+ * since the store won't buy it back.
+ */
+export function expectedPackValue(config: BoosterConfig, facts: MaybeFacts): number {
+  const totalVariantWeight = config.variants.reduce((total, variant) => total + variant.weight, 0);
+  if (totalVariantWeight === 0) return 0;
+  let value = 0;
+  for (const variant of config.variants) {
+    const variantShare = variant.weight / totalVariantWeight;
+    for (const [sheetName, count] of Object.entries(variant.slots)) {
+      const sheet = config.sheets[sheetName];
+      for (const { printingId, copies } of expectedCopies(sheet, count)) {
+        const printing = facts(printingId);
+        if (printing === undefined) continue;
+        const finish = finishFor(sheetName, sheet, printing.finishes);
+        value += variantShare * copies * (printing.marketPrice[finish] ?? 0);
+      }
+    }
+  }
+  return value;
 }

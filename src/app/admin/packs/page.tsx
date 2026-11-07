@@ -11,7 +11,7 @@ import {
   type SimulateOpeningsError,
   type SimulationReport,
 } from "@/modules/packs";
-import { packMsrp } from "@/modules/store";
+import { packPrice } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
 import { Cents, type Result } from "@/shared/kernel";
@@ -161,9 +161,9 @@ async function Report(props: { report: SimulationReport; choices: BoosterChoice[
     ...report.bestPulls.map((pull) => pull.printingId),
     ...report.samplePacks.flatMap((pack) => pack.cards.map((card) => card.printingId)),
   ];
-  const [cards, msrp] = await Promise.all([
+  const [cards, price] = await Promise.all([
     printingCards(db, shownIds),
-    packMsrp(db, report.setCode, report.boosterType),
+    packPrice(db, report.setCode, report.boosterType),
   ]);
   const setName =
     props.choices.find((choice) => choice.setCode === report.setCode)?.setName ?? report.setCode;
@@ -176,9 +176,11 @@ async function Report(props: { report: SimulationReport; choices: BoosterChoice[
           {report.packCount.toLocaleString("en-US")} × {setName} {boosterLabel(report.boosterType)}
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {msrp === null
+          {price === null
             ? "This pack isn't sold on its own. "
-            : `A pack costs ${Cents.format(msrp)} (MSRP). `}
+            : price.price > price.listPrice
+              ? `A pack costs ${Cents.format(price.price)}: its MSRP of ${Cents.format(price.listPrice)}, raised to what its cards sell back for. `
+              : `A pack costs ${Cents.format(price.price)} (MSRP). `}
           Cards inside an average pack are worth{" "}
           <strong className="text-zinc-900 tabular-nums dark:text-zinc-100">
             {Cents.format(report.averageValue)}

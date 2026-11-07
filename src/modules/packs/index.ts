@@ -3,6 +3,7 @@ export { loadBooster, openBooster } from "./application/open-booster";
 export type { LoadedBooster, OpenBoosterInput } from "./application/open-booster";
 export type { BoosterCheck } from "./application/check-boosters";
 export { makePacks } from "./application/make-packs";
+export { valueBooster } from "./application/value-booster";
 export type { Packs } from "./application/make-packs";
 export type {
   BoosterKey,
@@ -13,7 +14,13 @@ export type {
 } from "./application/ports";
 export type { SimulateOpeningsError, SimulateOpeningsInput } from "./application/simulate";
 export type { BoosterUnavailable, CountInvalid } from "./domain/errors";
-export { COUNT_KEYS, type CountKey, type PerPackCounts } from "./domain/odds";
+export {
+  COUNT_KEYS,
+  expectedPackValue,
+  type CountKey,
+  type MaybeFacts,
+  type PerPackCounts,
+} from "./domain/odds";
 export type { Pack, PackCard, PrintingFacts } from "./domain/pack";
 export { SIMULATION_LIMIT, type Pull, type SimulationReport } from "./domain/report";
 export { availableBoosters, type BoosterChoice } from "./queries/boosters";

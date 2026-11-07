@@ -28,4 +28,5 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0018 | [Live updates: Postgres LISTEN/NOTIFY and Server-Sent Events](0018-live-updates.md)                           | Accepted |
 | 0019 | [Store what each card does, worked out by the catalog sync and versioned](0019-precomputed-card-features.md)  | Accepted |
 | 0020 | [Import every paper set's printings, as reference sets, for real collections](0020-reference-sets.md)         | Accepted |
+| 0021 | [Never sell sealed product for less than its contents sell back for](0021-sealed-value-floor.md)              | Accepted |
 | 0022 | [Serve LLM tools from one registry, over MCP and OpenAPI, signed in with access tokens](0022-llm-tool-api.md) | Accepted |

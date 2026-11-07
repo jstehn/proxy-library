@@ -1,5 +1,6 @@
 import { Cents, err, ok, type Result } from "@/shared/kernel";
 import type { PriceInvalid, QuantityInvalid } from "./errors";
+import { FULL_RATE_BPS } from "./singles";
 
 // Sealed product prices (ADR 0014; design doc 06, rules 1, 4 and 8).
 
@@ -21,7 +22,7 @@ export function kindPriceApplies(productName: string): boolean {
 }
 
 /**
- * The MSRP a product sells for (ADR 0014, amended by ADR 0015): its own override, else Wizards'
+ * A product's list price (ADR 0014, amended by ADR 0015): its own override, else Wizards'
  * official MSRP from WPN, else its kind's price. None of them means not for sale.
  */
 export function msrpFor(prices: {
@@ -30,6 +31,51 @@ export function msrpFor(prices: {
   kindPrice: Cents | null;
 }): Cents | null {
   return prices.override ?? prices.officialMsrp ?? prices.kindPrice;
+}
+
+/**
+ * The lowest price a product may sell at (ADR 0021): what its contents sell back for on
+ * average, rounded up to the cent, so buying and selling everything back never pays.
+ */
+export function resaleFloor(contentsValue: Cents, buylistRateBps: number): Cents {
+  return Cents.of(Math.ceil((contentsValue * buylistRateBps) / FULL_RATE_BPS));
+}
+
+export type StorePrice = Readonly<{
+  /** What the store charges. */
+  price: Cents;
+  /** The price before the floor: override, official MSRP or kind price. */
+  listPrice: Cents;
+  /** The floor raised the price above the list price. */
+  isRaised: boolean;
+}>;
+
+export type PriceInputs = Readonly<{
+  override: Cents | null;
+  officialMsrp: Cents | null;
+  kindPrice: Cents | null;
+  /** The contents' average market value from the last valuation, or null if not valued yet. */
+  contentsValue: Cents | null;
+  buylistRateBps: number;
+}>;
+
+/**
+ * What a sealed product sells for (design doc 27, rules 1–3), or null when it isn't for sale.
+ * An admin's override is used as typed (decision 2). Otherwise the list price is raised to the
+ * resale floor when it's below it. A product priced only by its kind isn't for sale until it
+ * has been valued (decision 3). The store's SQL (`STORE_PRICE` in queries/store.ts) is the same
+ * rule; an integration test checks they agree.
+ */
+export function storePrice(inputs: PriceInputs): StorePrice | null {
+  const { override, officialMsrp, kindPrice, contentsValue, buylistRateBps } = inputs;
+  if (override !== null) return { price: override, listPrice: override, isRaised: false };
+  const listPrice = officialMsrp ?? kindPrice;
+  if (listPrice === null) return null;
+  if (officialMsrp === null && contentsValue === null) return null;
+  const floor = contentsValue === null ? Cents.zero : resaleFloor(contentsValue, buylistRateBps);
+  return floor > listPrice
+    ? { price: floor, listPrice, isRaised: true }
+    : { price: listPrice, listPrice, isRaised: false };
 }
 
 export const MAX_PRICE = Cents.of(1_000_000); // $10,000.00
