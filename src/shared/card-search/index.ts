@@ -10,14 +10,33 @@ export {
   parseColors,
   parseSearch,
   rarityName,
+  taggerAlias,
   toggleTerm,
   type ColorValue,
+  type ComparableField,
   type Comparison,
   type ParsedSearch,
   type SearchField,
   type SearchNode,
   type SearchTerm,
 } from "./parse";
+export {
+  IS_DESCRIPTIONS,
+  IS_GROUPS,
+  SEARCH_BASICS,
+  SEARCH_KEYWORDS,
+  searchHelpText,
+  type SearchHelpRow,
+} from "./help";
+export {
+  cardSignals,
+  plainText,
+  SIGNAL_KINDS,
+  type Signal,
+  type SignalCard,
+  type SignalKind,
+  type SignalOptions,
+} from "./signals";
 export {
   parseList,
   type ListLine,

@@ -1,4 +1,5 @@
 import { COLOR_COMBINATIONS, type ManaColor } from "@/shared/kernel";
+import { TAGS, THEMES, type Tag, type Theme } from "./tags";
 
 // The card search language (design docs 14 and 15), modeled on Scryfall's and used by every card
 // search box. Pure: text in, a tree of conditions out, plus notes about anything it couldn't
@@ -14,6 +15,7 @@ import { COLOR_COMBINATIONS, type ManaColor } from "@/shared/kernel";
 //   !"Lightning Bolt"      exactly that name
 //   o:/draw (a|two)/       a regular expression (names, rules text, type line, artist)
 //   kw:flying is:mdfc usd<1 year>=2024 own=0 …   see KEYWORDS below
+//   tag:ramp theme:tokens pow>tou mv:even o:"when ~ dies" is:shockland   (design doc 28)
 
 type Color = ManaColor;
 
@@ -44,7 +46,15 @@ export type SearchField =
   | "border"
   | "frame"
   | "own"
-  | "real";
+  | "real"
+  | "tag"
+  | "theme"
+  | "banned"
+  | "restricted"
+  | "fullOracle";
+
+/** Numbers a term can compare with each other on the same card: `pow>tou`, `pow>=mv`. */
+export type ComparableField = "power" | "toughness" | "loyalty" | "defense" | "manaValue";
 
 export type Comparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | ":";
 
@@ -57,6 +67,8 @@ export type SearchTerm = Readonly<{
   comparison: Comparison;
   value: string;
   isPattern?: boolean;
+  /** `pow>tou` compares with another number on the card instead of `value`. */
+  compareTo?: ComparableField;
 }>;
 
 export type SearchNode =
@@ -122,7 +134,66 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   own: "own",
   owned: "own",
   real: "real",
+  tag: "tag",
+  role: "tag",
+  theme: "theme",
+  banned: "banned",
+  restricted: "restricted",
+  fo: "fullOracle",
+  fulloracle: "fullOracle",
 };
+
+/** Keywords borrowed from Scryfall's tagger, read as this app's tags and themes. */
+const TAGGER_KEYWORDS = new Set(["otag", "oracletag", "function"]);
+
+/** Scryfall tagger values that mean one of this app's tags or themes (design doc 28, 3.6). */
+const TAGGER_ALIASES: Readonly<Record<string, { field: "tag" | "theme"; value: Tag | Theme }>> = {
+  ramp: { field: "tag", value: "ramp" },
+  "mana-rock": { field: "tag", value: "ramp" },
+  "mana-dork": { field: "tag", value: "ramp" },
+  "land-ramp": { field: "tag", value: "ramp" },
+  draw: { field: "tag", value: "draw" },
+  "card-draw": { field: "tag", value: "draw" },
+  "card-advantage": { field: "tag", value: "draw" },
+  removal: { field: "tag", value: "removal" },
+  "board-wipe": { field: "tag", value: "wipe" },
+  sweeper: { field: "tag", value: "wipe" },
+  wrath: { field: "tag", value: "wipe" },
+  counterspell: { field: "tag", value: "counter" },
+  tutor: { field: "tag", value: "tutor" },
+  protection: { field: "tag", value: "protection" },
+  "hexproof-granter": { field: "tag", value: "protection" },
+  "sacrifice-outlet": { field: "theme", value: "sacrifice" },
+  "token-maker": { field: "theme", value: "tokens" },
+  "token-generator": { field: "theme", value: "tokens" },
+  recursion: { field: "theme", value: "graveyard" },
+  reanimation: { field: "theme", value: "graveyard" },
+  mill: { field: "theme", value: "graveyard" },
+  lifegain: { field: "theme", value: "lifegain" },
+};
+
+/** The tag or theme a tagger value stands for, or null. `removal-…` values are all removal. */
+export function taggerAlias(value: string): { field: "tag" | "theme"; value: string } | null {
+  const text = value.toLowerCase();
+  if (text.startsWith("removal-")) return { field: "tag", value: "removal" };
+  return TAGGER_ALIASES[text] ?? null;
+}
+
+/** What `pow>tou` may name on its right: the numbers on a card, under their keywords. */
+const COMPARABLE: Readonly<Record<string, ComparableField>> = {
+  pow: "power",
+  power: "power",
+  tou: "toughness",
+  toughness: "toughness",
+  loy: "loyalty",
+  loyalty: "loyalty",
+  def: "defense",
+  defense: "defense",
+  mv: "manaValue",
+  cmc: "manaValue",
+  manavalue: "manaValue",
+};
+const COMPARABLE_FIELDS = new Set<SearchField>(Object.values(COMPARABLE));
 
 const NUMERIC_FIELDS = new Set<SearchField>([
   "manaValue",
@@ -136,7 +207,7 @@ const NUMERIC_FIELDS = new Set<SearchField>([
   "real",
 ]);
 /** Text fields that accept a /regular expression/ instead of words. */
-const PATTERN_FIELDS = new Set<SearchField>(["name", "oracle", "type", "artist"]);
+const PATTERN_FIELDS = new Set<SearchField>(["name", "oracle", "fullOracle", "type", "artist"]);
 /** The longest regular expression accepted, so a search can't ask the database for too much. */
 export const MAX_PATTERN_LENGTH = 100;
 
@@ -145,7 +216,39 @@ export const IS_VALUES = {
   finish: ["foil", "etched"],
   layout: ["dfc", "transform", "mdfc", "split", "adventure", "flip", "meld", "saga", "class"],
   treatment: ["showcase", "borderless", "extendedart", "fullart", "serialized", "promo"],
-  kind: ["commander", "permanent", "spell", "historic", "legendary", "vanilla", "bear"],
+  kind: [
+    "commander",
+    "permanent",
+    "spell",
+    "historic",
+    "legendary",
+    "vanilla",
+    "frenchvanilla",
+    "bear",
+    "modal",
+    "party",
+    "outlaw",
+    "hybrid",
+    "phyrexian",
+  ],
+  land: [
+    "basic",
+    "fetchable",
+    "dual",
+    "shockland",
+    "fetchland",
+    "checkland",
+    "fastland",
+    "slowland",
+    "painland",
+    "bounceland",
+    "scryland",
+    "gainland",
+    "triome",
+    "cycleland",
+    "manland",
+    "pathway",
+  ],
 } as const;
 const ALL_IS_VALUES = new Set<string>(Object.values(IS_VALUES).flat());
 export const BORDERS = ["black", "white", "borderless", "silver", "gold", "yellow"] as const;
@@ -297,6 +400,20 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
     };
   }
 
+  if (TAGGER_KEYWORDS.has(keyword) && rawValue !== "" && pattern === undefined) {
+    const alias = taggerAlias(rawValue);
+    if (alias === null) {
+      notes.push(
+        `"${keyword}:${rawValue}" isn't one of this app's tags; use tag:, theme: or o:/…/ (ignored)`,
+      );
+      return null;
+    }
+    const negate = comparison === "!=";
+    return {
+      kind: "term",
+      term: { field: alias.field, comparison: negate ? "!=" : ":", value: alias.value },
+    };
+  }
   const field = KEYWORDS[keyword];
   if (field === undefined) {
     notes.push(`Unknown keyword "${keyword}${comparison}" (ignored)`);
@@ -319,6 +436,15 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
     return { kind: "term", term: { field, comparison: ":", value: pattern, isPattern: true } };
   }
   const value = rawValue;
+  const other = COMPARABLE[value.toLowerCase()];
+  if (COMPARABLE_FIELDS.has(field) && other !== undefined) {
+    if (other === field) {
+      notes.push(`"${word}" compares a number with itself (ignored)`);
+      return null;
+    }
+    const exactly = comparison === ":" ? "=" : comparison;
+    return { kind: "term", term: { field, comparison: exactly, value: other, compareTo: other } };
+  }
   const problem = valueProblem(field, comparison, value);
   if (problem !== null) {
     notes.push(`${problem} (ignored)`);
@@ -328,6 +454,11 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
 }
 
 function valueProblem(field: SearchField, comparison: Comparison, value: string): string | null {
+  if (field === "manaValue" && /^(even|odd)$/i.test(value)) {
+    return comparison === ":" || comparison === "=" || comparison === "!="
+      ? null
+      : `"${comparison}" doesn't apply to even or odd`;
+  }
   if (NUMERIC_FIELDS.has(field) && !/^-?\d+(\.\d+)?$/.test(value)) {
     return `"${value}" isn't a number`;
   }
@@ -337,6 +468,15 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
   if (field === "rarity" && rarityName(value) === null) return `"${value}" isn't a rarity`;
   if (field === "is" && !ALL_IS_VALUES.has(value.toLowerCase())) {
     return `"is:${value}" isn't supported (see Search help)`;
+  }
+  if (field === "tag" && !(TAGS as readonly string[]).includes(value.toLowerCase())) {
+    return `"tag:${value}" isn't a tag (${TAGS.join(", ")})`;
+  }
+  if (field === "theme" && !(THEMES as readonly string[]).includes(value.toLowerCase())) {
+    return `"theme:${value}" isn't a theme (${THEMES.join(", ")})`;
+  }
+  if ((field === "banned" || field === "restricted") && !/^[a-z]+$/i.test(value)) {
+    return `"${value}" isn't a format`;
   }
   if (field === "produces" && !/^[wubrgc]+$/i.test(value)) {
     return `"${value}" isn't a mana color (W, U, B, R, G or C)`;
@@ -363,6 +503,11 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
     "produces",
     "border",
     "frame",
+    "fullOracle",
+    "tag",
+    "theme",
+    "banned",
+    "restricted",
   ].includes(field);
   if (textField && comparison !== ":" && comparison !== "=" && comparison !== "!=") {
     return `"${comparison}" doesn't apply to text`;

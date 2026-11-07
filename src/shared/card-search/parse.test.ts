@@ -191,3 +191,97 @@ describe("design doc 15 keywords", () => {
     ]);
   });
 });
+
+describe("design doc 28 keywords", () => {
+  const only = (text: string) => parseSearch(text);
+
+  it("reads role tags and themes, and refuses values that aren't one", () => {
+    expect(only("tag:ramp").node).toEqual(term("tag", ":", "ramp"));
+    expect(only("role:draw").node).toEqual(term("tag", ":", "draw"));
+    expect(only("theme:tokens").node).toEqual(term("theme", ":", "tokens"));
+    expect(only("-theme:sacrifice").node).toEqual({
+      kind: "not",
+      child: term("theme", ":", "sacrifice"),
+    });
+    expect(only("tag:lifegain").notes).toEqual([
+      expect.stringContaining('"tag:lifegain" isn\'t a tag'),
+    ]);
+    expect(only("theme:ramp").notes).toHaveLength(1);
+  });
+
+  it("reads Scryfall tagger values that mean a tag or theme, and notes the rest", () => {
+    expect(only("otag:card-draw").node).toEqual(term("tag", ":", "draw"));
+    expect(only("function:board-wipe").node).toEqual(term("tag", ":", "wipe"));
+    expect(only("otag:removal-creature").node).toEqual(term("tag", ":", "removal"));
+    expect(only("otag:sacrifice-outlet").node).toEqual(term("theme", ":", "sacrifice"));
+    expect(only("otag!=ramp").node).toEqual(term("tag", "!=", "ramp"));
+    const unknown = only("otag:pseudo-ramp t:creature");
+    expect(unknown.node).toEqual(term("type", ":", "creature"));
+    expect(unknown.notes).toEqual([
+      "\"otag:pseudo-ramp\" isn't one of this app's tags; use tag:, theme: or o:/…/ (ignored)",
+    ]);
+  });
+
+  it("compares two numbers on the same card", () => {
+    expect(only("pow>tou").node).toEqual({
+      kind: "term",
+      term: { field: "power", comparison: ">", value: "toughness", compareTo: "toughness" },
+    });
+    expect(only("tou:pow").node).toMatchObject({
+      term: { field: "toughness", comparison: "=", compareTo: "power" },
+    });
+    expect(only("pow>=cmc").node).toMatchObject({ term: { compareTo: "manaValue" } });
+    expect(only("pow>pow").notes).toEqual(['"pow>pow" compares a number with itself (ignored)']);
+  });
+
+  it("reads even and odd mana values", () => {
+    expect(only("mv:even").node).toEqual(term("manaValue", ":", "even"));
+    expect(only("cmc!=odd").node).toEqual(term("manaValue", "!=", "odd"));
+    expect(only("mv>even").notes).toEqual(['">" doesn\'t apply to even or odd (ignored)']);
+  });
+
+  it("reads banned, restricted and full oracle text", () => {
+    expect(only("banned:commander").node).toEqual(term("banned", ":", "commander"));
+    expect(only("restricted:vintage").node).toEqual(term("restricted", ":", "vintage"));
+    expect(only('fo:"can\'t be blocked"').node).toEqual(
+      term("fullOracle", ":", "can't be blocked"),
+    );
+    expect(only("fo:/flying\\)/").node).toMatchObject({
+      term: { field: "fullOracle", isPattern: true },
+    });
+    expect(only("banned:<3").notes).toHaveLength(1);
+  });
+
+  it("keeps ~ in rules text for the SQL to read as the card's name", () => {
+    expect(only('o:"when ~ dies"').node).toEqual(term("oracle", ":", "when ~ dies"));
+  });
+
+  it("accepts every new is: value", () => {
+    for (const value of [
+      "frenchvanilla",
+      "modal",
+      "party",
+      "outlaw",
+      "hybrid",
+      "phyrexian",
+      "basic",
+      "fetchable",
+      "dual",
+      "shockland",
+      "fetchland",
+      "checkland",
+      "fastland",
+      "slowland",
+      "painland",
+      "bounceland",
+      "scryland",
+      "gainland",
+      "triome",
+      "cycleland",
+      "manland",
+      "pathway",
+    ]) {
+      expect(only(`is:${value}`).notes).toEqual([]);
+    }
+  });
+});

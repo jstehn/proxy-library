@@ -2,6 +2,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import {
   manaSymbols,
+  type ComparableField,
   parseColors,
   rarityName,
   type Comparison,
@@ -112,6 +113,7 @@ function textMatch(column: SQL, term: SearchTerm): SQL {
 
 function termCondition(term: SearchTerm, context: SearchContext): SQL {
   const { comparison, value } = term;
+  if (term.compareTo !== undefined) return fieldComparison(term.field, comparison, term.compareTo);
   switch (term.field) {
     case "name":
       return textTerm(
@@ -121,11 +123,16 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
         comparison,
       );
     case "oracle":
-      return textTerm(
-        sql`exists (select 1 from jsonb_array_elements(p.faces) face
-                     where ${textMatch(sql`(face->>'text')`, term)})`,
-        comparison,
-      );
+      return textTerm(oracleCondition(term, { withReminders: false }), comparison);
+    case "fullOracle":
+      return textTerm(oracleCondition(term, { withReminders: true }), comparison);
+    case "tag":
+      return textTerm(sql`${value.toLowerCase()} = any(p.role_tags)`, comparison);
+    case "theme":
+      return textTerm(sql`${value.toLowerCase()} = any(p.theme_tags)`, comparison);
+    case "banned":
+    case "restricted":
+      return textTerm(sql`p.legalities->>${value.toLowerCase()} = ${term.field}`, comparison);
     case "type":
       return textTerm(textMatch(sql`p.type_line`, term), comparison);
     case "artist":
@@ -189,6 +196,10 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
       // …and for identity, "within these" (id:rw finds what a Boros commander can play).
       return colorCondition(sql`p.color_identity`, comparison === ":" ? "<=" : comparison, value);
     case "manaValue":
+      if (/^(even|odd)$/i.test(value)) {
+        const remainder = value.toLowerCase() === "even" ? 0 : 1;
+        return textTerm(sql`(p.mana_value::int % 2) = ${remainder}`, comparison);
+      }
       return sql`p.mana_value ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "power":
     case "toughness":
@@ -266,6 +277,150 @@ function faceNumber(key: string, comparison: Comparison, value: string): SQL {
                         and (face->>${key})::int ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)})`;
 }
 
+/** Reminder text: anything in parentheses. */
+const REMINDER = String.raw`\([^)]*\)`;
+
+/** A face's rules text, with or without reminder text. */
+function faceText(withReminders: boolean): SQL {
+  return withReminders
+    ? sql`(face->>'text')`
+    : sql`regexp_replace(face->>'text', ${REMINDER}, '', 'g')`;
+}
+
+/** Characters that mean something in a regular expression. */
+const REGEX_SPECIALS = String.raw`([.^$*+?()\[\]{}|\\])`;
+
+/** SQL: a text column with its regular-expression characters escaped. */
+function escapedForPattern(text: SQL): SQL {
+  return sql`regexp_replace(${text}, ${REGEX_SPECIALS}, ${String.raw`\\\1`}, 'g')`;
+}
+
+/** The same escaping in TypeScript, for plain words that become a pattern because of `~`. */
+function escapeForPattern(text: string): string {
+  return text.replace(/[.^$*+?()[\]{}|\\]/g, (character) => `\\${character}`);
+}
+
+/** How cards refer to themselves since late 2024 ("this creature"), besides their name. */
+const SELF_WORDS = String.raw`this (creature|artifact|enchantment|land|planeswalker|battle|card|spell|permanent|token|vehicle|equipment|aura|saga|class|siege|room)`;
+
+/**
+ * Rules text matching a term (`o:` without reminder text, `fo:` with). A `~` stands for the
+ * card's own name: the face's full name, its short name ("Jolene" for "Jolene, the Plunder
+ * Queen"), or "this creature" and the like.
+ */
+function oracleCondition(term: SearchTerm, options: { withReminders: boolean }): SQL {
+  const text = faceText(options.withReminders);
+  if (!term.value.includes("~")) {
+    return sql`exists (select 1 from jsonb_array_elements(p.faces) face
+                        where ${textMatch(text, term)})`;
+  }
+  const source = term.isPattern === true ? term.value : escapeForPattern(term.value);
+  const faceName = sql`coalesce(face->>'name', p.name)`;
+  const self = sql`'(' || ${escapedForPattern(faceName)} || '|'
+                       || ${escapedForPattern(sql`split_part(${faceName}, ',', 1)`)} || '|'
+                       || ${SELF_WORDS} || ')'`;
+  return sql`exists (select 1 from jsonb_array_elements(p.faces) face
+                      where ${text} ~* replace(${source}, '~', ${self}))`;
+}
+
+/** SQL for one number on the card: a face's (power, …) or the mana value. */
+function cardNumber(field: ComparableField): SQL {
+  return field === "manaValue" ? sql`p.mana_value` : sql`(face->>${field})::int`;
+}
+
+/** `pow>tou`: two numbers on the same face compared (faces without both numbers don't match). */
+function fieldComparison(
+  field: SearchTerm["field"],
+  comparison: Comparison,
+  other: ComparableField,
+): SQL {
+  const left = field as ComparableField; // the parser only allows comparable fields here
+  const guards = [left, other]
+    .filter((side) => side !== "manaValue")
+    .map((side) => sql`face->>${side} ~ '^-?[0-9]+$'`);
+  return sql`exists (select 1 from jsonb_array_elements(p.faces) face
+                      where ${sql.join(guards, sql` and `)}
+                        and ${cardNumber(left)} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${cardNumber(other)})`;
+}
+
+/** Every rules text on the card without reminder text, one face per line. */
+const PLAIN_RULES_TEXT = sql`coalesce((select string_agg(regexp_replace(face->>'text', ${REMINDER}, '', 'g'), ${"\n"})
+                                          from jsonb_array_elements(p.faces) face), '')`;
+
+/** How many basic land types the type line has (Plains, Island, …). */
+const BASIC_TYPE_COUNT = sql`(select count(*) from unnest(array['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']) basic(type_name)
+                               where p.type_line ~ ('\\m' || basic.type_name || '\\M'))::int`;
+
+/** A land whose rules text (no reminders) matches this pattern. */
+function landSaying(pattern: string): SQL {
+  return sql`(${hasType("Land")} and ${PLAIN_RULES_TEXT} ~* ${pattern})`;
+}
+
+const ENTERS_TAPPED = String.raw`enters( the battlefield)? tapped`;
+const BASIC_NAME = String.raw`(plains|island|swamp|mountain|forest)`;
+
+/** The common land cycles (design doc 28, section 3.6), from the type line and rules text. */
+function landCycle(value: string): SQL | null {
+  const land = hasType("Land");
+  switch (value) {
+    case "basic":
+      return sql`(${land} and ${hasType("Basic")})`;
+    case "fetchable":
+      return sql`(${land} and ${BASIC_TYPE_COUNT} >= 1)`;
+    case "dual":
+      return sql`(${land} and not ${hasType("Basic")} and ${BASIC_TYPE_COUNT} = 2
+                  and btrim(${PLAIN_RULES_TEXT}) = '')`;
+    case "shockland":
+      return sql`(${BASIC_TYPE_COUNT} = 2 and ${landSaying(String.raw`you may pay 2 life`)})`;
+    case "fetchland":
+      return landSaying(
+        String.raw`pay 1 life, sacrifice [^:]*: search your library for an? \w+ or \w+ card`,
+      );
+    case "checkland":
+      return landSaying(
+        String.raw`${ENTERS_TAPPED} unless you control an? ${BASIC_NAME} or an? ${BASIC_NAME}`,
+      );
+    case "fastland":
+      return landSaying(String.raw`${ENTERS_TAPPED} unless you control two or fewer other lands`);
+    case "slowland":
+      return landSaying(String.raw`${ENTERS_TAPPED} unless you control two or more other lands`);
+    case "painland":
+      return landSaying(
+        String.raw`\{T\}: add \{[WUBRG]\} or \{[WUBRG]\}\.[^.\n]*deals 1 damage to you`,
+      );
+    case "bounceland":
+      return landSaying(String.raw`return a land you control to its owner's hand`);
+    case "scryland":
+      return landSaying(
+        String.raw`${ENTERS_TAPPED}\.\s*when [^.]*enters( the battlefield)?, scry 1`,
+      );
+    case "gainland":
+      return landSaying(
+        String.raw`${ENTERS_TAPPED}\.\s*when [^.]*enters( the battlefield)?, you gain 1 life`,
+      );
+    case "triome":
+      return sql`(${land} and ${BASIC_TYPE_COUNT} = 3)`;
+    case "cycleland":
+      return sql`(${land} and ${BASIC_TYPE_COUNT} = 2
+                  and exists (select 1 from unnest(p.keywords) keyword where lower(keyword) = 'cycling'))`;
+    case "manland":
+      return landSaying(String.raw`becomes an? [^.]*creature`);
+    case "pathway":
+      return sql`(p.layout = 'modal_dfc' and p.type_line ~ '^Land // Land$')`;
+    default:
+      return null;
+  }
+}
+
+/** Creatures whose only rules text is keyword abilities (`Flying`, `Ward {2}`, …). */
+const FRENCH_VANILLA = sql`(${hasType("Creature")}
+  and btrim(${PLAIN_RULES_TEXT}) <> ''
+  and not exists (
+    select 1 from regexp_split_to_table(lower(${PLAIN_RULES_TEXT}), '[\n,]') part
+     where btrim(part) <> ''
+       and not exists (select 1 from unnest(p.keywords) keyword
+                        where btrim(part) = lower(keyword) or btrim(part) like lower(keyword) || ' %')))`;
+
 /** Whether the type line has this word (whole words: "Creature", not "Creatures"). */
 function hasType(word: string): SQL {
   return sql`p.type_line ~ ${`\\m${word}\\M`}`;
@@ -322,8 +477,20 @@ function isCondition(value: string, context: SearchContext): SQL {
                                where face->>'power' = '2' and face->>'toughness' = '2'))`;
     case "commander":
       return commanderCondition();
+    case "frenchvanilla":
+      return FRENCH_VANILLA;
+    case "modal":
+      return sql`${PLAIN_RULES_TEXT} ~* ${String.raw`\mchoose [a-z ]+ ?—`}`;
+    case "party":
+      return sql`(${hasType("Creature")} and p.type_line ~ '\\m(Cleric|Rogue|Warrior|Wizard)\\M')`;
+    case "outlaw":
+      return sql`(${hasType("Creature")} and p.type_line ~ '\\m(Assassin|Mercenary|Pirate|Rogue|Warlock)\\M')`;
+    case "hybrid":
+      return sql`coalesce(p.mana_cost, '') ~ ${String.raw`\{[WUBRGC2]/[WUBRG](/P)?\}`}`;
+    case "phyrexian":
+      return sql`coalesce(p.mana_cost, '') ~ ${String.raw`/P\}`}`;
     default:
-      return sql`false`; // the parser refuses other values
+      return landCycle(value) ?? sql`false`; // the parser refuses other values
   }
 }
 
