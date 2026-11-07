@@ -15,6 +15,8 @@ import { makeSignIn } from "./sign-in";
  * Builds every accounts use case from one set of dependencies.
  * The composition root calls this once; tests call it with fakes.
  */
+import { makeActorFromToken, makeCreateAccessToken, makeRevokeAccessToken } from "./access-tokens";
+
 export function makeAccounts(dependencies: AccountsDependencies) {
   return {
     registerPlayer: makeRegisterPlayer(dependencies),
@@ -28,6 +30,9 @@ export function makeAccounts(dependencies: AccountsDependencies) {
     setSelfFunding: makeSetSelfFunding(dependencies),
     setDisabled: makeSetDisabled(dependencies),
     resetPassword: makeResetPassword(dependencies),
+    createAccessToken: makeCreateAccessToken(dependencies),
+    revokeAccessToken: makeRevokeAccessToken(dependencies),
+    actorFromToken: makeActorFromToken(dependencies),
   };
 }
 

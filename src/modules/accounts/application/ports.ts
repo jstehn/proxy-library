@@ -1,4 +1,5 @@
 import type { Clock, Result, UnitOfWork, UserId } from "@/shared/kernel";
+import type { AccessToken, AccessTokenId, Scope } from "../domain/access-token";
 import type { DisplayName, Password, Username } from "../domain/credentials";
 import type { InvalidCredentials, UsernameTaken } from "../domain/errors";
 import type { Invite, InviteCode } from "../domain/invite";
@@ -60,12 +61,38 @@ export interface InviteRepository {
 export interface SecretGenerator {
   inviteCode(): InviteCode;
   temporaryPassword(): Password;
+  /** 32 random bytes for a new access token (design doc 28). */
+  accessTokenBytes(): Uint8Array;
+}
+
+/** A token as it is first stored: everything but the id, plus the secret's hash. */
+export type NewAccessToken = Readonly<{
+  userId: UserId;
+  name: string;
+  prefix: string;
+  hash: string;
+  scopes: readonly Scope[];
+  createdAt: Date;
+}>;
+
+/** Personal access tokens (design doc 28, section 6). Only hashes are stored (rule 2). */
+export interface AccessTokenRepository {
+  countLive(userId: UserId): Promise<number>;
+  insert(token: NewAccessToken): Promise<AccessToken>;
+  /** The live (not revoked) token with this hash, or null. */
+  findLiveByHash(hash: string): Promise<AccessToken | null>;
+  /** Revokes one of the player's live tokens; false when it isn't theirs or is already revoked. */
+  revoke(id: AccessTokenId, userId: UserId, at: Date): Promise<boolean>;
+  /** Revokes every live token of the player; returns how many. */
+  revokeAll(userId: UserId, at: Date): Promise<number>;
+  touch(id: AccessTokenId, at: Date): Promise<void>;
 }
 
 /** The repositories that must share one transaction. */
 export type AccountsServices = {
   players: PlayerRepository;
   invites: InviteRepository;
+  accessTokens: AccessTokenRepository;
 };
 
 /** Everything the accounts use cases need, passed in by the composition root. */

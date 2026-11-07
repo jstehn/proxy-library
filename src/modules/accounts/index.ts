@@ -2,6 +2,22 @@
 export { makeAccounts } from "./application/make-accounts";
 export type { Accounts } from "./application/make-accounts";
 export type {
+  CreateAccessTokenError,
+  CreateAccessTokenInput,
+  CreatedAccessToken,
+  TokenActor,
+} from "./application/access-tokens";
+export {
+  AccessTokenId,
+  allows,
+  MAX_LIVE_TOKENS,
+  SCOPES,
+  TOKEN_NAME_MAX_LENGTH,
+  type AccessToken,
+  type Scope,
+} from "./domain/access-token";
+export type {
+  AccessTokenRepository,
   AccountsDependencies,
   AccountsServices,
   IdentityProvider,

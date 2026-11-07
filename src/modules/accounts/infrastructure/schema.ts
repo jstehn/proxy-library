@@ -1,5 +1,6 @@
 // Tables owned by the accounts module. drizzle-kit reads this file to generate migrations.
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -98,3 +99,27 @@ export const invites = pgTable("invites", {
   usedAt: timestamptz("used_at"),
   revokedAt: timestamptz("revoked_at"),
 });
+
+// Personal access tokens for LLM clients (design doc 28, section 8). Only the secret's SHA-256 is
+// stored; "revoked" is final.
+export const accessTokens = pgTable(
+  "access_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    prefix: text("prefix").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    scopes: text("scopes").array().notNull(),
+    createdAt: timestamptz("created_at").notNull(),
+    lastUsedAt: timestamptz("last_used_at"),
+    revokedAt: timestamptz("revoked_at"),
+  },
+  (table) => [
+    index("access_tokens_live")
+      .on(table.userId)
+      .where(sql`${table.revokedAt} is null`),
+  ],
+);

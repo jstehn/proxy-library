@@ -81,26 +81,30 @@ export function makeSetDisabled(dependencies: AccountsDependencies) {
     const allowed = requireAdmin(actor);
     if (!allowed.ok) return allowed;
 
-    const result = await unitOfWork.run<Player, SetDisabledError>(async ({ players }) => {
-      await players.lockAccounts();
-      const target = await findPlayer(players, input.userId);
-      if (!target.ok) return target;
+    const result = await unitOfWork.run<Player, SetDisabledError>(
+      async ({ players, accessTokens }) => {
+        await players.lockAccounts();
+        const target = await findPlayer(players, input.userId);
+        if (!target.ok) return target;
 
-      const change = checkDisableChange({
-        actor,
-        target: target.value,
-        disable: input.disabled,
-        activeAdminCount: await players.countActiveAdmins(),
-      });
-      if (!change.ok) return change;
+        const change = checkDisableChange({
+          actor,
+          target: target.value,
+          disable: input.disabled,
+          activeAdminCount: await players.countActiveAdmins(),
+        });
+        if (!change.ok) return change;
 
-      const updated: Player = {
-        ...target.value,
-        disabledAt: input.disabled ? clock.now() : null,
-      };
-      await players.update(updated);
-      return ok(updated);
-    });
+        const updated: Player = {
+          ...target.value,
+          disabledAt: input.disabled ? clock.now() : null,
+        };
+        await players.update(updated);
+        // Design doc 28, rule 20: disabling a player revokes their access tokens for good.
+        if (input.disabled) await accessTokens.revokeAll(input.userId, clock.now());
+        return ok(updated);
+      },
+    );
 
     // Rule 8: disabling someone signs them out everywhere, straight away.
     if (result.ok && input.disabled) await identity.endAllSessions(input.userId);
@@ -115,7 +119,7 @@ export function makeSetDisabled(dependencies: AccountsDependencies) {
  * The temporary password is returned once, for the admin to pass on.
  */
 export function makeResetPassword(dependencies: AccountsDependencies) {
-  const { unitOfWork, identity, secrets } = dependencies;
+  const { unitOfWork, identity, secrets, clock } = dependencies;
 
   async function resetPassword(
     actor: Actor,
@@ -126,14 +130,18 @@ export function makeResetPassword(dependencies: AccountsDependencies) {
 
     const temporaryPassword = secrets.temporaryPassword();
 
-    const result = await unitOfWork.run<Player, ResetPasswordError>(async ({ players }) => {
-      const target = await findPlayer(players, input.userId);
-      if (!target.ok) return target;
+    const result = await unitOfWork.run<Player, ResetPasswordError>(
+      async ({ players, accessTokens }) => {
+        const target = await findPlayer(players, input.userId);
+        if (!target.ok) return target;
 
-      const updated: Player = { ...target.value, mustChangePassword: true };
-      await players.update(updated);
-      return ok(updated);
-    });
+        const updated: Player = { ...target.value, mustChangePassword: true };
+        await players.update(updated);
+        // Design doc 28, rule 20: a password reset suggests trouble, so tokens go too.
+        await accessTokens.revokeAll(input.userId, clock.now());
+        return ok(updated);
+      },
+    );
     if (!result.ok) return result;
 
     await identity.setPassword(input.userId, temporaryPassword);

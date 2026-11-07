@@ -139,6 +139,19 @@ export {
   type SharedDeck,
   type ViewedDeck,
 } from "./queries/sharing";
+export {
+  searchForDeck,
+  type SearchForDeck,
+  type SearchForDeckInput,
+} from "./queries/search-for-deck";
+export {
+  SEARCH_FOR_DECK_LIMITS,
+  SEARCH_POOLS,
+  type MergedCard,
+  type QueryReport,
+  type SearchPool,
+  type SynergyQuery,
+} from "./domain/search-for-deck";
 export { makeProxySheets, type ProxySheet, type ProxySheetInput } from "./application/proxy-sheets";
 export type {
   ProxyImageSource,

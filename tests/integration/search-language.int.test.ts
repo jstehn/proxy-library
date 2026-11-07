@@ -321,6 +321,11 @@ describe("rules text", () => {
     ]);
   });
 
+  it("reads \\b in a pattern as a word boundary", async () => {
+    expect(await find(String.raw`o:/\bdies\b/`)).toEqual(["Sky Courier"]);
+    expect(await find(String.raw`o:/\bcharm\b/`)).toEqual(["Izzet Charm"]);
+  });
+
   it("leaves reminder text out of o: and keeps it in fo: (rule 18)", async () => {
     expect(await find('o:"can\'t be blocked"')).toEqual([]);
     expect(await find('fo:"can\'t be blocked"')).toEqual(["Sky Courier"]);

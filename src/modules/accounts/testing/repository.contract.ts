@@ -3,7 +3,11 @@
 // in fast tests are known to behave like the real thing (patterns.md #18).
 import { beforeEach, describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
-import type { InviteRepository, PlayerRepository } from "../application/ports";
+import type {
+  AccessTokenRepository,
+  InviteRepository,
+  PlayerRepository,
+} from "../application/ports";
 import type { DisplayName, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
 import { newPlayer, type Player } from "../domain/player";
@@ -24,6 +28,7 @@ export function testPlayer(id: string, overrides: Partial<Player> = {}): Player 
 export type RepositoryHarness = {
   players: PlayerRepository;
   invites: InviteRepository;
+  accessTokens: AccessTokenRepository;
   /** Creates what a player row depends on (Better Auth's user row); a no-op in memory. */
   createIdentity(player: Player): Promise<void>;
 };
@@ -78,6 +83,66 @@ export function describeRepositoryContracts(
 
     it("can take the accounts lock", async () => {
       await expect(harness.players.lockAccounts()).resolves.toBeUndefined();
+    });
+  });
+
+  describe(`AccessTokenRepository contract (${implementation})`, () => {
+    const at = (time: string) => new Date(`2026-11-07T${time}:00.000Z`);
+    const newToken = (userId: UserId, hash: string) => ({
+      userId,
+      name: "LM Studio",
+      prefix: hash.slice(0, 8),
+      hash,
+      scopes: ["read", "decks:write"] as const,
+      createdAt: at("12:00"),
+    });
+
+    it("finds a live token by its hash, exactly as saved", async () => {
+      const jack = await savePlayer(testPlayer("jack"));
+      const token = await harness.accessTokens.insert(newToken(jack.userId, "hash-aaaaaaaa"));
+      expect(token).toMatchObject({
+        userId: jack.userId,
+        name: "LM Studio",
+        prefix: "hash-aaa",
+        scopes: ["read", "decks:write"],
+        createdAt: at("12:00"),
+        lastUsedAt: null,
+        revokedAt: null,
+      });
+      expect(await harness.accessTokens.findLiveByHash("hash-aaaaaaaa")).toEqual(token);
+      expect(await harness.accessTokens.findLiveByHash("other")).toBeNull();
+    });
+
+    it("revokes only the owner's live token, once", async () => {
+      const jack = await savePlayer(testPlayer("jack"));
+      const amy = await savePlayer(testPlayer("amy"));
+      const token = await harness.accessTokens.insert(newToken(jack.userId, "hash-1"));
+      expect(await harness.accessTokens.revoke(token.id, amy.userId, at("12:05"))).toBe(false);
+      expect(await harness.accessTokens.countLive(jack.userId)).toBe(1);
+      expect(await harness.accessTokens.revoke(token.id, jack.userId, at("12:05"))).toBe(true);
+      expect(await harness.accessTokens.revoke(token.id, jack.userId, at("12:06"))).toBe(false);
+      expect(await harness.accessTokens.findLiveByHash("hash-1")).toBeNull();
+      expect(await harness.accessTokens.countLive(jack.userId)).toBe(0);
+    });
+
+    it("revokes every live token of one player", async () => {
+      const jack = await savePlayer(testPlayer("jack"));
+      const amy = await savePlayer(testPlayer("amy"));
+      await harness.accessTokens.insert(newToken(jack.userId, "hash-1"));
+      await harness.accessTokens.insert(newToken(jack.userId, "hash-2"));
+      await harness.accessTokens.insert(newToken(amy.userId, "hash-3"));
+      expect(await harness.accessTokens.revokeAll(jack.userId, at("13:00"))).toBe(2);
+      expect(await harness.accessTokens.countLive(jack.userId)).toBe(0);
+      expect(await harness.accessTokens.countLive(amy.userId)).toBe(1);
+    });
+
+    it("records when a token was last used", async () => {
+      const jack = await savePlayer(testPlayer("jack"));
+      const token = await harness.accessTokens.insert(newToken(jack.userId, "hash-1"));
+      await harness.accessTokens.touch(token.id, at("12:30"));
+      expect((await harness.accessTokens.findLiveByHash("hash-1"))?.lastUsedAt).toEqual(
+        at("12:30"),
+      );
     });
   });
 

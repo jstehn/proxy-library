@@ -102,12 +102,23 @@ const NUMERIC_OPERATORS: Readonly<Record<Comparison, string>> = {
 };
 
 /**
+ * A pattern as Postgres reads it. People (and LLMs) write `\b` for a word boundary, as in
+ * JavaScript; in Postgres it means a backspace, and its word boundary is `\y`. An escaped
+ * backslash (`\\b`) stays as written.
+ */
+export function forPostgres(pattern: string): string {
+  return pattern.replace(/\\(.)/g, (escape, character: string) =>
+    character === "b" ? "\\y" : escape,
+  );
+}
+
+/**
  * How a text column matches the term: a case-insensitive regular expression (`~*`) for
  * /patterns/, else "contains" (ILIKE). The pattern was checked by the parser (length, syntax).
  */
 function textMatch(column: SQL, term: SearchTerm): SQL {
   return term.isPattern === true
-    ? sql`${column} ~* ${term.value}`
+    ? sql`${column} ~* ${forPostgres(term.value)}`
     : sql`${column} ilike ${containing(term.value)}`;
 }
 
@@ -314,7 +325,7 @@ function oracleCondition(term: SearchTerm, options: { withReminders: boolean }):
     return sql`exists (select 1 from jsonb_array_elements(p.faces) face
                         where ${textMatch(text, term)})`;
   }
-  const source = term.isPattern === true ? term.value : escapeForPattern(term.value);
+  const source = term.isPattern === true ? forPostgres(term.value) : escapeForPattern(term.value);
   const faceName = sql`coalesce(face->>'name', p.name)`;
   const self = sql`'(' || ${escapedForPattern(faceName)} || '|'
                        || ${escapedForPattern(sql`split_part(${faceName}, ',', 1)`)} || '|'

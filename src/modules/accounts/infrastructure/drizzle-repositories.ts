@@ -1,11 +1,16 @@
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
-import type { InviteRepository, PlayerRepository } from "../application/ports";
+import type {
+  AccessTokenRepository,
+  InviteRepository,
+  PlayerRepository,
+} from "../application/ports";
+import { AccessTokenId, withRead, type AccessToken } from "../domain/access-token";
 import type { DisplayName, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
 import type { Player } from "../domain/player";
-import { authUsers, invites, players } from "./schema";
+import { accessTokens, authUsers, invites, players } from "./schema";
 
 // An arbitrary but fixed number that names the "accounts" lock (design doc 02, section 8).
 // Postgres advisory locks are identified by a number rather than a table row.
@@ -117,6 +122,66 @@ export function drizzleInviteRepository(db: DbExecutor): InviteRepository {
         .update(invites)
         .set({ usedBy: invite.usedBy, usedAt: invite.usedAt, revokedAt: invite.revokedAt })
         .where(eq(invites.code, invite.code));
+    },
+  };
+}
+
+/** Personal access tokens (design doc 28), in the `access_tokens` table. */
+export function drizzleAccessTokenRepository(db: DbExecutor): AccessTokenRepository {
+  function toToken(row: typeof accessTokens.$inferSelect): AccessToken {
+    return {
+      id: AccessTokenId.of(row.id),
+      userId: UserId.of(row.userId),
+      name: row.name,
+      prefix: row.prefix,
+      scopes: withRead(row.scopes),
+      createdAt: row.createdAt,
+      lastUsedAt: row.lastUsedAt,
+      revokedAt: row.revokedAt,
+    };
+  }
+  const isLive = isNull(accessTokens.revokedAt);
+
+  return {
+    async countLive(userId) {
+      const [row] = await db
+        .select({ live: count() })
+        .from(accessTokens)
+        .where(and(eq(accessTokens.userId, userId), isLive));
+      return row.live;
+    },
+    async insert({ hash, ...token }) {
+      const [row] = await db
+        .insert(accessTokens)
+        .values({ ...token, tokenHash: hash, scopes: [...token.scopes] })
+        .returning();
+      return toToken(row);
+    },
+    async findLiveByHash(hash) {
+      const [row] = await db
+        .select()
+        .from(accessTokens)
+        .where(and(eq(accessTokens.tokenHash, hash), isLive));
+      return row === undefined ? null : toToken(row);
+    },
+    async revoke(id, userId, at) {
+      const rows = await db
+        .update(accessTokens)
+        .set({ revokedAt: at })
+        .where(and(eq(accessTokens.id, id), eq(accessTokens.userId, userId), isLive))
+        .returning({ id: accessTokens.id });
+      return rows.length > 0;
+    },
+    async revokeAll(userId, at) {
+      const rows = await db
+        .update(accessTokens)
+        .set({ revokedAt: at })
+        .where(and(eq(accessTokens.userId, userId), isLive))
+        .returning({ id: accessTokens.id });
+      return rows.length;
+    },
+    async touch(id, at) {
+      await db.update(accessTokens).set({ lastUsedAt: at }).where(eq(accessTokens.id, id));
     },
   };
 }

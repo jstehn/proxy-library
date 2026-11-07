@@ -10,7 +10,11 @@ import { toActor, type Actor } from "../domain/player";
 import { sequentialSecretGenerator } from "../testing/fakes";
 import { createAuth } from "./better-auth";
 import { betterAuthIdentityProvider } from "./better-auth-identity-provider";
-import { drizzleInviteRepository, drizzlePlayerRepository } from "./drizzle-repositories";
+import {
+  drizzleAccessTokenRepository,
+  drizzleInviteRepository,
+  drizzlePlayerRepository,
+} from "./drizzle-repositories";
 
 const config = loadConfig();
 const { db, close } = createDatabase(config.databaseUrl);
@@ -22,6 +26,7 @@ function buildAccounts() {
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       players: drizzlePlayerRepository(transaction),
       invites: drizzleInviteRepository(transaction),
+      accessTokens: drizzleAccessTokenRepository(transaction),
     })),
     identity,
     secrets: sequentialSecretGenerator(),

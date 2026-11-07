@@ -153,6 +153,10 @@ export function cryptoSecretGenerator(): SecretGenerator {
       return groups.map((group) => group.join("")).join("-") as InviteCode;
     },
 
+    accessTokenBytes() {
+      return crypto.getRandomValues(new Uint8Array(32));
+    },
+
     temporaryPassword() {
       const words = secureRandomIndexes(4, WORDS.length).map((index) => WORDS[index]);
       return words.join("-") as Password;

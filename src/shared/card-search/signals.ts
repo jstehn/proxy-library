@@ -207,13 +207,9 @@ const TEXT_RULES: readonly TextRule[] = [
   rule("zone", "mill", String.raw`\bmills?\b`),
 ];
 
-/**
- * A text rule. The follow-up search drops `\b`: in Postgres's regular expressions it means a
- * backspace, not a word boundary.
- */
+/** A text rule; its follow-up search is the same pattern (the search reads `\b` as here). */
 function rule(kind: SignalKind, name: string, source: string): TextRule {
-  const followUp = `o:/${source.replace(/\\b/g, "")}/`;
-  return { kind, name, pattern: new RegExp(source, "i"), followUp };
+  return { kind, name, pattern: new RegExp(source, "i"), followUp: `o:/${source}/` };
 }
 
 /** Card types worth counting: a deck with many of one says "artifacts matter" and the like. */

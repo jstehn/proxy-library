@@ -3,5 +3,9 @@ export { createAuth } from "./better-auth";
 export type { Auth } from "./better-auth";
 export { betterAuthIdentityProvider } from "./better-auth-identity-provider";
 export { cryptoSecretGenerator } from "./crypto-secret-generator";
-export { drizzleInviteRepository, drizzlePlayerRepository } from "./drizzle-repositories";
+export {
+  drizzleAccessTokenRepository,
+  drizzleInviteRepository,
+  drizzlePlayerRepository,
+} from "./drizzle-repositories";
 export { hasSessionCookie } from "./session-cookie";

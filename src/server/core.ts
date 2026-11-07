@@ -7,6 +7,7 @@ import {
   betterAuthIdentityProvider,
   createAuth,
   cryptoSecretGenerator,
+  drizzleAccessTokenRepository,
   drizzleInviteRepository,
   drizzlePlayerRepository,
 } from "@/modules/accounts/infrastructure";
@@ -92,6 +93,7 @@ export function buildCore(config: Config) {
       system: makeSystemService(transaction),
       players: drizzlePlayerRepository(transaction),
       invites: drizzleInviteRepository(transaction),
+      accessTokens: drizzleAccessTokenRepository(transaction),
       wallets: drizzleWalletRepository(transaction),
       economy: drizzleEconomySettingsRepository(transaction),
       playerDirectory: drizzlePlayerDirectory(transaction),

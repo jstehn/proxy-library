@@ -5,7 +5,9 @@ import { inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import type { Password, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
 import type { Player } from "../domain/player";
+import { AccessTokenId, type AccessToken } from "../domain/access-token";
 import type {
+  AccessTokenRepository,
   AccountsServices,
   IdentityProvider,
   InviteRepository,
@@ -55,6 +57,56 @@ export function inMemoryInviteRepository(): InviteRepository {
     async update(invite) {
       if (!invites.has(invite.code)) throw new Error(`invite ${invite.code} does not exist`);
       invites.set(invite.code, invite);
+    },
+  };
+}
+
+export function inMemoryAccessTokenRepository(): AccessTokenRepository {
+  const tokens = new Map<AccessTokenId, { token: AccessToken; hash: string }>();
+  let nextId = 1;
+  const live = () => [...tokens.values()].filter((stored) => stored.token.revokedAt === null);
+
+  return {
+    async countLive(userId) {
+      return live().filter((stored) => stored.token.userId === userId).length;
+    },
+    async insert({ hash, ...rest }) {
+      const token: AccessToken = {
+        ...rest,
+        id: AccessTokenId.of(nextId++),
+        lastUsedAt: null,
+        revokedAt: null,
+      };
+      tokens.set(token.id, { token, hash });
+      return token;
+    },
+    async findLiveByHash(hash) {
+      return live().find((stored) => stored.hash === hash)?.token ?? null;
+    },
+    async revoke(id, userId, at) {
+      const stored = tokens.get(id);
+      if (
+        stored === undefined ||
+        stored.token.userId !== userId ||
+        stored.token.revokedAt !== null
+      ) {
+        return false;
+      }
+      tokens.set(id, { ...stored, token: { ...stored.token, revokedAt: at } });
+      return true;
+    },
+    async revokeAll(userId, at) {
+      const mine = live().filter((stored) => stored.token.userId === userId);
+      for (const stored of mine) {
+        tokens.set(stored.token.id, { ...stored, token: { ...stored.token, revokedAt: at } });
+      }
+      return mine.length;
+    },
+    async touch(id, at) {
+      const stored = tokens.get(id);
+      if (stored !== undefined) {
+        tokens.set(id, { ...stored, token: { ...stored.token, lastUsedAt: at } });
+      }
     },
   };
 }
@@ -150,6 +202,7 @@ export function inMemoryIdentityProvider() {
 export function sequentialSecretGenerator(): SecretGenerator {
   let inviteCount = 0;
   let passwordCount = 0;
+  let tokenCount = 0;
 
   return {
     inviteCode() {
@@ -160,12 +213,20 @@ export function sequentialSecretGenerator(): SecretGenerator {
       passwordCount += 1;
       return `temp-password-${passwordCount}` as Password;
     },
+    accessTokenBytes() {
+      tokenCount += 1;
+      return new Uint8Array(32).fill(tokenCount);
+    },
   };
 }
 
 /** One in-memory set of accounts services, shared by a test's unit of work. */
 export function inMemoryAccountsServices(): AccountsServices {
-  return { players: inMemoryPlayerRepository(), invites: inMemoryInviteRepository() };
+  return {
+    players: inMemoryPlayerRepository(),
+    invites: inMemoryInviteRepository(),
+    accessTokens: inMemoryAccessTokenRepository(),
+  };
 }
 
 export function inMemoryAccountsUnitOfWork(

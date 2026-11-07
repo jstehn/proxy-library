@@ -19,5 +19,9 @@ export type InviteNotOpen = Readonly<{
 }>;
 export type InviteDurationInvalid = Readonly<{ kind: "InviteDurationInvalid" }>;
 
+export type TokenNameInvalid = Readonly<{ kind: "TokenNameInvalid"; maximum: number }>;
+export type TooManyTokens = Readonly<{ kind: "TooManyTokens"; maximum: number }>;
+export type TokenNotFound = Readonly<{ kind: "TokenNotFound" }>;
+
 export type LastAdmin = Readonly<{ kind: "LastAdmin" }>;
 export type CannotDisableSelf = Readonly<{ kind: "CannotDisableSelf" }>;
