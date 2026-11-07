@@ -49,4 +49,5 @@ export {
 } from "./domain/credentials";
 export type { Actor, Player } from "./domain/player";
 export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
+export { listAccessTokens } from "./queries/access-tokens";
 export type { InviteListItem, PlayerListItem } from "./queries/admin";

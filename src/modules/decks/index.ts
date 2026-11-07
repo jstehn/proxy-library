@@ -140,6 +140,13 @@ export {
   type ViewedDeck,
 } from "./queries/sharing";
 export {
+  deckSignalCards,
+  findCard,
+  ownedSignalCards,
+  SIGNAL_CARD_LIMIT,
+  type CardReference,
+} from "./queries/card-facts";
+export {
   searchForDeck,
   type SearchForDeck,
   type SearchForDeckInput,

@@ -187,7 +187,16 @@ const policies = [
   {
     from: { file: { categories: "test" } },
     allow: {
-      to: [el("kernel-testing"), el("config"), el("db"), el("runtime"), layer("testing")],
+      to: [
+        el("kernel-testing"),
+        el("config"),
+        el("db"),
+        el("runtime"),
+        layer("testing"),
+        // The integration harness (catalog fixtures, players), for the LLM tools' end-to-end test
+        // in src/app (design doc 28): it drives app code no tests/ file may import.
+        el("test-setup"),
+      ],
     },
   },
 ];

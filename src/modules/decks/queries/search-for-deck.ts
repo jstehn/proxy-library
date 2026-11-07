@@ -190,25 +190,27 @@ export async function searchForDeck(
   const perQuery = Math.min(Math.max(1, input.perQuery), SEARCH_FOR_DECK_LIMITS.perQuery);
   const queries = input.queries.slice(0, SEARCH_FOR_DECK_LIMITS.queries);
 
-  const hits: QueryHits[] = [];
-  for (const query of queries) {
-    const parsed = parseSearch(query.search);
-    const condition = searchCondition(parsed.node, {
-      userId,
-      foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
-      ownIncludesReal: context.usesRealCards,
-    });
-    const [owned, store] = await Promise.all([
-      input.where === "store" ? [] : ownedHits(db, context, condition, perQuery),
-      input.where === "owned"
-        ? []
-        : storeHits(db, context, condition, perQuery, input.maxPriceCents),
-    ]);
-    const found = (owned[0]?.total ?? 0) + (store[0]?.total ?? 0);
-    // Owned first, then the store, within one query's share of the cap.
-    const cards = [...owned, ...store].slice(0, perQuery).map(toFound);
-    hits.push({ query, found: Number(found), cards, notes: parsed.notes });
-  }
+  // The queries run side by side; each is one or two SQL statements.
+  const hits: QueryHits[] = await Promise.all(
+    queries.map(async (query) => {
+      const parsed = parseSearch(query.search);
+      const condition = searchCondition(parsed.node, {
+        userId,
+        foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
+        ownIncludesReal: context.usesRealCards,
+      });
+      const [owned, store] = await Promise.all([
+        input.where === "store" ? [] : ownedHits(db, context, condition, perQuery),
+        input.where === "owned"
+          ? []
+          : storeHits(db, context, condition, perQuery, input.maxPriceCents),
+      ]);
+      const found = Number(owned[0]?.total ?? 0) + Number(store[0]?.total ?? 0);
+      // Owned first, then the store, within one query's share of the cap.
+      const cards = [...owned, ...store].slice(0, perQuery).map(toFound);
+      return { query, found, cards, notes: parsed.notes };
+    }),
+  );
 
   return {
     deck: {

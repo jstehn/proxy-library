@@ -32,6 +32,16 @@ export default async function AccountPage() {
         </Link>
       </section>
 
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Connect an LLM</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Let an AI assistant look at your cards and help build decks, with an access token.
+        </p>
+        <Link href="/account/tokens" className="w-fit underline">
+          Access tokens
+        </Link>
+      </section>
+
       <section className="flex flex-col gap-3 rounded-lg border border-red-300 p-4 dark:border-red-900">
         <h2 className="font-medium">Start over</h2>
         <p className="text-sm">

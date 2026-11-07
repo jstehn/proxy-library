@@ -64,6 +64,27 @@ app sends `X-Accel-Buffering: no`, which nginx (and Nginx Proxy Manager) honor, 
 configuring there. If a proxy buffers the stream anyway, the draft page notices and falls back to
 reloading every 5 seconds, which works but feels less live.
 
+## Connect an LLM
+
+Players can let an AI assistant read their cards, decks and wishlist and help build decks
+(design doc 28). Each player makes an **access token** on **Account → Access tokens**, which
+also shows copy-ready setup for their client. Two endpoints, both signed in with
+`Authorization: Bearer pl_…`:
+
+| Endpoint                      | For                                                              |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `POST /api/mcp`               | any MCP client (Streamable HTTP, stateless; JSON responses)      |
+| `POST /api/tools/<tool>`      | plain function calling; the tool's input is the JSON body        |
+| `GET /api/tools/openapi.json` | the OpenAPI 3.1 description of those tools, to import (no token) |
+
+Clients that only start local (stdio) MCP servers connect through the `mcp-remote` bridge:
+`npx -y mcp-remote https://proxylib.example.com/api/mcp --header "Authorization:Bearer pl_…"`.
+
+From outside your network, serve the app over **HTTPS** (above): the token travels in a header.
+No token can buy, sell, open packs, trade or delete anything; an admin password reset or
+disabling a player revokes that player's tokens. Web connectors that accept only OAuth
+(claude.ai, ChatGPT on the web) can't connect yet.
+
 ## Deploying to a Portainer server
 
 `scripts/deploy.sh` deploys to a Docker server managed by Portainer, as the stack

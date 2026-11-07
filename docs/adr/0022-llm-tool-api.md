@@ -17,7 +17,7 @@ prompts and resources.
 
 ## Decision
 
-- **One tool registry** in the app layer (`src/server/llm-tools/`): each tool has a name,
+- **One tool registry** in the app layer (`src/app/_llm-tools/`): each tool has a name,
   instructions, a Zod input and output schema, a scope and a handler that calls existing queries
   and use cases with the caller's `Actor`. Tools add no business rules.
 - **Two thin endpoints over it:** `POST /api/mcp` (MCP Streamable HTTP, stateless, with the

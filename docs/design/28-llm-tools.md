@@ -1,9 +1,10 @@
 # Design: LLM tools (MCP + OpenAPI)
 
 - **Phase:** 28
-- **Status:** **Approved** (2026-11-07) with every recommendation in section 13, plus one
-  addition: expand the card search language as far as the stored data reasonably allows
-  (section 3.6).
+- **Status:** **Built** (2026-11-07). Approved the same day with every recommendation in section
+  13, plus one addition: expand the card search language as far as the stored data reasonably
+  allows (section 3.6), and `analyze_cards` (section 3.7, added at review). Implementation notes
+  in section 14.
 - **Related:** ADR 0022 (this phase), ADR 0017 (shared card search), ADR 0019 (stored card
   features), design doc 20 (suggestions), design doc 23 (fingerprints for safe list edits),
   design doc 26 (wishlist), design doc 02 (accounts)
@@ -56,7 +57,7 @@ owned picks to the deck and wishlist the rest.
 | Term                | Meaning in this codebase                                                                                                                        |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | LLM tool            | One operation a model may call: name, instructions, input/output schemas, scope, handler. Defined once in the registry.                         |
-| Tool registry       | The list of every LLM tool (`src/server/llm-tools/registry.ts`). Both endpoints are built from it.                                              |
+| Tool registry       | The list of every LLM tool (`src/app/_llm-tools/registry.ts`). Both endpoints are built from it.                                                |
 | MCP                 | Model Context Protocol: JSON-RPC messages (`tools/list`, `tools/call`, …) over HTTP. The open standard most LLM clients speak.                  |
 | OpenAPI             | A JSON description of an HTTP API. Function-calling clients turn each operation into a tool.                                                    |
 | Access token        | A secret string `pl_…` that stands for one player. Only its SHA-256 hash is stored. Shown once.                                                 |
@@ -191,7 +192,7 @@ type SearchForDeckOutput = Readonly<{
 type MoneyView = Readonly<{ cents: number; text: string }>; // { cents: 123, text: "$1.23" }
 ```
 
-Pure functions (tested without a database, `src/server/llm-tools/search-for-deck.ts`):
+Pure functions (tested without a database, `src/modules/decks/domain/search-for-deck.ts`):
 
 ```ts
 /** Joins each query's hits into one list per card, with every synergy it matched. */
@@ -249,7 +250,7 @@ Example: <one realistic call>.
 
 ### 3.5 The cookbook
 
-Data, not prose, so it can be tested (`src/server/llm-tools/cookbook.ts`):
+Data, not prose, so it can be tested (`src/app/_llm-tools/cookbook.ts`):
 
 ```ts
 type CookbookEntry = Readonly<{
@@ -610,3 +611,36 @@ Every recommendation accepted:
 9. **Limits:** 8 queries × 50 cards per `search_for_deck` call, 200 merged, pages of 25 (max
    100).
 10. **No rate limiting** beyond those bounds; add a per-token limit if a client loops.
+
+## 14. Implementation notes (2026-11-07)
+
+- **The registry lives in `src/app/_llm-tools/`, not `src/server/llm-tools/`.** A tool is a
+  controller, like a server action, and the app layer may already import every module's public
+  API, the pure card search and helpers such as `problemText`; `src/server` may not import the
+  app. The `_` keeps the folder out of Next's routing. Only `http.ts` (which reaches the
+  container) is `server-only`, so the registry and MCP server can be tested in Vitest.
+- **The MCP adapter uses the SDK's low-level `Server`**, not `McpServer.registerTool`, so the
+  JSON Schema it lists is exactly the one OpenAPI shows (`inputJsonSchema`, from
+  `z.toJSONSchema(…, { io: "input" })`), and scope checks and error sentences happen in one
+  place (`callTool`). Results carry JSON text and `structuredContent`; there's no
+  `outputSchema` (it would make clients reject any result that drifts from it).
+- **22 tools, not 23:** `get_collection` was folded into `search_cards` (`where: "owned"`) and
+  `get_account` (totals and value). `FoundCard` has no `wished` flag: a decks query can't read
+  the wishlist's tables through its API, and `get_card` shows wishes.
+- **The queries behind the tools live in the decks module:** `searchForDeck` (merging and ranking
+  pure in `decks/domain/search-for-deck.ts`), `findCard` (a name, front-face name, oracle id or
+  printing id → the card and its standard printing), `deckSignalCards` and `ownedSignalCards`.
+  `cardSignals` itself is pure, in `@/shared/card-search/signals.ts`.
+- **`\b` in a pattern means a word boundary.** Models write JavaScript-style regular
+  expressions; Postgres reads `\b` as a backspace, so `forPostgres` turns it into `\y`. The web
+  search boxes get the fix too.
+- **Balances come from `refreshWallet`**, as on every page that shows money: a due allowance is
+  paid when `get_account` or `get_wishlist` runs.
+- **The queries of one `search_for_deck` call run side by side:** four queries over the real
+  catalog (Treasure makers, artifact sacrifice, spore counters, shock lands) take about 0.4 s.
+- **Tests may import the integration harness** (a new lint allowance), for the end-to-end test
+  in `src/app/_llm-tools/llm-tools.int.test.ts`, which drives a real MCP client over the SDK's
+  in-memory transport.
+- **Verified by hand** with `curl` against the dev server: 401 without a token, `initialize`,
+  `tools/list` (22 tools), `tools/call`, and the HTTP and OpenAPI endpoints. Connecting two
+  clients from different vendors (section 12, "by hand") is left for you.
