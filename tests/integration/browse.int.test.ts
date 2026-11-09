@@ -38,6 +38,7 @@ async function newDeck(format: "casual" | "commander", list = ""): Promise<DeckI
 async function browse(deckId: DeckId, input: Partial<BrowseInput> = {}) {
   const page = await browseCollection(db, jack.userId, {
     deckId,
+    source: "mine",
     search: "",
     colors: null,
     includeColorless: true,
@@ -111,6 +112,7 @@ describe("browsing the collection for a deck", () => {
     const deckId = await newDeck("casual");
     const others = await browseCollection(db, actor("someone").userId, {
       deckId,
+      source: "mine",
       search: "",
       colors: null,
       includeColorless: true,
@@ -159,5 +161,99 @@ describe("browsing the collection for a deck", () => {
     });
     // Only the deck's format, as the server has it.
     expect(card.rules.legalities).toEqual({ commander: rules?.legalities.commander });
+  });
+});
+
+describe("browsing every card for a deck (design doc 29)", () => {
+  const all = (deckId: DeckId, input: Partial<BrowseInput> = {}) =>
+    browse(deckId, { source: "all", onlyLegal: false, ...input });
+
+  it("shows each card for sale once, owned or not, and leaves out disabled sets", async () => {
+    await give("Agate Assault", 2);
+    const deckId = await newDeck("casual");
+    const page = await all(deckId);
+
+    // Beza has four printings (two in a disabled promo set): one tile.
+    expect(names(page).filter((name) => name === "Beza, the Bounding Spring")).toHaveLength(1);
+    // Rat Colony and Toski are only in a disabled set: not for sale, not shown.
+    expect(names(page)).not.toContain("Rat Colony");
+    expect(names(page)).not.toContain("Toski, Bearer of Secrets");
+    expect(new Set(names(page)).size).toBe(page.cards.length);
+    expect(page.total).toBe(page.cards.length);
+
+    expect(page.cards.find((card) => card.name === "Agate Assault")).toMatchObject({ owned: 2 });
+    expect(page.cards.find((card) => card.name === "Banishing Light")).toMatchObject({
+      owned: 0,
+      ownedReal: 0,
+    });
+    // The owned browse still shows only your cards (rule 1).
+    expect(names(await browse(deckId, { onlyLegal: false }))).toEqual(["Agate Assault"]);
+  });
+
+  it("shows a card you don't own as its standard art, nonfoil, at that printing's price", async () => {
+    const deckId = await newDeck("casual");
+    const truce = (await all(deckId, { search: "dawn's truce" })).cards;
+    // BLB 9 rather than the borderless showcase 295 (design doc 24, rule 2).
+    expect(truce).toEqual([
+      expect.objectContaining({
+        setCode: "BLB",
+        collectorNumber: "9",
+        finish: "nonfoil",
+        priceCents: 982,
+        owned: 0,
+      }),
+    ]);
+    // A search that only one printing matches shows that printing (rule 3).
+    const showcase = (await all(deckId, { search: "dawn's truce frame:showcase" })).cards;
+    expect(showcase).toEqual([
+      expect.objectContaining({ collectorNumber: "295", priceCents: 1420 }),
+    ]);
+  });
+
+  it("shows a card you own as your copy, whatever the standard art is", async () => {
+    await give("Dawn's Truce", 3); // gives the first by collector number: the showcase 295
+    const deckId = await newDeck("casual");
+    const [truce] = (await all(deckId, { search: "dawn's truce" })).cards;
+    expect(truce).toMatchObject({ collectorNumber: "295", owned: 3 });
+  });
+
+  it("finds only what you're missing with own=0", async () => {
+    await give("Agate Assault", 1);
+    const deckId = await newDeck("casual");
+    const missing = await all(deckId, { search: "own=0" });
+    expect(names(missing)).not.toContain("Agate Assault");
+    expect(missing.cards.every((card) => card.owned === 0)).toBe(true);
+    expect(missing.total).toBe((await all(deckId)).total - 1);
+  });
+
+  it("keeps the deck's rules: a commander's colors and the fit filter", async () => {
+    const deckId = await newDeck("commander", "Commander\n1 Bria, Riptide Rogue");
+    const blueRed = await browse(deckId, { source: "all", colors: ["U", "R"] });
+    expect(blueRed.cards.length).toBeGreaterThan(0);
+    expect(
+      blueRed.cards.every((card) =>
+        card.rules.colorIdentity.every((color) => "UR".includes(color)),
+      ),
+    ).toBe(true);
+    expect(blueRed.cards.every((card) => card.misfit === null)).toBe(true);
+  });
+
+  it("adds a card you don't own, and the deck counts it as short", async () => {
+    const deckId = await newDeck("casual");
+    const [light] = (await all(deckId, { search: '"banishing light"' })).cards;
+    const added = await decks.setEntry(jack, {
+      deckId,
+      oracleId: light.oracleId,
+      board: "main",
+      quantity: 2,
+      printingId: PrintingId.of(light.printingId),
+    });
+    expect(added.ok).toBe(true);
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines).toEqual([
+      expect.objectContaining({ oracleId: light.oracleId, quantity: 2, owned: 0 }),
+    ]);
+    const [again] = (await all(deckId, { search: '"banishing light"' })).cards;
+    expect(again).toMatchObject({ inThisDeck: 2, owned: 0 });
   });
 });

@@ -1100,3 +1100,50 @@ test("a player makes an access token for an LLM, uses it, and revokes it (design
   expect(after.status()).toBe(401);
   await context.close();
 });
+
+test("the admin builds from every card, then buys what the deck is short (design doc 29)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByLabel("Deck name").fill("Wish list deck");
+  await page.getByRole("button", { name: "Create deck" }).click();
+  await expect(page.getByRole("heading", { name: "Wish list deck" })).toBeVisible();
+
+  // The grid starts on your own cards; "All cards" searches the catalog. own=0 finds what the
+  // admin doesn't have (which cards depends on the packs earlier tests opened).
+  const searchIn = page.getByRole("group", { name: "Search in" });
+  await expect(searchIn.getByRole("button", { name: "My cards" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await searchIn.getByRole("button", { name: "All cards" }).click();
+  await page.getByRole("searchbox", { name: "Search every card" }).fill("own=0");
+  const grid = page.getByRole("list", { name: "Every card" });
+  const missing = grid.getByRole("button", { name: /, not owned$/ }).first();
+  const name = (await missing.getAttribute("aria-label"))!.replace(/, not owned$/, "");
+  await missing.click();
+
+  const selected = page.getByRole("region", { name: `Selected: ${name}` });
+  await expect(selected.getByText("You don't own this card.")).toBeVisible();
+  await selected.getByRole("button", { name: "Add to deck" }).click();
+  await expect(page.getByText(`Added 1 ${name} (now 1).`)).toBeVisible();
+  const problems = page.getByRole("region", { name: "Problems" });
+  await expect(problems.getByText("1 card has a problem (marked ⚠ below).")).toBeVisible();
+
+  // The existing way out: Buy a list, filled in with what the deck is short of.
+  await selected.getByRole("link", { name: "buy what it's short" }).click();
+  await expect(
+    page.getByText("Filled in with the cards Wish list deck is short of."),
+  ).toBeVisible();
+  await expect(page.getByLabel("Cards to buy")).toHaveValue(new RegExp(`^1 ${escapeRegExp(name)}`));
+});
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

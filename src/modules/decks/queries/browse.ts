@@ -6,10 +6,11 @@ import { FORMATS } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
-import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
+import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
-// Browsing your collection while building a deck (design doc 14, section 2.1): one entry per
-// card you own (shown as the printing you have most copies of), with what the deck needs to know.
+// Browsing cards while building a deck (design doc 14, section 2.1): one entry per card, with
+// what the deck needs to know. The grid searches either the cards you own or every card for sale
+// (design doc 29). Your cards are shown as your most special copy, others as their standard art.
 
 const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
@@ -19,9 +20,13 @@ type Color = z.infer<typeof ColorSchema>;
 export const BROWSE_PAGE_SIZE = 60;
 export const BROWSE_SORTS = ["name", "manaValue", "color", "type", "newest"] as const;
 export type BrowseSort = (typeof BROWSE_SORTS)[number];
+/** What the grid searches: the cards you own, or every card for sale (design doc 29). */
+export const BROWSE_SOURCES = ["mine", "all"] as const;
+export type BrowseSource = (typeof BROWSE_SOURCES)[number];
 
 export type BrowseInput = Readonly<{
   deckId: number;
+  source: BrowseSource;
   search: string;
   /**
    * Show only cards whose color identity is within these colors; null shows every color. A
@@ -43,7 +48,10 @@ export type BrowseCard = Readonly<{
   manaCost: string | null;
   manaValue: number;
   typeLine: string;
-  /** Copies counted as owned in this deck: game copies, plus real ones when it uses them. */
+  /**
+   * Copies counted as owned in this deck: game copies, plus real ones when it uses them. Zero for
+   * a card you don't own (only when browsing every card).
+   */
   owned: number;
   /** How many of `owned` are real copies (design doc 16). */
   ownedReal: number;
@@ -111,26 +119,34 @@ export async function deckBrowseContext(
   return { format, commanderColors, usesRealCards: row.uses_real_cards };
 }
 
-const ORDER: Readonly<Record<BrowseSort, SQL>> = {
-  name: sql`p.name`,
-  manaValue: sql`p.mana_value, p.name`,
-  color: sql`cardinality(p.color_identity) = 0, cardinality(p.color_identity),
-             array_to_string(p.color_identity, ''), p.name`,
-  // The deck list's type order (domain/stats.ts TYPE_ORDER), so the grid can show type headings.
-  type: sql`case
-              when p.type_line ~ '\\mCreature\\M' then 0
-              when p.type_line ~ '\\mPlaneswalker\\M' then 1
-              when p.type_line ~ '\\mInstant\\M' then 2
-              when p.type_line ~ '\\mSorcery\\M' then 3
-              when p.type_line ~ '\\mArtifact\\M' then 4
-              when p.type_line ~ '\\mEnchantment\\M' then 5
-              when p.type_line ~ '\\mBattle\\M' then 6
-              when p.type_line ~ '\\mLand\\M' then 7
-              else 8 end, p.mana_value, p.name`,
-  newest: sql`owned.newest desc nulls last, p.name`,
-};
+/**
+ * The grid's ORDER BY for a printing "p" of each card. `newest` is the card's "newest" date (when
+ * you last got one, or for every card the newest set it's in), and `oracleId` breaks name ties so
+ * no card lands on two pages.
+ */
+function orderBy(sort: BrowseSort, newest: SQL, oracleId: SQL): SQL {
+  const keys: Record<BrowseSort, SQL> = {
+    name: sql`p.name`,
+    manaValue: sql`p.mana_value, p.name`,
+    color: sql`cardinality(p.color_identity) = 0, cardinality(p.color_identity),
+               array_to_string(p.color_identity, ''), p.name`,
+    // The deck list's type order (domain/stats.ts TYPE_ORDER), so the grid can show type headings.
+    type: sql`case
+                when p.type_line ~ '\\mCreature\\M' then 0
+                when p.type_line ~ '\\mPlaneswalker\\M' then 1
+                when p.type_line ~ '\\mInstant\\M' then 2
+                when p.type_line ~ '\\mSorcery\\M' then 3
+                when p.type_line ~ '\\mArtifact\\M' then 4
+                when p.type_line ~ '\\mEnchantment\\M' then 5
+                when p.type_line ~ '\\mBattle\\M' then 6
+                when p.type_line ~ '\\mLand\\M' then 7
+                else 8 end, p.mana_value, p.name`,
+    newest: sql`${newest} desc nulls last, p.name`,
+  };
+  return sql`${keys[sort]}, ${oracleId}`;
+}
 
-/** One page of the cards you own that match the search and colors, for one of your decks. */
+/** One page of the cards that match the search and colors, for one of your decks. */
 export async function browseCollection(
   db: DbExecutor,
   userId: UserId,
@@ -162,6 +178,57 @@ export async function browseCollection(
   const offset = (Math.max(1, input.page) - 1) * BROWSE_PAGE_SIZE;
   // The cards you own for this deck: real ones too when it uses them (design doc 16, rule 2).
   const owned = ownedCopies(userId, sql`${context.usesRealCards}`);
+  // What a printing "p" must satisfy to be in the grid.
+  const matches = sql`${searchCondition(parsed.node, {
+    userId,
+    foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
+    ownIncludesReal: context.usesRealCards,
+  })} and ${colorFilter} and (${!input.onlyLegal} or ${legal})`;
+
+  // One page of candidates: (oracle_id, printing_id shown, owned, owned_real, newest, total).
+  // Your cards: the printing shown is your most special copy, and it's the one searched.
+  const mineCandidates = sql`
+    candidates as (
+      select owned.oracle_id, owned.printing_id, owned.owned, owned.owned_real, owned.newest,
+             count(*) over ()::int as total
+        from owned join printings p on p.id = owned.printing_id
+       where ${matches}
+       order by ${orderBy(input.sort, sql`owned.newest`, sql`owned.oracle_id`)}
+       limit ${BROWSE_PAGE_SIZE} offset ${offset}
+    )`;
+  // Every card for sale (design doc 29, section 9): group the matching printings by card, page
+  // the groups, and only then choose a printing for each of the 60 cards on the page.
+  const allCandidates = sql`
+    matching as (
+      -- One row per card: its newest matching printing. Every printing of a card has the same
+      -- name, mana value, colors and types, so this row can sort the card, and it carries only
+      -- the columns sorting needs (a narrow sort stays in memory).
+      select distinct on (p.oracle_id)
+             p.oracle_id, p.name, p.mana_value, p.color_identity, p.type_line,
+             s.release_date as newest
+        from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+       where ${matches}
+       order by p.oracle_id, s.release_date desc nulls last
+    ),
+    paged as (
+      -- "p" here is the matching row, so the grid's ORDER BY (written for a printing) applies.
+      select p.oracle_id, p.newest, count(*) over ()::int as total
+        from matching p
+       order by ${orderBy(input.sort, sql`p.newest`, sql`p.oracle_id`)}
+       limit ${BROWSE_PAGE_SIZE} offset ${offset}
+    ),
+    candidates as (
+      select paged.oracle_id,
+             -- Yours: your most special copy (rule 3). Otherwise the standard art among the
+             -- printings that match, so "s:mh3" shows the MH3 one (design doc 24, rule 2).
+             coalesce(owned.printing_id, (
+               select p.id from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+                where p.oracle_id = paged.oracle_id and ${matches}
+                order by ${STANDARD_FIRST} limit 1)) as printing_id,
+             coalesce(owned.owned, 0) as owned, coalesce(owned.owned_real, 0) as owned_real,
+             paged.newest, paged.total
+        from paged left join owned on owned.oracle_id = paged.oracle_id
+    )`;
 
   const rows = await db.execute<{
     oracle_id: string;
@@ -198,15 +265,16 @@ export async function browseCollection(
               where a.user_id = ${userId} and ap.oracle_id = p.oracle_id) as newest
         from ${owned} c join printings p on p.id = c.printing_id
        group by p.oracle_id
-    )
-    select owned.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-           owned.owned, owned.owned_real,
+    ),
+    ${input.source === "mine" ? mineCandidates : allCandidates}
+    select card.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
+           card.owned, card.owned_real,
            coalesce((select sum(e.quantity) from deck_entries e
-                      where e.deck_id = ${input.deckId} and e.oracle_id = owned.oracle_id), 0)::int
+                      where e.deck_id = ${input.deckId} and e.oracle_id = card.oracle_id), 0)::int
              as in_this_deck,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${input.deckId}
-               and e.oracle_id = owned.oracle_id)::int as other_decks,
+               and e.oracle_id = card.oracle_id)::int as other_decks,
            ${identityFits} as fits_identity,
            ${legal} as is_legal,
            p.color_identity, p.legalities->>${context.format} as legality,
@@ -218,9 +286,10 @@ export async function browseCollection(
            (select s.usd_cents from price_snapshots s
              where s.printing_id = p.id and s.finish = shown.finish
              order by s.day desc limit 1) as price_cents,
-           count(*) over ()::int as total
-      from owned join printings p on p.id = owned.printing_id
-      -- The finish a new deck line shows, as the deck view picks it when nothing is pinned.
+           card.total
+      from candidates card join printings p on p.id = card.printing_id
+      -- The finish a new deck line shows, as the deck view picks it when nothing is pinned: your
+      -- most special copy's, or nonfoil for a card you don't own (design doc 29, rule 4).
       cross join lateral (
         select coalesce(
                  (select c.finish from ${owned} c
@@ -229,14 +298,7 @@ export async function browseCollection(
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown
-     where ${searchCondition(parsed.node, {
-       userId,
-       foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
-       ownIncludesReal: context.usesRealCards,
-     })} and ${colorFilter}
-       and (${!input.onlyLegal} or ${legal})
-     order by ${ORDER[input.sort]}
-     limit ${BROWSE_PAGE_SIZE} offset ${offset}
+     order by ${orderBy(input.sort, sql`card.newest`, sql`card.oracle_id`)}
   `);
 
   const total = rows.rows[0]?.total ?? 0;

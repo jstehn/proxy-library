@@ -234,6 +234,7 @@ describe("decks with real cards (rule 2)", () => {
     const browse = (search: string) =>
       browseCollection(db, jack.userId, {
         deckId,
+        source: "mine",
         search,
         colors: null,
         includeColorless: true,

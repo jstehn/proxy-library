@@ -1,8 +1,10 @@
 "use client";
+import Link from "next/link";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, SuggestionCard, SuggestionList } from "@/modules/decks";
 import type { Tag } from "@/shared/card-search";
+import { Cents } from "@/shared/kernel";
 import { TAG_LABELS } from "../../labels";
 import { SuggestionRow } from "./suggestions";
 import { ownedWords } from "./derive";
@@ -20,6 +22,8 @@ export type Selection = Readonly<{
   inDeck: Readonly<Partial<Record<Board, number>>>;
   otherDecks: number;
   misfit: "color" | "legality" | null;
+  /** The shown printing's latest price, or null if it has none. */
+  priceCents: number | null;
   /** The card's roles, read from its rules text (design doc 19). */
   tags: readonly Tag[];
 }>;
@@ -35,6 +39,7 @@ export function SelectedCard(props: {
   quantity: number;
   onQuantity: (quantity: number) => void;
   onAdd: (board: Board) => void;
+  deckId: number;
   isCommanderDeck: boolean;
   onClose: () => void;
   /** Cards like this one: null until asked for (design doc 20). */
@@ -84,7 +89,15 @@ export function SelectedCard(props: {
             )}
           </div>
           <dl className="flex flex-wrap gap-x-3 gap-y-0.5">
-            <Fact label="You own" value={ownedWords(selection.owned, selection.ownedReal)} />
+            <Fact
+              label="You own"
+              value={
+                selection.owned === 0 ? "none" : ownedWords(selection.owned, selection.ownedReal)
+              }
+            />
+            {selection.priceCents !== null && (
+              <Fact label="Price" value={Cents.format(Cents.of(selection.priceCents))} />
+            )}
             <Fact label="In this deck" value={String(inDeck)} />
             {selection.otherDecks > 0 && (
               <Fact label="Other decks using it" value={String(selection.otherDecks)} />
@@ -146,10 +159,20 @@ export function SelectedCard(props: {
           </button>
         )}
       </div>
-      {props.quantity > selection.owned && (
+      {selection.owned === 0 ? (
         <p className="text-xs text-amber-700 dark:text-amber-400">
-          That&apos;s more than you own ({selection.owned}). You can add them; the deck marks it.
+          You don&apos;t own this card. Add it and the deck marks it short; then{" "}
+          <Link href={`/singles/list?deck=${props.deckId}`} className="underline">
+            buy what it&apos;s short
+          </Link>{" "}
+          when you&apos;re done.
         </p>
+      ) : (
+        props.quantity > selection.owned && (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            That&apos;s more than you own ({selection.owned}). You can add them; the deck marks it.
+          </p>
+        )
       )}
       <div className="flex flex-col gap-1 text-sm">
         {props.similar === null ? (

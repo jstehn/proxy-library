@@ -5,6 +5,7 @@ import type {
   Board,
   BrowseCard,
   BrowseSort,
+  BrowseSource,
   DeckLine,
   Format,
   SuggestionCard,
@@ -12,6 +13,7 @@ import type {
 } from "@/modules/decks";
 import { mainType } from "@/modules/decks/client";
 import { cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
+import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
   browseAction,
@@ -126,6 +128,9 @@ export function DeckBuilder(props: {
   // decision 2); every other deck starts with every color, and anyone can pick colors.
   const startingColors = (colors: Color[] | null): Color[] =>
     isCommanderDeck && colors !== null ? colors : [...COLORS];
+  // The grid always starts on the cards you own; "All cards" searches the whole catalog
+  // (design doc 29, decision 1).
+  const [source, setSource] = useState<BrowseSource>("mine");
   const [search, setSearch] = useState("");
   const [waitedSearch, setWaitedSearch] = useState("");
   const [colors, setColors] = useState<Color[]>(() => startingColors(commanderColors));
@@ -162,7 +167,14 @@ export function DeckBuilder(props: {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const filters = JSON.stringify([waitedSearch, colors, includeColorless, showEverything, sort]);
+  const filters = JSON.stringify([
+    source,
+    waitedSearch,
+    colors,
+    includeColorless,
+    showEverything,
+    sort,
+  ]);
 
   /** Loads one page of the collection; page 1 replaces the grid, later pages add to it. */
   const loadPage = useCallback(
@@ -171,6 +183,7 @@ export function DeckBuilder(props: {
       const everyColor = colors.length === COLORS.length && includeColorless;
       void browseAction({
         deckId,
+        source,
         search: waitedSearch,
         colors: showEverything || everyColor ? null : colors,
         includeColorless,
@@ -194,7 +207,7 @@ export function DeckBuilder(props: {
         }));
       });
     },
-    [deckId, filters, waitedSearch, colors, includeColorless, showEverything, sort],
+    [deckId, filters, source, waitedSearch, colors, includeColorless, showEverything, sort],
   );
 
   useEffect(() => loadPage(1), [loadPage]);
@@ -277,6 +290,7 @@ export function DeckBuilder(props: {
       inDeck: inDeck(card.oracleId),
       otherDecks: card.otherDecks,
       misfit: card.misfit,
+      priceCents: card.priceCents,
       tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
     });
   }
@@ -305,6 +319,7 @@ export function DeckBuilder(props: {
       inDeck: inDeck(line.oracleId),
       otherDecks: line.otherDecks.length,
       misfit: null,
+      priceCents: line.priceCents,
       tags: cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana }),
     });
   }
@@ -470,13 +485,32 @@ export function DeckBuilder(props: {
           className={`min-w-0 flex-1 flex-col gap-3 ${tab === "collection" ? "flex" : "hidden lg:flex"}`}
         >
           <div className="flex flex-col gap-2">
+            <div role="group" aria-label="Search in" className="flex items-center gap-1">
+              <span className="mr-1 text-xs text-zinc-500">Search</span>
+              {(["mine", "all"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={source === option}
+                  onClick={() => setSource(option)}
+                  className={pill(source === option)}
+                >
+                  {option === "mine" ? "My cards" : "All cards"}
+                </button>
+              ))}
+              {source === "all" && (
+                <span className="ml-1 text-xs text-zinc-500">
+                  Cards you don&apos;t own show as short; buy them when you&apos;re done.
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <input
                 ref={searchRef}
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                aria-label="Search your cards"
+                aria-label={source === "mine" ? "Search your cards" : "Search every card"}
                 placeholder='Search: bolt, t:creature mv<=3, o:"draw a card", id<=esper'
                 className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
               />
@@ -550,7 +584,7 @@ export function DeckBuilder(props: {
                   checked={showEverything}
                   onChange={(event) => setShowEverything(event.target.checked)}
                 />
-                Show everything I own
+                Show cards that don&apos;t fit
               </label>
             </div>
             <div
@@ -614,7 +648,7 @@ export function DeckBuilder(props: {
           <ul
             ref={gridRef}
             onKeyDown={onGridKey}
-            aria-label="Cards you own"
+            aria-label={source === "mine" ? "Cards you own" : "Every card"}
             className={`grid ${CARD_SIZES[cardSize]} gap-3 transition-opacity ${isFirstPageLoading && browse.cards.length > 0 ? "opacity-60" : ""}`}
           >
             {browse.cards.map((card, index) => {
@@ -638,7 +672,8 @@ export function DeckBuilder(props: {
           </ul>
           {!isFirstPageLoading && browse.cards.length === 0 && (
             <p className="text-sm text-zinc-500">
-              None of your cards match. Try fewer filters, or &quot;Show everything I own&quot;.
+              {source === "mine" ? "None of your cards match" : "No cards match"}. Try fewer
+              filters, or &quot;Show cards that don&apos;t fit&quot;.
             </p>
           )}
           <div ref={endRef} className="h-1" />
@@ -653,6 +688,7 @@ export function DeckBuilder(props: {
                 quantity={quantity}
                 onQuantity={setQuantity}
                 onAdd={add}
+                deckId={deckId}
                 isCommanderDeck={isCommanderDeck}
                 onClose={() => setSelected(null)}
                 similar={similar?.oracleId === selected.oracleId ? similar.list : null}
@@ -787,7 +823,7 @@ function GridCard(props: {
           data-card
           onClick={props.onSelect}
           aria-pressed={props.isSelected}
-          aria-label={`${card.name}, you own ${card.owned}${props.inThisDeck > 0 ? `, ${props.inThisDeck} in this deck` : ""}`}
+          aria-label={`${card.name}, ${card.owned === 0 ? "not owned" : `you own ${card.owned}`}${props.inThisDeck > 0 ? `, ${props.inThisDeck} in this deck` : ""}`}
           className="group block w-full text-left"
         >
           <span
@@ -825,7 +861,14 @@ function GridCard(props: {
             )}
           </span>
           <span className="block text-xs text-zinc-500">
-            own {ownedWords(card.owned, card.ownedReal)}
+            {card.owned === 0 ? (
+              <>
+                <span className="font-medium text-amber-700 dark:text-amber-400">Not owned</span>
+                {card.priceCents !== null && ` · ${Cents.format(Cents.of(card.priceCents))}`}
+              </>
+            ) : (
+              `own ${ownedWords(card.owned, card.ownedReal)}`
+            )}
             {card.otherDecks > 0 &&
               ` · in ${card.otherDecks} other ${card.otherDecks === 1 ? "deck" : "decks"}`}
           </span>

@@ -133,6 +133,7 @@ describe("the same search on every page", () => {
       (
         await browseCollection(db, jack.userId, {
           deckId: created.value,
+          source: "mine",
           search,
           colors: null,
           includeColorless: true,

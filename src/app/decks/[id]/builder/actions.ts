@@ -4,6 +4,7 @@ import { PrintingId, printingCards, type PrintingCard } from "@/modules/catalog"
 import {
   BOARDS,
   BROWSE_SORTS,
+  BROWSE_SOURCES,
   browseCollection,
   budgetList,
   cardPrintings,
@@ -30,6 +31,7 @@ const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
 const BrowseInput = z.object({
   deckId: z.number().int().positive(),
+  source: z.enum(BROWSE_SOURCES),
   search: z.string().max(400),
   colors: z.array(ColorSchema).max(5).nullable(),
   includeColorless: z.boolean(),
@@ -38,7 +40,7 @@ const BrowseInput = z.object({
   page: z.number().int().min(1).max(1000),
 });
 
-/** One page of your collection, filtered and sorted for this deck. */
+/** One page of your collection (or of every card for sale), filtered and sorted for this deck. */
 export async function browseAction(input: z.input<typeof BrowseInput>): Promise<BrowsePage | null> {
   const actor = await requireActor();
   const parsed = BrowseInput.safeParse(input);

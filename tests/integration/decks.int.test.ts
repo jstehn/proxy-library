@@ -130,6 +130,7 @@ describe("your most special copy", () => {
     const view = await deckView(db, jack.userId, deckId);
     const grid = await browseCollection(db, jack.userId, {
       deckId,
+      source: "mine",
       search: text,
       colors: null,
       includeColorless: true,
