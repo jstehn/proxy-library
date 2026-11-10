@@ -1,0 +1,6 @@
+# shellcheck shell=bash
+# Copy to .envrc.local (gitignored), fill in, then run `direnv allow`.
+# The project's task board: https://github.com/chrisvel/tududi
+export TUDUDI_URL="https://tududi.realdomain.org"
+# Create one in tududi: Profile → API keys.
+export TUDUDI_API_KEY=""

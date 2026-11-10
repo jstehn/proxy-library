@@ -83,6 +83,8 @@ export function DeckList(props: {
   busy: boolean;
   /** Lines with this role are marked (chosen in the statistics). */
   highlighted: Tag | null;
+  /** Cards marked by name: a bracket reason chosen in the bracket panel (design doc 31). */
+  highlightedNames?: ReadonlySet<string>;
   /** Someone else's shared deck (design doc 21): no controls. */
   readOnly?: boolean;
   /** The viewer's own copies of each card, shown on a shared deck (by oracle id). */
@@ -92,7 +94,8 @@ export function DeckList(props: {
   const commanders = props.lines.filter((line) => line.board === "commander");
   const groups = view === "roles" ? groupsByRole(props.lines) : groupsOf(props.lines);
   const isHighlighted = (line: DeckLine) =>
-    props.highlighted !== null && tagsOf(line).includes(props.highlighted);
+    (props.highlighted !== null && tagsOf(line).includes(props.highlighted)) ||
+    (props.highlightedNames?.has(line.name) ?? false);
 
   return (
     <section aria-label="Deck list" className="flex flex-col gap-4">
@@ -241,6 +244,14 @@ function ListLine(props: {
           className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-zinc-900"
         >
           {line.finish === "etched" ? "etched" : "foil"}
+        </span>
+      )}
+      {line.isGameChanger && (
+        <span
+          title="On Wizards' Game Changer list: none in brackets 1–2, up to three in bracket 3"
+          className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
+        >
+          GC
         </span>
       )}
       {problems.length > 0 && (

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Board,
+  Bracket,
+  BracketRule,
   BrowseCard,
   BrowseSort,
   BrowseSource,
@@ -11,17 +13,20 @@ import type {
   SuggestionCard,
   SuggestionList,
 } from "@/modules/decks";
-import { mainType } from "@/modules/decks/client";
-import { cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
+import { bracketLine, bracketWarning, estimateBracket, mainType } from "@/modules/decks/client";
+import { bracketFlags, cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
   browseAction,
   cardDetailAction,
   setQuantityAction,
+  setTargetBracketAction,
   similarAction,
   type BuilderDeck,
 } from "./actions";
+import { BracketPanel } from "./bracket-panel";
+import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
@@ -98,6 +103,8 @@ export function DeckBuilder(props: {
   deckId: number;
   format: Format;
   initialDeck: BuilderDeck;
+  /** The Commander bracket the owner is aiming for (design doc 31). */
+  targetBracket: Bracket | null;
   /** Seeds the test hands' shuffles (made by the server: ADR 0008's implementation note). */
   seed: string;
 }) {
@@ -110,8 +117,37 @@ export function DeckBuilder(props: {
   // Worked out from the deck in hand, so they change the moment a card goes in (design doc 19).
   const commanderColors = commanderColorsOf(format, deck.lines, deck.rules);
   const problems = problemsOf(format, deck.lines, deck.rules);
+  // The bracket, live like the problems (design doc 31). Null outside Commander.
+  const estimate = estimateBracket(format, deck.lines.map(bracketLine));
+  const [targetBracket, setTargetBracket] = useState(props.targetBracket);
+  const [isSavingTarget, startSavingTarget] = useTransition();
+  const warning = bracketWarning(estimate, targetBracket);
   const [showTestHand, setShowTestHand] = useState(false);
-  const [highlightedRole, setHighlightedRole] = useState<Tag | null>(null);
+  // The deck list marks one thing at a time: a role's cards or a bracket reason's.
+  const [highlightedRole, setHighlightedRoleOnly] = useState<Tag | null>(null);
+  const [highlightedRule, setHighlightedRule] = useState<BracketRule | null>(null);
+  const setHighlightedRole = (tag: Tag | null) => {
+    setHighlightedRoleOnly(tag);
+    setHighlightedRule(null);
+  };
+  const highlightRule = (rule: BracketRule | null) => {
+    setHighlightedRule(rule);
+    setHighlightedRoleOnly(null);
+  };
+  const highlightedNames = new Set(
+    estimate?.findings.find((finding) => finding.rule === highlightedRule)?.cards ?? [],
+  );
+  function changeTarget(target: Bracket | null) {
+    const before = targetBracket;
+    setTargetBracket(target);
+    startSavingTarget(async () => {
+      const result = await setTargetBracketAction({ deckId, target });
+      if (!result.ok) {
+        setTargetBracket(before);
+        setMessage({ tone: "error", text: result.message });
+      }
+    });
+  }
   const [showSuggestions, setShowSuggestions] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
@@ -292,6 +328,7 @@ export function DeckBuilder(props: {
       misfit: card.misfit,
       priceCents: card.priceCents,
       tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
+      bracketFlags: bracketFlags(card),
     });
   }
 
@@ -321,6 +358,7 @@ export function DeckBuilder(props: {
       misfit: null,
       priceCents: line.priceCents,
       tags: cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana }),
+      bracketFlags: bracketFlags(line),
     });
   }
 
@@ -734,7 +772,21 @@ export function DeckBuilder(props: {
                 )}
               </ul>
             )}
+            {/* Over target is a warning, not a problem: the deck still follows the rules. */}
+            {warning !== null && (
+              <p className="text-amber-700 dark:text-amber-400">⚠ {bracketWarningText(warning)}</p>
+            )}
           </section>
+          {estimate !== null && (
+            <BracketPanel
+              estimate={estimate}
+              target={targetBracket}
+              onTargetChange={changeTarget}
+              saving={isSavingTarget}
+              highlighted={highlightedRule}
+              onHighlight={highlightRule}
+            />
+          )}
           <StatsPanel
             lines={deck.lines}
             format={format}
@@ -762,7 +814,7 @@ export function DeckBuilder(props: {
           {showSuggestions && (
             <SuggestionsPanel
               deckId={deckId}
-              deckKey={deckKey}
+              deckKey={`${deckKey}|${targetBracket ?? ""}`}
               onSelect={selectSuggestion}
               onClose={() => setShowSuggestions(false)}
             />
@@ -787,6 +839,7 @@ export function DeckBuilder(props: {
             }}
             busy={isSaving}
             highlighted={highlightedRole}
+            highlightedNames={highlightedNames}
           />
         </aside>
       </div>

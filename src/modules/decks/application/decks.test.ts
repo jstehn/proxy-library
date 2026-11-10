@@ -137,6 +137,60 @@ describe("decks (design doc 09)", () => {
 });
 
 // Design doc 23: Edit as text.
+describe("target bracket (design doc 31)", () => {
+  async function commanderDeck(): Promise<DeckId> {
+    const created = await decks.createDeck(jack, { name: "Atraxa", format: "commander" });
+    if (!created.ok) throw new Error(created.error.kind);
+    return created.value;
+  }
+
+  it("starts with none, saves one, keeps it on other changes and clears it on request", async () => {
+    const id = await commanderDeck();
+    expect(repository.get(id)?.targetBracket).toBeNull();
+    expect(await decks.updateDeck(jack, { deckId: id, targetBracket: 3 })).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(repository.get(id)?.targetBracket).toBe(3);
+    await decks.updateDeck(jack, { deckId: id, name: "Atraxa, Grand Unifier" });
+    expect(repository.get(id)?.targetBracket).toBe(3);
+    await decks.updateDeck(jack, { deckId: id, targetBracket: null });
+    expect(repository.get(id)?.targetBracket).toBeNull();
+  });
+
+  it("refuses brackets outside 1–5", async () => {
+    const id = await commanderDeck();
+    for (const target of [0, 6, 2.5]) {
+      expect(await decks.updateDeck(jack, { deckId: id, targetBracket: target })).toEqual(
+        err({ kind: "TargetBracketInvalid" }),
+      );
+    }
+  });
+
+  it("is only for Commander decks, and leaving Commander clears it (invariant 8)", async () => {
+    const modern = await newDeck();
+    expect(await decks.updateDeck(jack, { deckId: modern, targetBracket: 2 })).toEqual(
+      err({ kind: "TargetBracketNotCommander" }),
+    );
+    const id = await commanderDeck();
+    await decks.updateDeck(jack, { deckId: id, targetBracket: 2 });
+    await decks.updateDeck(jack, { deckId: id, format: "casual" });
+    expect(repository.get(id)?.targetBracket).toBeNull();
+    // A format change and a target together: the target is checked against the new format.
+    expect(
+      await decks.updateDeck(jack, { deckId: id, format: "commander", targetBracket: 4 }),
+    ).toEqual({ ok: true, value: undefined });
+    expect(repository.get(id)?.targetBracket).toBe(4);
+  });
+
+  it("belongs to the deck's owner", async () => {
+    const id = await commanderDeck();
+    expect(await decks.updateDeck(mallory, { deckId: id, targetBracket: 2 })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+  });
+});
+
 describe("replaceList", () => {
   async function deckWith(
     ...entries: Array<{ oracleId: string; board?: "main" | "side"; quantity: number }>

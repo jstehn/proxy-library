@@ -56,3 +56,11 @@ review.
   to every suggestion query for the same data, one row per printing.
 - **Tag per oracle card instead of per printing:** fewer rows, but the catalog's queries and the
   search language (ADR 0017) work on printings, so every query would need one more join.
+
+## Implementation note (design doc 31, 2026-11-10)
+
+Version 2 adds `printings.bracket_flags` (land denial and extra turns, from
+`src/shared/card-search/brackets.ts`) to the stored features. Wizards' **Game Changer** list is
+deliberately **not** a stored feature: it's data Wizards changes, not a rule of ours, so it lives
+in `printings.is_game_changer` and every Scryfall pass rewrites it. A versioned feature would only
+change when we bump the version, and the list would go stale between bumps.

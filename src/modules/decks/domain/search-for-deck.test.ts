@@ -18,6 +18,7 @@ const card = (name: string, overrides: Partial<FoundCard> = {}): FoundCard => ({
   manaValue: 2,
   typeLine: "Creature",
   text: "",
+  isGameChanger: false,
   roleTags: [],
   themes: [],
   owned: 0,

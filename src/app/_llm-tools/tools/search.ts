@@ -22,7 +22,7 @@ import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../t
 const SEARCH_MAX_LENGTH = 2000;
 
 const SYNTAX_SUMMARY =
-  'Search syntax (Scryfall-style): words match names; o:/regex/ or o:"phrase" rules text (~ is the card\'s own name); t: type; c: colors; id<= color identity; mv<=3; pow>tou; kw:flying; tag:ramp|draw|removal|wipe|counter|tutor|protection; theme:counters|tokens|sacrifice|graveyard|artifacts|enchantments|lifegain|spells|landfall|equipment; is:commander, is:shockland and other land cycles; usd<2; own>0; or, -, parentheses. Call get_search_guide for everything.';
+  'Search syntax (Scryfall-style): words match names; o:/regex/ or o:"phrase" rules text (~ is the card\'s own name); t: type; c: colors; id<= color identity; mv<=3; pow>tou; kw:flying; tag:ramp|draw|removal|wipe|counter|tutor|protection; is:gamechanger (is:gc), is:landdenial, is:extraturn for Commander brackets; theme:counters|tokens|sacrifice|graveyard|artifacts|enchantments|lifegain|spells|landfall|equipment; is:commander, is:shockland and other land cycles; usd<2; own>0; or, -, parentheses. Call get_search_guide for everything.';
 
 export const searchForDeckTool = defineTool({
   name: "search_for_deck",
@@ -35,6 +35,7 @@ export const searchForDeckTool = defineTool({
     "Reading the result: cards that matched several synergies are the strongest leads. Read each card's text before recommending it: the searches find candidates, you judge fit. If a query found 0, loosen it; if it was capped, narrow it; then run again. Prefer owned cards (owned > 0); price is what a store card would cost.",
     'Example (Jolene, the Plunder Queen): queries [{"synergy":"Treasure makers","search":"o:/create[^.]*treasure/"}, {"synergy":"Sacrifice outlets","search":"o:/sacrifice (a|an|another) [^.]*artifact/"}, {"synergy":"Cheap ramp","search":"tag:ramp mv<=3"}].',
     "Only cards in this app's catalog are searched (expansion, core and Commander sets), with your real ownership and the store's prices.",
+    "Target bracket: when the deck has one (get_deck's bracket.target), cards that would take it over are left out automatically; leftOutOverTarget names what was left out (gameChanger, landDenial, extraTurn).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -92,6 +93,7 @@ export const searchForDeckTool = defineTool({
     if (result === null) return deckNotFound(input.deckId);
     return done({
       deck: result.deck,
+      leftOutOverTarget: result.leftOutOverTarget,
       goal: input.goal === "" ? null : input.goal,
       queries: result.queries,
       cards: result.cards.map((card) => ({
@@ -103,6 +105,7 @@ export const searchForDeckTool = defineTool({
         ...(input.includeText ? { text: card.text } : {}),
         roleTags: card.roleTags,
         themes: card.themes,
+        ...(card.isGameChanger ? { isGameChanger: true } : {}),
         owned: card.owned,
         price: moneyOrNull(card.priceCents),
         synergies: card.synergies,

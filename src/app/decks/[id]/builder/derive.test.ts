@@ -17,6 +17,7 @@ const gridCard = (name: string, card: Partial<CardRules> = {}): BrowseCard => ({
   oracleId: name,
   printingId: `printing-${name}`,
   ownedReal: 0,
+  isGameChanger: false,
   name,
   manaCost: "{1}{G}",
   manaValue: 2,

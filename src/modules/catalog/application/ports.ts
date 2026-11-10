@@ -91,6 +91,7 @@ export type CardExtras = Readonly<{
   legalities: Readonly<Record<string, string>>;
   producedMana: readonly string[];
   keywords: readonly string[];
+  isGameChanger: boolean;
 }>;
 
 /** "This printing makes that token printing", from the printing's Scryfall `all_parts`. */
@@ -110,6 +111,8 @@ export type CardFeatures = Readonly<{
   id: PrintingId;
   roleTags: readonly string[];
   themeTags: readonly string[];
+  /** Text bracket flags only (land denial, extra turns); Game Changers have their own column. */
+  bracketFlags: readonly string[];
 }>;
 
 export interface CatalogRepository {

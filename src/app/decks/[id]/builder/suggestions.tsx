@@ -110,6 +110,16 @@ export function SuggestionsPanel(props: {
   );
 }
 
+/** "Hiding 6 cards over your target bracket" (design doc 31), or nothing. */
+export function HiddenOverTarget(props: { count: number }) {
+  if (props.count === 0) return null;
+  return (
+    <p className="text-xs text-amber-700 dark:text-amber-400">
+      Hiding {props.count} {props.count === 1 ? "card" : "cards"} over your target bracket.
+    </p>
+  );
+}
+
 function SuggestionSection(props: {
   title: string;
   list: SuggestionList;
@@ -120,6 +130,7 @@ function SuggestionSection(props: {
   return (
     <div className="flex flex-col gap-1">
       <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{props.title}</h3>
+      <HiddenOverTarget count={props.list.hiddenOverTarget} />
       {all.length === 0 ? (
         <p className="text-xs text-zinc-500">{props.empty}</p>
       ) : (
@@ -230,6 +241,7 @@ function BudgetForm(props: {
         </button>
       </form>
       {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+      {result !== null && <HiddenOverTarget count={result.list.hiddenOverTarget} />}
       {result !== null &&
         (result.list.picks.length === 0 ? (
           <p className="text-xs text-zinc-500">Nothing in the store fits this deck and budget.</p>

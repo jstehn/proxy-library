@@ -76,6 +76,13 @@ export default async function globalSetup() {
       stdio: "inherit",
     });
 
+    // No Bloomburrow card is on Wizards' Game Changer list (and the trimmed fixtures leave the
+    // field out), so put two white cards on it for the bracket test (design doc 31).
+    await db.execute(sql`
+      update printings set is_game_changer = true
+       where name in ('Banishing Light', 'Builder''s Talent')
+    `);
+
     // Card images the server itself reads (proxy PDFs) are placeholders already in the cache,
     // so it never downloads one. (The browser's own image requests are stubbed in each test.)
     const placeholder = new Uint8Array(readFileSync("tests/fixtures/images/card.jpg"));

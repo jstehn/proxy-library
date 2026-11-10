@@ -249,6 +249,8 @@ export const IS_VALUES = {
     "manland",
     "pathway",
   ],
+  // Commander brackets (design doc 31): "gc" is short for "gamechanger".
+  bracket: ["gamechanger", "gc", "landdenial", "extraturn"],
 } as const;
 const ALL_IS_VALUES = new Set<string>(Object.values(IS_VALUES).flat());
 export const BORDERS = ["black", "white", "borderless", "silver", "gold", "yellow"] as const;

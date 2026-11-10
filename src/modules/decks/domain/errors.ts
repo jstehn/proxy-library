@@ -7,6 +7,10 @@ export type CardNotFound = Readonly<{ kind: "CardNotFound" }>;
 export type CommentInvalid = Readonly<{ kind: "CommentInvalid"; maximum: number }>;
 export type CommentNotFound = Readonly<{ kind: "CommentNotFound" }>;
 export type NotAllowed = Readonly<{ kind: "NotAllowed" }>;
+/** A target bracket isn't 1–5 (design doc 31). */
+export type TargetBracketInvalid = Readonly<{ kind: "TargetBracketInvalid" }>;
+/** Only Commander decks have a target bracket (design doc 31, invariant 8). */
+export type TargetBracketNotCommander = Readonly<{ kind: "TargetBracketNotCommander" }>;
 /** The deck changed after its text box was filled (design doc 23, rule 5). */
 export type DeckChanged = Readonly<{ kind: "DeckChanged" }>;
 /** Lines a list save couldn't use; nothing was saved (design doc 23, rule 1). */

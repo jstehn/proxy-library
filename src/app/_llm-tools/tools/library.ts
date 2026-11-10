@@ -188,6 +188,7 @@ function suggestionView(suggestion: Suggestion, includeText: boolean) {
     manaCost: card.manaCost,
     typeLine: card.typeLine,
     ...(includeText ? { text: card.text } : {}),
+    ...(card.isGameChanger ? { isGameChanger: true } : {}),
     owned: card.owned,
     price: moneyOrNull(card.priceCents),
     why: suggestion.reasons.map(reasonText),
@@ -205,6 +206,7 @@ export const suggestForDeck = defineTool({
   description: [
     "The app's own suggestions for a deck: its profile (themes, creature types and keywords it read from the commander and deck, and roles below target), then cards for the deck and for each short role, from your collection first and then the store, each with why.",
     "Use it when: you want a second opinion next to your own search_for_deck queries, or quick picks for missing roles (ramp, draw, removal, wipe). Its themes come from fixed rules, so it can miss what a deck is really about; analyze_cards and search_for_deck can find more.",
+    "With a target bracket on the deck, cards that would take it over are left out; hiddenOverTarget says how many.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -217,6 +219,7 @@ export const suggestForDeck = defineTool({
       forDeck: {
         owned: result.forDeck.owned.map((each) => suggestionView(each, input.includeText)),
         store: result.forDeck.store.map((each) => suggestionView(each, input.includeText)),
+        hiddenOverTarget: result.forDeck.hiddenOverTarget,
       },
       forRoles: result.forRoles.map((role) => ({
         role: role.tag,
@@ -224,6 +227,7 @@ export const suggestForDeck = defineTool({
         target: role.target,
         owned: role.owned.map((each) => suggestionView(each, input.includeText)),
         store: role.store.map((each) => suggestionView(each, input.includeText)),
+        hiddenOverTarget: role.hiddenOverTarget,
       })),
     });
   },
@@ -257,6 +261,7 @@ export const similarCardsTool = defineTool({
       like: found.name,
       owned: result.owned.map((each) => suggestionView(each, input.includeText)),
       store: result.store.map((each) => suggestionView(each, input.includeText)),
+      hiddenOverTarget: result.hiddenOverTarget,
     });
   },
 });
@@ -287,6 +292,7 @@ export const budgetUpgrades = defineTool({
       picks: result.picks.map((each) => suggestionView(each, input.includeText)),
       total: money(result.totalCents),
       list: result.listText,
+      hiddenOverTarget: result.hiddenOverTarget,
     });
   },
 });

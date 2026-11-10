@@ -1,10 +1,11 @@
 // Deck suggestions (design doc 20) against real Postgres and the fixture catalog, whose role tags
 // and themes the sync's tag pass has stored.
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   budgetList,
   deckSuggestions,
+  deckView,
   makeDecks,
   similarCards,
   type DeckId,
@@ -81,8 +82,12 @@ describe("deck suggestions", () => {
 
     // Each short role gets its own list: removal has Banishing Light first (owned).
     const removal = suggestions.forRoles.find((role) => role.tag === "removal");
-    expect(names(removal ?? { owned: [], store: [] }, "owned")).toEqual(["Banishing Light"]);
-    expect(names(removal ?? { owned: [], store: [] }, "store")).toContain("Driftgloom Coyote");
+    expect(names(removal ?? { owned: [], store: [], hiddenOverTarget: 0 }, "owned")).toEqual([
+      "Banishing Light",
+    ]);
+    expect(names(removal ?? { owned: [], store: [], hiddenOverTarget: 0 }, "store")).toContain(
+      "Driftgloom Coyote",
+    );
   });
 
   it("finds cards like one, at the cheapest printing for sale", async () => {
@@ -119,3 +124,84 @@ describe("deck suggestions", () => {
     expect(await budgetList(db, actor("sam").userId, deckId, 500)).toBeNull();
   });
 });
+
+describe("a target bracket (design doc 31)", () => {
+  // No Bloomburrow card is a Game Changer, so the test puts two on Wizards' list for a while.
+  const GAME_CHANGERS = ["Banishing Light", "Builder's Talent"];
+  const setGameChangers = (on: boolean) =>
+    db.execute(sql`
+      update printings set is_game_changer = ${on}
+       where name in (${sql.join(
+         GAME_CHANGERS.map((name) => sql`${name}`),
+         sql`, `,
+       )})`);
+
+  beforeEach(async () => {
+    await give("Banishing Light");
+    await give("Carrot Cake", 2);
+    await setGameChangers(true);
+  });
+  afterEach(() => setGameChangers(false));
+
+  const everyName = (list: SuggestionList) => [...names(list, "owned"), ...names(list, "store")];
+
+  it("leaves out Game Changers in bracket 2, says how many, and keeps them in bracket 3 (invariant 10)", async () => {
+    const deckId = await bezaDeck();
+    const open = await deckSuggestions(db, jack.userId, deckId);
+    expect(everyName(open?.forDeck ?? emptyList)).toEqual(expect.arrayContaining(GAME_CHANGERS));
+    expect(open?.forDeck.hiddenOverTarget).toBe(0);
+
+    await decks.updateDeck(jack, { deckId, targetBracket: 2 });
+    const core = await deckSuggestions(db, jack.userId, deckId);
+    for (const name of GAME_CHANGERS)
+      expect(everyName(core?.forDeck ?? emptyList)).not.toContain(name);
+    expect(core?.forDeck.hiddenOverTarget).toBe(2);
+    expect(names(core?.forDeck ?? emptyList, "owned")).toContain("Carrot Cake");
+
+    const budget = await budgetList(db, jack.userId, deckId, 100_000);
+    expect(budget?.picks.map((pick) => pick.card.name)).not.toContain("Builder's Talent");
+    expect(budget?.hiddenOverTarget).toBeGreaterThan(0);
+
+    await decks.updateDeck(jack, { deckId, targetBracket: 3 });
+    const upgraded = await deckSuggestions(db, jack.userId, deckId);
+    expect(everyName(upgraded?.forDeck ?? emptyList)).toEqual(
+      expect.arrayContaining(GAME_CHANGERS),
+    );
+  });
+
+  it("reads the target and each line's Game Changer flag in the deck view", async () => {
+    const deckId = await bezaDeck();
+    await decks.setEntry(jack, {
+      deckId,
+      oracleId: await oracleIdOf("Banishing Light"),
+      board: "main",
+      quantity: 1,
+    });
+    await decks.updateDeck(jack, { deckId, targetBracket: 2 });
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.deck.targetBracket).toBe(2);
+    const flagged = view?.lines.filter((line) => line.isGameChanger).map((line) => line.name);
+    expect(flagged).toEqual(["Banishing Light"]);
+  });
+
+  it("only lets Commander decks have one, in the database too (invariant 8)", async () => {
+    const deckId = await bezaDeck();
+    await expect(
+      db.execute(sql`update decks set target_bracket = 6 where id = ${deckId}`),
+    ).rejects.toThrow();
+    await expect(
+      db.execute(sql`update decks set format = 'modern', target_bracket = 2 where id = ${deckId}`),
+    ).rejects.toThrow();
+  });
+});
+
+const emptyList: SuggestionList = { owned: [], store: [], hiddenOverTarget: 0 };
+
+async function oracleIdOf(name: string): Promise<string> {
+  const [row] = (
+    await db.execute<{ oracle_id: string }>(
+      sql`select oracle_id from printings where name = ${name} limit 1`,
+    )
+  ).rows;
+  return row.oracle_id;
+}

@@ -1,8 +1,16 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { parseSearch, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
+import {
+  parseSearch,
+  TAGS,
+  THEMES,
+  type BracketFlag,
+  type Tag,
+  type Theme,
+} from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { bracketLine, flagsOverTarget, type Bracket } from "../domain/brackets";
 import type { Format } from "../domain/deck";
 import {
   SEARCH_FOR_DECK_LIMITS,
@@ -15,6 +23,7 @@ import {
   type SynergyQuery,
 } from "../domain/search-for-deck";
 import { deckBrowseContext } from "./browse";
+import { deckView } from "./decks";
 import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
 
 // Several synergy searches for one deck at once (design doc 28, section 3.3). Every query is
@@ -38,7 +47,11 @@ export type SearchForDeck = Readonly<{
     name: string;
     format: Format;
     commanderColors: readonly string[] | null;
+    /** The bracket the owner chose (design doc 31), or null. */
+    targetBracket: Bracket | null;
   }>;
+  /** What the searches left out to keep the deck within its target bracket. */
+  leftOutOverTarget: readonly BracketFlag[];
   queries: readonly QueryReport[];
   cards: readonly MergedCard[];
 }>;
@@ -46,7 +59,24 @@ export type SearchForDeck = Readonly<{
 type Context = NonNullable<Awaited<ReturnType<typeof deckBrowseContext>>> & {
   deckId: number;
   userId: UserId;
+  /** Flags a card mustn't have, or it would take the deck over its target bracket. */
+  overTarget: readonly BracketFlag[];
 };
+
+/** SQL: printing "p" has none of these bracket flags (invariant 10). */
+function withinTarget(flags: readonly BracketFlag[]): SQL {
+  const conditions: SQL[] = [];
+  if (flags.includes("gameChanger")) conditions.push(sql`not p.is_game_changer`);
+  const textFlags = flags.filter((flag) => flag !== "gameChanger");
+  if (textFlags.length > 0) {
+    const array = sql.join(
+      textFlags.map((flag) => sql`${flag}`),
+      sql`, `,
+    );
+    conditions.push(sql`not (p.bracket_flags && array[${array}]::text[])`);
+  }
+  return conditions.length === 0 ? sql`true` : sql.join(conditions, sql` and `);
+}
 
 /** The deck's rules for a printing "p" (rule 12). */
 function fitsDeck(context: Context): SQL {
@@ -63,7 +93,7 @@ function fitsDeck(context: Context): SQL {
       : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
   const notInDeck = sql`not exists (select 1 from deck_entries e
                                      where e.deck_id = ${context.deckId} and e.oracle_id = p.oracle_id)`;
-  return sql`(${identity} and ${legal} and ${notInDeck})`;
+  return sql`(${identity} and ${legal} and ${notInDeck} and ${withinTarget(context.overTarget)})`;
 }
 
 type Row = {
@@ -76,13 +106,14 @@ type Row = {
   face_text: string;
   role_tags: string[];
   theme_tags: string[];
+  is_game_changer: boolean;
   owned: number;
   price_cents: number | null;
   total: number;
 };
 
 const CARD_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
-  p.type_line, p.role_tags, p.theme_tags,
+  p.type_line, p.role_tags, p.theme_tags, p.is_game_changer,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
 /** Your cards matching a search, as your most special copy of each. */
@@ -170,6 +201,7 @@ function toFound(row: Row): FoundCard {
     themes: row.theme_tags.filter((theme): theme is Theme =>
       (THEMES as readonly string[]).includes(theme),
     ),
+    isGameChanger: row.is_game_changer,
     owned: Number(row.owned),
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
   };
@@ -183,10 +215,11 @@ export async function searchForDeck(
 ): Promise<SearchForDeck | null> {
   const browse = await deckBrowseContext(db, userId, input.deckId);
   if (browse === null) return null;
-  const [deck] = (
-    await db.execute<{ name: string }>(sql`select name from decks where id = ${input.deckId}`)
-  ).rows;
-  const context: Context = { ...browse, deckId: input.deckId, userId };
+  const view = await deckView(db, userId, input.deckId);
+  if (view === null) return null;
+  const target = view.deck.targetBracket;
+  const overTarget = target === null ? [] : flagsOverTarget(view.lines.map(bracketLine), target);
+  const context: Context = { ...browse, deckId: input.deckId, userId, overTarget };
   const perQuery = Math.min(Math.max(1, input.perQuery), SEARCH_FOR_DECK_LIMITS.perQuery);
   const queries = input.queries.slice(0, SEARCH_FOR_DECK_LIMITS.queries);
 
@@ -215,10 +248,12 @@ export async function searchForDeck(
   return {
     deck: {
       id: input.deckId,
-      name: deck.name,
+      name: view.deck.name,
       format: context.format,
       commanderColors: context.commanderColors,
+      targetBracket: target,
     },
+    leftOutOverTarget: overTarget,
     ...searchForDeckResult(hits, perQuery),
   };
 }

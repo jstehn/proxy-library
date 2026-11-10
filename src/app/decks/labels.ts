@@ -1,5 +1,13 @@
-import type { DeckProblem, Format, Reason } from "@/modules/decks";
-import { plural } from "@/modules/decks/client";
+import type {
+  Bracket,
+  BracketEstimate,
+  BracketFinding,
+  BracketWarning,
+  DeckProblem,
+  Format,
+  Reason,
+} from "@/modules/decks";
+import { BRACKET_NAMES, plural } from "@/modules/decks/client";
 import { THEME_LABELS, type Tag } from "@/shared/card-search";
 import { assertNever } from "@/shared/kernel";
 
@@ -48,6 +56,50 @@ export function problemText(problem: DeckProblem): string {
       return assertNever(problem);
   }
 }
+
+/** "Bracket 3 · Upgraded" (design doc 31). */
+export function bracketLabel(bracket: Bracket): string {
+  return `Bracket ${bracket} · ${BRACKET_NAMES[bracket]}`;
+}
+
+/** The estimate's headline: "Bracket 1–2", "Bracket 3 · Upgraded", "Bracket 4–5". */
+export function estimateLabel(estimate: BracketEstimate): string {
+  const { low, high } = estimate.range;
+  return low === high ? bracketLabel(low) : `Bracket ${low}–${high}`;
+}
+
+const copies = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+/** One reason for the bracket, in words, without the card names (the panel lists those). */
+export function findingText(finding: BracketFinding): string {
+  switch (finding.rule) {
+    case "gameChangers":
+      return finding.forces === 3
+        ? `${copies(finding.count, "Game Changer", "Game Changers")} (up to 3 in bracket 3)`
+        : `${finding.count} Game Changers (more than 3: bracket 4)`;
+    case "landDenial":
+      return `${copies(finding.count, "mass land denial card", "mass land denial cards")} (bracket 4)`;
+    case "extraTurns":
+      return finding.forces === 2
+        ? `${copies(finding.count, "extra-turn card", "extra-turn cards")} (a few are fine in bracket 2)`
+        : `${finding.count} extra-turn cards (3 or more is chaining: bracket 4)`;
+    default:
+      return assertNever(finding.rule);
+  }
+}
+
+/** A finding with its cards: "2 Game Changers (up to 3 in bracket 3): Rhystic Study, …". */
+export function findingWithCards(finding: BracketFinding): string {
+  return `${findingText(finding)}: ${finding.cards.join(", ")}`;
+}
+
+/** The over-target warning in words. */
+export function bracketWarningText(warning: BracketWarning): string {
+  return `The cards make this at least bracket ${warning.floor}, over your target of ${warning.target}: ${warning.findings.map(findingWithCards).join("; ")}.`;
+}
+
+/** What the estimate can't check, in words. */
+export const UNCHECKED_TEXT = "Not checked: two-card combos, and how you play the deck.";
 
 /** Role tags as the builder names them (design doc 19). */
 export const TAG_LABELS: Record<Tag, string> = {

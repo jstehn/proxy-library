@@ -68,6 +68,8 @@ export type BrowseCard = Readonly<{
   /** The rest of a provisional deck line, shown until the server answers. */
   producedMana: string[];
   text: string;
+  /** On Wizards' Game Changer list (design doc 31). */
+  isGameChanger: boolean;
   setCode: string;
   collectorNumber: string;
   finish: "nonfoil" | "foil" | "etched";
@@ -246,6 +248,7 @@ export async function browseCollection(
     color_identity: string[];
     legality: string | null;
     face_text: string;
+    is_game_changer: boolean;
     has_power_toughness: boolean;
     is_basic_land: boolean;
     produced_mana: string[] | null;
@@ -282,7 +285,7 @@ export async function browseCollection(
            exists (select 1 from jsonb_array_elements(p.faces) f
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
-           p.produced_mana, p.set_code, p.collector_number, shown.finish,
+           p.produced_mana, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = p.id and s.finish = shown.finish
              order by s.day desc limit 1) as price_cents,
@@ -326,6 +329,7 @@ export async function browseCollection(
       },
       producedMana: row.produced_mana ?? [],
       text: row.face_text,
+      isGameChanger: row.is_game_changer,
       setCode: row.set_code,
       collectorNumber: row.collector_number,
       finish: FinishSchema.parse(row.finish),

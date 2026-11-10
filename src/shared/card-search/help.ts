@@ -118,13 +118,15 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
   },
 ];
 
-export const IS_GROUPS = ["finish", "layout", "treatment", "kind", "land"] as const;
+export const IS_GROUPS = ["finish", "layout", "treatment", "kind", "land", "bracket"] as const;
 export const IS_DESCRIPTIONS: Readonly<Record<(typeof IS_GROUPS)[number], string>> = {
   finish:
     "is:foil means: sold in foil (store), this copy is foil (collection), you own a foil (deck builder)",
   layout: "how the card is laid out (dfc is any double-faced card; mdfc is modal)",
   treatment: "special printings",
   kind: "kinds of card (vanilla: no rules text; frenchvanilla: only keywords; bear: a 2-mana 2/2; modal: choose one —; party: Cleric, Rogue, Warrior or Wizard; outlaw: Assassin, Mercenary, Pirate, Rogue or Warlock; hybrid and phyrexian: mana in the cost)",
+  bracket:
+    "Commander brackets (gamechanger or gc: on Wizards' Game Changer list; landdenial: mass land denial, including Blood Moon and Back to Basics; extraturn: takes an extra turn). -is:gc leaves Game Changers out",
   land: "land cycles (fetchable: has a basic land type; dual: two types and no rules text; triome: three types; pathway: a land on each face)",
 };
 

@@ -303,6 +303,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
             legalities: card.legalities,
             producedMana: [...card.producedMana],
             keywords: [...card.keywords],
+            isGameChanger: card.isGameChanger,
           })
           .where(eq(printings.scryfallId, card.scryfallId));
       }
@@ -392,12 +393,15 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
           id: card.id,
           role_tags: card.roleTags,
           theme_tags: card.themeTags,
+          bracket_flags: card.bracketFlags,
         })),
       );
       await db.execute(sql`
         update printings p
-           set role_tags = v.role_tags, theme_tags = v.theme_tags, features_version = ${version}
-          from jsonb_to_recordset(${rows}::jsonb) as v(id text, role_tags text[], theme_tags text[])
+           set role_tags = v.role_tags, theme_tags = v.theme_tags,
+               bracket_flags = v.bracket_flags, features_version = ${version}
+          from jsonb_to_recordset(${rows}::jsonb)
+               as v(id text, role_tags text[], theme_tags text[], bracket_flags text[])
          where p.id = v.id
       `);
     },

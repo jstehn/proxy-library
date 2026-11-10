@@ -3,6 +3,7 @@ import type { Finish, PrintingId } from "@/modules/catalog";
 import { err, ok, type Result } from "@/shared/kernel";
 import {
   checkName,
+  checkTargetBracket,
   checkQuantity,
   MAX_DECKS,
   MAX_NAME_LENGTH,
@@ -24,6 +25,8 @@ import type {
   ListProblems,
   ListTooLong,
   NameInvalid,
+  TargetBracketInvalid,
+  TargetBracketNotCommander,
   QuantityInvalid,
   TooManyDecks,
 } from "../domain/errors";
@@ -36,7 +39,8 @@ import type { DecksDependencies, UnnamedPrinting } from "./ports";
 // (rule 7): someone else's deck is reported as not found.
 
 export type CreateDeckError = NameInvalid | TooManyDecks;
-export type UpdateDeckError = DeckNotFound | NameInvalid;
+export type UpdateDeckError =
+  DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
@@ -98,18 +102,33 @@ export function makeManageDecks(dependencies: DecksDependencies) {
 
   async function updateDeck(
     actor: Actor,
-    input: { deckId: DeckId; name?: string; format?: Format; usesRealCards?: boolean },
+    input: {
+      deckId: DeckId;
+      name?: string;
+      format?: Format;
+      usesRealCards?: boolean;
+      /** 1–5, null to clear, or left out to keep (design doc 31). */
+      targetBracket?: number | null;
+    },
   ): Promise<Result<void, UpdateDeckError>> {
     const name = input.name === undefined ? ok(undefined) : checkName(input.name);
     if (!name.ok) return name;
     return unitOfWork.run<void, UpdateDeckError>(async ({ decks }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
+      const format = input.format ?? deck.format;
+      // Kept unless asked to change, but a deck leaving Commander loses it (invariant 8).
+      const target =
+        input.targetBracket !== undefined
+          ? checkTargetBracket(format, input.targetBracket)
+          : ok(format === "commander" ? deck.targetBracket : null);
+      if (!target.ok) return target;
       await decks.save(
         {
           ...deck,
           name: name.value ?? deck.name,
-          format: input.format ?? deck.format,
+          format,
+          targetBracket: target.value,
           // "Use my real cards" (design doc 16): only this deck's counting changes.
           usesRealCards: input.usesRealCards ?? deck.usesRealCards,
         },

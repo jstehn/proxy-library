@@ -500,6 +500,14 @@ function isCondition(value: string, context: SearchContext): SQL {
       return sql`coalesce(p.mana_cost, '') ~ ${String.raw`\{[WUBRGC2]/[WUBRG](/P)?\}`}`;
     case "phyrexian":
       return sql`coalesce(p.mana_cost, '') ~ ${String.raw`/P\}`}`;
+    // Commander brackets (design doc 31).
+    case "gamechanger":
+    case "gc":
+      return sql`p.is_game_changer`;
+    case "landdenial":
+      return sql`'landDenial' = any(p.bracket_flags)`;
+    case "extraturn":
+      return sql`'extraTurn' = any(p.bracket_flags)`;
     default:
       return landCycle(value) ?? sql`false`; // the parser refuses other values
   }

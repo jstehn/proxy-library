@@ -60,6 +60,10 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
 - **A maybeboard** (deferred 2026-11-03, design doc 23): cards you're considering, kept with the
   deck but not counted. Until then, pasted `Maybeboard` / `Considering` sections are skipped.
+- **Two-card combos in the bracket estimate** (deferred 2026-11-10, design doc 31): import
+  Commander Spellbook's combo data in the worker (a new external source, its own ADR), so the
+  estimate can say "Thassa's Oracle + Demonic Consultation → bracket 4" and check that bracket
+  3 combos only come online late.
 
 ## Trades
 

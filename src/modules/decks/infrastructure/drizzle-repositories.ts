@@ -20,6 +20,7 @@ import {
   type Format,
   type PrintingFacts,
 } from "../domain/deck";
+import { isBracket } from "../domain/brackets";
 import { deckEntries, decks } from "./schema";
 
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
@@ -68,6 +69,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
       name: row.name,
       format: z.enum(FORMATS).parse(row.format),
       usesRealCards: row.usesRealCards,
+      targetBracket:
+        row.targetBracket !== null && isBracket(row.targetBracket) ? row.targetBracket : null,
       entries: entries.map((entry) => ({
         oracleId: entry.oracleId,
         board: z.enum(BOARDS).parse(entry.board),
@@ -85,6 +88,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         name: deck.name,
         format: deck.format,
         usesRealCards: deck.usesRealCards,
+        targetBracket: deck.targetBracket,
         updatedAt: at,
       })
       .where(eq(decks.id, deck.id));

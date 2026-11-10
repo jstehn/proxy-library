@@ -229,6 +229,63 @@ describe("the MCP server", () => {
     expect((await call(client, "get_wishlist")).wishes).toEqual([]);
   });
 
+  it("reports a Commander deck's bracket, saves a target, and keeps searches within it (design doc 31)", async () => {
+    // No Bloomburrow card is a Game Changer: put one on the list for this test.
+    await db.execute(
+      sql`update printings set is_game_changer = true where name = 'Banishing Light'`,
+    );
+    try {
+      const client = await connect();
+      const { deckId } = await call(client, "create_deck", {
+        name: "Beza",
+        list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light",
+      });
+      const before = await call(client, "get_deck", { deckId, includeText: false });
+      expect(before.bracket).toMatchObject({ target: null, floor: 3, gameChangers: 1 });
+      expect(before.bracket.findings[0].text).toBe(
+        "1 Game Changer (up to 3 in bracket 3): Banishing Light",
+      );
+      expect(
+        before.lines.find((line: { name: string }) => line.name === "Banishing Light"),
+      ).toMatchObject({ isGameChanger: true });
+
+      expect(await call(client, "update_deck", { deckId, targetBracket: 2 })).toEqual({
+        deckId,
+        updated: true,
+      });
+      const over = await call(client, "get_deck", { deckId, includeText: false });
+      expect(over.bracket.target).toBe(2);
+      expect(over.bracket.overTarget).toContain("over your target of 2");
+
+      const found = await call(client, "search_for_deck", {
+        deckId,
+        queries: [{ synergy: "White enchantments", search: "t:enchantment" }],
+      });
+      expect(found.leftOutOverTarget).toEqual(["gameChanger", "landDenial"]);
+
+      await call(client, "update_deck", { deckId, targetBracket: 0 });
+      expect((await call(client, "get_deck", { deckId })).bracket.target).toBeNull();
+
+      const { deckId: modern } = await call(client, "create_deck", {
+        name: "Modern",
+        format: "modern",
+      });
+      const refused = await callTool(context(), "update_deck", {
+        deckId: modern,
+        targetBracket: 3,
+      });
+      expect(refused).toMatchObject({
+        kind: "outcome",
+        outcome: { ok: false, error: { kind: "TargetBracketNotCommander" } },
+      });
+      expect((await call(client, "get_deck", { deckId: modern })).bracket).toBeNull();
+    } finally {
+      await db.execute(
+        sql`update printings set is_game_changer = false where name = 'Banishing Light'`,
+      );
+    }
+  });
+
   it("reads the account, a card, sets, the guide, and the app's suggestions", async () => {
     await give("Banishing Light", 2);
     const client = await connect();

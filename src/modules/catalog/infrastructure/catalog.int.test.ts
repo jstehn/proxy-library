@@ -141,6 +141,39 @@ describe("the first sync", () => {
     expect(again.rows[0].role_tags).toEqual(["removal"]);
   });
 
+  it("stores bracket flags from text, and Game Changers from every Scryfall pass (design doc 31)", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    const flagged = await db.execute<{ flagged: number }>(sql`
+      select count(*)::int as flagged from printings
+       where is_game_changer or cardinality(bracket_flags) > 0
+    `);
+    expect(flagged.rows[0].flagged).toBe(0); // no Bloomburrow card counts against a bracket
+
+    // Text flags come from the tag pass: give one printing Armageddon's text and tag it again.
+    await db.execute(sql`
+      update printings
+         set faces = jsonb_set(faces, '{0,text}', '"Destroy all lands."'), features_version = 0
+       where name = 'Agate Assault'
+    `);
+    expect(await catalog.tagPass()).toBeGreaterThan(0);
+    const armageddon = await db.execute<{ bracket_flags: string[] }>(sql`
+      select bracket_flags from printings where name = 'Agate Assault' limit 1
+    `);
+    expect(armageddon.rows[0].bracket_flags).toEqual(["landDenial"]);
+
+    // Game Changer status is rewritten by each Scryfall pass, so a change to Wizards' list shows
+    // the next night without re-tagging: the fixture says Banishing Light isn't one.
+    await db.execute(
+      sql`update printings set is_game_changer = true where name = 'Banishing Light'`,
+    );
+    await catalog.runSync("prices");
+    const banishingLight = await db.execute<{ is_game_changer: boolean }>(sql`
+      select bool_or(is_game_changer) as is_game_changer from printings where name = 'Banishing Light'
+    `);
+    expect(banishingLight.rows[0].is_game_changer).toBe(false);
+  });
+
   it("stores images and legalities from Scryfall on each printing", async () => {
     await buildCatalog().runSync("prices");
     const rows = await db.execute<{ with_images: number }>(

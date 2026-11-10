@@ -47,6 +47,7 @@ beforeEach(async () => {
       name: "Goblins",
       format: "casual",
       usesRealCards: false,
+      targetBracket: null,
       entries: [{ oracleId: "krenko", board: "main", quantity: 1, printingId: null, finish: null }],
     },
     new Date(),

@@ -191,6 +191,8 @@ export type ScryfallCard = Readonly<{
   producedMana: readonly string[];
   /** Keyword abilities and actions ("Flying", "Ward", "Scry"), for `kw:` searches. */
   keywords: readonly string[];
+  /** On Wizards' Commander Game Changer list (design doc 31). */
+  isGameChanger: boolean;
   /**
    * Scryfall ids from its `all_parts` that may be tokens it makes (tokens, emblems, The Monarch)
    * alongside ordinary related cards; the sync keeps those that are token printings.

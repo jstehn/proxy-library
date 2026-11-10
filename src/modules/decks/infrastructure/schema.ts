@@ -9,6 +9,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -34,6 +35,8 @@ export const decks = pgTable(
     // "Use my real cards" (design doc 16): real copies count as owned in this deck. New decks
     // turn it on; decks made before the real collection existed keep it off.
     usesRealCards: boolean("uses_real_cards").notNull().default(false),
+    // The Commander bracket the owner means it for, 1–5 (design doc 31); null: none chosen.
+    targetBracket: smallint("target_bracket"),
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },
@@ -41,6 +44,10 @@ export const decks = pgTable(
     index("decks_owner_idx").on(table.ownerId),
     index("decks_visibility_idx").on(table.visibility),
     check("decks_visibility_known", sql`${table.visibility} in ('private', 'shared')`),
+    check(
+      "decks_target_bracket",
+      sql`${table.targetBracket} is null or (${table.targetBracket} between 1 and 5 and ${table.format} = 'commander')`,
+    ),
     check(
       "decks_format_known",
       sql`${table.format} in ('casual', 'standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander', 'limited')`,

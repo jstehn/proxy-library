@@ -285,7 +285,8 @@ export const THEME_LABELS: Readonly<Record<Theme, string>> = Object.fromEntries(
 ) as Record<Theme, string>;
 
 /**
- * Bumped whenever TAG_RULES or THEME_RULES change: the catalog sync then works out every
- * printing's stored features again (design doc 20, invariant 1).
+ * Bumped whenever TAG_RULES, THEME_RULES or BRACKET_TEXT_RULES (./brackets.ts) change: the
+ * catalog sync then works out every printing's stored features again (design doc 20,
+ * invariant 1). Version 2: bracket flags (design doc 31).
  */
-export const CARD_FEATURES_VERSION = 1;
+export const CARD_FEATURES_VERSION = 2;

@@ -45,6 +45,14 @@ export {
   type ParsedList,
 } from "./list";
 export {
+  BRACKET_FLAGS,
+  BRACKET_TEXT_RULES,
+  bracketFlags,
+  textBracketFlags,
+  type BracketFacts,
+  type BracketFlag,
+} from "./brackets";
+export {
   CARD_FEATURES_VERSION,
   cardTags,
   cardThemes,

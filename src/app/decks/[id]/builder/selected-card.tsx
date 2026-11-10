@@ -3,10 +3,10 @@ import Link from "next/link";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, SuggestionCard, SuggestionList } from "@/modules/decks";
-import type { Tag } from "@/shared/card-search";
+import type { BracketFlag, Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { TAG_LABELS } from "../../labels";
-import { SuggestionRow } from "./suggestions";
+import { HiddenOverTarget, SuggestionRow } from "./suggestions";
 import { ownedWords } from "./derive";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
@@ -26,7 +26,15 @@ export type Selection = Readonly<{
   priceCents: number | null;
   /** The card's roles, read from its rules text (design doc 19). */
   tags: readonly Tag[];
+  /** What counts against a Commander bracket (design doc 31). */
+  bracketFlags: readonly BracketFlag[];
 }>;
+
+const FLAG_LABELS: Readonly<Record<BracketFlag, string>> = {
+  gameChanger: "Game Changer",
+  landDenial: "Mass land denial",
+  extraTurn: "Extra turn",
+};
 
 const MISFIT_TEXT = {
   color: "Outside your commander's colors",
@@ -115,6 +123,18 @@ export function SelectedCard(props: {
               ))}
             </ul>
           )}
+          {selection.bracketFlags.length > 0 && (
+            <ul aria-label="Bracket" className="flex flex-wrap gap-1">
+              {selection.bracketFlags.map((flag) => (
+                <li
+                  key={flag}
+                  className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] text-violet-900 dark:bg-violet-950 dark:text-violet-200"
+                >
+                  {FLAG_LABELS[flag]}
+                </li>
+              ))}
+            </ul>
+          )}
           {selection.misfit && (
             <p className="text-amber-700 dark:text-amber-400">{MISFIT_TEXT[selection.misfit]}</p>
           )}
@@ -192,6 +212,7 @@ export function SelectedCard(props: {
             <h4 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
               Cards like this
             </h4>
+            <HiddenOverTarget count={props.similar.hiddenOverTarget} />
             <ul aria-label="Cards like this" className="flex flex-col">
               {[...props.similar.owned, ...props.similar.store].map((suggestion) => (
                 <SuggestionRow

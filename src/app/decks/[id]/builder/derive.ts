@@ -77,6 +77,7 @@ export function provisionalLine(
     manaCost: card.manaCost,
     producedMana: card.producedMana,
     text: card.text,
+    isGameChanger: card.isGameChanger,
     priceCents: card.priceCents,
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,

@@ -90,6 +90,24 @@ export {
 } from "./domain/rules";
 export { deckStats, mainType, roleTargets, TYPE_ORDER, type DeckStats } from "./domain/stats";
 export {
+  BRACKET_NAMES,
+  BRACKET_RULES,
+  BRACKETS,
+  bracketLine,
+  bracketWarning,
+  estimateBracket,
+  fitsTarget,
+  flagsOverTarget,
+  isBracket,
+  type Bracket,
+  type BracketEstimate,
+  type BracketFinding,
+  type BracketLine,
+  type BracketRule,
+  type BracketSource,
+  type BracketWarning,
+} from "./domain/brackets";
+export {
   decksUsing,
   deckView,
   decksFor,

@@ -2,11 +2,14 @@ import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import {
   BOARDS,
+  bracketLine,
+  bracketWarning,
   deckProblems,
   deckStats,
   deckText,
   deckView,
   DeckId,
+  estimateBracket,
   decksFor,
   findCard,
   fingerprint,
@@ -17,7 +20,13 @@ import {
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
-import { problemText } from "@/app/decks/labels";
+import {
+  bracketWarningText,
+  estimateLabel,
+  findingWithCards,
+  problemText,
+  UNCHECKED_TEXT,
+} from "@/app/decks/labels";
 import {
   cardNotFound,
   deckNotFound,
@@ -28,6 +37,7 @@ import {
   moneyOrNull,
   type ToolContext,
 } from "../tool";
+import { assertNever } from "@/shared/kernel";
 
 // Reading and editing decks (design doc 28, section 5.2). Edits go through the decks module's
 // use cases with the token's Actor, so they follow the same rules as the deck builder.
@@ -73,6 +83,29 @@ function problemsOf(view: DeckView): DeckProblem[] {
   );
 }
 
+/** The bracket estimate and target, as get_deck reports them (design doc 31). Null outside Commander. */
+function bracketOf(view: DeckView) {
+  const estimate = estimateBracket(view.deck.format, view.lines.map(bracketLine));
+  if (estimate === null) return null;
+  const warning = bracketWarning(estimate, view.deck.targetBracket);
+  return {
+    target: view.deck.targetBracket,
+    floor: estimate.floor,
+    range: estimate.range,
+    summary: `${estimateLabel(estimate)} (at least, from the cards)`,
+    gameChangers: estimate.gameChangers,
+    findings: estimate.findings.map((finding) => ({
+      rule: finding.rule,
+      count: finding.count,
+      forces: finding.forces,
+      cards: finding.cards,
+      text: findingWithCards(finding),
+    })),
+    overTarget: warning === null ? null : bracketWarningText(warning),
+    unchecked: UNCHECKED_TEXT,
+  };
+}
+
 async function viewFor(context: ToolContext, id: number) {
   return deckView(context.container.db, context.actor.userId, id);
 }
@@ -108,9 +141,9 @@ export const getDeck = defineTool({
   name: "get_deck",
   title: "Get a deck",
   description: [
-    "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its list as text, and its fingerprint.",
+    "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned; "owned < quantity" means short), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, list (the text replace_deck_list takes), shortList (the missing cards as a list).',
+    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
     "Rules: decks may hold cards you don't own; they show as short. Basic lands are never short.",
   ].join("\n"),
   scope: "read",
@@ -146,6 +179,7 @@ export const getDeck = defineTool({
         manaCost: line.manaCost,
         manaValue: line.manaValue,
         typeLine: line.typeLine,
+        ...(line.isGameChanger ? { isGameChanger: true } : {}),
         ...(input.includeText ? { text: line.text } : {}),
         price: moneyOrNull(line.priceCents),
       })),
@@ -163,6 +197,7 @@ export const getDeck = defineTool({
       },
       roleTargets: roleTargets(view.deck.format),
       problems: problems.map(problemText),
+      bracket: bracketOf(view),
       list,
       shortList: shortList(problems, view.lines),
     });
@@ -224,9 +259,10 @@ export const createDeck = defineTool({
 
 export const updateDeck = defineTool({
   name: "update_deck",
-  title: "Rename a deck or change its format",
+  title: "Rename a deck, change its format or target bracket",
   description: [
-    "Changes a deck's name, format, or whether your real cards count as owned in it. Leave out what stays the same.",
+    "Changes a deck's name, format, target bracket, or whether your real cards count as owned in it. Leave out what stays the same.",
+    "Target bracket (Commander decks only): the Commander bracket the player means the deck for, 1–5 (1 Exhibition, 2 Core, 3 Upgraded, 4 Optimized, 5 cEDH), or 0 for none. With one, get_deck warns when the cards go over it, and suggest_for_deck, similar_cards, budget_upgrades and search_for_deck leave out cards that would. Changing the format away from Commander clears it.",
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,
@@ -238,6 +274,13 @@ export const updateDeck = defineTool({
       .boolean()
       .optional()
       .describe("Whether your real (paper) cards count as owned in this deck."),
+    targetBracket: z
+      .number()
+      .int()
+      .min(0)
+      .max(5)
+      .optional()
+      .describe("The Commander bracket to aim for, 1–5, or 0 to clear it. Commander decks only."),
   }),
   async run(context, input) {
     const result = await context.container.decks.updateDeck(context.actor, {
@@ -245,14 +288,28 @@ export const updateDeck = defineTool({
       name: input.name,
       format: input.format,
       usesRealCards: input.usesRealCards,
+      // 0 clears it: a plain number keeps the schema simple for small models (rule 9).
+      targetBracket: input.targetBracket === 0 ? null : input.targetBracket,
     });
     if (!result.ok) {
-      return result.error.kind === "DeckNotFound"
-        ? deckNotFound(input.deckId)
-        : failed(
+      switch (result.error.kind) {
+        case "DeckNotFound":
+          return deckNotFound(input.deckId);
+        case "NameInvalid":
+          return failed(
             "NameInvalid",
             `Give the deck a name of up to ${result.error.maximum} characters.`,
           );
+        case "TargetBracketInvalid":
+          return failed("TargetBracketInvalid", "A target bracket is 1, 2, 3, 4 or 5.");
+        case "TargetBracketNotCommander":
+          return failed(
+            "TargetBracketNotCommander",
+            "Only Commander decks have a target bracket. Change the format to commander first, or leave targetBracket out.",
+          );
+        default:
+          return assertNever(result.error);
+      }
     }
     return done({ deckId: input.deckId, updated: true });
   },

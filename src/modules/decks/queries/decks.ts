@@ -11,6 +11,7 @@ import {
   type Deck,
   type Format,
 } from "../domain/deck";
+import { isBracket } from "../domain/brackets";
 import type { CardRules } from "../domain/rules";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
@@ -110,6 +111,8 @@ export type DeckLine = Readonly<{
   producedMana: string[];
   /** Rules text of every face, for role tags (design doc 19). */
   text: string;
+  /** On Wizards' Game Changer list (design doc 31). */
+  isGameChanger: boolean;
   /** Latest market price of one copy in its finish, in cents, if known. */
   priceCents: number | null;
   setCode: string;
@@ -145,8 +148,9 @@ export async function deckView(
       name: string;
       format: string;
       uses_real_cards: boolean;
+      target_bracket: number | null;
     }>(sql`
-      select id, owner_id, name, format, uses_real_cards from decks
+      select id, owner_id, name, format, uses_real_cards, target_bracket from decks
        where id = ${deckId} and owner_id = ${userId}
     `)
   ).rows;
@@ -171,6 +175,7 @@ export async function deckView(
     collector_number: string;
     is_basic_land: boolean;
     face_text: string;
+    is_game_changer: boolean;
     has_power_toughness: boolean;
     color_identity: string[];
     legalities: Record<string, string> | null;
@@ -190,6 +195,8 @@ export async function deckView(
              order by s.day desc limit 1) as price_cents,
            shown.set_code, shown.collector_number,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
+           exists (select 1 from printings g
+                    where g.oracle_id = e.oracle_id and g.is_game_changer) as is_game_changer,
            newest.color_identity, newest.legalities,
            coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
                       where p.oracle_id = e.oracle_id), 0)::int as owned,
@@ -258,6 +265,7 @@ export async function deckView(
       manaCost: row.mana_cost,
       producedMana: row.produced_mana ?? [],
       text: row.face_text,
+      isGameChanger: row.is_game_changer,
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,
       collectorNumber: row.collector_number,
@@ -274,6 +282,10 @@ export async function deckView(
     name: deckRow.name,
     format: z.enum(FORMATS).parse(deckRow.format),
     usesRealCards: deckRow.uses_real_cards,
+    targetBracket:
+      deckRow.target_bracket !== null && isBracket(deckRow.target_bracket)
+        ? deckRow.target_bracket
+        : null,
     entries: rows.rows.map((row) => ({
       oracleId: row.oracle_id,
       board: z.enum(BOARDS).parse(row.board),

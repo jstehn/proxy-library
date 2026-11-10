@@ -27,6 +27,8 @@ export type FoundCard = Readonly<{
   text: string;
   roleTags: readonly Tag[];
   themes: readonly Theme[];
+  /** On Wizards' Game Changer list (design doc 31). */
+  isGameChanger: boolean;
   /** Copies you can put in this deck (real ones too when the deck uses them). */
   owned: number;
   /** The store's price for the printing above, in cents; null when it isn't for sale. */

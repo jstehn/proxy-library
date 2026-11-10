@@ -141,6 +141,7 @@ function deck(
       name: "Test",
       format,
       usesRealCards: false,
+      targetBracket: null,
       entries: [],
     } as Deck,
   );

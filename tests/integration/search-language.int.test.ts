@@ -25,6 +25,8 @@ type TestCard = Readonly<{
   legalities?: Record<string, string>;
   roleTags?: string[];
   themeTags?: string[];
+  bracketFlags?: string[];
+  isGameChanger?: boolean;
 }>;
 
 let number = 0;
@@ -49,13 +51,14 @@ async function add(card: TestCard): Promise<void> {
                            colors, color_identity, mana_cost, mana_value, type_line, layout,
                            finishes, border_color, frame_version, frame_effects, promo_types,
                            is_full_art, variant_label, faces, legalities, keywords, role_tags,
-                           theme_tags)
+                           theme_tags, bracket_flags, is_game_changer)
     values (${randomUUID()}, 'TST', ${String(number)}, ${card.name}, ${randomUUID()},
             ${randomUUID()}, 'common', '{}', '{}', ${card.manaCost ?? null},
             ${card.manaValue ?? 0}, ${card.typeLine}, ${card.layout ?? "normal"},
             '{nonfoil}', 'black', '2015', '{}', '{}', false, '', ${JSON.stringify(faces)}::jsonb,
             ${JSON.stringify(card.legalities ?? {})}::jsonb,
-            ${toArray(card.keywords)}, ${toArray(card.roleTags)}, ${toArray(card.themeTags)})`);
+            ${toArray(card.keywords)}, ${toArray(card.roleTags)}, ${toArray(card.themeTags)},
+            ${toArray(card.bracketFlags)}, ${card.isGameChanger ?? false})`);
 }
 
 function toArray(values: readonly string[] = []) {
@@ -221,6 +224,31 @@ const SPELLS: readonly TestCard[] = [
     toughness: "1",
     legalities: { commander: "banned", vintage: "restricted" },
   },
+  // Commander brackets (design doc 31): stored as the sync stores them.
+  {
+    name: "Rhystic Study",
+    typeLine: "Enchantment",
+    text: "Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+    manaCost: "{2}{U}",
+    manaValue: 3,
+    isGameChanger: true,
+  },
+  {
+    name: "Blood Moon",
+    typeLine: "Enchantment",
+    text: "Nonbasic lands are Mountains.",
+    manaCost: "{2}{R}",
+    manaValue: 3,
+    bracketFlags: ["landDenial"],
+  },
+  {
+    name: "Time Warp",
+    typeLine: "Sorcery",
+    text: "Target player takes an extra turn after this one.",
+    manaCost: "{3}{U}{U}",
+    manaValue: 5,
+    bracketFlags: ["extraTurn"],
+  },
 ];
 
 beforeAll(async () => {
@@ -292,9 +320,12 @@ describe("numbers", () => {
 
   it("finds even and odd mana values", async () => {
     expect(await find("mv:odd -t:land")).toEqual([
+      "Blood Moon",
       "Jolene, the Plunder Queen",
+      "Rhystic Study",
       "Serra Angel",
       "Sky Courier",
+      "Time Warp",
     ]);
     expect(await find("mv:even -t:land")).toEqual([
       "Battle Cleric",
@@ -338,6 +369,14 @@ describe("tags, themes and legality", () => {
     expect(await find("theme:tokens")).toEqual(["Jolene, the Plunder Queen"]);
     expect(await find("otag:counterspell")).toEqual(["Izzet Charm"]);
     expect(await find("tag:removal -tag:counter")).toEqual([]);
+  });
+
+  it("finds Game Changers, land denial and extra turns (design doc 31)", async () => {
+    expect(await find("is:gamechanger")).toEqual(["Rhystic Study"]);
+    expect(await find("is:gc")).toEqual(["Rhystic Study"]);
+    expect(await find("is:landdenial")).toEqual(["Blood Moon"]);
+    expect(await find("is:extraturn")).toEqual(["Time Warp"]);
+    expect(await find("t:enchantment -is:gc")).toEqual(["Blood Moon"]);
   });
 
   it("finds banned and restricted cards", async () => {

@@ -1,4 +1,9 @@
-import { CARD_FEATURES_VERSION, cardTags, cardThemes } from "@/shared/card-search";
+import {
+  CARD_FEATURES_VERSION,
+  cardTags,
+  cardThemes,
+  textBracketFlags,
+} from "@/shared/card-search";
 import { ok } from "@/shared/kernel";
 import {
   isNightlySyncDue,
@@ -275,6 +280,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         legalities: card.legalities,
         producedMana: card.producedMana,
         keywords: card.keywords,
+        isGameChanger: card.isGameChanger,
       });
       if (isPriced) summary.pricedPrintings++;
       summary.priceSnapshots += todays.length;
@@ -302,6 +308,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         id: printing.id,
         roleTags: cardTags(printing),
         themeTags: cardThemes(printing),
+        bracketFlags: textBracketFlags(printing),
       }));
       await inTransaction(({ catalog }) =>
         catalog.saveCardFeatures(features, CARD_FEATURES_VERSION),

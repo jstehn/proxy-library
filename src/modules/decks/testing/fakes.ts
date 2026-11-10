@@ -30,6 +30,7 @@ export function inMemoryDeckRepository() {
         name: input.name,
         format: input.format,
         usesRealCards: input.usesRealCards ?? true,
+        targetBracket: null,
         entries: [],
       });
       return id;

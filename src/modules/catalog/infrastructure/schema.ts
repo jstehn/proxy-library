@@ -84,6 +84,15 @@ export const printings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Land denial and extra turns read from the rules text (design doc 31), stored by the tag
+    // pass for `is:landdenial` / `is:extraturn` searches.
+    bracketFlags: text("bracket_flags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    // On Wizards' Game Changer list (Scryfall's game_changer), rewritten by every Scryfall pass so
+    // a change to the list shows the next night without re-tagging (design doc 31).
+    isGameChanger: boolean("is_game_changer").notNull().default(false),
     featuresVersion: integer("features_version").notNull().default(0),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -92,6 +101,10 @@ export const printings = pgTable(
     index("printings_oracle_idx").on(table.oracleId),
     index("printings_role_tags_idx").using("gin", table.roleTags),
     index("printings_theme_tags_idx").using("gin", table.themeTags),
+    index("printings_bracket_flags_idx").using("gin", table.bracketFlags),
+    index("printings_game_changer_idx")
+      .on(table.isGameChanger)
+      .where(sql`${table.isGameChanger}`),
     index("printings_features_version_idx").on(table.featuresVersion),
   ],
 );

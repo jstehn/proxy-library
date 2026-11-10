@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { CardRules, DeckLine, Format } from "@/modules/decks";
+import type { Bracket, BracketRule, CardRules, DeckLine, Format } from "@/modules/decks";
+import { bracketLine, estimateBracket } from "@/modules/decks/client";
 import type { Tag } from "@/shared/card-search";
+import { BracketPanel } from "./builder/bracket-panel";
 import { DeckList } from "./builder/deck-list";
 import { problemsOf } from "./builder/derive";
 import { StatsPanel } from "./builder/stats-panel";
@@ -17,12 +19,27 @@ export function SharedDeckView(props: {
   rules: Readonly<Record<string, CardRules>>;
   cards: Readonly<Record<string, PrintingCard>>;
   format: Format;
+  /** The bracket its owner is aiming for (design doc 31, section 5.3). */
+  targetBracket: Bracket | null;
   seed: string;
   ownerName: string;
   yourCopies: Readonly<Record<string, number>>;
   listText: string;
 }) {
-  const [highlighted, setHighlighted] = useState<Tag | null>(null);
+  const [highlighted, setHighlightedRole] = useState<Tag | null>(null);
+  const [highlightedRule, setHighlightedRule] = useState<BracketRule | null>(null);
+  const setHighlighted = (tag: Tag | null) => {
+    setHighlightedRole(tag);
+    setHighlightedRule(null);
+  };
+  const highlightRule = (rule: BracketRule | null) => {
+    setHighlightedRule(rule);
+    setHighlightedRole(null);
+  };
+  const estimate = estimateBracket(props.format, props.lines.map(bracketLine));
+  const highlightedNames = new Set(
+    estimate?.findings.find((finding) => finding.rule === highlightedRule)?.cards ?? [],
+  );
   const [showTestHand, setShowTestHand] = useState(false);
   const problems = problemsOf(props.format, props.lines, props.rules);
   const problemsByName = new Map<string, string[]>();
@@ -43,6 +60,7 @@ export function SharedDeckView(props: {
           onSelect={() => undefined}
           busy={false}
           highlighted={highlighted}
+          highlightedNames={highlightedNames}
           readOnly
           yourCopies={props.yourCopies}
         />
@@ -83,6 +101,14 @@ export function SharedDeckView(props: {
             </ul>
           )}
         </section>
+        {estimate !== null && (
+          <BracketPanel
+            estimate={estimate}
+            target={props.targetBracket}
+            highlighted={highlightedRule}
+            onHighlight={highlightRule}
+          />
+        )}
         <StatsPanel
           lines={props.lines}
           format={props.format}

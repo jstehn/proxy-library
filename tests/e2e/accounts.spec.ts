@@ -1144,6 +1144,77 @@ test("the admin builds from every card, then buys what the deck is short (design
   await expect(page.getByLabel("Cards to buy")).toHaveValue(new RegExp(`^1 ${escapeRegExp(name)}`));
 });
 
+test("the admin aims a Commander deck at a bracket and is warned when it goes over (design doc 31)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByLabel("Deck name").fill("Beza, bracket 2");
+  await page.getByLabel("Format").selectOption("commander");
+  await page.getByRole("button", { name: "Create deck" }).click();
+  await page.getByLabel("Paste a deck list").fill("Commander\n1 Beza, the Bounding Spring");
+  await page.getByRole("button", { name: "Add these cards" }).click();
+  await expect(page.getByText(/Added 1 card/)).toBeVisible();
+
+  // Nothing counts against a bracket yet. The global setup put Banishing Light and Builder's
+  // Talent on the Game Changer list.
+  const bracket = page.getByRole("region", { name: "Commander bracket" });
+  await expect(bracket.getByText("Bracket 1–2")).toBeVisible();
+  await bracket.getByLabel("Target").selectOption("2");
+
+  // Adding a Game Changer raises the floor and warns, without making the deck illegal.
+  await page
+    .getByRole("group", { name: "Search in" })
+    .getByRole("button", { name: "All cards" })
+    .click();
+  await page.getByRole("searchbox", { name: "Search every card" }).fill("is:gc banishing");
+  await page
+    .getByRole("list", { name: "Every card" })
+    .getByRole("button", { name: /^Banishing Light, / })
+    .click();
+  await page
+    .getByRole("region", { name: "Selected: Banishing Light" })
+    .getByRole("button", { name: "Add to deck" })
+    .click();
+  await expect(page.getByText("Added 1 Banishing Light (now 1).")).toBeVisible();
+  await expect(bracket.getByText("Bracket 3 · Upgraded")).toBeVisible();
+  const problems = page.getByRole("region", { name: "Problems" });
+  await expect(problems.getByText(/over your target of 2/)).toBeVisible();
+  const deckList = page.getByRole("region", { name: "Deck list" });
+  await expect(deckList.getByText("GC", { exact: true })).toBeVisible();
+
+  // A reason marks its cards in the list.
+  await bracket.getByRole("button", { name: /1 Game Changer/ }).click();
+  await expect(deckList.locator("[data-highlighted]")).toHaveCount(1);
+
+  // Suggestions leave out the other Game Changer, and say so.
+  await page.getByRole("button", { name: "Suggestions" }).click();
+  const panel = page.getByRole("region", { name: "Suggestions" });
+  await expect(panel.getByText(/Hiding \d+ cards? over your target bracket/).first()).toBeVisible();
+  await expect(panel.getByRole("button", { name: /^Builder's Talent/ })).toHaveCount(0);
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await bracket.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/bracket-dark.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("tab", { name: /Deck/ }).click();
+  await bracket.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/bracket-phone-dark.png" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // The target is saved with the deck.
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Commander bracket" }).getByLabel("Target"),
+  ).toHaveValue("2");
+});
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

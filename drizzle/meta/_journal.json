@@ -225,6 +225,13 @@
       "when": 1794335917479,
       "tag": "0031_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794340210863,
+      "tag": "0032_commander_brackets",
+      "breakpoints": true
     }
   ]
 }

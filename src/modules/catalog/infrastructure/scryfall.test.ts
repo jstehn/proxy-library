@@ -161,6 +161,26 @@ describe("tokens (design doc 25)", () => {
     expect(jailer.tokenIds).toEqual(["monarch"]);
   });
 
+  it("reads Wizards' Game Changer flag, false when Scryfall leaves it out (design doc 31)", () => {
+    const card = (changes: object) =>
+      mapScryfallCard(
+        ScryfallCardSchema.parse({
+          id: "rhystic",
+          name: "Rhystic Study",
+          set: "jmp",
+          set_type: "draft_innovation",
+          lang: "en",
+          prices: {},
+          ...changes,
+        }),
+      );
+    expect(card({ game_changer: true }).isGameChanger).toBe(true);
+    expect(card({ game_changer: false }).isGameChanger).toBe(false);
+    expect(card({}).isGameChanger).toBe(false);
+    // The trimmed fixture lines leave the field out: none of them is a Game Changer.
+    expect(lines.every((each) => !each.isGameChanger)).toBe(true);
+  });
+
   it("skips digital and non-English tokens", () => {
     const [rabbit] = byName("Rabbit");
     const raw = (changes: object) =>

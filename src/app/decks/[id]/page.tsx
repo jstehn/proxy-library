@@ -79,6 +79,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           rules={view.rules}
           cards={Object.fromEntries(cards)}
           format={deck.format}
+          targetBracket={deck.targetBracket}
           seed={seeds.newSeed()}
           ownerName={viewed.ownerName}
           yourCopies={viewed.yourCopies}
@@ -259,6 +260,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         deckId={deck.id}
         format={deck.format}
         initialDeck={builderDeck}
+        targetBracket={deck.targetBracket}
         seed={seeds.newSeed()}
       />
     </main>

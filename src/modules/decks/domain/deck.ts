@@ -6,7 +6,10 @@ import type {
   NameInvalid,
   PrintingNotOfCard,
   QuantityInvalid,
+  TargetBracketInvalid,
+  TargetBracketNotCommander,
 } from "./errors";
+import { isBracket, type Bracket } from "./brackets";
 
 // The deck builder's vocabulary (design doc 09, section 3).
 
@@ -64,6 +67,8 @@ export type Deck = Readonly<{
   format: Format;
   /** "Use my real cards" (design doc 16, rule 2): real copies count as owned in this deck. */
   usesRealCards: boolean;
+  /** The Commander bracket the owner means it for (design doc 31). Commander only; null: none. */
+  targetBracket: Bracket | null;
   entries: readonly DeckEntry[];
 }>;
 
@@ -77,6 +82,17 @@ export function checkName(raw: string): Result<string, NameInvalid> {
     return err({ kind: "NameInvalid", maximum: MAX_NAME_LENGTH });
   }
   return ok(name);
+}
+
+/** A target bracket for a deck of this format: 1–5 on Commander decks, or null (design doc 31). */
+export function checkTargetBracket(
+  format: Format,
+  target: number | null,
+): Result<Bracket | null, TargetBracketInvalid | TargetBracketNotCommander> {
+  if (target === null) return ok(null);
+  if (!isBracket(target)) return err({ kind: "TargetBracketInvalid" });
+  if (format !== "commander") return err({ kind: "TargetBracketNotCommander" });
+  return ok(target);
 }
 
 /** 0 removes the entry; otherwise 1–99 (rule 6). */

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
+import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import type { Format } from "../domain/deck";
 import {
   budgetPicks,
@@ -47,7 +48,14 @@ export type Suggestion = Readonly<{
 }>;
 
 /** One list of suggestions: cards you own first, then cards in the store. */
-export type SuggestionList = Readonly<{ owned: Suggestion[]; store: Suggestion[] }>;
+export type SuggestionList = Readonly<{
+  owned: Suggestion[];
+  store: Suggestion[];
+  /** Cards that would have been suggested but go over the deck's target bracket (design doc 31). */
+  hiddenOverTarget: number;
+}>;
+
+const EMPTY_LIST: SuggestionList = { owned: [], store: [], hiddenOverTarget: 0 };
 
 /** What the queries need to know about a deck. */
 type SuggestionContext = Readonly<{
@@ -60,6 +68,9 @@ type SuggestionContext = Readonly<{
   /** Oracle cards already in the deck, never suggested. */
   inDeck: string[];
   lines: ProfileLine[];
+  /** The bracket the owner chose (Commander only), and the deck as the estimate reads it. */
+  targetBracket: Bracket | null;
+  bracketLines: BracketLine[];
 }>;
 
 /** What a candidate must share with the deck (any one of these). */
@@ -117,7 +128,33 @@ export async function suggestionContext(
     colorLimit,
     inDeck: [...new Set(view.lines.map((line) => line.oracleId))],
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
+    targetBracket: view.deck.targetBracket,
+    bracketLines: view.lines.map(bracketLine),
   };
+}
+
+/** A pool split into the cards that keep the deck within its target and those that don't. */
+type TargetSplit = Readonly<{ kept: SuggestionCard[]; over: SuggestionCard[] }>;
+
+/** Leaves out cards that would take the deck over its target bracket (invariant 10). */
+function withinTarget(cards: readonly SuggestionCard[], context: SuggestionContext): TargetSplit {
+  const target = context.targetBracket;
+  if (target === null) return { kept: [...cards], over: [] };
+  const kept: SuggestionCard[] = [];
+  const over: SuggestionCard[] = [];
+  for (const card of cards) {
+    const flags = bracketLine({ ...card, quantity: 1, board: "main" }).flags;
+    (fitsTarget(context.bracketLines, { name: card.name, flags }, target) ? kept : over).push(card);
+  }
+  return { kept, over };
+}
+
+/** How many of the left-out cards would have scored at all: the "hiding N cards" count. */
+function countScoring(
+  over: readonly SuggestionCard[],
+  score: (card: CandidateCard) => Scored | null,
+): number {
+  return over.filter((card) => score(card) !== null).length;
 }
 
 /** The conditions every suggestion meets (invariant 2), on a printing `p`. */
@@ -167,6 +204,7 @@ type CandidateRow = {
   has_power_toughness: boolean;
   is_basic_land: boolean;
   produced_mana: string[] | null;
+  is_game_changer: boolean;
   set_code: string;
   collector_number: string;
   finish: string;
@@ -185,7 +223,7 @@ function candidateColumns(context: SuggestionContext): SQL {
     exists (select 1 from jsonb_array_elements(p.faces) f
              where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
     p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
-    p.produced_mana, p.set_code, p.collector_number`;
+    p.produced_mana, p.is_game_changer, p.set_code, p.collector_number`;
 }
 
 /** Cards you own that share something with what's wanted: one per oracle card. */
@@ -291,6 +329,7 @@ function toCard(row: CandidateRow, pool: "owned" | "store", format: Format): Sug
     },
     producedMana: row.produced_mana ?? [],
     text: row.face_text,
+    isGameChanger: row.is_game_changer,
     setCode: row.set_code,
     collectorNumber: row.collector_number,
     finish: FinishSchema.parse(row.finish),
@@ -354,21 +393,28 @@ export async function deckSuggestions(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  if (nothingWanted(want)) return { profile, forDeck: { owned: [], store: [] }, forRoles: [] };
+  if (nothingWanted(want)) return { profile, forDeck: EMPTY_LIST, forRoles: [] };
 
   const [owned, store] = await Promise.all([
-    ownedCandidates(db, userId, context, want),
-    storeCandidates(db, userId, context, want),
+    ownedCandidates(db, userId, context, want).then((cards) => withinTarget(cards, context)),
+    storeCandidates(db, userId, context, want).then((cards) => withinTarget(cards, context)),
   ]);
+  const over = [...owned.over, ...store.over];
+  const forDeckScore = (card: CandidateCard) => scoreForDeck(card, profile);
   const forDeck = {
-    owned: best(owned, (card) => scoreForDeck(card, profile), 12),
-    store: best(store, (card) => scoreForDeck(card, profile), 12),
+    owned: best(owned.kept, forDeckScore, 12),
+    store: best(store.kept, forDeckScore, 12),
+    hiddenOverTarget: countScoring(over, forDeckScore),
   };
-  const forRoles = profile.gaps.map((gap) => ({
-    ...gap,
-    owned: best(owned, (card) => scoreForRole(card, gap.tag, profile), 6),
-    store: best(store, (card) => scoreForRole(card, gap.tag, profile), 6),
-  }));
+  const forRoles = profile.gaps.map((gap) => {
+    const forRoleScore = (card: CandidateCard) => scoreForRole(card, gap.tag, profile);
+    return {
+      ...gap,
+      owned: best(owned.kept, forRoleScore, 6),
+      store: best(store.kept, forRoleScore, 6),
+      hiddenOverTarget: countScoring(over, forRoleScore),
+    };
+  });
   return { profile, forDeck, forRoles };
 }
 
@@ -390,7 +436,7 @@ export async function similarCards(
        order by ${STANDARD_FIRST} limit 1
     `)
   ).rows;
-  if (targetRow === undefined) return { owned: [], store: [] };
+  if (targetRow === undefined) return EMPTY_LIST;
   const target = toCard(targetRow, "store", context.format);
   const want: Wanted = {
     roles: target.roles,
@@ -398,16 +444,18 @@ export async function similarCards(
     tribes: creatureTypes(target.typeLine),
     keywords: target.keywords,
   };
-  if (nothingWanted(want)) return { owned: [], store: [] };
+  if (nothingWanted(want)) return EMPTY_LIST;
   // The card itself is never like itself: leave it out with the deck's cards.
   const withoutTarget = { ...context, inDeck: [...context.inDeck, oracleId] };
   const [owned, store] = await Promise.all([
-    ownedCandidates(db, userId, withoutTarget, want),
-    storeCandidates(db, userId, withoutTarget, want),
+    ownedCandidates(db, userId, withoutTarget, want).then((cards) => withinTarget(cards, context)),
+    storeCandidates(db, userId, withoutTarget, want).then((cards) => withinTarget(cards, context)),
   ]);
+  const likeScore = (card: CandidateCard) => scoreLike(card, target);
   return {
-    owned: best(owned, (card) => scoreLike(card, target), 6),
-    store: best(store, (card) => scoreLike(card, target), 6),
+    owned: best(owned.kept, likeScore, 6),
+    store: best(store.kept, likeScore, 6),
+    hiddenOverTarget: countScoring([...owned.over, ...store.over], likeScore),
   };
 }
 
@@ -419,6 +467,8 @@ export type BudgetList = Readonly<{
   totalCents: number;
   /** The picks as a list for Buy a list: "1 Name (SET) 123". */
   listText: string;
+  /** Store cards left out because they go over the deck's target bracket (design doc 31). */
+  hiddenOverTarget: number;
 }>;
 
 /** Store cards for this deck within a budget (design doc 20, section 3.2, "Budget"). */
@@ -432,8 +482,9 @@ export async function budgetList(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  if (nothingWanted(want)) return { picks: [], totalCents: 0, listText: "" };
-  const store = await storeCandidates(db, userId, context, want);
+  if (nothingWanted(want)) return { picks: [], totalCents: 0, listText: "", hiddenOverTarget: 0 };
+  const split = withinTarget(await storeCandidates(db, userId, context, want), context);
+  const store = split.kept;
   const byId = new Map(store.map((card) => [card.oracleId, card]));
   const scored = rank(store.map((card) => scoreForDeck(candidate(card), profile)));
   const picks = budgetPicks(scored, budgetCents, BUDGET_LIST_MAXIMUM).flatMap((pick) => {
@@ -449,5 +500,6 @@ export async function budgetList(
           `1 ${card.name} (${card.setCode.toUpperCase()}) ${card.collectorNumber}${card.finish === "nonfoil" ? "" : card.finish === "foil" ? " *F*" : " *E*"}`,
       )
       .join("\n"),
+    hiddenOverTarget: countScoring(split.over, (card) => scoreForDeck(card, profile)),
   };
 }

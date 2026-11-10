@@ -54,6 +54,8 @@ export const ScryfallCardSchema = z.object({
   produced_mana: z.array(z.string()).optional(),
   // Keyword abilities and actions ("Flying", "Scry"), for `kw:` searches (design doc 15).
   keywords: z.array(z.string()).optional(),
+  // On Wizards' Commander Game Changer list (design doc 31).
+  game_changer: z.boolean().default(false),
   prices: z.object({
     usd: z.string().nullable().default(null),
     usd_foil: z.string().nullable().default(null),
@@ -173,6 +175,7 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     legalities: raw.legalities,
     producedMana: (raw.produced_mana ?? []).filter((symbol) => /^[WUBRGC]$/.test(symbol)),
     keywords: raw.keywords ?? [],
+    isGameChanger: raw.game_changer,
     tokenIds: relatedTokenIds(raw),
     token: mapToken(raw),
   };

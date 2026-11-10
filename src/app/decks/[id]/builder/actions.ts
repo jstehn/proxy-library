@@ -1,4 +1,5 @@
 "use server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId, printingCards, type PrintingCard } from "@/modules/catalog";
 import {
@@ -208,4 +209,35 @@ export async function budgetAction(input: z.input<typeof BudgetInput>): Promise<
   const parsed = BudgetInput.safeParse(input);
   if (!parsed.success) return null;
   return budgetList(getContainer().db, actor.userId, parsed.data.deckId, parsed.data.budgetCents);
+}
+
+const TargetBracketInput = z.object({
+  deckId: DeckIdInput,
+  target: z.number().int().nullable(),
+});
+
+export type TargetBracketResult = Readonly<{ ok: true } | { ok: false; message: string }>;
+
+/** Saves the Commander bracket the owner is aiming for, or clears it (design doc 31). */
+export async function setTargetBracketAction(
+  input: z.input<typeof TargetBracketInput>,
+): Promise<TargetBracketResult> {
+  const actor = await requireActor();
+  const parsed = TargetBracketInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That bracket wasn't understood." };
+  const result = await getContainer().decks.updateDeck(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    targetBracket: parsed.data.target,
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      TargetBracketInvalid: "A target bracket is 1 to 5.",
+      TargetBracketNotCommander: "Only Commander decks have a target bracket.",
+    };
+    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the bracket." };
+  }
+  // The shared view shows the target too.
+  revalidatePath(`/decks/${parsed.data.deckId}`);
+  return { ok: true };
 }
