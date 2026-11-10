@@ -18,7 +18,7 @@ are mechanical enough to check automatically.
   application/domain, `shared/db`, `shared/http`. `app/` → modules' `index.ts`, `server/`, `ui/`.
   Only composition roots import `infrastructure`.
 - **Deep imports** into another module (anything but its `index.ts`).
-- **Cycles** (`import/no-cycle`).
+- **Cycles** (`pnpm lint:cycles`, part of `pnpm check`; see the note below).
 - **Forbidden globals outside adapters** (`no-restricted-syntax` / `no-restricted-globals`):
   `Math.random`, `Date.now`, `new Date()` without arguments, `process.env` (except in
   `shared/config.ts`), `fetch` (except in `shared/http` and adapters).
@@ -40,3 +40,14 @@ A recurring need means the rule or the architecture should change (via an ADR).
 - **Convention only:** erodes.
 - **dependency-cruiser:** great for graphs and reports and can be added later for visualization,
   but ESLint gives in-editor feedback.
+
+## Implementation note (2026-11-10): cycles moved out of ESLint
+
+`import/no-cycle` had grown to 195 of the 212 seconds ESLint took, and so most of every
+`pnpm check` (about 4 minutes). Its cost is in building the import graph for every file, so
+neither `ignoreExternal` nor `maxDepth: 2` made it faster. Cycles are now found by
+`scripts/check-cycles.ts` (`pnpm lint:cycles`, run by `pnpm check`): it reads each file of the
+tsconfig project once with the TypeScript compiler, resolves imports as tsconfig does (`@/…`
+included), and searches the graph once, in about 2 seconds for 610 files. Like the rule, it
+ignores packages and type-only imports (`import type`, or every name marked `type`), which are
+erased when compiled and can't loop at runtime. The rule is off in `eslint.config.mjs`.

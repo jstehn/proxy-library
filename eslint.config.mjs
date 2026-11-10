@@ -222,7 +222,8 @@ export default defineConfig([
           policies,
         },
       ],
-      "import/no-cycle": "error",
+      // Import cycles are checked by `pnpm lint:cycles` (scripts/check-cycles.ts), not by
+      // import/no-cycle: that rule took over three minutes of every lint (ADR 0009, 2026-11-10).
     },
   },
 

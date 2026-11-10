@@ -6,3 +6,5 @@ AGENTS.md
 .next-e2e/
 # Recorded pages, kept exactly as recorded
 tests/fixtures/wpn/
+# Claude Code's own per-machine settings, rewritten by the tool
+.claude/settings.local.json
