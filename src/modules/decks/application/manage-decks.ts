@@ -30,7 +30,7 @@ import type {
 import { parseList } from "@/shared/card-search";
 import { fingerprint } from "../domain/list-format";
 import { createDeckInTransaction, type DeckCardInput } from "./create-deck-in-transaction";
-import type { DecksDependencies } from "./ports";
+import type { DecksDependencies, UnnamedPrinting } from "./ports";
 
 // Deck use cases (design doc 09, section 5). Every one works only on the actor's own decks
 // (rule 7): someone else's deck is reported as not found.
@@ -65,6 +65,8 @@ export type ReplaceListInput = Readonly<{
   text: string;
   /** The fingerprint of the deck when its text box was filled (design doc 23, rule 5). */
   fingerprint: string;
+  /** The printing for an unowned line that names none; the standard one unless asked. */
+  unnamedPrinting?: UnnamedPrinting;
 }>;
 
 /** How many cards the deck holds after the save. */
@@ -164,6 +166,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       if (deck === null) return err({ kind: "DeckNotFound" });
       const found = await cards.resolve(actor.userId, parsed.lines, {
         includeReal: deck.usesRealCards,
+        unnamedPrinting: "standard",
       });
 
       const notFound: string[] = [];
@@ -216,6 +219,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
 
       const found = await cards.resolve(actor.userId, parsed.lines, {
         includeReal: deck.usesRealCards,
+        unnamedPrinting: input.unnamedPrinting ?? "standard",
       });
       const lines: MatchedLine[] = [];
       const notFound: string[] = [];

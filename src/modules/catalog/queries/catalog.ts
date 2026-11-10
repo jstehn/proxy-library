@@ -223,6 +223,8 @@ export type PrintingSearch = Readonly<{
   color?: string;
   sort: "name" | "number" | "price";
   page: number; // from 1
+  /** One row per card (its cheapest printing in the store) instead of one per printing. */
+  oneRowPerCard?: boolean;
 }>;
 
 export const SEARCH_PAGE_SIZE = 60;
@@ -279,17 +281,30 @@ export async function searchPrintings(
   }[search.sort];
   const offset = (Math.max(1, search.page) - 1) * SEARCH_PAGE_SIZE;
 
+  // The matching printings, or each matching card's cheapest printing (unpriced ones last).
+  const matching = search.oneRowPerCard
+    ? sql`select distinct on (p.oracle_id) p.* from printings p
+            join card_sets s on s.code = p.set_code and s.is_enabled
+           where ${where}
+           order by p.oracle_id,
+                    (select min(snapshot.usd_cents) from price_snapshots snapshot
+                      where snapshot.printing_id = p.id
+                        and snapshot.day = (select max(day) from price_snapshots)) asc nulls last,
+                    p.id`
+    : sql`select p.* from printings p
+            join card_sets s on s.code = p.set_code and s.is_enabled
+           where ${where}`;
+
   const [rows, totals] = await Promise.all([
     db.execute<{ id: string }>(sql`
-      select p.id from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${where}
+      with matching as (${matching})
+      select p.id from matching p
        order by ${order}
        limit ${SEARCH_PAGE_SIZE} offset ${offset}
     `),
     db.execute<{ total: number }>(sql`
-      select count(*)::int as total from printings p
-        join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${where}
+      with matching as (${matching})
+      select count(*)::int as total from matching
     `),
   ]);
   const total = totals.rows[0].total;

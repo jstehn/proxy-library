@@ -141,6 +141,63 @@ describe("the MCP server", () => {
     expect(saved.cards).toBe(2);
   });
 
+  it("finds each card once at its cheapest, and builds a list from the cheapest printings", async () => {
+    // A card with two printings in the store, priced on a day after the fixture's own.
+    const day = "2099-01-01";
+    const [card] = (
+      await db.execute<{ name: string }>(sql`
+        select p.name from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+         group by p.name having count(*) >= 2 order by p.name limit 1
+      `)
+    ).rows;
+    const client = await connect();
+    const list = `Deck\n1 ${card.name}`;
+    // A new deck each time: a card already in a deck keeps its printing when the list names none.
+    const replace = async (unnamedPrinting?: string) => {
+      const { deckId } = await call(client, "create_deck", { name: "Test", format: "casual" });
+      const { fingerprint } = await call(client, "get_deck", { deckId });
+      await call(client, "replace_deck_list", { deckId, list, fingerprint, unnamedPrinting });
+      const deck = await call(client, "get_deck", { deckId, includeText: false });
+      return deck.lines[0].printingId as string;
+    };
+    try {
+      const standard = await replace("standard");
+      const [cheap] = (
+        await db.execute<{ id: string }>(sql`
+          select p.id from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+           where p.name = ${card.name} and p.id <> ${standard} limit 1
+        `)
+      ).rows;
+      await db.execute(sql`insert into price_snapshots (printing_id, finish, day, usd_cents)
+                           values (${standard}, 'nonfoil', ${day}, 5000),
+                                  (${cheap.id}, 'nonfoil', ${day}, 100)`);
+
+      // The default picks the cheapest printing; "standard" keeps design doc 24's choice.
+      expect(await replace()).toBe(cheap.id);
+      expect(await replace("standard")).toBe(standard);
+
+      const search = `"${card.name}"`;
+      const once = await call(client, "search_cards", { search });
+      const rows = once.cards.filter((row: { name: string }) => row.name === card.name);
+      expect(rows).toEqual([
+        expect.objectContaining({ printingId: cheap.id, cheapest: { cents: 100, text: "$1.00" } }),
+      ]);
+      const every = await call(client, "search_cards", { search, oneRowPerCard: false });
+      expect(
+        every.cards.filter((row: { name: string }) => row.name === card.name).length,
+      ).toBeGreaterThanOrEqual(2);
+    } finally {
+      await db.execute(sql`delete from price_snapshots where day = ${day}`);
+    }
+  });
+
+  it("takes a long search, such as many card names at once", async () => {
+    const client = await connect();
+    const names = Array.from({ length: 60 }, (_, index) => `"Not A Card ${index}"`);
+    const result = await call(client, "search_cards", { search: names.join(" or ") });
+    expect(result.total).toBe(0);
+  });
+
   it("refuses a tool the token's scopes don't allow (rule 3), and changes nothing", async () => {
     const client = await connect(["read"]);
     const result = await client.callTool({ name: "create_deck", arguments: { name: "Nope" } });

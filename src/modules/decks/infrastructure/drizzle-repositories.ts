@@ -128,6 +128,15 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
     const found = new Map<number, ResolvedCard>();
     // The copies that count as this player's in the deck (real ones only if it uses them).
     const owned = ownedCopies(ownerId, sql`${options.includeReal}`);
+    // An unowned line that names no printing: the cheapest printing in the store first (ties
+    // and unpriced printings by the standard ranking), or just the standard ranking.
+    const unnamedOrder =
+      options.unnamedPrinting === "cheapest"
+        ? sql`(select min(snapshot.usd_cents) from price_snapshots snapshot
+                where snapshot.printing_id = p.id
+                  and snapshot.day = (select max(day) from price_snapshots)) asc nulls last,
+              ${STANDARD_FIRST}`
+        : STANDARD_FIRST;
     // One small query per line: a pasted deck is at most about a hundred lines.
     for (const [index, query] of queries.entries()) {
       const setCode = query.setCode ?? "";
@@ -152,10 +161,10 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
               join candidates p on p.id = c.printing_id
              order by ${MOST_SPECIAL_FIRST} limit 1
           ),
-          -- Otherwise the card's standard printing (design doc 24, rule 2).
+          -- Otherwise the card's standard printing (design doc 24, rule 2), or its cheapest.
           standard as (
             select p.id from candidates p join card_sets s on s.code = p.set_code
-             order by ${STANDARD_FIRST} limit 1
+             order by ${unnamedOrder} limit 1
           ),
           chosen as (
             select coalesce((select id from named), (select id from special), (select id from standard)) as id

@@ -116,7 +116,7 @@ describe("your most special copy", () => {
       await drizzleCardLookup(db).resolve(
         jack.userId,
         [{ name: BEZA, setCode: null, collectorNumber: null }],
-        { includeReal },
+        { includeReal, unnamedPrinting: "standard" },
       )
     ).get(0);
     const deckId = await newDeck();
@@ -197,7 +197,7 @@ describe("your most special copy", () => {
         { name: BEZA, setCode: "BLB", collectorNumber: "2" },
         { name: BEZA, setCode: "ZZZ", collectorNumber: "1" },
       ],
-      { includeReal: false },
+      { includeReal: false, unnamedPrinting: "standard" },
     );
     expect(found.get(0)).toMatchObject({
       printingId: plain,
@@ -316,7 +316,7 @@ describe("the standard printing, and choosing one", () => {
       await drizzleCardLookup(db).resolve(
         jack.userId,
         [{ name: BEZA, setCode: null, collectorNumber: null }],
-        { includeReal: false },
+        { includeReal: false, unnamedPrinting: "standard" },
       )
     ).get(0);
     const deckId = await newDeck();

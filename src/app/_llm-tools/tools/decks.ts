@@ -313,7 +313,7 @@ export const replaceDeckList = defineTool({
   description: [
     "Replaces the deck's cards with a list in the usual text format, all or nothing.",
     "Use it when: making many changes at once. First call get_deck, edit its `list`, and send it back with the `fingerprint` get_deck gave.",
-    'Inputs: list, with headings "Commander", "Deck", "Sideboard" and lines like "1 Sol Ring" or "1 Sol Ring (C21) 263" for a printing.',
+    'Inputs: list, with headings "Commander", "Deck", "Sideboard" and lines like "1 Sol Ring" or "1 Sol Ring (C21) 263" for a printing. A line without a printing keeps the printing the deck already has for that card; for a new card it uses your copy if you own one, otherwise the cheapest printing in the store (unnamedPrinting "cheapest", the default) or the card\'s standard printing ("standard").',
     "Returns: the new card count. If the deck changed since your get_deck (DeckChanged), call get_deck again and redo your edit. If some lines couldn't be used (ListProblems), nothing was saved: fix those lines.",
   ].join("\n"),
   scope: "decks:write",
@@ -322,12 +322,19 @@ export const replaceDeckList = defineTool({
     deckId,
     list: z.string().min(1).describe("The deck's complete new list."),
     fingerprint: z.string().min(1).describe("The fingerprint from your latest get_deck."),
+    unnamedPrinting: z
+      .enum(["cheapest", "standard"])
+      .default("cheapest")
+      .describe(
+        'For an unowned line that names no printing: "cheapest" in the store, or the card\'s "standard" printing.',
+      ),
   }),
   async run(context, input) {
     const result = await context.container.decks.replaceList(context.actor, {
       deckId: DeckId.of(input.deckId),
       text: input.list,
       fingerprint: input.fingerprint,
+      unnamedPrinting: input.unnamedPrinting,
     });
     if (!result.ok) {
       switch (result.error.kind) {

@@ -15,6 +15,12 @@ import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../t
 // The search tools (design doc 28, sections 3.3, 3.6 and 3.7): the synergy search for a deck,
 // a plain search, the deck analysis that suggests what to search for, and the search guide.
 
+/**
+ * The longest search a tool takes: room for a list of card names ("a" or "b" or …) to check
+ * many cards in one call.
+ */
+const SEARCH_MAX_LENGTH = 2000;
+
 const SYNTAX_SUMMARY =
   'Search syntax (Scryfall-style): words match names; o:/regex/ or o:"phrase" rules text (~ is the card\'s own name); t: type; c: colors; id<= color identity; mv<=3; pow>tou; kw:flying; tag:ramp|draw|removal|wipe|counter|tutor|protection; theme:counters|tokens|sacrifice|graveyard|artifacts|enchantments|lifegain|spells|landfall|equipment; is:commander, is:shockland and other land cycles; usd<2; own>0; or, -, parentheses. Call get_search_guide for everything.';
 
@@ -42,7 +48,11 @@ export const searchForDeckTool = defineTool({
             .min(1)
             .max(60)
             .describe('What this query looks for: "Treasure makers".'),
-          search: z.string().min(1).max(300).describe("The card search, in the search syntax."),
+          search: z
+            .string()
+            .min(1)
+            .max(SEARCH_MAX_LENGTH)
+            .describe("The card search, in the search syntax."),
         }),
       )
       .min(1)
@@ -105,19 +115,30 @@ export const searchCards = defineTool({
   name: "search_cards",
   title: "Search cards",
   description: [
-    "One card search with no deck rules, in your collection or the store. Paged, 60 cards at a time.",
+    "One card search with no deck rules, in your collection or the store. Paged, 60 cards at a time. In the store each card shows once, as its cheapest printing (set oneRowPerCard false to list every printing).",
+    'Use it to check many cards at once by name: "Craterhoof Behemoth" or "Doubling Season" or "Skullclamp".',
     "Use it when: looking up cards outside a deck's context, or checking what a search finds. For a deck, use search_for_deck: it applies the deck's colors and legality and merges several searches.",
     SYNTAX_SUMMARY,
   ].join("\n"),
   scope: "read",
   readOnly: true,
   input: z.object({
-    search: z.string().min(1).max(300).describe("The card search, in the search syntax."),
+    search: z
+      .string()
+      .min(1)
+      .max(SEARCH_MAX_LENGTH)
+      .describe("The card search, in the search syntax."),
     where: z
       .enum(["owned", "store"])
       .default("store")
       .describe('"owned": your collection; "store": everything for sale in this app.'),
     page: z.number().int().min(1).default(1).describe("Which page, from 1."),
+    oneRowPerCard: z
+      .boolean()
+      .default(true)
+      .describe(
+        "Store only: each card once, as its cheapest printing. False lists every printing.",
+      ),
   }),
   async run(context, input) {
     const { db } = context.container;
@@ -155,6 +176,7 @@ export const searchCards = defineTool({
       search: input.search,
       sort: "name",
       page: input.page,
+      oneRowPerCard: input.oneRowPerCard,
     });
     const ids = result.printingIds;
     const cards = await printingCards(db, ids);
@@ -201,7 +223,7 @@ export const analyzeCards = defineTool({
       .describe("A deck to analyze (its commander and main deck). Give this or search."),
     search: z
       .string()
-      .max(300)
+      .max(SEARCH_MAX_LENGTH)
       .default("")
       .describe('Or: your cards matching a search, such as "id<=g" for everything green you own.'),
     minimumCards: z

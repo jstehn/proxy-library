@@ -38,8 +38,20 @@ export type ResolvedCard = Readonly<{
   namedPrinting: boolean;
 }>;
 
-/** Whose copies count when choosing a printing: game ones, plus real ones if the deck uses them. */
-export type ResolveOptions = Readonly<{ includeReal: boolean }>;
+/**
+ * Which printing a line that names no printing (and that you own no copy of) gets: the card's
+ * standard printing (design doc 24), or its cheapest one in the store, so a deck built to buy
+ * costs as little as it can.
+ */
+export type UnnamedPrinting = "standard" | "cheapest";
+
+/** How to choose a printing for each line of a list. */
+export type ResolveOptions = Readonly<{
+  /** Whose copies count: game ones, plus real ones if the deck uses them. */
+  includeReal: boolean;
+  /** The printing for an unowned line that names none. */
+  unnamedPrinting: UnnamedPrinting;
+}>;
 
 export type CardQuery = Readonly<{
   name: string;
