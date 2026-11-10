@@ -1,7 +1,7 @@
 # Lessons
 
 A course in TypeScript and software design, taught through building this project. Each lesson
-matches one phase of the [roadmap](../docs/roadmap.md) and assumes you know **Python and SQL**, so
+matches a phase of the [roadmap](../docs/roadmap.md) that taught something new (ADR 0023) and assumes you know **Python and SQL**, so
 new ideas are compared to their Python equivalents wherever one exists.
 
 | #   | Lesson                                                                                   | You'll learn                                                                                                                                                                                                                                                                                                                 |

@@ -3,6 +3,10 @@
 - **Phase:** N
 - **Status:** Draft → In review → **Approved** (implementation starts only after approval)
 - **Related ADRs:** 000X, 000Y
+- **Lesson:** yes (topics) | no
+
+For big features only; a small feature gets a short plan in its tududi task (ADR 0023). Delete
+any section below that doesn't apply instead of writing "none".
 
 ## 1. Purpose & scope
 

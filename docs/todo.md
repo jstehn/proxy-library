@@ -14,8 +14,9 @@ ideas that come up mid-feature go to tududi's **inbox** and wait.
 Don't use the **Planned** status: the kanban board has no column for it, so planned tasks
 don't show up anywhere.
 
-When a feature is picked up it gets a design doc as usual (docs/roadmap.md). Its task is done
-when the phase's lesson is written and the work is committed.
+When a feature is picked up it gets a design doc (big feature) or a short plan in the task's
+note (small feature), approved before any code (docs/roadmap.md, ADR 0023). Its task is done when
+the work is committed, along with its lesson if the plan said "Lesson: yes".
 
 [future-ideas.md](future-ideas.md) stays as the record of deferred ideas and known limits that
 design docs link to. Its items are also on the board as `someday` tasks; when one is picked up,
@@ -38,7 +39,7 @@ example the recommendation improvements behind "Card ratings for recommendations
 3. Once the doc is approved, break it into tasks, one per step that ends in a commit (a
    migration, a domain function and its tests, a page, a tool). Use subtasks for checklist
    items inside a step. Link the design doc section in each task's note.
-4. Add the closing tasks: **Lesson NN**, and anything the doc's rollout section lists (a sync
+4. Add the closing tasks: **Lesson NN** if the doc says "Lesson: yes", and anything the doc's rollout section lists (a sync
    run, a worker check).
 5. Set the backlog task to **Cancelled** with the note "Became project <name>". If it had
    subtasks, they become tasks in the new project, or get dropped there on purpose.
@@ -54,7 +55,7 @@ example the recommendation improvements behind "Card ratings for recommendations
 
 **Finishing it**
 
-When every task is done, the lesson is written and the work is committed, set the project to
+When every task is done, any lesson is written and the work is committed, set the project to
 **Done**. Leftover ideas go back to the backlog as `someday` tasks (and to
 [future-ideas.md](future-ideas.md) if a design doc links to them).
 

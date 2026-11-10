@@ -8,3 +8,5 @@ AGENTS.md
 tests/fixtures/wpn/
 # Claude Code's own per-machine settings, rewritten by the tool
 .claude/settings.local.json
+# Written by drizzle-kit (`pnpm db:generate`), never by hand
+drizzle/meta/

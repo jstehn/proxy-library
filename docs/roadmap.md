@@ -1,7 +1,7 @@
 # Roadmap
 
-The source of truth for build order. Each phase produces one lesson (`lessons/NN-*.md`) and ends
-with a commit.
+The source of truth for build order. Each phase ends with a commit, and with a lesson
+(`lessons/NN-*.md`) when it teaches something new.
 
 ## The loop every phase follows
 
@@ -13,19 +13,24 @@ flowchart LR
   T --> A[4. Application<br/>use cases + fakes]
   A --> I[5. Infrastructure<br/>adapters + contract tests]
   I --> U[6. UI<br/>thin controllers + views]
-  U --> L[7. Lesson + ADR updates]
+  U --> L[7. Lesson if planned + ADR updates]
   L --> C[8. pnpm check → commit]
 ```
 
-1. **Design:** fill in [`design/TEMPLATE.md`](design/TEMPLATE.md) (types, invariants, use cases,
-   ports, state machines, tables, test plan, open questions). New cross-cutting decisions become
-   ADRs.
-2. **Review gate:** no implementation code until you approve the design doc.
+1. **Design**, sized to the feature (ADR 0023):
+   - **Big feature** (a new table, module or port, a cross-cutting decision, or work across
+     modules): fill in [`design/TEMPLATE.md`](design/TEMPLATE.md), deleting sections that don't
+     apply.
+   - **Small feature:** a short plan in the tududi task's note: what changes, which files, the
+     tests, open questions.
+   - Either way, say "Lesson: yes (topics)" or "Lesson: no". New cross-cutting decisions become
+     ADRs.
+2. **Review gate:** no implementation code until you approve the design doc or plan.
 3. **Domain first**, test-driven: pure functions and property tests.
 4. **Application:** use-case factories, tested against in-memory fakes.
 5. **Infrastructure:** Drizzle repos and gateways, plus contract and integration tests.
 6. **UI:** server actions (parse → actor → use case → map Result) and views.
-7. **Lesson:** a real lesson that teaches the phase's concepts, **not** a log of what was built.
+7. **Lesson** (only if the plan says yes): a real lesson that teaches the phase's concepts, **not** a log of what was built.
    It follows the format in [`lessons/README.md`](../lessons/README.md): objectives, concepts built
    up simple → complex with Python comparisons and real repo code, common mistakes, graded
    exercises with verified solutions, a recap, and further reading.

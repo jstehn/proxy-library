@@ -4,11 +4,11 @@
 
 Self-hosted web app simulating an MTG collection: buy/open virtual sealed product, singles store,
 wallet ledger, deck builder (owned cards only), trades. Also a TypeScript learning project for a
-Python/SQL developer: `lessons/NN-*.md` has one lesson per build phase. Lessons **teach concepts**
-(objectives → concepts with Python comparisons → mistakes → exercises with verified solutions →
-recap), following `lessons/README.md`. They are not changelogs. Write or update the phase's lesson
-when finishing it, verify every exercise solution compiles and passes, and commit at the end of
-each lesson.
+Python/SQL developer: `lessons/NN-*.md` has a lesson for each build phase that teaches something new
+(ADR 0023). Lessons **teach concepts** (objectives → concepts with Python comparisons → mistakes →
+exercises with verified solutions → recap), following `lessons/README.md`. They are not changelogs.
+When the approved plan says "Lesson: yes", write or update the phase's lesson when finishing it,
+verify every exercise solution compiles and passes, and commit at the end of each lesson.
 
 ## Architecture: read before writing code
 
@@ -18,9 +18,11 @@ each lesson.
   roots in `src/server/` and `worker/`. See `docs/architecture/overview.md`.
 - Pattern choices: `docs/architecture/patterns.md`. Rules and naming:
   `docs/architecture/conventions.md`. Tests: `docs/architecture/testing.md`. Why: `docs/adr/`.
-- **Process:** every phase starts with a design doc (`docs/design/NN-*.md` from the template) and
-  the user must approve it **before** implementation code is written. New cross-cutting decisions
-  become ADRs.
+- **Process (ADR 0023):** a big feature (new table, module or port, cross-cutting decision, or work
+  across modules) starts with a design doc (`docs/design/NN-*.md` from the template); a small one
+  with a short plan in its tududi task. The user must approve it **before** implementation code is
+  written. Each says "Lesson: yes (topics)" or "Lesson: no". New cross-cutting decisions become
+  ADRs.
 - **Task board:** the Proxy Library project in tududi, via the `tududi` MCP server (`.mcp.json`,
   key in `.envrc.local`). One feature in progress at a time; new ideas mid-feature go to tududi's
   inbox, not into the current work. See `docs/todo.md`.
@@ -54,7 +56,8 @@ each lesson.
   and `@/shared/card-search/sql` (queries only), ADR 0017.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
-- Commands: `pnpm check` (typecheck + lint + format + unit tests; must pass before commit),
+- Commands: `pnpm check` (typecheck + lint + cycles + format + unit tests, in parallel and cached
+  by `scripts/check.sh`; must pass before commit),
   `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
   (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
   (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs

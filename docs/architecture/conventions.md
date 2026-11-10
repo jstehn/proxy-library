@@ -124,9 +124,11 @@ over the clever one.
 
 - Comments explain **why**, not what. Public functions in `index.ts` get a one-line TSDoc.
 - A non-obvious decision gets an ADR, not a long comment.
-- When a phase is finished, its lesson (`lessons/NN-*.md`) is updated.
+- When a phase that teaches something new is finished, its lesson (`lessons/NN-*.md`) is written
+  or updated (ADR 0023).
 
 ## Git
 
-- Small commits with imperative subject lines. At least one commit at the end of each lesson.
-- Each commit passes `pnpm check` (typecheck + lint + format + unit tests).
+- Small commits with imperative subject lines. At least one commit at the end of each phase.
+- Each commit passes `pnpm check` (typecheck + lint + cycles + format + unit tests, run in parallel
+  and cached; `rm -rf node_modules/.cache` forces a full run).
