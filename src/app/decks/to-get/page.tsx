@@ -3,6 +3,7 @@ import { cardsToGetFor } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { WishForShortForm } from "../../wishlist/wish-forms";
 
 // Decks → Cards to get (design doc 21): every card your decks need beyond what you own. One copy
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
@@ -43,6 +44,7 @@ export default async function CardsToGetPage() {
             >
               Buy them all
             </Link>
+            <WishForShortForm label="Wish for them all" look="button" />
           </div>
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-zinc-500">
@@ -87,7 +89,9 @@ export default async function CardsToGetPage() {
           </table>
           <p className="text-xs text-zinc-500">
             &quot;Buy them all&quot; opens Buy a list with these cards filled in, where you can
-            check each line and choose printings before anything is bought.
+            check each line and choose printings before anything is bought. &quot;Wish for them
+            all&quot; puts each card on your wishlist in any printing, at the cheapest price, and
+            leaves alone a card you already wished for in a finish or printing you chose.
           </p>
         </>
       )}

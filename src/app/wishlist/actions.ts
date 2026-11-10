@@ -2,8 +2,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { cardsToGetFor, deckProblems, deckView } from "@/modules/decks";
 import {
   WishId,
+  type CardNeed,
+  type WishedForCards,
   type AddWishError,
   type BuyWishError,
   type UpdateWishError,
@@ -12,7 +15,7 @@ import {
 } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { assertNever, Cents, type Result } from "@/shared/kernel";
+import { assertNever, Cents, type Result, type UserId } from "@/shared/kernel";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
 // Wishlist page both use these.
@@ -148,6 +151,78 @@ export async function buyWishAction(_previous: WishState, formData: FormData): P
     redirect(`/wishlist?${query.toString()}`);
   }
   return { message: `Bought for ${Cents.format(receipt.total)}.`, tone: "success" };
+}
+
+const DeckIdForm = z.coerce.number().int().positive();
+
+/**
+ * "Wish for them all" on Cards to get, and "Wish for what it's short" on a deck (task 71). The
+ * cards are worked out again here: the form says only which deck, or none for all of them.
+ */
+export async function wishForShortCardsAction(
+  _previous: WishState,
+  formData: FormData,
+): Promise<WishState> {
+  const actor = await requireActor();
+  const rawDeckId = formData.get("deckId");
+  let needs: CardNeed[];
+  if (rawDeckId === null) {
+    needs = await allDecksNeed(actor.userId);
+  } else {
+    const deckId = DeckIdForm.safeParse(rawDeckId);
+    const forDeck = deckId.success ? await deckNeeds(actor.userId, deckId.data) : null;
+    if (forDeck === null) return { message: "That deck is gone.", tone: "error" };
+    needs = forDeck;
+  }
+  if (needs.length === 0)
+    return { message: "Nothing to wish for: you own it all.", tone: "success" };
+
+  const result = await getContainer().wishlist.wishForCards(actor, needs);
+  if (!result.ok) return { message: "A card isn't in the catalog any more.", tone: "error" };
+  refresh();
+  return { message: wishedMessage(result.value), tone: "success" };
+}
+
+/** Each card your decks are short of, at the copies the hungriest deck uses (design doc 21). */
+async function allDecksNeed(userId: UserId): Promise<CardNeed[]> {
+  const toGet = await cardsToGetFor(getContainer().db, userId);
+  return toGet.cards.map((card) => ({ oracleId: card.oracleId, quantity: card.needed }));
+}
+
+/**
+ * The cards one deck is short of, as game copies: a wish counts only those, so the real copies
+ * a deck may use (design doc 16) come off what it needs. Null when it isn't your deck.
+ */
+async function deckNeeds(userId: UserId, deckId: number): Promise<CardNeed[] | null> {
+  const view = await deckView(getContainer().db, userId, deckId);
+  if (view === null) return null;
+  const lineOf = (oracleId: string) => view.lines.find((line) => line.oracleId === oracleId);
+  const problems = deckProblems(
+    view.deck,
+    (oracleId) => view.rules[oracleId],
+    (oracleId) => lineOf(oracleId)?.owned ?? 0,
+  );
+  return problems.flatMap((problem): CardNeed[] =>
+    problem.kind === "Short"
+      ? [
+          {
+            oracleId: problem.oracleId,
+            quantity: problem.needed - (lineOf(problem.oracleId)?.ownedReal ?? 0),
+          },
+        ]
+      : [],
+  );
+}
+
+function wishedMessage(wished: WishedForCards): string {
+  const { added, raised, unchanged, skipped } = wished;
+  const parts: string[] = [];
+  if (added > 0) parts.push(`added ${added} ${added === 1 ? "wish" : "wishes"}`);
+  if (raised > 0) parts.push(`asked for more copies on ${raised}`);
+  if (unchanged > 0) parts.push(`${unchanged} already on your wishlist`);
+  if (skipped > 0) parts.push(`${skipped} didn't fit: your wishlist is full`);
+  const sentence = parts.join(", ");
+  return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
 }
 
 function addMessage(error: AddWishError): string {

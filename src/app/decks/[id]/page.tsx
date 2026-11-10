@@ -14,6 +14,7 @@ import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
+import { WishForShortForm } from "../../wishlist/wish-forms";
 import {
   deleteDeckAction,
   importListAction,
@@ -121,7 +122,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{deck.name}</h1>
-          <p className="text-sm text-zinc-500">
+          <div className="text-sm text-zinc-500">
             {FORMAT_LABELS[deck.format]} ·{" "}
             <a href="#edit-as-text" className="underline">
               Edit as text
@@ -138,11 +139,11 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             <Link href={`/singles/list?deck=${deck.id}`} className="underline">
               Buy what it&apos;s short
             </Link>{" "}
-            ·{" "}
+            · <WishForShortForm deckId={deck.id} label="Wish for what it's short" look="link" /> ·{" "}
             <Link href="/decks" className="underline">
               All decks
             </Link>
-          </p>
+          </div>
         </div>
         <form action={setVisibilityAction} className="flex items-center gap-2 text-sm">
           <input type="hidden" name="deckId" value={deck.id} />

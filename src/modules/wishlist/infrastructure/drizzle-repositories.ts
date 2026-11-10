@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { FINISHES } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
@@ -45,6 +45,15 @@ export function drizzleWishRepository(db: DbExecutor): WishRepository {
     async findByTarget(userId, target) {
       const [row] = await db.select().from(wishes).where(targetCondition(userId, target));
       return row === undefined ? null : wishFromStored(row);
+    },
+
+    async forCards(userId, oracleIds) {
+      if (oracleIds.length === 0) return [];
+      const rows = await db
+        .select()
+        .from(wishes)
+        .where(and(eq(wishes.userId, userId), inArray(wishes.oracleId, [...oracleIds])));
+      return rows.map(wishFromStored);
     },
 
     async count(userId) {
@@ -108,7 +117,16 @@ export function drizzleWishCatalog(db: DbExecutor): WishCatalog {
         finishes: FINISHES.filter((finish) => row.finishes.includes(finish)),
       };
     },
+    async knownCards(oracleIds) {
+      if (oracleIds.length === 0) return new Set();
+      const rows = await db
+        .selectDistinct({ oracleId: printings.oracleId })
+        .from(printings)
+        .where(inArray(printings.oracleId, [...oracleIds]));
+      return new Set(rows.map((row) => row.oracleId));
+    },
     forSale: (oracleId) => offersOf(db, [oracleId]),
+    forSaleOfCards: (oracleIds) => offersOf(db, oracleIds),
     owned: (userId, oracleId) => ownedOf(db, userId, [oracleId]),
   };
 }

@@ -155,3 +155,32 @@ describe("buying from the wishlist", () => {
     expect(await count("collection_cards", "user_id = 'jack'")).toBe(0);
   });
 });
+
+describe("wishing for many cards at once (task 71)", () => {
+  it("adds a cheapest wish at today's price, raises it, and refuses an unknown card", async () => {
+    const regular = await printingOf("Dawn's Truce", "9");
+    const oracle = await db.execute<{ oracle_id: string }>(
+      sql`select oracle_id from printings where id = ${regular}`,
+    );
+    const oracleId = oracle.rows[0].oracle_id;
+
+    expect(await wishlist.wishForCards(jack, [{ oracleId, quantity: 2 }])).toEqual({
+      ok: true,
+      value: { added: 1, raised: 0, unchanged: 0, skipped: 0 },
+    });
+    const [wish] = await wishesForCard(db, jack.userId, regular);
+    expect(wish).toMatchObject({
+      target: { kind: "anyPrinting", finish: "cheapest" },
+      quantity: 2,
+      savedPrice: 956, // "cheapest" takes the foil, which costs less than #9's nonfoil
+    });
+
+    expect(await wishlist.wishForCards(jack, [{ oracleId, quantity: 3 }])).toMatchObject({
+      value: { raised: 1 },
+    });
+    expect(await wishlist.wishForCards(jack, [{ oracleId: "not-a-card", quantity: 1 }])).toEqual(
+      err({ kind: "CardNotFound" }),
+    );
+    expect((await wishesForCard(db, jack.userId, regular))[0].quantity).toBe(3);
+  });
+});

@@ -304,6 +304,64 @@ describe("buyWish", () => {
   });
 });
 
+describe("wishForCards (task 71)", () => {
+  it("adds cheapest wishes at today's cheapest price, raises one, leaves a chosen finish", async () => {
+    const foilBolt = await added({ kind: "anyPrinting", printingId: "bolt", finish: "foil" });
+    const result = await wishlist.wishForCards(jack, [
+      { oracleId: "cleaver", quantity: 2 },
+      { oracleId: "bolt", quantity: 4 },
+    ]);
+    expect(result).toEqual({ ok: true, value: { added: 1, raised: 0, unchanged: 1, skipped: 0 } });
+    const cleaver = wishes.all().find((wish) => wish.target.oracleId === "cleaver");
+    expect(cleaver).toMatchObject({
+      target: { kind: "anyPrinting", oracleId: "cleaver", finish: "cheapest" },
+      quantity: 2,
+      savedPrice: 2384,
+      createdAt: now,
+    });
+    expect(wishes.all().find((wish) => wish.id === foilBolt.id)).toEqual(foilBolt);
+
+    const again = await wishlist.wishForCards(jack, [{ oracleId: "cleaver", quantity: 3 }]);
+    expect(again).toEqual({ ok: true, value: { added: 0, raised: 1, unchanged: 0, skipped: 0 } });
+    expect(wishes.all().find((wish) => wish.id === cleaver?.id)?.quantity).toBe(3);
+  });
+
+  it("keeps a raised wish's target price and note", async () => {
+    const wish = await added(
+      { kind: "anyPrinting", printingId: "m3c", finish: "cheapest" },
+      { quantity: 1, targetPrice: Cents.of(2000), note: "for Lorehold" },
+    );
+    await wishlist.wishForCards(jack, [{ oracleId: "cleaver", quantity: 2 }]);
+    expect(wishes.all()).toEqual([{ ...wish, quantity: 2 }]);
+  });
+
+  it("refuses a card the catalog doesn't have, and changes nothing", async () => {
+    const result = await wishlist.wishForCards(jack, [
+      { oracleId: "cleaver", quantity: 1 },
+      { oracleId: "nope", quantity: 1 },
+    ]);
+    expect(result).toEqual(err({ kind: "CardNotFound" }));
+    expect(wishes.all()).toEqual([]);
+  });
+
+  it("adds what fits on a nearly full wishlist (rule 2)", async () => {
+    for (let index = 0; index < 499; index++) {
+      await wishes.insert({
+        userId: jack.userId,
+        target: { kind: "anyPrinting", oracleId: `card-${index}`, finish: "nonfoil" },
+        ...ONE,
+        savedPrice: null,
+        createdAt: now,
+      });
+    }
+    const result = await wishlist.wishForCards(jack, [
+      { oracleId: "cleaver", quantity: 1 },
+      { oracleId: "bolt", quantity: 1 },
+    ]);
+    expect(result).toEqual({ ok: true, value: { added: 1, raised: 0, unchanged: 0, skipped: 1 } });
+  });
+});
+
 describe("deleteWishlist", () => {
   it("deletes every wish of one player (part of a reset)", async () => {
     await added();

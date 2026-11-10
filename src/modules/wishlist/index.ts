@@ -2,6 +2,8 @@
 // may import.
 export { makeWishlist, type Wishlist } from "./application/make-wishlist";
 export type { BoughtWish, BuyWishError, BuyWishInput } from "./application/buy-wish";
+export type { WishedForCards } from "./application/wish-for-cards";
+export type { CardNeed } from "./domain/card-wishes";
 export {
   deleteWishlist,
   type AddedWish,

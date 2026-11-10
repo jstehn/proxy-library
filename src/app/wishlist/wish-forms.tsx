@@ -1,11 +1,18 @@
 "use client";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { Finish } from "@/modules/catalog";
 import type { FinishPreference, Offer, Wish } from "@/modules/wishlist";
 import { Cents } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
-import { addWishAction, buyWishAction, updateWishAction, type WishState } from "./actions";
+import {
+  addWishAction,
+  buyWishAction,
+  updateWishAction,
+  wishForShortCardsAction,
+  type WishState,
+} from "./actions";
 import { FINISH_NAMES, offerLabel } from "./labels";
 
 // The wishlist's forms (design doc 26, section 9): buying a wish, changing it, and adding one
@@ -242,6 +249,50 @@ export function RemoveWishButton() {
       className="text-sm text-zinc-600 underline disabled:opacity-60 dark:text-zinc-400"
     >
       {pending ? "Removing…" : "Remove"}
+    </button>
+  );
+}
+
+/**
+ * "Wish for them all" (every deck, no `deckId`) or "Wish for what it's short" (one deck), with
+ * what it did next to it (task 71). `look` "link" fits in a line of links.
+ */
+export function WishForShortForm(props: {
+  deckId?: number;
+  label: string;
+  look: "button" | "link";
+}) {
+  const [state, formAction] = useActionState(wishForShortCardsAction, initialState);
+  return (
+    <form action={formAction} className="inline">
+      {props.deckId !== undefined && <input type="hidden" name="deckId" value={props.deckId} />}
+      <WishForShortButton label={props.label} look={props.look} />
+      {state.message && (
+        <span
+          role="status"
+          className={`ml-2 text-xs ${state.tone === "error" ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}
+        >
+          {state.message}{" "}
+          {state.tone === "success" && (
+            <Link href="/wishlist" className="underline">
+              Your wishlist
+            </Link>
+          )}
+        </span>
+      )}
+    </form>
+  );
+}
+
+function WishForShortButton(props: { label: string; look: "button" | "link" }) {
+  const { pending } = useFormStatus();
+  const className =
+    props.look === "link"
+      ? "underline disabled:opacity-60"
+      : "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-60 dark:border-zinc-700";
+  return (
+    <button type="submit" disabled={pending} className={className}>
+      {pending ? "Adding…" : props.label}
     </button>
   );
 }

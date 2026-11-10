@@ -17,6 +17,8 @@ export interface WishRepository {
   find(wishId: WishId, userId: UserId): Promise<Wish | null>;
   /** The player's wish for this target, if they have one (rule 1). */
   findByTarget(userId: UserId, target: WishTarget): Promise<Wish | null>;
+  /** The player's wishes for any of these cards, every kind of target. */
+  forCards(userId: UserId, oracleIds: readonly string[]): Promise<Wish[]>;
   count(userId: UserId): Promise<number>;
   insert(wish: NewWish): Promise<Wish>;
   /** Saves new details for an existing wish. */
@@ -33,8 +35,12 @@ export type PrintingFacts = Readonly<{ oracleId: string; finishes: readonly Fini
 export interface WishCatalog {
   /** Null for an unknown printing. */
   printing(printingId: string): Promise<PrintingFacts | null>;
+  /** Which of these cards (oracle ids) the catalog has. */
+  knownCards(oracleIds: readonly string[]): Promise<Set<string>>;
   /** Every printing of this card for sale today, in every finish. */
   forSale(oracleId: string): Promise<Offer[]>;
+  /** The same for many cards at once, in one query. */
+  forSaleOfCards(oracleIds: readonly string[]): Promise<Offer[]>;
   /** What the player owns of this card, every printing and finish. */
   owned(userId: UserId, oracleId: string): Promise<OwnedStack[]>;
 }

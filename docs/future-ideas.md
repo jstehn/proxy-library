@@ -49,8 +49,9 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Bulk selling:** "sell everything above 4 copies" or "sell all commons under $0.10", with a
   preview of the payout.
 - ~~**Wishlist**~~ **Done (design doc 26).** Still open: price alerts outside the app (e-mail
-  isn't set up), "add a deck's missing cards to the wishlist" from its cards-to-get panel, and
-  sharing a wishlist with the playgroup for trades.
+  isn't set up) and sharing a wishlist with the playgroup for trades. Wishing for a deck's
+  missing cards is done (task 71: "Wish for them all" on Cards to get, "Wish for what it's
+  short" on a deck).
 
 ## Decks
 

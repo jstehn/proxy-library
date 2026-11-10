@@ -16,6 +16,11 @@ export function inMemoryWishRepository() {
     async findByTarget(userId, target) {
       return rows.find((wish) => wish.userId === userId && sameTarget(wish.target, target)) ?? null;
     },
+    async forCards(userId, oracleIds) {
+      return rows.filter(
+        (wish) => wish.userId === userId && oracleIds.includes(wish.target.oracleId),
+      );
+    },
     async count(userId) {
       return rows.filter((wish) => wish.userId === userId).length;
     },
@@ -52,8 +57,15 @@ export function inMemoryWishCatalog(tables: {
     async printing(printingId) {
       return tables.printings[printingId] ?? null;
     },
+    async knownCards(oracleIds) {
+      const known = new Set(Object.values(tables.printings).map((facts) => facts.oracleId));
+      return new Set(oracleIds.filter((oracleId) => known.has(oracleId)));
+    },
     async forSale(oracleId) {
       return tables.forSale.filter((offer) => offer.oracleId === oracleId);
+    },
+    async forSaleOfCards(oracleIds) {
+      return tables.forSale.filter((offer) => oracleIds.includes(offer.oracleId));
     },
     async owned(userId, oracleId) {
       return tables.ownedBy(userId).filter((stack) => stack.oracleId === oracleId);
