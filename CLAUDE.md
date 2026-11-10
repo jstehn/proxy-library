@@ -21,6 +21,9 @@ each lesson.
 - **Process:** every phase starts with a design doc (`docs/design/NN-*.md` from the template) and
   the user must approve it **before** implementation code is written. New cross-cutting decisions
   become ADRs.
+- **Task board:** the Proxy Library project in tududi, via the `tududi` MCP server (`.mcp.json`,
+  key in `.envrc.local`). One feature in progress at a time; new ideas mid-feature go to tududi's
+  inbox, not into the current work. See `docs/todo.md`.
 
 ## Environment
 

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tududi": {
+      "type": "http",
+      "url": "${TUDUDI_URL}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${TUDUDI_API_KEY}"
+      }
+    }
+  }
+}
