@@ -21,6 +21,14 @@ design doc (or joins a phase's design) and is removed from this list.
     statistical test, and `check-packs` checks it on real data.
   - Other rules to look for in the same pass: guaranteed "one of each" slots, serialized-card
     odds printed on the box, and Jumpstart theme packs (MTGJSON uses fixed sheets for these).
+  - **Survey (2026-11-10, task 60): no enabled set needs one.** `check-packs 300` passes on
+    all 530 recipes (159,000 packs). Jumpstart (JMP, J22, J25) is 121 fixed 20-card lists over
+    46 themes, equally likely, each with a rare or mythic, and every J25 list holds an
+    anime-art card (#30–80), as Wizards describes. The set Jumpstart packs (DMU, BRO, ONE,
+    MOM) are a fixed theme list plus a random rare of its color. Serialized cards are on the
+    collector sheets of the 11 enabled sets that have them (0.007% to 1.5% of packs). Sets with
+    serialized cards but no recipe (LTR, MH3, RVR, ACR, INR) aren't enabled. Revisit this when
+    a new set is enabled and `check-packs` or its box odds disagree.
 - **Animated foil effects** beyond the still sheen: Phase 8 adds the animated shimmer on reveal.
   A later pass could show different foil treatments (surge, galaxy, fracture foil) differently,
   using the printing's promo types.
