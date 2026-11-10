@@ -82,8 +82,14 @@ Clients that only start local (stdio) MCP servers connect through the `mcp-remot
 
 From outside your network, serve the app over **HTTPS** (above): the token travels in a header.
 No token can buy, sell, open packs, trade or delete anything; an admin password reset or
-disabling a player revokes that player's tokens. Web connectors that accept only OAuth
-(claude.ai, ChatGPT on the web) can't connect yet.
+disabling a player revokes that player's tokens.
+
+**Web connectors** (claude.ai's **Settings → Connectors → Add custom connector**, ChatGPT on the
+web) sign in with OAuth instead (design doc 30): give them `https://proxylib.example.com/api/mcp`
+and nothing else. They register themselves, send you to an approval page where you choose what
+they may do, and get an ordinary access token, listed and revoked on **Account → Access
+tokens**. The app must be reachable from the internet over HTTPS, and `APP_URL` must be its
+public address (the OAuth endpoints are built from it).
 
 ## Deploying to a Portainer server
 

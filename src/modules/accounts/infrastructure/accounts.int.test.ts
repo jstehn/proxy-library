@@ -13,6 +13,7 @@ import { betterAuthIdentityProvider } from "./better-auth-identity-provider";
 import {
   drizzleAccessTokenRepository,
   drizzleInviteRepository,
+  drizzleOAuthRepository,
   drizzlePlayerRepository,
 } from "./drizzle-repositories";
 
@@ -27,6 +28,7 @@ function buildAccounts() {
       players: drizzlePlayerRepository(transaction),
       invites: drizzleInviteRepository(transaction),
       accessTokens: drizzleAccessTokenRepository(transaction),
+      oauth: drizzleOAuthRepository(transaction),
     })),
     identity,
     secrets: sequentialSecretGenerator(),

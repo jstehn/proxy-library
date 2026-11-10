@@ -6,11 +6,13 @@ import type { Password, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
 import type { Player } from "../domain/player";
 import { AccessTokenId, type AccessToken } from "../domain/access-token";
+import type { AuthorizationCode, OAuthClient } from "../domain/oauth";
 import type {
   AccessTokenRepository,
   AccountsServices,
   IdentityProvider,
   InviteRepository,
+  OAuthRepository,
   PlayerRepository,
   SecretGenerator,
 } from "../application/ports";
@@ -62,22 +64,27 @@ export function inMemoryInviteRepository(): InviteRepository {
 }
 
 export function inMemoryAccessTokenRepository(): AccessTokenRepository {
-  const tokens = new Map<AccessTokenId, { token: AccessToken; hash: string }>();
+  type Stored = { token: AccessToken; hash: string; clientId: string | null };
+  const tokens = new Map<AccessTokenId, Stored>();
   let nextId = 1;
   const live = () => [...tokens.values()].filter((stored) => stored.token.revokedAt === null);
 
   return {
-    async countLive(userId) {
-      return live().filter((stored) => stored.token.userId === userId).length;
+    async countLive(userId, exceptClientId) {
+      return live().filter(
+        (stored) =>
+          stored.token.userId === userId &&
+          (exceptClientId === undefined || stored.clientId !== exceptClientId),
+      ).length;
     },
-    async insert({ hash, ...rest }) {
+    async insert({ hash, oauthClientId, ...rest }) {
       const token: AccessToken = {
         ...rest,
         id: AccessTokenId.of(nextId++),
         lastUsedAt: null,
         revokedAt: null,
       };
-      tokens.set(token.id, { token, hash });
+      tokens.set(token.id, { token, hash, clientId: oauthClientId ?? null });
       return token;
     },
     async findLiveByHash(hash) {
@@ -107,6 +114,38 @@ export function inMemoryAccessTokenRepository(): AccessTokenRepository {
       if (stored !== undefined) {
         tokens.set(id, { ...stored, token: { ...stored.token, lastUsedAt: at } });
       }
+    },
+    async revokeForClient(userId, clientId, at) {
+      const theirs = live().filter(
+        (stored) => stored.token.userId === userId && stored.clientId === clientId,
+      );
+      for (const stored of theirs) {
+        tokens.set(stored.token.id, { ...stored, token: { ...stored.token, revokedAt: at } });
+      }
+      return theirs.length;
+    },
+  };
+}
+
+export function inMemoryOAuthRepository(): OAuthRepository {
+  const clients = new Map<string, OAuthClient>();
+  const codes = new Map<string, { code: AuthorizationCode; used: boolean }>();
+
+  return {
+    async insertClient(client) {
+      clients.set(client.clientId, client);
+    },
+    async findClient(clientId) {
+      return clients.get(clientId) ?? null;
+    },
+    async insertCode(hash, code) {
+      codes.set(hash, { code, used: false });
+    },
+    async takeCode(hash, now) {
+      const stored = codes.get(hash);
+      if (stored === undefined || stored.used || stored.code.expiresAt <= now) return null;
+      codes.set(hash, { ...stored, used: true });
+      return stored.code;
     },
   };
 }
@@ -226,6 +265,7 @@ export function inMemoryAccountsServices(): AccountsServices {
     players: inMemoryPlayerRepository(),
     invites: inMemoryInviteRepository(),
     accessTokens: inMemoryAccessTokenRepository(),
+    oauth: inMemoryOAuthRepository(),
   };
 }
 

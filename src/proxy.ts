@@ -1,16 +1,30 @@
 // Runs before every matching request (Next 16's name for middleware).
 // Only a quick cookie-presence check: pages and actions do the real permission checks.
 import { NextResponse, type NextRequest } from "next/server";
+import { signInPathFor } from "@/server/next-path";
 import { hasSessionCookie } from "@/server/session-cookie";
 
 /** Pages anyone may open without signing in. The LLM tool endpoints sign in with a bearer
  * token instead of the cookie, and check it themselves (design doc 28). */
-const PUBLIC_PATHS = ["/sign-in", "/register", "/api/health", "/api/mcp", "/api/tools"];
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/register",
+  "/api/health",
+  "/api/mcp",
+  "/api/tools",
+  // OAuth for web connectors (design doc 30): discovery, registration and the token swap.
+  "/.well-known/oauth-",
+  "/api/oauth/",
+];
 
 export function proxy(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
   if (isPublic || hasSessionCookie(request.headers)) return NextResponse.next();
-  return NextResponse.redirect(new URL("/sign-in", request.url));
+  // Come back here after signing in (the OAuth approval page needs its query string).
+  const next = request.nextUrl.pathname + request.nextUrl.search;
+  return NextResponse.redirect(
+    new URL(next === "/" ? "/sign-in" : signInPathFor(next), request.url),
+  );
 }
 
 export const config = {

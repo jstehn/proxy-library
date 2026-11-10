@@ -1,5 +1,6 @@
 import "server-only";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { resourceMetadataUrl } from "@/app/_oauth/http";
 import { getContainer } from "@/server/container";
 import { makeMcpServer } from "./mcp";
 import { callTool, problemMessage } from "./registry";
@@ -24,7 +25,13 @@ export function unauthorized(): Response {
           "Send an access token as Authorization: Bearer pl_… (make one on your Account page in Proxy Library).",
       },
     },
-    { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="proxy-library"' } },
+    {
+      status: 401,
+      headers: {
+        // Where a web connector finds out how to sign in with OAuth (design doc 30).
+        "WWW-Authenticate": `Bearer realm="proxy-library", resource_metadata="${resourceMetadataUrl()}"`,
+      },
+    },
   );
 }
 

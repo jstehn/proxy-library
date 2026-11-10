@@ -6,6 +6,7 @@ export { cryptoSecretGenerator } from "./crypto-secret-generator";
 export {
   drizzleAccessTokenRepository,
   drizzleInviteRepository,
+  drizzleOAuthRepository,
   drizzlePlayerRepository,
 } from "./drizzle-repositories";
 export { hasSessionCookie } from "./session-cookie";

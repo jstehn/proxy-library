@@ -36,6 +36,15 @@ export default async function TokensPage() {
         </p>
       </div>
 
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Claude on the web, and other web connectors</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          No token needed: in claude.ai, open Settings → Connectors → Add custom connector, and give
+          it <code className="break-all">{mcpUrl}</code>. It sends you to Proxy Library to approve
+          it, and then shows up in the list below.
+        </p>
+      </section>
+
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Make a token</h2>
         <CreateTokenForm mcpUrl={mcpUrl} openApiUrl={openApiUrl} />

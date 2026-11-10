@@ -67,6 +67,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 27  | A value floor for sealed product       | exact averages by linearity of expectation, a floor rounded up, partial values, precompute with a version, one rule in SQL and TypeScript, tested to agree                             | ✅ Done |
 | 28  | LLM tools (MCP + OpenAPI)              | one tool registry and two adapters, bearer tokens stored as hashes, schemas as contracts (Zod → JSON Schema), tools written for a model to read, a search language grown for synergies | ✅ Done |
 | 29  | Build from every card                  | one query with two sources (a swapped CTE), page before per-row work, `DISTINCT ON`, reading `EXPLAIN ANALYZE`, attributing a cost you didn't add                                      | ✅ Done |
+| 30  | OAuth for web connectors               | an OAuth 2.1 authorization server in a few hundred lines: discovery metadata, dynamic client registration, PKCE, single-use codes, reusing the access tokens it already had            | ✅ Done |
 
 ### Why this order (changed from the original plan)
 

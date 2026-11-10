@@ -16,8 +16,16 @@ import { makeSignIn } from "./sign-in";
  * The composition root calls this once; tests call it with fakes.
  */
 import { makeActorFromToken, makeCreateAccessToken, makeRevokeAccessToken } from "./access-tokens";
+import {
+  makeApproveAuthorization,
+  makeCheckAuthorizationRequest,
+  makeDenyAuthorization,
+  makeExchangeAuthorizationCode,
+  makeRegisterOAuthClient,
+} from "./oauth";
 
 export function makeAccounts(dependencies: AccountsDependencies) {
+  const checkAuthorizationRequest = makeCheckAuthorizationRequest(dependencies);
   return {
     registerPlayer: makeRegisterPlayer(dependencies),
     signIn: makeSignIn(dependencies),
@@ -33,6 +41,11 @@ export function makeAccounts(dependencies: AccountsDependencies) {
     createAccessToken: makeCreateAccessToken(dependencies),
     revokeAccessToken: makeRevokeAccessToken(dependencies),
     actorFromToken: makeActorFromToken(dependencies),
+    registerOAuthClient: makeRegisterOAuthClient(dependencies),
+    checkAuthorizationRequest,
+    approveAuthorization: makeApproveAuthorization(dependencies, checkAuthorizationRequest),
+    denyAuthorization: makeDenyAuthorization(checkAuthorizationRequest),
+    exchangeAuthorizationCode: makeExchangeAuthorizationCode(dependencies),
   };
 }
 

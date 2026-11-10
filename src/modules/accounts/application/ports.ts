@@ -3,6 +3,7 @@ import type { AccessToken, AccessTokenId, Scope } from "../domain/access-token";
 import type { DisplayName, Password, Username } from "../domain/credentials";
 import type { InvalidCredentials, UsernameTaken } from "../domain/errors";
 import type { Invite, InviteCode } from "../domain/invite";
+import type { AuthorizationCode, OAuthClient } from "../domain/oauth";
 import type { Player } from "../domain/player";
 
 // Ports: what the accounts use cases need from the outside world, described as interfaces.
@@ -61,7 +62,7 @@ export interface InviteRepository {
 export interface SecretGenerator {
   inviteCode(): InviteCode;
   temporaryPassword(): Password;
-  /** 32 random bytes for a new access token (design doc 28). */
+  /** 32 random bytes for a new access token (design doc 28), OAuth client id or code (30). */
   accessTokenBytes(): Uint8Array;
 }
 
@@ -73,11 +74,14 @@ export type NewAccessToken = Readonly<{
   hash: string;
   scopes: readonly Scope[];
   createdAt: Date;
+  /** The OAuth client it was made for (design doc 30), if any. */
+  oauthClientId?: string | null;
 }>;
 
 /** Personal access tokens (design doc 28, section 6). Only hashes are stored (rule 2). */
 export interface AccessTokenRepository {
-  countLive(userId: UserId): Promise<number>;
+  /** The player's live tokens, leaving out those made for `exceptClientId` (design doc 30). */
+  countLive(userId: UserId, exceptClientId?: string): Promise<number>;
   insert(token: NewAccessToken): Promise<AccessToken>;
   /** The live (not revoked) token with this hash, or null. */
   findLiveByHash(hash: string): Promise<AccessToken | null>;
@@ -86,6 +90,17 @@ export interface AccessTokenRepository {
   /** Revokes every live token of the player; returns how many. */
   revokeAll(userId: UserId, at: Date): Promise<number>;
   touch(id: AccessTokenId, at: Date): Promise<void>;
+  /** Revokes the player's live tokens made for one OAuth client (design doc 30, rule 7). */
+  revokeForClient(userId: UserId, clientId: string, at: Date): Promise<number>;
+}
+
+/** OAuth clients and authorization codes (design doc 30). Codes are stored as hashes. */
+export interface OAuthRepository {
+  insertClient(client: OAuthClient): Promise<void>;
+  findClient(clientId: string): Promise<OAuthClient | null>;
+  insertCode(hash: string, code: AuthorizationCode): Promise<void>;
+  /** The code with this hash if it's unused and unexpired, marking it used; otherwise null. */
+  takeCode(hash: string, now: Date): Promise<AuthorizationCode | null>;
 }
 
 /** The repositories that must share one transaction. */
@@ -93,6 +108,7 @@ export type AccountsServices = {
   players: PlayerRepository;
   invites: InviteRepository;
   accessTokens: AccessTokenRepository;
+  oauth: OAuthRepository;
 };
 
 /** Everything the accounts use cases need, passed in by the composition root. */

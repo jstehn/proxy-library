@@ -9,6 +9,7 @@ import {
   cryptoSecretGenerator,
   drizzleAccessTokenRepository,
   drizzleInviteRepository,
+  drizzleOAuthRepository,
   drizzlePlayerRepository,
 } from "@/modules/accounts/infrastructure";
 import { makeCatalog, PrintingId } from "@/modules/catalog";
@@ -94,6 +95,7 @@ export function buildCore(config: Config) {
       players: drizzlePlayerRepository(transaction),
       invites: drizzleInviteRepository(transaction),
       accessTokens: drizzleAccessTokenRepository(transaction),
+      oauth: drizzleOAuthRepository(transaction),
       wallets: drizzleWalletRepository(transaction),
       economy: drizzleEconomySettingsRepository(transaction),
       playerDirectory: drizzlePlayerDirectory(transaction),

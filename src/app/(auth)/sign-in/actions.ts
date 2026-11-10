@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { SignInError } from "@/modules/accounts";
 import { getContainer } from "@/server/container";
 import { assertNever } from "@/shared/kernel";
+import { safeNextPath } from "@/server/next-path";
 
 export type SignInState = { error: string | null; username: string };
 
@@ -24,7 +25,8 @@ export async function signInAction(
   const result = await getContainer().accounts.signIn(form.data, await headers());
   if (!result.ok) return { error: messageFor(result.error), username: form.data.username };
 
-  redirect(result.value.mustChangePassword ? "/account/password" : "/");
+  if (result.value.mustChangePassword) redirect("/account/password");
+  redirect(safeNextPath(formData.get("next")) ?? "/");
 }
 
 function messageFor(error: SignInError): string {

@@ -25,3 +25,23 @@ export type TokenNotFound = Readonly<{ kind: "TokenNotFound" }>;
 
 export type LastAdmin = Readonly<{ kind: "LastAdmin" }>;
 export type CannotDisableSelf = Readonly<{ kind: "CannotDisableSelf" }>;
+
+// OAuth for web connectors (design doc 30).
+export type OAuthClientInvalid = Readonly<{ kind: "OAuthClientInvalid"; reason: string }>;
+/** Shown on the approval page, never redirected to (rule 2). */
+export type UnknownClient = Readonly<{ kind: "UnknownClient" }>;
+export type RedirectUriNotRegistered = Readonly<{ kind: "RedirectUriNotRegistered" }>;
+/** Sent back to the client's redirect URI as `error=…` (RFC 6749, section 4.1.2.1). */
+export type AuthorizationRefused = Readonly<{
+  kind: "AuthorizationRefused";
+  error: "invalid_request" | "unsupported_response_type";
+  description: string;
+  redirectUri: string;
+  state: string | null;
+}>;
+/** The token endpoint's errors (RFC 6749, section 5.2). */
+export type TokenRequestRefused = Readonly<{
+  kind: "TokenRequestRefused";
+  error: "invalid_request" | "invalid_grant" | "unsupported_grant_type";
+  description: string;
+}>;

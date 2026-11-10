@@ -116,6 +116,10 @@ export const accessTokens = pgTable(
     createdAt: timestamptz("created_at").notNull(),
     lastUsedAt: timestamptz("last_used_at"),
     revokedAt: timestamptz("revoked_at"),
+    // The OAuth client it was made for (design doc 30); null for a token made by hand.
+    oauthClientId: text("oauth_client_id").references(() => oauthClients.clientId, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     index("access_tokens_live")
@@ -123,3 +127,27 @@ export const accessTokens = pgTable(
       .where(sql`${table.revokedAt} is null`),
   ],
 );
+
+// OAuth for web connectors (design doc 30, section 8). Codes are stored as SHA-256 hashes and
+// used once.
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  name: text("name").notNull(),
+  redirectUris: text("redirect_uris").array().notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+});
+
+export const oauthCodes = pgTable("oauth_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => players.userId, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scopes: text("scopes").array().notNull(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  usedAt: timestamptz("used_at"),
+});

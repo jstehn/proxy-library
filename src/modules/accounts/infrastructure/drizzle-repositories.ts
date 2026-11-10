@@ -1,16 +1,18 @@
-import { and, count, eq, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import type {
   AccessTokenRepository,
   InviteRepository,
+  OAuthRepository,
   PlayerRepository,
 } from "../application/ports";
 import { AccessTokenId, withRead, type AccessToken } from "../domain/access-token";
 import type { DisplayName, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
+import type { AuthorizationCode, OAuthClient } from "../domain/oauth";
 import type { Player } from "../domain/player";
-import { accessTokens, authUsers, invites, players } from "./schema";
+import { accessTokens, authUsers, invites, oauthClients, oauthCodes, players } from "./schema";
 
 // An arbitrary but fixed number that names the "accounts" lock (design doc 02, section 8).
 // Postgres advisory locks are identified by a number rather than a table row.
@@ -143,11 +145,19 @@ export function drizzleAccessTokenRepository(db: DbExecutor): AccessTokenReposit
   const isLive = isNull(accessTokens.revokedAt);
 
   return {
-    async countLive(userId) {
+    async countLive(userId, exceptClientId) {
       const [row] = await db
         .select({ live: count() })
         .from(accessTokens)
-        .where(and(eq(accessTokens.userId, userId), isLive));
+        .where(
+          and(
+            eq(accessTokens.userId, userId),
+            isLive,
+            exceptClientId === undefined
+              ? undefined
+              : sql`${accessTokens.oauthClientId} is distinct from ${exceptClientId}`,
+          ),
+        );
       return row.live;
     },
     async insert({ hash, ...token }) {
@@ -182,6 +192,55 @@ export function drizzleAccessTokenRepository(db: DbExecutor): AccessTokenReposit
     },
     async touch(id, at) {
       await db.update(accessTokens).set({ lastUsedAt: at }).where(eq(accessTokens.id, id));
+    },
+    async revokeForClient(userId, clientId, at) {
+      const rows = await db
+        .update(accessTokens)
+        .set({ revokedAt: at })
+        .where(
+          and(eq(accessTokens.userId, userId), eq(accessTokens.oauthClientId, clientId), isLive),
+        )
+        .returning({ id: accessTokens.id });
+      return rows.length;
+    },
+  };
+}
+
+/** OAuth clients and codes (design doc 30), in `oauth_clients` and `oauth_codes`. */
+export function drizzleOAuthRepository(db: DbExecutor): OAuthRepository {
+  return {
+    async insertClient(client: OAuthClient) {
+      await db.insert(oauthClients).values({ ...client, redirectUris: [...client.redirectUris] });
+    },
+    async findClient(clientId) {
+      const [row] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
+      return row ?? null;
+    },
+    async insertCode(hash, code: AuthorizationCode) {
+      await db.insert(oauthCodes).values({ ...code, codeHash: hash, scopes: [...code.scopes] });
+    },
+    async takeCode(hash, now) {
+      // One statement, so two swaps of the same code can't both succeed.
+      const [row] = await db
+        .update(oauthCodes)
+        .set({ usedAt: now })
+        .where(
+          and(
+            eq(oauthCodes.codeHash, hash),
+            isNull(oauthCodes.usedAt),
+            gt(oauthCodes.expiresAt, now),
+          ),
+        )
+        .returning();
+      if (row === undefined) return null;
+      return {
+        clientId: row.clientId,
+        userId: UserId.of(row.userId),
+        redirectUri: row.redirectUri,
+        codeChallenge: row.codeChallenge,
+        scopes: withRead(row.scopes),
+        expiresAt: row.expiresAt,
+      };
     },
   };
 }

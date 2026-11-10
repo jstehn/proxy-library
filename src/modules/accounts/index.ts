@@ -7,6 +7,16 @@ export type {
   CreatedAccessToken,
   TokenActor,
 } from "./application/access-tokens";
+export type {
+  ApproveError,
+  AuthorizationParameters,
+  AuthorizationProblem,
+  AuthorizationRequest,
+  IssuedToken,
+  RegisterClientInput,
+  TokenRequest,
+} from "./application/oauth";
+export { MAX_REDIRECT_URIS, type OAuthClient } from "./domain/oauth";
 export {
   AccessTokenId,
   allows,
@@ -22,6 +32,7 @@ export type {
   AccountsServices,
   IdentityProvider,
   InviteRepository,
+  OAuthRepository,
   PlayerRepository,
   SecretGenerator,
 } from "./application/ports";
