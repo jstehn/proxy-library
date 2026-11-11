@@ -50,7 +50,12 @@ describe("deck suggestions", () => {
 
   it("knows the deck: Beza leads tokens, and every role is short", async () => {
     const suggestions = await deckSuggestions(db, jack.userId, await bezaDeck());
-    expect(suggestions?.profile.themes).toEqual(["tokens"]);
+    expect(suggestions?.profile.themes).toEqual([
+      "tokens",
+      "creature-tokens",
+      "artifact-tokens",
+      "treasures",
+    ]);
     expect(suggestions?.profile.gaps.map((gap) => gap.tag)).toEqual([
       "ramp",
       "draw",

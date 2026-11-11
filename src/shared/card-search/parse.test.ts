@@ -201,6 +201,9 @@ describe("design doc 28 keywords", () => {
     expect(only("tag:ramp").node).toEqual(term("tag", ":", "ramp"));
     expect(only("role:draw").node).toEqual(term("tag", ":", "draw"));
     expect(only("theme:tokens").node).toEqual(term("theme", ":", "tokens"));
+    expect(only("theme:treasure").node).toEqual(term("theme", ":", "treasures"));
+    expect(only("theme:flicker").node).toEqual(term("theme", ":", "blink"));
+    expect(only("theme:grouphug").node).toEqual(term("theme", ":", "group-hug"));
     expect(only("-theme:sacrifice").node).toEqual({
       kind: "not",
       child: term("theme", ":", "sacrifice"),
@@ -216,6 +219,17 @@ describe("design doc 28 keywords", () => {
     expect(only("function:board-wipe").node).toEqual(term("tag", ":", "wipe"));
     expect(only("otag:removal-creature").node).toEqual(term("tag", ":", "removal"));
     expect(only("otag:sacrifice-outlet").node).toEqual(term("theme", ":", "sacrifice"));
+    expect(only("otag:treasure").node).toEqual(term("theme", ":", "treasures"));
+    expect(only("otag:politics").node).toEqual(term("theme", ":", "politics"));
+    expect(only("otag:goad").node).toEqual(term("theme", ":", "goad"));
+    expect(only("otag:vote").node).toEqual(term("theme", ":", "voting"));
+    expect(only("otag:group-hug").node).toEqual(term("theme", ":", "group-hug"));
+    expect(only("otag:group-slug").node).toEqual(term("theme", ":", "each-opponent"));
+    expect(only("otag:blink").node).toEqual(term("theme", ":", "blink"));
+    expect(only("otag:wheel").node).toEqual(term("theme", ":", "wheels"));
+    expect(only("otag:clone").node).toEqual(term("theme", ":", "clones"));
+    expect(only("otag:theft").node).toEqual(term("theme", ":", "theft"));
+    expect(only("otag:superfriends").node).toEqual(term("theme", ":", "planeswalkers"));
     expect(only("otag!=ramp").node).toEqual(term("tag", "!=", "ramp"));
     const unknown = only("otag:pseudo-ramp t:creature");
     expect(unknown.node).toEqual(term("type", ":", "creature"));

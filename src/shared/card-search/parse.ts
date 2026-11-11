@@ -149,30 +149,95 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
 /** Keywords borrowed from Scryfall's tagger, read as this app's tags and themes. */
 const TAGGER_KEYWORDS = new Set(["otag", "oracletag", "function"]);
 
-/** Scryfall tagger values that mean one of this app's tags or themes (design doc 28, 3.6). */
-const TAGGER_ALIASES: Readonly<Record<string, { field: "tag" | "theme"; value: Tag | Theme }>> = {
-  ramp: { field: "tag", value: "ramp" },
+type TaggerEntry =
+  Readonly<{ field: "tag"; value: Tag }> | Readonly<{ field: "theme"; value: Theme }>;
+
+/** Scryfall tagger values that mean one of this app's tags or themes (design docs 28 and 38). */
+const TAGGER_ALIASES: Readonly<Record<string, TaggerEntry>> = {
+  ...(Object.fromEntries(TAGS.map((tag) => [tag, { field: "tag", value: tag }])) as Record<
+    Tag,
+    TaggerEntry
+  >),
+  ...(Object.fromEntries(
+    THEMES.map((theme) => [theme, { field: "theme", value: theme }]),
+  ) as Record<Theme, TaggerEntry>),
   "mana-rock": { field: "tag", value: "ramp" },
   "mana-dork": { field: "tag", value: "ramp" },
   "land-ramp": { field: "tag", value: "ramp" },
-  draw: { field: "tag", value: "draw" },
   "card-draw": { field: "tag", value: "draw" },
   "card-advantage": { field: "tag", value: "draw" },
-  removal: { field: "tag", value: "removal" },
   "board-wipe": { field: "tag", value: "wipe" },
   sweeper: { field: "tag", value: "wipe" },
   wrath: { field: "tag", value: "wipe" },
   counterspell: { field: "tag", value: "counter" },
-  tutor: { field: "tag", value: "tutor" },
-  protection: { field: "tag", value: "protection" },
   "hexproof-granter": { field: "tag", value: "protection" },
-  "sacrifice-outlet": { field: "theme", value: "sacrifice" },
+  "+1/+1-counters": { field: "theme", value: "counters" },
+  proliferate: { field: "theme", value: "counters" },
   "token-maker": { field: "theme", value: "tokens" },
   "token-generator": { field: "theme", value: "tokens" },
+  populate: { field: "theme", value: "creature-tokens" },
+  "creature-token": { field: "theme", value: "creature-tokens" },
+  "artifact-token": { field: "theme", value: "artifact-tokens" },
+  treasure: { field: "theme", value: "treasures" },
+  "treasure-maker": { field: "theme", value: "treasures" },
+  "treasure-generator": { field: "theme", value: "treasures" },
+  foods: { field: "theme", value: "food" },
+  "food-maker": { field: "theme", value: "food" },
+  clue: { field: "theme", value: "clues" },
+  investigate: { field: "theme", value: "clues" },
+  "sacrifice-outlet": { field: "theme", value: "sacrifice" },
+  aristocrats: { field: "theme", value: "sacrifice" },
   recursion: { field: "theme", value: "graveyard" },
   reanimation: { field: "theme", value: "graveyard" },
+  reanimator: { field: "theme", value: "graveyard" },
   mill: { field: "theme", value: "graveyard" },
-  lifegain: { field: "theme", value: "lifegain" },
+  artifact: { field: "theme", value: "artifacts" },
+  "artifact-matters": { field: "theme", value: "artifacts" },
+  enchantment: { field: "theme", value: "enchantments" },
+  enchantress: { field: "theme", value: "enchantments" },
+  "life-gain": { field: "theme", value: "lifegain" },
+  spellslinger: { field: "theme", value: "spells" },
+  magecraft: { field: "theme", value: "spells" },
+  "lands-matter": { field: "theme", value: "landfall" },
+  auras: { field: "theme", value: "equipment" },
+  voltron: { field: "theme", value: "equipment" },
+  political: { field: "theme", value: "politics" },
+  pillowfort: { field: "theme", value: "politics" },
+  "forced-combat": { field: "theme", value: "goad" },
+  vote: { field: "theme", value: "voting" },
+  council: { field: "theme", value: "voting" },
+  grouphug: { field: "theme", value: "group-hug" },
+  hug: { field: "theme", value: "group-hug" },
+  initiative: { field: "theme", value: "monarch" },
+  dungeon: { field: "theme", value: "monarch" },
+  eachopponent: { field: "theme", value: "each-opponent" },
+  "group-slug": { field: "theme", value: "each-opponent" },
+  groupslug: { field: "theme", value: "each-opponent" },
+  flicker: { field: "theme", value: "blink" },
+  wheel: { field: "theme", value: "wheels" },
+  discard: { field: "theme", value: "wheels" },
+  clone: { field: "theme", value: "clones" },
+  copy: { field: "theme", value: "clones" },
+  steal: { field: "theme", value: "theft" },
+  superfriends: { field: "theme", value: "planeswalkers" },
+  planeswalker: { field: "theme", value: "planeswalkers" },
+  legendary: { field: "theme", value: "legends" },
+  "legends-matter": { field: "theme", value: "legends" },
+  historic: { field: "theme", value: "legends" },
+  "impulse-draw": { field: "theme", value: "exile" },
+  cascade: { field: "theme", value: "exile" },
+  discover: { field: "theme", value: "exile" },
+  foretell: { field: "theme", value: "exile" },
+  extracombat: { field: "theme", value: "extra-combat" },
+  "extra-combats": { field: "theme", value: "extra-combat" },
+  tax: { field: "theme", value: "stax" },
+  taxes: { field: "theme", value: "stax" },
+  hatebears: { field: "theme", value: "stax" },
+  infect: { field: "theme", value: "poison" },
+  toxic: { field: "theme", value: "poison" },
+  vehicle: { field: "theme", value: "vehicles" },
+  mount: { field: "theme", value: "vehicles" },
+  mounts: { field: "theme", value: "vehicles" },
 };
 
 /** The tag or theme a tagger value stands for, or null. `removal-…` values are all removal. */
@@ -180,6 +245,12 @@ export function taggerAlias(value: string): { field: "tag" | "theme"; value: str
   const text = value.toLowerCase();
   if (text.startsWith("removal-")) return { field: "tag", value: "removal" };
   return TAGGER_ALIASES[text] ?? null;
+}
+
+/** The canonical theme name for a `theme:` value or synonym (`treasure` → `treasures`), or null. */
+function canonicalTheme(value: string): Theme | null {
+  const alias = TAGGER_ALIASES[value.toLowerCase()];
+  return alias?.field === "theme" ? alias.value : null;
 }
 
 /** What `pow>tou` may name on its right: the numbers on a card, under their keywords. */
@@ -456,7 +527,8 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
     notes.push(`${problem} (ignored)`);
     return null;
   }
-  return { kind: "term", term: { field, comparison, value } };
+  const normalizedValue = field === "theme" ? (canonicalTheme(value) ?? value) : value;
+  return { kind: "term", term: { field, comparison, value: normalizedValue } };
 }
 
 function valueProblem(field: SearchField, comparison: Comparison, value: string): string | null {
@@ -478,7 +550,7 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
   if (field === "tag" && !(TAGS as readonly string[]).includes(value.toLowerCase())) {
     return `"tag:${value}" isn't a tag (${TAGS.join(", ")})`;
   }
-  if (field === "theme" && !(THEMES as readonly string[]).includes(value.toLowerCase())) {
+  if (field === "theme" && canonicalTheme(value) === null) {
     return `"theme:${value}" isn't a theme (${THEMES.join(", ")})`;
   }
   if ((field === "banned" || field === "restricted") && !/^[a-z]+$/i.test(value)) {

@@ -111,7 +111,7 @@ describe("deckProfile", () => {
       ],
       "standard",
     );
-    expect(profile.themes).toEqual(["tokens"]);
+    expect(profile.themes).toEqual(["tokens", "creature-tokens"]);
     // 6 of 10 creatures are Rabbit Soldiers: both types count, as the rule says.
     expect(profile.tribes).toEqual(["Rabbit", "Soldier"]);
   });
