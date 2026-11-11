@@ -156,7 +156,8 @@ ranking every store legend (about 3,000) against a big collection fast enough to
 2. Only on-color cards count; a card is never counted for a candidate whose identity it leaves.
 3. The commander itself is never in its own pool count.
 4. Every copy you own counts, whatever deck it's in; another deck only shows up as a note.
-5. `onPlan ≤ filled ≤ SPELL_SLOTS`, each role's `have ≤ target`, and lands never count as spells.
+5. `filled = min(SPELL_SLOTS, on-color cards)`, `onPlan ≤ on-color cards` (it may pass 62: the
+   score caps it at 30), each role's `have ≤ target`, and lands never count as spells.
 6. Store legends appear only when asked, always with a price, and are marked as not owned.
 7. The ranking is deterministic: the same collection gives the same order (ties by owned first,
    then name).
