@@ -98,6 +98,11 @@ export type SetEntryInput = Readonly<{
   finish?: Finish;
 }>;
 
+export type AddCardsInput = Readonly<{
+  deckId: DeckId;
+  /** Copies to add to the main deck, on top of any it has (design doc 35's planned lands). */
+  cards: ReadonlyArray<Readonly<{ oracleId: string; quantity: number }>>;
+}>;
 export type ImportReport = Readonly<{ added: number; unreadable: string[]; notFound: string[] }>;
 
 export type ReplaceListInput = Readonly<{
@@ -213,6 +218,33 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         finish: input.finish,
       });
       await decks.save(changed, clock.now());
+      return ok();
+    });
+  }
+
+  /** Adds copies of several cards to the main deck in one go (design doc 35: planned lands). */
+  async function addCards(
+    actor: Actor,
+    input: AddCardsInput,
+  ): Promise<Result<void, SetEntryError>> {
+    return unitOfWork.run<void, SetEntryError>(async ({ decks, cards }) => {
+      let deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      for (const card of input.cards) {
+        const existing = deck.entries.find(
+          (entry) => entry.oracleId === card.oracleId && entry.board === "main",
+        );
+        const quantity = checkQuantity((existing?.quantity ?? 0) + card.quantity);
+        if (!quantity.ok) return quantity;
+        if (card.quantity < 1) return err({ kind: "QuantityInvalid", maximum: MAX_QUANTITY });
+        if (!(await cards.exists(card.oracleId))) return err({ kind: "CardNotFound" });
+        deck = withEntry(deck, {
+          oracleId: card.oracleId,
+          board: "main",
+          quantity: quantity.value,
+        });
+      }
+      await decks.save(deck, clock.now());
       return ok();
     });
   }
@@ -460,6 +492,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     orderHeadings,
     deleteDeck,
     setEntry,
+    addCards,
     moveEntry,
     importList,
     replaceList,

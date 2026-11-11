@@ -88,6 +88,40 @@ describe("decks (design doc 09)", () => {
     expect(repository.get(id)?.entries).toEqual([]);
   });
 
+  it("adds several cards to the main deck at once, on top of what's there (design doc 35)", async () => {
+    const id = await newDeck();
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 2 });
+    const added = await decks.addCards(jack, {
+      deckId: id,
+      cards: [
+        { oracleId: "bolt", quantity: 1 },
+        { oracleId: "duress", quantity: 3 },
+      ],
+    });
+    expect(added.ok).toBe(true);
+    const quantities = repository.get(id)?.entries.map((entry) => [entry.oracleId, entry.quantity]);
+    expect(quantities?.sort()).toEqual([
+      ["bolt", 3],
+      ["duress", 3],
+    ]);
+  });
+
+  it("adds nothing when one card can't be added", async () => {
+    const id = await newDeck();
+    const result = await decks.addCards(jack, {
+      deckId: id,
+      cards: [
+        { oracleId: "bolt", quantity: 1 },
+        { oracleId: "no-such-card", quantity: 1 },
+      ],
+    });
+    expect(result).toEqual(err({ kind: "CardNotFound" }));
+    expect(repository.get(id)?.entries).toEqual([]);
+    expect(await decks.addCards(mallory, { deckId: id, cards: [] })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+  });
+
   it("moves a card to the maybeboard and back, adding up copies (design doc 32)", async () => {
     const id = await newDeck();
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 3 });

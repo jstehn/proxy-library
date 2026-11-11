@@ -100,6 +100,8 @@ export type ManaBaseInput = Readonly<{
   deckThemes: readonly Theme[];
 }>;
 
+/** Below this many non-land cards the curve says too little to move the land count. */
+const CURVE_MINIMUM_SPELLS = 20;
 /** How many store lands to show. */
 const CONSIDER_BUYING = 5;
 /** A non-basic must score more than this to be picked; a basic does as well below it. */
@@ -123,12 +125,12 @@ const SOURCE_FLOORS: Readonly<Record<"commander" | "other", readonly [number, nu
 };
 
 /** The land count to aim for: the format's usual count, moved by the curve and other sources. */
-export function landTarget(format: Format, stats: DeckStats): LandTarget {
+export function landTarget(format: Format | string, stats: DeckStats): LandTarget {
   const base = suggestedLands(format);
   const reasons: LandTargetReason[] = [{ kind: "base", lands: base }];
   // Limited decks have few rocks and a known curve: the usual 17 stands.
   const spells = stats.curve.reduce((sum, count) => sum + count, 0);
-  if (format !== "limited" && spells > 0) {
+  if (format !== "limited" && spells >= CURVE_MINIMUM_SPELLS) {
     const average = stats.averageManaValue;
     if (average < 2.5) reasons.push({ kind: "lowCurve", averageManaValue: average, change: -1 });
     else if (average >= 4) {

@@ -42,6 +42,7 @@ export {
   type ProxyStreamEvent,
 } from "./domain/proxy-progress";
 export { copiesToTake } from "./domain/free-copies";
+export { landTarget, tapped } from "./domain/mana-base";
 export {
   CUT_WEIGHTS,
   rankCuts,

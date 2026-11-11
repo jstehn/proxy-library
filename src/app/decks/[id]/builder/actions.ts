@@ -11,6 +11,8 @@ import {
   cardPrintings,
   type PrintingOption,
   deckSuggestions,
+  manaBasePlan,
+  type ManaBasePlan,
   similarCards,
   type BudgetList,
   type DeckSuggestions,
@@ -280,6 +282,47 @@ export async function suggestionsAction(deckId: number): Promise<DeckSuggestions
   const parsed = DeckIdInput.safeParse(deckId);
   if (!parsed.success) return null;
   return deckSuggestions(getContainer().db, actor.userId, parsed.data);
+}
+
+/** A mana base you could start from (design doc 35). */
+export async function manaBaseAction(deckId: number): Promise<ManaBasePlan | null> {
+  const actor = await requireActor();
+  const parsed = DeckIdInput.safeParse(deckId);
+  if (!parsed.success) return null;
+  return manaBasePlan(getContainer().db, actor.userId, parsed.data);
+}
+
+const AddLandsInput = z.object({
+  deckId: DeckIdInput,
+  lands: z
+    .array(z.object({ oracleId: z.string().min(1), quantity: z.number().int().min(1).max(99) }))
+    .min(1)
+    .max(100),
+});
+
+/** Adds the planned lands to the main deck in one go, and returns the fresh deck. */
+export async function addLandsAction(
+  input: z.input<typeof AddLandsInput>,
+): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = AddLandsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Those lands weren't understood." };
+  const { deckId, lands } = parsed.data;
+  const result = await getContainer().decks.addCards(actor, {
+    deckId: DeckId.of(deckId),
+    cards: lands,
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      CardNotFound: "One of those lands isn't in the catalog.",
+      QuantityInvalid: "That would put more than 99 copies of a land in the deck.",
+    };
+    return { ok: false, message: messages[result.error.kind] ?? "Couldn't add the lands." };
+  }
+  const deck = await loadBuilderDeck(deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
 }
 
 const SimilarInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });

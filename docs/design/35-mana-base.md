@@ -152,7 +152,8 @@ Start at `suggestedLands(format)` (37 / 24 / 17) and adjust, Commander and 60-ca
 | Non-land mana sources (rocks, dorks, ramp) past 9 | −1 for each 3, at most −3 |
 | Never below `base − 4` or above `base + 3`        | clamp                     |
 
-Limited (40 cards) only uses the base 17: draft decks have few rocks and a known curve. The
+The curve moves nothing until the deck has 20 non-land cards: a commander and a few spells say
+too little about it (found building step 4). Limited (40 cards) only uses the base 17: draft decks have few rocks and a known curve. The
 adjustments are a rule of thumb in the spirit of Frank Karsten's land-count regression, not that
 formula (question 1).
 

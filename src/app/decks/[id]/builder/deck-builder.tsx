@@ -26,6 +26,7 @@ import { bracketFlags, cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
+  addLandsAction,
   browseAction,
   cardDetailAction,
   headingAction,
@@ -45,6 +46,7 @@ import { HeadingField } from "./heading-field";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { CutsPanel } from "./cuts-panel";
+import { ManaBasePanel, type LandsToAdd } from "./mana-base-panel";
 import { TestHandPanel } from "./test-hand";
 import { PrintingPicker } from "./printing-picker";
 import { countedCopies, SelectedCard, type Selection } from "./selected-card";
@@ -165,6 +167,7 @@ export function DeckBuilder(props: {
   }
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showCuts, setShowCuts] = useState(false);
+  const [showManaBase, setShowManaBase] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
     oracleId: string;
@@ -523,6 +526,21 @@ export function DeckBuilder(props: {
               ? `Moved ${line.name} to the maybeboard.`
               : `Moved ${line.name} into the deck.`,
         });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+      }
+    });
+  }
+
+  /** Adds the mana base panel's lands (design doc 35) and shows the deck the server now has. */
+  function addLands(lands: LandsToAdd, count: number) {
+    const request = ++latestChange.current;
+    startSaving(async () => {
+      const result = await addLandsAction({ deckId, lands: [...lands] });
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        setMessage({ tone: "ok", text: `Added ${count} ${count === 1 ? "land" : "lands"}.` });
       } else {
         setMessage({ tone: "error", text: result.message });
       }
@@ -1003,6 +1021,14 @@ export function DeckBuilder(props: {
             </button>
             <button
               type="button"
+              aria-expanded={showManaBase}
+              onClick={() => setShowManaBase((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showManaBase ? "Hide mana base" : "Mana base"}
+            </button>
+            <button
+              type="button"
               aria-expanded={showTestHand}
               onClick={() => setShowTestHand((value) => !value)}
               className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
@@ -1029,6 +1055,15 @@ export function DeckBuilder(props: {
                 setTab("collection");
               }}
               onClose={() => setShowCuts(false)}
+              busy={isSaving}
+            />
+          )}
+          {showManaBase && (
+            <ManaBasePanel
+              deckId={deckId}
+              deckKey={deckKey}
+              onAdd={addLands}
+              onClose={() => setShowManaBase(false)}
               busy={isSaving}
             />
           )}

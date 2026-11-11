@@ -1215,6 +1215,46 @@ test("the admin aims a Commander deck at a bracket and is warned when it goes ov
   ).toHaveValue("2");
 });
 
+test("the admin fills a Commander deck's lands from the mana base plan (design doc 35)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByLabel("Deck name").fill("Beza lands");
+  await page.getByLabel("Format").selectOption("commander");
+  await page.getByRole("button", { name: "Create deck" }).click();
+  await page
+    .getByLabel("Paste a deck list")
+    .fill("Commander\n1 Beza, the Bounding Spring\nDeck\n30 Plains");
+  await page.getByRole("button", { name: "Add these cards" }).click();
+  await expect(page.getByText(/Added 31 cards/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Mana base", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Mana base" });
+  await expect(panel.getByText("30 of ~37")).toBeVisible();
+  await expect(panel.getByText("7 Plains")).toBeVisible();
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await panel.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/mana-base-dark.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("tab", { name: /Deck/ }).click();
+  await panel.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/mana-base-phone-dark.png" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
+
+  await panel.getByRole("button", { name: "Add these 7 lands" }).click();
+  await expect(page.getByText("Added 7 lands.")).toBeVisible();
+  await expect(panel.getByText("37 of ~37")).toBeVisible();
+  await expect(panel.getByText("The deck is at its land target.")).toBeVisible();
+});
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

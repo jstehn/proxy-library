@@ -6,7 +6,7 @@ import {
   deckSize,
   roleTargets,
   TARGETED_TAGS,
-  suggestedLands,
+  landTarget,
   TYPE_ORDER,
   type ManaSource,
 } from "@/modules/decks/client";
@@ -43,7 +43,8 @@ export function StatsPanel(props: {
     `text-left underline-offset-2 hover:underline ${props.highlighted === tag ? "font-semibold underline" : ""}`;
   const toggle = (tag: Tag) => props.onHighlight(props.highlighted === tag ? null : tag);
   const target = deckSize(props.format);
-  const landGoal = suggestedLands(props.format);
+  // The mana base's land target (design doc 35): the usual count, moved by the curve.
+  const landGoal = landTarget(props.format, stats).lands;
   const tallest = Math.max(...stats.curve, 1);
   const neededColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
   const mostPips = Math.max(...MANA_COLORS.map((color) => stats.pips[color]), 1);
