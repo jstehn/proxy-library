@@ -7,8 +7,10 @@ import {
   type GeneratedPack,
 } from "./generate";
 import type { FactsLookup } from "./pack";
+import { packTheme } from "./theme";
 
-// Checks a generated pack against the rules its recipe implies (design doc 05, rules 2–4 and 6).
+// Checks a generated pack against the rules its recipe implies (design doc 05, rules 2–4 and 6,
+// and a theme for every Jumpstart pack).
 // Used by the property tests and by `pnpm worker check-packs`, which runs it on every real recipe.
 
 /** Everything wrong with this pack, as readable sentences. An empty list means it's fine. */
@@ -21,6 +23,10 @@ export function packProblems(
   if (variant === undefined) return [`variant ${pack.variantIndex} doesn't exist`];
 
   const problems: string[] = [];
+  // Task 40: every Jumpstart pack can say which theme it is.
+  if (config.boosterType === "jumpstart" && packTheme(config, pack.variantIndex) === null) {
+    problems.push(`variant ${pack.variantIndex} has no theme list`);
+  }
   const cardsBySheet = new Map<string, PrintingId[]>();
   for (const card of pack.cards) {
     cardsBySheet.set(card.sheet, [...(cardsBySheet.get(card.sheet) ?? []), card.printingId]);

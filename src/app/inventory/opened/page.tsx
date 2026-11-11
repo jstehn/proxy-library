@@ -9,6 +9,7 @@ import {
 } from "@/modules/catalog";
 import { openingView, type OpenedCard, type OpeningView } from "@/modules/inventory";
 import { findSet } from "@/modules/catalog";
+import { packThemes } from "@/modules/packs";
 import { storePage } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -50,6 +51,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
+  const themes = await packThemes(db, packs);
   const total = Cents.sum(
     openings.flatMap((opening) =>
       opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),
@@ -88,7 +90,14 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
 
       {openings.map((opening) => (
         <section key={opening.itemId} aria-label={opening.name} className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium">{opening.name}</h2>
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-lg font-medium">{opening.name}</h2>
+            {themes.has(opening.itemId) && (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Theme: <strong>{themes.get(opening.itemId)}</strong>
+              </p>
+            )}
+          </div>
           {opening.contentKind === "product" && <Unpacked opening={opening} />}
           {opening.cards.length > 0 && (
             <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
@@ -117,7 +126,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(packs, cards)}>{results}</PackOpener>
+        <PackOpener packs={await openerPacks(packs, cards, themes)}>{results}</PackOpener>
       ) : (
         results
       )}
@@ -132,6 +141,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
 async function openerPacks(
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
+  themes: ReadonlyMap<number, string>,
 ): Promise<OpenerPack[]> {
   const { db } = getContainer();
   const setCodes = [...new Set(packs.flatMap((pack) => (pack.setCode ? [pack.setCode] : [])))];
@@ -169,6 +179,7 @@ async function openerPacks(
       featuredPrintingId: info?.featured?.printingId ?? null,
       photoIds,
       photoVariant: variantFor(pack.itemId, photoIds.length),
+      theme: themes.get(pack.itemId) ?? null,
       cards: pack.cards.map((card) => {
         const printing = cards.get(card.printingId);
         return {

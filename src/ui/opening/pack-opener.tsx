@@ -140,6 +140,9 @@ export function PackOpener(props: PackOpenerProps) {
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="font-medium">
           Pack {state.pack + 1} of {packs.length}: {pack.name}
+          {pack.theme !== null && (state.phase === "revealing" || state.phase === "summary") && (
+            <> · Theme: {pack.theme}</>
+          )}
         </span>
         <span className="flex-1" />
         <button type="button" onClick={toggleMuted} className="underline" aria-pressed={muted}>

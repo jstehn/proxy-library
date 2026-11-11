@@ -97,6 +97,8 @@ export type OpeningView = Readonly<{
   contentKind: "product" | "pack" | "deck";
   openedAt: string;
   seed: string | null;
+  /** For a pack, which of its recipe's layouts it rolled (a Jumpstart pack's theme). */
+  variantIndex: number | null;
   /** For a pack, in reveal order; one entry per card. */
   cards: readonly OpenedCard[];
   extras: readonly string[];
@@ -105,6 +107,7 @@ export type OpeningView = Readonly<{
 
 type StoredResult = {
   kind: "pack" | "deck" | "product";
+  variantIndex?: number;
   cards?: Array<{ printingId: string; finish: OpenedCard["finish"]; quantity?: number }>;
   extras?: string[];
 };
@@ -147,6 +150,7 @@ export async function openingView(
     contentKind: row.contentKind as OpeningView["contentKind"],
     openedAt: (row.openedAt ?? new Date(0)).toISOString(),
     seed: row.seed,
+    variantIndex: result.variantIndex ?? null,
     cards: (result.cards ?? []).map((card) => ({
       printingId: card.printingId,
       finish: card.finish,

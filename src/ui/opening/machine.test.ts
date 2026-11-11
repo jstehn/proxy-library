@@ -34,6 +34,7 @@ function pack(itemId: number, cards: OpenerCard[]): OpenerPack {
     featuredPrintingId: null,
     photoIds: [],
     photoVariant: 0,
+    theme: null,
     cards,
   };
 }

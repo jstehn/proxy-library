@@ -24,3 +24,4 @@ export {
 export type { Pack, PackCard, PrintingFacts } from "./domain/pack";
 export { SIMULATION_LIMIT, type Pull, type SimulationReport } from "./domain/report";
 export { availableBoosters, type BoosterChoice } from "./queries/boosters";
+export { packThemes, type OpenedPackKey } from "./queries/themes";

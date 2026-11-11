@@ -24,6 +24,8 @@ export type OpenerPack = Readonly<{
   photoIds: readonly string[];
   /** Which photo this pack shows (the same one every time for this item). */
   photoVariant: number;
+  /** A Jumpstart pack's theme ("Angels"), shown once it's torn open, like its theme card. */
+  theme: string | null;
   cards: readonly OpenerCard[]; // in reveal order (rule 1)
 }>;
 
