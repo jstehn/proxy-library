@@ -335,7 +335,9 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       // Text with headings sets their order too: the order they come in (design doc 34).
       const textHasHeadings = lines.some((line) => line.heading !== null);
       const headings = textHasHeadings ? [] : deck.headings;
-      await decks.save({ ...deck, entries, headings }, clock.now());
+      // A deck's first headings switch it to grouping by them, as importList does.
+      const grouping = deck.headings.length === 0 && textHasHeadings ? "custom" : deck.grouping;
+      await decks.save({ ...deck, entries, headings, grouping }, clock.now());
       return ok({ cards: entries.reduce((total, entry) => total + entry.quantity, 0) });
     });
   }

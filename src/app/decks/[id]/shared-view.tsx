@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Bracket, BracketRule, CardRules, DeckLine, Format } from "@/modules/decks";
+import type { Bracket, BracketRule, CardRules, DeckLine, Format, Grouping } from "@/modules/decks";
 import { bracketLine, estimateBracket } from "@/modules/decks/client";
 import type { Tag } from "@/shared/card-search";
 import { BracketPanel } from "./builder/bracket-panel";
@@ -25,6 +25,9 @@ export function SharedDeckView(props: {
   ownerName: string;
   yourCopies: Readonly<Record<string, number>>;
   listText: string;
+  /** The owner's grouping and headings (design doc 34, decision 4). */
+  grouping: Grouping;
+  headings: readonly string[];
 }) {
   const [highlighted, setHighlightedRole] = useState<Tag | null>(null);
   const [highlightedRule, setHighlightedRule] = useState<BracketRule | null>(null);
@@ -63,6 +66,8 @@ export function SharedDeckView(props: {
           highlightedNames={highlightedNames}
           readOnly
           yourCopies={props.yourCopies}
+          grouping={props.grouping}
+          headings={props.headings}
         />
         <details className="text-sm">
           <summary className="cursor-pointer underline">The list as text</summary>

@@ -338,6 +338,44 @@ describe("the maybeboard and cards to cut (design doc 32)", () => {
   });
 });
 
+describe("headings (design doc 34)", () => {
+  it("sets a card's heading, renames and orders headings, and writes them in the list", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Beza",
+      list: "Commander\n1 Beza, the Bounding Spring\nRemoval (1)\n1 Banishing Light\nDeck\n1 Carrot Cake\n10 Plains",
+    });
+    await call(client, "set_deck_entry", {
+      deckId,
+      card: "Carrot Cake",
+      quantity: 1,
+      heading: "Food",
+    });
+    let deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.deck).toMatchObject({ grouping: "custom", headings: ["Removal", "Food"] });
+    expect(deck.lines).toContainEqual(
+      expect.objectContaining({ name: "Carrot Cake", heading: "Food" }),
+    );
+    expect(deck.list).toContain("Removal (1)\n1 Banishing Light");
+
+    await call(client, "arrange_headings", { deckId, order: ["Food", "Removal"] });
+    await call(client, "arrange_headings", { deckId, from: "Removal", to: "Interaction" });
+    deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.deck.headings).toEqual(["Food", "Interaction"]);
+
+    const refused = await callTool(context(), "set_deck_entry", {
+      deckId,
+      card: "Plains",
+      quantity: 10,
+      heading: "Lands",
+    });
+    expect(refused).toMatchObject({
+      kind: "outcome",
+      outcome: { ok: false, error: { kind: "HeadingInvalid" } },
+    });
+  });
+});
+
 describe("plain calls (the HTTP endpoint's core)", () => {
   it("reports an unknown tool, bad input and a missing scope as problems", async () => {
     expect(await callTool(context(), "make_coffee", {})).toMatchObject({

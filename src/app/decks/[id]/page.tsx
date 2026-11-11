@@ -85,6 +85,8 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           ownerName={viewed.ownerName}
           yourCopies={viewed.yourCopies}
           listText={EXPORTERS.names(view.lines)}
+          grouping={deck.grouping}
+          headings={deck.headings}
         />
         {commentSection}
       </main>

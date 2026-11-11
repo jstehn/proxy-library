@@ -1,7 +1,7 @@
 # Design: custom deck headings
 
 - **Phase:** 34 (tududi task 110)
-- **Status:** **Approved** (2026-11-10: your own order for headings; proposals 2–4)
+- **Status:** **Done** (approved 2026-11-10: your own order for headings; proposals 2–4)
 - **Related:** design doc 09 (decks), 14 (the deck list), 19 (roles), 23 (Edit as text),
   32 (the maybeboard), ADR 0017 (the list reader in `@/shared/card-search`)
 - **Lesson:** no (columns on two tables and changes along an existing path; nothing new to teach)
@@ -185,3 +185,23 @@ a heading changed elsewhere.
 4. **The shared grouping:** **accepted: the switch is saved on the deck**, so a shared deck
    shows the way its owner set it up. Alternative: each viewer's own choice, remembered in
    their browser.
+
+## 14. Implementation notes (2026-11-10)
+
+- Headings are plain strings checked by `checkHeading` (`decks/domain/headings.ts`), not a
+  branded type: read models and pasted lists carry them as text. Besides length and board names,
+  a heading must start with a letter and can't be a card type's title ("Creatures"), so every
+  heading survives Edit as text (a line starting with a digit is a card; "//" and "#" are
+  comments). `isReservedTitle` in `@/shared/card-search` holds the list reader's titles.
+- The repository (and the fake) run `tidyHeadings` on every save, so the stored order always
+  matches the lines; it also drops headings past `MAX_HEADINGS` from the extra lines.
+- Edit as text only writes headings for the main deck, so a card on the maybeboard keeps its
+  heading through a text save (`replacedEntries` keeps other boards' headings). Text with
+  headings, saved to a deck without any, switches it to `custom`, as importing a list does.
+- The builder has one server action for every heading change (`headingAction`, by `kind`). It
+  doesn't revalidate the page (like quantity changes), so the Edit as text box can be stale
+  after one; its fingerprint, which now reads headings, refuses a stale save.
+- The LLM tool inputs clear a heading with `""`, not null: the registry's rule 9 keeps
+  nullable types out of tool schemas. `arrange_headings` renames, merges, clears or orders.
+- Checked in a browser at phone width in dark mode: pasting an Archidekt-style list into a new
+  deck, ↑ ↓, Rename, the Heading field, By type and back, and the export.

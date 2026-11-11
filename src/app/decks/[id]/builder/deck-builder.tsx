@@ -18,6 +18,7 @@ import {
   bracketLine,
   bracketWarning,
   estimateBracket,
+  headingMoved,
   isCounted,
   mainType,
 } from "@/modules/decks/client";
@@ -27,6 +28,8 @@ import { ManaText } from "@/ui/mana";
 import {
   browseAction,
   cardDetailAction,
+  headingAction,
+  loadBuilderDeck,
   moveLineAction,
   otherDecksAction,
   setQuantityAction,
@@ -38,6 +41,7 @@ import {
 import { BracketPanel } from "./bracket-panel";
 import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";
+import { HeadingField } from "./heading-field";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { CutsPanel } from "./cuts-panel";
@@ -525,6 +529,67 @@ export function DeckBuilder(props: {
     });
   }
 
+  /**
+   * Saves a heading change (design doc 34) and shows the deck as the server now has it. `local`
+   * changes the deck in hand at once, so the list regroups before the answer comes.
+   */
+  function saveHeadings(
+    change: Parameters<typeof headingAction>[0],
+    text: string,
+    local: (current: BuilderDeck) => BuilderDeck,
+  ) {
+    const request = ++latestChange.current;
+    setDeck(local);
+    startSaving(async () => {
+      const result = await headingAction(change);
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        setMessage({ tone: "ok", text });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+        // Undo the change in hand: the deck as the server has it.
+        const fresh = await loadBuilderDeck(deckId);
+        if (fresh !== null) setDeck(fresh);
+      }
+    });
+  }
+
+  function setLineHeading(line: DeckLine, heading: string | null) {
+    saveHeadings(
+      { kind: "set", deckId, oracleId: line.oracleId, board: line.board, heading },
+      heading === null ? `${line.name}: no heading.` : `${line.name}: under ${heading}.`,
+      (current) => ({
+        ...current,
+        lines: current.lines.map((each) => (each === line ? { ...each, heading } : each)),
+      }),
+    );
+  }
+
+  function moveHeading(heading: string, direction: "up" | "down") {
+    const order = headingMoved(deck.headings, heading, direction);
+    saveHeadings({ kind: "order", deckId, order }, `Moved ${heading} ${direction}.`, (current) => ({
+      ...current,
+      headings: order,
+    }));
+  }
+
+  function renameHeading(from: string, to: string | null) {
+    saveHeadings(
+      { kind: "rename", deckId, from, to },
+      to === null ? `Cleared ${from}.` : `Renamed ${from} to ${to.trim()}.`,
+      (current) => current,
+    );
+  }
+
+  function setGrouping(grouping: BuilderDeck["grouping"]) {
+    saveHeadings(
+      { kind: "grouping", deckId, grouping },
+      grouping === "custom" ? "Grouped by your headings." : "Grouped by card type.",
+      (current) => ({ ...current, grouping }),
+    );
+  }
+
   function changeLine(line: DeckLine, next: number) {
     saveQuantity(
       { oracleId: line.oracleId, board: line.board, quantity: Math.max(0, Math.min(99, next)) },
@@ -844,6 +909,21 @@ export function DeckBuilder(props: {
                 otherDecks={otherDecks}
                 onTake={takeFrom}
               />
+              {deck.lines
+                .filter((line) => line.oracleId === selected.oracleId && line.board === "main")
+                .map((line) => (
+                  <div
+                    key={`heading-${line.oracleId}-${line.heading ?? ""}`}
+                    className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <HeadingField
+                      line={line}
+                      headings={deck.headings}
+                      busy={isSaving}
+                      onSave={setLineHeading}
+                    />
+                  </div>
+                ))}
               {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
                 <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
                   <PrintingPicker
@@ -974,6 +1054,11 @@ export function DeckBuilder(props: {
             busy={isSaving}
             highlighted={highlightedRole}
             highlightedNames={highlightedNames}
+            grouping={deck.grouping}
+            headings={deck.headings}
+            onGrouping={setGrouping}
+            onMoveHeading={moveHeading}
+            onRenameHeading={renameHeading}
           />
         </aside>
       </div>

@@ -17,6 +17,10 @@ import {
   type SuggestionList,
   DeckId,
   deckView,
+  GROUPINGS,
+  MAX_HEADING_LENGTH,
+  MAX_HEADINGS,
+  type Grouping,
   type BrowsePage,
   type CardRules,
   type DeckLine,
@@ -67,6 +71,9 @@ export type BuilderDeck = Readonly<{
   rules: Record<string, CardRules>;
   /** Card details for every line, for name previews. */
   cards: Record<string, PrintingCard>;
+  /** By type or by the deck's own headings, and those headings in order (design doc 34). */
+  grouping: Grouping;
+  headings: string[];
 }>;
 
 /** Loads the deck for the builder. */
@@ -83,6 +90,8 @@ export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | nul
     lines: view.lines,
     rules: { ...view.rules },
     cards: Object.fromEntries(cards),
+    grouping: view.deck.grouping,
+    headings: [...view.deck.headings],
   };
 }
 
@@ -329,4 +338,61 @@ export async function setTargetBracketAction(
   // The shared view shows the target too.
   revalidatePath(`/decks/${parsed.data.deckId}`);
   return { ok: true };
+}
+
+const HeadingName = z.string().max(200);
+// One action for every heading change (design doc 34); `kind` says which.
+const HeadingInput = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("set"),
+    deckId: DeckIdInput,
+    oracleId: z.string().min(1),
+    board: z.enum(BOARDS),
+    heading: HeadingName.nullable(),
+  }),
+  z.object({
+    kind: z.literal("rename"),
+    deckId: DeckIdInput,
+    from: HeadingName,
+    to: HeadingName.nullable(),
+  }),
+  z.object({ kind: z.literal("order"), deckId: DeckIdInput, order: z.array(HeadingName).max(100) }),
+  z.object({ kind: z.literal("grouping"), deckId: DeckIdInput, grouping: z.enum(GROUPINGS) }),
+]);
+
+/** What a heading refusal says, by its kind. */
+const HEADING_MESSAGES: Readonly<Record<string, string>> = {
+  DeckNotFound: "That deck isn't yours.",
+  EntryNotFound: "That card isn't on that board any more.",
+  HeadingInvalid: `A heading starts with a letter, has at most ${MAX_HEADING_LENGTH} characters, and isn't a board or card type ("Sideboard", "Creatures").`,
+  HeadingNotFound: "That heading isn't in the deck any more.",
+  HeadingOrderInvalid: "The headings changed meanwhile: try again.",
+  TooManyHeadings: `A deck can have at most ${MAX_HEADINGS} headings.`,
+  NameInvalid: "That change wasn't understood.",
+  TargetBracketInvalid: "That change wasn't understood.",
+  TargetBracketNotCommander: "That change wasn't understood.",
+};
+
+/** Sets a card's heading, renames or orders headings, or switches the grouping (design doc 34). */
+export async function headingAction(input: z.input<typeof HeadingInput>): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = HeadingInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const { decks } = getContainer();
+  const change = parsed.data;
+  const deckId = DeckId.of(change.deckId);
+  const result =
+    change.kind === "set"
+      ? await decks.setEntryHeading(actor, { ...change, deckId })
+      : change.kind === "rename"
+        ? await decks.renameHeading(actor, { ...change, deckId })
+        : change.kind === "order"
+          ? await decks.orderHeadings(actor, { deckId, order: change.order })
+          : await decks.updateDeck(actor, { deckId, grouping: change.grouping });
+  if (!result.ok) {
+    return { ok: false, message: HEADING_MESSAGES[result.error.kind] ?? "That didn't work." };
+  }
+  const deck = await loadBuilderDeck(change.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
 }

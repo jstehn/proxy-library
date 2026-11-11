@@ -2,21 +2,23 @@
 import { useState } from "react";
 import { CardWithPreview, NamePreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Board, DeckLine } from "@/modules/decks";
+import type { Board, DeckLine, Grouping } from "@/modules/decks";
 import { mainType, TYPE_ORDER } from "@/modules/decks/client";
 import { cardTags, TAGS, type Tag } from "@/shared/card-search";
 import { ManaText } from "@/ui/mana";
 import { TAG_LABELS } from "../../labels";
 
 // The deck as Moxfield shows one (design doc 14, section 2.4): the commander as its card, then
-// the cards grouped by type (or by role, design doc 19) with counts and mana costs. Every name
-// previews its card.
+// the cards grouped by type, by the deck's own headings (design doc 34) or by role (design doc
+// 19), with counts and mana costs. Every name previews its card.
 
 type Group = Readonly<{
   title: string;
   lines: DeckLine[];
   /** Shown closed until opened: the maybeboard (design doc 32). */
   collapsed?: boolean;
+  /** The deck's own heading this group is (design doc 34), for its ↑ ↓ and Rename buttons. */
+  heading?: string;
 }>;
 
 /** A line's roles, read from its rules text. */
@@ -64,23 +66,50 @@ function groupsByRole(lines: readonly DeckLine[]): Group[] {
 
 /** The deck in display order: commander, the main deck by type, then the sideboard. */
 function groupsOf(lines: readonly DeckLine[]): Group[] {
+  return [...typeGroups(lines.filter((line) => line.board === "main")), ...sideboardGroup(lines)];
+}
+
+/**
+ * The main deck by the deck's own headings, in its order, then the cards with no heading in
+ * their usual groups by type (design doc 34, decision 2), then the sideboard.
+ */
+function groupsByHeading(lines: readonly DeckLine[], headings: readonly string[]): Group[] {
   const main = lines.filter((line) => line.board === "main");
+  const headed: Group[] = headings
+    .map((heading) => ({
+      title: heading,
+      heading,
+      lines: sortedByCost(main.filter((line) => line.heading === heading)),
+    }))
+    .filter((group) => group.lines.length > 0);
+  const rest = main.filter((line) => line.heading === null || !headings.includes(line.heading));
+  return [...headed, ...typeGroups(rest), ...sideboardGroup(lines)];
+}
+
+/** Main-deck lines grouped by card type: Creatures, Planeswalkers, ... Lands, Other. */
+function typeGroups(main: readonly DeckLine[]): Group[] {
   const byType = new Map<string, DeckLine[]>();
   for (const line of main) {
     const type = mainType(line.typeLine);
     byType.set(type, [...(byType.get(type) ?? []), line]);
   }
   const plural = (type: string) => (type === "Sorcery" ? "Sorceries" : `${type}s`);
-  const groups: Group[] = [...TYPE_ORDER, "Other"]
+  return [...TYPE_ORDER, "Other"]
     .filter((type) => byType.has(type))
     .map((type) => ({
       title: type === "Other" ? "Other" : plural(type),
       lines: sortedByCost(byType.get(type) ?? []),
     }));
-  return [...groups, ...sideboardGroup(lines)];
 }
 
-const VIEWS = { list: "By type", roles: "By role", visual: "Visual" } as const;
+// "By type" and "By heading" are the deck's grouping, saved with it (design doc 34); "By role"
+// and "Visual" are passing views (Visual shows the deck's grouping as pictures).
+const VIEWS = {
+  list: "By type",
+  headings: "By heading",
+  roles: "By role",
+  visual: "Visual",
+} as const;
 type View = keyof typeof VIEWS;
 
 const count = (lines: readonly DeckLine[]) => lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -103,10 +132,42 @@ export function DeckList(props: {
   readOnly?: boolean;
   /** The viewer's own copies of each card, shown on a shared deck (by oracle id). */
   yourCopies?: Readonly<Record<string, number>>;
+  /** By type or by the deck's own headings, and the headings in order (design doc 34). */
+  grouping: Grouping;
+  headings: readonly string[];
+  /** Saves the deck's grouping when By type or By heading is chosen (the owner only). */
+  onGrouping?: (grouping: Grouping) => void;
+  /** Moves a heading up or down the order. */
+  onMoveHeading?: (heading: string, direction: "up" | "down") => void;
+  /** Renames a heading (onto another merges them), or clears it with null. */
+  onRenameHeading?: (from: string, to: string | null) => void;
 }) {
-  const [view, setView] = useState<View>("list");
+  const [passingView, setPassingView] = useState<"roles" | "visual" | null>(null);
+  const view: View = passingView ?? (props.grouping === "custom" ? "headings" : "list");
+  const choose = (option: View) => {
+    if (option === "roles" || option === "visual") {
+      setPassingView(option);
+      return;
+    }
+    setPassingView(null);
+    const grouping: Grouping = option === "headings" ? "custom" : "type";
+    if (grouping !== props.grouping) props.onGrouping?.(grouping);
+  };
   const commanders = props.lines.filter((line) => line.board === "commander");
-  const groups = view === "roles" ? groupsByRole(props.lines) : groupsOf(props.lines);
+  const groups =
+    view === "roles"
+      ? groupsByRole(props.lines)
+      : props.grouping === "custom"
+        ? groupsByHeading(props.lines, props.headings)
+        : groupsOf(props.lines);
+  // Someone else's deck shows its owner's grouping; only the owner can switch it.
+  const options = (Object.keys(VIEWS) as View[]).filter(
+    (option) =>
+      props.onGrouping !== undefined ||
+      option === "roles" ||
+      option === "visual" ||
+      option === (props.grouping === "custom" ? "headings" : "list"),
+  );
   const isHighlighted = (line: DeckLine) =>
     (props.highlighted !== null && tagsOf(line).includes(props.highlighted)) ||
     (props.highlightedNames?.has(line.name) ?? false);
@@ -116,12 +177,12 @@ export function DeckList(props: {
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Deck</h2>
         <div role="group" aria-label="Deck view" className="flex gap-1 text-xs">
-          {(Object.keys(VIEWS) as View[]).map((option) => (
+          {options.map((option) => (
             <button
               key={option}
               type="button"
               aria-pressed={view === option}
-              onClick={() => setView(option)}
+              onClick={() => choose(option)}
               className={`rounded px-2 py-0.5 ${view === option ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
             >
               {VIEWS[option]}
@@ -229,12 +290,131 @@ export function DeckList(props: {
           </details>
         ) : (
           <div key={group.title} className="flex flex-col gap-1">
-            <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{heading}</h3>
+            {group.heading !== undefined && props.onRenameHeading !== undefined ? (
+              <HeadingTitle
+                heading={group.heading}
+                title={heading}
+                headings={props.headings}
+                busy={props.busy}
+                onMove={props.onMoveHeading}
+                onRename={props.onRenameHeading}
+              />
+            ) : (
+              <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                {heading}
+              </h3>
+            )}
             {body}
           </div>
         );
       })}
     </section>
+  );
+}
+
+/**
+ * A heading of the deck's own, with ↑ ↓ to move it and Rename (design doc 34). Renaming onto
+ * another heading merges the two; Clear takes it off its cards, which go back to their type.
+ */
+function HeadingTitle(props: {
+  heading: string;
+  title: string;
+  headings: readonly string[];
+  busy: boolean;
+  onMove?: (heading: string, direction: "up" | "down") => void;
+  onRename: (from: string, to: string | null) => void;
+}) {
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(props.heading);
+  const index = props.headings.indexOf(props.heading);
+  const small =
+    "rounded border border-zinc-300 px-1.5 text-xs leading-5 normal-case disabled:opacity-40 dark:border-zinc-700";
+
+  if (renaming) {
+    const merges = name.trim() !== props.heading && props.headings.includes(name.trim());
+    return (
+      <form
+        className="flex flex-wrap items-center gap-1"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setRenaming(false);
+          if (name.trim() !== props.heading) props.onRename(props.heading, name);
+        }}
+      >
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          aria-label={`New name for ${props.heading}`}
+          maxLength={40}
+          autoFocus
+          className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-1.5 py-0.5 text-sm dark:border-zinc-700"
+        />
+        <button type="submit" className={small}>
+          {merges ? "Merge" : "Save"}
+        </button>
+        <button
+          type="button"
+          className={small}
+          onClick={() => {
+            setRenaming(false);
+            props.onRename(props.heading, null);
+          }}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          className={small}
+          onClick={() => {
+            setRenaming(false);
+            setName(props.heading);
+          }}
+        >
+          Cancel
+        </button>
+      </form>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <h3 className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-zinc-500 uppercase">
+        {props.title}
+      </h3>
+      {props.onMove !== undefined && (
+        <>
+          <button
+            type="button"
+            className={small}
+            disabled={props.busy || index <= 0}
+            onClick={() => props.onMove?.(props.heading, "up")}
+            aria-label={`Move ${props.heading} up`}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className={small}
+            disabled={props.busy || index < 0 || index >= props.headings.length - 1}
+            onClick={() => props.onMove?.(props.heading, "down")}
+            aria-label={`Move ${props.heading} down`}
+          >
+            ↓
+          </button>
+        </>
+      )}
+      <button
+        type="button"
+        className={small}
+        disabled={props.busy}
+        onClick={() => {
+          setName(props.heading);
+          setRenaming(true);
+        }}
+        aria-label={`Rename ${props.heading}`}
+      >
+        Rename
+      </button>
+    </div>
   );
 }
 

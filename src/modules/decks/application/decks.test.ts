@@ -585,6 +585,7 @@ describe("headings (design doc 34)", () => {
 
   it("replaceList keeps headings when the text has none, and sets them when it has some", async () => {
     const id = await deckWithCards();
+    expect(repository.get(id)?.grouping).toBe("type");
     await setHeading(id, "bolt", "Removal");
     await setHeading(id, "ring", "Ramp");
     const current = () => fingerprint(repository.get(id)?.entries ?? []);
@@ -604,6 +605,16 @@ describe("headings (design doc 34)", () => {
     });
     expect(headingOf(id, "bolt")).toBeNull();
     expect(repository.get(id)?.headings).toEqual(["Ramp"]);
+  });
+
+  it("switches a deck without headings to them when its text gets some", async () => {
+    const id = await deckWithCards();
+    await decks.replaceList(jack, {
+      deckId: id,
+      text: "Ramp (1)\n1 Sol Ring",
+      fingerprint: fingerprint(repository.get(id)?.entries ?? []),
+    });
+    expect(repository.get(id)?.grouping).toBe("custom");
   });
 
   it("switches a deck's grouping", async () => {
