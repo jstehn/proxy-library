@@ -200,8 +200,11 @@ function inTribe(card: CandidateCard, tribe: string): boolean {
   );
 }
 
-/** Points and reasons for fitting a deck, without the strength tie-break. */
-function deckFit(card: CandidateCard, profile: DeckProfile): { points: number; reasons: Reason[] } {
+/** Points and reasons for fitting a deck, without the strength tie-break. Cuts use it too. */
+export function deckFit(
+  card: CandidateCard,
+  profile: DeckProfile,
+): { points: number; reasons: Reason[] } {
   const reasons: Reason[] = [];
   let points = 0;
   for (const theme of profile.themes) {

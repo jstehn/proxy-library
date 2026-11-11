@@ -126,6 +126,13 @@ export {
 } from "./queries/decks";
 export { copiesToTake, takeCopies, type BoardCount } from "./domain/free-copies";
 export {
+  rankCuts,
+  type CutContext,
+  type CutLine,
+  type CutReason,
+  type RankedCut,
+} from "./domain/cuts";
+export {
   BROWSE_PAGE_SIZE,
   BROWSE_SORTS,
   browseCollection,

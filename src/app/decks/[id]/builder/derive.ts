@@ -81,6 +81,9 @@ export function provisionalLine(
     priceCents: card.priceCents,
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,
+    // Not in the grid's facts; the server's answer brings them (they only nudge the cut ranking).
+    rarity: "common",
+    keywords: [],
     owned: card.owned,
     ownedReal: card.ownedReal,
     isBasicLand: card.rules.isBasicLand,

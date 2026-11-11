@@ -118,6 +118,10 @@ export type DeckLine = Readonly<{
   priceCents: number | null;
   setCode: string;
   collectorNumber: string;
+  /** The shown printing's rarity, for the cut ranking's tie-break (design doc 32). */
+  rarity: string;
+  /** Keyword abilities on any printing of the card ("Flying", "Ward"). */
+  keywords: string[];
   /** Copies counted as owned: game copies, plus real ones when the deck uses them. */
   owned: number;
   /** How many of `owned` are real copies (design doc 16: "3 game · 1 real"). */
@@ -229,6 +233,8 @@ export async function deckView(
     price_cents: number | null;
     set_code: string;
     collector_number: string;
+    rarity: string;
+    keywords: string[] | null;
     is_basic_land: boolean;
     face_text: string;
     is_game_changer: boolean;
@@ -249,7 +255,9 @@ export async function deckView(
                and s.finish = coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
              order by s.day desc limit 1) as price_cents,
-           shown.set_code, shown.collector_number,
+           shown.set_code, shown.collector_number, shown.rarity,
+           (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
+             where kp.oracle_id = e.oracle_id) as keywords,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
            exists (select 1 from printings g
                     where g.oracle_id = e.oracle_id and g.is_game_changer) as is_game_changer,
@@ -326,6 +334,8 @@ export async function deckView(
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,
       collectorNumber: row.collector_number,
+      rarity: row.rarity,
+      keywords: row.keywords ?? [],
       owned: row.owned,
       ownedReal: row.owned_real,
       isBasicLand: row.is_basic_land,

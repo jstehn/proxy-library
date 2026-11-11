@@ -42,6 +42,14 @@ export {
   type ProxyStreamEvent,
 } from "./domain/proxy-progress";
 export { copiesToTake } from "./domain/free-copies";
+export {
+  CUT_WEIGHTS,
+  rankCuts,
+  type CutContext,
+  type CutLine,
+  type CutReason,
+  type RankedCut,
+} from "./domain/cuts";
 export { BOARDS, COUNTED_BOARDS, isCounted, isPlayed, type Board } from "./domain/boards";
 export {
   deckProblems,
