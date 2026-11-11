@@ -6,6 +6,8 @@ import type {
   DeckProblem,
   CutReason,
   Format,
+  LandReason,
+  LandTargetReason,
   Reason,
 } from "@/modules/decks";
 import { BRACKET_NAMES, plural } from "@/modules/decks/client";
@@ -155,6 +157,58 @@ export function cutReasonText(reason: CutReason): string {
       return `${reason.flags.map((flag) => FLAG_WORDS[flag]).join(", ")}: over your bracket ${reason.target} target`;
     case "notOwned":
       return `You're short ${reason.short}`;
+    default:
+      return assertNever(reason);
+  }
+}
+
+const COLOR_NAMES: Readonly<Record<string, string>> = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+  C: "colorless",
+};
+
+/** "white and blue" from ["W", "U"]. */
+function colorList(colors: readonly string[]): string {
+  const names = colors.map((color) => COLOR_NAMES[color] ?? color);
+  return names.length <= 1
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/** Why the land target moved, in words (design doc 35). */
+export function landTargetReasonText(reason: LandTargetReason): string {
+  switch (reason.kind) {
+    case "base":
+      return `${reason.lands} is the usual count`;
+    case "lowCurve":
+      return `${reason.change}: a low curve (average ${reason.averageManaValue.toFixed(1)})`;
+    case "highCurve":
+      return `+${reason.change}: a high curve (average ${reason.averageManaValue.toFixed(1)})`;
+    case "manyManaSources":
+      return `${reason.change}: ${reason.sources} other mana sources`;
+    default:
+      return assertNever(reason);
+  }
+}
+
+/** Why a land is in the plan, in words (design doc 35). */
+export function landReasonText(reason: LandReason): string {
+  switch (reason.kind) {
+    case "fixes":
+      return `makes ${colorList(reason.colors)}, which the deck is short of`;
+    case "untapped":
+      return "enters untapped";
+    case "utility":
+      return `also ${[
+        ...reason.roles.map((role) => TAG_LABELS[role].toLowerCase()),
+        ...reason.themes.map((theme) => THEME_LABELS[theme].toLowerCase()),
+      ].join(", ")}`;
+    case "basic":
+      return `a basic for ${COLOR_NAMES[reason.color]} sources`;
     default:
       return assertNever(reason);
   }

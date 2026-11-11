@@ -175,6 +175,17 @@ export {
   type SuggestionList,
 } from "./queries/suggestions";
 export type { DeckProfile, Reason } from "./domain/suggest";
+export { manaBasePlan } from "./queries/mana-base";
+export type {
+  LandCandidate,
+  LandReason,
+  LandTarget,
+  LandTargetReason,
+  ManaBasePlan,
+  PlannedLand,
+  SourceTarget,
+  Tapped,
+} from "./domain/mana-base";
 export {
   cardsToGetFor,
   deckComments,

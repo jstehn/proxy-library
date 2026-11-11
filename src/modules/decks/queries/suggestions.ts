@@ -67,7 +67,8 @@ type SuggestionContext = Readonly<{
   colorLimit: Array<z.infer<typeof ColorSchema>> | null;
   /** Oracle cards already in the deck, never suggested. */
   inDeck: string[];
-  lines: ProfileLine[];
+  /** The deck's lines, with their cards' oracle ids. */
+  lines: Array<ProfileLine & Readonly<{ oracleId: string }>>;
   /** The bracket the owner chose (Commander only), and the deck as the estimate reads it. */
   targetBracket: Bracket | null;
   bracketLines: BracketLine[];
