@@ -35,6 +35,9 @@ export default async function DecksPage(props: PageProps<"/decks">) {
           <Link href="/decks/to-get" className="underline">
             Cards to get for all your decks
           </Link>
+          <Link href="/decks/commanders" className="underline">
+            Find a commander
+          </Link>
         </p>
       </header>
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}

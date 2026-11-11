@@ -27,6 +27,8 @@ export type PoolCard = CandidateCard & Readonly<{ colorIdentity: readonly ManaCo
 /** A card that could lead the deck. */
 export type CommanderCandidate = Readonly<{
   oracleId: string;
+  /** The printing to show: your most-held copy, or the store's cheapest. */
+  printingId: string;
   name: string;
   typeLine: string;
   text: string;

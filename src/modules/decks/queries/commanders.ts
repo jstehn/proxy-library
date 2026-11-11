@@ -61,6 +61,7 @@ type PoolRow = {
 
 type CandidateRow = {
   oracle_id: string;
+  printing_id: string;
   name: string;
   type_line: string;
   face_text: string;
@@ -76,7 +77,7 @@ type CandidateRow = {
 const POOL_COLUMNS = sql`p.oracle_id, p.name, p.type_line, p.mana_value, p.keywords, p.role_tags,
   p.theme_tags, p.color_identity, p.rarity`;
 
-const CANDIDATE_COLUMNS = sql`p.oracle_id, p.name, p.type_line, ${FACE_TEXT} as face_text,
+const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.type_line, ${FACE_TEXT} as face_text,
   exists (select 1 from jsonb_array_elements(p.faces) f
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
   p.color_identity, p.keywords, p.is_game_changer`;
@@ -110,6 +111,7 @@ function toPoolCard(row: PoolRow, pool: "owned" | "store"): PoolCard {
 function toCandidate(row: CandidateRow): CommanderCandidate {
   return {
     oracleId: row.oracle_id,
+    printingId: row.printing_id,
     name: row.name,
     typeLine: row.type_line,
     text: row.face_text,
@@ -189,7 +191,11 @@ async function ownedPool(
 function includesColors(colors: readonly ManaColor[] | undefined): SQL {
   return colors === undefined || colors.length === 0
     ? sql`true`
-    : sql`p.color_identity @> ${textArray(colors)}`;
+    : // Not textArray: its "_" placeholder would have to be in the identity too.
+      sql`p.color_identity @> array[${sql.join(
+        colors.map((color) => sql`${color}`),
+        sql`, `,
+      )}]::text[]`;
 }
 
 async function ownedCandidates(

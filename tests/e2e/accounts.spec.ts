@@ -1255,6 +1255,44 @@ test("the admin fills a Commander deck's lands from the mana base plan (design d
   await expect(panel.getByText("The deck is at its land target.")).toBeVisible();
 });
 
+test("the admin finds a commander and starts a deck led by it (design doc 36)", async ({
+  page,
+}) => {
+  await page.route("**/api/images/**", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/sign-in");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("secret-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.getByRole("link", { name: "Decks", exact: true }).click();
+  await page.getByRole("link", { name: "Find a commander" }).click();
+  await expect(page.getByRole("heading", { name: "Find a commander" })).toBeVisible();
+  await page.getByLabel("White").check();
+  await page.getByLabel("Also legends I don't own").check();
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+
+  const beza = page.getByRole("listitem").filter({ hasText: "Beza, the Bounding Spring" });
+  // Earlier tests built decks around Beza (a deck may hold cards you don't own).
+  await expect(beza.getByText(/Already leads .*Beza lands/)).toBeVisible();
+  await expect(beza.getByText(/of 62\s+spells from your cards/)).toBeVisible();
+  await beza.getByRole("button", { name: "See the cards" }).click();
+  await expect(beza.getByText("Your cards by role")).toBeVisible();
+  await expect(beza.getByText("What the rest might cost")).toBeVisible();
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await beza.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/find-commander-dark.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await beza.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/find-commander-phone-dark.png" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ colorScheme: "light" });
+
+  await beza.getByRole("button", { name: "Start a deck" }).click();
+  await expect(page).toHaveURL(/\/decks\/\d+$/);
+  await expect(page.getByText("Beza, the Bounding Spring").first()).toBeVisible();
+});
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

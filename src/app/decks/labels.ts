@@ -1,5 +1,6 @@
 import type {
   Bracket,
+  CommanderPlan,
   BracketEstimate,
   BracketFinding,
   BracketWarning,
@@ -212,4 +213,13 @@ export function landReasonText(reason: LandReason): string {
     default:
       return assertNever(reason);
   }
+}
+
+/** What a commander's text leads, in words (design doc 36): "Tokens, Rabbits, Flying". */
+export function planText(plan: CommanderPlan): string {
+  return [
+    ...plan.themes.map((theme) => THEME_LABELS[theme]),
+    ...plan.tribes.map(plural),
+    ...plan.keywords,
+  ].join(", ");
 }

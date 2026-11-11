@@ -138,6 +138,8 @@ describe("commanders I can build", () => {
       1,
     );
 
+    const white = await commandersICanBuild(db, jack.userId, { colors: ["W"] });
+    expect(white.map((entry) => entry.commander.name)).toContain("Test Rabbit Lord");
     const blue = await commandersICanBuild(db, jack.userId, { colors: ["U"] });
     expect(blue.map((entry) => entry.commander.name)).not.toContain("Test Rabbit Lord");
   });

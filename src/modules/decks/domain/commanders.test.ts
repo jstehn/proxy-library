@@ -20,6 +20,7 @@ const commander = (
   overrides: Partial<CommanderCandidate> = {},
 ): CommanderCandidate => ({
   oracleId: name,
+  printingId: name,
   name,
   typeLine: "Legendary Creature — Human",
   text: "",
