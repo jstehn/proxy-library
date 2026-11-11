@@ -1,4 +1,4 @@
-import type { Board } from "./deck";
+import { isCounted, isPlayed, type Board } from "./boards";
 import type { PrintedCard } from "./playtest-card";
 
 // Proxy sheets (design doc 14, section 3): which cards to print and where each one goes on the
@@ -113,7 +113,8 @@ export function cardsToPrint(lines: readonly ProxyLine[], options: ProxyOptions)
   const realLeft = new Map(lines.map((line) => [line.oracleId, line.ownedReal]));
   return lines
     .filter((line) => options.basicLands === "include" || !line.isBasicLand)
-    .filter((line) => options.cards === "all" || line.board !== "side")
+    .filter((line) => isCounted(line.board))
+    .filter((line) => options.cards === "all" || isPlayed(line.board))
     .flatMap((line) => {
       const wanted = options.copies === "one" ? 1 : line.quantity;
       const covered =

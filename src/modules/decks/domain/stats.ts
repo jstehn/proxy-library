@@ -1,4 +1,5 @@
 import { cardTags, TAGS, type Tag } from "@/shared/card-search";
+import { isCounted, isPlayed, type Board } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
 // exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.
@@ -7,7 +8,7 @@ export type StatsLine = Readonly<{
   quantity: number;
   manaValue: number;
   typeLine: string;
-  board: "main" | "side" | "commander";
+  board: Board;
   /** e.g. "{2}{W}{U}"; missing or null for cards without a cost (lands). */
   manaCost?: string | null;
   /** Colors of mana it can make: "W", "U", "B", "R", "G", "C" (lands, rocks, dorks). */
@@ -97,8 +98,10 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
   const tags = Object.fromEntries(TAGS.map((tag) => [tag, 0])) as Record<Tag, number>;
 
   for (const line of lines) {
+    // The maybeboard is counted nowhere; the sideboard only in the deck's value.
+    if (!isCounted(line.board)) continue;
     priceCents += (line.priceCents ?? 0) * line.quantity;
-    if (line.board === "side") continue;
+    if (!isPlayed(line.board)) continue;
     cardCount += line.quantity;
     const type = mainType(line.typeLine);
     types[type] = (types[type] ?? 0) + line.quantity;

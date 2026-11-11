@@ -35,7 +35,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
         </p>
       </header>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">With printings (Moxfield, Archidekt, Arena)</h2>
+        <h2 className="font-medium">With printings (Moxfield, Archidekt)</h2>
         <textarea
           readOnly
           rows={16}
@@ -45,7 +45,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
         />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">Names only</h2>
+        <h2 className="font-medium">Names only (Arena, MTGO; no maybeboard)</h2>
         <textarea
           readOnly
           rows={10}

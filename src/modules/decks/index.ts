@@ -45,12 +45,16 @@ export type {
 export {
   becomesADeck,
   BOARDS,
+  COUNTED_BOARDS,
   DeckId,
   DeckOrigin,
+  isCounted,
+  isPlayed,
   FORMATS,
   MAX_LIST_LINES,
   MAX_QUANTITY,
   type Board,
+  type CountedBoard,
   type Deck,
   type Format,
 } from "./domain/deck";

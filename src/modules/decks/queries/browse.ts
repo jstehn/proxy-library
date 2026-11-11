@@ -277,15 +277,17 @@ export async function browseCollection(
     select card.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
            card.owned, card.owned_real,
            coalesce((select sum(e.quantity) from deck_entries e
-                      where e.deck_id = ${input.deckId} and e.oracle_id = card.oracle_id), 0)::int
+                      where e.deck_id = ${input.deckId} and e.oracle_id = card.oracle_id
+                        and e.board <> 'maybe'), 0)::int
              as in_this_deck,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${input.deckId}
-               and e.oracle_id = card.oracle_id)::int as other_decks,
+               and e.oracle_id = card.oracle_id and e.board <> 'maybe')::int as other_decks,
            greatest(card.owned - coalesce((select sum(e.quantity) from deck_entries e
                                              join decks d on d.id = e.deck_id
                                             where d.owner_id = ${userId} and d.id <> ${input.deckId}
-                                              and e.oracle_id = card.oracle_id), 0), 0)::int as free,
+                                              and e.oracle_id = card.oracle_id
+                                              and e.board <> 'maybe'), 0), 0)::int as free,
            ${identityFits} as fits_identity,
            ${legal} as is_legal,
            p.color_identity, p.legalities->>${context.format} as legality,

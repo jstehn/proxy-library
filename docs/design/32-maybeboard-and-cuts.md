@@ -32,13 +32,13 @@ planning (the sideboard already exists).
 
 ## 2. Ubiquitous language
 
-| Term | Meaning in this codebase |
-| ---- | ------------------------ |
-| Maybeboard | The deck's `maybe` board: cards considered, not played. Counted nowhere. |
-| Counted boards | `commander`, `main` and `side`: every board but the maybeboard. |
-| Cut candidate | A main-deck card that isn't a land or a commander. |
-| Keep score | How much a cut candidate earns its place. Lower means a better cut. |
-| Cut reason | One reason a card scores low (or high), put into words by the builder and `rank_cuts`. |
+| Term           | Meaning in this codebase                                                               |
+| -------------- | -------------------------------------------------------------------------------------- |
+| Maybeboard     | The deck's `maybe` board: cards considered, not played. Counted nowhere.               |
+| Counted boards | `commander`, `main` and `side`: every board but the maybeboard.                        |
+| Cut candidate  | A main-deck card that isn't a land or a commander.                                     |
+| Keep score     | How much a cut candidate earns its place. Lower means a better cut.                    |
+| Cut reason     | One reason a card scores low (or high), put into words by the builder and `rank_cuts`. |
 
 ## 3. Domain model
 
@@ -91,15 +91,15 @@ export function rankCuts(
 
 ### Keep score (one place to tune, like design doc 20's `WEIGHTS`)
 
-| Part | Points |
-| ---- | ------ |
-| Fit: design doc 20's `deckFit` against the deck's own profile (themes, tribes, commander keywords) | as in doc 20: +3 a theme, +3 a tribe, +1 a commander keyword (2 at most) |
-| Role the deck is short of (count ≤ target) | +3 for each such role |
-| Role the deck has too many of (count > target + 2) | −1 for each such role |
-| Mana value ≥ 5 when the deck's average non-land mana value is over its format's guide (3.3 Commander, 3.0 others) | −(mana value − 4), at most −3 |
-| A Game Changer in a deck whose cards go over its target bracket | −5 |
-| Copies short | −1 |
-| Strength tie-break (`strength`, rarity and price) | +0.5 × strength |
+| Part                                                                                                              | Points                                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Fit: design doc 20's `deckFit` against the deck's own profile (themes, tribes, commander keywords)                | as in doc 20: +3 a theme, +3 a tribe, +1 a commander keyword (2 at most) |
+| Role the deck is short of (count ≤ target)                                                                        | +3 for each such role                                                    |
+| Role the deck has too many of (count > target + 2)                                                                | −1 for each such role                                                    |
+| Mana value ≥ 5 when the deck's average non-land mana value is over its format's guide (3.3 Commander, 3.0 others) | −(mana value − 4), at most −3                                            |
+| A Game Changer in a deck whose cards go over its target bracket                                                   | −5                                                                       |
+| Copies short                                                                                                      | −1                                                                       |
+| Strength tie-break (`strength`, rarity and price)                                                                 | +0.5 × strength                                                          |
 
 Reasons list every part that applied, so a low score explains itself and a kept card says why.
 
@@ -121,12 +121,12 @@ Reasons list every part that applied, so a low score explains itself and a kept 
 
 ## 5. Use cases
 
-| Use case | Actor / authz | Input | Output | Errors (`kind`) | Transaction? |
-| -------- | ------------- | ----- | ------ | --------------- | ------------ |
-| `setEntry` (existing) with `board: "maybe"` | owner | deck, card, board, quantity | — | as today | yes |
-| `moveEntry` (new) | owner | deck, card, from board, to board | — | DeckNotFound, EntryNotFound, CommanderMove | yes |
-| `importList` / `replaceList` (existing) | owner | text | — | as today | yes |
-| `cutsFor` (query) | owner | deck id, how many (default 10, at most 30) | `RankedCut[]` | — (null if not theirs) | no |
+| Use case                                    | Actor / authz | Input                                      | Output        | Errors (`kind`)                            | Transaction? |
+| ------------------------------------------- | ------------- | ------------------------------------------ | ------------- | ------------------------------------------ | ------------ |
+| `setEntry` (existing) with `board: "maybe"` | owner         | deck, card, board, quantity                | —             | as today                                   | yes          |
+| `moveEntry` (new)                           | owner         | deck, card, from board, to board           | —             | DeckNotFound, EntryNotFound, CommanderMove | yes          |
+| `importList` / `replaceList` (existing)     | owner         | text                                       | —             | as today                                   | yes          |
+| `cutsFor` (query)                           | owner         | deck id, how many (default 10, at most 30) | `RankedCut[]` | — (null if not theirs)                     | no           |
 
 `moveEntry` adds to the target board's count if the card is already there (Bolt ×1 maybe +
 Bolt ×2 main → Bolt ×3 main) and keeps the pinned printing of the line being moved.

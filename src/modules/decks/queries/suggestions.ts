@@ -4,7 +4,7 @@ import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
-import type { Format } from "../domain/deck";
+import { isCounted, type Format } from "../domain/deck";
 import {
   budgetPicks,
   creatureTypes,
@@ -126,7 +126,10 @@ export async function suggestionContext(
     format: view.deck.format,
     usesRealCards: view.deck.usesRealCards,
     colorLimit,
-    inDeck: [...new Set(view.lines.map((line) => line.oracleId))],
+    // A card on the maybeboard can still be suggested (design doc 32, invariant 1).
+    inDeck: [
+      ...new Set(view.lines.filter((line) => isCounted(line.board)).map((line) => line.oracleId)),
+    ],
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
     targetBracket: view.deck.targetBracket,
     bracketLines: view.lines.map(bracketLine),
@@ -249,11 +252,12 @@ async function ownedCandidates(
              order by s.day desc limit 1) as price_cents,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${context.deckId}
-               and e.oracle_id = owned.oracle_id)::int as other_decks,
+               and e.oracle_id = owned.oracle_id and e.board <> 'maybe')::int as other_decks,
            greatest(owned.owned - coalesce((select sum(e.quantity) from deck_entries e
                                               join decks d on d.id = e.deck_id
                                              where d.owner_id = ${userId} and d.id <> ${context.deckId}
-                                               and e.oracle_id = owned.oracle_id), 0), 0)::int as free
+                                               and e.oracle_id = owned.oracle_id
+                                               and e.board <> 'maybe'), 0), 0)::int as free
       from owned join printings p on p.id = owned.printing_id
      where ${fitsDeck(context)} and ${sharedCount(want)} > 0
      order by ${sharedCount(want)} desc, p.name

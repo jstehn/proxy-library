@@ -42,6 +42,7 @@ export {
   type ProxyStreamEvent,
 } from "./domain/proxy-progress";
 export { copiesToTake } from "./domain/free-copies";
+export { BOARDS, COUNTED_BOARDS, isCounted, isPlayed, type Board } from "./domain/boards";
 export {
   deckProblems,
   canBeCommander,

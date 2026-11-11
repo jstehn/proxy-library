@@ -10,6 +10,7 @@ const BOARD_WORDS: Record<Board, string> = {
   commander: "Commander",
   main: "Deck",
   side: "Sideboard",
+  maybe: "Maybeboard",
 };
 
 const FINISH_WORDS: Record<PrintingFinish, string> = {

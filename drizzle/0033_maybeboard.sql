@@ -1,0 +1,2 @@
+ALTER TABLE "deck_entries" DROP CONSTRAINT "deck_entries_board_known";--> statement-breakpoint
+ALTER TABLE "deck_entries" ADD CONSTRAINT "deck_entries_board_known" CHECK ("deck_entries"."board" in ('commander', 'main', 'side', 'maybe'));

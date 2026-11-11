@@ -60,11 +60,12 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     needs as (
       select e.deck_id, e.oracle_id, sum(e.quantity) as quantity
         from deck_entries e join decks d on d.id = e.deck_id
-       where d.owner_id = ${userId}
+       where d.owner_id = ${userId} and e.board <> 'maybe'
        group by e.deck_id, e.oracle_id
     )
     select d.id, d.name, d.format, d.updated_at, d.origin, d.visibility, d.uses_real_cards,
-           coalesce((select sum(e.quantity) from deck_entries e where e.deck_id = d.id), 0)::int as cards,
+           coalesce((select sum(e.quantity) from deck_entries e
+                      where e.deck_id = d.id and e.board <> 'maybe'), 0)::int as cards,
            -- Real copies count only in decks with the switch on (design doc 16, rule 2).
            coalesce((select sum(greatest(0, n.quantity - coalesce(o.game, 0)
                                             - case when d.uses_real_cards then coalesce(o.real, 0) else 0 end))
@@ -162,6 +163,7 @@ function otherDeckUses(userId: UserId, deckId: SQL, oracleId: SQL): SQL {
                              coalesce(sum(e2.quantity) filter (where e2.board <> 'commander'), 0)::int as available
                         from deck_entries e2
                        where e2.oracle_id = ${oracleId} and e2.deck_id <> ${deckId}
+                         and e2.board <> 'maybe'
                        group by e2.deck_id) used
                 join decks other on other.id = used.deck_id
                where other.owner_id = ${userId})`;
@@ -375,7 +377,7 @@ export async function decksUsing(
   }>(sql`
     select p.id as printing_id, d.id as deck_id, d.name, sum(e.quantity)::int as quantity
       from printings p
-      join deck_entries e on e.oracle_id = p.oracle_id
+      join deck_entries e on e.oracle_id = p.oracle_id and e.board <> 'maybe'
       join decks d on d.id = e.deck_id and d.owner_id = ${userId}
      where p.id = any(${sql.param([...new Set(printingIds)])}::text[])
      group by p.id, d.id, d.name

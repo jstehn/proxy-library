@@ -110,8 +110,8 @@ export async function sharedDecks(db: DbExecutor): Promise<SharedDeck[]> {
     updated_at: Date;
   }>(sql`
     select d.id, d.name, d.format, u.name as owner_name, d.updated_at,
-           coalesce((select sum(e.quantity) from deck_entries e where e.deck_id = d.id), 0)::int
-             as cards,
+           coalesce((select sum(e.quantity) from deck_entries e
+                      where e.deck_id = d.id and e.board <> 'maybe'), 0)::int as cards,
            (select array_agg(distinct p.name) from deck_entries e
               join printings p on p.oracle_id = e.oracle_id
              where e.deck_id = d.id and e.board = 'commander') as commanders,
@@ -170,7 +170,7 @@ export async function cardsToGetFor(db: DbExecutor, userId: UserId): Promise<Car
                         where r.user_id = ${userId} and rp.oracle_id = e.oracle_id), 0)
            else 0 end::int as real_copies
       from deck_entries e join decks d on d.id = e.deck_id
-     where d.owner_id = ${userId}
+     where d.owner_id = ${userId} and e.board <> 'maybe'
        -- Basic lands are never short (design doc 09, rule 1).
        and not exists (select 1 from printings p
                         where p.oracle_id = e.oracle_id and p.type_line ~ '^Basic\\y.*\\yLand\\y')

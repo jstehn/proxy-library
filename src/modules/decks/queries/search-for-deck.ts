@@ -92,7 +92,8 @@ function fitsDeck(context: Context): SQL {
       ? sql`true`
       : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
   const notInDeck = sql`not exists (select 1 from deck_entries e
-                                     where e.deck_id = ${context.deckId} and e.oracle_id = p.oracle_id)`;
+                                     where e.deck_id = ${context.deckId} and e.oracle_id = p.oracle_id
+                                       and e.board <> 'maybe')`;
   return sql`(${identity} and ${legal} and ${notInDeck} and ${withinTarget(context.overTarget)})`;
 }
 

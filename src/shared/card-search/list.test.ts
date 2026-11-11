@@ -116,12 +116,19 @@ describe("parseList", () => {
     ]);
   });
 
-  it("skips maybeboard sections until decks have one", () => {
-    const { lines, unreadable } = parseList(
-      "1 Bolt\nMaybeboard (2)\n1 Shock\nConsidering\n1 Opt\nLands (1)\n1 Forest",
-    );
-    expect(unreadable).toEqual([]);
-    expect(lines.map((line) => line.name)).toEqual(["Bolt", "Forest"]);
+  it("skips maybeboard sections unless asked to keep them (decks, design doc 32)", () => {
+    const text = "1 Bolt\nMaybeboard (2)\n1 Shock\nConsidering\n1 Opt\nLands (1)\n1 Forest";
+    const skipped = parseList(text);
+    expect(skipped.unreadable).toEqual([]);
+    expect(skipped.lines.map((line) => line.name)).toEqual(["Bolt", "Forest"]);
+
+    const kept = parseList(text, { keepMaybeboard: true });
+    expect(kept.lines.map((line) => [line.name, line.board])).toEqual([
+      ["Bolt", "main"],
+      ["Shock", "maybe"],
+      ["Opt", "maybe"],
+      ["Forest", "main"],
+    ]);
   });
 
   it("reads a whole category-grouped Commander list: 1 commander and 99 cards", () => {

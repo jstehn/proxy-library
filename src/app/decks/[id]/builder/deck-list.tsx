@@ -325,4 +325,5 @@ export const BOARD_LABELS: Record<Board, string> = {
   commander: "Commander",
   main: "Main deck",
   side: "Sideboard",
+  maybe: "Maybeboard",
 };

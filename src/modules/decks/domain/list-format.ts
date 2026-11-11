@@ -1,5 +1,5 @@
 import type { Finish } from "@/modules/catalog";
-import type { Board } from "./deck";
+import { BOARDS, isCounted, type Board } from "./boards";
 import type { DeckProblem } from "./rules";
 
 // Deck lists as text, out (design doc 09, section 10). Reading lists in is shared with the
@@ -23,8 +23,13 @@ function sections<Line extends Readonly<{ board: Board }>>(
   format: (line: Line) => string,
 ): string {
   const parts: string[] = [];
-  const titles: Record<Board, string> = { commander: "Commander", main: "Deck", side: "Sideboard" };
-  for (const board of ["commander", "main", "side"] as const) {
+  const titles: Record<Board, string> = {
+    commander: "Commander",
+    main: "Deck",
+    side: "Sideboard",
+    maybe: "Maybeboard",
+  };
+  for (const board of BOARDS) {
     const onBoard = lines.filter((line) => line.board === board);
     if (onBoard.length > 0) parts.push([titles[board], ...onBoard.map(format)].join("\n"));
   }
@@ -32,15 +37,19 @@ function sections<Line extends Readonly<{ board: Board }>>(
 }
 
 export const EXPORTERS: Readonly<Record<"printings" | "names", Exporter>> = {
-  /** "4 Lightning Bolt (M11) 149": Moxfield, Archidekt and Arena all read this. */
+  /** "4 Lightning Bolt (M11) 149": Moxfield and Archidekt read this, maybeboard included. */
   printings: (lines) =>
     sections(lines, (line) =>
       line.setCode === null
         ? `${line.quantity} ${line.name}`
         : `${line.quantity} ${line.name} (${line.setCode}) ${line.collectorNumber ?? ""}`.trim(),
     ),
-  /** "4 Lightning Bolt": for anything else. */
-  names: (lines) => sections(lines, (line) => `${line.quantity} ${line.name}`),
+  /** "4 Lightning Bolt": Arena, MTGO and anything else; they have no maybeboard (design doc 32). */
+  names: (lines) =>
+    sections(
+      lines.filter((line) => isCounted(line.board)),
+      (line) => `${line.quantity} ${line.name}`,
+    ),
 };
 
 /** A deck line for the Edit as text box (design doc 23). */

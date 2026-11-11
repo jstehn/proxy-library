@@ -1,4 +1,5 @@
 import type { Color } from "@/modules/catalog";
+import { isCounted, isPlayed } from "./boards";
 import type { Deck, DeckEntry, Format } from "./deck";
 
 // What's wrong with a deck (design doc 09, rules 1–5). Pure: the caller supplies what the rules
@@ -159,7 +160,7 @@ function commanderProblems(deck: DeckToCheck, rules: RulesLookup, size: number):
   const problems: DeckProblem[] = [];
   const commanders = deck.entries.filter((entry) => entry.board === "commander");
   const commanderCount = count(commanders);
-  const total = count(deck.entries.filter((entry) => entry.board !== "side"));
+  const total = count(deck.entries.filter((entry) => isPlayed(entry.board)));
 
   if (commanderCount === 0) problems.push({ kind: "CommanderMissing" });
   if (commanderCount > 2) problems.push({ kind: "TooManyCommanders", count: commanderCount });
@@ -187,6 +188,17 @@ export function deckProblems(
   rules: RulesLookup,
   owned: OwnedLookup,
 ): DeckProblem[] {
+  // The maybeboard is counted nowhere (design doc 32, invariant 1).
+  const counted = { ...deck, entries: deck.entries.filter((entry) => isCounted(entry.board)) };
+  return countedCardProblems(counted, rules, owned);
+}
+
+/** The problems of a deck's counted boards. */
+function countedCardProblems(
+  deck: DeckToCheck,
+  rules: RulesLookup,
+  owned: OwnedLookup,
+): DeckProblem[] {
   const copies = copiesByCard(deck.entries);
   const problems = ownershipProblems(copies, rules, owned);
   const format = FORMAT_RULES[deck.format];
@@ -195,7 +207,7 @@ export function deckProblems(
     case "casual":
       return problems;
     case "constructed": {
-      const main = count(deck.entries.filter((entry) => entry.board !== "side"));
+      const main = count(deck.entries.filter((entry) => isPlayed(entry.board)));
       const side = count(deck.entries.filter((entry) => entry.board === "side"));
       if (main < format.minimum)
         problems.push({ kind: "TooFewCards", minimum: format.minimum, count: main });
@@ -211,7 +223,7 @@ export function deckProblems(
       const main = count(
         deck.entries.filter(
           (entry) =>
-            entry.board !== "side" && !/\bConspiracy\b/.test(rules(entry.oracleId).typeLine),
+            isPlayed(entry.board) && !/\bConspiracy\b/.test(rules(entry.oracleId).typeLine),
         ),
       );
       if (main < format.minimum)

@@ -207,7 +207,7 @@ describe("round trip: deck → text → parse → replace", () => {
           })),
         );
 
-        const parsed = parseList(text);
+        const parsed = parseList(text, { keepMaybeboard: true });
         expect(parsed.unreadable).toEqual([]);
         const lines: MatchedLine[] = parsed.lines.map((line) => {
           const card = Number(/\d+$/.exec(line.name)?.[0]);

@@ -71,7 +71,10 @@ export const deckEntries = pgTable(
   (table) => [
     primaryKey({ columns: [table.deckId, table.oracleId, table.board] }),
     index("deck_entries_oracle_idx").on(table.oracleId),
-    check("deck_entries_board_known", sql`${table.board} in ('commander', 'main', 'side')`),
+    check(
+      "deck_entries_board_known",
+      sql`${table.board} in ('commander', 'main', 'side', 'maybe')`,
+    ),
     check("deck_entries_quantity", sql`${table.quantity} between 1 and 99`),
   ],
 );

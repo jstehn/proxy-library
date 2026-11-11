@@ -1,4 +1,4 @@
-import type { Board } from "./deck";
+import { isCounted, isPlayed, type Board } from "./boards";
 import type { PrintedCard, PrintedFace } from "./playtest-card";
 import { cardsToPrint, type ProxyCard, type ProxyLine, type ProxyOptions } from "./proxy-sheet";
 
@@ -86,7 +86,8 @@ export function deckTokens(
 
   type Building = { art: TokenArt; fromOwnPrinting: boolean; madeBy: string[]; boards: Board[] };
   const tokens = new Map<string, Building>();
-  for (const maker of makers) {
+  // The maybeboard's cards are counted nowhere: no tokens for them (design doc 32).
+  for (const maker of makers.filter((card) => isCounted(card.board))) {
     // Each token this card makes, with the art its own printing links to, if any.
     const byToken = new Map<string, TokenLinkRow[]>();
     for (const link of linksByCard.get(maker.oracleId) ?? []) {
@@ -172,7 +173,7 @@ export function printedToken(art: TokenArt): PrintedCard {
 export function tokensToPrint(tokens: readonly TokenLine[], options: ProxyOptions): ProxyCard[] {
   return tokens
     .filter((token) => token.included)
-    .filter((token) => options.cards === "all" || token.boards.some((board) => board !== "side"))
+    .filter((token) => options.cards === "all" || token.boards.some((board) => isPlayed(board)))
     .flatMap((token) => {
       const card: ProxyCard = {
         printingId: token.art.id,

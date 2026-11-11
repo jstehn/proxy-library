@@ -21,8 +21,15 @@ export const DeckId = {
   },
 };
 
-export const BOARDS = ["commander", "main", "side"] as const;
-export type Board = (typeof BOARDS)[number];
+export {
+  BOARDS,
+  COUNTED_BOARDS,
+  isCounted,
+  isPlayed,
+  type Board,
+  type CountedBoard,
+} from "./boards";
+import type { Board } from "./boards";
 
 export const FORMATS = [
   "casual",

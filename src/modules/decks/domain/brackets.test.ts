@@ -32,6 +32,14 @@ const lineArbitrary = fc.record({
 });
 
 describe("estimateBracket", () => {
+  it("leaves out the sideboard and the maybeboard (design doc 32)", () => {
+    const parked = gameChangers(4).map((card, index) => ({
+      ...card,
+      board: index % 2 === 0 ? ("side" as const) : ("maybe" as const),
+    }));
+    expect(floorOf([line("Llanowar Elves"), ...parked])).toBe(1);
+  });
+
   it("gives a deck with nothing flagged 1–2, with intent and combos unchecked", () => {
     expect(estimateBracket("commander", [line("Llanowar Elves")])).toEqual({
       floor: 1,

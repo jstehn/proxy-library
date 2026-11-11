@@ -1,7 +1,8 @@
 // Commander brackets (design doc 31, sections 3.2 and 3.3): the lowest bracket a deck's cards
 // allow, why, and whether it's within the bracket its owner chose. Pure, and safe for the browser.
 import { BRACKET_FLAGS, bracketFlags, type BracketFlag } from "@/shared/card-search";
-import type { Board, Format } from "./deck";
+import { isPlayed, type Board } from "./boards";
+import type { Format } from "./deck";
 
 export const BRACKETS = [1, 2, 3, 4, 5] as const;
 /** Wizards' Commander power bands: 1 Exhibition, 2 Core, 3 Upgraded, 4 Optimized, 5 cEDH. */
@@ -97,7 +98,7 @@ export function estimateBracket(
   lines: readonly BracketLine[],
 ): BracketEstimate | null {
   if (format !== "commander") return null;
-  const counted = lines.filter((line) => line.board !== "side");
+  const counted = lines.filter((line) => isPlayed(line.board));
   const findings: BracketFinding[] = [];
   for (const rule of BRACKET_RULE_NAMES) {
     const { flag, forces } = BRACKET_RULES[rule];
@@ -148,7 +149,7 @@ export function fitsTarget(
   card: Readonly<{ name: string; flags: readonly BracketFlag[] }>,
   target: Bracket,
 ): boolean {
-  const counted = lines.filter((line) => line.board !== "side");
+  const counted = lines.filter((line) => isPlayed(line.board));
   return BRACKET_RULE_NAMES.every((rule) => {
     const { flag, forces } = BRACKET_RULES[rule];
     if (!card.flags.includes(flag)) return true;

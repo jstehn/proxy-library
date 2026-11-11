@@ -59,6 +59,11 @@ describe("cardsToPrint", () => {
     line("Delver of Secrets", { hasBack: true }),
   ];
 
+  it("never prints the maybeboard (design doc 32)", () => {
+    const maybe = [line("Opt", { board: "maybe" })];
+    expect(cardsToPrint(maybe, options({ cards: "all" }))).toEqual([]);
+  });
+
   it("prints every copy but skips basic lands, by default", () => {
     const cards = cardsToPrint(deck, DEFAULT_PROXY_OPTIONS);
     expect(cards.map((card) => card.name)).toEqual([

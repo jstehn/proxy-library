@@ -150,6 +150,10 @@ describe("deckTokens", () => {
   it("makes no tokens for cards that make none", () => {
     expect(deckTokens([{ ...krenko, oracleId: "bolt" }], links, [], new Map())).toEqual([]);
   });
+
+  it("makes no tokens for maybeboard cards (design doc 32)", () => {
+    expect(deckTokens([{ ...tithe, board: "maybe" }], links, [], new Map())).toEqual([]);
+  });
 });
 
 describe("tokensToPrint", () => {

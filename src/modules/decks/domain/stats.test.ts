@@ -23,6 +23,13 @@ describe("deckStats", () => {
     expect(stats.averageManaValue).toBeCloseTo((4 * 1 + 2 * 9 + 3) / 7);
   });
 
+  it("leaves the maybeboard out of everything, its value too (design doc 32)", () => {
+    const maybe = { quantity: 2, manaValue: 3, typeLine: "Sorcery", priceCents: 500 } as const;
+    expect(deckStats([{ ...maybe, board: "maybe" }])).toEqual(deckStats([]));
+    // The sideboard still counts in the deck's value.
+    expect(deckStats([{ ...maybe, board: "side" }]).priceCents).toBe(1000);
+  });
+
   it("is all zeros for an empty deck", () => {
     expect(deckStats([])).toEqual({
       curve: [0, 0, 0, 0, 0, 0, 0, 0],

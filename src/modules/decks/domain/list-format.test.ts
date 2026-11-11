@@ -42,6 +42,15 @@ describe("exporters (Strategy)", () => {
       [2, "Duress", "side"],
     ]);
   });
+
+  it("writes the maybeboard with printings, and leaves it out of names only (design doc 32)", () => {
+    const withMaybe = [
+      ...lines,
+      { quantity: 1, name: "Opt", board: "maybe" as const, setCode: null, collectorNumber: null },
+    ];
+    expect(EXPORTERS.printings(withMaybe)).toMatch(/\n\nMaybeboard\n1 Opt$/);
+    expect(EXPORTERS.names(withMaybe)).toBe(EXPORTERS.names(lines));
+  });
 });
 
 describe("shortList", () => {

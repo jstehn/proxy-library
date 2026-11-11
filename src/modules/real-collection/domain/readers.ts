@@ -23,8 +23,11 @@ export type ImportLine = Readonly<{
   /** Nonfoil unless the line says otherwise. */
   finish: Finish;
   /** A pasted deck list's section ("Commander", "Sideboard"); "main" for collection files. */
-  board: ListSection;
+  board: ImportBoard;
 }>;
+
+/** The sections a real import keeps: a maybeboard isn't cards you have. */
+export type ImportBoard = Exclude<ListSection, "maybe">;
 
 export type ImportFormat = "list" | "moxfield" | "manabox" | "ours";
 
@@ -158,16 +161,23 @@ function readCsv(text: string, format: CsvFormat, name: ImportFormat): ReadImpor
 /** Reads a pasted list with the deck importer's parser, quantities up to the maximum. */
 function readList(text: string): ReadImport {
   const parsed = parseList(text, { maxQuantity: MAX_REAL_QUANTITY });
-  const lines = parsed.lines.map((line, index): ImportLine => ({
-    index,
-    quantity: line.quantity,
-    name: line.name,
-    setCode: line.setCode,
-    collectorNumber: line.collectorNumber,
-    scryfallId: null,
-    finish: line.finish ?? "nonfoil",
-    board: line.board,
-  }));
+  // parseList leaves a maybeboard out unless asked; this tells TypeScript so too.
+  const lines = parsed.lines.flatMap((line, index): ImportLine[] =>
+    line.board === "maybe"
+      ? []
+      : [
+          {
+            index,
+            quantity: line.quantity,
+            name: line.name,
+            setCode: line.setCode,
+            collectorNumber: line.collectorNumber,
+            scryfallId: null,
+            finish: line.finish ?? "nonfoil",
+            board: line.board,
+          },
+        ],
+  );
   return { format: "list", lines, unreadable: parsed.unreadable };
 }
 

@@ -179,7 +179,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     actor: Actor,
     input: { deckId: DeckId; text: string },
   ): Promise<Result<ImportReport, DeckNotFound>> {
-    const parsed = parseList(input.text);
+    const parsed = parseList(input.text, { keepMaybeboard: true });
     return unitOfWork.run<ImportReport, DeckNotFound>(async ({ decks, cards }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
@@ -229,7 +229,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     if (input.text.split("\n").length > MAX_LIST_LINES) {
       return err({ kind: "ListTooLong", maximumLines: MAX_LIST_LINES });
     }
-    const parsed = parseList(input.text);
+    const parsed = parseList(input.text, { keepMaybeboard: true });
     return unitOfWork.run<ReplaceReport, ReplaceListError>(async ({ decks, cards }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });

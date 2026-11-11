@@ -72,8 +72,8 @@ function ownedCopiesOfCard(context: SearchContext): SQL {
 }
 
 /**
- * SQL: how many copies of printing "p"'s card the player's decks hold, on any board, leaving out
- * the deck being built (task 42). Ownership is shared, so these copies are owned but not free.
+ * SQL: how many copies of printing "p"'s card the player's decks hold, on any board but the
+ * maybeboard (design doc 32), leaving out the deck being built (task 42). Ownership is shared, so these copies are owned but not free.
  */
 function copiesInOtherDecks(context: SearchContext): SQL {
   const notThisDeck =
@@ -82,6 +82,7 @@ function copiesInOtherDecks(context: SearchContext): SQL {
                join decks used_deck on used_deck.id = used.deck_id
               where used_deck.owner_id = ${context.userId}
                 and used.oracle_id = p.oracle_id
+                and used.board <> 'maybe'
                 and ${notThisDeck})`;
 }
 

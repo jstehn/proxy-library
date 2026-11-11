@@ -3,7 +3,7 @@
 // (design doc 15). Pure.
 
 /** The sections a list can have; a plain shopping list is all "main". */
-export type ListSection = "commander" | "main" | "side";
+export type ListSection = "commander" | "main" | "side" | "maybe";
 
 /** One line of a pasted deck list, understood. */
 export type ListLine = Readonly<{
@@ -21,14 +21,14 @@ export type ParsedList = Readonly<{ lines: ListLine[]; unreadable: string[] }>;
 // "4 Lightning Bolt", "4x Lightning Bolt", "1 Lightning Bolt (M11) 149", "Lightning Bolt"
 const LINE = /^(?:(\d+)\s*x?\s+)?(.+?)(?:\s+\(([A-Za-z0-9]{2,8})\)(?:\s+(\S+))?)?$/;
 // Section headers used by Moxfield, Arena and MTGO exports, with or without a count:
-// "Sideboard", "Sideboard:", "Sideboard (15)". "skip" is a section the app has no board for yet
-// (a maybeboard, design doc 23): its lines are left out rather than added to the main deck.
+// "Sideboard", "Sideboard:", "Sideboard (15)". A maybeboard's lines are kept only when the
+// reader asks for them (decks, design doc 32); anything else leaves them out.
 const COUNT = String.raw`\s*(?::|\(\d+\))?\s*$`;
-const HEADERS: ReadonlyArray<[RegExp, ListSection | "skip"]> = [
+const HEADERS: ReadonlyArray<[RegExp, ListSection]> = [
   [new RegExp(String.raw`^(commander|commanders)` + COUNT, "i"), "commander"],
   [new RegExp(String.raw`^(deck|main|mainboard|main deck)` + COUNT, "i"), "main"],
   [new RegExp(String.raw`^(sideboard|side|sb)` + COUNT, "i"), "side"],
-  [new RegExp(String.raw`^(maybeboard|maybe|considering)` + COUNT, "i"), "skip"],
+  [new RegExp(String.raw`^(maybeboard|maybe|considering)` + COUNT, "i"), "maybe"],
 ];
 // Any other "Name (count)" line is a category heading from Archidekt or Moxfield ("Lands (36)",
 // "Ramp & Mana Fixers (9)"): it starts with a letter, not a quantity, and no card name ends in
@@ -36,7 +36,11 @@ const HEADERS: ReadonlyArray<[RegExp, ListSection | "skip"]> = [
 const CATEGORY = /^[^\d\s].*\s\(\d+\)$/;
 
 /** How a list is read. A deck needs at most 99 copies of a card; a real collection more. */
-export type ListOptions = Readonly<{ maxQuantity?: number }>;
+export type ListOptions = Readonly<{
+  maxQuantity?: number;
+  /** Keep a Maybeboard / Considering section's lines (on board "maybe"); otherwise they're skipped. */
+  keepMaybeboard?: boolean;
+}>;
 
 /**
  * Reads a pasted list ("parse, don't validate"): each line becomes a typed ListLine, or is
@@ -47,7 +51,7 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
   const maxQuantity = options.maxQuantity ?? 99;
   const lines: ListLine[] = [];
   const unreadable: string[] = [];
-  let board: ListSection | "skip" = "main";
+  let board: ListSection = "main";
 
   for (const raw of text.split(/\r?\n/)) {
     let line = raw.trim();
@@ -62,8 +66,7 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
       board = "main";
       continue;
     }
-    if (board === "skip") continue;
-    // TypeScript narrowed `board` after the check above: here it can't be "skip".
+    if (board === "maybe" && options.keepMaybeboard !== true) continue;
     let lineBoard: ListSection = board;
     if (/^SB:\s*/i.test(line)) {
       lineBoard = "side";

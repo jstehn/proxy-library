@@ -456,3 +456,31 @@ async function oracleOf(name: string): Promise<string> {
   ).rows;
   return row.oracle_id;
 }
+
+describe("the maybeboard (design doc 32)", () => {
+  it("keeps a pasted Maybeboard section, and counts it nowhere", async () => {
+    const { id: printingId, name } = await card();
+    await store.buySingle(jack, { printingId, finish: "nonfoil", quantity: 1 });
+    const deckId = await newDeck();
+    const report = await decks.importList(jack, {
+      deckId,
+      text: `20 Plains\n\nMaybeboard (2)\n2 ${name}`,
+    });
+    expect(report.ok && report.value.notFound).toEqual([]);
+
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines.find((line) => line.name === name)).toMatchObject({
+      board: "maybe",
+      quantity: 2,
+    });
+    // Not in the card count, and not short although only one copy is owned.
+    const [summary] = await decksFor(db, jack.userId);
+    expect(summary).toMatchObject({ cards: 20, short: 0 });
+
+    // Another deck sees the copy as free: the maybeboard doesn't use it (task 42).
+    const other = await newDeck();
+    await decks.importList(jack, { deckId: other, text: `1 ${name}` });
+    const otherView = await deckView(db, jack.userId, other);
+    expect(otherView?.lines[0]).toMatchObject({ otherDecks: [], free: 1 });
+  });
+});

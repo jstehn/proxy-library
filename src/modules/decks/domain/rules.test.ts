@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import { samplePrintingId } from "../testing/fakes";
-import { DeckId, withEntry, type Deck, type Format } from "./deck";
+import { DeckId, withEntry, type Board, type Deck, type Format } from "./deck";
 import { canBeCommander, deckProblems, shortCount, type CardRules } from "./rules";
 
 // Small made-up cards, keyed by oracle id.
@@ -128,10 +128,7 @@ const CARDS: Record<string, CardRules> = {
 const rules = (oracleId: string) => CARDS[oracleId];
 const ownAll = () => 99;
 
-function deck(
-  format: Format,
-  entries: Array<[string, number, ("main" | "side" | "commander")?]>,
-): Deck {
+function deck(format: Format, entries: Array<[string, number, Board?]>): Deck {
   return entries.reduce(
     (built, [oracleId, quantity, board = "main"]) =>
       withEntry(built, { oracleId, board, quantity }),
@@ -165,6 +162,17 @@ describe("ownership (rule 1)", () => {
       { kind: "Short", oracleId: "bolt", name: "Lightning Bolt", needed: 5, owned: 3 },
     ]);
     expect(shortCount(problems)).toBe(2);
+  });
+
+  it("counts nothing on the maybeboard: not short, not in the size (design doc 32)", () => {
+    const owned = (oracleId: string) => (oracleId === "ruby" ? 4 : 0);
+    const maybe = deck("standard", [
+      ["ruby", 4],
+      ["mountain", 56],
+      ["lotus", 3, "maybe"],
+      ["ruby", 2, "maybe"],
+    ]);
+    expect(deckProblems(maybe, rules, owned)).toEqual([]);
   });
 
   it("casual decks have no other rules (rule 4)", () => {
