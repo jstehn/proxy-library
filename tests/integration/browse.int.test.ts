@@ -257,3 +257,30 @@ describe("browsing every card for a deck (design doc 29)", () => {
     expect(again).toMatchObject({ inThisDeck: 2, owned: 0 });
   });
 });
+
+describe("free copies: owned copies no other deck uses (task 42)", () => {
+  it("counts copies in your other decks, but not in the deck being built", async () => {
+    await give("Agate Assault", 3);
+    await give("Banishing Light", 1);
+    const other = await newDeck("casual", "2 Agate Assault\nSideboard\n1 Banishing Light");
+    const building = await newDeck("casual", "1 Agate Assault");
+
+    const page = await browse(building);
+    expect(page.cards.find((card) => card.name === "Agate Assault")).toMatchObject({
+      owned: 3,
+      otherDecks: 1,
+      free: 1,
+    });
+    expect(names(await browse(building, { search: "free>0" }))).toContain("Agate Assault");
+    expect(names(await browse(building, { search: "free>0" }))).not.toContain("Banishing Light");
+    expect(names(await browse(building, { search: "spare=0" }))).toContain("Banishing Light");
+
+    // The deck view names the other deck and its copies; its commanders can't be given.
+    const view = await deckView(db, jack.userId, building);
+    const agate = view?.lines.find((line) => line.name === "Agate Assault");
+    expect(agate).toMatchObject({
+      free: 1,
+      otherDecks: [{ deckId: other, name: "Test", quantity: 2, available: 2 }],
+    });
+  });
+});

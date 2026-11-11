@@ -149,6 +149,8 @@ describe("design doc 15 keywords", () => {
     expect(only("border:borderless").node).toEqual(term("border", ":", "borderless"));
     expect(only("frame:showcase").node).toEqual(term("frame", ":", "showcase"));
     expect(only("own=0").node).toEqual(term("own", "=", "0"));
+    expect(only("free>0").node).toEqual(term("free", ">", "0"));
+    expect(only("spare>=2").node).toEqual(term("free", ">=", "2"));
     for (const value of ["mdfc", "dfc", "adventure", "showcase", "fullart", "vanilla", "bear"]) {
       expect(only(`is:${value}`).notes).toEqual([]);
     }

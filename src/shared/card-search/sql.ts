@@ -28,6 +28,11 @@ export type SearchContext = Readonly<{
    * always counts only real copies.
    */
   ownIncludesReal?: boolean;
+  /**
+   * The deck being built, if any (task 42): `free` counts the copies your *other* decks hold.
+   * Without one, every deck you have counts.
+   */
+  deckId?: number;
 }>;
 
 /** Store: the printing is sold in foil or etched. */
@@ -57,6 +62,27 @@ function copiesOfCard(table: SQL, userId: UserId): SQL {
                join printings owned_printing on owned_printing.id = owned.printing_id
               where owned.user_id = ${userId}
                 and owned_printing.oracle_id = p.oracle_id)`;
+}
+
+/** SQL: the copies of printing "p"'s card that `own` counts in this context. */
+function ownedCopiesOfCard(context: SearchContext): SQL {
+  const game = copiesOfCard(sql`collection_cards`, context.userId);
+  if (!context.ownIncludesReal) return game;
+  return sql`(${game} + ${copiesOfCard(sql`real_cards`, context.userId)})`;
+}
+
+/**
+ * SQL: how many copies of printing "p"'s card the player's decks hold, on any board, leaving out
+ * the deck being built (task 42). Ownership is shared, so these copies are owned but not free.
+ */
+function copiesInOtherDecks(context: SearchContext): SQL {
+  const notThisDeck =
+    context.deckId === undefined ? sql`true` : sql`used_deck.id <> ${context.deckId}`;
+  return sql`(select coalesce(sum(used.quantity), 0) from deck_entries used
+               join decks used_deck on used_deck.id = used.deck_id
+              where used_deck.owner_id = ${context.userId}
+                and used.oracle_id = p.oracle_id
+                and ${notThisDeck})`;
 }
 
 /** The search as one SQL condition. */
@@ -190,13 +216,11 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
         comparison,
       );
     }
-    case "own": {
-      const game = copiesOfCard(sql`collection_cards`, context.userId);
-      const total = context.ownIncludesReal
-        ? sql`(${game} + ${copiesOfCard(sql`real_cards`, context.userId)})`
-        : game;
-      return sql`${total} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
-    }
+    case "own":
+      return sql`${ownedCopiesOfCard(context)} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+    case "free":
+      return sql`greatest(${ownedCopiesOfCard(context)} - ${copiesInOtherDecks(context)}, 0)
+                  ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "real":
       return sql`${copiesOfCard(sql`real_cards`, context.userId)}
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;

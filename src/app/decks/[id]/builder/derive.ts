@@ -84,6 +84,8 @@ export function provisionalLine(
     owned: card.owned,
     ownedReal: card.ownedReal,
     isBasicLand: card.rules.isBasicLand,
+    // Which decks hold the rest comes with the server's answer; the grid already knows how many are free.
     otherDecks: [],
+    free: card.free,
   };
 }

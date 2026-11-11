@@ -73,7 +73,15 @@ describe("decks", () => {
     const view = await deckView(db, jack.userId, first);
     if (view === null) throw new Error("no deck");
     expect(view.lines).toEqual([
-      expect.objectContaining({ name, quantity: 1, owned: 1, otherDecks: ["Second"], printingId }),
+      expect.objectContaining({
+        name,
+        quantity: 1,
+        owned: 1,
+        // Second uses the only copy, so none is free here (task 42).
+        otherDecks: [{ deckId: second, name: "Second", quantity: 1, available: 1 }],
+        free: 0,
+        printingId,
+      }),
     ]);
     // The importer pinned the printing Jack owns.
     const owned = (oracleId: string) =>

@@ -58,6 +58,8 @@ export type BrowseCard = Readonly<{
   inThisDeck: number;
   /** How many of your other decks use this card (ownership is shared between decks). */
   otherDecks: number;
+  /** Copies owned that none of your other decks uses (task 42). */
+  free: number;
   /** Why it doesn't fit this deck, or null if it does. */
   misfit: "color" | "legality" | null;
   /**
@@ -185,6 +187,7 @@ export async function browseCollection(
     userId,
     foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
     ownIncludesReal: context.usesRealCards,
+    deckId: input.deckId,
   })} and ${colorFilter} and (${!input.onlyLegal} or ${legal})`;
 
   // One page of candidates: (oracle_id, printing_id shown, owned, owned_real, newest, total).
@@ -243,6 +246,7 @@ export async function browseCollection(
     owned_real: number;
     in_this_deck: number;
     other_decks: number;
+    free: number;
     fits_identity: boolean;
     is_legal: boolean;
     color_identity: string[];
@@ -278,6 +282,10 @@ export async function browseCollection(
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${input.deckId}
                and e.oracle_id = card.oracle_id)::int as other_decks,
+           greatest(card.owned - coalesce((select sum(e.quantity) from deck_entries e
+                                             join decks d on d.id = e.deck_id
+                                            where d.owner_id = ${userId} and d.id <> ${input.deckId}
+                                              and e.oracle_id = card.oracle_id), 0), 0)::int as free,
            ${identityFits} as fits_identity,
            ${legal} as is_legal,
            p.color_identity, p.legalities->>${context.format} as legality,
@@ -317,6 +325,7 @@ export async function browseCollection(
       ownedReal: row.owned_real,
       inThisDeck: row.in_this_deck,
       otherDecks: row.other_decks,
+      free: row.free,
       misfit: !row.fits_identity ? "color" : !row.is_legal ? "legality" : null,
       rules: {
         name: row.name,

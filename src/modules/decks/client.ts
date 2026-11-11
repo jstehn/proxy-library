@@ -41,6 +41,7 @@ export {
   type ProxyProgress,
   type ProxyStreamEvent,
 } from "./domain/proxy-progress";
+export { copiesToTake } from "./domain/free-copies";
 export {
   deckProblems,
   canBeCommander,

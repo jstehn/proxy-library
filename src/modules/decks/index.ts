@@ -117,7 +117,10 @@ export {
   type DeckLine,
   type DeckSummary,
   type DeckView,
+  otherDecksHolding,
+  type OtherDeckUse,
 } from "./queries/decks";
+export { copiesToTake, takeCopies, type BoardCount } from "./domain/free-copies";
 export {
   BROWSE_PAGE_SIZE,
   BROWSE_SORTS,

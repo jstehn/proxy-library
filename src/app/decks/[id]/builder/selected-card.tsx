@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Board, SuggestionCard, SuggestionList } from "@/modules/decks";
+import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
+import { copiesToTake } from "@/modules/decks/client";
 import type { BracketFlag, Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { TAG_LABELS } from "../../labels";
@@ -20,7 +21,10 @@ export type Selection = Readonly<{
   ownedReal: number;
   /** Copies in this deck per board. */
   inDeck: Readonly<Partial<Record<Board, number>>>;
+  /** How many of your other decks use it (ownership is shared between decks). */
   otherDecks: number;
+  /** Copies owned that none of your other decks uses (task 42). */
+  free: number;
   misfit: "color" | "legality" | null;
   /** The shown printing's latest price, or null if it has none. */
   priceCents: number | null;
@@ -54,6 +58,10 @@ export function SelectedCard(props: {
   similar: SuggestionList | "loading" | null;
   onShowSimilar: () => void;
   onSelectSimilar: (card: SuggestionCard) => void;
+  /** Your other decks holding it: "loading" until they arrive (task 42). */
+  otherDecks: readonly OtherDeckUse[] | "loading";
+  /** Take `count` copies out of another deck, so they're free for this one. */
+  onTake: (use: OtherDeckUse, count: number) => void;
 }) {
   const { selection, detail } = props;
   const inDeck = Object.values(selection.inDeck).reduce((sum, value) => sum + (value ?? 0), 0);
@@ -107,10 +115,19 @@ export function SelectedCard(props: {
               <Fact label="Price" value={Cents.format(Cents.of(selection.priceCents))} />
             )}
             <Fact label="In this deck" value={String(inDeck)} />
-            {selection.otherDecks > 0 && (
-              <Fact label="Other decks using it" value={String(selection.otherDecks)} />
+            {selection.owned > 0 && selection.otherDecks > 0 && (
+              <Fact label="Free" value={String(selection.free)} />
             )}
           </dl>
+          {selection.otherDecks > 0 && (
+            <OtherDecks
+              uses={props.otherDecks}
+              // Copies this deck wants free: what it holds, or what you're about to add.
+              wanted={inDeck > 0 ? inDeck : props.quantity}
+              free={selection.free}
+              onTake={props.onTake}
+            />
+          )}
           {selection.tags.length > 0 && (
             <ul aria-label="Roles" className="flex flex-wrap gap-1">
               {selection.tags.map((tag) => (
@@ -226,6 +243,49 @@ export function SelectedCard(props: {
         )}
       </div>
     </section>
+  );
+}
+
+/** Your other decks holding the card, each with a button to take its copies (task 42). */
+function OtherDecks(props: {
+  uses: readonly OtherDeckUse[] | "loading";
+  wanted: number;
+  free: number;
+  onTake: (use: OtherDeckUse, count: number) => void;
+}) {
+  if (props.uses === "loading") return <p className="text-zinc-500">Finding your other decks…</p>;
+  return (
+    <div>
+      <p className="text-zinc-500">Also in your other decks:</p>
+      <ul aria-label="Other decks using it" className="mt-1 flex flex-col gap-1">
+        {props.uses.map((use) => {
+          const count = copiesToTake(props.wanted, props.free, use.available);
+          return (
+            <li key={use.deckId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link href={`/decks/${use.deckId}`} className="font-medium underline">
+                {use.name}
+              </Link>
+              <span className="text-zinc-500 tabular-nums">
+                {use.quantity === use.available
+                  ? `has ${use.quantity}`
+                  : use.available === 0
+                    ? "its commander"
+                    : `has ${use.quantity} (${use.quantity - use.available} as commander)`}
+              </span>
+              {count > 0 && (
+                <button
+                  type="button"
+                  onClick={() => props.onTake(use, count)}
+                  className="rounded-md border border-zinc-300 px-2 py-0.5 dark:border-zinc-700"
+                >
+                  Take {count}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

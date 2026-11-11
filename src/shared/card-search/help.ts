@@ -112,6 +112,11 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
     example: "own=0  own>=4",
   },
   {
+    write: "free spare",
+    finds: "how many copies you own that none of your other decks uses",
+    example: "free>0  free>=4",
+  },
+  {
     write: "real",
     finds: "how many copies you own for real (any printing)",
     example: "real>=1  real=0",

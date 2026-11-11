@@ -20,6 +20,9 @@ import {
   type BrowsePage,
   type CardRules,
   type DeckLine,
+  otherDecksHolding,
+  type OtherDeckUse,
+  takeCopies,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -122,6 +125,63 @@ export async function setQuantityAction(
 }
 
 const DeckIdInput = z.number().int().positive();
+
+const CardInDeckInput = z.object({ deckId: DeckIdInput, oracleId: z.string().min(1) });
+
+/** Your other decks holding a card, for the selected-card panel (task 42). */
+export async function otherDecksAction(
+  input: z.input<typeof CardInDeckInput>,
+): Promise<OtherDeckUse[]> {
+  const actor = await requireActor();
+  const parsed = CardInDeckInput.safeParse(input);
+  if (!parsed.success) return [];
+  return otherDecksHolding(
+    getContainer().db,
+    actor.userId,
+    parsed.data.deckId,
+    parsed.data.oracleId,
+  );
+}
+
+const TakeInput = z.object({
+  deckId: DeckIdInput,
+  fromDeckId: DeckIdInput,
+  oracleId: z.string().min(1),
+  count: z.number().int().min(1).max(99),
+});
+
+/**
+ * Takes copies of a card out of another of your decks, so they're free for this one (task 42):
+ * the sideboard first, then the main deck, never a commander. This deck doesn't change.
+ */
+export async function takeFromDeckAction(
+  input: z.input<typeof TakeInput>,
+): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = TakeInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const { deckId, fromDeckId, oracleId, count } = parsed.data;
+  const { db, decks } = getContainer();
+  const from = await deckView(db, actor.userId, fromDeckId);
+  if (from === null || fromDeckId === deckId)
+    return { ok: false, message: "That deck isn't yours." };
+
+  const counts = from.lines.filter((line) => line.oracleId === oracleId);
+  // One edit per board (the sideboard, then the main deck), each through the decks module.
+  for (const change of takeCopies(counts, count)) {
+    const result = await decks.setEntry(actor, {
+      deckId: DeckId.of(fromDeckId),
+      oracleId,
+      board: change.board,
+      quantity: change.quantity,
+    });
+    if (!result.ok) return { ok: false, message: `Couldn't change ${from.deck.name}.` };
+  }
+  revalidatePath(`/decks/${fromDeckId}`);
+  const deck = await loadBuilderDeck(deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
 
 const PrintingsInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });
 

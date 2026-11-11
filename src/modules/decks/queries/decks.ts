@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
@@ -122,9 +122,63 @@ export type DeckLine = Readonly<{
   /** How many of `owned` are real copies (design doc 16: "3 game · 1 real"). */
   ownedReal: number;
   isBasicLand: boolean;
-  /** Your other decks that also use this card (shared ownership, decided before the run). */
-  otherDecks: string[];
+  /**
+   * Your other decks that also use this card, and how many copies each holds (ownership is
+   * shared between decks, so they can all count the same copies).
+   */
+  otherDecks: OtherDeckUse[];
+  /** Copies owned that none of your other decks uses (task 42): `owned` minus theirs, at least 0. */
+  free: number;
 }>;
+
+/** Another of your decks holding a card, on any board (task 42). */
+export type OtherDeckUse = Readonly<{
+  deckId: number;
+  name: string;
+  /** Copies of the card in that deck, on every board. */
+  quantity: number;
+  /** How many of them it can give: all but its commanders, which are never taken. */
+  available: number;
+}>;
+
+const OtherDeckUsesSchema = z.array(
+  z.object({
+    deckId: z.coerce.number(),
+    name: z.string(),
+    quantity: z.coerce.number(),
+    available: z.coerce.number(),
+  }),
+);
+
+/**
+ * SQL: a JSON list of `OtherDeckUse`, or null: the player's decks other than `deckId` that hold
+ * card `oracleId` (both are SQL, so a query can pass its own columns).
+ */
+function otherDeckUses(userId: UserId, deckId: SQL, oracleId: SQL): SQL {
+  return sql`(select json_agg(json_build_object('deckId', other.id, 'name', other.name,
+                                                'quantity', used.quantity, 'available', used.available)
+                              order by other.name, other.id)
+                from (select e2.deck_id, sum(e2.quantity)::int as quantity,
+                             coalesce(sum(e2.quantity) filter (where e2.board <> 'commander'), 0)::int as available
+                        from deck_entries e2
+                       where e2.oracle_id = ${oracleId} and e2.deck_id <> ${deckId}
+                       group by e2.deck_id) used
+                join decks other on other.id = used.deck_id
+               where other.owner_id = ${userId})`;
+}
+
+/** Your decks other than `deckId` that hold a card, and how many copies each (task 42). */
+export async function otherDecksHolding(
+  db: DbExecutor,
+  userId: UserId,
+  deckId: number,
+  oracleId: string,
+): Promise<OtherDeckUse[]> {
+  const rows = await db.execute<{ uses: unknown }>(
+    sql`select ${otherDeckUses(userId, sql`${deckId}`, sql`${oracleId}`)} as uses`,
+  );
+  return OtherDeckUsesSchema.parse(rows.rows[0]?.uses ?? []);
+}
 
 export type DeckView = Readonly<{
   deck: Deck;
@@ -181,7 +235,7 @@ export async function deckView(
     legalities: Record<string, string> | null;
     owned: number;
     owned_real: number;
-    other_decks: string[] | null;
+    other_decks: unknown;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
            shown.id as printing_id,
@@ -202,8 +256,7 @@ export async function deckView(
                       where p.oracle_id = e.oracle_id), 0)::int as owned,
            coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
                       where c.is_real and p.oracle_id = e.oracle_id), 0)::int as owned_real,
-           (select array_agg(distinct d2.name) from deck_entries e2 join decks d2 on d2.id = e2.deck_id
-             where d2.owner_id = ${userId} and e2.oracle_id = e.oracle_id and d2.id <> e.deck_id) as other_decks
+           ${otherDeckUses(userId, sql`e.deck_id`, sql`e.oracle_id`)} as other_decks
       from deck_entries e
       -- The newest printing carries the current rules facts (legalities, identity).
       join lateral (
@@ -251,6 +304,8 @@ export async function deckView(
       isBasicLand: row.is_basic_land,
       hasPowerToughness: row.has_power_toughness,
     };
+    const otherDecks = OtherDeckUsesSchema.parse(row.other_decks ?? []);
+    const usedElsewhere = otherDecks.reduce((total, use) => total + use.quantity, 0);
     return {
       oracleId: row.oracle_id,
       board: z.enum(BOARDS).parse(row.board),
@@ -272,7 +327,8 @@ export async function deckView(
       owned: row.owned,
       ownedReal: row.owned_real,
       isBasicLand: row.is_basic_land,
-      otherDecks: row.other_decks ?? [],
+      otherDecks,
+      free: Math.max(row.owned - usedElsewhere, 0),
     };
   });
 

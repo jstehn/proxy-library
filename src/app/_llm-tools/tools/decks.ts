@@ -143,8 +143,8 @@ export const getDeck = defineTool({
   description: [
     "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
-    "Rules: decks may hold cards you don't own; they show as short. Basic lands are never short.",
+    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
+    "Rules: decks may hold cards you don't own; they show as short. Basic lands are never short. Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -176,6 +176,16 @@ export const getDeck = defineTool({
         board: line.board,
         quantity: line.quantity,
         owned: line.owned,
+        ...(line.otherDecks.length > 0
+          ? {
+              free: line.free,
+              otherDecks: line.otherDecks.map((use) => ({
+                deckId: use.deckId,
+                name: use.name,
+                quantity: use.quantity,
+              })),
+            }
+          : {}),
         manaCost: line.manaCost,
         manaValue: line.manaValue,
         typeLine: line.typeLine,
@@ -321,7 +331,7 @@ export const setDeckEntry = defineTool({
   description: [
     "Sets how many copies of one card a deck has on one board: 0 removes it. It sets the count, it doesn't add to it.",
     "Use it when: adding, removing or changing a few cards. For many changes at once, use replace_deck_list.",
-    "Rules: cards you don't own may be added (they show as short); prefer owned cards. Check the result with get_deck.",
+    "Rules: cards you don't own may be added (they show as short); prefer owned cards, and free ones (search free>0) over cards another deck uses. To move a card from another deck, set it to 0 there (the player decides; ask first). Check the result with get_deck.",
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,

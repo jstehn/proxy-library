@@ -212,6 +212,7 @@ type CandidateRow = {
   owned: number;
   owned_real: number;
   other_decks: number;
+  free: number;
 };
 
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
@@ -248,7 +249,11 @@ async function ownedCandidates(
              order by s.day desc limit 1) as price_cents,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${context.deckId}
-               and e.oracle_id = owned.oracle_id)::int as other_decks
+               and e.oracle_id = owned.oracle_id)::int as other_decks,
+           greatest(owned.owned - coalesce((select sum(e.quantity) from deck_entries e
+                                              join decks d on d.id = e.deck_id
+                                             where d.owner_id = ${userId} and d.id <> ${context.deckId}
+                                               and e.oracle_id = owned.oracle_id), 0), 0)::int as free
       from owned join printings p on p.id = owned.printing_id
      where ${fitsDeck(context)} and ${sharedCount(want)} > 0
      order by ${sharedCount(want)} desc, p.name
@@ -299,7 +304,7 @@ async function storeCandidates(
         ) best on true
     )
     select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
-           0 as owned, 0 as owned_real, 0 as other_decks
+           0 as owned, 0 as owned_real, 0 as other_decks, 0 as free
       from cheapest join printings p on p.id = cheapest.printing_id
   `);
   return rows.rows.map((row) => toCard(row, "store", context.format));
@@ -317,6 +322,7 @@ function toCard(row: CandidateRow, pool: "owned" | "store", format: Format): Sug
     ownedReal: Number(row.owned_real),
     inThisDeck: 0,
     otherDecks: Number(row.other_decks),
+    free: Number(row.free),
     misfit: null,
     rules: {
       name: row.name,
@@ -430,7 +436,7 @@ export async function similarCards(
   const [targetRow] = (
     await db.execute<CandidateRow>(sql`
       select ${candidateColumns(context)}, 'nonfoil' as finish, null as price_cents,
-             0 as owned, 0 as owned_real, 0 as other_decks
+             0 as owned, 0 as owned_real, 0 as other_decks, 0 as free
         from printings p join card_sets s on s.code = p.set_code
        where p.oracle_id = ${oracleId}
        order by ${STANDARD_FIRST} limit 1

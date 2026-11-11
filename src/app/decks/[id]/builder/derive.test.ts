@@ -25,6 +25,7 @@ const gridCard = (name: string, card: Partial<CardRules> = {}): BrowseCard => ({
   owned: 1,
   inThisDeck: 0,
   otherDecks: 0,
+  free: 1,
   misfit: null,
   rules: rules(name, card),
   producedMana: [],

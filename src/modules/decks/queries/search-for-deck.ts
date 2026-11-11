@@ -231,6 +231,7 @@ export async function searchForDeck(
         userId,
         foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
         ownIncludesReal: context.usesRealCards,
+        deckId: input.deckId,
       });
       const [owned, store] = await Promise.all([
         input.where === "store" ? [] : ownedHits(db, context, condition, perQuery),

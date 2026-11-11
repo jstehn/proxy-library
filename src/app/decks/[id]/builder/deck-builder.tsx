@@ -10,6 +10,7 @@ import type {
   BrowseSource,
   DeckLine,
   Format,
+  OtherDeckUse,
   SuggestionCard,
   SuggestionList,
 } from "@/modules/decks";
@@ -20,9 +21,11 @@ import { ManaText } from "@/ui/mana";
 import {
   browseAction,
   cardDetailAction,
+  otherDecksAction,
   setQuantityAction,
   setTargetBracketAction,
   similarAction,
+  takeFromDeckAction,
   type BuilderDeck,
 } from "./actions";
 import { BracketPanel } from "./bracket-panel";
@@ -190,7 +193,10 @@ export function DeckBuilder(props: {
   /** The grid card behind the selection, to show a new card before the server answers. */
   const selectedCard = useRef<BrowseCard | null>(null);
   const selectedPrinting = useRef<string | null>(null);
+  const selectedOracle = useRef<string | null>(null);
   const [detail, setDetail] = useState<PrintingCard | null>(null);
+  /** The selected card's other decks (task 42): "loading" while they're fetched. */
+  const [otherDecks, setOtherDecks] = useState<readonly OtherDeckUse[] | "loading">([]);
   const [quantity, setQuantity] = useState(1);
   const [tab, setTab] = useState<"collection" | "deck">("collection");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -301,10 +307,17 @@ export function DeckBuilder(props: {
   const totalInDeck = (oracleId: string) =>
     Object.values(inDeck(oracleId)).reduce((sum, count) => sum + (count ?? 0), 0);
 
-  function select(selection: Selection) {
+  /** Selects a card. `uses` are its other decks when already known (a deck line has them). */
+  function select(selection: Selection, uses?: readonly OtherDeckUse[]) {
     selectedPrinting.current = selection.printingId;
+    selectedOracle.current = selection.oracleId;
     setSelected(selection);
     setQuantity(1);
+    if (uses !== undefined || selection.otherDecks === 0) {
+      setOtherDecks(uses ?? []);
+    } else {
+      loadOtherDecks(selection.oracleId);
+    }
     const known = deck.cards[selection.printingId];
     setDetail(known ?? null);
     if (known === undefined) {
@@ -325,6 +338,7 @@ export function DeckBuilder(props: {
       ownedReal: card.ownedReal,
       inDeck: inDeck(card.oracleId),
       otherDecks: card.otherDecks,
+      free: card.free,
       misfit: card.misfit,
       priceCents: card.priceCents,
       tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
@@ -347,18 +361,64 @@ export function DeckBuilder(props: {
 
   function selectFromDeck(line: DeckLine) {
     selectedCard.current = null;
-    select({
-      oracleId: line.oracleId,
-      printingId: line.printingId,
-      name: line.name,
-      owned: line.owned,
-      ownedReal: line.ownedReal,
-      inDeck: inDeck(line.oracleId),
-      otherDecks: line.otherDecks.length,
-      misfit: null,
-      priceCents: line.priceCents,
-      tags: cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana }),
-      bracketFlags: bracketFlags(line),
+    select(
+      {
+        oracleId: line.oracleId,
+        printingId: line.printingId,
+        name: line.name,
+        owned: line.owned,
+        ownedReal: line.ownedReal,
+        inDeck: inDeck(line.oracleId),
+        otherDecks: line.otherDecks.length,
+        free: line.free,
+        misfit: null,
+        priceCents: line.priceCents,
+        tags: cardTags({
+          typeLine: line.typeLine,
+          text: line.text,
+          producedMana: line.producedMana,
+        }),
+        bracketFlags: bracketFlags(line),
+      },
+      line.otherDecks,
+    );
+  }
+
+  function loadOtherDecks(oracleId: string) {
+    setOtherDecks("loading");
+    void otherDecksAction({ deckId, oracleId }).then((uses) => {
+      if (selectedOracle.current === oracleId) setOtherDecks(uses);
+    });
+  }
+
+  /** Takes copies out of another deck so they're free here (task 42); this deck stays as it is. */
+  function takeFrom(use: OtherDeckUse, count: number) {
+    if (selected === null) return;
+    const card = selected;
+    startSaving(async () => {
+      const result = await takeFromDeckAction({
+        deckId,
+        fromDeckId: use.deckId,
+        oracleId: card.oracleId,
+        count,
+      });
+      if (!result.ok) {
+        setMessage({ tone: "error", text: result.message });
+        return;
+      }
+      setDeck(result.deck);
+      const free = Math.min(card.free + count, card.owned);
+      const left = use.quantity - count;
+      setSelected((current) =>
+        current?.oracleId === card.oracleId
+          ? { ...current, free, otherDecks: current.otherDecks - (left === 0 ? 1 : 0) }
+          : current,
+      );
+      loadOtherDecks(card.oracleId);
+      setMessage({
+        tone: "ok",
+        text: `Took ${count} ${card.name} out of ${use.name}${left === 0 ? "" : ` (it has ${left} left)`}.`,
+      });
     });
   }
 
@@ -732,6 +792,8 @@ export function DeckBuilder(props: {
                 similar={similar?.oracleId === selected.oracleId ? similar.list : null}
                 onShowSimilar={() => showSimilar(selected.oracleId)}
                 onSelectSimilar={selectSuggestion}
+                otherDecks={otherDecks}
+                onTake={takeFrom}
               />
               {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
                 <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
@@ -923,7 +985,7 @@ function GridCard(props: {
               `own ${ownedWords(card.owned, card.ownedReal)}`
             )}
             {card.otherDecks > 0 &&
-              ` · in ${card.otherDecks} other ${card.otherDecks === 1 ? "deck" : "decks"}`}
+              `${card.owned > 0 ? ` · ${card.free} free` : ""} · in ${card.otherDecks} other ${card.otherDecks === 1 ? "deck" : "decks"}`}
           </span>
         </button>
       </li>

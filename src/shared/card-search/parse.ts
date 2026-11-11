@@ -46,6 +46,7 @@ export type SearchField =
   | "border"
   | "frame"
   | "own"
+  | "free"
   | "real"
   | "tag"
   | "theme"
@@ -133,6 +134,8 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   frame: "frame",
   own: "own",
   owned: "own",
+  free: "free",
+  spare: "free",
   real: "real",
   tag: "tag",
   role: "tag",
@@ -204,6 +207,7 @@ const NUMERIC_FIELDS = new Set<SearchField>([
   "usd",
   "year",
   "own",
+  "free",
   "real",
 ]);
 /** Text fields that accept a /regular expression/ instead of words. */
