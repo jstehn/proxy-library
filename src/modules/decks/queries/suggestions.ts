@@ -58,7 +58,7 @@ export type SuggestionList = Readonly<{
 const EMPTY_LIST: SuggestionList = { owned: [], store: [], hiddenOverTarget: 0 };
 
 /** What the queries need to know about a deck. */
-type SuggestionContext = Readonly<{
+export type SuggestionContext = Readonly<{
   deckId: number;
   format: Format;
   /** Whether real copies count as owned here (design doc 16). */
@@ -162,7 +162,7 @@ function countScoring(
 }
 
 /** The conditions every suggestion meets (invariant 2), on a printing `p`. */
-function fitsDeck(context: SuggestionContext): SQL {
+export function fitsDeck(context: SuggestionContext): SQL {
   const identity =
     context.colorLimit === null
       ? sql`true`

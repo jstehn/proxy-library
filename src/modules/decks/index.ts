@@ -176,6 +176,20 @@ export {
 } from "./queries/suggestions";
 export type { DeckProfile, Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
+export { draftForDeck } from "./queries/draft-deck";
+export {
+  curveBucket,
+  draftDeck,
+  type CurveBucket,
+  type DeckDraft,
+  type DraftCandidate,
+  type DraftedSpell,
+  type DraftInput,
+  type DraftOptions,
+  type DraftReason,
+  type DraftSection,
+  type RoleProgress,
+} from "./domain/draft-deck";
 export {
   commanderDetails,
   commandersICanBuild,

@@ -11,6 +11,7 @@ import {
   deckText,
   deckView,
   DeckId,
+  draftForDeck,
   estimateBracket,
   decksFor,
   findCard,
@@ -29,9 +30,11 @@ import {
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
+import { THEMES } from "@/shared/card-search";
 import {
   bracketWarningText,
   cutReasonText,
+  draftReasonText,
   estimateLabel,
   findingWithCards,
   landReasonText,
@@ -212,6 +215,116 @@ export const planManaBaseTool = defineTool({
         ...describeLand(land),
         price: moneyOrNull(land.card.priceCents),
       })),
+    });
+  },
+});
+
+export const draftDeckTool = defineTool({
+  name: "draft_deck",
+  title: "Draft a rough heuristic 100-card starting point from owned cards",
+  description: [
+    "Assembles a coarse heuristic 100-card starting skeleton for a Commander deck that already has a commander: fills open slots from the player's owned cards first (every copy they own counts, even ones in other decks, with a note in alsoIn), starting with missing role targets (ramp, draw, removal, wipe), then spells matching the commander's regex theme tags, tribes and keywords, then generic on-color mana-curve filler; if owned cards can't finish a role or reach the spell count and includeStore is 'fill-gaps', fills the remaining gaps from the store with prices and a storeCost total; finally calls plan_mana_base on the drafted curve to add owned non-basic lands and basics to reach 100 cards.",
+    "Use it when: you want a fast initial survey of what the player's collection can contribute toward 100 cards (and what roles are still missing). WARNING: This tool is a blind tag-and-curve heuristic that does NOT understand how cards actually work together. Filling or creating a deck directly from this tool without further work will produce an AWFUL, unfocused deck (especially 'curve' section picks, which are merely random on-color cards that plug a mana cost).",
+    "Rules: treat this strictly as a starting point that requires additional investigation. Read the commander's and candidates' oracle text (get_deck), run analyze_cards and search_for_deck to find real enablers, payoffs and win conditions, replace weak matches and curve filler, and make sure the player knows this raw draft is only a rough starting skeleton before applying agreed cards with replace_deck_list or set_deck_entry.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    themes: z
+      .array(z.enum(THEMES))
+      .default([])
+      .describe('Optional extra themes to lean into, e.g. ["tokens", "sacrifice"].'),
+    roleTargets: z
+      .object({
+        ramp: z
+          .number()
+          .int()
+          .min(0)
+          .max(30)
+          .optional()
+          .describe("Target ramp count (default 10)."),
+        draw: z
+          .number()
+          .int()
+          .min(0)
+          .max(30)
+          .optional()
+          .describe("Target card draw count (default 10)."),
+        removal: z
+          .number()
+          .int()
+          .min(0)
+          .max(30)
+          .optional()
+          .describe("Target single-target removal count (default 8)."),
+        wipe: z
+          .number()
+          .int()
+          .min(0)
+          .max(30)
+          .optional()
+          .describe("Target board wipe count (default 3)."),
+      })
+      .optional()
+      .describe(
+        "Optional overrides for Commander role targets (defaults: ramp 10, draw 10, removal 8, wipe 3).",
+      ),
+    includeStore: z
+      .enum(["fill-gaps", "none"])
+      .default("fill-gaps")
+      .describe(
+        '"fill-gaps" uses owned cards first and fills unmet role targets or empty spell slots from the store with prices; "none" uses only owned cards.',
+      ),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    if (view.deck.format !== "commander") {
+      return failed("NotCommanderDeck", "draft_deck only drafts 100-card Commander decks.");
+    }
+    if (!view.lines.some((line) => line.board === "commander")) {
+      return failed(
+        "CommanderMissing",
+        "Put a commander on the commander board first before calling draft_deck.",
+      );
+    }
+    const draft = await draftForDeck(context.container.db, context.actor.userId, input.deckId, {
+      themes: input.themes,
+      roleTargets: input.roleTargets,
+      includeStore: input.includeStore,
+    });
+    if (draft === null) return deckNotFound(input.deckId);
+
+    return done({
+      deck: { id: view.deck.id, name: view.deck.name },
+      existingCount: draft.existingCount,
+      totalAfterDraft: draft.totalAfterDraft,
+      ownedAddedCount: draft.ownedAddedCount,
+      storeAddedCount: draft.storeAddedCount,
+      storeCost: money(draft.storeCostCents),
+      profile: draft.profile,
+      roleSummary: draft.roleSummary,
+      spells: draft.spells.map((spell) => ({
+        name: spell.name,
+        manaCost: spell.manaCost,
+        typeLine: spell.typeLine,
+        pool: spell.pool,
+        section: spell.section,
+        ...(spell.primaryRole !== undefined ? { primaryRole: spell.primaryRole } : {}),
+        why: spell.reasons.map(draftReasonText),
+        ...(spell.pool === "store" ? { price: moneyOrNull(spell.priceCents) } : {}),
+        ...(spell.alsoIn.length > 0 ? { alsoIn: spell.alsoIn } : {}),
+      })),
+      landsToAdd: draft.manaBase.add.map((land) => ({
+        name: land.card.name,
+        quantity: land.quantity,
+        kind: land.card.isBasicLand ? "basic" : "owned",
+        tapped: land.tapped,
+        why: land.reasons.map(landReasonText),
+        ...(land.card.alsoIn.length > 0 ? { alsoIn: land.card.alsoIn } : {}),
+      })),
+      note: "WARNING: This draft is a coarse tag-and-curve heuristic, NOT a finished deck. Filling a deck directly from this output without refinement will produce a weak, unfocused deck (especially 'curve' section picks, which only plug a mana cost). Use this as a starting point for investigation: check the cards' oracle text, run analyze_cards and search_for_deck for real enablers and payoffs, replace filler, and tell the player clearly that this is only an initial heuristic skeleton.",
     });
   },
 });

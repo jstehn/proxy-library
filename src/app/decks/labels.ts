@@ -6,6 +6,7 @@ import type {
   BracketWarning,
   DeckProblem,
   CutReason,
+  DraftReason,
   Format,
   LandReason,
   LandTargetReason,
@@ -222,4 +223,12 @@ export function planText(plan: CommanderPlan): string {
     ...plan.tribes.map(plural),
     ...plan.keywords,
   ].join(", ");
+}
+
+/** Why a spell is in a draft, in words (design doc 37). */
+export function draftReasonText(reason: DraftReason): string {
+  if (reason.kind === "curve") {
+    return reason.bucket === "5+" ? "5+ mana curve slot" : `${reason.bucket} mana curve slot`;
+  }
+  return reasonText(reason);
 }

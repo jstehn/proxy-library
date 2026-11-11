@@ -405,6 +405,58 @@ describe("commanders I can build (design doc 36)", () => {
   });
 });
 
+describe("draft_deck (design doc 37)", () => {
+  it("drafts owned cards first, marks store gap-fill with prices, and respects includeStore='none'", async () => {
+    await give("Banishing Light");
+    await give("Carrot Cake");
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Beza Draft",
+      list: "Commander\n1 Beza, the Bounding Spring",
+    });
+
+    const ownedOnly = await call(client, "draft_deck", {
+      deckId,
+      includeStore: "none",
+    });
+    expect(ownedOnly.existingCount).toBe(1);
+    expect(ownedOnly.storeAddedCount).toBe(0);
+    expect(ownedOnly.storeCost).toEqual({ cents: 0, text: "$0.00" });
+    expect(ownedOnly.spells.every((spell: { pool: string }) => spell.pool === "owned")).toBe(true);
+    expect(ownedOnly.spells.map((spell: { name: string }) => spell.name).sort()).toEqual([
+      "Banishing Light",
+      "Carrot Cake",
+    ]);
+    expect(ownedOnly.landsToAdd).toEqual([
+      expect.objectContaining({ name: "Plains", kind: "basic" }),
+    ]);
+
+    const withStore = await call(client, "draft_deck", {
+      deckId,
+      includeStore: "fill-gaps",
+    });
+    expect(withStore.storeAddedCount).toBeGreaterThan(0);
+    expect(withStore.storeCost.cents).toBeGreaterThan(0);
+    expect(
+      withStore.spells
+        .filter((spell: { pool: string }) => spell.pool === "owned")
+        .map((spell: { name: string }) => spell.name)
+        .sort(),
+    ).toEqual(["Banishing Light", "Carrot Cake"]);
+
+    const noCommander = await call(client, "create_deck", {
+      name: "Empty Commander",
+      format: "commander",
+    });
+    const refused = await client.callTool({
+      name: "draft_deck",
+      arguments: { deckId: noCommander.deckId },
+    });
+    expect(refused.isError).toBe(true);
+    expect(JSON.stringify(refused.content)).toContain("commander");
+  });
+});
+
 describe("headings (design doc 34)", () => {
   it("sets a card's heading, renames and orders headings, and writes them in the list", async () => {
     const client = await connect();

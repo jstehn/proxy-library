@@ -46,6 +46,7 @@ import { HeadingField } from "./heading-field";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { CutsPanel } from "./cuts-panel";
+import { DraftPanel } from "./draft-panel";
 import { ManaBasePanel, type LandsToAdd } from "./mana-base-panel";
 import { TestHandPanel } from "./test-hand";
 import { PrintingPicker } from "./printing-picker";
@@ -167,6 +168,7 @@ export function DeckBuilder(props: {
   }
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showCuts, setShowCuts] = useState(false);
+  const [showDraft, setShowDraft] = useState(false);
   const [showManaBase, setShowManaBase] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
@@ -533,14 +535,17 @@ export function DeckBuilder(props: {
   }
 
   /** Adds the mana base panel's lands (design doc 35) and shows the deck the server now has. */
-  function addLands(lands: LandsToAdd, count: number) {
+  function addLands(lands: LandsToAdd, count: number, customText?: string) {
     const request = ++latestChange.current;
     startSaving(async () => {
       const result = await addLandsAction({ deckId, lands: [...lands] });
       if (request !== latestChange.current) return;
       if (result.ok) {
         setDeck(result.deck);
-        setMessage({ tone: "ok", text: `Added ${count} ${count === 1 ? "land" : "lands"}.` });
+        setMessage({
+          tone: "ok",
+          text: customText ?? `Added ${count} ${count === 1 ? "land" : "lands"}.`,
+        });
       } else {
         setMessage({ tone: "error", text: result.message });
       }
@@ -1027,6 +1032,20 @@ export function DeckBuilder(props: {
             >
               {showManaBase ? "Hide mana base" : "Mana base"}
             </button>
+            {isCommanderDeck && (
+              <button
+                type="button"
+                aria-expanded={showDraft}
+                onClick={() => setShowDraft((value) => !value)}
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+              >
+                {showDraft
+                  ? "Hide draft"
+                  : cardTotal > 0 && cardTotal < 100
+                    ? `Draft deck (fill ${100 - cardTotal})`
+                    : "Draft deck"}
+              </button>
+            )}
             <button
               type="button"
               aria-expanded={showTestHand}
@@ -1036,6 +1055,15 @@ export function DeckBuilder(props: {
               {showTestHand ? "Hide test hand" : "Test hand"}
             </button>
           </div>
+          {showDraft && (
+            <DraftPanel
+              deckId={deckId}
+              deckKey={`${deckKey}|${targetBracket ?? ""}`}
+              onAdd={(cards, count, label) => addLands(cards, count, label)}
+              onClose={() => setShowDraft(false)}
+              busy={isSaving}
+            />
+          )}
           {showSuggestions && (
             <SuggestionsPanel
               deckId={deckId}

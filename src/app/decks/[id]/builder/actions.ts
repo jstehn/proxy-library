@@ -11,6 +11,8 @@ import {
   cardPrintings,
   type PrintingOption,
   deckSuggestions,
+  draftForDeck,
+  type DeckDraft,
   manaBasePlan,
   type ManaBasePlan,
   similarCards,
@@ -290,6 +292,23 @@ export async function manaBaseAction(deckId: number): Promise<ManaBasePlan | nul
   const parsed = DeckIdInput.safeParse(deckId);
   if (!parsed.success) return null;
   return manaBasePlan(getContainer().db, actor.userId, parsed.data);
+}
+
+const DraftDeckInput = z.object({
+  deckId: DeckIdInput,
+  includeStore: z.enum(["fill-gaps", "none"]).optional(),
+});
+
+/** A 100-card Commander draft from owned cards first (design doc 37). */
+export async function draftDeckAction(
+  input: z.input<typeof DraftDeckInput>,
+): Promise<DeckDraft | null> {
+  const actor = await requireActor();
+  const parsed = DraftDeckInput.safeParse(input);
+  if (!parsed.success) return null;
+  return draftForDeck(getContainer().db, actor.userId, parsed.data.deckId, {
+    includeStore: parsed.data.includeStore,
+  });
 }
 
 const AddLandsInput = z.object({

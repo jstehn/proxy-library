@@ -8,7 +8,7 @@ import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/m
 import { deckStats, MANA_COLORS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { ownedCopies } from "./owned";
-import { suggestionContext } from "./suggestions";
+import { suggestionContext, type SuggestionContext } from "./suggestions";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
 // play (yours, the basics, and the store's), and the pure planManaBase picks among them.
@@ -76,14 +76,20 @@ function toCandidate(row: LandRow): LandCandidate {
   };
 }
 
-/** A mana base plan for one of this player's decks, or null if the deck isn't theirs. */
-export async function manaBasePlan(
+export type LandPools = Readonly<{
+  owned: LandCandidate[];
+  basics: LandCandidate[];
+  store: LandCandidate[];
+}>;
+
+/** Owned non-basic lands, basic lands, and candidate store lands for a deck context. */
+export async function landPoolsForDeck(
   db: DbExecutor,
   userId: UserId,
-  deckId: number,
-): Promise<ManaBasePlan | null> {
-  const context = await suggestionContext(db, userId, deckId);
-  if (context === null) return null;
+  context: SuggestionContext,
+  extraThemes: readonly Theme[] = [],
+): Promise<LandPools> {
+  const { deckId } = context;
   const playable = playableLand(context.format, context.colorLimit);
 
   // Every land you own: decks share cards, so other decks only show up as a note.
@@ -115,9 +121,15 @@ export async function manaBasePlan(
   // Store lands worth a look: two of the deck's colors (one, for a one-color deck), or a role
   // or theme the deck has. Each at its cheapest printing for sale.
   const stats = deckStats(context.lines);
-  const deckColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
+  const cmdColors = (context.colorLimit ?? []).filter(
+    (color): color is (typeof MANA_COLORS)[number] =>
+      (MANA_COLORS as readonly string[]).includes(color),
+  );
+  const pipColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
+  const deckColors = pipColors.length > 0 ? pipColors : cmdColors;
   const profile = deckProfile(context.lines, context.format);
   const deckRoles = profile.gaps.map((gap) => gap.tag);
+  const themes = [...new Set([...profile.themes, ...extraThemes])];
   const colorsWanted = Math.min(2, Math.max(1, deckColors.length));
   const store = await db.execute<LandRow>(sql`
     with matching as (
@@ -127,7 +139,7 @@ export async function manaBasePlan(
          and ((select count(*) from unnest(p.produced_mana) as made
                 where made = any(${textArray(deckColors)})) >= ${colorsWanted}
               or p.role_tags && ${textArray(deckRoles)}
-              or p.theme_tags && ${textArray(profile.themes)})
+              or p.theme_tags && ${textArray(themes)})
          and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
                            join printings op on op.id = c.printing_id
                           where op.oracle_id = p.oracle_id)
@@ -167,6 +179,24 @@ export async function manaBasePlan(
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 
+  return {
+    owned: owned.rows.filter(withinTarget).map(toCandidate),
+    basics: basics.rows.map(toCandidate),
+    store: store.rows.filter(withinTarget).map(toCandidate),
+  };
+}
+
+/** A mana base plan for one of this player's decks, or null if the deck isn't theirs. */
+export async function manaBasePlan(
+  db: DbExecutor,
+  userId: UserId,
+  deckId: number,
+): Promise<ManaBasePlan | null> {
+  const context = await suggestionContext(db, userId, deckId);
+  if (context === null) return null;
+  const pools = await landPoolsForDeck(db, userId, context);
+  const profile = deckProfile(context.lines, context.format);
+
   const inDeck = new Map<string, number>();
   for (const line of context.lines) {
     if (!isCounted(line.board)) continue;
@@ -177,10 +207,10 @@ export async function manaBasePlan(
     format: context.format,
     lines: context.lines,
     inDeck,
-    owned: owned.rows.filter(withinTarget).map(toCandidate),
-    basics: basics.rows.map(toCandidate),
-    store: store.rows.filter(withinTarget).map(toCandidate),
-    deckRoles,
+    owned: pools.owned,
+    basics: pools.basics,
+    store: pools.store,
+    deckRoles: profile.gaps.map((gap) => gap.tag),
     deckThemes: profile.themes,
   });
 }
