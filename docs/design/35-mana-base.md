@@ -205,13 +205,13 @@ left, and the top five (by score, then price) are `considerBuying`.
 
 ## 5. Use cases
 
-| Use case              | Actor / authz | Input          | Output              | Errors (`kind`) | Transaction?       |
-| --------------------- | ------------- | -------------- | ------------------- | --------------- | ------------------ |
-| Plan the mana base    | deck owner    | deck id        | `ManaBasePlan` view | `deckNotFound`  | no (read)          |
-| Add the planned lands | deck owner    | deck id, lands | the deck, updated   | existing ones   | yes (existing add) |
+| Use case              | Actor / authz | Input          | Output              | Errors (`kind`)                                   | Transaction? |
+| --------------------- | ------------- | -------------- | ------------------- | ------------------------------------------------- | ------------ |
+| Plan the mana base    | deck owner    | deck id        | `ManaBasePlan` view | `deckNotFound`                                    | no (read)    |
+| Add the planned lands | deck owner    | deck id, lands | the deck, updated   | `DeckNotFound`, `CardNotFound`, `QuantityInvalid` | yes          |
 
-Adding uses the builder's existing add-cards path (each land `+n` to `main`), so no new write
-code: the panel sends the plan's lines, and the server re-checks ownership as it does today.
+Adding is a new use case, `addCards` (built in step 3): one transaction that adds each land's
+copies to `main` on top of what the deck has, so a failure adds nothing.
 
 ## 6. Ports
 
