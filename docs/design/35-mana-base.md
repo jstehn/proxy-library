@@ -122,12 +122,12 @@ export type ManaBasePlan = Readonly<{
 
 export type ManaBaseInput = Readonly<{
   format: Format;
-  /** Colors lands may make: the commander's identity, or every color outside Commander. */
-  identity: readonly ManaColor[];
   lines: readonly ProfileLine[]; // the deck (counted boards only matter)
-  owned: readonly LandCandidate[];
+  inDeck: ReadonlyMap<string, number>; // copies of each oracle card the deck already plays
+  owned: readonly LandCandidate[]; // lands you own the deck may play (identity, bracket)
+  basics: readonly LandCandidate[]; // the six basics, Wastes included
   store: readonly LandCandidate[];
-  deckRoles: readonly Tag[]; // from deckProfile: what the deck keeps doing
+  deckRoles: readonly Tag[]; // roles the deck is short on (deckProfile gaps)
   deckThemes: readonly Theme[];
 }>;
 
@@ -175,7 +175,7 @@ While the deck has fewer lands than its target:
 
 1. Score every owned non-basic candidate with an owned copy the deck
    doesn't use yet: `+3` for each short color it
-   makes (weighted by how short), `+1` for each other deck color, `+2` if utility for this
+   makes (weighted by how short), `+1` for each other deck color, `+3` if utility for this
    deck, `−2` if always tapped, `−1` if sometimes tapped. A land making no deck color and no
    utility scores nothing and is skipped. Lands that can't be in the deck (outside the identity,
    over the bracket's limits) never are candidates.
@@ -193,7 +193,8 @@ left, and the top five (by score, then price) are `considerBuying`.
 1. The plan never makes the deck go past its land target: `lands + added = max(lands, target)`.
 2. A deck at or over its target gets an empty `add` and `over = lands − target`.
 3. Every added non-basic is owned, and never more copies than you own; in Commander, one copy.
-4. Every planned land's produced colors are within `identity` (colorless always is).
+4. Every planned land may be played in the deck: its color identity is within the commander's
+   (Command Tower makes five colors but has none). The query only offers such lands.
 5. Store lands are only in `considerBuying`, at most five, and none is also in `add`.
 6. Basics in `add` are only of colors with a source target (or Wastes for a colorless deck).
 7. Source targets exist only for colors the spells use; each is at least its heaviest-cost floor.
