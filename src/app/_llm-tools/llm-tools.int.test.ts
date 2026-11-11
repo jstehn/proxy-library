@@ -338,6 +338,30 @@ describe("the maybeboard and cards to cut (design doc 32)", () => {
   });
 });
 
+describe("the mana base (design doc 35)", () => {
+  it("plans lands to reach the target: Plains for Beza, with reasons", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Beza",
+      list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n30 Plains",
+    });
+    const plan = await call(client, "plan_mana_base", { deckId });
+    expect(plan).toMatchObject({ lands: 30, landTarget: 37, over: 0 });
+    expect(plan.landTargetWhy[0]).toBe("37 is the usual count");
+    expect(plan.sources).toEqual([{ color: "W", have: 30, target: 37, mostOfItInOneCost: 2 }]);
+    expect(plan.add).toEqual([
+      {
+        name: "Plains",
+        quantity: 7,
+        kind: "basic",
+        tapped: "never",
+        why: ["a basic for white sources"],
+        alsoIn: [],
+      },
+    ]);
+  });
+});
+
 describe("headings (design doc 34)", () => {
   it("sets a card's heading, renames and orders headings, and writes them in the list", async () => {
     const client = await connect();

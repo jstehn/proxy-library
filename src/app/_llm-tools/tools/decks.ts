@@ -15,6 +15,7 @@ import {
   fingerprint,
   FORMATS,
   GROUPINGS,
+  manaBasePlan,
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
   MAX_QUANTITY,
@@ -29,6 +30,8 @@ import {
   cutReasonText,
   estimateLabel,
   findingWithCards,
+  landReasonText,
+  landTargetReasonText,
   problemText,
   UNCHECKED_TEXT,
 } from "@/app/decks/labels";
@@ -161,6 +164,48 @@ export const rankCutsTool = defineTool({
         why: cut.reasons.map(cutReasonText),
       })),
       candidates: cuts.length,
+    });
+  },
+});
+
+export const planManaBaseTool = defineTool({
+  name: "plan_mana_base",
+  title: "Plan a deck's mana base",
+  description: [
+    "A mana base you could start from: a land count for the deck (the usual count, moved by its curve and its other mana sources, with reasons), how many sources of each of its colors to aim for and how many it has, then lands to add to reach the count: lands the player owns first (any copy: decks share cards, so a land in another deck counts, with a note where else it's played), picked for the colors the deck is short of, untapped first, plus owned lands that do something the deck needs; basics fill the rest. Also up to five store lands to consider buying, with prices; these are never in the lands to add.",
+    "Use it when: building a deck, after the spells are chosen, or when the player asks about lands or colors. It's a starting point from rules of thumb, not the best mana base: check the lands against the deck and present them as options.",
+    'Rules: it only adds lands, never cuts them ("over" says how many lands the deck has beyond the target). Add the lands the player agrees to with set_deck_entry; suggest store lands, or add them to the wishlist with add_wish, never buy.',
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({ deckId }),
+  async run(context, input) {
+    const plan = await manaBasePlan(context.container.db, context.actor.userId, input.deckId);
+    if (plan === null) return deckNotFound(input.deckId);
+    const describeLand = (land: (typeof plan.add)[number]) => ({
+      name: land.card.name,
+      quantity: land.quantity,
+      kind: land.card.isBasicLand ? "basic" : land.card.priceCents === null ? "owned" : "store",
+      tapped: land.tapped,
+      why: land.reasons.map(landReasonText),
+      alsoIn: land.card.alsoIn,
+    });
+    return done({
+      lands: plan.lands,
+      landTarget: plan.landTarget.lands,
+      landTargetWhy: plan.landTarget.reasons.map(landTargetReasonText),
+      over: plan.over,
+      sources: plan.sources.map((source) => ({
+        color: source.color,
+        have: source.have,
+        target: source.target,
+        mostOfItInOneCost: source.heaviestCost,
+      })),
+      add: plan.add.map(describeLand),
+      considerBuying: plan.considerBuying.map((land) => ({
+        ...describeLand(land),
+        price: moneyOrNull(land.card.priceCents),
+      })),
     });
   },
 });
