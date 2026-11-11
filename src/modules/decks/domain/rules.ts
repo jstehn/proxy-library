@@ -69,7 +69,9 @@ function isUnlimited(card: CardRules): boolean {
  * - or a card that says it "can be your commander".
  * Checked against every precon's commanders in the catalog by `pnpm worker check-commanders`.
  */
-export function canBeCommander(card: CardRules): boolean {
+export function canBeCommander(
+  card: Pick<CardRules, "typeLine" | "text" | "hasPowerToughness">,
+): boolean {
   const isLegendary = /\bLegendary\b/.test(card.typeLine);
   return (
     (isLegendary && /\bCreature\b/.test(card.typeLine)) ||

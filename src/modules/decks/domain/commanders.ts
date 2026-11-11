@@ -1,6 +1,6 @@
 import type { Theme } from "@/shared/card-search";
 import {
-  deckFit,
+  creatureTypes,
   deckProfile,
   rank,
   scoreForDeck,
@@ -128,35 +128,74 @@ const planOnly = (profile: DeckProfile): DeckProfile => ({ ...profile, gaps: [] 
 
 const TARGETS = roleTargets("commander") ?? { ramp: 10, draw: 10, removal: 8, wipe: 3 };
 
-/** A pool card with its identity worked out once, for every candidate to check. */
-type MaskedCard = Readonly<{ card: PoolCard; mask: number }>;
+/**
+ * A pool card with what every candidate checks worked out once: its identity mask, creature
+ * types and whether it's a changeling. Ranking thousands of legends against thousands of cards
+ * repeats these checks millions of times.
+ */
+type PreparedCard = Readonly<{
+  card: PoolCard;
+  mask: number;
+  types: readonly string[];
+  isChangeling: boolean;
+  /** Which targeted roles it does, in TARGETED_TAGS order. */
+  roles: readonly boolean[];
+}>;
 
-function masked(pool: readonly PoolCard[]): MaskedCard[] {
+function prepare(pool: readonly PoolCard[]): PreparedCard[] {
   return pool
     .filter((card) => !isLand(card.typeLine))
-    .map((card) => ({ card, mask: colorMask(card.colorIdentity) }));
+    .map((card) => ({
+      card,
+      mask: colorMask(card.colorIdentity),
+      types: creatureTypes(card.typeLine),
+      isChangeling: card.keywords.some((keyword) => keyword.toLowerCase() === "changeling"),
+      roles: TARGETED_TAGS.map((tag) => card.roles.includes(tag)),
+    }));
 }
 
 /** The on-color non-land cards for one candidate, never the candidate itself. */
-function onColor(candidate: CommanderCandidate, pool: readonly MaskedCard[]): PoolCard[] {
+function onColor(candidate: CommanderCandidate, pool: readonly PreparedCard[]): PreparedCard[] {
   const mask = colorMask(candidate.colorIdentity);
-  return pool
-    .filter((entry) => entry.card.oracleId !== candidate.oracleId)
-    .filter((entry) => withinIdentity(entry.mask, mask))
-    .map((entry) => entry.card);
+  return pool.filter(
+    (entry) => entry.card.oracleId !== candidate.oracleId && withinIdentity(entry.mask, mask),
+  );
 }
+
+/**
+ * Whether a card shares a theme, tribe or keyword with the plan: `deckFit(card, plan).points > 0`
+ * (every weight is positive), without building the reasons. A test checks the two agree.
+ */
+export function sharesPlan(entry: PreparedCard, plan: DeckProfile): boolean {
+  const { card } = entry;
+  return (
+    plan.themes.some((theme) => card.themes.includes(theme)) ||
+    plan.tribes.some((tribe) => entry.isChangeling || entry.types.includes(tribe)) ||
+    plan.keywords.some((keyword) => card.keywords.includes(keyword))
+  );
+}
+
+/** For tests: a pool card as the ranking prepares it. */
+export const preparedForTest = (card: PoolCard): PreparedCard => prepare([card])[0];
 
 function coverageOf(
   candidate: CommanderCandidate,
-  cards: readonly PoolCard[],
+  cards: readonly PreparedCard[],
   landMasks: readonly number[],
 ): CommanderCoverage {
   const profile = commanderProfile(candidate);
   const plan = planOnly(profile);
-  const onPlan = cards.filter((card) => deckFit(card, plan).points > 0).length;
-  const roles = TARGETED_TAGS.map((tag) => ({
+  const roleCounts = TARGETED_TAGS.map(() => 0);
+  let onPlan = 0;
+  for (const entry of cards) {
+    if (sharesPlan(entry, plan)) onPlan += 1;
+    entry.roles.forEach((does, index) => {
+      if (does) roleCounts[index] += 1;
+    });
+  }
+  const roles = TARGETED_TAGS.map((tag, index) => ({
     tag,
-    have: Math.min(TARGETS[tag], cards.filter((card) => card.roles.includes(tag)).length),
+    have: Math.min(TARGETS[tag], roleCounts[index]),
     target: TARGETS[tag],
   }));
   const roleCoverage = roles.reduce((sum, role) => sum + role.have, 0);
@@ -192,7 +231,7 @@ export function rankCommanders(
   pool: readonly PoolCard[],
   ownedLands: readonly WithIdentity[],
 ): CommanderCoverage[] {
-  const cards = masked(pool);
+  const cards = prepare(pool);
   const landMasks = ownedLands.map((land) => colorMask(land.colorIdentity));
   return candidates
     .map((candidate) => coverageOf(candidate, onColor(candidate, cards), landMasks))
@@ -210,7 +249,8 @@ export function coverageDetails(
   pool: readonly PoolCard[],
   ownedLands: readonly WithIdentity[],
 ): CoverageDetails {
-  const cards = onColor(candidate, masked(pool));
+  const prepared = onColor(candidate, prepare(pool));
+  const cards = prepared.map((entry) => entry.card);
   const landMasks = ownedLands.map((land) => colorMask(land.colorIdentity));
   const plan = planOnly(commanderProfile(candidate));
   const byRole = Object.fromEntries(
@@ -220,7 +260,7 @@ export function coverageDetails(
     ]),
   ) as Record<TargetedTag, PoolCard[]>;
   return {
-    coverage: coverageOf(candidate, cards, landMasks),
+    coverage: coverageOf(candidate, prepared, landMasks),
     onPlan: rank(cards.map((card) => scoreForDeck(card, plan))),
     byRole,
   };
@@ -239,9 +279,11 @@ function cheapestFirst(a: PoolCard, b: PoolCard): number {
  */
 export function missingCost(coverage: CommanderCoverage, store: readonly PoolCard[]): MissingCost {
   const candidate = coverage.commander;
-  const cards = onColor(candidate, masked(store))
-    .filter((card) => card.priceCents !== null)
-    .sort(cheapestFirst);
+  const plan = planOnly(commanderProfile(candidate));
+  const prepared = onColor(candidate, prepare(store))
+    .filter((entry) => entry.card.priceCents !== null)
+    .sort((a, b) => cheapestFirst(a.card, b.card));
+  const cards = prepared.map((entry) => entry.card);
   const chosen = new Set<string>();
   const picks: MissingPick[] = [];
   const take = (card: PoolCard, fills: MissingPick["fills"]) => {
@@ -257,12 +299,11 @@ export function missingCost(coverage: CommanderCoverage, store: readonly PoolCar
     for (const card of fitting.slice(0, Math.max(0, short))) take(card, role.tag);
   }
 
-  const plan = planOnly(commanderProfile(candidate));
   const emptySlots = Math.max(0, SPELL_SLOTS - coverage.filled - picks.length);
-  const onPlan = cards.filter(
-    (card) => !chosen.has(card.oracleId) && deckFit(card, plan).points > 0,
+  const onPlan = prepared.filter(
+    (entry) => !chosen.has(entry.card.oracleId) && sharesPlan(entry, plan),
   );
-  for (const card of onPlan.slice(0, emptySlots)) take(card, "plan");
+  for (const entry of onPlan.slice(0, emptySlots)) take(entry.card, "plan");
 
   return { picks, totalCents: picks.reduce((sum, pick) => sum + (pick.card.priceCents ?? 0), 0) };
 }

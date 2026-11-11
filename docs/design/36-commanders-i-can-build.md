@@ -250,7 +250,11 @@ commander yet? `commanders_i_can_build`".
    Proposal as written; tune later.
 2. **Store legends:** offered behind "Also legends I don't own" (proposal), or owned only?
 3. **Speed:** rank everything per request (proposal; the bit masks keep it cheap), or cache per
-   player. I'll measure with all store legends against a 5,000-card pool before deciding.
+   player. Measured (step 2, dev catalog): owned legends only, under 50 ms; with all 2,920 store
+   legends, about 0.6 s of SQL (each printing priced once) plus 0.6 s of ranking against a
+   5,000-card pool, after preparing each pool card once (identity mask, creature types, role
+   flags) and checking the plan with `sharesPlan` (a test checks it agrees with `deckFit`).
+   Decided: per request, no cache.
 4. **Missing cost** only in the details, for one commander at a time (proposal), or for every
    row (one store query per candidate: slower)?
 5. **Bracket:** only a badge on Game Changer commanders now (proposal); a bracket filter on the

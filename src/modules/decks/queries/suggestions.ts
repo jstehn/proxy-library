@@ -82,7 +82,7 @@ type Wanted = Readonly<{
   keywords: readonly string[];
 }>;
 
-function textArray(values: readonly string[]): SQL {
+export function textArray(values: readonly string[]): SQL {
   return sql`array[${sql.join(
     [...values, "_"].map((value) => sql`${value}`), // "_" keeps an empty array typed
     sql`, `,
@@ -177,7 +177,7 @@ function fitsDeck(context: SuggestionContext): SQL {
 }
 
 /** Creature types are words; anything else is dropped before it reaches a pattern. */
-function tribePattern(tribes: readonly string[]): string | null {
+export function tribePattern(tribes: readonly string[]): string | null {
   const safe = tribes.filter((tribe) => /^[A-Za-z][A-Za-z'-]*$/.test(tribe));
   return safe.length === 0 ? null : `\\m(${safe.join("|")})\\M`;
 }

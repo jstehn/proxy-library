@@ -176,6 +176,22 @@ export {
 } from "./queries/suggestions";
 export type { DeckProfile, Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
+export {
+  commanderDetails,
+  commandersICanBuild,
+  type CommanderDetails,
+  type CommanderSearch,
+} from "./queries/commanders";
+export { SPELL_SLOTS } from "./domain/commanders";
+export type {
+  CommanderCandidate,
+  CommanderCoverage,
+  CommanderPlan,
+  MissingCost,
+  MissingPick,
+  PoolCard,
+  RoleCoverage,
+} from "./domain/commanders";
 export type {
   LandCandidate,
   LandReason,

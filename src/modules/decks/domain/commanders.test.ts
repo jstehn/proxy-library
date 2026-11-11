@@ -4,13 +4,16 @@ import {
   colorMask,
   coverageDetails,
   missingCost,
+  preparedForTest,
   rankCommanders,
+  sharesPlan,
   SPELL_SLOTS,
   withinIdentity,
   type CommanderCandidate,
   type PoolCard,
 } from "./commanders";
 import type { ManaColor } from "./stats";
+import { deckFit, type DeckProfile } from "./suggest";
 
 const commander = (
   name: string,
@@ -236,6 +239,33 @@ describe("invariants (design doc 36, section 4)", () => {
           expect(reversed.map((entry) => entry.score)).toEqual(ranked.map((entry) => entry.score));
         },
       ),
+    );
+  });
+});
+
+describe("sharesPlan", () => {
+  it("agrees with deckFit finding any point", () => {
+    const plans = fc.record({
+      themes: fc.subarray(["tokens", "counters", "graveyard"] as const),
+      tribes: fc.subarray(["Elf", "Rabbit"]),
+      keywords: fc.subarray(["Flying", "Trample"]),
+    });
+    const cards = fc.record({
+      themes: fc.subarray(["tokens", "counters", "graveyard"] as const),
+      typeLine: fc.constantFrom(
+        "Creature — Elf Druid",
+        "Creature — Rabbit",
+        "Instant",
+        "Creature — Bear",
+      ),
+      keywords: fc.subarray(["Flying", "Trample", "Changeling"]),
+    });
+    fc.assert(
+      fc.property(plans, cards, (planRow, cardRow) => {
+        const plan: DeckProfile = { ...planRow, gaps: [] };
+        const entry = card("Card", cardRow);
+        expect(sharesPlan(preparedForTest(entry), plan)).toBe(deckFit(entry, plan).points > 0);
+      }),
     );
   });
 });
