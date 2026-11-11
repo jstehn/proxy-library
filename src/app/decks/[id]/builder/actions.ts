@@ -126,6 +126,35 @@ export async function setQuantityAction(
 
 const DeckIdInput = z.number().int().positive();
 
+const MoveInput = z.object({
+  deckId: DeckIdInput,
+  oracleId: z.string().min(1),
+  from: z.enum(BOARDS),
+  to: z.enum(BOARDS),
+});
+
+/** Moves a card's line to another board, such as the maybeboard and back (design doc 32). */
+export async function moveLineAction(input: z.input<typeof MoveInput>): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = MoveInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const result = await getContainer().decks.moveEntry(actor, {
+    ...parsed.data,
+    deckId: DeckId.of(parsed.data.deckId),
+  });
+  if (!result.ok) {
+    const messages: Record<typeof result.error.kind, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      EntryNotFound: "That card isn't on that board any more.",
+      CommanderMove: "Commanders stay where they are.",
+    };
+    return { ok: false, message: messages[result.error.kind] };
+  }
+  const deck = await loadBuilderDeck(parsed.data.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
+
 const CardInDeckInput = z.object({ deckId: DeckIdInput, oracleId: z.string().min(1) });
 
 /** Your other decks holding a card, for the selected-card panel (task 42). */

@@ -9,17 +9,21 @@ import {
   MAX_NAME_LENGTH,
   MAX_LIST_LINES,
   MAX_QUANTITY,
+  movedEntry,
   replacedEntries,
   withEntry,
   withPrinting,
   type ChoosePrintingError as PrintingRuleError,
   type Board,
   type DeckId,
+  type EntryMove,
   type Format,
   type MatchedLine,
 } from "../domain/deck";
 import type {
   CardNotFound,
+  CommanderMove,
+  EntryNotFound,
   DeckChanged,
   DeckNotFound,
   ListProblems,
@@ -42,6 +46,8 @@ export type CreateDeckError = NameInvalid | TooManyDecks;
 export type UpdateDeckError =
   DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
+export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
+export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
 
@@ -167,6 +173,21 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         finish: input.finish,
       });
       await decks.save(changed, clock.now());
+      return ok();
+    });
+  }
+
+  /** Moves a card's line to another board, such as the maybeboard and back (design doc 32). */
+  async function moveEntry(
+    actor: Actor,
+    input: MoveEntryInput,
+  ): Promise<Result<void, MoveEntryError>> {
+    return unitOfWork.run<void, MoveEntryError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const moved = movedEntry(deck, input);
+      if (!moved.ok) return moved;
+      await decks.save(moved.value, clock.now());
       return ok();
     });
   }
@@ -324,6 +345,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     updateDeck,
     deleteDeck,
     setEntry,
+    moveEntry,
     importList,
     replaceList,
     choosePrinting,

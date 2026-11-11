@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
-import { copiesToTake } from "@/modules/decks/client";
+import { BOARDS, copiesToTake, isCounted } from "@/modules/decks/client";
 import type { BracketFlag, Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { TAG_LABELS } from "../../labels";
@@ -64,7 +64,8 @@ export function SelectedCard(props: {
   onTake: (use: OtherDeckUse, count: number) => void;
 }) {
   const { selection, detail } = props;
-  const inDeck = Object.values(selection.inDeck).reduce((sum, value) => sum + (value ?? 0), 0);
+  const inDeck = countedCopies(selection.inDeck);
+  const onMaybeboard = selection.inDeck.maybe ?? 0;
   const button =
     "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-zinc-300 dark:border-zinc-700";
 
@@ -115,6 +116,7 @@ export function SelectedCard(props: {
               <Fact label="Price" value={Cents.format(Cents.of(selection.priceCents))} />
             )}
             <Fact label="In this deck" value={String(inDeck)} />
+            {onMaybeboard > 0 && <Fact label="Maybeboard" value={String(onMaybeboard)} />}
             {selection.owned > 0 && selection.otherDecks > 0 && (
               <Fact label="Free" value={String(selection.free)} />
             )}
@@ -190,6 +192,14 @@ export function SelectedCard(props: {
         <button type="button" onClick={() => props.onAdd("side")} className={button}>
           Sideboard
         </button>
+        <button
+          type="button"
+          onClick={() => props.onAdd("maybe")}
+          className={button}
+          title="Keep it with the deck without counting it (the maybeboard)"
+        >
+          Maybe
+        </button>
         {props.isCommanderDeck && (
           <button type="button" onClick={() => props.onAdd("commander")} className={button}>
             Make commander
@@ -244,6 +254,11 @@ export function SelectedCard(props: {
       </div>
     </section>
   );
+}
+
+/** Copies on the boards that count: every board but the maybeboard (design doc 32). */
+export function countedCopies(perBoard: Readonly<Partial<Record<Board, number>>>): number {
+  return BOARDS.filter(isCounted).reduce((sum, board) => sum + (perBoard[board] ?? 0), 0);
 }
 
 /** Your other decks holding the card, each with a button to take its copies (task 42). */

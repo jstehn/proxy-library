@@ -81,6 +81,52 @@ describe("decks (design doc 09)", () => {
     expect(repository.get(id)?.entries).toEqual([]);
   });
 
+  it("moves a card to the maybeboard and back, adding up copies (design doc 32)", async () => {
+    const id = await newDeck();
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 3 });
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "maybe", quantity: 1 });
+    await decks.setEntry(jack, {
+      deckId: id,
+      oracleId: "bolt",
+      board: "main",
+      quantity: 3,
+      printingId: samplePrintingId("bolt-m11"),
+      finish: "foil",
+    });
+    expect(
+      await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "main", to: "maybe" }),
+    ).toEqual({ ok: true, value: undefined });
+    // Four copies on the maybeboard, keeping the moved line's pinned printing (invariant 3).
+    expect(repository.get(id)?.entries).toEqual([
+      {
+        oracleId: "bolt",
+        board: "maybe",
+        quantity: 4,
+        printingId: samplePrintingId("bolt-m11"),
+        finish: "foil",
+      },
+    ]);
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
+    expect(repository.get(id)?.entries.map((entry) => entry.board)).toEqual(["main"]);
+  });
+
+  it("refuses to move a missing line, a commander, or another player's deck", async () => {
+    const id = await newDeck();
+    await decks.setEntry(jack, { deckId: id, oracleId: "ring", board: "commander", quantity: 1 });
+    const move = (from: "main" | "commander", to: "maybe" | "commander") =>
+      decks.moveEntry(jack, { deckId: id, oracleId: "ring", from, to });
+    expect(await move("main", "maybe")).toEqual(err({ kind: "EntryNotFound" }));
+    expect(await move("commander", "maybe")).toEqual(err({ kind: "CommanderMove" }));
+    expect(
+      await decks.moveEntry(mallory, {
+        deckId: id,
+        oracleId: "ring",
+        from: "commander",
+        to: "maybe",
+      }),
+    ).toEqual(err({ kind: "DeckNotFound" }));
+  });
+
   it("refuses unknown cards and bad quantities", async () => {
     const id = await newDeck();
     expect(

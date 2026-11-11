@@ -12,7 +12,12 @@ import { TAG_LABELS } from "../../labels";
 // the cards grouped by type (or by role, design doc 19) with counts and mana costs. Every name
 // previews its card.
 
-type Group = Readonly<{ title: string; lines: DeckLine[] }>;
+type Group = Readonly<{
+  title: string;
+  lines: DeckLine[];
+  /** Shown closed until opened: the maybeboard (design doc 32). */
+  collapsed?: boolean;
+}>;
 
 /** A line's roles, read from its rules text. */
 function tagsOf(line: DeckLine): Tag[] {
@@ -22,9 +27,16 @@ function tagsOf(line: DeckLine): Tag[] {
 const sortedByCost = (group: readonly DeckLine[]) =>
   [...group].sort((a, b) => a.manaValue - b.manaValue || a.name.localeCompare(b.name));
 
+/** The sideboard, then the maybeboard (closed until opened), after the main deck's groups. */
 function sideboardGroup(lines: readonly DeckLine[]): Group[] {
   const side = lines.filter((line) => line.board === "side");
-  return side.length > 0 ? [{ title: "Sideboard", lines: sortedByCost(side) }] : [];
+  const maybe = lines.filter((line) => line.board === "maybe");
+  return [
+    ...(side.length > 0 ? [{ title: "Sideboard", lines: sortedByCost(side) }] : []),
+    ...(maybe.length > 0
+      ? [{ title: "Maybeboard", lines: sortedByCost(maybe), collapsed: true }]
+      : []),
+  ];
 }
 
 /**
@@ -80,6 +92,8 @@ export function DeckList(props: {
   problemsByName: ReadonlyMap<string, string[]>;
   onChange: (line: DeckLine, quantity: number) => void;
   onSelect: (line: DeckLine) => void;
+  /** Moves a line to another board: to the maybeboard and back (design doc 32). */
+  onMove?: (line: DeckLine, to: Board) => void;
   busy: boolean;
   /** Lines with this role are marked (chosen in the statistics). */
   highlighted: Tag | null;
@@ -164,12 +178,10 @@ export function DeckList(props: {
         </p>
       )}
 
-      {groups.map((group) => (
-        <div key={group.title} className="flex flex-col gap-1">
-          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-            {group.title} ({count(group.lines)})
-          </h3>
-          {view !== "visual" ? (
+      {groups.map((group) => {
+        const heading = `${group.title} (${count(group.lines)})`;
+        const body =
+          view !== "visual" ? (
             <ul className="flex flex-col">
               {group.lines.map((line) => (
                 <ListLine
@@ -206,9 +218,22 @@ export function DeckList(props: {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      ))}
+          );
+        // The maybeboard isn't part of the deck: it stays closed until you open it.
+        return group.collapsed ? (
+          <details key={group.title} className="flex flex-col gap-1">
+            <summary className="cursor-pointer text-xs font-medium tracking-wide text-zinc-500 uppercase">
+              {heading} · not counted
+            </summary>
+            {body}
+          </details>
+        ) : (
+          <div key={group.title} className="flex flex-col gap-1">
+            <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{heading}</h3>
+            {body}
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -219,6 +244,7 @@ function ListLine(props: {
   problemsByName: ReadonlyMap<string, string[]>;
   onChange: (line: DeckLine, quantity: number) => void;
   onSelect: (line: DeckLine) => void;
+  onMove?: (line: DeckLine, to: Board) => void;
   busy: boolean;
   highlighted: boolean;
   readOnly?: boolean;
@@ -276,7 +302,14 @@ function ListLine(props: {
           you {props.yourCopies[line.oracleId] ?? 0}
         </span>
       )}
-      {!props.readOnly && <LineControls line={line} onChange={props.onChange} busy={props.busy} />}
+      {!props.readOnly && (
+        <LineControls
+          line={line}
+          onChange={props.onChange}
+          onMove={props.onMove}
+          busy={props.busy}
+        />
+      )}
     </li>
   );
 }
@@ -284,14 +317,35 @@ function ListLine(props: {
 const control =
   "rounded border border-zinc-300 px-1.5 text-xs leading-5 disabled:opacity-40 dark:border-zinc-700";
 
+/** Where a line's move button sends it: the maybeboard, or back into the deck. */
+function moveTarget(board: Board): Readonly<{ to: Board; label: string; words: string }> | null {
+  if (board === "maybe") return { to: "main", label: "Deck", words: "into the deck" };
+  if (board === "main" || board === "side")
+    return { to: "maybe", label: "Maybe", words: "to the maybeboard" };
+  return null; // commanders don't move (design doc 32)
+}
+
 function LineControls(props: {
   line: DeckLine;
   onChange: (line: DeckLine, quantity: number) => void;
+  onMove?: (line: DeckLine, to: Board) => void;
   busy: boolean;
 }) {
-  const { line } = props;
+  const { line, onMove } = props;
+  const move = moveTarget(line.board);
   return (
     <span className="flex shrink-0 gap-0.5">
+      {onMove !== undefined && move !== null && (
+        <button
+          type="button"
+          className={control}
+          aria-label={`Move ${line.name} ${move.words}`}
+          title={`Move ${move.words}`}
+          onClick={() => onMove(line, move.to)}
+        >
+          {move.label}
+        </button>
+      )}
       <button
         type="button"
         className={control}

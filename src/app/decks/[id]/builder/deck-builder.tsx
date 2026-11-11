@@ -14,13 +14,20 @@ import type {
   SuggestionCard,
   SuggestionList,
 } from "@/modules/decks";
-import { bracketLine, bracketWarning, estimateBracket, mainType } from "@/modules/decks/client";
+import {
+  bracketLine,
+  bracketWarning,
+  estimateBracket,
+  isCounted,
+  mainType,
+} from "@/modules/decks/client";
 import { bracketFlags, cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
   browseAction,
   cardDetailAction,
+  moveLineAction,
   otherDecksAction,
   setQuantityAction,
   setTargetBracketAction,
@@ -35,7 +42,7 @@ import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./de
 import { SuggestionsPanel } from "./suggestions";
 import { TestHandPanel } from "./test-hand";
 import { PrintingPicker } from "./printing-picker";
-import { SelectedCard, type Selection } from "./selected-card";
+import { countedCopies, SelectedCard, type Selection } from "./selected-card";
 import { StatsPanel } from "./stats-panel";
 
 // The deck builder (design doc 14, section 2): your collection as card images on the left, the
@@ -304,8 +311,8 @@ export function DeckBuilder(props: {
     }
     return counts;
   }
-  const totalInDeck = (oracleId: string) =>
-    Object.values(inDeck(oracleId)).reduce((sum, count) => sum + (count ?? 0), 0);
+  /** Copies in the deck, the maybeboard left out (design doc 32). */
+  const totalInDeck = (oracleId: string) => countedCopies(inDeck(oracleId));
 
   /** Selects a card. `uses` are its other decks when already known (a deck line has them). */
   function select(selection: Selection, uses?: readonly OtherDeckUse[]) {
@@ -474,9 +481,46 @@ export function DeckBuilder(props: {
       { oracleId: selected.oracleId, printingId: selected.printingId, board, quantity: next },
       board === "commander"
         ? `${selected.name} is now a commander.`
-        : `Added ${added} ${selected.name} (now ${next}${board === "side" ? " in the sideboard" : ""}${added < quantity ? ", the most one line can hold" : ""}).`,
+        : `Added ${added} ${selected.name} (now ${next}${board === "side" ? " in the sideboard" : board === "maybe" ? " on the maybeboard" : ""}${added < quantity ? ", the most one line can hold" : ""}).`,
     );
     setSelected({ ...selected, inDeck: { ...selected.inDeck, [board]: next } });
+  }
+
+  /** Moves a line to another board (design doc 32); the deck shows the move at once. */
+  function moveLine(line: DeckLine, to: Board) {
+    const request = ++latestChange.current;
+    setDeck((current) => {
+      const there = current.lines.find(
+        (other) => other.oracleId === line.oracleId && other.board === to,
+      );
+      const rest = current.lines.filter(
+        (other) =>
+          other.oracleId !== line.oracleId || (other.board !== line.board && other.board !== to),
+      );
+      const quantity = Math.min(99, line.quantity + (there?.quantity ?? 0));
+      return { ...current, lines: [...rest, { ...line, board: to, quantity }] };
+    });
+    startSaving(async () => {
+      const result = await moveLineAction({
+        deckId,
+        oracleId: line.oracleId,
+        from: line.board,
+        to,
+      });
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        setMessage({
+          tone: "ok",
+          text:
+            to === "maybe"
+              ? `Moved ${line.name} to the maybeboard.`
+              : `Moved ${line.name} into the deck.`,
+        });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+      }
+    });
   }
 
   function changeLine(line: DeckLine, next: number) {
@@ -541,7 +585,10 @@ export function DeckBuilder(props: {
     }
   }
   const deckProblems = problems.filter((problem) => problem.name === null);
-  const cardTotal = deck.lines.reduce((sum, line) => sum + line.quantity, 0);
+  // The maybeboard isn't counted (design doc 32).
+  const cardTotal = deck.lines
+    .filter((line) => isCounted(line.board))
+    .reduce((sum, line) => sum + line.quantity, 0);
   const pill = (pressed: boolean) =>
     `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`;
 
@@ -895,6 +942,7 @@ export function DeckBuilder(props: {
             cards={deck.cards}
             problemsByName={problemsByName}
             onChange={changeLine}
+            onMove={moveLine}
             onSelect={(line) => {
               selectFromDeck(line);
               setTab("collection");

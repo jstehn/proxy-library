@@ -1,6 +1,7 @@
 import type { Finish, PrintingId } from "@/modules/catalog";
 import { err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
 import type {
+  CommanderMove,
   EntryNotFound,
   FinishNotAvailable,
   NameInvalid,
@@ -134,6 +135,40 @@ export function withEntry(
     finish: change.finish ?? existing?.finish ?? null,
   };
   return { ...deck, entries: [...others, entry] };
+}
+
+/** Moving a card's line to another board (design doc 32): to the maybeboard and back. */
+export type EntryMove = Readonly<{ oracleId: string; from: Board; to: Board }>;
+
+/**
+ * The deck with one card's line moved to another board. If the card is on that board already,
+ * the copies add up (at most 99), and the moved line's pinned printing wins when it has one.
+ * Commanders don't move: choosing one is its own step.
+ */
+export function movedEntry(
+  deck: Deck,
+  move: EntryMove,
+): Result<Deck, EntryNotFound | CommanderMove> {
+  if (move.from === "commander" || move.to === "commander") return err({ kind: "CommanderMove" });
+  const moving = deck.entries.find(
+    (entry) => entry.oracleId === move.oracleId && entry.board === move.from,
+  );
+  if (moving === undefined) return err({ kind: "EntryNotFound" });
+  if (move.from === move.to) return ok(deck);
+
+  const there = deck.entries.find(
+    (entry) => entry.oracleId === move.oracleId && entry.board === move.to,
+  );
+  const withoutOld = withEntry(deck, { oracleId: move.oracleId, board: move.from, quantity: 0 });
+  return ok(
+    withEntry(withoutOld, {
+      oracleId: move.oracleId,
+      board: move.to,
+      quantity: Math.min(MAX_QUANTITY, moving.quantity + (there?.quantity ?? 0)),
+      printingId: moving.printingId ?? there?.printingId ?? null,
+      finish: moving.printingId === null ? (there?.finish ?? null) : moving.finish,
+    }),
+  );
 }
 
 /** A printing chosen for a deck line, and what the catalog says about it (design doc 24). */
