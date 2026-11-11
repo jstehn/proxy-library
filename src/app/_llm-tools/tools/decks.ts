@@ -15,6 +15,7 @@ import {
   fingerprint,
   FORMATS,
   MAX_QUANTITY,
+  rankCuts,
   roleTargets,
   shortList,
   type DeckProblem,
@@ -22,6 +23,7 @@ import {
 } from "@/modules/decks";
 import {
   bracketWarningText,
+  cutReasonText,
   estimateLabel,
   findingWithCards,
   problemText,
@@ -46,7 +48,9 @@ const deckId = z.number().int().positive().describe("The deck's id, from list_de
 const board = z
   .enum(BOARDS)
   .default("main")
-  .describe('Which part of the deck: "main", "side" (sideboard) or "commander".');
+  .describe(
+    'Which part of the deck: "main", "side" (sideboard), "commander", or "maybe" (the maybeboard: cards being considered, counted nowhere).',
+  );
 const card = z
   .string()
   .min(1)
@@ -110,6 +114,48 @@ async function viewFor(context: ToolContext, id: number) {
   return deckView(context.container.db, context.actor.userId, id);
 }
 
+/** The most cut candidates rank_cuts returns at once. */
+const MAX_CUTS = 30;
+
+export const rankCutsTool = defineTool({
+  name: "rank_cuts",
+  title: "Rank a deck's weakest cards",
+  description: [
+    "The deck's main-deck cards that earn their place least, weakest first, each with a keep score (lower is a better cut) and its reasons in words: fits none of the deck's themes, a role the deck has too many of, expensive in a high curve, over the target bracket, not owned. Reasons to keep a card are listed too (a theme it fits, a role the deck is short of). Lands and commanders aren't ranked.",
+    "Use it when: the deck is over its size, or the player asks what to cut. Then judge the cards by their text (get_deck with includeText) before suggesting cuts.",
+    'Rules: suggest cuts, don\'t make them unasked. To set a card aside, move it to the maybeboard with set_deck_entry (0 on "main", then the same count on "maybe").',
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    count: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_CUTS)
+      .default(10)
+      .describe(`How many cards to return, weakest first (1 to ${MAX_CUTS}).`),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const cuts = rankCuts(view.lines, {
+      format: view.deck.format,
+      targetBracket: view.deck.targetBracket,
+    });
+    return done({
+      deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
+      cuts: cuts.slice(0, input.count).map((cut) => ({
+        name: cut.name,
+        keepScore: Math.round(cut.keepScore * 10) / 10,
+        why: cut.reasons.map(cutReasonText),
+      })),
+      candidates: cuts.length,
+    });
+  },
+});
+
 export const listDecks = defineTool({
   name: "list_decks",
   title: "List my decks",
@@ -144,7 +190,7 @@ export const getDeck = defineTool({
     "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
     'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
-    "Rules: decks may hold cards you don't own; they show as short. Basic lands are never short. Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity).",
+    'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -219,7 +265,7 @@ export const createDeck = defineTool({
   title: "Create a deck",
   description: [
     "Makes a new, empty deck and returns its id. Optionally fills it from a list in the usual text format.",
-    'Use it when: the player wants a new deck. Then add cards with set_deck_entry, or pass a whole list here ("Commander" / "Deck" / "Sideboard" headings, then lines like "1 Sol Ring").',
+    'Use it when: the player wants a new deck. Then add cards with set_deck_entry, or pass a whole list here ("Commander" / "Deck" / "Sideboard" / "Maybeboard" headings, then lines like "1 Sol Ring").',
     "Rules: cards you don't own may be added; they show as short.",
   ].join("\n"),
   scope: "decks:write",
@@ -231,7 +277,7 @@ export const createDeck = defineTool({
       .string()
       .default("")
       .describe(
-        'Optional cards to start with, one per line: "1 Sol Ring". Headings: Commander, Deck, Sideboard.',
+        'Optional cards to start with, one per line: "1 Sol Ring". Headings: Commander, Deck, Sideboard, Maybeboard.',
       ),
   }),
   async run(context, input) {
@@ -331,7 +377,7 @@ export const setDeckEntry = defineTool({
   description: [
     "Sets how many copies of one card a deck has on one board: 0 removes it. It sets the count, it doesn't add to it.",
     "Use it when: adding, removing or changing a few cards. For many changes at once, use replace_deck_list.",
-    "Rules: cards you don't own may be added (they show as short); prefer owned cards, and free ones (search free>0) over cards another deck uses. To move a card from another deck, set it to 0 there (the player decides; ask first). Check the result with get_deck.",
+    'Rules: cards you don\'t own may be added (they show as short); prefer owned cards, and free ones (search free>0) over cards another deck uses. To move a card from another deck, set it to 0 there (the player decides; ask first). To set a card aside without removing it, set it to 0 on "main" and add it on "maybe". Check the result with get_deck.',
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,

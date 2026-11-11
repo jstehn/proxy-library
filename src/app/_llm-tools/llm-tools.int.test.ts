@@ -312,6 +312,32 @@ describe("the MCP server", () => {
   });
 });
 
+describe("the maybeboard and cards to cut (design doc 32)", () => {
+  it("ranks the weakest cards, and keeps maybeboard cards out of everything", async () => {
+    await give("Banishing Light");
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Beza",
+      list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n1 Carrot Cake\n10 Plains\nMaybeboard\n1 Agate Assault",
+    });
+
+    const deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.lines).toContainEqual(
+      expect.objectContaining({ name: "Agate Assault", board: "maybe" }),
+    );
+    expect(deck.stats.cardCount).toBe(13); // the maybeboard isn't counted
+    expect(deck.shortList).not.toContain("Agate Assault");
+
+    const ranked = await call(client, "rank_cuts", { deckId, count: 5 });
+    // Lands, the commander and the maybeboard aren't ranked.
+    expect(ranked.cuts.map((cut: { name: string }) => cut.name).sort()).toEqual([
+      "Banishing Light",
+      "Carrot Cake",
+    ]);
+    for (const cut of ranked.cuts) expect(cut.why.length).toBeGreaterThan(0);
+  });
+});
+
 describe("plain calls (the HTTP endpoint's core)", () => {
   it("reports an unknown tool, bad input and a missing scope as problems", async () => {
     expect(await callTool(context(), "make_coffee", {})).toMatchObject({
