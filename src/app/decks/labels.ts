@@ -4,11 +4,12 @@ import type {
   BracketFinding,
   BracketWarning,
   DeckProblem,
+  CutReason,
   Format,
   Reason,
 } from "@/modules/decks";
 import { BRACKET_NAMES, plural } from "@/modules/decks/client";
-import { THEME_LABELS, type Tag } from "@/shared/card-search";
+import { THEME_LABELS, type BracketFlag, type Tag } from "@/shared/card-search";
 import { assertNever } from "@/shared/kernel";
 
 export const FORMAT_LABELS: Record<Format, string> = {
@@ -125,6 +126,35 @@ export function reasonText(reason: Reason): string {
         : `${TAG_LABELS[reason.tag]} (${reason.count} of ${reason.target})`;
     case "keyword":
       return reason.keyword;
+    default:
+      return assertNever(reason);
+  }
+}
+
+/** Bracket flags in words, for a cut's reason. */
+const FLAG_WORDS: Readonly<Record<BracketFlag, string>> = {
+  gameChanger: "a Game Changer",
+  landDenial: "mass land denial",
+  extraTurn: "an extra turn",
+};
+
+/** Why a card is a cut candidate (or worth keeping), in words (design doc 32). */
+export function cutReasonText(reason: CutReason): string {
+  switch (reason.kind) {
+    case "noFit":
+      return "Fits none of the deck's themes";
+    case "fits":
+      return `Fits: ${reason.reasons.map(reasonText).join(", ")}`;
+    case "surplusRole":
+      return `${TAG_LABELS[reason.tag]}: ${reason.count} in the deck, target ${reason.target}`;
+    case "neededRole":
+      return `${TAG_LABELS[reason.tag]}: only ${reason.count} of ${reason.target}, keep it`;
+    case "topHeavy":
+      return `${reason.manaValue} mana, and the curve averages ${reason.average}`;
+    case "overBracket":
+      return `${reason.flags.map((flag) => FLAG_WORDS[flag]).join(", ")}: over your bracket ${reason.target} target`;
+    case "notOwned":
+      return `You're short ${reason.short}`;
     default:
       return assertNever(reason);
   }

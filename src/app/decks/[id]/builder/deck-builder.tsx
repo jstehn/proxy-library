@@ -40,6 +40,7 @@ import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
+import { CutsPanel } from "./cuts-panel";
 import { TestHandPanel } from "./test-hand";
 import { PrintingPicker } from "./printing-picker";
 import { countedCopies, SelectedCard, type Selection } from "./selected-card";
@@ -159,6 +160,7 @@ export function DeckBuilder(props: {
     });
   }
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showCuts, setShowCuts] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
     oracleId: string;
@@ -913,6 +915,14 @@ export function DeckBuilder(props: {
             </button>
             <button
               type="button"
+              aria-expanded={showCuts}
+              onClick={() => setShowCuts((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showCuts ? "Hide cards to cut" : "Cards to cut"}
+            </button>
+            <button
+              type="button"
               aria-expanded={showTestHand}
               onClick={() => setShowTestHand((value) => !value)}
               className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
@@ -926,6 +936,20 @@ export function DeckBuilder(props: {
               deckKey={`${deckKey}|${targetBracket ?? ""}`}
               onSelect={selectSuggestion}
               onClose={() => setShowSuggestions(false)}
+            />
+          )}
+          {showCuts && (
+            <CutsPanel
+              lines={deck.lines}
+              format={format}
+              targetBracket={targetBracket}
+              onMove={moveLine}
+              onSelect={(line) => {
+                selectFromDeck(line);
+                setTab("collection");
+              }}
+              onClose={() => setShowCuts(false)}
+              busy={isSaving}
             />
           )}
           {showTestHand && (
