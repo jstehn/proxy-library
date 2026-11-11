@@ -92,6 +92,7 @@ export type CardExtras = Readonly<{
   producedMana: readonly string[];
   keywords: readonly string[];
   isGameChanger: boolean;
+  edhrecRank: number | null;
 }>;
 
 /** "This printing makes that token printing", from the printing's Scryfall `all_parts`. */

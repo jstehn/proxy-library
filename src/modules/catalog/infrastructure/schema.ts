@@ -93,6 +93,8 @@ export const printings = pgTable(
     // On Wizards' Game Changer list (Scryfall's game_changer), rewritten by every Scryfall pass so
     // a change to the list shows the next night without re-tagging (design doc 31).
     isGameChanger: boolean("is_game_changer").notNull().default(false),
+    // Scryfall's edhrec_rank (1 = most popular on EDHREC), rewritten by every Scryfall pass (design doc 39).
+    edhrecRank: integer("edhrec_rank"),
     featuresVersion: integer("features_version").notNull().default(0),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },

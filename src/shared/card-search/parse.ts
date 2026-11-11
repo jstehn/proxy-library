@@ -248,8 +248,8 @@ export function taggerAlias(value: string): { field: "tag" | "theme"; value: str
 }
 
 /** The canonical theme name for a `theme:` value or synonym (`treasure` → `treasures`), or null. */
-function canonicalTheme(value: string): Theme | null {
-  const alias = TAGGER_ALIASES[value.toLowerCase()];
+export function canonicalTheme(value: string): Theme | null {
+  const alias = TAGGER_ALIASES[value.trim().toLowerCase()];
   return alias?.field === "theme" ? alias.value : null;
 }
 

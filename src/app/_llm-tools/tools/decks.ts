@@ -3,6 +3,7 @@ import { PrintingId } from "@/modules/catalog";
 import {
   BOARDS,
   bracketLine,
+  COMMANDER_SORTS,
   commanderDetails,
   commandersICanBuild,
   bracketWarning,
@@ -30,7 +31,7 @@ import {
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
-import { THEMES } from "@/shared/card-search";
+import { canonicalTheme, THEMES } from "@/shared/card-search";
 import {
   bracketWarningText,
   cutReasonText,
@@ -335,9 +336,9 @@ export const commandersICanBuildTool = defineTool({
   name: "commanders_i_can_build",
   title: "Find commanders my cards could build",
   description: [
-    `Ranks the cards that could lead a Commander deck by how much of a deck the player's own cards already cover: "onPlan" cards (inside its color identity, sharing a theme, creature type or keyword its text cares about), the roles ramp, draw, removal and wipes against the usual targets, how many of a deck's ${SPELL_SLOTS} spell slots their on-color cards could fill, and how many on-color non-basic lands they own. Every copy the player owns counts, even ones in other decks.`,
+    `Ranks the cards that could lead a Commander deck by how much of a deck the player's own cards already cover ("coverage", default), by Scryfall EDHREC popularity ("popularity"), by a card-strength & Game Changer heuristic ("power"), or by a blend of all three ("combined"): "onPlan" cards (inside its color identity, sharing a theme, creature type or keyword its text cares about), the roles ramp, draw, removal and wipes against the usual targets, how many of a deck's ${SPELL_SLOTS} spell slots their on-color cards could fill, and how many on-color non-basic lands they own. Every copy the player owns counts, even ones in other decks. Filter by "theme" (e.g. "politics", "voting", "treasures", "artifact-tokens", "blink") or "tribe" (e.g. "Elf", "Dragon").`,
     'Use it when: the player wants a new deck but has no commander yet, or asks which legend their collection supports. With "commander" (a name), it returns that one in detail instead: the on-plan cards and why, the cards for each role, and the cheapest store cards that would fill what\'s missing, with a total.',
-    'Rules: these are ideas from simple counts over rules text, not a verdict on the best commander: present a few with their numbers and let the player choose. Then create_deck with the list "Commander\\n1 <name>" and build it the usual way. Partners and Backgrounds aren\'t paired here.',
+    "Rules: these rankings are starting-point heuristics over rules text and Scryfall metadata, not tournament win rates or a verdict on the best commander: read the commander's oracle text, present a few options with their trade-offs, and let the player choose. Then create_deck with the list \"Commander\\n1 <name>\" and build it the usual way. Partners and Backgrounds aren't paired here.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -346,6 +347,24 @@ export const commandersICanBuildTool = defineTool({
       .array(ManaColorSchema)
       .default([])
       .describe('Only commanders whose color identity includes all of these, e.g. ["G", "W"].'),
+    theme: z
+      .string()
+      .optional()
+      .describe(
+        'Only commanders whose plan leads this theme (or an otag alias), e.g. "politics", "voting", "goad", "treasures", "artifact-tokens", "creature-tokens", "blink", "counters".',
+      ),
+    tribe: z
+      .string()
+      .optional()
+      .describe(
+        'Only commanders whose plan or creature subtypes include this tribe, e.g. "Elf", "Dragon", "Goblin".',
+      ),
+    sort: z
+      .enum(COMMANDER_SORTS)
+      .default("coverage")
+      .describe(
+        'Ordering heuristic: "coverage" (cards owned, default), "combined" (blend of coverage, popularity and power), "popularity" (Scryfall EDHREC rank), or "power" (Game Changer, card strength and plan richness).',
+      ),
     includeStore: z
       .boolean()
       .default(false)
@@ -389,12 +408,30 @@ export const commandersICanBuildTool = defineTool({
         },
       });
     }
+    const resolvedTheme =
+      input.theme === undefined || input.theme.trim() === ""
+        ? undefined
+        : canonicalTheme(input.theme.trim());
+    if (input.theme !== undefined && input.theme.trim() !== "" && resolvedTheme === null) {
+      return failed(
+        "UnknownTheme",
+        `Unknown theme "${input.theme}". Known themes: ${THEMES.join(", ")}.`,
+      );
+    }
     const ranked = await commandersICanBuild(db, userId, {
       colors: input.colors,
       includeStore: input.includeStore,
+      theme: resolvedTheme ?? undefined,
+      tribe: input.tribe,
+      sort: input.sort,
     });
     return done({
       found: ranked.length,
+      sort: input.sort,
+      ...(resolvedTheme ? { theme: resolvedTheme } : {}),
+      ...(input.tribe ? { tribe: input.tribe } : {}),
+      heuristicNote:
+        "These rankings are starting-point heuristics over regex theme tags, collection counts, and Scryfall EDHREC rank — not tournament win rates or a verdict on the best commander. Always read the commander's oracle text and investigate real synergies before building.",
       commanders: ranked.slice(0, input.limit).map(describeCoverage),
     });
   },
@@ -405,15 +442,22 @@ function describeCoverage(coverage: CommanderCoverage) {
   const { commander } = coverage;
   return {
     name: commander.name,
+    manaCost: commander.manaCost ?? null,
+    typeLine: commander.typeLine,
+    text: commander.text,
     colorIdentity: commander.colorIdentity.join("") || "colorless",
     owned: commander.ownedCopies > 0,
     price: moneyOrNull(commander.priceCents),
     isGameChanger: commander.isGameChanger,
+    edhrecRank: commander.edhrecRank ?? null,
     leads: planText(coverage.plan) || "nothing these rules read from its text",
     onPlan: coverage.onPlan,
     roles: coverage.roles.map((role) => ({ role: role.tag, have: role.have, target: role.target })),
     spellsFromYourCards: `${coverage.filled} of ${SPELL_SLOTS}`,
     ownedLands: coverage.ownedLands,
+    coverageScore: coverage.score,
+    powerScore: coverage.powerScore,
+    combinedScore: coverage.combinedScore,
     alreadyLeads: commander.leads,
   };
 }

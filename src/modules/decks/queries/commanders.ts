@@ -8,6 +8,7 @@ import {
   rankCommanders,
   type CommanderCandidate,
   type CommanderCoverage,
+  type CommanderSort,
   type CoverageDetails,
   type MissingCost,
   type PoolCard,
@@ -18,8 +19,8 @@ import { MANA_COLORS, TARGETED_TAGS, type ManaColor } from "../domain/stats";
 import { ownedCopies } from "./owned";
 import { textArray, tribePattern } from "./suggestions";
 
-// Commanders I can build (design doc 36, section 9): SQL gathers your pool, your lands and the
-// cards that could lead a deck; the pure rankCommanders orders them.
+// Commanders I can build (design docs 36 and 39): SQL gathers your pool, your lands and the
+// cards that could lead a deck; the pure rankCommanders filters and orders them.
 
 export type CommanderSearch = Readonly<{
   /** Only commanders whose identity includes every one of these colors. */
@@ -28,6 +29,12 @@ export type CommanderSearch = Readonly<{
   includeStore?: boolean;
   /** Whether your real copies count (design doc 16): off, like a new deck. */
   withReal?: boolean;
+  /** Only commanders whose plan leads this theme (design doc 39). */
+  theme?: Theme;
+  /** Only commanders whose plan or creature subtypes include this tribe (design doc 39). */
+  tribe?: string;
+  /** Ordering heuristic (default "coverage", design doc 39). */
+  sort?: CommanderSort;
 }>;
 
 /** One commander in detail, with the cheapest store cards that would close its gaps. */
@@ -63,12 +70,17 @@ type CandidateRow = {
   oracle_id: string;
   printing_id: string;
   name: string;
+  mana_cost: string | null;
+  mana_value: number;
   type_line: string;
   face_text: string;
   has_power_toughness: boolean;
   color_identity: string[];
   keywords: string[];
+  rarity: string;
+  role_tags: string[];
   is_game_changer: boolean;
+  edhrec_rank: number | null;
   owned: number;
   price_cents: number | null;
   leads: string[] | null;
@@ -77,10 +89,11 @@ type CandidateRow = {
 const POOL_COLUMNS = sql`p.oracle_id, p.name, p.type_line, p.mana_value, p.keywords, p.role_tags,
   p.theme_tags, p.color_identity, p.rarity`;
 
-const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.type_line, ${FACE_TEXT} as face_text,
+const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
+  p.type_line, ${FACE_TEXT} as face_text,
   exists (select 1 from jsonb_array_elements(p.faces) f
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
-  p.color_identity, p.keywords, p.is_game_changer`;
+  p.color_identity, p.keywords, p.rarity, p.role_tags, p.is_game_changer, p.edhrec_rank`;
 
 /** SQL: the latest price of printing `p`, in its cheapest finish. */
 const LATEST_PRICE = sql`(select min(latest.usd_cents) from (
@@ -113,11 +126,16 @@ function toCandidate(row: CandidateRow): CommanderCandidate {
     oracleId: row.oracle_id,
     printingId: row.printing_id,
     name: row.name,
+    manaCost: row.mana_cost,
+    manaValue: Number(row.mana_value),
     typeLine: row.type_line,
     text: row.face_text,
     colorIdentity: colorsOf(row.color_identity),
     keywords: row.keywords,
+    rarity: row.rarity,
+    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
     isGameChanger: row.is_game_changer,
+    edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
     ownedCopies: Number(row.owned),
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
     leads: row.leads ?? [],
@@ -232,7 +250,7 @@ async function storeCandidates(
   return rows.rows.filter(leadsCommander).map(toCandidate);
 }
 
-/** Every card that could lead a deck, ranked by how much of it your cards cover (section 9). */
+/** Every card that could lead a deck, ranked by how much of it your cards cover (sections 9 & 39). */
 export async function commandersICanBuild(
   db: DbExecutor,
   userId: UserId,
@@ -243,7 +261,11 @@ export async function commandersICanBuild(
     ...(await ownedCandidates(db, userId, search)),
     ...(search.includeStore === true ? await storeCandidates(db, userId, search) : []),
   ];
-  return rankCommanders(candidates, pool, lands);
+  return rankCommanders(candidates, pool, lands, {
+    sort: search.sort,
+    theme: search.theme,
+    tribe: search.tribe,
+  });
 }
 
 /** Store cards on-color for this commander that do a targeted role or share its plan. */

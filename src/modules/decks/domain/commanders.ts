@@ -1,4 +1,4 @@
-import type { Theme } from "@/shared/card-search";
+import type { Tag, Theme } from "@/shared/card-search";
 import {
   creatureTypes,
   deckProfile,
@@ -18,8 +18,20 @@ import {
   type TargetedTag,
 } from "./stats";
 
-// Commanders I can build (design doc 36, section 3): for each card that could lead a deck, how
-// much of a Commander deck your owned cards already cover. Pure: the queries gather the rows.
+// Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
+// much of a Commander deck your owned cards already cover, plus popularity and power heuristics.
+// Pure: the queries gather the rows.
+
+export const COMMANDER_SORTS = ["coverage", "popularity", "power", "combined"] as const;
+export type CommanderSort = (typeof COMMANDER_SORTS)[number];
+
+export type RankCommandersOptions = Readonly<{
+  sort?: CommanderSort;
+  /** Keep only commanders whose plan.themes includes this theme. */
+  theme?: Theme;
+  /** Keep only commanders whose plan.tribes or own creature types include this tribe (case-insensitive). */
+  tribe?: string;
+}>;
 
 /** An owned card the coverage counts (one per oracle card), or a store card for the missing part. */
 export type PoolCard = CandidateCard & Readonly<{ colorIdentity: readonly ManaColor[] }>;
@@ -30,11 +42,17 @@ export type CommanderCandidate = Readonly<{
   /** The printing to show: your most-held copy, or the store's cheapest. */
   printingId: string;
   name: string;
+  manaCost?: string | null;
+  manaValue?: number;
   typeLine: string;
   text: string;
   colorIdentity: readonly ManaColor[];
   keywords: readonly string[];
+  rarity?: string;
+  roles?: readonly Tag[];
   isGameChanger: boolean;
+  /** Scryfall's EDHREC popularity rank (1 = most popular on EDHREC, null when unranked). */
+  edhrecRank?: number | null;
   /** Copies you own (0 for a store legend). */
   ownedCopies: number;
   /** Store price of its cheapest printing, for a legend you don't own; otherwise null. */
@@ -65,7 +83,12 @@ export type CommanderCoverage = Readonly<{
   filled: number;
   /** On-color non-basic lands you own (basics are free): a note, not in the score. */
   ownedLands: number;
+  /** Collection coverage score (design doc 36, section 3.1). */
   score: number;
+  /** Card power heuristic (design doc 39, section 3.1): Game Changer, card strength, plan richness, popularity. */
+  powerScore: number;
+  /** Blend of collection coverage + popularity + power (design doc 39, section 3.1). */
+  combinedScore: number;
 }>;
 
 export type CoverageDetails = Readonly<{
@@ -180,6 +203,42 @@ export function sharesPlan(entry: PreparedCard, plan: DeckProfile): boolean {
 /** For tests: a pool card as the ranking prepares it. */
 export const preparedForTest = (card: PoolCard): PreparedCard => prepare([card])[0];
 
+/**
+ * Bounded popularity bonus (0 to 25 points) from Scryfall's EDHREC rank (design doc 39, 3.1).
+ * Rank <= 10 gives 25; rank 1,000 gives ~10.7; rank >= 31,623 or null gives 0.
+ */
+export function popularityBonus(edhrecRank: number | null | undefined): number {
+  if (edhrecRank === null || edhrecRank === undefined || edhrecRank <= 0) return 0;
+  const clamped = Math.max(10, edhrecRank);
+  const raw = 25 * (1 - (Math.log10(clamped) - 1) / 3.5);
+  return Math.round(Math.max(0, Math.min(25, raw)) * 10) / 10;
+}
+
+/**
+ * Heuristic power score for a commander candidate (design doc 39, 3.1): combines Wizards' Game
+ * Changer flag, card strength (rarity + low-mana efficiency + roles), plan richness, and popularity.
+ */
+export function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
+  const cardStrength = strength({
+    rarity: candidate.rarity ?? "rare",
+    priceCents: candidate.priceCents,
+  });
+  const roleBonus = Math.min(4, (candidate.roles?.length ?? 0) * 2);
+  const efficiencyBonus =
+    candidate.manaValue !== undefined && candidate.manaValue <= 3
+      ? 3 - Math.min(2, Math.max(0, candidate.manaValue - 1))
+      : 0;
+  const planRichness = Math.min(6, plan.themes.length * 2 + plan.tribes.length * 2);
+  const raw =
+    (candidate.isGameChanger ? 12 : 0) +
+    2 * cardStrength +
+    roleBonus +
+    efficiencyBonus +
+    planRichness +
+    0.4 * popularityBonus(candidate.edhrecRank);
+  return Math.round(raw * 10) / 10;
+}
+
 function coverageOf(
   candidate: CommanderCandidate,
   cards: readonly PreparedCard[],
@@ -207,37 +266,86 @@ function coverageOf(
     COMMANDER_WEIGHTS.onPlan * Math.min(onPlan, COMMANDER_WEIGHTS.onPlanCap) +
     COMMANDER_WEIGHTS.role * roleCoverage +
     COMMANDER_WEIGHTS.filled * filled;
+  const commanderPlan: CommanderPlan = {
+    themes: profile.themes,
+    tribes: profile.tribes,
+    keywords: profile.keywords,
+  };
+  const powerScore = commanderPowerScore(candidate, commanderPlan);
+  const combinedScore =
+    Math.round((score + popularityBonus(candidate.edhrecRank) + 0.5 * powerScore) * 10) / 10;
   return {
     commander: candidate,
-    plan: { themes: profile.themes, tribes: profile.tribes, keywords: profile.keywords },
+    plan: commanderPlan,
     onPlan,
     roles,
     filled,
     ownedLands: landMasks.filter((land) => withinIdentity(land, mask)).length,
     score,
+    powerScore,
+    combinedScore,
   };
 }
 
-/** Highest score first; at equal scores, commanders you own first, then by name. */
-function byScore(a: CommanderCoverage, b: CommanderCoverage): number {
+const ownedTie = (a: CommanderCoverage, b: CommanderCoverage) =>
+  Number(b.commander.ownedCopies > 0) - Number(a.commander.ownedCopies > 0);
+
+const edhrecTie = (a: CommanderCoverage, b: CommanderCoverage) => {
+  const rankA = a.commander.edhrecRank ?? Number.MAX_SAFE_INTEGER;
+  const rankB = b.commander.edhrecRank ?? Number.MAX_SAFE_INTEGER;
+  return rankA - rankB;
+};
+
+const nameTie = (a: CommanderCoverage, b: CommanderCoverage) =>
+  a.commander.name.localeCompare(b.commander.name);
+
+function comparatorFor(
+  sort: CommanderSort,
+): (a: CommanderCoverage, b: CommanderCoverage) => number {
+  switch (sort) {
+    case "popularity":
+      return (a, b) => edhrecTie(a, b) || b.score - a.score || ownedTie(a, b) || nameTie(a, b);
+    case "power":
+      return (a, b) =>
+        b.powerScore - a.powerScore ||
+        b.score - a.score ||
+        edhrecTie(a, b) ||
+        ownedTie(a, b) ||
+        nameTie(a, b);
+    case "combined":
+      return (a, b) =>
+        b.combinedScore - a.combinedScore || ownedTie(a, b) || edhrecTie(a, b) || nameTie(a, b);
+    case "coverage":
+      return (a, b) => b.score - a.score || ownedTie(a, b) || edhrecTie(a, b) || nameTie(a, b);
+  }
+}
+
+function matchesTribe(coverage: CommanderCoverage, tribe: string): boolean {
+  const target = tribe.trim().toLowerCase();
+  if (target === "") return true;
   return (
-    b.score - a.score ||
-    Number(b.commander.ownedCopies > 0) - Number(a.commander.ownedCopies > 0) ||
-    a.commander.name.localeCompare(b.commander.name)
+    coverage.plan.tribes.some((entry) => entry.toLowerCase() === target) ||
+    creatureTypes(coverage.commander.typeLine).some((entry) => entry.toLowerCase() === target)
   );
 }
 
-/** Every candidate's coverage from your pool, highest score first (design doc 36, 3.1). */
+/** Every candidate's coverage from your pool, filtered and ordered by `options` (design docs 36 & 39). */
 export function rankCommanders(
   candidates: readonly CommanderCandidate[],
   pool: readonly PoolCard[],
   ownedLands: readonly WithIdentity[],
+  options: RankCommandersOptions = {},
 ): CommanderCoverage[] {
   const cards = prepare(pool);
   const landMasks = ownedLands.map((land) => colorMask(land.colorIdentity));
+  const sort = options.sort ?? "coverage";
   return candidates
     .map((candidate) => coverageOf(candidate, onColor(candidate, cards), landMasks))
-    .sort(byScore);
+    .filter(
+      (coverage) => options.theme === undefined || coverage.plan.themes.includes(options.theme),
+    )
+    .filter((coverage) => options.tribe === undefined || matchesTribe(coverage, options.tribe))
+    .sort(comparatorFor(sort));
 }
 
 /** Strongest first, then by name: the order role lists show. */

@@ -177,6 +177,9 @@ describe("tokens (design doc 25)", () => {
     expect(card({ game_changer: true }).isGameChanger).toBe(true);
     expect(card({ game_changer: false }).isGameChanger).toBe(false);
     expect(card({}).isGameChanger).toBe(false);
+    expect(card({ edhrec_rank: 42 }).edhrecRank).toBe(42);
+    expect(card({ edhrec_rank: null }).edhrecRank).toBeNull();
+    expect(card({}).edhrecRank).toBeNull();
     // The trimmed fixture lines leave the field out: none of them is a Game Changer.
     expect(lines.every((each) => !each.isGameChanger)).toBe(true);
   });

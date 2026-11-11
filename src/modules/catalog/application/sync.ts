@@ -281,6 +281,7 @@ export function makeSync(dependencies: CatalogDependencies) {
         producedMana: card.producedMana,
         keywords: card.keywords,
         isGameChanger: card.isGameChanger,
+        edhrecRank: card.edhrecRank,
       });
       if (isPriced) summary.pricedPrintings++;
       summary.priceSnapshots += todays.length;

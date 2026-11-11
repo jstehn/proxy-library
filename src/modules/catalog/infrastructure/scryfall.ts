@@ -56,6 +56,8 @@ export const ScryfallCardSchema = z.object({
   keywords: z.array(z.string()).optional(),
   // On Wizards' Commander Game Changer list (design doc 31).
   game_changer: z.boolean().default(false),
+  // Scryfall's EDHREC popularity rank (1 = most popular; design doc 39).
+  edhrec_rank: z.number().int().positive().nullable().optional(),
   prices: z.object({
     usd: z.string().nullable().default(null),
     usd_foil: z.string().nullable().default(null),
@@ -176,6 +178,7 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     producedMana: (raw.produced_mana ?? []).filter((symbol) => /^[WUBRGC]$/.test(symbol)),
     keywords: raw.keywords ?? [],
     isGameChanger: raw.game_changer,
+    edhrecRank: raw.edhrec_rank ?? null,
     tokenIds: relatedTokenIds(raw),
     token: mapToken(raw),
   };

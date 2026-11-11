@@ -1,10 +1,68 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
 import { commanderCardsAction, type CommanderCardsView } from "./actions";
 
-// One commander's cards on Find a commander (design doc 36, section 9), loaded when opened:
-// your on-plan cards and why, your cards for each role, and what the rest might cost.
+// One commander's cards on Find a commander (design docs 36 and 39), loaded when opened:
+// your on-plan cards and why, your cards for each role, and what the rest might cost; plus
+// hover/focus/tap preview on the commander's thumbnail image.
+
+type PreviewSpot = Readonly<{ left: number; top: number }>;
+const PREVIEW_WIDTH = 260;
+const PREVIEW_HEIGHT = Math.round((PREVIEW_WIDTH * 680) / 488);
+
+export function CommanderThumbnail(props: { printingId: string; name: string }) {
+  const [spot, setSpot] = useState<PreviewSpot | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  function show() {
+    const box = buttonRef.current?.getBoundingClientRect();
+    if (box === undefined) return;
+    const left =
+      box.right + 12 + PREVIEW_WIDTH <= window.innerWidth - 8
+        ? box.right + 12
+        : Math.max(8, box.left - PREVIEW_WIDTH - 12);
+    const top = Math.max(8, Math.min(box.top - 20, window.innerHeight - PREVIEW_HEIGHT - 8));
+    setSpot({ left, top });
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onMouseEnter={show}
+        onMouseLeave={() => setSpot(null)}
+        onFocus={show}
+        onBlur={() => setSpot(null)}
+        onClick={() => (spot ? setSpot(null) : show())}
+        aria-label={`Preview ${props.name}`}
+        className="shrink-0 self-start rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/images/${props.printingId}/small/front`}
+          alt={props.name}
+          loading="lazy"
+          className="aspect-[146/204] w-16 rounded-[4.5%] bg-zinc-100 sm:w-20 dark:bg-zinc-800"
+        />
+      </button>
+      {spot && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/images/${props.printingId}/normal/front`}
+          alt=""
+          aria-hidden
+          data-card-preview
+          width={PREVIEW_WIDTH}
+          height={PREVIEW_HEIGHT}
+          className="pointer-events-none fixed z-50 rounded-[4.5%] bg-zinc-200 shadow-2xl ring-1 ring-black/30 dark:bg-zinc-800"
+          style={{ left: spot.left, top: spot.top, width: PREVIEW_WIDTH }}
+        />
+      )}
+    </>
+  );
+}
 
 type Loaded = CommanderCardsView | "loading" | "failed" | null;
 

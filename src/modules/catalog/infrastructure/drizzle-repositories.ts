@@ -304,6 +304,7 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
             producedMana: [...card.producedMana],
             keywords: [...card.keywords],
             isGameChanger: card.isGameChanger,
+            edhrecRank: card.edhrecRank,
           })
           .where(eq(printings.scryfallId, card.scryfallId));
       }

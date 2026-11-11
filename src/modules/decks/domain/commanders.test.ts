@@ -145,6 +145,90 @@ describe("rankCommanders", () => {
     ];
     expect(rankCommanders([tokens], [], lands)[0].ownedLands).toBe(1);
   });
+
+  it("filters by theme, including umbrella themes and specific sub-themes (design doc 39)", () => {
+    const votingCommander = commander("Tivit", {
+      text: "Council's dilemma — each player votes for evidence or bribery. For each bribery vote, create a Treasure token.",
+    });
+    const goadCommander = commander("Marisi", {
+      text: "Whenever a creature you control deals combat damage to a player, goad each creature that player controls.",
+    });
+    const candidates = [tokens, votingCommander, goadCommander];
+    expect(
+      rankCommanders(candidates, [], [], { theme: "politics" }).map(
+        (entry) => entry.commander.name,
+      ),
+    ).toEqual(["Marisi", "Tivit"]);
+    expect(
+      rankCommanders(candidates, [], [], { theme: "voting" }).map((entry) => entry.commander.name),
+    ).toEqual(["Tivit"]);
+    expect(
+      rankCommanders(candidates, [], [], { theme: "treasures" }).map(
+        (entry) => entry.commander.name,
+      ),
+    ).toEqual(["Tivit"]);
+  });
+
+  it("filters by tribe case-insensitively across both plan.tribes and commander subtypes (design doc 39)", () => {
+    const elfLord = commander("Ezuri", {
+      typeLine: "Legendary Creature — Elf Warrior",
+      text: "Other Elf creatures you control get +3/+3.",
+    });
+    const elfNonLord = commander("Lonis", {
+      typeLine: "Legendary Creature — Snake Elf Scout",
+      text: "Whenever another nontoken creature you control enters, investigate.",
+    });
+    const candidates = [tokens, elfLord, elfNonLord];
+    expect(
+      rankCommanders(candidates, [], [], { tribe: "elf" }).map((entry) => entry.commander.name),
+    ).toEqual(["Ezuri", "Lonis"]);
+    expect(
+      rankCommanders(candidates, [], [], { tribe: "DRAGON" }).map((entry) => entry.commander.name),
+    ).toEqual([]);
+  });
+
+  it("orders by popularity (edhrecRank ascending, null last), power, and combined (design doc 39)", () => {
+    const covered = commander("Covered Legend", {
+      text: "Whenever a token you control enters, draw.",
+      edhrecRank: 5000,
+    });
+    const popular = commander("Popular Legend", {
+      edhrecRank: 25,
+    });
+    const powerhouse = commander("Powerhouse Legend", {
+      isGameChanger: true,
+      rarity: "mythic",
+      manaValue: 2,
+      roles: ["draw", "ramp"],
+      edhrecRank: 150,
+    });
+    const unranked = commander("Unranked Legend", {
+      edhrecRank: null,
+    });
+    const pool = many(6, { themes: ["tokens"] }, "TokenMaker");
+    const candidates = [covered, popular, powerhouse, unranked];
+
+    expect(
+      rankCommanders(candidates, pool, [], { sort: "coverage" }).map(
+        (entry) => entry.commander.name,
+      ),
+    ).toEqual(["Covered Legend", "Popular Legend", "Powerhouse Legend", "Unranked Legend"]);
+
+    expect(
+      rankCommanders(candidates, pool, [], { sort: "popularity" }).map(
+        (entry) => entry.commander.name,
+      ),
+    ).toEqual(["Popular Legend", "Powerhouse Legend", "Covered Legend", "Unranked Legend"]);
+
+    expect(
+      rankCommanders(candidates, pool, [], { sort: "power" }).map((entry) => entry.commander.name),
+    ).toEqual(["Powerhouse Legend", "Popular Legend", "Covered Legend", "Unranked Legend"]);
+
+    const combined = rankCommanders(candidates, pool, [], { sort: "combined" });
+    // Covered Legend has +20 coverage, Popular Legend has +22.2 popularity, Powerhouse has +18.3 popularity + 0.5*powerScore
+    expect(combined[0].commander.name).toBe("Powerhouse Legend");
+    expect(combined[combined.length - 1].commander.name).toBe("Unranked Legend");
+  });
 });
 
 describe("coverageDetails", () => {

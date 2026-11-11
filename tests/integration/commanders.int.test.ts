@@ -14,6 +14,7 @@ type TestCard = Readonly<{
   identity: string[];
   text?: string;
   roles?: string[];
+  edhrecRank?: number;
   /** A store price makes it for sale. */
   priceCents?: number;
 }>;
@@ -34,12 +35,12 @@ async function addCard(card: TestCard): Promise<void> {
     insert into printings (id, set_code, collector_number, name, oracle_id, scryfall_id, rarity,
                            colors, color_identity, mana_value, type_line, layout, finishes,
                            border_color, frame_version, frame_effects, promo_types, is_full_art,
-                           variant_label, faces, legalities, role_tags)
+                           variant_label, faces, legalities, role_tags, edhrec_rank)
     values (${id}, 'BLB', ${`${collectorNumber}`}, ${card.name}, ${oracleId}, ${randomUUID()},
             'rare', ${textArray(card.identity)}, ${textArray(card.identity)}, 3, ${card.typeLine},
             'normal', '{nonfoil}', 'black', '2015', '{}', '{}', false, '',
             ${JSON.stringify(faces)}::jsonb, '{"commander": "legal"}'::jsonb,
-            ${textArray(card.roles ?? [])})`);
+            ${textArray(card.roles ?? [])}, ${card.edhrecRank ?? null})`);
   if (card.priceCents !== undefined) {
     await db.execute(sql`
       insert into price_snapshots (printing_id, finish, day, usd_cents)
@@ -55,11 +56,14 @@ beforeAll(async () => {
     typeLine: "Legendary Creature — Rabbit Noble",
     identity: ["W"],
     text: "Other Rabbits you control get +1/+1.",
+    edhrecRank: 450,
   });
   await addCard({
     name: "Test Lone Legend",
-    typeLine: "Legendary Creature — Human",
+    typeLine: "Legendary Creature — Human Advisor",
     identity: ["W"],
+    text: "Will of the council — Starting with you, each player votes for grace or condemnation.",
+    edhrecRank: 80,
   });
   await addCard({ name: "Test Bunny One", ...rabbit });
   await addCard({ name: "Test Bunny Two", ...rabbit });
@@ -166,5 +170,23 @@ describe("commanders I can build", () => {
     expect(
       await commanderDetails(db, jack.userId, oracleIds.get("Test Bunny One") ?? ""),
     ).toBeNull();
+  });
+
+  it("filters by theme or tribe and orders by popularity", async () => {
+    await giveAll();
+    const politics = await commandersICanBuild(db, jack.userId, { theme: "politics" });
+    expect(politics.map((entry) => entry.commander.name)).toEqual(["Test Lone Legend"]);
+    expect(politics[0]?.commander.text).toContain("Will of the council");
+    expect(politics[0]?.commander.typeLine).toBe("Legendary Creature — Human Advisor");
+
+    const rabbits = await commandersICanBuild(db, jack.userId, { tribe: "rabbit" });
+    expect(rabbits.map((entry) => entry.commander.name)).toEqual(["Test Rabbit Lord"]);
+
+    const byPopularity = await commandersICanBuild(db, jack.userId, { sort: "popularity" });
+    expect(byPopularity.map((entry) => entry.commander.name)).toEqual([
+      "Test Lone Legend",
+      "Test Rabbit Lord",
+    ]);
+    expect(byPopularity[0]?.commander.edhrecRank).toBe(80);
   });
 });

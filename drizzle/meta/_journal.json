@@ -253,6 +253,13 @@
       "when": 1794362340116,
       "tag": "0035_deck_headings",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794400000000,
+      "tag": "0036_printing_edhrec_rank",
+      "breakpoints": true
     }
   ]
 }

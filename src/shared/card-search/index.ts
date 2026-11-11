@@ -2,6 +2,7 @@
 // the browser. The SQL that runs a search is in ./sql.ts, for server code only.
 export {
   BORDERS,
+  canonicalTheme,
   FRAME_VERSIONS,
   hasTerm,
   IS_VALUES,

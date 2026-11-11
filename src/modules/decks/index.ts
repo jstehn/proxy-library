@@ -196,7 +196,15 @@ export {
   type CommanderDetails,
   type CommanderSearch,
 } from "./queries/commanders";
-export { SPELL_SLOTS } from "./domain/commanders";
+export {
+  COMMANDER_SORTS,
+  commanderPowerScore,
+  popularityBonus,
+  rankCommanders,
+  SPELL_SLOTS,
+  type CommanderSort,
+  type RankCommandersOptions,
+} from "./domain/commanders";
 export type {
   CommanderCandidate,
   CommanderCoverage,
