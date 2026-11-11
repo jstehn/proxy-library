@@ -2,6 +2,7 @@ import type { Finish, PrintingId, SealedProductId } from "@/modules/catalog";
 import type { InventoryServices } from "@/modules/inventory";
 import type { WalletServices } from "@/modules/wallet";
 import type { Cents, Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import type { PricingMode } from "../domain/pricing";
 
 // Ports: what the store use cases need from outside (design doc 06, section 6).
 
@@ -74,6 +75,9 @@ export interface StoreSettings {
   /** The buylist rate in basis points (5000 = 50%). */
   buylistRate(): Promise<number>;
   setBuylistRate(rateBps: number, by: UserId, at: Date): Promise<void>;
+  /** How sealed product is priced: `msrp` (the default) or `value` (design doc 33). */
+  pricingMode(): Promise<PricingMode>;
+  setPricingMode(mode: PricingMode, by: UserId, at: Date): Promise<void>;
 }
 
 /** A product's contents value, as one valuation stores it (design doc 27, section 8). */

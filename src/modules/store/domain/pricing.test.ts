@@ -6,6 +6,7 @@ import {
   checkQuantity,
   kindPriceApplies,
   msrpFor,
+  PRICING_MODES,
   productKind,
   resaleFloor,
   storePrice,
@@ -59,7 +60,29 @@ describe("pricing", () => {
   });
 });
 
-describe("storePrice (design doc 27)", () => {
+describe("storePrice in MSRP pricing, the default (design doc 33)", () => {
+  const msrp = {
+    override: null,
+    officialMsrp: null,
+    kindPrice: Cents.of(399),
+    contentsValue: Cents.of(127_627),
+    buylistRateBps: 5000,
+    pricingMode: "msrp" as const,
+  };
+
+  it("sells an official MSRP as published, even when the contents sell back for more", () => {
+    // The Chocobo Bundle: $109.99 on the box, cards that sell back for $174.62.
+    const bundle = { ...msrp, officialMsrp: Cents.of(10_999), contentsValue: Cents.of(34_924) };
+    expect(storePrice(bundle)).toEqual({ price: 10_999, listPrice: 10_999, isRaised: false });
+    expect(storePrice({ ...bundle, pricingMode: "value" })?.price).toBe(17_462);
+  });
+
+  it("still raises a kind price, the generic guess, to the resale value", () => {
+    expect(storePrice(msrp)).toEqual({ price: 63_814, listPrice: 399, isRaised: true });
+  });
+});
+
+describe("storePrice (design doc 27, in value-based pricing)", () => {
   const cents = (value: number) => Cents.of(value);
   const base = {
     override: null,
@@ -67,6 +90,7 @@ describe("storePrice (design doc 27)", () => {
     kindPrice: cents(399),
     contentsValue: cents(127_627),
     buylistRateBps: 5000,
+    pricingMode: "value" as const,
   };
 
   it("raises a pack whose contents sell back for more than it costs: Alpha's $3.99 to $638.14", () => {
@@ -112,14 +136,27 @@ describe("storePrice (design doc 27)", () => {
     kindPrice: maybe,
     contentsValue: fc.option(fc.integer({ min: 0, max: 100_000_000 }).map(cents), { nil: null }),
     buylistRateBps: fc.integer({ min: 0, max: 10_000 }),
+    pricingMode: fc.constantFrom(...PRICING_MODES),
   });
 
-  it("never sells below the resale value without an override (rule 1)", () => {
+  it("never sells below the resale value without an override (rule 1; doc 33, invariant 2)", () => {
     fc.assert(
       fc.property(inputs, (input) => {
         const result = storePrice(input);
         if (result === null || input.override !== null || input.contentsValue === null) return true;
+        // MSRP pricing sells an official MSRP as published, below the floor or not.
+        if (input.pricingMode === "msrp" && input.officialMsrp !== null) return true;
         return result.price * 10_000 >= input.contentsValue * input.buylistRateBps;
+      }),
+    );
+  });
+
+  it("in MSRP pricing, sells an official MSRP as published (design doc 33, invariant 1)", () => {
+    fc.assert(
+      fc.property(inputs, (input) => {
+        const result = storePrice({ ...input, pricingMode: "msrp" });
+        if (input.override !== null || input.officialMsrp === null) return true;
+        return result?.price === input.officialMsrp && !result.isRaised;
       }),
     );
   });

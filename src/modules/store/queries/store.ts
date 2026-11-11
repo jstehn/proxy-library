@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
+import type { PricingMode } from "../domain/pricing";
 
 // Read models for the store screens (ADR 0006). Prices follow design doc 06, rule 1 (a product's
 // own override, else its official MSRP, else its kind's price; no price means not for sale),
@@ -16,13 +17,15 @@ const LIST_PRICE = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
 /** What its contents sell back for, rounded up (ADR 0021); null before the first valuation. */
 const RESALE_FLOOR = sql`ceil(v.value_cents * ss.buylist_rate_bps / 10000.0)::bigint`;
 /**
- * The store price in SQL (design doc 27): an override as typed; otherwise the list price,
- * raised to the resale floor. A product priced only by its kind waits for its first valuation.
- * The same rule as `storePrice` in domain/pricing.ts; an integration test checks they agree.
+ * The store price in SQL (design doc 27): an override as typed; in MSRP pricing (design doc 33,
+ * the default) an official MSRP as published; otherwise the list price, raised to the resale
+ * floor. A product priced only by its kind waits for its first valuation. The same rule as
+ * `storePrice` in domain/pricing.ts; an integration test checks they agree.
  */
 const MSRP = sql`(case
   when o.cents is not null then o.cents
   when coalesce(w.msrp_cents, k.cents) is null then null
+  when w.msrp_cents is not null and ss.pricing_mode = 'msrp' then w.msrp_cents
   when w.msrp_cents is null and v.value_cents is null then null
   else greatest(coalesce(w.msrp_cents, k.cents), coalesce(${RESALE_FLOOR}, 0))
 end)`;
@@ -455,6 +458,33 @@ export async function singleHistory(
     priceDay: row.price_day,
     at: new Date(row.created_at).toISOString(),
   }));
+}
+
+/**
+ * How many products for sale have an official MSRP below what their contents sell back for:
+ * the products value-based pricing raises and MSRP pricing doesn't (design doc 33).
+ */
+export async function msrpsBelowResale(db: DbExecutor): Promise<number> {
+  const [row] = (
+    await db.execute<{ count: number }>(sql`
+      select count(*)::int as count
+        from sealed_products sp
+        join card_sets s on s.code = sp.set_code and s.is_enabled
+        ${PRICE_JOINS}
+       where ${HAS_CONTENTS} and o.cents is null and w.msrp_cents is not null
+         and ${RESALE_FLOOR} > w.msrp_cents`)
+  ).rows;
+  return row?.count ?? 0;
+}
+
+/** How the store prices sealed product (design doc 33). */
+export async function currentPricingMode(db: DbExecutor): Promise<PricingMode> {
+  const [row] = (
+    await db.execute<{ mode: string }>(
+      sql`select pricing_mode as mode from store_settings where id = 1`,
+    )
+  ).rows;
+  return row?.mode === "value" ? "value" : "msrp";
 }
 
 /** The store's buylist rate, in basis points. */

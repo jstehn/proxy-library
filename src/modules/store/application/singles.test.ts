@@ -31,6 +31,7 @@ function actor(id: string, isAdmin = false): Actor {
 }
 
 const jack = actor("jack");
+let settings: ReturnType<typeof inMemoryStoreSettings>;
 const admin = actor("admin", true);
 const now = new Date("2026-01-07T10:00:00Z");
 const bolt = PrintingId.of("bolt");
@@ -49,6 +50,7 @@ beforeEach(() => {
   wallet = inMemoryWalletServices(["jack", "admin"]);
   collection = inMemoryCollectionRepository();
   storeLedger = inMemoryStoreLedger();
+  settings = inMemoryStoreSettings();
   const services = {
     ...wallet.services,
     items: inMemoryItemRepository(),
@@ -63,7 +65,7 @@ beforeEach(() => {
       "old/nonfoil": { price: Cents.of(500), day: "2026-01-06", isSetEnabled: false },
       "tarmo/nonfoil": { price: Cents.of(3000), day: "2026-01-06", isSetEnabled: true },
     }),
-    storeSettings: inMemoryStoreSettings(),
+    storeSettings: settings,
     productValues: inMemoryProductValues(),
     events,
   };
@@ -180,6 +182,15 @@ describe("setBuylistRate", () => {
     expect(await store.setBuylistRate(jack, 5000)).toEqual(err({ kind: "Forbidden" }));
     expect(await store.setBuylistRate(admin, 10_001)).toEqual(err({ kind: "RateInvalid" }));
     expect((await store.setBuylistRate(admin, 10_000)).ok).toBe(true);
+  });
+});
+
+describe("setPricingMode (design doc 33)", () => {
+  it("is admin-only, and starts as MSRP pricing", async () => {
+    expect(await settings.pricingMode()).toBe("msrp");
+    expect(await store.setPricingMode(jack, "value")).toEqual(err({ kind: "Forbidden" }));
+    expect((await store.setPricingMode(admin, "value")).ok).toBe(true);
+    expect(await settings.pricingMode()).toBe("value");
   });
 });
 

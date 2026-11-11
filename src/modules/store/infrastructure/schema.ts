@@ -91,12 +91,15 @@ export const storeSettings = pgTable(
   {
     id: smallint("id").primaryKey(),
     buylistRateBps: integer("buylist_rate_bps").notNull(),
+    // How sealed product is priced (design doc 33): "msrp" or "value".
+    pricingMode: text("pricing_mode").notNull().default("msrp"),
     updatedAt: timestamptz("updated_at").notNull(),
     updatedBy: text("updated_by"),
   },
   (table) => [
     check("store_settings_single_row", sql`${table.id} = 1`),
     check("store_settings_rate", sql`${table.buylistRateBps} between 0 and 10000`),
+    check("store_settings_pricing_mode", sql`${table.pricingMode} in ('msrp', 'value')`),
   ],
 );
 

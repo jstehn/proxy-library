@@ -14,10 +14,12 @@ export type {
 } from "./application/ports";
 export {
   MAX_QUANTITY,
+  PRICING_MODES,
   productKind,
   resaleFloor,
   storePrice,
   type PriceInputs,
+  type PricingMode,
   type StorePrice,
 } from "./domain/pricing";
 export type { ValuationReport } from "./application/value-products";
@@ -43,6 +45,8 @@ export {
 export { quoteShoppingList } from "./queries/shopping-list";
 export {
   currentBuylistRate,
+  currentPricingMode,
+  msrpsBelowResale,
   singleHistory,
   type SingleHistoryRow,
   kindPrices,

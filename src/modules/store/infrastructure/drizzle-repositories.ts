@@ -20,7 +20,7 @@ import type {
   StoreLedger,
   StoreSettings,
 } from "../application/ports";
-import { kindPriceApplies, productKind } from "../domain/pricing";
+import { kindPriceApplies, productKind, type PricingMode } from "../domain/pricing";
 import {
   msrpOverrides,
   msrpPrices,
@@ -185,7 +185,24 @@ export function drizzleStoreSettings(db: DbExecutor): StoreSettings {
       .where(eq(storeSettings.id, SETTINGS_ROW_ID));
   }
 
-  return { buylistRate, setBuylistRate };
+  async function pricingMode(): Promise<PricingMode> {
+    const [row] = await db
+      .select({ mode: storeSettings.pricingMode })
+      .from(storeSettings)
+      .where(eq(storeSettings.id, SETTINGS_ROW_ID));
+    if (row === undefined) throw new Error("store_settings has no row: run the migrations");
+    // The table's check allows only these two (migration 0034).
+    return row.mode === "value" ? "value" : "msrp";
+  }
+
+  async function setPricingMode(mode: PricingMode, by: UserId, at: Date): Promise<void> {
+    await db
+      .update(storeSettings)
+      .set({ pricingMode: mode, updatedAt: at, updatedBy: by })
+      .where(eq(storeSettings.id, SETTINGS_ROW_ID));
+  }
+
+  return { buylistRate, setBuylistRate, pricingMode, setPricingMode };
 }
 
 export function drizzleProductValues(db: DbExecutor): ProductValues {

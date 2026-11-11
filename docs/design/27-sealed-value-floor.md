@@ -3,7 +3,9 @@
 - **Phase:** 27
 - **Status:** **Built** (2026-11-07). Approved the same day with every recommendation, and
   your framing of the trigger: contents worth more than twice the price (the buylist rate,
-  50%). Implementation notes in section 14
+  50%). Implementation notes in section 14. **Amended by design doc 33 (ADR 0024):** by
+  default an official MSRP is sold as published; this rule applies in full only in
+  value-based pricing
 - **Related:** ADR 0014 (sealed product at MSRP; this amends it, see ADR 0021), ADR 0015
   (official MSRPs), design doc 06 (store and inventory), design doc 07 (selling singles back),
   design doc 17 (a draft's entry fee is three packs)

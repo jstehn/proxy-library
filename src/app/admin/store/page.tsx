@@ -1,10 +1,21 @@
 import { enabledSets } from "@/modules/catalog";
-import { currentBuylistRate, kindPrices, productPrices } from "@/modules/store";
+import {
+  currentBuylistRate,
+  currentPricingMode,
+  kindPrices,
+  msrpsBelowResale,
+  productPrices,
+} from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
-import { setBuylistRateAction, setKindPriceAction, setProductPriceAction } from "./actions";
+import {
+  setBuylistRateAction,
+  setKindPriceAction,
+  setPricingModeAction,
+  setProductPriceAction,
+} from "./actions";
 
 // MSRPs (ADR 0014): one price per product kind, and optional per-product overrides.
 
@@ -44,8 +55,10 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
   const setCode = typeof searchParams.set === "string" ? searchParams.set.toUpperCase() : null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
   const back = setCode === null ? "/admin/store" : `/admin/store?set=${setCode}`;
-  const [rateBps, kinds, sets, products] = await Promise.all([
+  const [rateBps, pricingMode, belowResale, kinds, sets, products] = await Promise.all([
     currentBuylistRate(db),
+    currentPricingMode(db),
+    msrpsBelowResale(db),
     kindPrices(db),
     enabledSets(db),
     setCode === null ? Promise.resolve([]) : productPrices(db, setCode),
@@ -73,6 +86,50 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           <button type="submit" className={buttonClass}>
             Save
           </button>
+        </form>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Pricing sealed product</h2>
+        <form action={setPricingModeAction} className="flex flex-col gap-2 text-sm">
+          <label className="flex items-start gap-2">
+            <input
+              type="radio"
+              name="mode"
+              value="msrp"
+              defaultChecked={pricingMode === "msrp"}
+              className="mt-1"
+            />
+            <span>
+              <strong>MSRP pricing</strong> (the default): a product with Wizards&apos; official
+              MSRP sells at that price. A product priced by its kind (a generic guess, like $3.99 a
+              pack) is raised to what its cards sell back for, so old sets aren&apos;t sold for less
+              than their cards are worth.
+            </span>
+          </label>
+          <label className="flex items-start gap-2">
+            <input
+              type="radio"
+              name="mode"
+              value="value"
+              defaultChecked={pricingMode === "value"}
+              className="mt-1"
+            />
+            <span>
+              <strong>Value-based pricing</strong>: official MSRPs are raised too, so no product
+              sells for less than its cards sell back for.
+            </span>
+          </label>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            {belowResale === 0
+              ? "No product with an official MSRP sells for less than its cards sell back for, so both choices give the same prices today."
+              : `${belowResale} ${belowResale === 1 ? "product has" : "products have"} an official MSRP below what ${belowResale === 1 ? "its" : "their"} cards sell back for: value-based pricing raises ${belowResale === 1 ? "it" : "them"}, MSRP pricing doesn't.`}
+          </p>
+          <div>
+            <button type="submit" className={buttonClass}>
+              Save
+            </button>
+          </div>
         </form>
       </section>
 

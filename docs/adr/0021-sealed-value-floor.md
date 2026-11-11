@@ -1,6 +1,7 @@
 # 0021. Never sell sealed product for less than its contents sell back for
 
-- **Status:** Accepted (decided by the user, 2026-11-07)
+- **Status:** Accepted (decided by the user, 2026-11-07); amended by
+  [0024](0024-msrp-pricing-by-default.md): by default an official MSRP is no longer raised
 - **Date:** 2026-11-07
 
 ## Context

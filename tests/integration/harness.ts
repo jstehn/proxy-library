@@ -140,7 +140,9 @@ export async function resetPlayers(ids: readonly string[]): Promise<void> {
   await db.execute(
     sql`update economy_settings set starting_grant_cents = 5000, allowance_cents = 0 where id = 1`,
   );
-  await db.execute(sql`update store_settings set buylist_rate_bps = 5000 where id = 1`);
+  await db.execute(
+    sql`update store_settings set buylist_rate_bps = 5000, pricing_mode = 'msrp' where id = 1`,
+  );
 }
 
 export function actor(id: string, isAdmin = false): Actor {

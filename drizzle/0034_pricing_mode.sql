@@ -1,0 +1,2 @@
+ALTER TABLE "store_settings" ADD COLUMN "pricing_mode" text DEFAULT 'msrp' NOT NULL;--> statement-breakpoint
+ALTER TABLE "store_settings" ADD CONSTRAINT "store_settings_pricing_mode" CHECK ("store_settings"."pricing_mode" in ('msrp', 'value'));

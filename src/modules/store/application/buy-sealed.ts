@@ -32,9 +32,10 @@ export function makeBuySealed(dependencies: StoreDependencies) {
     return unitOfWork.run<SealedReceipt, BuySealedError>(async (services) => {
       const listing = await services.priceList.listing(input.productId);
       if (listing === null || !listing.isSetEnabled) return err({ kind: "ProductNotForSale" });
-      // Never less than the contents sell back for (design doc 27, ADR 0021).
+      // The store's pricing mode decides whether an official MSRP is raised (design doc 33).
       const buylistRateBps = await services.storeSettings.buylistRate();
-      const price = storePrice({ ...listing, buylistRateBps });
+      const pricingMode = await services.storeSettings.pricingMode();
+      const price = storePrice({ ...listing, buylistRateBps, pricingMode });
       if (price === null) return err({ kind: "ProductNotForSale" });
       const unitPrice = price.price;
 

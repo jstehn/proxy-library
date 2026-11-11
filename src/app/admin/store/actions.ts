@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { SealedProductId } from "@/modules/catalog";
+import { PRICING_MODES } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
@@ -63,6 +64,15 @@ function parsePercent(raw: FormDataEntryValue | null): number | undefined {
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(text)) return undefined;
   const [whole, fraction = ""] = text.split(".");
   return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+}
+
+/** Chooses MSRP or value-based pricing for sealed product (design doc 33). */
+export async function setPricingModeAction(formData: FormData): Promise<void> {
+  const actor = await requireAdminActor();
+  const mode = PRICING_MODES.find((one) => one === formData.get("mode"));
+  if (mode === undefined) done("/admin/store", "Choose MSRP or value-based pricing.");
+  const result = await getContainer().store.setPricingMode(actor, mode);
+  done("/admin/store", result.ok ? undefined : "Only admins can change pricing.");
 }
 
 export async function setBuylistRateAction(formData: FormData): Promise<void> {

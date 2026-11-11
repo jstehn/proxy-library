@@ -4,7 +4,14 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SealedProductId } from "@/modules/catalog";
 import { makeInventory, type Item } from "@/modules/inventory";
-import { makeStore, productPrices, storePage, storePrice } from "@/modules/store";
+import {
+  makeStore,
+  PRICING_MODES,
+  productPrices,
+  storePage,
+  storePrice,
+  type PricingMode,
+} from "@/modules/store";
 import { drizzlePriceList } from "@/modules/store/infrastructure";
 import { Cents } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
@@ -171,6 +178,19 @@ describe("the resale floor (design doc 27)", () => {
   });
 
   it("agrees with storePrice for every product, in every place that shows a price", async () => {
+    // A product with an official MSRP above its floor, so the two modes differ (design doc 33).
+    await db.execute(
+      sql`update wpn_products set msrp_cents = 599 where name = 'Bloomburrow Play Booster'`,
+    );
+    for (const pricingMode of PRICING_MODES) {
+      await db.execute(sql`update store_settings set pricing_mode = ${pricingMode} where id = 1`);
+      expect(await pricesAgree(pricingMode)).toBeGreaterThan(0);
+    }
+    await db.execute(sql`update wpn_products set msrp_cents = null`);
+  });
+
+  /** Checks every listed product's price in SQL against storePrice; how many were raised. */
+  async function pricesAgree(pricingMode: PricingMode): Promise<number> {
     const listings = await db.execute<{ id: string; set_code: string }>(sql`
       select sp.id, sp.set_code from sealed_products sp
         join card_sets s on s.code = sp.set_code and s.is_enabled
@@ -182,14 +202,36 @@ describe("the resale floor (design doc 27)", () => {
       if (!pages.has(row.set_code)) pages.set(row.set_code, await storePage(db, row.set_code));
       const listing = await priceList.listing(SealedProductId.of(row.id));
       if (listing === null) throw new Error(`no listing for ${row.id}`);
-      const expected = storePrice({ ...listing, buylistRateBps: 5000 });
+      const expected = storePrice({ ...listing, buylistRateBps: 5000, pricingMode });
       const shown = pages.get(row.set_code)?.products.find((p) => p.id === row.id);
       expect(shown?.msrp ?? null).toBe(expected?.price ?? null);
       const adminRow = (await productPrices(db, row.set_code)).find((p) => p.id === row.id);
       expect(adminRow?.storePrice ?? null).toBe(expected?.price ?? null);
       if (expected?.isRaised) raised++;
     }
-    expect(raised).toBeGreaterThan(0);
+    return raised;
+  }
+
+  it("sells an official MSRP as published in MSRP pricing, and raises it in value-based (design doc 33)", async () => {
+    await db.execute(
+      sql`update wpn_products set msrp_cents = 599 where name = 'Bloomburrow Play Booster'`,
+    );
+    const shown = async () =>
+      (await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp;
+    expect(await shown()).toBe(599); // the default, MSRP pricing
+    await buy(PLAY_PACK);
+    expect(await balance("jack")).toBe(5000 - 599);
+
+    expect(await store.setPricingMode(admin, "value")).toEqual({ ok: true, value: undefined });
+    const raised = await shown();
+    expect(raised).toBeGreaterThan(599);
+    await buy(PLAY_PACK);
+    expect(await balance("jack")).toBe(5000 - 599 - Number(raised));
+    expect(await store.setPricingMode(actor("jack"), "msrp")).toEqual({
+      ok: false,
+      error: { kind: "Forbidden" },
+    });
+    await db.execute(sql`update wpn_products set msrp_cents = null`);
   });
 
   it("is gone when the store stops buying, and an admin's own price is never raised", async () => {

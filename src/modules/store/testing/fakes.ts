@@ -12,6 +12,7 @@ import type {
   StoreLedger,
   StoreSettings,
 } from "../application/ports";
+import type { PricingMode } from "../domain/pricing";
 import { DEFAULT_BUYLIST_RATE_BPS } from "../domain/singles";
 
 // In-memory stand-ins for the store ports.
@@ -67,9 +68,19 @@ export function inMemoryMarketPrices(quotes: Readonly<Record<string, MarketQuote
   };
 }
 
-export function inMemoryStoreSettings(rateBps = DEFAULT_BUYLIST_RATE_BPS): StoreSettings {
+export function inMemoryStoreSettings(
+  rateBps = DEFAULT_BUYLIST_RATE_BPS,
+  startingMode: PricingMode = "msrp",
+): StoreSettings {
   let rate = rateBps;
+  let mode = startingMode;
   return {
+    async pricingMode() {
+      return mode;
+    },
+    async setPricingMode(newMode) {
+      mode = newMode;
+    },
     async buylistRate() {
       return rate;
     },

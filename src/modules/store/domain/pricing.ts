@@ -41,6 +41,14 @@ export function resaleFloor(contentsValue: Cents, buylistRateBps: number): Cents
   return Cents.of(Math.ceil((contentsValue * buylistRateBps) / FULL_RATE_BPS));
 }
 
+/**
+ * How the store prices sealed product (design doc 33, ADR 0024). `msrp`, the default: an
+ * official MSRP sells as published, and only kind prices are raised to the resale floor.
+ * `value`: official MSRPs are raised too (design doc 27's full rule).
+ */
+export const PRICING_MODES = ["msrp", "value"] as const;
+export type PricingMode = (typeof PRICING_MODES)[number];
+
 export type StorePrice = Readonly<{
   /** What the store charges. */
   price: Cents;
@@ -57,20 +65,26 @@ export type PriceInputs = Readonly<{
   /** The contents' average market value from the last valuation, or null if not valued yet. */
   contentsValue: Cents | null;
   buylistRateBps: number;
+  pricingMode: PricingMode;
 }>;
 
 /**
- * What a sealed product sells for (design doc 27, rules 1–3), or null when it isn't for sale.
- * An admin's override is used as typed (decision 2). Otherwise the list price is raised to the
- * resale floor when it's below it. A product priced only by its kind isn't for sale until it
+ * What a sealed product sells for (design doc 27, rules 1–3; design doc 33), or null when it
+ * isn't for sale. An admin's override is used as typed (decision 2). In MSRP pricing, an official
+ * MSRP sells as published. Otherwise the list price is raised to the resale floor when it's
+ * below it. A product priced only by its kind isn't for sale until it
  * has been valued (decision 3). The store's SQL (`STORE_PRICE` in queries/store.ts) is the same
  * rule; an integration test checks they agree.
  */
 export function storePrice(inputs: PriceInputs): StorePrice | null {
-  const { override, officialMsrp, kindPrice, contentsValue, buylistRateBps } = inputs;
+  const { override, officialMsrp, kindPrice, contentsValue, buylistRateBps, pricingMode } = inputs;
   if (override !== null) return { price: override, listPrice: override, isRaised: false };
   const listPrice = officialMsrp ?? kindPrice;
   if (listPrice === null) return null;
+  // MSRP pricing sells an official MSRP as published (design doc 33, invariant 1).
+  if (officialMsrp !== null && pricingMode === "msrp") {
+    return { price: officialMsrp, listPrice, isRaised: false };
+  }
   if (officialMsrp === null && contentsValue === null) return null;
   const floor = contentsValue === null ? Cents.zero : resaleFloor(contentsValue, buylistRateBps);
   return floor > listPrice

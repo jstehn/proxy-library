@@ -2,7 +2,7 @@ import type { Actor } from "@/modules/accounts";
 import type { SealedProductId } from "@/modules/catalog";
 import { err, ok, type Cents, type Result } from "@/shared/kernel";
 import type { Forbidden, PriceInvalid, ProductNotFound } from "../domain/errors";
-import { checkPrice } from "../domain/pricing";
+import { checkPrice, PRICING_MODES, type PricingMode } from "../domain/pricing";
 import type { StoreDependencies } from "./ports";
 
 export type SetKindPriceError = Forbidden | PriceInvalid;
@@ -54,5 +54,16 @@ export function makeManagePrices(dependencies: StoreDependencies) {
     });
   }
 
-  return { setKindPrice, setProductPrice };
+  /** Chooses MSRP or value-based pricing (design doc 33). Admins only. */
+  async function setPricingMode(actor: Actor, mode: PricingMode): Promise<Result<void, Forbidden>> {
+    if (!actor.isAdmin) return err({ kind: "Forbidden" });
+    // A defect, not an expected failure: callers parse the mode before calling.
+    if (!PRICING_MODES.includes(mode)) throw new Error(`not a pricing mode: ${mode}`);
+    return unitOfWork.run<void, Forbidden>(async ({ storeSettings }) => {
+      await storeSettings.setPricingMode(mode, actor.userId, clock.now());
+      return ok();
+    });
+  }
+
+  return { setKindPrice, setProductPrice, setPricingMode };
 }
