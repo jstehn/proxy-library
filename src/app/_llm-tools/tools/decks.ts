@@ -3,6 +3,8 @@ import { PrintingId } from "@/modules/catalog";
 import {
   BOARDS,
   bracketLine,
+  commanderDetails,
+  commandersICanBuild,
   bracketWarning,
   deckProblems,
   deckStats,
@@ -21,7 +23,9 @@ import {
   MAX_QUANTITY,
   rankCuts,
   roleTargets,
+  SPELL_SLOTS,
   shortList,
+  type CommanderCoverage,
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
@@ -32,7 +36,9 @@ import {
   findingWithCards,
   landReasonText,
   landTargetReasonText,
+  planText,
   problemText,
+  reasonText,
   UNCHECKED_TEXT,
 } from "@/app/decks/labels";
 import {
@@ -209,6 +215,95 @@ export const planManaBaseTool = defineTool({
     });
   },
 });
+
+const ManaColorSchema = z.enum(["W", "U", "B", "R", "G"]);
+
+export const commandersICanBuildTool = defineTool({
+  name: "commanders_i_can_build",
+  title: "Find commanders my cards could build",
+  description: [
+    `Ranks the cards that could lead a Commander deck by how much of a deck the player's own cards already cover: "onPlan" cards (inside its color identity, sharing a theme, creature type or keyword its text cares about), the roles ramp, draw, removal and wipes against the usual targets, how many of a deck's ${SPELL_SLOTS} spell slots their on-color cards could fill, and how many on-color non-basic lands they own. Every copy the player owns counts, even ones in other decks.`,
+    'Use it when: the player wants a new deck but has no commander yet, or asks which legend their collection supports. With "commander" (a name), it returns that one in detail instead: the on-plan cards and why, the cards for each role, and the cheapest store cards that would fill what\'s missing, with a total.',
+    'Rules: these are ideas from simple counts over rules text, not a verdict on the best commander: present a few with their numbers and let the player choose. Then create_deck with the list "Commander\\n1 <name>" and build it the usual way. Partners and Backgrounds aren\'t paired here.',
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    colors: z
+      .array(ManaColorSchema)
+      .default([])
+      .describe('Only commanders whose color identity includes all of these, e.g. ["G", "W"].'),
+    includeStore: z
+      .boolean()
+      .default(false)
+      .describe("Also legends the player doesn't own, from the store, with their price."),
+    limit: z.number().int().min(1).max(50).default(10).describe("How many to return."),
+    commander: z
+      .string()
+      .optional()
+      .describe("A commander's name: return that one in detail instead of the list."),
+  }),
+  async run(context, input) {
+    const { db } = context.container;
+    const userId = context.actor.userId;
+    if (input.commander !== undefined) {
+      const found = await findCard(db, input.commander);
+      if (found === null) return cardNotFound(input.commander);
+      const details = await commanderDetails(db, userId, found.oracleId);
+      if (details === null) {
+        return failed("NotACommander", `${found.name} can't lead a Commander deck.`);
+      }
+      return done({
+        ...describeCoverage(details.coverage),
+        onPlanCards: details.onPlan.map((entry) => ({
+          name: entry.card.name,
+          why: entry.reasons.map(reasonText),
+        })),
+        cardsByRole: Object.fromEntries(
+          Object.entries(details.byRole).map(([tag, cards]) => [
+            tag,
+            cards.map((card) => card.name),
+          ]),
+        ),
+        missing: {
+          total: money(details.missing.totalCents),
+          cards: details.missing.picks.map((pick) => ({
+            name: pick.card.name,
+            fills: pick.fills === "plan" ? "on-plan" : pick.fills,
+            price: moneyOrNull(pick.card.priceCents),
+          })),
+          note: "The cheapest store cards for the roles still short, then on-plan cards for the empty slots: an estimate, not a shopping list.",
+        },
+      });
+    }
+    const ranked = await commandersICanBuild(db, userId, {
+      colors: input.colors,
+      includeStore: input.includeStore,
+    });
+    return done({
+      found: ranked.length,
+      commanders: ranked.slice(0, input.limit).map(describeCoverage),
+    });
+  },
+});
+
+/** One commander's coverage, as the tool reports it. */
+function describeCoverage(coverage: CommanderCoverage) {
+  const { commander } = coverage;
+  return {
+    name: commander.name,
+    colorIdentity: commander.colorIdentity.join("") || "colorless",
+    owned: commander.ownedCopies > 0,
+    price: moneyOrNull(commander.priceCents),
+    isGameChanger: commander.isGameChanger,
+    leads: planText(coverage.plan) || "nothing these rules read from its text",
+    onPlan: coverage.onPlan,
+    roles: coverage.roles.map((role) => ({ role: role.tag, have: role.have, target: role.target })),
+    spellsFromYourCards: `${coverage.filled} of ${SPELL_SLOTS}`,
+    ownedLands: coverage.ownedLands,
+    alreadyLeads: commander.leads,
+  };
+}
 
 export const listDecks = defineTool({
   name: "list_decks",

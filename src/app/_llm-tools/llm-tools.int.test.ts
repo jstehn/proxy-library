@@ -362,6 +362,49 @@ describe("the mana base (design doc 35)", () => {
   });
 });
 
+describe("commanders I can build (design doc 36)", () => {
+  it("ranks owned commanders, and details one with what's missing", async () => {
+    await give("Beza, the Bounding Spring");
+    await give("Banishing Light");
+    const client = await connect();
+    const list = await call(client, "commanders_i_can_build", {});
+    expect(list.found).toBe(1);
+    expect(list.commanders[0]).toMatchObject({
+      name: "Beza, the Bounding Spring",
+      colorIdentity: "W",
+      owned: true,
+      price: null,
+      spellsFromYourCards: "1 of 62",
+      alreadyLeads: [],
+    });
+    expect(list.commanders[0].roles).toContainEqual({ role: "removal", have: 1, target: 8 });
+
+    const withStore = await call(client, "commanders_i_can_build", {
+      includeStore: true,
+      colors: ["W"],
+      limit: 50,
+    });
+    const store = withStore.commanders.filter((entry: { owned: boolean }) => !entry.owned);
+    expect(store.length).toBeGreaterThan(0);
+    for (const entry of store) expect(entry.price).not.toBeNull();
+
+    const beza = await call(client, "commanders_i_can_build", {
+      commander: "Beza, the Bounding Spring",
+    });
+    expect(beza.name).toBe("Beza, the Bounding Spring");
+    expect(beza.cardsByRole.removal).toEqual(["Banishing Light"]);
+    expect(beza.missing.note).toMatch(/estimate/);
+    for (const card of beza.missing.cards) expect(card.price).not.toBeNull();
+
+    const notOne = await client.callTool({
+      name: "commanders_i_can_build",
+      arguments: { commander: "Banishing Light" },
+    });
+    expect(notOne.isError).toBe(true);
+    expect(JSON.stringify(notOne.content)).toContain("can't lead a Commander deck");
+  });
+});
+
 describe("headings (design doc 34)", () => {
   it("sets a card's heading, renames and orders headings, and writes them in the list", async () => {
     const client = await connect();

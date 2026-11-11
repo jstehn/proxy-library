@@ -8,6 +8,7 @@ import {
   listDecks,
   arrangeHeadings,
   planManaBaseTool,
+  commandersICanBuildTool,
   rankCutsTool,
   replaceDeckList,
   setDeckEntry,
@@ -40,6 +41,7 @@ export const TOOLS: readonly LlmTool[] = [
   suggestForDeck,
   rankCutsTool,
   planManaBaseTool,
+  commandersICanBuildTool,
   similarCardsTool,
   budgetUpgrades,
   cardsToGet,
@@ -59,7 +61,7 @@ export const TOOLS: readonly LlmTool[] = [
 /** House rules, for MCP's server instructions and OpenAPI's description (rule 10 repeats them). */
 export const INSTRUCTIONS = [
   "Proxy Library: a self-hosted Magic: The Gathering collection with play money, a store of singles, decks and a wishlist. These tools act as the signed-in player.",
-  'Building or improving a deck: get_deck (read the commander), analyze_cards (what the deck keeps doing), then search_for_deck with one query per synergy (enablers and payoffs), then judge the cards by their text, then set_deck_entry or replace_deck_list; once the spells are in, plan_mana_base proposes lands (owned first, then basics). suggest_for_deck is a second opinion. For ideas on what to cut, rank_cuts lists the cards that score lowest on simple checks, with reasons; set cuts the player agrees to aside on the "maybe" board (the maybeboard, counted nowhere) rather than deleting them. A deck may use headings of the player\'s own ("Ramp"): see get_deck\'s headings; set them with set_deck_entry and arrange_headings.',
+  'No commander yet? commanders_i_can_build lists the legends the player\'s cards already cover most of: offer a few, then create_deck. Building or improving a deck: get_deck (read the commander), analyze_cards (what the deck keeps doing), then search_for_deck with one query per synergy (enablers and payoffs), then judge the cards by their text, then set_deck_entry or replace_deck_list; once the spells are in, plan_mana_base proposes lands (owned first, then basics). suggest_for_deck is a second opinion. For ideas on what to cut, rank_cuts lists the cards that score lowest on simple checks, with reasons; set cuts the player agrees to aside on the "maybe" board (the maybeboard, counted nowhere) rather than deleting them. A deck may use headings of the player\'s own ("Ramp"): see get_deck\'s headings; set them with set_deck_entry and arrange_headings.',
   "Commander brackets: get_deck's bracket gives the deck's target bracket (1–5, chosen by the player) and the lowest bracket its cards allow, with the cards that decide it. If a Commander deck has no target, ask the player which bracket they want and save it with update_deck. Keep Game Changers, mass land denial and extra turns within the target (-is:gc leaves Game Changers out of a search); the suggestion and search tools already leave out cards over it. Two-card combos aren't checked: point out any you add.",
   "Rules: decks may hold cards the player doesn't own (they show as short); prefer owned cards. Money is in cents ($1.23 is 123). Always call get_deck before replace_deck_list and pass its fingerprint. Nothing here buys or sells: suggest purchases, or add them to the wishlist with add_wish.",
   "The app's suggestions, possible cuts and budget picks come from simple rules over rules text and prices: treat them as ideas to weigh, not answers, check them against the cards' text, and present them to the player as options.",
