@@ -38,6 +38,7 @@ export {
   type SignalOptions,
 } from "./signals";
 export {
+  isReservedTitle,
   parseList,
   type ListLine,
   type ListOptions,

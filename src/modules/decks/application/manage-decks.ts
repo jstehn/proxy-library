@@ -18,13 +18,24 @@ import {
   type DeckId,
   type EntryMove,
   type Format,
+  type Grouping,
   type MatchedLine,
 } from "../domain/deck";
+import {
+  checkHeading,
+  MAX_HEADINGS,
+  orderedHeadings,
+  renamedHeading,
+  tidyHeadings,
+} from "../domain/headings";
 import type {
   CardNotFound,
   CommanderMove,
   EntryNotFound,
   DeckChanged,
+  HeadingInvalid,
+  HeadingNotFound,
+  HeadingOrderInvalid,
   DeckNotFound,
   ListProblems,
   ListTooLong,
@@ -33,6 +44,7 @@ import type {
   TargetBracketNotCommander,
   QuantityInvalid,
   TooManyDecks,
+  TooManyHeadings,
 } from "../domain/errors";
 import { parseList } from "@/shared/card-search";
 import { fingerprint } from "../domain/list-format";
@@ -50,6 +62,24 @@ export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
 export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
+export type SetEntryHeadingError = DeckNotFound | EntryNotFound | HeadingInvalid | TooManyHeadings;
+export type RenameHeadingError = DeckNotFound | HeadingInvalid | HeadingNotFound;
+export type OrderHeadingsError = DeckNotFound | HeadingOrderInvalid;
+
+export type SetEntryHeadingInput = Readonly<{
+  deckId: DeckId;
+  oracleId: string;
+  board: Board;
+  /** The heading, or null to clear it (design doc 34). */
+  heading: string | null;
+}>;
+
+export type RenameHeadingInput = Readonly<{
+  deckId: DeckId;
+  from: string;
+  /** A new name, another heading to merge into, or null to clear it from every card. */
+  to: string | null;
+}>;
 
 export type ChoosePrintingInput = Readonly<{
   deckId: DeckId;
@@ -81,6 +111,13 @@ export type ReplaceListInput = Readonly<{
 
 /** How many cards the deck holds after the save. */
 export type ReplaceReport = Readonly<{ cards: number }>;
+
+/** A heading read from a pasted list, if the deck can use it: not too long, not a board name. */
+function usableHeading(heading: string | null): string | null {
+  if (heading === null) return null;
+  const checked = checkHeading(heading);
+  return checked.ok ? checked.value : null;
+}
 
 export function makeManageDecks(dependencies: DecksDependencies) {
   const { unitOfWork, clock } = dependencies;
@@ -115,6 +152,8 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       usesRealCards?: boolean;
       /** 1–5, null to clear, or left out to keep (design doc 31). */
       targetBracket?: number | null;
+      /** By type or by the deck's own headings (design doc 34). */
+      grouping?: Grouping;
     },
   ): Promise<Result<void, UpdateDeckError>> {
     const name = input.name === undefined ? ok(undefined) : checkName(input.name);
@@ -137,6 +176,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
           targetBracket: target.value,
           // "Use my real cards" (design doc 16): only this deck's counting changes.
           usesRealCards: input.usesRealCards ?? deck.usesRealCards,
+          grouping: input.grouping ?? deck.grouping,
         },
         clock.now(),
       );
@@ -212,6 +252,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       const notFound: string[] = [];
       let added = 0;
       let updated = deck;
+      const hadHeadings = deck.headings.length > 0;
       // `entries()` gives [index, line] pairs, like Python's enumerate().
       for (const [index, line] of parsed.lines.entries()) {
         const card = found.get(index);
@@ -222,6 +263,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         const existing = updated.entries.find(
           (entry) => entry.oracleId === card.oracleId && entry.board === line.board,
         );
+        const heading = usableHeading(line.heading);
         updated = withEntry(updated, {
           oracleId: card.oracleId,
           board: line.board,
@@ -229,9 +271,14 @@ export function makeManageDecks(dependencies: DecksDependencies) {
           printingId: card.printingId,
           // "*F*" / "*E*" in the list choose the finish; otherwise the one found.
           finish: line.finish ?? card.finish,
+          // A heading in the list is used; a line without one keeps the card's (design doc 34).
+          ...(heading !== null ? { heading } : {}),
         });
         added += line.quantity;
       }
+      // A deck's first headings, from a list, switch it to grouping by them (design doc 34).
+      const tidied = tidyHeadings(updated);
+      if (!hadHeadings && tidied.headings.length > 0) updated = { ...tidied, grouping: "custom" };
       await decks.save(updated, clock.now());
       return ok({ added, unreadable: parsed.unreadable, notFound });
     });
@@ -277,6 +324,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
           finish: card.finish,
           namesPrinting: card.namedPrinting,
           finishMarker: line.finish,
+          heading: usableHeading(line.heading),
         });
       }
       if (notFound.length > 0 || parsed.unreadable.length > 0) {
@@ -284,7 +332,10 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       }
 
       const entries = replacedEntries(deck.entries, lines);
-      await decks.save({ ...deck, entries }, clock.now());
+      // Text with headings sets their order too: the order they come in (design doc 34).
+      const textHasHeadings = lines.some((line) => line.heading !== null);
+      const headings = textHasHeadings ? [] : deck.headings;
+      await decks.save({ ...deck, entries, headings }, clock.now());
       return ok({ cards: entries.reduce((total, entry) => total + entry.quantity, 0) });
     });
   }
@@ -340,9 +391,71 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     );
   }
 
+  /** Gives one card line a heading, or clears it (design doc 34). A new heading goes last. */
+  async function setEntryHeading(
+    actor: Actor,
+    input: SetEntryHeadingInput,
+  ): Promise<Result<void, SetEntryHeadingError>> {
+    const heading = input.heading === null ? ok(null) : checkHeading(input.heading);
+    if (!heading.ok) return heading;
+    return unitOfWork.run<void, SetEntryHeadingError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const line = deck.entries.find(
+        (entry) => entry.oracleId === input.oracleId && entry.board === input.board,
+      );
+      if (line === undefined) return err({ kind: "EntryNotFound" });
+      const changed = tidyHeadings(withEntry(deck, { ...line, heading: heading.value }));
+      // tidyHeadings drops a heading past the limit, so a line that lost it was one too many.
+      const kept = changed.entries.find(
+        (entry) => entry.oracleId === input.oracleId && entry.board === input.board,
+      );
+      if (heading.value !== null && kept?.heading !== heading.value) {
+        return err({ kind: "TooManyHeadings", maximum: MAX_HEADINGS });
+      }
+      await decks.save(changed, clock.now());
+      return ok();
+    });
+  }
+
+  /** Renames a heading on every card, merges it into another, or clears it (design doc 34). */
+  async function renameHeading(
+    actor: Actor,
+    input: RenameHeadingInput,
+  ): Promise<Result<void, RenameHeadingError>> {
+    const to = input.to === null ? ok(null) : checkHeading(input.to);
+    if (!to.ok) return to;
+    return unitOfWork.run<void, RenameHeadingError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const renamed = renamedHeading(deck, input.from, to.value);
+      if (!renamed.ok) return renamed;
+      await decks.save(renamed.value, clock.now());
+      return ok();
+    });
+  }
+
+  /** Puts a deck's headings in the owner's order; it must name each one once (design doc 34). */
+  async function orderHeadings(
+    actor: Actor,
+    input: Readonly<{ deckId: DeckId; order: readonly string[] }>,
+  ): Promise<Result<void, OrderHeadingsError>> {
+    return unitOfWork.run<void, OrderHeadingsError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const ordered = orderedHeadings(deck, input.order);
+      if (!ordered.ok) return ordered;
+      await decks.save(ordered.value, clock.now());
+      return ok();
+    });
+  }
+
   return {
     createDeck,
     updateDeck,
+    setEntryHeading,
+    renameHeading,
+    orderHeadings,
     deleteDeck,
     setEntry,
     moveEntry,

@@ -22,7 +22,10 @@ export interface DeckRepository {
   countFor(ownerId: UserId): Promise<number>;
   /** The deck, locked until the transaction ends, if it exists and belongs to this player. */
   lockOwned(deckId: DeckId, ownerId: UserId): Promise<Deck | null>;
-  /** Saves the name, format and every entry (replacing the old entries). */
+  /**
+   * Saves the name, format, settings and every entry (replacing the old entries), with the
+   * headings tidied to match the entries (`tidyHeadings`, design doc 34).
+   */
   save(deck: Deck, at: Date): Promise<void>;
   delete(deckId: DeckId): Promise<void>;
   /** Deletes every deck a player has. Returns how many. */

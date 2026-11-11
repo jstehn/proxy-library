@@ -66,7 +66,10 @@ function listAndFingerprint(view: DeckView): { list: string; fingerprint: string
       setCode: line.pinnedPrintingId === null ? null : line.setCode,
       collectorNumber: line.pinnedPrintingId === null ? null : line.collectorNumber,
       finish: line.pinnedFinish,
+      heading: line.heading,
     })),
+    // Grouped by its own headings, the list shows them as "Ramp (9)" blocks (design doc 34).
+    view.deck.grouping === "custom" ? view.deck.headings : null,
   );
   const print = fingerprint(
     view.lines.map((line) => ({

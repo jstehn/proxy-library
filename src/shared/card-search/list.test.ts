@@ -20,6 +20,7 @@ describe("parseList", () => {
         collectorNumber: null,
         finish: null,
         board: "main",
+        heading: null,
       },
       {
         quantity: 2,
@@ -28,6 +29,7 @@ describe("parseList", () => {
         collectorNumber: null,
         finish: null,
         board: "main",
+        heading: null,
       },
       {
         quantity: 1,
@@ -36,6 +38,7 @@ describe("parseList", () => {
         collectorNumber: "263",
         finish: null,
         board: "main",
+        heading: null,
       },
       {
         quantity: 1,
@@ -44,6 +47,7 @@ describe("parseList", () => {
         collectorNumber: null,
         finish: null,
         board: "main",
+        heading: null,
       },
     ]);
   });

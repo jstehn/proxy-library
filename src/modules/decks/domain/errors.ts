@@ -34,3 +34,11 @@ export type FinishNotAvailable = Readonly<{ kind: "FinishNotAvailable" }>;
 export type TokenNotInDeck = Readonly<{ kind: "TokenNotInDeck" }>;
 /** The art chosen is a printing of another token, or isn't in the catalog (design doc 25). */
 export type NotThatToken = Readonly<{ kind: "NotThatToken" }>;
+/** A heading is empty, too long, or a board's name (design doc 34). */
+export type HeadingInvalid = Readonly<{ kind: "HeadingInvalid"; maximum: number }>;
+/** The deck has no such heading (design doc 34). */
+export type HeadingNotFound = Readonly<{ kind: "HeadingNotFound" }>;
+/** An order of headings that leaves one out, names one twice, or names one the deck lacks. */
+export type HeadingOrderInvalid = Readonly<{ kind: "HeadingOrderInvalid" }>;
+/** A new heading past the most a deck may have (design doc 34). */
+export type TooManyHeadings = Readonly<{ kind: "TooManyHeadings"; maximum: number }>;

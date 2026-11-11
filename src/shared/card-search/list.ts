@@ -14,6 +14,11 @@ export type ListLine = Readonly<{
   /** From Moxfield's markers: "*F*" foil, "*E*" etched; null when the line doesn't say. */
   finish: "foil" | "etched" | null;
   board: ListSection;
+  /**
+   * The category heading the line was under ("Ramp (9)" gives "Ramp"), on the main deck only;
+   * null under a board header or a card type's title ("Creatures (30)"). Design doc 34.
+   */
+  heading: string | null;
 }>;
 
 export type ParsedList = Readonly<{ lines: ListLine[]; unreadable: string[] }>;
@@ -32,8 +37,21 @@ const HEADERS: ReadonlyArray<[RegExp, ListSection]> = [
 ];
 // Any other "Name (count)" line is a category heading from Archidekt or Moxfield ("Lands (36)",
 // "Ramp & Mana Fixers (9)"): it starts with a letter, not a quantity, and no card name ends in
-// "(digits)". Its cards are in the main deck.
-const CATEGORY = /^[^\d\s].*\s\(\d+\)$/;
+// "(digits)". Its cards are in the main deck, under that heading (design doc 34).
+const CATEGORY = /^([^\d\s].*)\s\((\d+)\)$/;
+// Titles of the built-in groups by card type: their cards get no heading, since grouping by
+// type shows them that way anyway.
+const TYPE_TITLE =
+  /^(creatures?|planeswalkers?|instants?|sorcery|sorceries|artifacts?|enchantments?|battles?|lands?|other)$/i;
+
+/**
+ * Whether a list would read this as a board header ("Sideboard") or a card type's title
+ * ("Creatures") rather than a heading of the deck's own: a deck can't use those as headings,
+ * so every heading survives being written out and read back (design doc 34).
+ */
+export function isReservedTitle(title: string): boolean {
+  return TYPE_TITLE.test(title) || HEADERS.some(([pattern]) => pattern.test(title));
+}
 
 /** How a list is read. A deck needs at most 99 copies of a card; a real collection more. */
 export type ListOptions = Readonly<{
@@ -45,13 +63,15 @@ export type ListOptions = Readonly<{
 /**
  * Reads a pasted list ("parse, don't validate"): each line becomes a typed ListLine, or is
  * returned as unreadable. Section headers ("Sideboard", "Commander (1)") switch the board, and so
- * does "SB: 2 Duress". Category headings ("Lands (36)") switch back to the main deck.
+ * does "SB: 2 Duress". Category headings ("Ramp (9)") switch back to the main deck and give the
+ * lines under them that heading.
  */
 export function parseList(text: string, options: ListOptions = {}): ParsedList {
   const maxQuantity = options.maxQuantity ?? 99;
   const lines: ListLine[] = [];
   const unreadable: string[] = [];
   let board: ListSection = "main";
+  let heading: string | null = null;
 
   for (const raw of text.split(/\r?\n/)) {
     let line = raw.trim();
@@ -60,10 +80,14 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
     const header = HEADERS.find(([pattern]) => pattern.test(line));
     if (header !== undefined) {
       board = header[1];
+      heading = null;
       continue;
     }
-    if (CATEGORY.test(line)) {
+    const category = CATEGORY.exec(line);
+    if (category !== null) {
       board = "main";
+      const title = category[1].trim();
+      heading = TYPE_TITLE.test(title) ? null : title;
       continue;
     }
     if (board === "maybe" && options.keepMaybeboard !== true) continue;
@@ -99,6 +123,7 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
       collectorNumber: match[4] ?? null,
       finish,
       board: lineBoard,
+      heading: lineBoard === "main" ? heading : null,
     });
   }
   return { lines, unreadable };

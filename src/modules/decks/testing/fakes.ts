@@ -12,6 +12,7 @@ import type {
   ResolvedCard,
 } from "../application/ports";
 import { DeckId, type Deck } from "../domain/deck";
+import { tidyHeadings } from "../domain/headings";
 import { CommentId, type DeckForSharing } from "../domain/sharing";
 import type { TokenChoice } from "../domain/token-proxies";
 
@@ -31,6 +32,8 @@ export function inMemoryDeckRepository() {
         format: input.format,
         usesRealCards: input.usesRealCards ?? true,
         targetBracket: null,
+        grouping: "type",
+        headings: [],
         entries: [],
       });
       return id;
@@ -43,7 +46,7 @@ export function inMemoryDeckRepository() {
       return deck !== undefined && deck.ownerId === ownerId ? deck : null;
     },
     async save(deck) {
-      decks.set(deck.id, deck);
+      decks.set(deck.id, tidyHeadings(deck));
     },
     async delete(deckId) {
       decks.delete(deckId);

@@ -66,7 +66,13 @@ export type DeckEntry = Readonly<{
   quantity: number;
   printingId: PrintingId | null;
   finish: Finish | null;
+  /** The deck's own heading for this line ("Ramp"), or null (design doc 34). */
+  heading: string | null;
 }>;
+
+export const GROUPINGS = ["type", "custom"] as const;
+/** How the main deck is grouped: by card type (the default) or by its own headings. */
+export type Grouping = (typeof GROUPINGS)[number];
 
 export type Deck = Readonly<{
   id: DeckId;
@@ -77,6 +83,9 @@ export type Deck = Readonly<{
   usesRealCards: boolean;
   /** The Commander bracket the owner means it for (design doc 31). Commander only; null: none. */
   targetBracket: Bracket | null;
+  grouping: Grouping;
+  /** The deck's headings in the owner's order; `tidyHeadings` keeps it matching the lines. */
+  headings: readonly string[];
   entries: readonly DeckEntry[];
 }>;
 
@@ -117,9 +126,11 @@ export function checkQuantity(quantity: number): Result<number, QuantityInvalid>
  */
 export function withEntry(
   deck: Deck,
-  change: Omit<DeckEntry, "printingId" | "finish"> & {
+  change: Omit<DeckEntry, "printingId" | "finish" | "heading"> & {
     printingId?: PrintingId | null;
     finish?: Finish | null;
+    /** A heading, null to clear it, or left out to keep the line's (design doc 34). */
+    heading?: string | null;
   },
 ): Deck {
   const same = (entry: DeckEntry) =>
@@ -133,6 +144,7 @@ export function withEntry(
     quantity: change.quantity,
     printingId: change.printingId ?? existing?.printingId ?? null,
     finish: change.finish ?? existing?.finish ?? null,
+    heading: change.heading !== undefined ? change.heading : (existing?.heading ?? null),
   };
   return { ...deck, entries: [...others, entry] };
 }
@@ -167,6 +179,7 @@ export function movedEntry(
       quantity: Math.min(MAX_QUANTITY, moving.quantity + (there?.quantity ?? 0)),
       printingId: moving.printingId ?? there?.printingId ?? null,
       finish: moving.printingId === null ? (there?.finish ?? null) : moving.finish,
+      heading: moving.heading ?? there?.heading ?? null,
     }),
   );
 }
@@ -234,6 +247,8 @@ export type MatchedLine = Readonly<{
   namesPrinting: boolean;
   /** "*F*" or "*E*" on the line, which always wins. */
   finishMarker: Finish | null;
+  /** The heading the line was under in the text ("Ramp (9)"), or null (design doc 34). */
+  heading: string | null;
 }>;
 
 /**
@@ -241,11 +256,17 @@ export type MatchedLine = Readonly<{
  * lines for the same card on the same board are added together (at most 99). A card the deck
  * already has keeps its printing and finish unless the line names a different printing; a
  * finish marker always wins. A new card takes the printing and finish the catalog chose.
+ *
+ * Headings (design doc 34): text with any heading in it sets every main-deck line's heading;
+ * text without one keeps the headings the deck's cards already have. Other boards always keep
+ * theirs, since text shows headings on the main deck only (a card on the maybeboard keeps its
+ * heading for when it comes back).
  */
 export function replacedEntries(
   current: readonly DeckEntry[],
   lines: readonly MatchedLine[],
 ): DeckEntry[] {
+  const textHasHeadings = lines.some((line) => line.heading !== null);
   // A Map keeps insertion order, so the entries come out in the order of the text.
   const entries = new Map<string, DeckEntry>();
   for (const line of lines) {
@@ -258,9 +279,11 @@ export function replacedEntries(
       });
       continue;
     }
+    const version = chosenVersion(current, line);
     entries.set(key, {
-      ...chosenVersion(current, line),
+      ...version,
       quantity: Math.min(MAX_QUANTITY, line.quantity),
+      heading: textHasHeadings && line.board === "main" ? line.heading : version.heading,
     });
   }
   return [...entries.values()];
@@ -272,7 +295,12 @@ function chosenVersion(current: readonly DeckEntry[], line: MatchedLine): DeckEn
   const existing =
     current.find((entry) => entry.oracleId === line.oracleId && entry.board === line.board) ??
     current.find((entry) => entry.oracleId === line.oracleId);
-  const base = { oracleId: line.oracleId, board: line.board, quantity: line.quantity };
+  const base = {
+    oracleId: line.oracleId,
+    board: line.board,
+    quantity: line.quantity,
+    heading: existing?.heading ?? null,
+  };
 
   if (existing !== undefined && (!line.namesPrinting || existing.printingId === line.printingId)) {
     return {

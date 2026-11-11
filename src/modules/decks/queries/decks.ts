@@ -7,6 +7,7 @@ import {
   DeckId,
   DeckOrigin,
   FORMATS,
+  GROUPINGS,
   type Board,
   type Deck,
   type Format,
@@ -103,6 +104,8 @@ export type DeckLine = Readonly<{
   /** What the deck stores (null when not pinned): for Edit as text (design doc 23). */
   pinnedPrintingId: string | null;
   pinnedFinish: "nonfoil" | "foil" | "etched" | null;
+  /** The deck's own heading for this line ("Ramp"), or null (design doc 34). */
+  heading: string | null;
   name: string;
   typeLine: string;
   manaValue: number;
@@ -209,8 +212,11 @@ export async function deckView(
       format: string;
       uses_real_cards: boolean;
       target_bracket: number | null;
+      grouping: string;
+      heading_order: string[];
     }>(sql`
-      select id, owner_id, name, format, uses_real_cards, target_bracket from decks
+      select id, owner_id, name, format, uses_real_cards, target_bracket, grouping, heading_order
+        from decks
        where id = ${deckId} and owner_id = ${userId}
     `)
   ).rows;
@@ -223,6 +229,7 @@ export async function deckView(
     quantity: number;
     pinned_printing: string | null;
     pinned_finish: string | null;
+    heading: string | null;
     printing_id: string;
     finish: string;
     name: string;
@@ -246,7 +253,7 @@ export async function deckView(
     other_decks: unknown;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
-           shown.id as printing_id,
+           e.heading, shown.id as printing_id,
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
@@ -324,6 +331,7 @@ export async function deckView(
       finish: FinishSchema.parse(row.finish),
       pinnedPrintingId: row.pinned_printing,
       pinnedFinish: row.pinned_finish === null ? null : FinishSchema.parse(row.pinned_finish),
+      heading: row.heading,
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),
@@ -354,6 +362,8 @@ export async function deckView(
       deckRow.target_bracket !== null && isBracket(deckRow.target_bracket)
         ? deckRow.target_bracket
         : null,
+    grouping: z.enum(GROUPINGS).parse(deckRow.grouping),
+    headings: deckRow.heading_order,
     entries: rows.rows.map((row) => ({
       oracleId: row.oracle_id,
       board: z.enum(BOARDS).parse(row.board),
@@ -362,6 +372,7 @@ export async function deckView(
       // each line as `pinnedPrintingId` and `pinnedFinish`.
       printingId: null,
       finish: null,
+      heading: row.heading,
     })),
   };
   return { deck, lines, rules };

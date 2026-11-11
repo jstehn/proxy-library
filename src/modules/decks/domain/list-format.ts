@@ -12,15 +12,22 @@ export type ExportLine = Readonly<{
   board: Board;
   setCode: string | null;
   collectorNumber: string | null;
+  /** The deck's own heading for the line (design doc 34), or null. */
+  heading: string | null;
 }>;
 
 /** Every exporter has the same shape (Strategy): lines in, text out. */
 export type Exporter = (lines: readonly ExportLine[]) => string;
 
+type SectionLine = Readonly<{ board: Board; quantity: number; heading: string | null }>;
+
 // Generic over the line type (like a TypeVar bound in Python): any line with a board will do.
-function sections<Line extends Readonly<{ board: Board }>>(
+// With `headings` (design doc 34), the main deck is written as "Ramp (9)" blocks in that order,
+// then its cards without a heading under "Deck"; the list reader gives the headings back.
+function sections<Line extends SectionLine>(
   lines: readonly Line[],
   format: (line: Line) => string,
+  headings: readonly string[] | null = null,
 ): string {
   const parts: string[] = [];
   const titles: Record<Board, string> = {
@@ -29,21 +36,38 @@ function sections<Line extends Readonly<{ board: Board }>>(
     side: "Sideboard",
     maybe: "Maybeboard",
   };
+  const block = (title: string, group: readonly Line[]) => {
+    if (group.length > 0) parts.push([title, ...group.map(format)].join("\n"));
+  };
   for (const board of BOARDS) {
     const onBoard = lines.filter((line) => line.board === board);
-    if (onBoard.length > 0) parts.push([titles[board], ...onBoard.map(format)].join("\n"));
+    if (board !== "main" || headings === null) {
+      block(titles[board], onBoard);
+      continue;
+    }
+    for (const heading of headings) {
+      const under = onBoard.filter((line) => line.heading === heading);
+      const copies = under.reduce((total, line) => total + line.quantity, 0);
+      block(`${heading} (${copies})`, under);
+    }
+    block(
+      titles.main,
+      onBoard.filter((line) => line.heading === null || !headings.includes(line.heading)),
+    );
   }
   return parts.join("\n\n");
 }
 
+/** "4 Lightning Bolt (M11) 149", or "4 Lightning Bolt" for a line with no printing. */
+function withPrinting(line: ExportLine): string {
+  return line.setCode === null
+    ? `${line.quantity} ${line.name}`
+    : `${line.quantity} ${line.name} (${line.setCode}) ${line.collectorNumber ?? ""}`.trim();
+}
+
 export const EXPORTERS: Readonly<Record<"printings" | "names", Exporter>> = {
   /** "4 Lightning Bolt (M11) 149": Moxfield and Archidekt read this, maybeboard included. */
-  printings: (lines) =>
-    sections(lines, (line) =>
-      line.setCode === null
-        ? `${line.quantity} ${line.name}`
-        : `${line.quantity} ${line.name} (${line.setCode}) ${line.collectorNumber ?? ""}`.trim(),
-    ),
+  printings: (lines) => sections(lines, withPrinting),
   /** "4 Lightning Bolt": Arena, MTGO and anything else; they have no maybeboard (design doc 32). */
   names: (lines) =>
     sections(
@@ -51,6 +75,17 @@ export const EXPORTERS: Readonly<Record<"printings" | "names", Exporter>> = {
       (line) => `${line.quantity} ${line.name}`,
     ),
 };
+
+/**
+ * The printings list with the deck's own headings as "Ramp (9)" blocks, in the deck's order
+ * (design doc 34): the form Archidekt and Moxfield show categories in, and this app reads back.
+ */
+export function exportWithHeadings(
+  lines: readonly ExportLine[],
+  headings: readonly string[],
+): string {
+  return sections(lines, withPrinting, headings);
+}
 
 /** A deck line for the Edit as text box (design doc 23). */
 export type DeckTextLine = Readonly<{
@@ -62,6 +97,8 @@ export type DeckTextLine = Readonly<{
   collectorNumber: string | null;
   /** The pinned finish; foil and etched are written as "*F*" and "*E*". */
   finish: Finish | null;
+  /** The deck's own heading for the line (design doc 34), or null. */
+  heading: string | null;
 }>;
 
 const FINISH_MARKERS: Readonly<Record<Finish, string>> = {
@@ -74,13 +111,21 @@ const FINISH_MARKERS: Readonly<Record<Finish, string>> = {
  * A deck's whole list as text, the way the Edit as text box starts (design doc 23). Saving it
  * unchanged leaves the deck as it was (rule 3), so it names printings and finish markers.
  */
-export function deckText(lines: readonly DeckTextLine[]): string {
-  return sections(lines, (line) => {
-    const printing =
-      line.setCode === null ? "" : ` (${line.setCode}) ${line.collectorNumber ?? ""}`.trimEnd();
-    const marker = line.finish === null ? "" : FINISH_MARKERS[line.finish];
-    return `${line.quantity} ${line.name}${printing}${marker}`;
-  });
+export function deckText(
+  lines: readonly DeckTextLine[],
+  /** The deck's headings in order, when it's grouped by them (design doc 34); else null. */
+  headings: readonly string[] | null = null,
+): string {
+  return sections(
+    lines,
+    (line) => {
+      const printing =
+        line.setCode === null ? "" : ` (${line.setCode}) ${line.collectorNumber ?? ""}`.trimEnd();
+      const marker = line.finish === null ? "" : FINISH_MARKERS[line.finish];
+      return `${line.quantity} ${line.name}${printing}${marker}`;
+    },
+    headings,
+  );
 }
 
 /**
@@ -93,6 +138,7 @@ export type FingerprintEntry = Readonly<{
   quantity: number;
   printingId: string | null;
   finish: Finish | null;
+  heading: string | null;
 }>;
 
 /**
@@ -110,6 +156,7 @@ export function fingerprint(entries: readonly FingerprintEntry[]): string {
         entry.quantity,
         entry.printingId ?? "",
         entry.finish ?? "",
+        entry.heading ?? "",
       ].join("|"),
     )
     .sort()

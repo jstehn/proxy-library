@@ -19,6 +19,7 @@ function matched(overrides: Partial<MatchedLine> & Pick<MatchedLine, "oracleId">
     finish: "foil",
     namesPrinting: false,
     finishMarker: null,
+    heading: null,
     ...overrides,
   };
 }
@@ -31,8 +32,9 @@ describe("replacedEntries", () => {
       quantity: 4,
       printingId: samplePrintingId("bolt-m11"),
       finish: "nonfoil",
+      heading: null,
     },
-    { oracleId: ring, board: "main", quantity: 1, printingId: null, finish: null },
+    { oracleId: ring, board: "main", quantity: 1, printingId: null, finish: null, heading: null },
   ];
 
   it("holds exactly the list's cards: cards not in it are removed", () => {
@@ -95,6 +97,7 @@ describe("deckText", () => {
         setCode: null,
         collectorNumber: null,
         finish: "foil",
+        heading: null,
       },
       {
         quantity: 7,
@@ -103,6 +106,7 @@ describe("deckText", () => {
         setCode: null,
         collectorNumber: null,
         finish: null,
+        heading: null,
       },
       {
         quantity: 1,
@@ -111,6 +115,7 @@ describe("deckText", () => {
         setCode: "C21",
         collectorNumber: "263",
         finish: "etched",
+        heading: null,
       },
       {
         quantity: 1,
@@ -119,6 +124,7 @@ describe("deckText", () => {
         setCode: "XLN",
         collectorNumber: "65",
         finish: "nonfoil",
+        heading: null,
       },
     ];
     expect(deckText(lines)).toBe(
@@ -145,8 +151,9 @@ describe("fingerprint", () => {
       quantity: 4,
       printingId: samplePrintingId("bolt-m11"),
       finish: "nonfoil",
+      heading: null,
     },
-    { oracleId: ring, board: "side", quantity: 1, printingId: null, finish: null },
+    { oracleId: ring, board: "side", quantity: 1, printingId: null, finish: null, heading: null },
   ];
 
   it("doesn't depend on the order entries are stored in", () => {
@@ -178,6 +185,7 @@ describe("round trip: deck → text → parse → replace", () => {
     quantity: fc.integer({ min: 1, max: 99 }),
     printing: fc.option(fc.integer({ min: 1, max: 5 }), { nil: null }),
     finish: fc.option(fc.constantFrom(...FINISHES), { nil: null }),
+    heading: fc.option(fc.constantFrom("Ramp", "Removal", "Win conditions"), { nil: null }),
   });
   // One entry per card per board, as a deck has (invariant 9).
   const deck = fc.uniqueArray(entry, {
@@ -195,6 +203,7 @@ describe("round trip: deck → text → parse → replace", () => {
           printingId:
             each.printing === null ? null : samplePrintingId(`p-${each.card}-${each.printing}`),
           finish: each.finish,
+          heading: each.heading,
         }));
         const text = deckText(
           generated.map((each) => ({
@@ -204,7 +213,10 @@ describe("round trip: deck → text → parse → replace", () => {
             setCode: each.printing === null ? null : `S${each.printing}X`,
             collectorNumber: each.printing === null ? null : String(each.card),
             finish: each.finish,
+            heading: each.heading,
           })),
+          // Grouped by its own headings (design doc 34): every heading the deck has, in order.
+          [...new Set(generated.flatMap((each) => (each.heading === null ? [] : [each.heading])))],
         );
 
         const parsed = parseList(text, { keepMaybeboard: true });
@@ -222,6 +234,7 @@ describe("round trip: deck → text → parse → replace", () => {
             finish: "foil",
             namesPrinting: printing !== null,
             finishMarker: line.finish,
+            heading: line.heading,
           };
         });
 

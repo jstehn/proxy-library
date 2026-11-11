@@ -95,8 +95,8 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
-    .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}`)
-    .join(",")}`;
+    .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}:${entry.heading ?? ""}`)
+    .join(",")}|${deck.grouping}|${deck.headings.join(",")}`;
 
   // The Edit as text box (design doc 23): printings only where pinned, so saving the text
   // unchanged leaves the deck as it was. The fingerprint is of what's stored.
@@ -107,6 +107,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     setCode: line.pinnedPrintingId === null ? null : line.setCode,
     collectorNumber: line.pinnedPrintingId === null ? null : line.collectorNumber,
     finish: line.pinnedFinish,
+    heading: line.heading,
   }));
   const deckFingerprint = fingerprint(
     view.lines.map((line) => ({
@@ -189,7 +190,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <EditAsText
         key={deckFingerprint}
         deckId={deck.id}
-        text={deckText(textLines)}
+        text={deckText(textLines, deck.grouping === "custom" ? deck.headings : null)}
         fingerprint={deckFingerprint}
       />
 

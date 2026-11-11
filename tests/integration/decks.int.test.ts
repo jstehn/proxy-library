@@ -484,3 +484,25 @@ describe("the maybeboard (design doc 32)", () => {
     expect(otherView?.lines[0]).toMatchObject({ otherDecks: [], free: 1 });
   });
 });
+
+describe("headings (design doc 34)", () => {
+  it("stores headings, their order and the grouping, and shows them in the deck view", async () => {
+    const { name } = await card();
+    const deckId = await newDeck();
+    await decks.importList(jack, { deckId, text: `Ramp (3)\n3 ${name}\n\nDeck\n20 Plains` });
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.deck.grouping).toBe("custom");
+    expect(view?.deck.headings).toEqual(["Ramp"]);
+    const headingOf = (cardName: string) =>
+      view?.lines.find((line) => line.name === cardName)?.heading;
+    expect(headingOf(name)).toBe("Ramp");
+    expect(headingOf("Plains")).toBeNull();
+
+    await decks.renameHeading(jack, { deckId, from: "Ramp", to: "Mana" });
+    await decks.updateDeck(jack, { deckId, grouping: "type" });
+    const after = await deckView(db, jack.userId, deckId);
+    expect(after?.deck).toMatchObject({ grouping: "type", headings: ["Mana"] });
+    // The fingerprint reads headings, so Edit as text notices a heading changed elsewhere.
+    expect(fingerprint(after?.deck.entries ?? [])).not.toBe(fingerprint(view?.deck.entries ?? []));
+  });
+});

@@ -16,11 +16,13 @@ import {
   DeckId,
   DeckOrigin,
   FORMATS,
+  GROUPINGS,
   type Deck,
   type Format,
   type PrintingFacts,
 } from "../domain/deck";
 import { isBracket } from "../domain/brackets";
+import { tidyHeadings } from "../domain/headings";
 import { deckEntries, decks } from "./schema";
 
 const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
@@ -71,17 +73,21 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
       usesRealCards: row.usesRealCards,
       targetBracket:
         row.targetBracket !== null && isBracket(row.targetBracket) ? row.targetBracket : null,
+      grouping: z.enum(GROUPINGS).parse(row.grouping),
+      headings: row.headingOrder,
       entries: entries.map((entry) => ({
         oracleId: entry.oracleId,
         board: z.enum(BOARDS).parse(entry.board),
         quantity: entry.quantity,
         printingId: entry.printingId === null ? null : PrintingId.of(entry.printingId),
         finish: entry.finish === null ? null : FinishSchema.parse(entry.finish),
+        heading: entry.heading,
       })),
     };
   }
 
-  async function save(deck: Deck, at: Date): Promise<void> {
+  async function save(untidy: Deck, at: Date): Promise<void> {
+    const deck = tidyHeadings(untidy);
     await db
       .update(decks)
       .set({
@@ -89,6 +95,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         format: deck.format,
         usesRealCards: deck.usesRealCards,
         targetBracket: deck.targetBracket,
+        grouping: deck.grouping,
+        headingOrder: [...deck.headings],
         updatedAt: at,
       })
       .where(eq(decks.id, deck.id));

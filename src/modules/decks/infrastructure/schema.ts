@@ -37,6 +37,13 @@ export const decks = pgTable(
     usesRealCards: boolean("uses_real_cards").notNull().default(false),
     // The Commander bracket the owner means it for, 1–5 (design doc 31); null: none chosen.
     targetBracket: smallint("target_bracket"),
+    // How the main deck is grouped (design doc 34): "type" (built-in) or "custom" (its headings).
+    grouping: text("grouping").notNull().default("type"),
+    // The deck's headings in the owner's order; read and written whole with the deck.
+    headingOrder: text("heading_order")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },
@@ -44,6 +51,7 @@ export const decks = pgTable(
     index("decks_owner_idx").on(table.ownerId),
     index("decks_visibility_idx").on(table.visibility),
     check("decks_visibility_known", sql`${table.visibility} in ('private', 'shared')`),
+    check("decks_grouping_known", sql`${table.grouping} in ('type', 'custom')`),
     check(
       "decks_target_bracket",
       sql`${table.targetBracket} is null or (${table.targetBracket} between 1 and 5 and ${table.format} = 'commander')`,
@@ -67,9 +75,15 @@ export const deckEntries = pgTable(
     quantity: integer("quantity").notNull(),
     printingId: text("printing_id").references(() => printings.id),
     finish: text("finish"),
+    // The deck's own heading for this line ("Ramp"), design doc 34; null: none.
+    heading: text("heading"),
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.oracleId, table.board] }),
+    check(
+      "deck_entries_heading_length",
+      sql`${table.heading} is null or char_length(${table.heading}) between 1 and 40`,
+    ),
     index("deck_entries_oracle_idx").on(table.oracleId),
     check(
       "deck_entries_board_known",

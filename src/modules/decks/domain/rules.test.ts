@@ -139,6 +139,8 @@ function deck(format: Format, entries: Array<[string, number, Board?]>): Deck {
       format,
       usesRealCards: false,
       targetBracket: null,
+      grouping: "type",
+      headings: [],
       entries: [],
     } as Deck,
   );
@@ -360,7 +362,14 @@ describe("withEntry", () => {
     });
     const more = withEntry(one, { oracleId: "bolt", board: "main", quantity: 4 });
     expect(more.entries).toEqual([
-      { oracleId: "bolt", board: "main", quantity: 4, printingId: "p1", finish: null },
+      {
+        oracleId: "bolt",
+        board: "main",
+        quantity: 4,
+        printingId: "p1",
+        finish: null,
+        heading: null,
+      },
     ]);
     expect(withEntry(more, { oracleId: "bolt", board: "main", quantity: 0 }).entries).toEqual([]);
   });

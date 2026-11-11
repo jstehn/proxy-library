@@ -75,7 +75,14 @@ describe("decks (design doc 09)", () => {
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 4 });
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 3 });
     expect(repository.get(id)?.entries).toEqual([
-      { oracleId: "bolt", board: "main", quantity: 3, printingId: null, finish: null },
+      {
+        oracleId: "bolt",
+        board: "main",
+        quantity: 3,
+        printingId: null,
+        finish: null,
+        heading: null,
+      },
     ]);
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 0 });
     expect(repository.get(id)?.entries).toEqual([]);
@@ -104,6 +111,7 @@ describe("decks (design doc 09)", () => {
         quantity: 4,
         printingId: samplePrintingId("bolt-m11"),
         finish: "foil",
+        heading: null,
       },
     ]);
     await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
@@ -162,13 +170,21 @@ describe("decks (design doc 09)", () => {
     });
     expect(repository.get(id)?.entries).toEqual(
       expect.arrayContaining([
-        { oracleId: "bolt", board: "main", quantity: 4, printingId: "bolt-m11", finish: "nonfoil" },
+        {
+          oracleId: "bolt",
+          board: "main",
+          quantity: 4,
+          printingId: "bolt-m11",
+          finish: "nonfoil",
+          heading: null,
+        },
         {
           oracleId: "delver",
           board: "main",
           quantity: 1,
           printingId: "delver-1",
           finish: "nonfoil",
+          heading: null,
         },
         {
           oracleId: "duress",
@@ -176,6 +192,7 @@ describe("decks (design doc 09)", () => {
           quantity: 2,
           printingId: "duress-1",
           finish: "nonfoil",
+          heading: null,
         },
       ]),
     );
@@ -261,9 +278,23 @@ describe("replaceList", () => {
     });
     expect(result).toEqual({ ok: true, value: { cards: 4 } });
     expect(repository.get(id)?.entries).toEqual([
-      { oracleId: "bolt", board: "main", quantity: 3, printingId: null, finish: null },
+      {
+        oracleId: "bolt",
+        board: "main",
+        quantity: 3,
+        printingId: null,
+        finish: null,
+        heading: null,
+      },
       // A card new to the deck gets your most special copy (rule 10).
-      { oracleId: "ring", board: "side", quantity: 1, printingId: "ring-foil", finish: "foil" },
+      {
+        oracleId: "ring",
+        board: "side",
+        quantity: 1,
+        printingId: "ring-foil",
+        finish: "foil",
+        heading: null,
+      },
     ]);
   });
 
@@ -351,8 +382,16 @@ describe("createDeckFromCards (opened precons)", () => {
         quantity: 1,
         printingId: "delver-1",
         finish: "foil",
+        heading: null,
       },
-      { oracleId: "bolt", board: "main", quantity: 1, printingId: "bolt-m11", finish: "nonfoil" },
+      {
+        oracleId: "bolt",
+        board: "main",
+        quantity: 1,
+        printingId: "bolt-m11",
+        finish: "nonfoil",
+        heading: null,
+      },
     ]);
   });
 
@@ -435,5 +474,141 @@ describe("choosePrinting", () => {
       err({ kind: "DeckNotFound" }),
     );
     expect(ring(id)).toMatchObject({ printingId: null, finish: null });
+  });
+});
+
+describe("headings (design doc 34)", () => {
+  async function deckWithCards() {
+    const id = await newDeck();
+    for (const oracleId of ["bolt", "duress", "ring"]) {
+      await decks.setEntry(jack, { deckId: id, oracleId, board: "main", quantity: 1 });
+    }
+    return id;
+  }
+  const headingOf = (id: DeckId, oracleId: string) =>
+    repository.get(id)?.entries.find((entry) => entry.oracleId === oracleId)?.heading;
+  const setHeading = (id: DeckId, oracleId: string, heading: string | null) =>
+    decks.setEntryHeading(jack, { deckId: id, oracleId, board: "main", heading });
+
+  it("gives a card a heading, a new one going last, and clears it", async () => {
+    const id = await deckWithCards();
+    expect(await setHeading(id, "bolt", "  Removal ")).toEqual({ ok: true, value: undefined });
+    await setHeading(id, "ring", "Ramp");
+    expect(headingOf(id, "bolt")).toBe("Removal");
+    expect(repository.get(id)?.headings).toEqual(["Removal", "Ramp"]);
+
+    await setHeading(id, "bolt", null);
+    expect(headingOf(id, "bolt")).toBeNull();
+    // No card is under Removal any more, so it's gone from the order.
+    expect(repository.get(id)?.headings).toEqual(["Ramp"]);
+  });
+
+  it("refuses a heading that's a board, a type or not a word, and a missing card", async () => {
+    const id = await deckWithCards();
+    for (const bad of ["Sideboard", "Creatures", "2-drops", "", "x".repeat(41)]) {
+      expect(await setHeading(id, "bolt", bad)).toEqual(
+        err({ kind: "HeadingInvalid", maximum: 40 }),
+      );
+    }
+    expect(
+      await decks.setEntryHeading(jack, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "side",
+        heading: "Ramp",
+      }),
+    ).toEqual(err({ kind: "EntryNotFound" }));
+    expect(
+      await decks.setEntryHeading(mallory, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        heading: "Ramp",
+      }),
+    ).toEqual(err({ kind: "DeckNotFound" }));
+  });
+
+  it("renames, merges and clears a heading on every card", async () => {
+    const id = await deckWithCards();
+    await setHeading(id, "bolt", "Removal");
+    await setHeading(id, "duress", "Discard");
+    await setHeading(id, "ring", "Ramp");
+
+    await decks.renameHeading(jack, { deckId: id, from: "Removal", to: "Interaction" });
+    expect(repository.get(id)?.headings).toEqual(["Interaction", "Discard", "Ramp"]);
+    await decks.renameHeading(jack, { deckId: id, from: "Discard", to: "Interaction" });
+    expect(headingOf(id, "duress")).toBe("Interaction");
+    expect(repository.get(id)?.headings).toEqual(["Interaction", "Ramp"]);
+    await decks.renameHeading(jack, { deckId: id, from: "Ramp", to: null });
+    expect(headingOf(id, "ring")).toBeNull();
+    expect(await decks.renameHeading(jack, { deckId: id, from: "Ramp", to: "X" })).toEqual(
+      err({ kind: "HeadingNotFound" }),
+    );
+  });
+
+  it("orders headings only when every one is named once", async () => {
+    const id = await deckWithCards();
+    await setHeading(id, "bolt", "Removal");
+    await setHeading(id, "ring", "Ramp");
+    expect(await decks.orderHeadings(jack, { deckId: id, order: ["Ramp", "Removal"] })).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(repository.get(id)?.headings).toEqual(["Ramp", "Removal"]);
+    for (const order of [["Ramp"], ["Ramp", "Ramp"], ["Ramp", "Removal", "Lands"]]) {
+      expect(await decks.orderHeadings(jack, { deckId: id, order })).toEqual(
+        err({ kind: "HeadingOrderInvalid" }),
+      );
+    }
+  });
+
+  it("keeps a card's heading through the maybeboard and back", async () => {
+    const id = await deckWithCards();
+    await setHeading(id, "bolt", "Removal");
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "main", to: "maybe" });
+    expect(repository.get(id)?.headings).toEqual(["Removal"]);
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
+    expect(headingOf(id, "bolt")).toBe("Removal");
+  });
+
+  it("imports headings from a pasted list and switches a deck without any to them", async () => {
+    const id = await newDeck();
+    await decks.importList(jack, {
+      deckId: id,
+      text: "Removal (4)\n4 Lightning Bolt\n\nLands (1)\n1 Sol Ring",
+    });
+    const deck = repository.get(id);
+    expect(deck?.grouping).toBe("custom");
+    expect(deck?.headings).toEqual(["Removal"]);
+    expect(headingOf(id, "ring")).toBeNull();
+  });
+
+  it("replaceList keeps headings when the text has none, and sets them when it has some", async () => {
+    const id = await deckWithCards();
+    await setHeading(id, "bolt", "Removal");
+    await setHeading(id, "ring", "Ramp");
+    const current = () => fingerprint(repository.get(id)?.entries ?? []);
+
+    await decks.replaceList(jack, {
+      deckId: id,
+      text: "1 Lightning Bolt\n1 Sol Ring",
+      fingerprint: current(),
+    });
+    expect(headingOf(id, "bolt")).toBe("Removal");
+    expect(repository.get(id)?.headings).toEqual(["Removal", "Ramp"]);
+
+    await decks.replaceList(jack, {
+      deckId: id,
+      text: "Ramp (1)\n1 Sol Ring\n\nDeck\n1 Lightning Bolt",
+      fingerprint: current(),
+    });
+    expect(headingOf(id, "bolt")).toBeNull();
+    expect(repository.get(id)?.headings).toEqual(["Ramp"]);
+  });
+
+  it("switches a deck's grouping", async () => {
+    const id = await newDeck();
+    await decks.updateDeck(jack, { deckId: id, grouping: "custom" });
+    expect(repository.get(id)?.grouping).toBe("custom");
   });
 });

@@ -48,7 +48,18 @@ beforeEach(async () => {
       format: "casual",
       usesRealCards: false,
       targetBracket: null,
-      entries: [{ oracleId: "krenko", board: "main", quantity: 1, printingId: null, finish: null }],
+      grouping: "type",
+      headings: [],
+      entries: [
+        {
+          oracleId: "krenko",
+          board: "main",
+          quantity: 1,
+          printingId: null,
+          finish: null,
+          heading: null,
+        },
+      ],
     },
     new Date(),
   );

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deckView, EXPORTERS, type ExportLine } from "@/modules/decks";
+import { deckView, EXPORTERS, exportWithHeadings, type ExportLine } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 
 // The deck as text (design doc 09): "4 Lightning Bolt (M11) 149", which Moxfield, Archidekt and
-// Arena all read, or names only.
+// Arena all read, or names only; and with the deck's own headings (design doc 34).
 
 export default async function ExportPage(props: PageProps<"/decks/[id]/export">) {
   const actor = await requireActor();
@@ -21,6 +21,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
     board: line.board,
     setCode: line.setCode,
     collectorNumber: line.collectorNumber,
+    heading: line.heading,
   }));
 
   return (
@@ -44,6 +45,18 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
           className="rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
         />
       </section>
+      {view.deck.headings.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium">With headings (Archidekt, Moxfield)</h2>
+          <textarea
+            readOnly
+            rows={16}
+            aria-label="Deck list with headings"
+            value={exportWithHeadings(lines, view.deck.headings)}
+            className="rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
+          />
+        </section>
+      )}
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Names only (Arena, MTGO; no maybeboard)</h2>
         <textarea

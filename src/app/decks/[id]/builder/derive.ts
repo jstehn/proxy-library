@@ -28,6 +28,7 @@ export function problemsOf(
         quantity: line.quantity,
         printingId: null,
         finish: null,
+        heading: null,
       })),
     },
     (oracleId) => rules[oracleId],
@@ -71,6 +72,7 @@ export function provisionalLine(
     // Adding from the grid pins the printing shown, not its finish (as the server will store).
     pinnedPrintingId: card.printingId,
     pinnedFinish: null,
+    heading: null,
     name: card.name,
     typeLine: card.typeLine,
     manaValue: card.manaValue,

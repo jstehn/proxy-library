@@ -88,3 +88,4 @@ export {
   type BracketSource,
   type BracketWarning,
 } from "./domain/brackets";
+export { checkHeading, headingMoved, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
