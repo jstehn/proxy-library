@@ -67,8 +67,8 @@ design doc (or joins a phase's design) and is removed from this list.
 - ~~**Sharing decks** and **"cards to get"**~~ **Done (design doc 21).** Still open: copying a
   shared deck into your own in one click (pasting its list does it today), and comment replies.
 - **Strict ownership as an option:** a copy used by one deck can't be used by another.
-- **A maybeboard** (deferred 2026-11-03, design doc 23): cards you're considering, kept with the
-  deck but not counted. Until then, pasted `Maybeboard` / `Considering` sections are skipped.
+- ~~**A maybeboard**~~ **Done (design doc 32)**, with Cards to cut and `rank_cuts`. Still open:
+  tuning the cut weights against real decks (task 57's harness), and "wish for the maybeboard".
 - **Two-card combos in the bracket estimate** (deferred 2026-11-10, design doc 31): import
   Commander Spellbook's combo data in the worker (a new external source, its own ADR), so the
   estimate can say "Thassa's Oracle + Demonic Consultation → bracket 4" and check that bracket
@@ -97,9 +97,9 @@ design doc (or joins a phase's design) and is removed from this list.
 ## Deck building (out of scope for design doc 14, 2026-09-30)
 
 - ~~**Suggestions** and **price-based recommendations**~~ **Done (design doc 20):** cards for the
-  deck's themes and short roles, cards like a selected one, and a list within a budget. Still
-  open: **cards to cut** (swaps, which need a judgment of card strength), and data from other
-  players' decks (EDHREC) if local heuristics fall short.
+  deck's themes and short roles, cards like a selected one, and a list within a budget. Cards to
+  cut are done too (design doc 32). Still open: **swaps** ("cut X, add Y" in one step), and data
+  from other players' decks (EDHREC) if local heuristics fall short.
 - ~~**Automatic tags**~~ **Done (design doc 19)**, with counts against targets, a draw simulator,
   and problems checked in the browser. Still open: an **`otag:` search keyword** (needs the tag
   rules in SQL, or tags stored per printing).
