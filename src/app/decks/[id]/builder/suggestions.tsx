@@ -104,7 +104,8 @@ export function SuggestionsPanel(props: {
         <Link href={`/singles/list?deck=${deckId}`} className="underline">
           buy what it&apos;s short
         </Link>
-        . Suggestions are read from rules text and prices, not from other players&apos; decks.
+        . Suggestions are ideas to consider, picked by simple rules from rules text and prices, not
+        from other players&apos; decks.
       </p>
     </section>
   );

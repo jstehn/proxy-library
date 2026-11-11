@@ -205,7 +205,7 @@ export const suggestForDeck = defineTool({
   title: "The app's suggestions for a deck",
   description: [
     "The app's own suggestions for a deck: its profile (themes, creature types and keywords it read from the commander and deck, and roles below target), then cards for the deck and for each short role, from your collection first and then the store, each with why.",
-    "Use it when: you want a second opinion next to your own search_for_deck queries, or quick picks for missing roles (ramp, draw, removal, wipe). Its themes come from fixed rules, so it can miss what a deck is really about; analyze_cards and search_for_deck can find more.",
+    "Use it when: you want a second opinion next to your own search_for_deck queries, or quick picks for missing roles (ramp, draw, removal, wipe). These are ideas to consider, not a ranking of the best cards: its themes come from fixed rules, so it can miss what a deck is really about; analyze_cards and search_for_deck can find more.",
     "With a target bracket on the deck, cards that would take it over are left out; hiddenOverTarget says how many.",
   ].join("\n"),
   scope: "read",
@@ -268,9 +268,9 @@ export const similarCardsTool = defineTool({
 
 export const budgetUpgrades = defineTool({
   name: "budget_upgrades",
-  title: "Best upgrades within a budget",
+  title: "Upgrade ideas within a budget",
   description: [
-    "The best store cards to buy for a deck within a budget, picked greedily by how well they fit, as a list Buy a list accepts.",
+    "Store cards a deck could buy within a budget, picked greedily by how well they fit the app's simple rules, as a list Buy a list accepts. Ideas to consider, not the best possible upgrades.",
     "Use it when: the player asks what to buy for a deck for $N. Nothing is bought: the player buys in the web app, or you add the picks to the wishlist with add_wish.",
   ].join("\n"),
   scope: "read",

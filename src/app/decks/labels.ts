@@ -138,17 +138,17 @@ const FLAG_WORDS: Readonly<Record<BracketFlag, string>> = {
   extraTurn: "an extra turn",
 };
 
-/** Why a card is a cut candidate (or worth keeping), in words (design doc 32). */
+/** Why a card scores low (or high) on the cut checks, in words (design doc 32). Hints, not verdicts. */
 export function cutReasonText(reason: CutReason): string {
   switch (reason.kind) {
     case "noFit":
-      return "Fits none of the deck's themes";
+      return "Matches none of the themes the app found";
     case "fits":
       return `Fits: ${reason.reasons.map(reasonText).join(", ")}`;
     case "surplusRole":
       return `${TAG_LABELS[reason.tag]}: ${reason.count} in the deck, target ${reason.target}`;
     case "neededRole":
-      return `${TAG_LABELS[reason.tag]}: only ${reason.count} of ${reason.target}, keep it`;
+      return `${TAG_LABELS[reason.tag]}: ${reason.count} in the deck, target ${reason.target} (short)`;
     case "topHeavy":
       return `${reason.manaValue} mana, and the curve averages ${reason.average}`;
     case "overBracket":

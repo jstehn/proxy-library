@@ -4,8 +4,9 @@ import type { Bracket, Board, DeckLine, Format } from "@/modules/decks";
 import { rankCuts } from "@/modules/decks/client";
 import { cutReasonText } from "../../labels";
 
-// Cards to cut (design doc 32, section 9): the deck's weakest main-deck cards, weakest first,
-// with the reasons for each and a button to move it to the maybeboard. Worked out in the
+// Possible cuts (design doc 32, section 9): the main-deck cards that score lowest on simple
+// checks, with the reasons for each and a button to move it to the maybeboard. Ideas to weigh,
+// not verdicts: the checks read rules text with fixed patterns. Worked out in the
 // browser from the deck in hand, like the problems, so it follows every edit.
 
 /** How many cut candidates the panel shows. */
@@ -30,23 +31,25 @@ export function CutsPanel(props: {
 
   return (
     <section
-      aria-label="Cards to cut"
+      aria-label="Possible cuts"
       className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
     >
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">Cards to cut</h2>
+        <h2 className="font-medium">Possible cuts</h2>
         <button
           type="button"
           onClick={props.onClose}
-          aria-label="Close cards to cut"
+          aria-label="Close possible cuts"
           className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           ✕
         </button>
       </div>
       <p className="text-xs text-zinc-500">
-        The weakest cards first, judged on the deck&apos;s themes, its role counts, its curve and
-        your target bracket. Lands and commanders aren&apos;t listed.
+        Ideas to consider, not rules: the cards that score lowest on a few simple checks (the themes
+        the app found, role counts, the curve and your target bracket). The checks read rules text,
+        so they miss combos, synergies they have no rule for and how you play the deck. Lands and
+        commanders aren&apos;t listed.
       </p>
       {cuts.length === 0 ? (
         <p className="text-zinc-500">No cards to judge yet: add some spells to the main deck.</p>

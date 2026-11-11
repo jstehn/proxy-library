@@ -919,7 +919,7 @@ export function DeckBuilder(props: {
               onClick={() => setShowCuts((value) => !value)}
               className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
             >
-              {showCuts ? "Hide cards to cut" : "Cards to cut"}
+              {showCuts ? "Hide possible cuts" : "Possible cuts"}
             </button>
             <button
               type="button"

@@ -25,6 +25,13 @@ together:
    top-heavy curve"). It's in the builder, beside Suggestions, with a **Move to maybeboard**
    button for each card, and in a new LLM tool **`rank_cuts`**.
 
+   **Ideas, not verdicts (2026-11-10, the player's request):** cuts and suggestions come from a
+   few simple checks over rules text and prices, so they miss combos, synergies without a rule,
+   and the player's plan. The builder shows them as **Possible cuts** with that caveat, the
+   reasons describe what was found ("matches none of the themes the app found") rather than
+   tell the player what to do, and the LLM tools tell the model to present them as options and
+   let the player decide.
+
 **Out of scope:** swaps ("cut X, add Y" in one step; suggestions and cuts stay separate lists),
 a learned or outside card-strength rating (task 53; this uses the same local rules as
 suggestions), cuts for lands (the mana base is task 49), and a maybeboard for 60-card sideboard

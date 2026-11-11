@@ -80,13 +80,13 @@ const PROMPTS: readonly Prompt[] = [
   },
   {
     name: "improve_deck",
-    description: "Find the weakest cards in a deck and better replacements.",
+    description: "Look for cards a deck could cut, and replacements to consider.",
     arguments: [{ name: "deckId", description: "The deck's id", required: true }],
     text: (args) =>
       [
         `Improve deck ${args.deckId}.`,
-        "Call get_deck and analyze_cards; find cards that don't fit what the deck does, or roles below target.",
-        "Find replacements with search_for_deck and similar_cards, owned first; propose swaps with reasons, and apply them with set_deck_entry when I agree.",
+        "Call get_deck, analyze_cards and rank_cuts; look for cards that don't fit what the deck does, or roles below target. rank_cuts gives ideas from simple checks: weigh them against the cards' text.",
+        "Find replacements with search_for_deck and similar_cards, owned first; offer swaps as options with your reasons, and apply them with set_deck_entry only when I agree.",
       ].join("\n"),
   },
 ];

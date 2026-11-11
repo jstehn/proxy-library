@@ -119,11 +119,11 @@ const MAX_CUTS = 30;
 
 export const rankCutsTool = defineTool({
   name: "rank_cuts",
-  title: "Rank a deck's weakest cards",
+  title: "Possible cuts for a deck",
   description: [
-    "The deck's main-deck cards that earn their place least, weakest first, each with a keep score (lower is a better cut) and its reasons in words: fits none of the deck's themes, a role the deck has too many of, expensive in a high curve, over the target bracket, not owned. Reasons to keep a card are listed too (a theme it fits, a role the deck is short of). Lands and commanders aren't ranked.",
-    "Use it when: the deck is over its size, or the player asks what to cut. Then judge the cards by their text (get_deck with includeText) before suggesting cuts.",
-    'Rules: suggest cuts, don\'t make them unasked. To set a card aside, move it to the maybeboard with set_deck_entry (0 on "main", then the same count on "maybe").',
+    "Ideas for what a deck could cut: the main-deck cards that score lowest on a few simple checks, lowest first, each with a rough keep score and the reasons in words (matches none of the themes the app found, a role the deck has more of than its target, expensive in a high curve, over the target bracket, not owned; reasons a card scored higher are listed too). Lands and commanders aren't ranked.",
+    "Use it when: the deck is over its size, or the player asks what to cut. It's a starting point, not a verdict: the checks read rules text with fixed patterns, so they miss combos, synergies they have no rule for, and the player's plan. Judge each card by its text (get_deck with includeText) and present cuts as options with your reasons.",
+    'Rules: suggest cuts, don\'t make them unasked; the player decides. To set a card aside, move it to the maybeboard with set_deck_entry (0 on "main", then the same count on "maybe").',
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -135,7 +135,7 @@ export const rankCutsTool = defineTool({
       .min(1)
       .max(MAX_CUTS)
       .default(10)
-      .describe(`How many cards to return, weakest first (1 to ${MAX_CUTS}).`),
+      .describe(`How many cards to return, lowest score first (1 to ${MAX_CUTS}).`),
   }),
   async run(context, input) {
     const view = await viewFor(context, input.deckId);

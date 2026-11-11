@@ -313,7 +313,7 @@ describe("the MCP server", () => {
 });
 
 describe("the maybeboard and cards to cut (design doc 32)", () => {
-  it("ranks the weakest cards, and keeps maybeboard cards out of everything", async () => {
+  it("ranks possible cuts, and keeps maybeboard cards out of everything", async () => {
     await give("Banishing Light");
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {

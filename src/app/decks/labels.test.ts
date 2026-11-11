@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { cutReasonText } from "./labels";
 
-// Cut reasons in words (design doc 32): what the builder's panel and rank_cuts say.
+// Cut reasons in words (design doc 32): what the builder's panel and rank_cuts say. They're hints
+// from simple checks, so they describe what was found rather than tell the player what to do.
 
 describe("cutReasonText", () => {
   it("says why a card is weak or worth keeping", () => {
-    expect(cutReasonText({ kind: "noFit" })).toBe("Fits none of the deck's themes");
+    expect(cutReasonText({ kind: "noFit" })).toBe("Matches none of the themes the app found");
     expect(cutReasonText({ kind: "fits", reasons: [{ kind: "theme", theme: "tokens" }] })).toMatch(
       /^Fits: /,
     );
@@ -13,7 +14,7 @@ describe("cutReasonText", () => {
       "Ramp: 14 in the deck, target 10",
     );
     expect(cutReasonText({ kind: "neededRole", tag: "wipe", count: 2, target: 3 })).toBe(
-      "Board wipes: only 2 of 3, keep it",
+      "Board wipes: 2 in the deck, target 3 (short)",
     );
     expect(cutReasonText({ kind: "topHeavy", manaValue: 7, average: 3.6 })).toBe(
       "7 mana, and the curve averages 3.6",
