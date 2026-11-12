@@ -122,6 +122,53 @@ describe("decks (design doc 09)", () => {
     );
   });
 
+  it("applies changes all-or-nothing and refuses a stale fingerprint (design doc 40)", async () => {
+    const id = await newDeck();
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 2 });
+    const firstPrint = fingerprint(repository.get(id)?.entries ?? []);
+
+    const applied = await decks.applyChanges(jack, {
+      deckId: id,
+      fingerprint: firstPrint,
+      changes: [
+        { oracleId: "bolt", board: "main", quantity: 0 },
+        { oracleId: "bolt", board: "maybe", quantity: 2 },
+        { oracleId: "duress", board: "main", quantity: 3 },
+      ],
+    });
+    expect(applied.ok).toBe(true);
+    expect(
+      repository
+        .get(id)
+        ?.entries.map((entry) => [entry.board, entry.oracleId, entry.quantity])
+        .sort(),
+    ).toEqual([
+      ["main", "duress", 3],
+      ["maybe", "bolt", 2],
+    ]);
+
+    // Stale fingerprint fails cleanly without saving anything.
+    const stale = await decks.applyChanges(jack, {
+      deckId: id,
+      fingerprint: firstPrint,
+      changes: [{ oracleId: "duress", board: "main", quantity: 0 }],
+    });
+    expect(stale).toEqual(err({ kind: "DeckChanged" }));
+
+    // Missing card in a batch leaves the deck completely untouched.
+    const secondPrint = fingerprint(repository.get(id)?.entries ?? []);
+    const missing = await decks.applyChanges(jack, {
+      deckId: id,
+      fingerprint: secondPrint,
+      changes: [
+        { oracleId: "duress", board: "main", quantity: 0 },
+        { oracleId: "no-such-card", board: "main", quantity: 1 },
+      ],
+    });
+    expect(missing).toEqual(err({ kind: "CardNotFound" }));
+    expect(repository.get(id)?.entries.find((e) => e.oracleId === "duress")?.quantity).toBe(3);
+  });
+
   it("moves a card to the maybeboard and back, adding up copies (design doc 32)", async () => {
     const id = await newDeck();
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 3 });

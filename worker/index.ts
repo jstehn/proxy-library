@@ -1,5 +1,5 @@
 // Worker entry point: `pnpm worker <command>`.
-import { invalidCommanders, preconCommanders } from "@/modules/decks";
+import { invalidCommanders, pairProblem, preconCommanders } from "@/modules/decks";
 import { productProblems } from "@/modules/inventory";
 import { loadProductCheck } from "@/modules/inventory/infrastructure";
 import { runMigrations } from "@/shared/db";
@@ -102,9 +102,16 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     let bad = 0;
     for (const deck of decks) {
       const invalid = invalidCommanders(deck.commanders);
-      if (invalid.length === 0) continue;
+      // Two commanders must also pair (design doc 40).
+      const pairing = pairProblem(deck.commanders);
+      if (invalid.length === 0 && pairing === null) continue;
       bad += 1;
-      console.log(`${deck.setCode} ${deck.deckName}: rejected ${invalid.join(", ")}`);
+      if (invalid.length > 0) {
+        console.log(`${deck.setCode} ${deck.deckName}: rejected ${invalid.join(", ")}`);
+      }
+      if (pairing?.kind === "CommandersCantPair") {
+        console.log(`${deck.setCode} ${deck.deckName}: can't pair ${pairing.names.join(" + ")}`);
+      }
     }
     console.log(`\n${decks.length} precon decks checked, ${bad} with a rejected commander`);
     if (bad > 0) process.exitCode = 1;

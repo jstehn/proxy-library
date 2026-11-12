@@ -21,6 +21,9 @@ export {
   type NewDeckInput,
 } from "./application/create-deck-in-transaction";
 export type {
+  ApplyChangesError,
+  ApplyChangesInput,
+  ApplyChangesReport,
   ChoosePrintingError,
   ChoosePrintingInput,
   CreateDeckError,
@@ -101,6 +104,7 @@ export {
   canBeCommander,
   deckProblems,
   invalidCommanders,
+  pairProblem,
   shortCount,
   type CardRules,
   type DeckProblem,
@@ -288,4 +292,21 @@ export {
   type TokenLine,
   type TokenMaker,
 } from "./domain/token-proxies";
+export {
+  previewChanges,
+  problemKey,
+  type AppliedChange,
+  type ChangePreview,
+  type DeckChange,
+  type PreviewLine,
+  type PreviewSnapshot,
+  type RoleDelta,
+} from "./domain/preview";
+export {
+  deckChangePreview,
+  deckListPreview,
+  type DeckChangePreview,
+  type ListPreviewError,
+  type ListPreviewResult,
+} from "./queries/preview";
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";

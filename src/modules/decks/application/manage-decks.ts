@@ -58,6 +58,7 @@ export type CreateDeckError = NameInvalid | TooManyDecks;
 export type UpdateDeckError =
   DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
+export type ApplyChangesError = DeckNotFound | DeckChanged | QuantityInvalid | CardNotFound;
 export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
 export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
@@ -103,6 +104,14 @@ export type AddCardsInput = Readonly<{
   /** Copies to add to the main deck, on top of any it has (design doc 35's planned lands). */
   cards: ReadonlyArray<Readonly<{ oracleId: string; quantity: number }>>;
 }>;
+
+export type ApplyChangesInput = Readonly<{
+  deckId: DeckId;
+  fingerprint: string;
+  changes: ReadonlyArray<Readonly<{ oracleId: string; board: Board; quantity: number }>>;
+}>;
+
+export type ApplyChangesReport = Readonly<{ cards: number; fingerprint: string }>;
 export type ImportReport = Readonly<{ added: number; unreadable: string[]; notFound: string[] }>;
 
 export type ReplaceListInput = Readonly<{
@@ -246,6 +255,43 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       }
       await decks.save(deck, clock.now());
       return ok();
+    });
+  }
+
+  /**
+   * Applies a batch of count changes all-or-nothing, refusing if the deck changed since the
+   * preview's fingerprint (design doc 40, section 4).
+   */
+  async function applyChanges(
+    actor: Actor,
+    input: ApplyChangesInput,
+  ): Promise<Result<ApplyChangesReport, ApplyChangesError>> {
+    for (const change of input.changes) {
+      const quantity = checkQuantity(change.quantity);
+      if (!quantity.ok) return quantity;
+    }
+    return unitOfWork.run<ApplyChangesReport, ApplyChangesError>(async ({ decks, cards }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      if (fingerprint(deck.entries) !== input.fingerprint) return err({ kind: "DeckChanged" });
+
+      const positiveIds = new Set(
+        input.changes.filter((change) => change.quantity > 0).map((change) => change.oracleId),
+      );
+      for (const oracleId of positiveIds) {
+        if (!(await cards.exists(oracleId))) return err({ kind: "CardNotFound" });
+      }
+
+      let updated = deck;
+      for (const change of input.changes) {
+        updated = withEntry(updated, change);
+      }
+      updated = tidyHeadings(updated);
+      await decks.save(updated, clock.now());
+      return ok({
+        cards: updated.entries.reduce((total, entry) => total + entry.quantity, 0),
+        fingerprint: fingerprint(updated.entries),
+      });
     });
   }
 
@@ -493,6 +539,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     deleteDeck,
     setEntry,
     addCards,
+    applyChanges,
     moveEntry,
     importList,
     replaceList,

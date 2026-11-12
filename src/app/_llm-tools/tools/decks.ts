@@ -7,6 +7,7 @@ import {
   commanderDetails,
   commandersICanBuild,
   bracketWarning,
+  deckChangePreview,
   deckProblems,
   deckStats,
   deckText,
@@ -28,6 +29,8 @@ import {
   SPELL_SLOTS,
   shortList,
   type CommanderCoverage,
+  type DeckChange,
+  type DeckChangePreview,
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
@@ -43,6 +46,7 @@ import {
   planText,
   problemText,
   reasonText,
+  TAG_LABELS,
   UNCHECKED_TEXT,
 } from "@/app/decks/labels";
 import {
@@ -934,5 +938,194 @@ export const arrangeHeadings = defineTool({
       }
     }
     return done({ deckId: input.deckId, order: input.order });
+  },
+});
+
+const roundTwo = (value: number) => Math.round(value * 100) / 100;
+
+function formatPreviewResponse(
+  preview: DeckChangePreview,
+  saved: Readonly<{ saved: boolean; fingerprint: string }>,
+) {
+  return {
+    deck: preview.deck,
+    format: preview.format,
+    targetSize: preview.targetSize,
+    saved: saved.saved,
+    fingerprint: saved.fingerprint,
+    changes: preview.changes.map((change) => ({
+      card: change.name,
+      board: change.board,
+      before: change.beforeQuantity,
+      after: change.afterQuantity,
+    })),
+    before: {
+      cardCount: preview.before.stats.cardCount,
+      lands: preview.before.stats.lands,
+      otherManaSources: preview.before.stats.otherManaSources,
+      averageManaValue: roundTwo(preview.before.stats.averageManaValue),
+      curve: preview.before.stats.curve,
+      pips: preview.before.stats.pips,
+      sources: preview.before.stats.sources,
+      value: money(preview.before.stats.priceCents),
+      shortTotal: preview.before.shortTotal,
+    },
+    after: {
+      cardCount: preview.after.stats.cardCount,
+      lands: preview.after.stats.lands,
+      otherManaSources: preview.after.stats.otherManaSources,
+      averageManaValue: roundTwo(preview.after.stats.averageManaValue),
+      curve: preview.after.stats.curve,
+      pips: preview.after.stats.pips,
+      sources: preview.after.stats.sources,
+      value: money(preview.after.stats.priceCents),
+      shortTotal: preview.after.shortTotal,
+    },
+    priceDelta: money(preview.priceDeltaCents),
+    roles: preview.roles.map((role) => ({
+      role: role.tag,
+      label: TAG_LABELS[role.tag],
+      before: role.before,
+      after: role.after,
+      target: role.target,
+    })),
+    newlyMetRoles: preview.newlyMetRoles,
+    newlyMissedRoles: preview.newlyMissedRoles,
+    problems: {
+      added: preview.problems.added.map(problemText),
+      resolved: preview.problems.resolved.map(problemText),
+      remaining: preview.problems.remaining.map(problemText),
+    },
+    newlyShort: preview.newlyShort.map((short) => ({
+      card: short.name,
+      needed: short.needed,
+      owned: short.owned,
+      missing: short.needed - short.owned,
+    })),
+    bracket:
+      preview.bracket.before === null || preview.bracket.after === null
+        ? null
+        : {
+            target: preview.targetBracket,
+            before: estimateLabel(preview.bracket.before),
+            after: estimateLabel(preview.bracket.after),
+            findingsAfter: preview.bracket.after.findings.map(findingWithCards),
+            overTargetAfter:
+              preview.bracket.warningAfter === null
+                ? null
+                : bracketWarningText(preview.bracket.warningAfter),
+          },
+  };
+}
+
+export const applyChangesTool = defineTool({
+  name: "apply_changes",
+  title: "Preview or apply a batch of changes to a deck",
+  description: [
+    "Pre-evaluates (and optionally saves) a batch of card count changes to a deck: returns before/after for card count, curve, average mana value, roles vs targets, colors, Commander bracket, problems added/resolved/remaining, newly short cards, price difference, and the deck's fingerprint. Each change sets the card's count on a board (0 removes it).",
+    "Use it when: testing swaps, cuts or additions before changing the player's deck, or applying multiple changes at once. Leave save false (the default) to preview first, show the player the differences, and save only what they agreed to by calling again with save true and the preview's fingerprint.",
+    'Rules: all card names must match the catalog or nothing is previewed or saved. To move a card to the maybeboard, send two changes: 0 on "main" and its count on "maybe".',
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    changes: z
+      .array(
+        z.object({
+          card,
+          quantity: z
+            .number()
+            .int()
+            .min(0)
+            .max(MAX_QUANTITY)
+            .describe("How many copies the deck should have on this board; 0 removes the card."),
+          board,
+        }),
+      )
+      .min(1)
+      .max(100)
+      .describe("Count changes to preview or save (1 to 100 entries)."),
+    save: z
+      .boolean()
+      .default(false)
+      .describe(
+        "False (the default) previews without saving; true saves all changes if fingerprint matches.",
+      ),
+    fingerprint: z
+      .string()
+      .optional()
+      .describe("Required when save is true: the fingerprint from get_deck or a preview."),
+  }),
+  async run(context, input) {
+    const saveFingerprint = input.fingerprint ?? "";
+    if (input.save && saveFingerprint === "") {
+      return failed(
+        "InputInvalid",
+        "Pass the fingerprint from get_deck or a prior preview when save is true.",
+      );
+    }
+    const uniqueNames = [...new Set(input.changes.map((entry) => entry.card))];
+    const resolvedEntries = await Promise.all(
+      uniqueNames.map(async (name) => [name, await findCard(context.container.db, name)] as const),
+    );
+    const byName = new Map<string, string>();
+    const missing: string[] = [];
+    for (const [name, found] of resolvedEntries) {
+      if (found === null) missing.push(name);
+      else byName.set(name, found.oracleId);
+    }
+    if (missing.length > 0) {
+      return failed(
+        "CardNotFound",
+        `Cards not in the catalog (nothing previewed or saved): ${missing.join(", ")}.`,
+      );
+    }
+
+    const resolvedChanges: DeckChange[] = input.changes.flatMap((entry) => {
+      const oracleId = byName.get(entry.card);
+      return oracleId === undefined
+        ? []
+        : [{ oracleId, board: entry.board, quantity: entry.quantity }];
+    });
+
+    const preview = await deckChangePreview(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      resolvedChanges,
+    );
+    if (preview === null) return deckNotFound(input.deckId);
+
+    if (!input.save) {
+      return done(
+        formatPreviewResponse(preview, { saved: false, fingerprint: preview.fingerprint }),
+      );
+    }
+
+    const result = await context.container.decks.applyChanges(context.actor, {
+      deckId: DeckId.of(input.deckId),
+      fingerprint: saveFingerprint,
+      changes: resolvedChanges,
+    });
+    if (!result.ok) {
+      switch (result.error.kind) {
+        case "DeckNotFound":
+          return deckNotFound(input.deckId);
+        case "DeckChanged":
+          return failed(
+            "DeckChanged",
+            "The deck changed since that fingerprint. Preview again without saving to get the new fingerprint.",
+          );
+        case "QuantityInvalid":
+          return failed("QuantityInvalid", `Use 0 to ${result.error.maximum} copies.`);
+        case "CardNotFound":
+          return cardNotFound("one of the changed cards");
+      }
+    }
+
+    return done(
+      formatPreviewResponse(preview, { saved: true, fingerprint: result.value.fingerprint }),
+    );
   },
 });

@@ -57,6 +57,8 @@ export function problemText(problem: DeckProblem): string {
       return `${problem.name} can't be a commander (a commander is a legendary creature, a legendary Vehicle or Spacecraft with power and toughness, or says it can be your commander).`;
     case "OutsideColorIdentity":
       return `${problem.name} is outside your commander's colors.`;
+    case "CommandersCantPair":
+      return `${problem.names[0]} and ${problem.names[1]} can't share the command zone: two commanders need Partner, Partner with each other, Friends forever, a Background with Choose a Background, or a Doctor with Doctor's companion.`;
     default:
       return assertNever(problem);
   }

@@ -34,6 +34,7 @@ export type DeckProblem =
   | Readonly<{ kind: "CommanderMissing" }>
   | Readonly<{ kind: "TooManyCommanders"; count: number }>
   | Readonly<{ kind: "CommanderInvalid"; name: string }>
+  | Readonly<{ kind: "CommandersCantPair"; names: readonly [string, string] }>
   | Readonly<{ kind: "OutsideColorIdentity"; name: string }>;
 
 /** Each format's shape, in one table (the Strategy idea, as data). */
@@ -81,7 +82,7 @@ export function canBeCommander(
 }
 
 /** A Background can be the second commander, beside one that says "Choose a Background". */
-function isBackground(card: CardRules): boolean {
+function isBackground(card: Pick<CardRules, "typeLine">): boolean {
   return /\bLegendary\b/.test(card.typeLine) && /\bBackground\b/.test(card.typeLine);
 }
 
@@ -91,6 +92,82 @@ export function invalidCommanders(commanders: readonly CardRules[]): string[] {
   return commanders
     .filter((card) => !canBeCommander(card) && !(isBackground(card) && choosesBackground))
     .map((card) => card.name);
+}
+
+type PairCard = Pick<CardRules, "name" | "typeLine" | "text">;
+
+/** What a card says about sharing the command zone (Commander rules 702.124, 903.3c). */
+type PairAbilities = Readonly<{
+  partner: boolean;
+  partnerWith: string | null;
+  partnerVariant: string | null;
+  friendsForever: boolean;
+  choosesBackground: boolean;
+  doctorsCompanion: boolean;
+}>;
+
+/**
+ * Keywords are matched with their capital letter, so reminder text ("if both have partner") never
+ * counts. A name ends at its reminder's "(", a line break, or the end of the text.
+ */
+function pairAbilities(card: PairCard): PairAbilities {
+  const partnerWith = /\bPartner with ([^(\n]+?)\s*(?:\(|\n|$)/.exec(card.text);
+  const variant = /\bPartner—([^(\n]+?)\s*(?:\(|\n|$)/.exec(card.text);
+  return {
+    partner: /\bPartner\b(?! with)(?!—)/.test(card.text),
+    partnerWith: partnerWith === null ? null : partnerWith[1].trim(),
+    partnerVariant: variant === null ? null : variant[1].trim(),
+    friendsForever: /\bFriends forever\b/.test(card.text),
+    choosesBackground: /\bChoose a Background\b/i.test(card.text),
+    doctorsCompanion: /\bDoctor's companion\b/.test(card.text),
+  };
+}
+
+/** A legendary Time Lord Doctor creature with no other creature types (rule 702.124k). */
+function isTheDoctor(card: PairCard): boolean {
+  const front = card.typeLine.split(" // ")[0];
+  const [types, subtypes = ""] = front.split("—").map((part) => part.trim());
+  return (
+    /\bLegendary\b/.test(types) &&
+    /\bCreature\b/.test(types) &&
+    subtypes.split(/\s+/).join(" ") === "Time Lord Doctor"
+  );
+}
+
+/** Whether `name` is the card's name or its front face's name. */
+function isNamed(card: PairCard, name: string): boolean {
+  return card.name === name || card.name.split(" // ")[0] === name;
+}
+
+/** Whether two commanders may share the command zone, in either order. */
+function canPair(first: PairCard, second: PairCard): boolean {
+  const a = pairAbilities(first);
+  const b = pairAbilities(second);
+  const oneWay = (x: PairAbilities, xCard: PairCard, y: PairAbilities, yCard: PairCard) =>
+    (x.partnerWith !== null &&
+      y.partnerWith !== null &&
+      isNamed(yCard, x.partnerWith) &&
+      isNamed(xCard, y.partnerWith)) ||
+    (x.choosesBackground && isBackground(yCard)) ||
+    (x.doctorsCompanion && isTheDoctor(yCard));
+  return (
+    (a.partner && b.partner) ||
+    (a.partnerVariant !== null && a.partnerVariant === b.partnerVariant) ||
+    (a.friendsForever && b.friendsForever) ||
+    oneWay(a, first, b, second) ||
+    oneWay(b, second, a, first)
+  );
+}
+
+/**
+ * The pairing problem of a deck's commanders (design doc 40, section 2), or null: only two
+ * commanders can have one. One leads alone; three or more are already too many.
+ */
+export function pairProblem(commanders: readonly PairCard[]): DeckProblem | null {
+  if (commanders.length !== 2) return null;
+  const [first, second] = commanders;
+  if (canPair(first, second)) return null;
+  return { kind: "CommandersCantPair", names: [first.name, second.name] };
 }
 
 /** Copies of each oracle card across every board. */
@@ -171,6 +248,11 @@ function commanderProblems(deck: DeckToCheck, rules: RulesLookup, size: number):
   const commanderCards = commanders.map((commander) => rules(commander.oracleId));
   for (const name of invalidCommanders(commanderCards)) {
     problems.push({ kind: "CommanderInvalid", name });
+  }
+  // Two copies of one card are a singleton problem, not a pairing one.
+  if (commanderCount === 2 && commanderCards.length === 2) {
+    const pairing = pairProblem(commanderCards);
+    if (pairing !== null) problems.push(pairing);
   }
   const identity = new Set<string>(commanderCards.flatMap((card) => card.colorIdentity));
   if (commanderCount > 0) {

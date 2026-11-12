@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import { samplePrintingId } from "../testing/fakes";
 import { DeckId, withEntry, type Board, type Deck, type Format } from "./deck";
-import { canBeCommander, deckProblems, shortCount, type CardRules } from "./rules";
+import { canBeCommander, deckProblems, pairProblem, shortCount, type CardRules } from "./rules";
 
 // Small made-up cards, keyed by oracle id.
 const legalEverywhere = {
@@ -318,11 +318,24 @@ describe("commander (rule 3)", () => {
       ["background", 1, "commander"],
     ]);
     expect(kinds(deckProblems(paired, rules, ownAll))).not.toContain("CommanderInvalid");
+    expect(kinds(deckProblems(paired, rules, ownAll))).not.toContain("CommandersCantPair");
     const alone = deck("commander", [
       ["ruby", 1, "commander"],
       ["background", 1, "commander"],
     ]);
     expect(kinds(deckProblems(alone, rules, ownAll))).toContain("CommanderInvalid");
+  });
+
+  it("refuses two commanders that don't pair, and only checks pairs (design doc 40)", () => {
+    const two = deck("commander", [
+      ["ruby", 1, "commander"],
+      ["chooser", 1, "commander"],
+    ]);
+    expect(deckProblems(two, rules, ownAll)).toContainEqual({
+      kind: "CommandersCantPair",
+      names: ["Ruby Commander", "Background Chooser"],
+    });
+    expect(kinds(deckProblems(legal, rules, ownAll))).not.toContain("CommandersCantPair");
   });
 
   it("is singleton, keeps to the commander's colors, and follows commander bans", () => {
@@ -349,6 +362,74 @@ describe("commander (rule 3)", () => {
     expect(deckProblems(banned, rules, ownAll)).toEqual([
       { kind: "NotLegal", name: "Black Lotus", status: "banned" },
     ]);
+  });
+});
+
+describe("commander pairs (design doc 40, section 2.1)", () => {
+  const legend = (name: string, text: string, subtypes = "Human") => ({
+    name,
+    typeLine: `Legendary Creature — ${subtypes}`,
+    text,
+  });
+  const PARTNER = "Partner (You can have two commanders if both have partner.)";
+  const pairs = (a: ReturnType<typeof legend>, b: ReturnType<typeof legend>) =>
+    pairProblem([a, b]) === null;
+
+  it("pairs two plain partners, but not a partner with a legend without it", () => {
+    expect(pairs(legend("Thrasios", PARTNER), legend("Tymna", `Lifelink\n${PARTNER}`))).toBe(true);
+    expect(pairs(legend("Thrasios", PARTNER), legend("Ruby", "Haste"))).toBe(false);
+  });
+
+  it("pairs 'Partner with' only with the named card, both ways", () => {
+    const pir = legend(
+      "Pir, Imaginative Rascal",
+      "Partner with Toothy, Imaginary Friend (When this creature enters, target player may put Toothy into their hand from their library.)\nIf one or more counters would be put on a permanent your team controls, that many plus one are put on it instead.",
+    );
+    const toothy = legend(
+      "Toothy, Imaginary Friend",
+      "Partner with Pir, Imaginative Rascal\nWhenever you draw a card, put a +1/+1 counter on Toothy.",
+    );
+    expect(pairs(pir, toothy)).toBe(true);
+    expect(pairs(toothy, pir)).toBe(true);
+    expect(pairs(pir, legend("Thrasios", PARTNER))).toBe(false);
+  });
+
+  it("pairs Partner— variants only when they match", () => {
+    const survivor = (name: string) =>
+      legend(name, "Partner—Survivors (You can have two commanders if both have this ability.)");
+    expect(pairs(survivor("Tyvar"), survivor("Zimone"))).toBe(true);
+    expect(
+      pairs(
+        survivor("Tyvar"),
+        legend(
+          "Cloud",
+          "Partner—Father & Son (You can have two commanders if both have this ability.)",
+        ),
+      ),
+    ).toBe(false);
+    expect(pairs(survivor("Tyvar"), legend("Thrasios", PARTNER))).toBe(false);
+  });
+
+  it("pairs Friends forever with Friends forever only", () => {
+    const friend = (name: string) =>
+      legend(name, "Friends forever (You can have two commanders if both have friends forever.)");
+    expect(pairs(friend("Will"), friend("Mike"))).toBe(true);
+    expect(pairs(friend("Will"), legend("Thrasios", PARTNER))).toBe(false);
+  });
+
+  it("pairs a Doctor's companion with a Time Lord Doctor that has no other types", () => {
+    const companion = legend(
+      "Rose Tyler",
+      "Doctor's companion (You can have two commanders if the other is the Doctor.)",
+    );
+    expect(pairs(companion, legend("The Tenth Doctor", "", "Time Lord Doctor"))).toBe(true);
+    expect(pairs(legend("The Tenth Doctor", "", "Time Lord Doctor"), companion)).toBe(true);
+    expect(pairs(companion, legend("The Master", "", "Time Lord Rogue"))).toBe(false);
+  });
+
+  it("has nothing to say about one commander, or three", () => {
+    expect(pairProblem([legend("Ruby", "")])).toBeNull();
+    expect(pairProblem([legend("A", ""), legend("B", ""), legend("C", "")])).toBeNull();
   });
 });
 
