@@ -20,8 +20,9 @@ export function drizzleDeckSharing(db: DbExecutor): DeckSharingRepository {
           format: string;
           visibility: string;
           first_shared_at: Date | null;
+          public_token: string | null;
         }>(sql`
-          select id, owner_id, name, format, visibility, first_shared_at
+          select id, owner_id, name, format, visibility, first_shared_at, public_token
             from decks where id = ${deckId} for update
         `)
       ).rows;
@@ -33,11 +34,16 @@ export function drizzleDeckSharing(db: DbExecutor): DeckSharingRepository {
         format: row.format,
         visibility: z.enum(VISIBILITIES).parse(row.visibility),
         firstSharedAt: row.first_shared_at === null ? null : new Date(row.first_shared_at),
+        publicToken: row.public_token,
       };
     },
 
     async setVisibility(deckId, visibility, firstSharedAt) {
       await db.update(decks).set({ visibility, firstSharedAt }).where(eq(decks.id, deckId));
+    },
+
+    async setPublicToken(deckId, publicToken) {
+      await db.update(decks).set({ publicToken }).where(eq(decks.id, deckId));
     },
 
     async addComment(input) {

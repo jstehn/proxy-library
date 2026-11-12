@@ -1,4 +1,5 @@
 // Sharing decks, comments and cards to get (design doc 21), against real Postgres.
+import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { activityFeed } from "@/modules/activity";
@@ -10,6 +11,7 @@ import {
   decksFor,
   makeDeckSharing,
   makeDecks,
+  publicDeckByToken,
   sharedDecks,
   type DeckId,
 } from "@/modules/decks";
@@ -30,7 +32,11 @@ beforeAll(loadFixtureCatalog);
 beforeEach(() => resetPlayers(["jack", "sam", "admin"]));
 
 const decks = makeDecks({ unitOfWork, clock });
-const sharing = makeDeckSharing({ unitOfWork, clock });
+const sharing = makeDeckSharing({
+  unitOfWork,
+  clock,
+  tokens: { newPublicToken: () => randomBytes(16).toString("base64url") },
+});
 const resetPlayer = makeResetPlayer({ unitOfWork, clock });
 const jack = actor("jack");
 const sam = actor("sam");
@@ -186,5 +192,29 @@ describe("resetting a player (invariant 7)", () => {
     expect(feed.some((item) => item.kind === "deckComment" && item.deckId === samsDeck.value)).toBe(
       true,
     );
+  });
+});
+
+describe("public deck links (design doc 47)", () => {
+  it("loads a private deck by its token, and invalidates old tokens on rotate or revoke", async () => {
+    const deckId = await deck("Public Lights", "4 Banishing Light\n10 Plains");
+    const enabled = await sharing.enablePublicLink(jack, { deckId });
+    expect(enabled.ok).toBe(true);
+    if (!enabled.ok) return;
+
+    const loaded = await publicDeckByToken(db, enabled.value);
+    expect(loaded?.ownerName).toBe("jack");
+    expect(loaded?.view.deck.name).toBe("Public Lights");
+    expect(await sharedDecks(db)).toEqual([]);
+
+    const rotated = await sharing.rotatePublicLink(jack, { deckId });
+    expect(rotated.ok).toBe(true);
+    if (!rotated.ok) return;
+    expect(rotated.value).not.toBe(enabled.value);
+    expect(await publicDeckByToken(db, enabled.value)).toBeNull();
+    expect((await publicDeckByToken(db, rotated.value))?.view.deck.id).toBe(deckId);
+
+    await sharing.revokePublicLink(jack, { deckId });
+    expect(await publicDeckByToken(db, rotated.value)).toBeNull();
   });
 });

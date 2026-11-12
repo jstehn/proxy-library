@@ -20,7 +20,7 @@ export type PostCommentError = DeckNotFound | CommentInvalid;
 export type DeleteCommentError = CommentNotFound | NotAllowed;
 
 export function makeDeckSharing(dependencies: DeckSharingDependencies) {
-  const { unitOfWork, clock } = dependencies;
+  const { unitOfWork, clock, tokens } = dependencies;
 
   /** Shares a deck with every player, or makes it private again. Owner only. */
   async function setVisibility(
@@ -108,7 +108,61 @@ export function makeDeckSharing(dependencies: DeckSharingDependencies) {
     });
   }
 
-  return { setVisibility, postComment, deleteComment };
+  async function updatePublicToken(
+    actor: Actor,
+    deckId: DeckId,
+    nextToken: (existing: string | null) => string | null,
+  ): Promise<Result<string | null, SetVisibilityError>> {
+    return unitOfWork.run<string | null, SetVisibilityError>(async (services) => {
+      const deck = await services.deckSharing.lockDeck(deckId);
+      if (deck === null || deck.ownerId !== actor.userId) return err({ kind: "DeckNotFound" });
+      const token = nextToken(deck.publicToken);
+      if (token !== deck.publicToken) {
+        await services.deckSharing.setPublicToken(deck.id, token);
+      }
+      return ok(token);
+    });
+  }
+
+  /** Enables a public read-only link for the deck, returning its existing or new token. Owner only. */
+  async function enablePublicLink(
+    actor: Actor,
+    input: { deckId: DeckId },
+  ): Promise<Result<string, SetVisibilityError>> {
+    const result = await updatePublicToken(
+      actor,
+      input.deckId,
+      (existing) => existing ?? tokens.newPublicToken(),
+    );
+    return result.ok ? ok(result.value as string) : result;
+  }
+
+  /** Replaces the deck's public link with a fresh token, invalidating the old URL. Owner only. */
+  async function rotatePublicLink(
+    actor: Actor,
+    input: { deckId: DeckId },
+  ): Promise<Result<string, SetVisibilityError>> {
+    const result = await updatePublicToken(actor, input.deckId, () => tokens.newPublicToken());
+    return result.ok ? ok(result.value as string) : result;
+  }
+
+  /** Turns off the deck's public link so `/d/[token]` returns 404. Owner only. */
+  async function revokePublicLink(
+    actor: Actor,
+    input: { deckId: DeckId },
+  ): Promise<Result<void, SetVisibilityError>> {
+    const result = await updatePublicToken(actor, input.deckId, () => null);
+    return result.ok ? ok() : result;
+  }
+
+  return {
+    setVisibility,
+    postComment,
+    deleteComment,
+    enablePublicLink,
+    rotatePublicLink,
+    revokePublicLink,
+  };
 }
 
 export type DeckSharing = ReturnType<typeof makeDeckSharing>;

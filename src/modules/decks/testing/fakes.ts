@@ -244,6 +244,10 @@ export function inMemoryDeckSharing(decks: readonly DeckForSharing[]) {
       const deck = byId.get(deckId);
       if (deck !== undefined) byId.set(deckId, { ...deck, visibility, firstSharedAt });
     },
+    async setPublicToken(deckId, publicToken) {
+      const deck = byId.get(deckId);
+      if (deck !== undefined) byId.set(deckId, { ...deck, publicToken });
+    },
     async addComment(input) {
       const id = CommentId.of(comments.length + 1);
       comments.push({ id, ...input, deletedAt: null, deletedBy: null });

@@ -32,7 +32,7 @@ export function SharedDeckView(props: {
   targetBracket: Bracket | null;
   seed: string;
   ownerName: string;
-  yourCopies: Readonly<Record<string, number>>;
+  yourCopies?: Readonly<Record<string, number>>;
   listText: string;
   /** The owner's grouping and headings (design doc 34, decision 4). */
   grouping: Grouping;

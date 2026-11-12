@@ -38,12 +38,15 @@ beforeEach(() => {
       format: "commander",
       visibility: "private",
       firstSharedAt: null,
+      publicToken: null,
     },
   ]);
   events = inMemoryEventRecorder();
+  let tokenCounter = 0;
   sharing = makeDeckSharing({
     unitOfWork: inMemoryUnitOfWork({ deckSharing: repository, events }),
     clock: fixedClock(NOW),
+    tokens: { newPublicToken: () => `public-token-${++tokenCounter}` },
   });
 });
 
@@ -134,5 +137,49 @@ describe("comments (design doc 21)", () => {
       ok: false,
       error: { kind: "CommentNotFound" },
     });
+  });
+});
+
+describe("public deck links (design doc 47)", () => {
+  it("are owner-only; non-owners get DeckNotFound", async () => {
+    expect(await sharing.enablePublicLink(sam, { deckId })).toEqual({
+      ok: false,
+      error: { kind: "DeckNotFound" },
+    });
+    expect(await sharing.rotatePublicLink(sam, { deckId })).toEqual({
+      ok: false,
+      error: { kind: "DeckNotFound" },
+    });
+    expect(await sharing.revokePublicLink(sam, { deckId })).toEqual({
+      ok: false,
+      error: { kind: "DeckNotFound" },
+    });
+    expect(repository.deck(deckId)?.publicToken).toBeNull();
+  });
+
+  it("enables idempotently without changing visibility or emitting deckShared", async () => {
+    const first = await sharing.enablePublicLink(jack, { deckId });
+    const second = await sharing.enablePublicLink(jack, { deckId });
+    expect(first).toEqual({ ok: true, value: "public-token-1" });
+    expect(second).toEqual({ ok: true, value: "public-token-1" });
+    expect(repository.deck(deckId)).toMatchObject({
+      visibility: "private",
+      firstSharedAt: null,
+      publicToken: "public-token-1",
+    });
+    expect(events.recorded).toEqual([]);
+  });
+
+  it("rotates to a new token and revokes back to null", async () => {
+    await sharing.enablePublicLink(jack, { deckId });
+    const rotated = await sharing.rotatePublicLink(jack, { deckId });
+    expect(rotated).toEqual({ ok: true, value: "public-token-2" });
+    expect(repository.deck(deckId)?.publicToken).toBe("public-token-2");
+
+    expect(await sharing.revokePublicLink(jack, { deckId })).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(repository.deck(deckId)?.publicToken).toBeNull();
   });
 });

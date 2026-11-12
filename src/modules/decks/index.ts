@@ -264,10 +264,12 @@ export {
   cardsToGetFor,
   deckComments,
   deckForViewer,
+  publicDeckByToken,
   sharedDecks,
   type CardsToGet,
   type CardToGetView,
   type CommentView,
+  type PublicDeck,
   type SharedDeck,
   type ViewedDeck,
 } from "./queries/sharing";

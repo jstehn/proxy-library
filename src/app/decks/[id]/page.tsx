@@ -28,6 +28,7 @@ import { loadBuilderDeck } from "./builder/actions";
 import { DeckBuilder } from "./builder/deck-builder";
 import { DeckComments } from "./comments";
 import { EditAsText } from "./edit-as-text";
+import { PublicLinkControls } from "./public-link-controls";
 import { SharedDeckView } from "./shared-view";
 
 const field =
@@ -165,25 +166,28 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             </Link>
           </div>
         </div>
-        <form action={setVisibilityAction} className="flex items-center gap-2 text-sm">
-          <input type="hidden" name="deckId" value={deck.id} />
-          <input
-            type="hidden"
-            name="visibility"
-            value={viewed.visibility === "shared" ? "private" : "shared"}
-          />
-          <span className="text-zinc-500">
-            {viewed.visibility === "shared"
-              ? "Shared: every player can see it and comment."
-              : "Private: only you can see it."}
-          </span>
-          <button
-            type="submit"
-            className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-          >
-            {viewed.visibility === "shared" ? "Make private" : "Share with the playgroup"}
-          </button>
-        </form>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <form action={setVisibilityAction} className="flex items-center gap-2 text-sm">
+            <input type="hidden" name="deckId" value={deck.id} />
+            <input
+              type="hidden"
+              name="visibility"
+              value={viewed.visibility === "shared" ? "private" : "shared"}
+            />
+            <span className="text-zinc-500">
+              {viewed.visibility === "shared"
+                ? "Shared: every player can see it and comment."
+                : "Private: only you can see it."}
+            </span>
+            <button
+              type="submit"
+              className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
+            >
+              {viewed.visibility === "shared" ? "Make private" : "Share with the playgroup"}
+            </button>
+          </form>
+          <PublicLinkControls deckId={deck.id} publicToken={viewed.publicToken} />
+        </div>
       </header>
       <form action={setUsesRealCardsAction} className="flex flex-wrap items-center gap-2 text-sm">
         <input type="hidden" name="deckId" value={deck.id} />

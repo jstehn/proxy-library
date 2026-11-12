@@ -5,6 +5,7 @@ import {
   canViewDeck,
   cardsToGet,
   checkCommentBody,
+  isValidPublicToken,
   MAX_COMMENT_LENGTH,
 } from "./sharing";
 
@@ -71,5 +72,15 @@ describe("cardsToGet (invariant 6)", () => {
       { oracleId: "bolt", missing: 2, deckIds: [1] },
     ]);
     expect(cardsToGet(needs, new Map([["bolt", 4]]))).toEqual([]);
+  });
+});
+
+describe("public link tokens (design doc 47)", () => {
+  it("accepts URL-safe base64url tokens and rejects short or malformed strings", () => {
+    expect(isValidPublicToken("abcDEF0123456789_-abcd")).toBe(true);
+    expect(isValidPublicToken("")).toBe(false);
+    expect(isValidPublicToken("too-short")).toBe(false);
+    expect(isValidPublicToken("has spaces or /slashes!")).toBe(false);
+    expect(isValidPublicToken("a".repeat(65))).toBe(false);
   });
 });

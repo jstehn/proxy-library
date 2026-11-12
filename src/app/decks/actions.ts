@@ -283,6 +283,41 @@ export async function setVisibilityAction(formData: FormData): Promise<void> {
   redirect(deckPath(deckId));
 }
 
+async function runPublicLinkAction(
+  formData: FormData,
+  run: (deckId: DeckId) => Promise<{ ok: boolean }>,
+): Promise<void> {
+  const deckId = Number(formData.get("deckId"));
+  const result = await run(DeckId.of(deckId));
+  if (!result.ok) redirect("/decks");
+  revalidatePath(deckPath(deckId));
+  redirect(deckPath(deckId));
+}
+
+/** Creates (or returns) the deck's public read-only link (design doc 47). */
+export async function enablePublicLinkAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  await runPublicLinkAction(formData, (deckId) =>
+    getContainer().deckSharing.enablePublicLink(actor, { deckId }),
+  );
+}
+
+/** Replaces the deck's public link with a fresh token (design doc 47). */
+export async function rotatePublicLinkAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  await runPublicLinkAction(formData, (deckId) =>
+    getContainer().deckSharing.rotatePublicLink(actor, { deckId }),
+  );
+}
+
+/** Turns off the deck's public link so `/d/[token]` returns 404 (design doc 47). */
+export async function revokePublicLinkAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  await runPublicLinkAction(formData, (deckId) =>
+    getContainer().deckSharing.revokePublicLink(actor, { deckId }),
+  );
+}
+
 /** Comments on a deck you can see. */
 export async function postCommentAction(formData: FormData): Promise<void> {
   const actor = await requireActor();

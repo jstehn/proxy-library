@@ -9,6 +9,8 @@ import { hasSessionCookie } from "@/server/session-cookie";
 const PUBLIC_PATHS = [
   "/sign-in",
   "/register",
+  "/d/",
+  "/api/images/",
   "/api/health",
   "/api/mcp",
   "/api/tools",
@@ -28,6 +30,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip Next's own files and static assets.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip Next's own files, static assets, and public PWA metadata/service-worker files.
+  matcher: [
+    "/((?!_next/static|_next/image|(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js|icon\\.svg|apple-icon\\.png)$|icons/).*)",
+  ],
 };

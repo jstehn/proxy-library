@@ -1,6 +1,7 @@
 // The wiring shared by both composition roots (the Next.js app and the worker).
 // This is the ONLY place that creates real implementations (database, clock, ...) and
 // hands them to the functions that need them. Each phase adds its module's services here.
+import { randomBytes } from "node:crypto";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -178,7 +179,11 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
-  const deckSharing = makeDeckSharing({ unitOfWork, clock });
+  const deckSharing = makeDeckSharing({
+    unitOfWork,
+    clock,
+    tokens: { newPublicToken: () => randomBytes(16).toString("base64url") },
+  });
   // Token art and "print it" choices for a deck's proxies (design doc 25).
   const chooseToken = makeTokenChoices({ unitOfWork });
   // Proxy PDFs use the large card images, from the catalog's cache (design doc 14, section 3);

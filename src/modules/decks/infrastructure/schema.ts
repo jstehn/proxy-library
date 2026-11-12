@@ -13,6 +13,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
@@ -33,6 +34,8 @@ export const decks = pgTable(
     // Who can see it (design doc 21): "private" (the owner) or "shared" (every player).
     visibility: text("visibility").notNull().default("private"),
     firstSharedAt: timestamptz("first_shared_at"),
+    // Unguessable token for `/d/[token]` public read-only links (design doc 47).
+    publicToken: text("public_token"),
     // "Use my real cards" (design doc 16): real copies count as owned in this deck. New decks
     // turn it on; decks made before the real collection existed keep it off.
     usesRealCards: boolean("uses_real_cards").notNull().default(false),
@@ -51,6 +54,7 @@ export const decks = pgTable(
   (table) => [
     index("decks_owner_idx").on(table.ownerId),
     index("decks_visibility_idx").on(table.visibility),
+    uniqueIndex("decks_public_token_idx").on(table.publicToken),
     check("decks_visibility_known", sql`${table.visibility} in ('private', 'shared')`),
     check("decks_grouping_known", sql`${table.grouping} in ('type', 'custom')`),
     check(

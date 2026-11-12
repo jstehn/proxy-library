@@ -25,7 +25,16 @@ export type DeckForSharing = Readonly<{
   visibility: Visibility;
   /** When it was first shared: the feed announces a deck only once (invariant 2). */
   firstSharedAt: Date | null;
+  /** Unguessable token for `/d/[token]` public read-only links (design doc 47). */
+  publicToken: string | null;
 }>;
+
+const PUBLIC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
+
+/** Whether a candidate URL token has the shape of a generated public deck link token. */
+export function isValidPublicToken(raw: string): boolean {
+  return PUBLIC_TOKEN_PATTERN.test(raw);
+}
 
 export type DeckComment = Readonly<{
   id: CommentId;

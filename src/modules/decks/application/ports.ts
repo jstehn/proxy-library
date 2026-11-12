@@ -139,6 +139,7 @@ export interface DeckSharingRepository {
   /** The deck, locked until the transaction ends, or null if there's no such deck. */
   lockDeck(deckId: DeckId): Promise<DeckForSharing | null>;
   setVisibility(deckId: DeckId, visibility: Visibility, firstSharedAt: Date | null): Promise<void>;
+  setPublicToken(deckId: DeckId, publicToken: string | null): Promise<void>;
   addComment(input: {
     deckId: DeckId;
     authorId: UserId;
@@ -155,4 +156,5 @@ export type DeckSharingServices = { deckSharing: DeckSharingRepository } & Activ
 export type DeckSharingDependencies = {
   unitOfWork: UnitOfWork<DeckSharingServices>;
   clock: Clock;
+  tokens: Readonly<{ newPublicToken(): string }>;
 };

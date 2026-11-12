@@ -3,7 +3,13 @@ import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import { FORMATS, type Format } from "../domain/deck";
-import { canViewDeck, cardsToGet, VISIBILITIES, type Visibility } from "../domain/sharing";
+import {
+  canViewDeck,
+  cardsToGet,
+  isValidPublicToken,
+  VISIBILITIES,
+  type Visibility,
+} from "../domain/sharing";
 import { deckView, type DeckView } from "./decks";
 
 // Read models for shared decks, comments and cards to get (design doc 21, section 9).
@@ -15,6 +21,8 @@ export type ViewedDeck = Readonly<{
   ownerName: string;
   isOwner: boolean;
   visibility: Visibility;
+  /** The deck's public link token, if enabled; only populated for the owner. */
+  publicToken: string | null;
   /** The viewer's own copies of each card in the deck (by oracle id); empty for the owner. */
   yourCopies: Readonly<Record<string, number>>;
 }>;
@@ -26,8 +34,13 @@ export async function deckForViewer(
   deckId: number,
 ): Promise<ViewedDeck | null> {
   const [row] = (
-    await db.execute<{ owner_id: string; owner_name: string; visibility: string }>(sql`
-      select d.owner_id, u.name as owner_name, d.visibility
+    await db.execute<{
+      owner_id: string;
+      owner_name: string;
+      visibility: string;
+      public_token: string | null;
+    }>(sql`
+      select d.owner_id, u.name as owner_name, d.visibility, d.public_token
         from decks d join auth_users u on u.id = d.owner_id
        where d.id = ${deckId}
     `)
@@ -50,7 +63,35 @@ export async function deckForViewer(
     `);
     yourCopies = Object.fromEntries(copies.rows.map((copy) => [copy.oracle_id, copy.owned]));
   }
-  return { view, ownerName: row.owner_name, isOwner, visibility, yourCopies };
+  return {
+    view,
+    ownerName: row.owner_name,
+    isOwner,
+    visibility,
+    publicToken: isOwner ? row.public_token : null,
+    yourCopies,
+  };
+}
+
+export type PublicDeck = Readonly<{
+  view: DeckView;
+  ownerName: string;
+}>;
+
+/** A deck opened via its unguessable `/d/[token]` public link (design doc 47), or null. */
+export async function publicDeckByToken(db: DbExecutor, token: string): Promise<PublicDeck | null> {
+  if (!isValidPublicToken(token)) return null;
+  const [row] = (
+    await db.execute<{ id: number; owner_id: string; owner_name: string }>(sql`
+      select d.id, d.owner_id, u.name as owner_name
+        from decks d join auth_users u on u.id = d.owner_id
+       where d.public_token = ${token}
+    `)
+  ).rows;
+  if (row === undefined) return null;
+  const view = await deckView(db, UserId.of(row.owner_id), Number(row.id));
+  if (view === null) return null;
+  return { view, ownerName: row.owner_name };
 }
 
 export type CommentView = Readonly<{
