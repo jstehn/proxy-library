@@ -16,6 +16,12 @@ import {
 /** A deck line as the profile reads it: the statistics' line, plus its keyword abilities. */
 export type ProfileLine = StatsLine & Readonly<{ keywords?: readonly string[] }>;
 
+/** Community Commander statistics for a card under this deck's commander (design doc 45). */
+export type EdhrecSignal = Readonly<{
+  inclusionRate: number;
+  synergy: number;
+}>;
+
 /** A card that could be suggested, from your collection or the store. */
 export type CandidateCard = Readonly<{
   oracleId: string;
@@ -28,6 +34,7 @@ export type CandidateCard = Readonly<{
   rarity: string;
   priceCents: number | null;
   pool: "owned" | "store";
+  edhrec?: EdhrecSignal | null;
 }>;
 
 export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
@@ -48,7 +55,8 @@ export type Reason =
   | Readonly<{ kind: "theme"; theme: Theme }>
   | Readonly<{ kind: "tribe"; tribe: string }>
   | Readonly<{ kind: "role"; tag: Tag; count?: number; target?: number }>
-  | Readonly<{ kind: "keyword"; keyword: string }>;
+  | Readonly<{ kind: "keyword"; keyword: string }>
+  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>;
 
 export type Scored = Readonly<{ card: CandidateCard; score: number; reasons: readonly Reason[] }>;
 
@@ -67,6 +75,8 @@ export const WEIGHTS = {
   likeMainType: 1,
   likeManaValue: 1,
   strength: 0.5,
+  edhrecSynergy: 4,
+  edhrecInclusion: 2,
 } as const;
 
 /** A theme counts for a deck without a leader when this many non-land cards fit it… */
@@ -230,11 +240,37 @@ export function deckFit(
   return { points, reasons };
 }
 
+const EDHREC_MIN_SYNERGY = 0.05;
+const EDHREC_MIN_INCLUSION = 0.15;
+
+function edhrecFit(
+  edhrec: EdhrecSignal | null | undefined,
+): { points: number; reason: Reason } | null {
+  if (!edhrec) return null;
+  if (edhrec.synergy < EDHREC_MIN_SYNERGY && edhrec.inclusionRate < EDHREC_MIN_INCLUSION) {
+    return null;
+  }
+  const points =
+    WEIGHTS.edhrecSynergy * Math.max(0, edhrec.synergy) +
+    WEIGHTS.edhrecInclusion * Math.max(0, edhrec.inclusionRate);
+  return {
+    points,
+    reason: {
+      kind: "edhrec",
+      inclusionPct: Math.round(edhrec.inclusionRate * 100),
+      synergyPct: Math.round(edhrec.synergy * 100),
+    },
+  };
+}
+
 /** How well a card fits a deck, or null if it shares nothing with it. */
 export function scoreForDeck(card: CandidateCard, profile: DeckProfile): Scored | null {
   const { points, reasons } = deckFit(card, profile);
-  if (points === 0) return null;
-  return { card, score: points + WEIGHTS.strength * strength(card), reasons };
+  const edhrec = edhrecFit(card.edhrec);
+  const totalPoints = points + (edhrec?.points ?? 0);
+  if (totalPoints === 0) return null;
+  if (edhrec !== null) reasons.push(edhrec.reason);
+  return { card, score: totalPoints + WEIGHTS.strength * strength(card), reasons };
 }
 
 /**

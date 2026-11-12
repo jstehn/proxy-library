@@ -14,6 +14,7 @@ import {
 } from "../domain/deck";
 import { isBracket } from "../domain/brackets";
 import type { CardRules } from "../domain/rules";
+import type { EdhrecSignal } from "../domain/suggest";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
@@ -139,6 +140,8 @@ export type DeckLine = Readonly<{
   otherDecks: OtherDeckUse[];
   /** Copies owned that none of your other decks uses (task 42): `owned` minus theirs, at least 0. */
   free: number;
+  /** EDHREC inclusion rate and synergy for this deck's commander(s), when synced. */
+  edhrec?: EdhrecSignal | null;
 }>;
 
 /** Another of your decks holding a card, on any board (task 42). */
@@ -380,7 +383,51 @@ export async function deckView(
       note: row.note,
     })),
   };
-  return { deck, lines, rules };
+  const commanderIds =
+    deck.format === "commander"
+      ? lines.filter((line) => line.board === "commander").map((line) => line.oracleId)
+      : [];
+  const edhrecByCard =
+    commanderIds.length > 0 ? await loadEdhrecSignals(db, commanderIds) : new Map();
+  const linesWithEdhrec =
+    edhrecByCard.size === 0
+      ? lines
+      : lines.map((line) => {
+          const signal = edhrecByCard.get(line.oracleId);
+          return signal ? { ...line, edhrec: signal } : line;
+        });
+
+  return { deck, lines: linesWithEdhrec, rules };
+}
+
+async function loadEdhrecSignals(
+  db: DbExecutor,
+  commanderOracleIds: readonly string[],
+): Promise<Map<string, EdhrecSignal>> {
+  const ids = sql.join(
+    commanderOracleIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+  const rows = await db.execute<{
+    card_oracle_id: string;
+    inclusion_rate: number;
+    synergy: number;
+  }>(sql`
+    select ec.card_oracle_id,
+           max(ec.inclusion_rate)::real as inclusion_rate,
+           max(ec.synergy)::real as synergy
+      from edhrec_commander_cards ec
+     where ec.commander_oracle_id in (${ids})
+     group by ec.card_oracle_id
+  `);
+  const map = new Map<string, EdhrecSignal>();
+  for (const row of rows.rows) {
+    map.set(row.card_oracle_id, {
+      inclusionRate: Number(row.inclusion_rate),
+      synergy: Number(row.synergy),
+    });
+  }
+  return map;
 }
 
 export type DeckRef = Readonly<{ id: number; name: string; quantity: number }>;

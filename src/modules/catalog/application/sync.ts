@@ -22,6 +22,7 @@ import {
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport, TokenPrinting } from "../domain/types";
 import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
+import { makeEdhrecSync, type EdhrecSyncSummary } from "./edhrec";
 import type {
   CardExtras,
   CatalogDependencies,
@@ -68,6 +69,7 @@ export type SyncSummary = {
   priceSnapshots: number;
   /** Official product photos, key art, MSRPs and details from WPN (design doc 13). */
   artwork: ArtworkSummary;
+  edhrec?: EdhrecSyncSummary;
   durationMs: number;
 };
 
@@ -84,6 +86,7 @@ export function makeSync(dependencies: CatalogDependencies) {
   }
 
   const artworkPass = makeArtworkPass(dependencies, inTransaction);
+  const { syncEdhrec } = makeEdhrecSync(dependencies);
 
   async function runSync(kind: SyncKind): Promise<SyncSummary> {
     const startedAt = clock.now().getTime();
@@ -186,6 +189,15 @@ export function makeSync(dependencies: CatalogDependencies) {
       summary.artwork = await artworkPass(kind, states);
     } catch (error) {
       summary.artwork.unreadable.push({ code: "*", error: describeError(error) });
+    }
+
+    // 7. EDHREC community Commander data. Never fails the sync.
+    if (dependencies.edhrec) {
+      try {
+        summary.edhrec = await syncEdhrec();
+      } catch {
+        // Fail-safe: EDHREC is supplementary.
+      }
     }
 
     summary.durationMs = clock.now().getTime() - startedAt;

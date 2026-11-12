@@ -272,3 +272,23 @@ describe("budgetPicks (invariant 5)", () => {
     );
   });
 });
+
+describe("EDHREC community signal scoring", () => {
+  it("scores cards with high EDHREC synergy or inclusion even without local tag matches", () => {
+    const comboPiece = candidate("Thassa's Oracle", {
+      edhrec: { inclusionRate: 0.68, synergy: 0.34 },
+    });
+    const lowSignal = candidate("Draft Chaff", {
+      edhrec: { inclusionRate: 0.04, synergy: 0.01 },
+    });
+
+    const scoredCombo = scoreForDeck(comboPiece, EMPTY);
+    expect(scoredCombo).not.toBeNull();
+    expect(scoredCombo?.reasons).toContainEqual({
+      kind: "edhrec",
+      inclusionPct: 68,
+      synergyPct: 34,
+    });
+    expect(scoreForDeck(lowSignal, EMPTY)).toBeNull();
+  });
+});

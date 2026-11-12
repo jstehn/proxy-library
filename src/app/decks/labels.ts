@@ -119,6 +119,11 @@ export const TAG_LABELS: Record<Tag, string> = {
   protection: "Protection",
 };
 
+function edhrecReasonText(inclusionPct: number, synergyPct: number): string {
+  const sign = synergyPct >= 0 ? "+" : "";
+  return `EDHREC: ${inclusionPct}% of decks (${sign}${synergyPct}% synergy)`;
+}
+
 /** Why a card is suggested, in words (design doc 20). */
 export function reasonText(reason: Reason): string {
   switch (reason.kind) {
@@ -132,6 +137,8 @@ export function reasonText(reason: Reason): string {
         : `${TAG_LABELS[reason.tag]} (${reason.count} of ${reason.target})`;
     case "keyword":
       return reason.keyword;
+    case "edhrec":
+      return edhrecReasonText(reason.inclusionPct, reason.synergyPct);
     default:
       return assertNever(reason);
   }
@@ -161,6 +168,8 @@ export function cutReasonText(reason: CutReason): string {
       return `${reason.flags.map((flag) => FLAG_WORDS[flag]).join(", ")}: over your bracket ${reason.target} target`;
     case "notOwned":
       return `You're short ${reason.short}`;
+    case "edhrec":
+      return edhrecReasonText(reason.inclusionPct, reason.synergyPct);
     default:
       return assertNever(reason);
   }

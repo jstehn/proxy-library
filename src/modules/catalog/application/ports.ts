@@ -12,6 +12,7 @@ import type {
   TokenPrinting,
 } from "../domain/types";
 import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
+import type { EdhrecCommanderPage } from "../domain/edhrec";
 
 // Ports: what the catalog needs from outside (design doc 04, section 6).
 
@@ -235,10 +236,35 @@ export interface SyncRunRepository {
   lastStartedAt(): Promise<Date | null>;
 }
 
+export interface EdhrecGateway {
+  /** Fetch and Zod-parse one commander's EDHREC page, or null on 404. */
+  commanderPage(slug: string): Promise<EdhrecCommanderPage | null>;
+}
+
+export interface EdhrecRepository {
+  /** Commanders to refresh: those in player decks/precons first, then enabled sets, missing or stale. */
+  commandersToSync(
+    staleBefore: Date,
+    limit: number,
+  ): Promise<ReadonlyArray<{ oracleId: string; name: string }>>;
+  /** Resolve card names to oracle_ids in our catalog. */
+  resolveOracleIdsByName(names: readonly string[]): Promise<ReadonlyMap<string, string>>;
+  /** Upsert commander metadata and replace its card entries atomically. */
+  saveCommanderData(
+    commanderOracleId: string,
+    slug: string,
+    status: "ok" | "not_found",
+    totalDecks: number,
+    entries: ReadonlyArray<{ cardOracleId: string; inclusionRate: number; synergy: number }>,
+    fetchedAt: Date,
+  ): Promise<void>;
+}
+
 export type CatalogServices = {
   catalog: CatalogRepository;
   syncRuns: SyncRunRepository;
   artwork: ArtworkRepository;
+  edhrec?: EdhrecRepository;
 };
 
 /**
@@ -259,6 +285,7 @@ export type CatalogDependencies = {
   imageFetcher: ImageFetcher;
   wpn: WpnGateway;
   artworkFiles: ArtworkStore;
+  edhrec?: EdhrecGateway;
   clock: Clock;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;

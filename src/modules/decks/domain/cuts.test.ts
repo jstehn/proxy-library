@@ -114,4 +114,21 @@ describe("rankCuts", () => {
     expect(names(lines)).toEqual(["Aardvark", "Moose", "Zebra"]);
     expect(names([...lines].reverse())).toEqual(["Aardvark", "Moose", "Zebra"]);
   });
+
+  it("gives a keep bonus for high-synergy or high-inclusion EDHREC cards", () => {
+    const staple = line("Commander Staple", {
+      edhrec: { inclusionRate: 0.72, synergy: 0.45 },
+    });
+    const chaff = line("Random Bear");
+    const cuts = rankCuts([commander, staple, chaff], {
+      format: "commander",
+      targetBracket: null,
+    });
+    expect(cuts.map((cut) => cut.name)).toEqual(["Random Bear", "Commander Staple"]);
+    expect(cuts[1].reasons).toContainEqual({
+      kind: "edhrec",
+      inclusionPct: 72,
+      synergyPct: 45,
+    });
+  });
 });

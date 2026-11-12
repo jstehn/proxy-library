@@ -50,6 +50,20 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
+   * `pnpm worker sync-edhrec [limit]`: fetch EDHREC community data for missing/stale commanders
+   * (design doc 45).
+   */
+  async "sync-edhrec"(container) {
+    const rawLimit = process.argv[3];
+    const limit = rawLimit !== undefined ? Number(rawLimit) : undefined;
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+      throw new Error(`limit must be a positive whole number, got ${rawLimit}`);
+    }
+    const summary = await container.catalog.syncEdhrec({ limit });
+    console.log(JSON.stringify(summary));
+  },
+
+  /**
    * `pnpm worker check-packs [packs]`: open that many packs (default 1,000) of every booster
    * recipe in the catalog and report anything that breaks the recipe's rules (design doc 05).
    */

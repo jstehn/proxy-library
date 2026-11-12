@@ -72,6 +72,8 @@ export type SuggestionContext = Readonly<{
   countedQuantities: ReadonlyMap<string, number>;
   /** The deck's lines, with their cards' oracle ids. */
   lines: Array<ProfileLine & Readonly<{ oracleId: string }>>;
+  /** Oracle ids of the deck's commanders (Commander format only; empty otherwise). */
+  commanderOracleIds: string[];
   /** The bracket the owner chose (Commander only), and the deck as the estimate reads it. */
   targetBracket: Bracket | null;
   bracketLines: BracketLine[];
@@ -151,6 +153,8 @@ export async function suggestionContext(
     inDeck: atLimit,
     countedQuantities,
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
+    commanderOracleIds:
+      view.deck.format === "commander" ? commanders.map((line) => line.oracleId) : [],
     targetBracket: view.deck.targetBracket,
     bracketLines: view.lines.map(bracketLine),
   };
@@ -236,7 +240,25 @@ type CandidateRow = {
   owned_real: number;
   other_decks: number;
   free: number;
+  edhrec_inclusion: number | null;
+  edhrec_synergy: number | null;
 };
+
+function edhrecCte(commanderOracleIds: string[]): SQL {
+  if (commanderOracleIds.length === 0) {
+    return sql`select null::text as card_oracle_id, 0::real as inclusion_rate, 0::real as synergy where false`;
+  }
+  const ids = sql.join(
+    commanderOracleIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+  return sql`select ec.card_oracle_id,
+                    max(ec.inclusion_rate)::real as inclusion_rate,
+                    max(ec.synergy)::real as synergy
+               from edhrec_commander_cards ec
+              where ec.commander_oracle_id in (${ids})
+              group by ec.card_oracle_id`;
+}
 
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
 function candidateColumns(context: SuggestionContext): SQL {
@@ -265,6 +287,9 @@ async function ownedCandidates(
              (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
         from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
        group by p.oracle_id
+    ),
+    edhrec as (
+      ${edhrecCte(context.commanderOracleIds)}
     )
     select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
            (select s.usd_cents from price_snapshots s
@@ -277,10 +302,15 @@ async function ownedCandidates(
                                               join decks d on d.id = e.deck_id
                                              where d.owner_id = ${userId} and d.id <> ${context.deckId}
                                                and e.oracle_id = owned.oracle_id
-                                               and e.board <> 'maybe'), 0), 0)::int as free
+                                               and e.board <> 'maybe'), 0), 0)::int as free,
+           edhrec.inclusion_rate as edhrec_inclusion,
+           edhrec.synergy as edhrec_synergy
       from owned join printings p on p.id = owned.printing_id
-     where ${fitsDeck(context)} and ${sharedCount(want)} > 0
-     order by ${sharedCount(want)} desc, p.name
+      left join edhrec on edhrec.card_oracle_id = p.oracle_id
+     where ${fitsDeck(context)}
+       and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15)
+     order by ${sharedCount(want)} desc, coalesce(edhrec.synergy, 0) desc,
+              coalesce(edhrec.inclusion_rate, 0) desc, p.name
      limit ${CANDIDATE_LIMIT}
   `);
   return rows.rows
@@ -299,20 +329,27 @@ async function storeCandidates(
   want: Wanted,
 ): Promise<SuggestionCard[]> {
   const rows = await db.execute<CandidateRow>(sql`
-    with matching as (
+    with edhrec as (
+      ${edhrecCte(context.commanderOracleIds)}
+    ),
+    matching as (
       select distinct on (p.oracle_id) p.oracle_id, ${sharedCount(want)} as shared,
+             coalesce(edhrec.synergy, 0) as edhrec_synergy,
+             coalesce(edhrec.inclusion_rate, 0) as edhrec_inclusion,
              case p.rarity when 'mythic' then 3 when 'rare' then 2 when 'uncommon' then 1 else 0 end
                as rarity_rank
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${fitsDeck(context)} and ${sharedCount(want)} > 0
+        left join edhrec on edhrec.card_oracle_id = p.oracle_id
+       where ${fitsDeck(context)}
+         and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15)
          and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
                            join printings op on op.id = c.printing_id
                           where op.oracle_id = p.oracle_id)
        order by p.oracle_id, rarity_rank desc
     ),
     kept as (
-      select oracle_id from matching
-       order by shared desc, rarity_rank desc, oracle_id
+      select oracle_id, edhrec_inclusion, edhrec_synergy from matching
+       order by shared desc, edhrec_synergy desc, edhrec_inclusion desc, rarity_rank desc, oracle_id
        limit ${CANDIDATE_LIMIT}
     ),
     cheapest as (
@@ -330,8 +367,11 @@ async function storeCandidates(
         ) best on true
     )
     select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
-           0 as owned, 0 as owned_real, 0 as other_decks, 0 as free
-      from cheapest join printings p on p.id = cheapest.printing_id
+           0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
+           kept.edhrec_inclusion, kept.edhrec_synergy
+      from cheapest
+      join kept on kept.oracle_id = cheapest.oracle_id
+      join printings p on p.id = cheapest.printing_id
   `);
   return rows.rows.map((row) => toCard(row, "store", context));
 }
@@ -378,6 +418,14 @@ function toCard(
       (THEMES as readonly string[]).includes(theme),
     ),
     rarity: row.rarity,
+    ...(row.edhrec_inclusion !== null && row.edhrec_synergy !== null
+      ? {
+          edhrec: {
+            inclusionRate: Number(row.edhrec_inclusion),
+            synergy: Number(row.edhrec_synergy),
+          },
+        }
+      : {}),
   };
 }
 
@@ -430,7 +478,9 @@ export async function deckSuggestions(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  if (nothingWanted(want)) return { profile, forDeck: EMPTY_LIST, forRoles: [] };
+  if (nothingWanted(want) && context.commanderOracleIds.length === 0) {
+    return { profile, forDeck: EMPTY_LIST, forRoles: [] };
+  }
 
   const [owned, store] = await Promise.all([
     ownedCandidates(db, userId, context, want).then((cards) => withinTarget(cards, context)),
@@ -519,7 +569,9 @@ export async function budgetList(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  if (nothingWanted(want)) return { picks: [], totalCents: 0, listText: "", hiddenOverTarget: 0 };
+  if (nothingWanted(want) && context.commanderOracleIds.length === 0) {
+    return { picks: [], totalCents: 0, listText: "", hiddenOverTarget: 0 };
+  }
   const split = withinTarget(await storeCandidates(db, userId, context, want), context);
   const store = split.kept;
   const byId = new Map(store.map((card) => [card.oracleId, card]));

@@ -3,7 +3,14 @@ import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { deckStats, isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
-import { deckFit, deckProfile, strength, type ProfileLine, type Reason } from "./suggest";
+import {
+  deckFit,
+  deckProfile,
+  strength,
+  type EdhrecSignal,
+  type ProfileLine,
+  type Reason,
+} from "./suggest";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
 // each with the reasons for its score. The same local rules as suggestions (design doc 20) judge
@@ -22,6 +29,8 @@ export type CutLine = ProfileLine &
     isGameChanger: boolean;
     /** Copies counted as owned in this deck. */
     owned: number;
+    /** Community EDHREC stats under this deck's commander (design doc 45). */
+    edhrec?: EdhrecSignal | null;
   }>;
 
 /** Why a card scores as it does; the builder and `rank_cuts` put these into words. */
@@ -30,6 +39,8 @@ export type CutReason =
   | Readonly<{ kind: "noFit" }>
   /** What it does fit (design doc 20's reasons): why to keep it. */
   | Readonly<{ kind: "fits"; reasons: readonly Reason[] }>
+  /** Popular or high-synergy with this commander on EDHREC (design doc 45). */
+  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>
   /** The deck has more of this role than its target needs. */
   | Readonly<{ kind: "surplusRole"; tag: TargetedTag; count: number; target: number }>
   /** The deck has no more of this role than it needs: cutting it would leave a gap. */
@@ -64,6 +75,8 @@ export const CUT_WEIGHTS = {
   overBracket: -5,
   notOwned: -1,
   strength: 0.5,
+  edhrecSynergy: 2,
+  edhrecInclusion: 1.5,
 } as const;
 
 /** Average non-land mana value above which a curve counts as high (a rough guide per format). */
@@ -149,6 +162,17 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       if (line.owned < line.quantity) {
         score += CUT_WEIGHTS.notOwned;
         reasons.push({ kind: "notOwned", short: line.quantity - line.owned });
+      }
+
+      if (line.edhrec && (line.edhrec.synergy >= 0.15 || line.edhrec.inclusionRate >= 0.3)) {
+        score +=
+          CUT_WEIGHTS.edhrecSynergy * Math.max(0, line.edhrec.synergy) +
+          CUT_WEIGHTS.edhrecInclusion * Math.max(0, line.edhrec.inclusionRate);
+        reasons.push({
+          kind: "edhrec",
+          inclusionPct: Math.round(line.edhrec.inclusionRate * 100),
+          synergyPct: Math.round(line.edhrec.synergy * 100),
+        });
       }
 
       score +=

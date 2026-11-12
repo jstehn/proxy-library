@@ -18,7 +18,9 @@ import {
   diskImageStore,
   drizzleArtworkRepository,
   drizzleCatalogRepository,
+  drizzleEdhrecRepository,
   drizzleSyncRunRepository,
+  httpEdhrecGateway,
   httpImageFetcher,
   httpMtgjsonGateway,
   httpScryfallGateway,
@@ -102,6 +104,7 @@ export function buildCore(config: Config) {
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
       artwork: drizzleArtworkRepository(transaction),
+      edhrec: drizzleEdhrecRepository(transaction),
       boosters: drizzleBoosterSource(transaction),
       collection: drizzleCollectionRepository(transaction),
       items: drizzleItemRepository(transaction),
@@ -164,6 +167,8 @@ export function buildCore(config: Config) {
     // WPN pages one a second; their images come from a CDN (design doc 13, rule 3).
     wpn: httpWpnGateway(politeFetch(1), politeFetch(4)),
     artworkFiles: diskArtworkStore(config.imageCacheDir),
+    // EDHREC pages one a second (design doc 45, invariant 5).
+    edhrec: httpEdhrecGateway(politeFetch(1)),
     clock,
     syncTime: config.syncTime,
   });

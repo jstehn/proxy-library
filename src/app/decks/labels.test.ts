@@ -23,5 +23,8 @@ describe("cutReasonText", () => {
       "a Game Changer: over your bracket 2 target",
     );
     expect(cutReasonText({ kind: "notOwned", short: 1 })).toBe("You're short 1");
+    expect(cutReasonText({ kind: "edhrec", inclusionPct: 45, synergyPct: 18 })).toBe(
+      "EDHREC: 45% of decks (+18% synergy)",
+    );
   });
 });

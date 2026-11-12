@@ -307,3 +307,37 @@ export const printingTokens = pgTable(
     index("printing_tokens_token_idx").on(table.tokenId),
   ],
 );
+
+/**
+ * Cached EDHREC commander page status (design doc 45). Avoids re-fetching missing commanders
+ * every night and lets the worker refresh stale ones on a 14-day TTL.
+ */
+export const edhrecCommanders = pgTable("edhrec_commanders", {
+  commanderOracleId: text("commander_oracle_id").primaryKey(),
+  slug: text("slug").notNull(),
+  status: text("status").notNull(), // "ok" | "not_found"
+  totalDecks: integer("total_decks").notNull().default(0),
+  fetchedAt: timestamptz("fetched_at").notNull(),
+});
+
+/** Community inclusion rate and synergy score per card for a commander (design doc 45). */
+export const edhrecCommanderCards = pgTable(
+  "edhrec_commander_cards",
+  {
+    commanderOracleId: text("commander_oracle_id")
+      .notNull()
+      .references(() => edhrecCommanders.commanderOracleId, { onDelete: "cascade" }),
+    cardOracleId: text("card_oracle_id").notNull(),
+    inclusionRate: doublePrecision("inclusion_rate").notNull(),
+    synergy: doublePrecision("synergy").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commanderOracleId, table.cardOracleId] }),
+    index("edhrec_commander_cards_synergy_idx").on(table.commanderOracleId, table.synergy),
+    check(
+      "edhrec_inclusion_range",
+      sql`${table.inclusionRate} >= 0 and ${table.inclusionRate} <= 1`,
+    ),
+    check("edhrec_synergy_range", sql`${table.synergy} >= -1 and ${table.synergy} <= 1`),
+  ],
+);
