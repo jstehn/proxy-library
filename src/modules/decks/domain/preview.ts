@@ -9,7 +9,7 @@ import {
   type BracketSource,
   type BracketWarning,
 } from "./brackets";
-import type { Board, Format } from "./deck";
+import { BOARDS, type Board, type Format } from "./deck";
 import { deckProblems, shortCount, type CardRules, type DeckProblem } from "./rules";
 import {
   deckSize,
@@ -130,6 +130,7 @@ function snapshotOf(
     printingId: null,
     finish: null,
     heading: null,
+    note: null,
   }));
   const problems = deckProblems({ format, entries }, rulesLookup, ownedLookup);
   return {
@@ -138,6 +139,141 @@ function snapshotOf(
     bracket: estimateBracket(format, lines.map(bracketLine)),
     shortTotal: shortCount(problems),
   };
+}
+
+function buildComparison(input: {
+  format: Format;
+  targetBracket: Bracket | null;
+  before: readonly PreviewLine[];
+  after: readonly PreviewLine[];
+  changes: readonly AppliedChange[];
+}): ChangePreview {
+  const rulesByCard = new Map<string, CardRules>();
+  const ownedByCard = new Map<string, number>();
+  for (const line of [...input.before, ...input.after]) {
+    rulesByCard.set(line.oracleId, line.rules);
+    ownedByCard.set(line.oracleId, line.owned);
+  }
+  const rulesLookup = (oracleId: string) => {
+    const found = rulesByCard.get(oracleId);
+    if (found === undefined) throw new Error(`missing rules for ${oracleId}`);
+    return found;
+  };
+  const ownedLookup = (oracleId: string) => ownedByCard.get(oracleId) ?? 0;
+
+  const before = snapshotOf(input.format, input.before, rulesLookup, ownedLookup);
+  const after = snapshotOf(input.format, input.after, rulesLookup, ownedLookup);
+
+  const beforeKeys = new Set(before.problems.map(problemKey));
+  const afterKeys = new Set(after.problems.map(problemKey));
+  const added = after.problems.filter((problem) => !beforeKeys.has(problemKey(problem)));
+  const resolved = before.problems.filter((problem) => !afterKeys.has(problemKey(problem)));
+  const remaining = after.problems.filter((problem) => beforeKeys.has(problemKey(problem)));
+
+  const targets = roleTargets(input.format);
+  const roles: RoleDelta[] = TAGS.map((tag) => ({
+    tag,
+    before: before.stats.tags[tag],
+    after: after.stats.tags[tag],
+    target: targets !== null && tag in targets ? targets[tag as TargetedTag] : null,
+  }));
+  const newlyMetRoles =
+    targets === null
+      ? []
+      : TARGETED_TAGS.filter(
+          (tag) => before.stats.tags[tag] < targets[tag] && after.stats.tags[tag] >= targets[tag],
+        );
+  const newlyMissedRoles =
+    targets === null
+      ? []
+      : TARGETED_TAGS.filter(
+          (tag) => before.stats.tags[tag] >= targets[tag] && after.stats.tags[tag] < targets[tag],
+        );
+
+  const beforeShort = new Map<string, number>();
+  for (const problem of before.problems) {
+    if (problem.kind === "Short") {
+      beforeShort.set(problem.oracleId, problem.needed - problem.owned);
+    }
+  }
+  const newlyShort = after.problems.filter(
+    (problem): problem is Extract<DeckProblem, { kind: "Short" }> =>
+      problem.kind === "Short" &&
+      problem.needed - problem.owned > (beforeShort.get(problem.oracleId) ?? 0),
+  );
+
+  return {
+    format: input.format,
+    targetSize: deckSize(input.format),
+    targetBracket: input.targetBracket,
+    before,
+    after,
+    changes: input.changes,
+    problems: { added, resolved, remaining },
+    roles,
+    newlyMetRoles,
+    newlyMissedRoles,
+    bracket: {
+      before: before.bracket,
+      after: after.bracket,
+      warningAfter: bracketWarning(after.bracket, input.targetBracket),
+    },
+    priceDeltaCents: after.stats.priceCents - before.stats.priceCents,
+    newlyShort,
+  };
+}
+
+/**
+ * Pure before/after comparison of two deck states (design doc 41): computes card quantity changes
+ * per board plus curve, roles, problems, bracket and price differences.
+ */
+export function compareDeckStates(input: {
+  format: Format;
+  targetBracket: Bracket | null;
+  before: readonly PreviewLine[];
+  after: readonly PreviewLine[];
+}): ChangePreview {
+  const key = (oracleId: string, board: Board) => `${board}:${oracleId}`;
+  const beforeMap = new Map<string, PreviewLine>();
+  const afterMap = new Map<string, PreviewLine>();
+  for (const line of input.before) beforeMap.set(key(line.oracleId, line.board), line);
+  for (const line of input.after) afterMap.set(key(line.oracleId, line.board), line);
+
+  const boardRank = new Map<Board, number>(BOARDS.map((board, index) => [board, index]));
+  const allKeys = new Set([...beforeMap.keys(), ...afterMap.keys()]);
+  const changes: AppliedChange[] = [...allKeys]
+    .flatMap((entryKey) => {
+      const beforeLine = beforeMap.get(entryKey);
+      const afterLine = afterMap.get(entryKey);
+      const beforeQuantity = beforeLine?.quantity ?? 0;
+      const afterQuantity = afterLine?.quantity ?? 0;
+      if (beforeQuantity === afterQuantity) return [];
+      const line = afterLine ?? beforeLine;
+      if (line === undefined) return [];
+      return [
+        {
+          oracleId: line.oracleId,
+          name: line.name,
+          board: line.board,
+          beforeQuantity,
+          afterQuantity,
+        },
+      ];
+    })
+    .sort(
+      (a, b) =>
+        (boardRank.get(a.board) ?? 99) - (boardRank.get(b.board) ?? 99) ||
+        a.name.localeCompare(b.name) ||
+        a.oracleId.localeCompare(b.oracleId),
+    );
+
+  return buildComparison({
+    format: input.format,
+    targetBracket: input.targetBracket,
+    before: input.before,
+    after: input.after,
+    changes,
+  });
 }
 
 /**
@@ -192,22 +328,6 @@ export function previewChanges(input: {
     else working[index] = nextLine;
   }
 
-  const rulesByCard = new Map<string, CardRules>();
-  const ownedByCard = new Map<string, number>();
-  for (const line of [...input.before, ...working]) {
-    rulesByCard.set(line.oracleId, line.rules);
-    ownedByCard.set(line.oracleId, line.owned);
-  }
-  const rulesLookup = (oracleId: string) => {
-    const found = rulesByCard.get(oracleId);
-    if (found === undefined) throw new Error(`missing rules for ${oracleId}`);
-    return found;
-  };
-  const ownedLookup = (oracleId: string) => ownedByCard.get(oracleId) ?? 0;
-
-  const before = snapshotOf(input.format, input.before, rulesLookup, ownedLookup);
-  const after = snapshotOf(input.format, working, rulesLookup, ownedLookup);
-
   const changes: AppliedChange[] = [...touched.entries()].map(([key, { oracleId, board }]) => {
     const afterLine = working.find((entry) => entry.oracleId === oracleId && entry.board === board);
     return {
@@ -219,61 +339,11 @@ export function previewChanges(input: {
     };
   });
 
-  const beforeKeys = new Set(before.problems.map(problemKey));
-  const afterKeys = new Set(after.problems.map(problemKey));
-  const added = after.problems.filter((problem) => !beforeKeys.has(problemKey(problem)));
-  const resolved = before.problems.filter((problem) => !afterKeys.has(problemKey(problem)));
-  const remaining = after.problems.filter((problem) => beforeKeys.has(problemKey(problem)));
-
-  const targets = roleTargets(input.format);
-  const roles: RoleDelta[] = TAGS.map((tag) => ({
-    tag,
-    before: before.stats.tags[tag],
-    after: after.stats.tags[tag],
-    target: targets !== null && tag in targets ? targets[tag as TargetedTag] : null,
-  }));
-  const newlyMetRoles =
-    targets === null
-      ? []
-      : TARGETED_TAGS.filter(
-          (tag) => before.stats.tags[tag] < targets[tag] && after.stats.tags[tag] >= targets[tag],
-        );
-  const newlyMissedRoles =
-    targets === null
-      ? []
-      : TARGETED_TAGS.filter(
-          (tag) => before.stats.tags[tag] >= targets[tag] && after.stats.tags[tag] < targets[tag],
-        );
-
-  const beforeShort = new Map<string, number>();
-  for (const problem of before.problems) {
-    if (problem.kind === "Short") {
-      beforeShort.set(problem.oracleId, problem.needed - problem.owned);
-    }
-  }
-  const newlyShort = after.problems.filter(
-    (problem): problem is Extract<DeckProblem, { kind: "Short" }> =>
-      problem.kind === "Short" &&
-      problem.needed - problem.owned > (beforeShort.get(problem.oracleId) ?? 0),
-  );
-
-  return {
+  return buildComparison({
     format: input.format,
-    targetSize: deckSize(input.format),
     targetBracket: input.targetBracket,
-    before,
-    after,
+    before: input.before,
+    after: working,
     changes,
-    problems: { added, resolved, remaining },
-    roles,
-    newlyMetRoles,
-    newlyMissedRoles,
-    bracket: {
-      before: before.bracket,
-      after: after.bracket,
-      warningAfter: bracketWarning(after.bracket, input.targetBracket),
-    },
-    priceDeltaCents: after.stats.priceCents - before.stats.priceCents,
-    newlyShort,
-  };
+  });
 }

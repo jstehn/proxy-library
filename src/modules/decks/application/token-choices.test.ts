@@ -58,6 +58,7 @@ beforeEach(async () => {
           printingId: null,
           finish: null,
           heading: null,
+          note: null,
         },
       ],
     },

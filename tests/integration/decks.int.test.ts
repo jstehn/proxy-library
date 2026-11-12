@@ -5,11 +5,17 @@ import { PrintingId } from "@/modules/catalog";
 import {
   browseCollection,
   cardPrintings,
+  compareDeckSnapshot,
   deckProblems,
+  deckTokenLines,
   deckView,
   decksFor,
+  filterTokenChecklist,
   fingerprint,
+  listDeckSnapshots,
   makeDecks,
+  summarizeTokenChecklist,
+  toTokenChecklistItem,
   type DeckId,
 } from "@/modules/decks";
 import { drizzleCardLookup } from "@/modules/decks/infrastructure";
@@ -504,5 +510,164 @@ describe("headings (design doc 34)", () => {
     expect(after?.deck).toMatchObject({ grouping: "type", headings: ["Mana"] });
     // The fingerprint reads headings, so Edit as text notices a heading changed elsewhere.
     expect(fingerprint(after?.deck.entries ?? [])).not.toBe(fingerprint(view?.deck.entries ?? []));
+  });
+});
+
+describe("line notes and snapshots (design doc 41)", () => {
+  it("stores line notes, preserves them across board moves, and clears them cleanly", async () => {
+    const { name } = await card();
+    const deckId = await newDeck();
+    await decks.importList(jack, { deckId, text: `1 ${name}\n20 Plains` });
+    const oid = await oracleOf(name);
+
+    const saved = await decks.setEntryNote(jack, {
+      deckId,
+      oracleId: oid,
+      board: "main",
+      note: "  Early blocker  ",
+    });
+    expect(saved).toEqual({ ok: true, value: undefined });
+
+    const moved = await decks.moveEntry(jack, {
+      deckId,
+      oracleId: oid,
+      from: "main",
+      to: "maybe",
+    });
+    expect(moved.ok).toBe(true);
+
+    let view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines.find((line) => line.oracleId === oid)).toMatchObject({
+      board: "maybe",
+      note: "Early blocker",
+    });
+
+    const tooLong = await decks.setEntryNote(jack, {
+      deckId,
+      oracleId: oid,
+      board: "maybe",
+      note: "x".repeat(201),
+    });
+    expect(tooLong).toEqual({ ok: false, error: { kind: "NoteInvalid", maximum: 200 } });
+
+    await decks.setEntryNote(jack, { deckId, oracleId: oid, board: "maybe", note: null });
+    view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines.find((line) => line.oracleId === oid)?.note).toBeNull();
+  });
+
+  it("saves, lists, compares, restores, and deletes deck snapshots against Postgres", async () => {
+    const { name } = await card();
+    const oid = await oracleOf(name);
+    const deckId = await newDeck();
+    await decks.importList(jack, { deckId, text: `2 ${name}\n20 Plains` });
+    await decks.setEntryNote(jack, { deckId, oracleId: oid, board: "main", note: "Original role" });
+
+    const snap1 = await decks.saveSnapshot(jack, { deckId, label: "Before cuts" });
+    if (!snap1.ok) throw new Error(snap1.error.kind);
+
+    await decks.setEntry(jack, {
+      deckId,
+      oracleId: oid,
+      board: "main",
+      quantity: 1,
+      note: "Trimmed to 1",
+    });
+    const carrotOid = await oracleOf("Carrot Cake");
+    await decks.setEntry(jack, { deckId, oracleId: carrotOid, board: "main", quantity: 2 });
+
+    const snap2 = await decks.saveSnapshot(jack, { deckId, label: "After cuts" });
+    if (!snap2.ok) throw new Error(snap2.error.kind);
+
+    const list = await listDeckSnapshots(db, jack.userId, deckId);
+    expect(list?.map((each) => each.label)).toEqual(["After cuts", "Before cuts"]);
+
+    const vsLive = await compareDeckSnapshot(db, jack.userId, deckId, snap1.value);
+    expect(vsLive).not.toBeNull();
+    expect(vsLive?.beforeSide).toMatchObject({ label: "Before cuts" });
+    expect(vsLive?.afterSide).toMatchObject({ label: "Current deck" });
+    expect(vsLive?.before.stats.cardCount).toBe(22);
+    expect(vsLive?.after.stats.cardCount).toBe(23);
+    expect(vsLive?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name,
+          board: "main",
+          beforeQuantity: 2,
+          afterQuantity: 1,
+        }),
+        expect.objectContaining({
+          name: "Carrot Cake",
+          board: "main",
+          beforeQuantity: 0,
+          afterQuantity: 2,
+        }),
+      ]),
+    );
+
+    const between = await compareDeckSnapshot(db, jack.userId, deckId, snap1.value, snap2.value);
+    expect(between?.afterSide).toMatchObject({ label: "After cuts" });
+
+    const restored = await decks.restoreSnapshot(jack, { deckId, snapshotId: snap1.value });
+    expect(restored.ok).toBe(true);
+    const view = await deckView(db, jack.userId, deckId);
+    expect(view?.lines.find((line) => line.oracleId === oid)).toMatchObject({
+      quantity: 2,
+      note: "Original role",
+    });
+    expect(view?.lines.find((line) => line.oracleId === carrotOid)).toBeUndefined();
+
+    const deleted = await decks.deleteSnapshot(jack, { deckId, snapshotId: snap2.value });
+    expect(deleted).toEqual({ ok: true, value: undefined });
+    expect((await listDeckSnapshots(db, jack.userId, deckId))?.length).toBe(1);
+  });
+});
+
+describe("token and emblem checklist (design doc 42)", () => {
+  beforeAll(loadFixtureCatalog);
+
+  it("summarizes mainboard and sideboard tokens while excluding maybeboard makers", async () => {
+    const deckId = await newDeck();
+    await decks.importList(jack, {
+      deckId,
+      text: [
+        "1 Carrot Cake",
+        "20 Plains",
+        "Sideboard",
+        "1 Crumb and Get It",
+        "Maybeboard",
+        "1 Beza, the Bounding Spring",
+      ].join("\n"),
+    });
+
+    const view = await deckView(db, jack.userId, deckId);
+    if (view === null) throw new Error("missing deck view");
+
+    const tokens = await deckTokenLines(
+      db,
+      view.deck.id,
+      view.lines.map((line) => ({
+        oracleId: line.oracleId,
+        printingId: line.printingId,
+        name: line.name,
+        board: line.board,
+      })),
+    );
+    expect(summarizeTokenChecklist(tokens)).toEqual({
+      total: 2,
+      tokens: 2,
+      emblems: 0,
+      helpers: 0,
+      mainboard: 1,
+      sideboardOnly: 1,
+    });
+
+    const items = tokens.map(toTokenChecklistItem);
+    expect(items.map((item) => [item.name, item.sideboardOnly])).toEqual([
+      ["Food", true],
+      ["Rabbit", false],
+    ]);
+    expect(filterTokenChecklist(items, { board: "played" }).map((item) => item.name)).toEqual([
+      "Rabbit",
+    ]);
   });
 });

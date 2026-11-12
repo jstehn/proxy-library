@@ -14,13 +14,16 @@ import type {
 import { DeckId, type Deck } from "../domain/deck";
 import { tidyHeadings } from "../domain/headings";
 import { CommentId, type DeckForSharing } from "../domain/sharing";
+import { SnapshotId, type DeckSnapshot } from "../domain/snapshots";
 import type { TokenChoice } from "../domain/token-proxies";
 
 // In-memory stand-ins for the decks ports.
 
 export function inMemoryDeckRepository() {
   const decks = new Map<DeckId, Deck>();
+  const snapshots = new Map<SnapshotId, DeckSnapshot>();
   let lastId = 0;
+  let lastSnapshotId = 0;
 
   const repository: DeckRepository = {
     async create(input) {
@@ -50,14 +53,45 @@ export function inMemoryDeckRepository() {
     },
     async delete(deckId) {
       decks.delete(deckId);
+      for (const [id, snapshot] of snapshots) {
+        if (snapshot.deckId === deckId) snapshots.delete(id);
+      }
     },
     async deleteAllOf(ownerId) {
       const owned = [...decks.values()].filter((deck) => deck.ownerId === ownerId);
-      for (const deck of owned) decks.delete(deck.id);
+      for (const deck of owned) {
+        decks.delete(deck.id);
+        for (const [id, snapshot] of snapshots) {
+          if (snapshot.deckId === deck.id) snapshots.delete(id);
+        }
+      }
       return owned.length;
     },
+    async countSnapshots(deckId) {
+      return [...snapshots.values()].filter((snapshot) => snapshot.deckId === deckId).length;
+    },
+    async saveSnapshot(snapshot) {
+      const id = SnapshotId.of(++lastSnapshotId);
+      snapshots.set(id, { id, ...snapshot });
+      return id;
+    },
+    async getSnapshot(deckId, snapshotId) {
+      const found = snapshots.get(snapshotId);
+      return found !== undefined && found.deckId === deckId ? found : null;
+    },
+    async deleteSnapshot(deckId, snapshotId) {
+      const found = snapshots.get(snapshotId);
+      if (found === undefined || found.deckId !== deckId) return false;
+      snapshots.delete(snapshotId);
+      return true;
+    },
   };
-  return { ...repository, get: (deckId: DeckId) => decks.get(deckId) };
+  return {
+    ...repository,
+    get: (deckId: DeckId) => decks.get(deckId),
+    snapshotsOf: (deckId: DeckId) =>
+      [...snapshots.values()].filter((snapshot) => snapshot.deckId === deckId),
+  };
 }
 
 /** A token printing the fake catalog has, and the cards (oracle ids) that make it. */
@@ -120,6 +154,14 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
         if (printingIds.includes(printingId)) found.set(printingId, card.oracleId);
       }
       return found;
+    },
+    async existingOracleIds(oracleIds) {
+      const known = new Set(cards.map((card) => card.oracleId));
+      return new Set(oracleIds.filter((oracleId) => known.has(oracleId)));
+    },
+    async existingPrintings(printingIds) {
+      const known = new Set(cards.map((card) => card.printingId));
+      return new Set(printingIds.filter((printingId) => known.has(printingId)));
     },
     async resolve(_ownerId: UserId, queries: readonly CardQuery[]) {
       const found = new Map<number, ResolvedCard>();

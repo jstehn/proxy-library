@@ -2,12 +2,23 @@ import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import { samplePrintingId } from "../testing/fakes";
 import { DeckId, withEntry, type Board, type Deck, type Format } from "./deck";
-import { canBeCommander, deckProblems, pairProblem, shortCount, type CardRules } from "./rules";
+import {
+  canBeCommander,
+  copyLimitFor,
+  deckProblems,
+  formatRulesSummary,
+  legalFormatsForCards,
+  pairProblem,
+  shortCount,
+  type CardRules,
+} from "./rules";
 
 // Small made-up cards, keyed by oracle id.
 const legalEverywhere = {
   standard: "legal",
+  pioneer: "legal",
   modern: "legal",
+  legacy: "legal",
   vintage: "legal",
   commander: "legal",
   pauper: "legal",
@@ -450,8 +461,66 @@ describe("withEntry", () => {
         printingId: "p1",
         finish: null,
         heading: null,
+        note: null,
       },
     ]);
     expect(withEntry(more, { oracleId: "bolt", board: "main", quantity: 0 }).entries).toEqual([]);
+  });
+});
+
+describe("60-card helpers (design doc 44)", () => {
+  it("reports format rules summary and per-card copy limits", () => {
+    expect(formatRulesSummary("standard")).toEqual({
+      minMainCards: 60,
+      exactSize: false,
+      maxCopies: 4,
+      maxSideboard: 15,
+    });
+    expect(formatRulesSummary("commander")).toEqual({
+      minMainCards: 100,
+      exactSize: true,
+      maxCopies: 1,
+      maxSideboard: null,
+    });
+    expect(formatRulesSummary("limited")).toEqual({
+      minMainCards: 40,
+      exactSize: false,
+      maxCopies: null,
+      maxSideboard: null,
+    });
+
+    expect(copyLimitFor("modern", CARDS.bolt)).toBe(4);
+    expect(copyLimitFor("vintage", CARDS.lotus)).toBe(1);
+    expect(copyLimitFor("modern", CARDS.mountain)).toBeNull();
+    expect(copyLimitFor("modern", CARDS.rats)).toBeNull();
+    expect(copyLimitFor("casual", CARDS.bolt)).toBeNull();
+  });
+
+  it("identifies which 60-card constructed formats a deck's cards satisfy", () => {
+    const modernLegal = deck("modern", [
+      ["mountain", 20],
+      ["bolt", 4],
+      ["sorcery", 2, "side"],
+    ]);
+    // Bolt is not standard-legal, and pioneer key wasn't set in legalEverywhere EXCEPT mountain/sorcery use legalEverywhere.
+    expect(legalFormatsForCards(modernLegal, rules)).toEqual([
+      "pioneer",
+      "modern",
+      "legacy",
+      "vintage",
+      "pauper",
+    ]);
+
+    const fiveBolts = deck("casual", [
+      ["mountain", 20],
+      ["bolt", 5],
+    ]);
+    expect(legalFormatsForCards(fiveBolts, rules)).toEqual([]);
+
+    const twoLotuses = deck("vintage", [
+      ["mountain", 20],
+      ["lotus", 2],
+    ]);
+    expect(legalFormatsForCards(twoLotuses, rules)).toEqual([]);
   });
 });

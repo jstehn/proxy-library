@@ -203,3 +203,110 @@ export function sheetCards(
 ): ProxyCard[] {
   return [...cardsToPrint(lines, options), ...tokensToPrint(tokens, options)];
 }
+
+/** Classification of an auxiliary card produced by a deck (design doc 42). */
+export const TOKEN_KINDS = ["token", "emblem", "helper"] as const;
+export type TokenKind = (typeof TOKEN_KINDS)[number];
+
+/** Counts across a deck's token, emblem, and helper checklist. */
+export type TokenChecklistSummary = Readonly<{
+  total: number;
+  tokens: number;
+  emblems: number;
+  helpers: number;
+  mainboard: number;
+  sideboardOnly: number;
+}>;
+
+/** Checklist entry derived from a TokenLine, ready for UI and MCP responses. */
+export type TokenChecklistItem = Readonly<{
+  oracleId: string;
+  name: string;
+  kind: TokenKind;
+  description: string;
+  /** Rules text from the card's faces (especially useful for emblems and helper cards). */
+  text: string;
+  colors: readonly string[];
+  hasBack: boolean;
+  madeBy: readonly string[];
+  boards: readonly Board[];
+  sideboardOnly: boolean;
+  includedInProxies: boolean;
+  art: TokenArt;
+}>;
+
+/** Classifies a token printing by its front type line (case-insensitive word match). */
+export function tokenKind(art: TokenArt): TokenKind {
+  const typeLine = art.faces[0]?.typeLine ?? "";
+  if (/\bemblem\b/i.test(typeLine)) return "emblem";
+  if (/\btoken\b/i.test(typeLine)) return "token";
+  return "helper";
+}
+
+/** Combined non-empty rules text across the token's faces, separated by ` // `, or "". */
+export function tokenRulesText(art: TokenArt): string {
+  return art.faces
+    .map((face) => face.text.trim())
+    .filter((text) => text !== "")
+    .join(" // ");
+}
+
+/** Maps a TokenLine into a checklist item with kind, rules text, and sideboard-only flag. */
+export function toTokenChecklistItem(line: TokenLine): TokenChecklistItem {
+  return {
+    oracleId: line.oracleId,
+    name: line.name,
+    kind: tokenKind(line.art),
+    description: tokenDescription(line.art),
+    text: tokenRulesText(line.art),
+    colors: line.art.colors,
+    hasBack: line.art.hasBack,
+    madeBy: line.madeBy,
+    boards: line.boards,
+    sideboardOnly: line.boards.every((board) => !isPlayed(board)),
+    includedInProxies: line.included,
+    art: line.art,
+  };
+}
+
+/** Summarizes token, emblem, helper, mainboard, and sideboard-only counts across lines. */
+export function summarizeTokenChecklist(lines: readonly TokenLine[]): TokenChecklistSummary {
+  let tokens = 0;
+  let emblems = 0;
+  let helpers = 0;
+  let mainboard = 0;
+  let sideboardOnly = 0;
+  for (const line of lines) {
+    const kind = tokenKind(line.art);
+    if (kind === "token") tokens += 1;
+    else if (kind === "emblem") emblems += 1;
+    else helpers += 1;
+
+    if (line.boards.some((board) => isPlayed(board))) mainboard += 1;
+    else sideboardOnly += 1;
+  }
+  return {
+    total: lines.length,
+    tokens,
+    emblems,
+    helpers,
+    mainboard,
+    sideboardOnly,
+  };
+}
+
+/** Filters checklist items by optional kind and board scope ("played" excludes sideboard-only). */
+export function filterTokenChecklist(
+  items: readonly TokenChecklistItem[],
+  filter: { kind?: TokenKind | "all"; board?: "all" | "played" },
+): TokenChecklistItem[] {
+  return items.filter((item) => {
+    if (filter.kind !== undefined && filter.kind !== "all" && item.kind !== filter.kind) {
+      return false;
+    }
+    if (filter.board === "played" && item.sideboardOnly) {
+      return false;
+    }
+    return true;
+  });
+}

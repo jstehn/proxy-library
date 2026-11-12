@@ -68,6 +68,8 @@ export type DeckEntry = Readonly<{
   finish: Finish | null;
   /** The deck's own heading for this line ("Ramp"), or null (design doc 34). */
   heading: string | null;
+  /** Why this card is in the deck (design doc 41), or null. */
+  note: string | null;
 }>;
 
 export const GROUPINGS = ["type", "custom"] as const;
@@ -126,11 +128,13 @@ export function checkQuantity(quantity: number): Result<number, QuantityInvalid>
  */
 export function withEntry(
   deck: Deck,
-  change: Omit<DeckEntry, "printingId" | "finish" | "heading"> & {
+  change: Omit<DeckEntry, "printingId" | "finish" | "heading" | "note"> & {
     printingId?: PrintingId | null;
     finish?: Finish | null;
     /** A heading, null to clear it, or left out to keep the line's (design doc 34). */
     heading?: string | null;
+    /** A note, null to clear it, or left out to keep the line's (design doc 41). */
+    note?: string | null;
   },
 ): Deck {
   const same = (entry: DeckEntry) =>
@@ -145,6 +149,7 @@ export function withEntry(
     printingId: change.printingId ?? existing?.printingId ?? null,
     finish: change.finish ?? existing?.finish ?? null,
     heading: change.heading !== undefined ? change.heading : (existing?.heading ?? null),
+    note: change.note !== undefined ? change.note : (existing?.note ?? null),
   };
   return { ...deck, entries: [...others, entry] };
 }
@@ -180,6 +185,7 @@ export function movedEntry(
       printingId: moving.printingId ?? there?.printingId ?? null,
       finish: moving.printingId === null ? (there?.finish ?? null) : moving.finish,
       heading: moving.heading ?? there?.heading ?? null,
+      note: moving.note ?? there?.note ?? null,
     }),
   );
 }
@@ -300,6 +306,7 @@ function chosenVersion(current: readonly DeckEntry[], line: MatchedLine): DeckEn
     board: line.board,
     quantity: line.quantity,
     heading: existing?.heading ?? null,
+    note: existing?.note ?? null,
   };
 
   if (existing !== undefined && (!line.namesPrinting || existing.printingId === line.printingId)) {

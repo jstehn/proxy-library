@@ -183,4 +183,53 @@ describe("draftForDeck", () => {
     if (!empty.ok) throw new Error(empty.error.kind);
     expect(await draftForDeck(db, jack.userId, empty.value)).toBeNull();
   });
+
+  it("drafts 60-card Standard decks with 4-of playsets without requiring a commander, and refuses Limited", async () => {
+    await give("Banishing Light", 4);
+    await give("Carrot Cake", 4);
+    await give("Test Draft Ramp", 4);
+
+    const created = await decks.createDeck(jack, { name: "Standard White", format: "standard" });
+    if (!created.ok) throw new Error(created.error.kind);
+    await decks.importList(jack, {
+      deckId: created.value,
+      text: "2 Carrot Cake\n10 Plains",
+    });
+
+    const draft = await draftForDeck(db, jack.userId, created.value);
+    if (draft === null) throw new Error("expected 60-card draft");
+
+    expect(draft.existingCount).toBe(12);
+    expect(draft.targetTotal).toBe(60);
+    expect(draft.totalAfterDraft).toBe(60);
+    expect(draft.roleSummary.map((r) => ({ tag: r.tag, target: r.target }))).toEqual([
+      { tag: "ramp", target: 4 },
+      { tag: "draw", target: 6 },
+      { tag: "removal", target: 6 },
+      { tag: "wipe", target: 2 },
+    ]);
+
+    const carrotCake = draft.spells.find((spell) => spell.name === "Carrot Cake");
+    const banishing = draft.spells.find((spell) => spell.name === "Banishing Light");
+    expect(carrotCake?.quantity).toBe(2); // 4 owned/limit minus 2 already in deck
+    expect(banishing?.quantity).toBe(4);
+
+    const additions = [
+      ...draft.spells.map((spell) => ({ oracleId: spell.oracleId, quantity: spell.quantity })),
+      ...draft.manaBase.add.map((entry) => ({
+        oracleId: entry.card.oracleId,
+        quantity: entry.quantity,
+      })),
+    ];
+    const added = await decks.addCards(jack, { deckId: created.value, cards: additions });
+    expect(added.ok).toBe(true);
+
+    const view = await deckView(db, jack.userId, created.value);
+    const totalCards = view?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
+    expect(totalCards).toBe(60);
+
+    const limited = await decks.createDeck(jack, { name: "Draft Pile", format: "limited" });
+    if (!limited.ok) throw new Error(limited.error.kind);
+    expect(await draftForDeck(db, jack.userId, limited.value)).toBeNull();
+  });
 });

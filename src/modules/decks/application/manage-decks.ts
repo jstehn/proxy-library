@@ -28,6 +28,8 @@ import {
   renamedHeading,
   tidyHeadings,
 } from "../domain/headings";
+import { checkNote } from "../domain/notes";
+import { checkSnapshotLabel, MAX_SNAPSHOTS_PER_DECK, type SnapshotId } from "../domain/snapshots";
 import type {
   CardNotFound,
   CommanderMove,
@@ -40,11 +42,15 @@ import type {
   ListProblems,
   ListTooLong,
   NameInvalid,
+  NoteInvalid,
+  SnapshotLabelInvalid,
+  SnapshotNotFound,
   TargetBracketInvalid,
   TargetBracketNotCommander,
   QuantityInvalid,
   TooManyDecks,
   TooManyHeadings,
+  TooManySnapshots,
 } from "../domain/errors";
 import { parseList } from "@/shared/card-search";
 import { fingerprint } from "../domain/list-format";
@@ -57,15 +63,20 @@ import type { DecksDependencies, UnnamedPrinting } from "./ports";
 export type CreateDeckError = NameInvalid | TooManyDecks;
 export type UpdateDeckError =
   DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
-export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound;
-export type ApplyChangesError = DeckNotFound | DeckChanged | QuantityInvalid | CardNotFound;
+export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound | NoteInvalid;
+export type ApplyChangesError =
+  DeckNotFound | DeckChanged | QuantityInvalid | CardNotFound | NoteInvalid;
 export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
 export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
 export type SetEntryHeadingError = DeckNotFound | EntryNotFound | HeadingInvalid | TooManyHeadings;
+export type SetEntryNoteError = DeckNotFound | EntryNotFound | NoteInvalid;
 export type RenameHeadingError = DeckNotFound | HeadingInvalid | HeadingNotFound;
 export type OrderHeadingsError = DeckNotFound | HeadingOrderInvalid;
+export type SaveSnapshotError = DeckNotFound | SnapshotLabelInvalid | TooManySnapshots;
+export type RestoreSnapshotError = DeckNotFound | SnapshotNotFound | DeckChanged;
+export type DeleteSnapshotError = DeckNotFound | SnapshotNotFound;
 
 export type SetEntryHeadingInput = Readonly<{
   deckId: DeckId;
@@ -97,6 +108,15 @@ export type SetEntryInput = Readonly<{
   quantity: number;
   printingId?: PrintingId;
   finish?: Finish;
+  note?: string | null;
+}>;
+
+export type SetEntryNoteInput = Readonly<{
+  deckId: DeckId;
+  oracleId: string;
+  board: Board;
+  /** The note explaining why this card is in the deck, or null to clear it (design doc 41). */
+  note: string | null;
 }>;
 
 export type AddCardsInput = Readonly<{
@@ -108,7 +128,9 @@ export type AddCardsInput = Readonly<{
 export type ApplyChangesInput = Readonly<{
   deckId: DeckId;
   fingerprint: string;
-  changes: ReadonlyArray<Readonly<{ oracleId: string; board: Board; quantity: number }>>;
+  changes: ReadonlyArray<
+    Readonly<{ oracleId: string; board: Board; quantity: number; note?: string | null }>
+  >;
 }>;
 
 export type ApplyChangesReport = Readonly<{ cards: number; fingerprint: string }>;
@@ -131,6 +153,14 @@ function usableHeading(heading: string | null): string | null {
   if (heading === null) return null;
   const checked = checkHeading(heading);
   return checked.ok ? checked.value : null;
+}
+
+function checkedOptionalNote(
+  note: string | null | undefined,
+): Result<string | null | undefined, NoteInvalid> {
+  if (note === undefined) return ok(undefined);
+  if (note === null) return ok(null);
+  return checkNote(note);
 }
 
 export function makeManageDecks(dependencies: DecksDependencies) {
@@ -214,6 +244,8 @@ export function makeManageDecks(dependencies: DecksDependencies) {
   ): Promise<Result<void, SetEntryError>> {
     const quantity = checkQuantity(input.quantity);
     if (!quantity.ok) return quantity;
+    const note = checkedOptionalNote(input.note);
+    if (!note.ok) return note;
     return unitOfWork.run<void, SetEntryError>(async ({ decks, cards }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
@@ -225,6 +257,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         quantity: quantity.value,
         printingId: input.printingId,
         finish: input.finish,
+        ...(note.value !== undefined ? { note: note.value } : {}),
       });
       await decks.save(changed, clock.now());
       return ok();
@@ -266,9 +299,23 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     actor: Actor,
     input: ApplyChangesInput,
   ): Promise<Result<ApplyChangesReport, ApplyChangesError>> {
+    const normalized: Array<{
+      oracleId: string;
+      board: Board;
+      quantity: number;
+      note?: string | null;
+    }> = [];
     for (const change of input.changes) {
       const quantity = checkQuantity(change.quantity);
       if (!quantity.ok) return quantity;
+      const note = checkedOptionalNote(change.note);
+      if (!note.ok) return note;
+      normalized.push({
+        oracleId: change.oracleId,
+        board: change.board,
+        quantity: quantity.value,
+        ...(note.value !== undefined ? { note: note.value } : {}),
+      });
     }
     return unitOfWork.run<ApplyChangesReport, ApplyChangesError>(async ({ decks, cards }) => {
       const deck = await decks.lockOwned(input.deckId, actor.userId);
@@ -276,14 +323,14 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       if (fingerprint(deck.entries) !== input.fingerprint) return err({ kind: "DeckChanged" });
 
       const positiveIds = new Set(
-        input.changes.filter((change) => change.quantity > 0).map((change) => change.oracleId),
+        normalized.filter((change) => change.quantity > 0).map((change) => change.oracleId),
       );
       for (const oracleId of positiveIds) {
         if (!(await cards.exists(oracleId))) return err({ kind: "CardNotFound" });
       }
 
       let updated = deck;
-      for (const change of input.changes) {
+      for (const change of normalized) {
         updated = withEntry(updated, change);
       }
       updated = tidyHeadings(updated);
@@ -530,16 +577,134 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     });
   }
 
+  /** Sets or clears a line's note ("why this card is here", design doc 41). */
+  async function setEntryNote(
+    actor: Actor,
+    input: SetEntryNoteInput,
+  ): Promise<Result<void, SetEntryNoteError>> {
+    const note = checkedOptionalNote(input.note);
+    if (!note.ok) return note;
+    return unitOfWork.run<void, SetEntryNoteError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const line = deck.entries.find(
+        (entry) => entry.oracleId === input.oracleId && entry.board === input.board,
+      );
+      if (line === undefined) return err({ kind: "EntryNotFound" });
+      const changed = withEntry(deck, {
+        ...line,
+        note: note.value ?? null,
+      });
+      await decks.save(changed, clock.now());
+      return ok();
+    });
+  }
+
+  /** Saves a point-in-time snapshot of a deck for before/after comparisons (design doc 41). */
+  async function saveSnapshot(
+    actor: Actor,
+    input: Readonly<{ deckId: DeckId; label: string }>,
+  ): Promise<Result<SnapshotId, SaveSnapshotError>> {
+    const label = checkSnapshotLabel(input.label);
+    if (!label.ok) return label;
+    return unitOfWork.run<SnapshotId, SaveSnapshotError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      if ((await decks.countSnapshots(deck.id)) >= MAX_SNAPSHOTS_PER_DECK) {
+        return err({ kind: "TooManySnapshots", maximum: MAX_SNAPSHOTS_PER_DECK });
+      }
+      return ok(
+        await decks.saveSnapshot({
+          deckId: deck.id,
+          label: label.value,
+          format: deck.format,
+          targetBracket: deck.targetBracket,
+          grouping: deck.grouping,
+          headings: [...deck.headings],
+          entries: deck.entries.map((entry) => ({ ...entry })),
+          createdAt: clock.now(),
+        }),
+      );
+    });
+  }
+
+  /** Restores a deck's entries, format, target bracket, and headings from a saved snapshot. */
+  async function restoreSnapshot(
+    actor: Actor,
+    input: Readonly<{ deckId: DeckId; snapshotId: SnapshotId; fingerprint?: string }>,
+  ): Promise<Result<ApplyChangesReport, RestoreSnapshotError>> {
+    return unitOfWork.run<ApplyChangesReport, RestoreSnapshotError>(async ({ decks, cards }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      if (input.fingerprint !== undefined && fingerprint(deck.entries) !== input.fingerprint) {
+        return err({ kind: "DeckChanged" });
+      }
+      const snapshot = await decks.getSnapshot(deck.id, input.snapshotId);
+      if (snapshot === null) return err({ kind: "SnapshotNotFound" });
+
+      const knownOracles = await cards.existingOracleIds(
+        snapshot.entries.map((entry) => entry.oracleId),
+      );
+      const pinnedPrintings = snapshot.entries.flatMap((entry) =>
+        entry.printingId === null ? [] : [entry.printingId],
+      );
+      const knownPrintings = await cards.existingPrintings(pinnedPrintings);
+
+      const restoredEntries = snapshot.entries
+        .filter((entry) => knownOracles.has(entry.oracleId))
+        .map((entry) => {
+          const keepsPrinting = entry.printingId !== null && knownPrintings.has(entry.printingId);
+          return {
+            ...entry,
+            printingId: keepsPrinting ? entry.printingId : null,
+            finish: keepsPrinting ? entry.finish : null,
+          };
+        });
+
+      const restored = tidyHeadings({
+        ...deck,
+        format: snapshot.format,
+        targetBracket: snapshot.format === "commander" ? snapshot.targetBracket : null,
+        grouping: snapshot.grouping,
+        headings: [...snapshot.headings],
+        entries: restoredEntries,
+      });
+      await decks.save(restored, clock.now());
+      return ok({
+        cards: restored.entries.reduce((total, entry) => total + entry.quantity, 0),
+        fingerprint: fingerprint(restored.entries),
+      });
+    });
+  }
+
+  /** Deletes one saved snapshot belonging to the deck. */
+  async function deleteSnapshot(
+    actor: Actor,
+    input: Readonly<{ deckId: DeckId; snapshotId: SnapshotId }>,
+  ): Promise<Result<void, DeleteSnapshotError>> {
+    return unitOfWork.run<void, DeleteSnapshotError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const deleted = await decks.deleteSnapshot(deck.id, input.snapshotId);
+      if (!deleted) return err({ kind: "SnapshotNotFound" });
+      return ok();
+    });
+  }
+
   return {
     createDeck,
     updateDeck,
     setEntryHeading,
+    setEntryNote,
     renameHeading,
     orderHeadings,
     deleteDeck,
     setEntry,
     addCards,
     applyChanges,
+    saveSnapshot,
+    restoreSnapshot,
+    deleteSnapshot,
     moveEntry,
     importList,
     replaceList,

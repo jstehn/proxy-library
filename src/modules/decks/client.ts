@@ -2,7 +2,9 @@
 // Server code imports index.ts instead.
 export {
   colorPips,
+  COMMANDER_ROLE_TARGETS,
   roleTargets,
+  SIXTY_CARD_ROLE_TARGETS,
   TARGETED_TAGS,
   type TargetedTag,
   deckSize,
@@ -28,9 +30,18 @@ export {
   type ProxySummary,
 } from "./domain/proxy-sheet";
 export {
+  filterTokenChecklist,
   sheetCards,
+  summarizeTokenChecklist,
+  TOKEN_KINDS,
   tokenDescription,
+  tokenKind,
+  tokenRulesText,
+  toTokenChecklistItem,
   type TokenArt,
+  type TokenChecklistItem,
+  type TokenChecklistSummary,
+  type TokenKind,
   type TokenLine,
 } from "./domain/token-proxies";
 export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
@@ -53,22 +64,33 @@ export {
 } from "./domain/cuts";
 export { BOARDS, COUNTED_BOARDS, isCounted, isPlayed, type Board } from "./domain/boards";
 export {
-  deckProblems,
   canBeCommander,
+  CONSTRUCTED_60_FORMATS,
+  copyLimitFor,
+  deckProblems,
+  formatRulesSummary,
+  legalFormatsForCards,
   type CardRules,
   type DeckProblem,
   type DeckToCheck,
+  type FormatRulesSummary,
 } from "./domain/rules";
 export {
+  chanceByTurn,
   deckOdds,
+  EARLY_RAMP_MAX_MV,
   hypergeometricAtLeast,
+  hypergeometricAtLeast2Groups,
   library,
   nextHand,
   OPENING_HAND,
+  openingHandOdds,
   startHand,
   type DrawLine,
+  type LandDropOdds,
   type LibraryCard,
   type OddsRow,
+  type OpeningHandOdds,
   type TestHand,
   type TestHandEvent,
 } from "./domain/draws";
@@ -90,3 +112,9 @@ export {
   type BracketWarning,
 } from "./domain/brackets";
 export { checkHeading, headingMoved, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
+export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
+export {
+  checkSnapshotLabel,
+  MAX_SNAPSHOT_LABEL_LENGTH,
+  MAX_SNAPSHOTS_PER_DECK,
+} from "./domain/snapshots";

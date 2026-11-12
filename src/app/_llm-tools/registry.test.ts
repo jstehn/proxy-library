@@ -36,6 +36,7 @@ describe("the tool registry", () => {
       ["arrange_headings", "decks:write"],
       ["replace_deck_list", "decks:write"],
       ["choose_printing", "decks:write"],
+      ["snapshot_deck", "decks:write"],
       ["add_wish", "wishlist:write"],
       ["update_wish", "wishlist:write"],
       ["remove_wish", "wishlist:write"],

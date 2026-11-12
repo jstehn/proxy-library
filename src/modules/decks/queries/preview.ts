@@ -33,7 +33,7 @@ export type ListPreviewResult =
   | Readonly<{ ok: true; value: DeckChangePreview }>
   | Readonly<{ ok: false; error: ListPreviewError }>;
 
-function viewFingerprint(view: DeckView): string {
+export function viewFingerprint(view: DeckView): string {
   return fingerprint(
     view.lines.map((line) => ({
       ...line,
@@ -43,7 +43,7 @@ function viewFingerprint(view: DeckView): string {
   );
 }
 
-function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
+export function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
   return {
     oracleId: line.oracleId,
     name: line.name,
@@ -62,7 +62,7 @@ function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
 }
 
 /** Loads card facts in the exact shape `deckView` reads for oracle cards not yet in the deck. */
-async function loadCardsForPreview(
+export async function loadCardsForPreview(
   db: DbExecutor,
   userId: UserId,
   usesRealCards: boolean,

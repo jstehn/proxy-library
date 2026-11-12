@@ -33,8 +33,17 @@ describe("replacedEntries", () => {
       printingId: samplePrintingId("bolt-m11"),
       finish: "nonfoil",
       heading: null,
+      note: null,
     },
-    { oracleId: ring, board: "main", quantity: 1, printingId: null, finish: null, heading: null },
+    {
+      oracleId: ring,
+      board: "main",
+      quantity: 1,
+      printingId: null,
+      finish: null,
+      heading: null,
+      note: null,
+    },
   ];
 
   it("holds exactly the list's cards: cards not in it are removed", () => {
@@ -152,8 +161,17 @@ describe("fingerprint", () => {
       printingId: samplePrintingId("bolt-m11"),
       finish: "nonfoil",
       heading: null,
+      note: null,
     },
-    { oracleId: ring, board: "side", quantity: 1, printingId: null, finish: null, heading: null },
+    {
+      oracleId: ring,
+      board: "side",
+      quantity: 1,
+      printingId: null,
+      finish: null,
+      heading: null,
+      note: null,
+    },
   ];
 
   it("doesn't depend on the order entries are stored in", () => {
@@ -186,6 +204,7 @@ describe("round trip: deck → text → parse → replace", () => {
     printing: fc.option(fc.integer({ min: 1, max: 5 }), { nil: null }),
     finish: fc.option(fc.constantFrom(...FINISHES), { nil: null }),
     heading: fc.option(fc.constantFrom("Ramp", "Removal", "Win conditions"), { nil: null }),
+    note: fc.option(fc.constantFrom("Combo piece", "Budget ramp", "Meta call"), { nil: null }),
   });
   // One entry per card per board, as a deck has (invariant 9).
   const deck = fc.uniqueArray(entry, {
@@ -204,6 +223,7 @@ describe("round trip: deck → text → parse → replace", () => {
             each.printing === null ? null : samplePrintingId(`p-${each.card}-${each.printing}`),
           finish: each.finish,
           heading: each.heading,
+          note: each.note,
         }));
         const text = deckText(
           generated.map((each) => ({

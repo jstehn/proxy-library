@@ -8,10 +8,15 @@ import {
 } from "./proxy-sheet";
 import {
   deckTokens,
+  filterTokenChecklist,
   newestFirst,
   sheetCards,
+  summarizeTokenChecklist,
   tokenDescription,
+  tokenKind,
+  tokenRulesText,
   tokensToPrint,
+  toTokenChecklistItem,
   type TokenArt,
   type TokenLinkRow,
   type TokenMaker,
@@ -253,5 +258,123 @@ describe("sheetCards", () => {
   it("prints exactly today's cards with no token copies (invariant 1)", () => {
     const options = { ...DEFAULT_PROXY_OPTIONS, tokenCopies: 0 as const };
     expect(sheetCards([bolt], tokens, options)).toEqual(cardsToPrint([bolt], options));
+  });
+});
+
+describe("token checklist (design doc 42)", () => {
+  const emblem = art("elspeth-emblem", {
+    oracleId: "elspeth-emblem",
+    name: "Elspeth, Knight-Errant Emblem",
+    colors: [],
+    faces: [
+      printedFace({
+        name: "Elspeth, Knight-Errant Emblem",
+        typeLine: "Emblem — Elspeth",
+        text: "Artifacts, creatures, enchantments, and lands you control have indestructible.",
+        power: null,
+        toughness: null,
+      }),
+    ],
+  });
+  const monarch = art("monarch-helper", {
+    oracleId: "monarch-helper",
+    name: "The Monarch",
+    colors: [],
+    faces: [
+      printedFace({
+        name: "The Monarch",
+        typeLine: "Card",
+        text: "At the beginning of your end step, draw a card.",
+        power: null,
+        toughness: null,
+      }),
+    ],
+  });
+  const incubator = art("incubator-dfc", {
+    oracleId: "incubator-dfc",
+    name: "Incubator // Phyrexian",
+    hasBack: true,
+    faces: [
+      printedFace({
+        name: "Incubator",
+        typeLine: "Token Artifact — Incubator",
+        text: "{2}: Transform this artifact.",
+        power: null,
+        toughness: null,
+      }),
+      printedFace({
+        name: "Phyrexian",
+        typeLine: "Token Artifact Creature — Phyrexian",
+        text: "",
+        power: "0",
+        toughness: "0",
+      }),
+    ],
+  });
+
+  const checklistLines = deckTokens(
+    [
+      krenko,
+      tithe,
+      {
+        oracleId: "elspeth",
+        printingId: "elspeth-1",
+        name: "Elspeth, Knight-Errant",
+        board: "commander",
+      },
+      { oracleId: "palace", printingId: "palace-1", name: "Palace Jailer", board: "main" },
+    ],
+    [
+      ...links,
+      { cardOracleId: "elspeth", printingId: "elspeth-1", token: emblem },
+      { cardOracleId: "palace", printingId: "palace-1", token: monarch },
+    ],
+    [],
+    new Map(),
+  );
+
+  it("classifies tokens, emblems, double-faced tokens, and helpers", () => {
+    expect(tokenKind(m13Goblin)).toBe("token");
+    expect(tokenKind(incubator)).toBe("token");
+    expect(tokenKind(emblem)).toBe("emblem");
+    expect(tokenKind(monarch)).toBe("helper");
+    expect(tokenRulesText(incubator)).toBe("{2}: Transform this artifact.");
+  });
+
+  it("summarizes counts cleanly with consistent mainboard and sideboard totals", () => {
+    const summary = summarizeTokenChecklist(checklistLines);
+    expect(summary).toEqual({
+      total: 4,
+      tokens: 2,
+      emblems: 1,
+      helpers: 1,
+      mainboard: 3,
+      sideboardOnly: 1,
+    });
+    expect(summary.tokens + summary.emblems + summary.helpers).toBe(summary.total);
+    expect(summary.mainboard + summary.sideboardOnly).toBe(summary.total);
+  });
+
+  it("builds checklist items and filters by kind and played boards", () => {
+    const items = checklistLines.map(toTokenChecklistItem);
+    const treasureItem = items.find((item) => item.name === "Treasure");
+    const emblemItem = items.find((item) => item.kind === "emblem");
+
+    expect(treasureItem?.sideboardOnly).toBe(true);
+    expect(emblemItem).toMatchObject({
+      kind: "emblem",
+      sideboardOnly: false,
+      description: "Emblem — Elspeth",
+      text: "Artifacts, creatures, enchantments, and lands you control have indestructible.",
+    });
+
+    expect(filterTokenChecklist(items, { kind: "emblem" }).map((item) => item.name)).toEqual([
+      "Elspeth, Knight-Errant Emblem",
+    ]);
+    expect(filterTokenChecklist(items, { board: "played" }).map((item) => item.name)).toEqual([
+      "Elspeth, Knight-Errant Emblem",
+      "Goblin",
+      "The Monarch",
+    ]);
   });
 });

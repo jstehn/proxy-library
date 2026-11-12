@@ -435,60 +435,65 @@ function ListLine(props: {
   return (
     <li
       data-highlighted={props.highlighted || undefined}
-      className={`group flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
+      className={`group flex flex-col gap-0.5 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
     >
-      <span className="w-5 text-right tabular-nums">{line.quantity}</span>
-      <NamePreview
-        printing={props.cards[line.printingId]}
-        name={line.name}
-        onSelect={() => props.onSelect(line)}
-        className="min-w-0 flex-1"
-      />
-      {line.finish !== "nonfoil" && (
-        <span
-          title={`The deck's copy is ${line.finish}: it prints with the foils`}
-          className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-zinc-900"
-        >
-          {line.finish === "etched" ? "etched" : "foil"}
-        </span>
-      )}
-      {line.isGameChanger && (
-        <span
-          title="On Wizards' Game Changer list: none in brackets 1–2, up to three in bracket 3"
-          className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
-        >
-          GC
-        </span>
-      )}
-      {problems.length > 0 && (
-        <span
-          title={problems.join("\n")}
-          aria-label={`Problem: ${problems.join(" ")}`}
-          className="text-xs text-red-600 dark:text-red-400"
-        >
-          ⚠
-        </span>
-      )}
-      {line.manaCost && (
-        <span className="shrink-0 text-xs">
-          <ManaText text={line.manaCost} />
-        </span>
-      )}
-      {props.yourCopies !== undefined && (
-        <span
-          className={`shrink-0 text-xs tabular-nums ${(props.yourCopies[line.oracleId] ?? 0) > 0 ? "text-green-700 dark:text-green-400" : "text-zinc-500"}`}
-          title="How many you own"
-        >
-          you {props.yourCopies[line.oracleId] ?? 0}
-        </span>
-      )}
-      {!props.readOnly && (
-        <LineControls
-          line={line}
-          onChange={props.onChange}
-          onMove={props.onMove}
-          busy={props.busy}
+      <div className="flex items-center gap-2">
+        <span className="w-5 text-right tabular-nums">{line.quantity}</span>
+        <NamePreview
+          printing={props.cards[line.printingId]}
+          name={line.name}
+          onSelect={() => props.onSelect(line)}
+          className="min-w-0 flex-1"
         />
+        {line.finish !== "nonfoil" && (
+          <span
+            title={`The deck's copy is ${line.finish}: it prints with the foils`}
+            className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-zinc-900"
+          >
+            {line.finish === "etched" ? "etched" : "foil"}
+          </span>
+        )}
+        {line.isGameChanger && (
+          <span
+            title="On Wizards' Game Changer list: none in brackets 1–2, up to three in bracket 3"
+            className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
+          >
+            GC
+          </span>
+        )}
+        {problems.length > 0 && (
+          <span
+            title={problems.join("\n")}
+            aria-label={`Problem: ${problems.join(" ")}`}
+            className="text-xs text-red-600 dark:text-red-400"
+          >
+            ⚠
+          </span>
+        )}
+        {line.manaCost && (
+          <span className="shrink-0 text-xs">
+            <ManaText text={line.manaCost} />
+          </span>
+        )}
+        {props.yourCopies !== undefined && (
+          <span
+            className={`shrink-0 text-xs tabular-nums ${(props.yourCopies[line.oracleId] ?? 0) > 0 ? "text-green-700 dark:text-green-400" : "text-zinc-500"}`}
+            title="How many you own"
+          >
+            you {props.yourCopies[line.oracleId] ?? 0}
+          </span>
+        )}
+        {!props.readOnly && (
+          <LineControls
+            line={line}
+            onChange={props.onChange}
+            onMove={props.onMove}
+            busy={props.busy}
+          />
+        )}
+      </div>
+      {line.note !== null && (
+        <p className="pl-7 text-xs break-words text-zinc-500 dark:text-zinc-400">{line.note}</p>
       )}
     </li>
   );

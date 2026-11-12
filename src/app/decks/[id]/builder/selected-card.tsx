@@ -32,6 +32,8 @@ export type Selection = Readonly<{
   tags: readonly Tag[];
   /** What counts against a Commander bracket (design doc 31). */
   bracketFlags: readonly BracketFlag[];
+  /** Format copy limit for this card, or null when unlimited. */
+  copyLimit?: number | null;
 }>;
 
 const FLAG_LABELS: Readonly<Record<BracketFlag, string>> = {
@@ -50,7 +52,8 @@ export function SelectedCard(props: {
   detail: PrintingCard | null;
   quantity: number;
   onQuantity: (quantity: number) => void;
-  onAdd: (board: Board) => void;
+  onAdd: (board: Board, amount?: number) => void;
+  copyLimit: number | null;
   deckId: number;
   isCommanderDeck: boolean;
   onClose: () => void;
@@ -115,7 +118,10 @@ export function SelectedCard(props: {
             {selection.priceCents !== null && (
               <Fact label="Price" value={Cents.format(Cents.of(selection.priceCents))} />
             )}
-            <Fact label="In this deck" value={String(inDeck)} />
+            <Fact
+              label="In this deck"
+              value={props.copyLimit !== null ? `${inDeck} / ${props.copyLimit}` : String(inDeck)}
+            />
             {onMaybeboard > 0 && <Fact label="Maybeboard" value={String(onMaybeboard)} />}
             {selection.owned > 0 && selection.otherDecks > 0 && (
               <Fact label="Free" value={String(selection.free)} />
@@ -189,6 +195,11 @@ export function SelectedCard(props: {
         >
           Add to deck
         </button>
+        {props.copyLimit === 4 && inDeck < 4 && (
+          <button type="button" onClick={() => props.onAdd("main", 4 - inDeck)} className={button}>
+            Fill to 4
+          </button>
+        )}
         <button type="button" onClick={() => props.onAdd("side")} className={button}>
           Sideboard
         </button>
@@ -206,6 +217,12 @@ export function SelectedCard(props: {
           </button>
         )}
       </div>
+      {props.copyLimit !== null && inDeck + props.quantity > props.copyLimit && (
+        <p className="text-xs text-amber-700 dark:text-amber-400">
+          Adding {props.quantity} puts this card at {inDeck + props.quantity} copies (format limit
+          is {props.copyLimit}). You can still add it and adjust later.
+        </p>
+      )}
       {selection.owned === 0 ? (
         <p className="text-xs text-amber-700 dark:text-amber-400">
           You don&apos;t own this card. Add it and the deck marks it short; then{" "}

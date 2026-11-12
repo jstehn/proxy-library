@@ -42,3 +42,11 @@ export type HeadingNotFound = Readonly<{ kind: "HeadingNotFound" }>;
 export type HeadingOrderInvalid = Readonly<{ kind: "HeadingOrderInvalid" }>;
 /** A new heading past the most a deck may have (design doc 34). */
 export type TooManyHeadings = Readonly<{ kind: "TooManyHeadings"; maximum: number }>;
+/** A line note is empty or longer than the limit (design doc 41). */
+export type NoteInvalid = Readonly<{ kind: "NoteInvalid"; maximum: number }>;
+/** The deck has no such snapshot, or it belongs to someone else (design doc 41). */
+export type SnapshotNotFound = Readonly<{ kind: "SnapshotNotFound" }>;
+/** A snapshot label is empty or longer than the limit (design doc 41). */
+export type SnapshotLabelInvalid = Readonly<{ kind: "SnapshotLabelInvalid"; maximum: number }>;
+/** A deck already has the maximum number of saved snapshots (design doc 41). */
+export type TooManySnapshots = Readonly<{ kind: "TooManySnapshots"; maximum: number }>;

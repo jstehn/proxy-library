@@ -20,10 +20,20 @@ import {
   type DeckSuggestions,
   type SuggestionList,
   DeckId,
+  deckTokenLines,
   deckView,
   GROUPINGS,
+  listDeckSnapshots,
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
+  MAX_NOTE_LENGTH,
+  MAX_SNAPSHOT_LABEL_LENGTH,
+  MAX_SNAPSHOTS_PER_DECK,
+  compareDeckSnapshot,
+  SnapshotId,
+  type SnapshotComparison,
+  type SnapshotSummary,
+  type TokenLine,
   type Grouping,
   type BrowsePage,
   type CardRules,
@@ -457,4 +467,199 @@ export async function headingAction(input: z.input<typeof HeadingInput>): Promis
   const deck = await loadBuilderDeck(change.deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
   return { ok: true, deck };
+}
+
+const NoteInput = z.object({
+  deckId: DeckIdInput,
+  oracleId: z.string().min(1),
+  board: z.enum(BOARDS),
+  note: z.string().max(500).nullable(),
+});
+
+/** Sets or clears a line's note (design doc 41). */
+export async function noteAction(input: z.input<typeof NoteInput>): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = NoteInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const result = await getContainer().decks.setEntryNote(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    oracleId: parsed.data.oracleId,
+    board: parsed.data.board,
+    note: parsed.data.note,
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      EntryNotFound: "That card isn't on that board any more.",
+      NoteInvalid: `A note can have at most ${MAX_NOTE_LENGTH} characters.`,
+    };
+    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the note." };
+  }
+  revalidatePath(`/decks/${parsed.data.deckId}`);
+  const deck = await loadBuilderDeck(parsed.data.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
+
+export type SnapshotsListResult =
+  { ok: true; snapshots: SnapshotSummary[] } | { ok: false; message: string };
+
+/** Lists saved snapshots for a deck, newest first (design doc 41). */
+export async function listSnapshotsAction(deckId: number): Promise<SnapshotsListResult> {
+  const actor = await requireActor();
+  const parsedId = DeckIdInput.safeParse(deckId);
+  if (!parsedId.success) return { ok: false, message: "That deck wasn't recognized." };
+  const snapshots = await listDeckSnapshots(getContainer().db, actor.userId, parsedId.data);
+  if (snapshots === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, snapshots };
+}
+
+const SaveSnapshotInput = z.object({
+  deckId: DeckIdInput,
+  label: z.string().max(120),
+});
+
+export type SaveSnapshotResult =
+  { ok: true; snapshotId: number; snapshots: SnapshotSummary[] } | { ok: false; message: string };
+
+/** Saves a snapshot of the deck's current entries (design doc 41). */
+export async function saveSnapshotAction(
+  input: z.input<typeof SaveSnapshotInput>,
+): Promise<SaveSnapshotResult> {
+  const actor = await requireActor();
+  const parsed = SaveSnapshotInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That snapshot label wasn't understood." };
+  const { db, decks } = getContainer();
+  const result = await decks.saveSnapshot(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    label: parsed.data.label,
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      SnapshotLabelInvalid: `Give the snapshot a label (up to ${MAX_SNAPSHOT_LABEL_LENGTH} characters).`,
+      TooManySnapshots: `A deck can have at most ${MAX_SNAPSHOTS_PER_DECK} snapshots. Delete an older one first.`,
+    };
+    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the snapshot." };
+  }
+  const snapshots = await listDeckSnapshots(db, actor.userId, parsed.data.deckId);
+  return {
+    ok: true,
+    snapshotId: result.value,
+    snapshots: snapshots ?? [],
+  };
+}
+
+const CompareSnapshotInput = z.object({
+  deckId: DeckIdInput,
+  beforeSnapshotId: z.number().int().positive(),
+  afterSnapshotId: z.number().int().positive().nullable().optional(),
+});
+
+export type CompareSnapshotResult =
+  { ok: true; comparison: SnapshotComparison } | { ok: false; message: string };
+
+/** Compares a saved snapshot against the live deck or another snapshot (design doc 41). */
+export async function compareSnapshotAction(
+  input: z.input<typeof CompareSnapshotInput>,
+): Promise<CompareSnapshotResult> {
+  const actor = await requireActor();
+  const parsed = CompareSnapshotInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Couldn't compare those snapshots." };
+  const comparison = await compareDeckSnapshot(
+    getContainer().db,
+    actor.userId,
+    parsed.data.deckId,
+    parsed.data.beforeSnapshotId,
+    parsed.data.afterSnapshotId ?? undefined,
+  );
+  if (comparison === null) return { ok: false, message: "That snapshot isn't available anymore." };
+  return { ok: true, comparison };
+}
+
+const SnapshotMutationInput = z.object({
+  deckId: DeckIdInput,
+  snapshotId: z.number().int().positive(),
+});
+
+export type RestoreSnapshotResult =
+  { ok: true; deck: BuilderDeck; cardCount: number } | { ok: false; message: string };
+
+/** Restores a deck's entries to a saved snapshot (design doc 41). */
+export async function restoreSnapshotAction(
+  input: z.input<typeof SnapshotMutationInput>,
+): Promise<RestoreSnapshotResult> {
+  const actor = await requireActor();
+  const parsed = SnapshotMutationInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That snapshot wasn't understood." };
+  const result = await getContainer().decks.restoreSnapshot(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    snapshotId: SnapshotId.of(parsed.data.snapshotId),
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      SnapshotNotFound: "That snapshot isn't in this deck anymore.",
+      DeckChanged: "The deck changed meanwhile; try restoring again.",
+    };
+    return {
+      ok: false,
+      message: messages[result.error.kind] ?? "Couldn't restore that snapshot.",
+    };
+  }
+  revalidatePath(`/decks/${parsed.data.deckId}`);
+  const deck = await loadBuilderDeck(parsed.data.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return {
+    ok: true,
+    deck,
+    cardCount: result.value.cards,
+  };
+}
+
+/** Deletes a saved snapshot without changing the deck (design doc 41). */
+export async function deleteSnapshotAction(
+  input: z.input<typeof SnapshotMutationInput>,
+): Promise<SnapshotsListResult> {
+  const actor = await requireActor();
+  const parsed = SnapshotMutationInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That snapshot wasn't understood." };
+  const { db, decks } = getContainer();
+  const result = await decks.deleteSnapshot(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    snapshotId: SnapshotId.of(parsed.data.snapshotId),
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      SnapshotNotFound: "That snapshot was already removed.",
+    };
+    return {
+      ok: false,
+      message: messages[result.error.kind] ?? "Couldn't delete that snapshot.",
+    };
+  }
+  const snapshots = await listDeckSnapshots(db, actor.userId, parsed.data.deckId);
+  if (snapshots === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, snapshots };
+}
+
+/** Tokens, emblems, and helper cards created by a deck's counted cards (design doc 42). */
+export async function tokensAction(deckId: number): Promise<TokenLine[] | null> {
+  const actor = await requireActor();
+  const parsed = DeckIdInput.safeParse(deckId);
+  if (!parsed.success) return null;
+  const { db } = getContainer();
+  const view = await deckView(db, actor.userId, parsed.data);
+  if (view === null) return null;
+  return deckTokenLines(
+    db,
+    view.deck.id,
+    view.lines.map((line) => ({
+      oracleId: line.oracleId,
+      printingId: line.printingId,
+      name: line.name,
+      board: line.board,
+    })),
+  );
 }

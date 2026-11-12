@@ -42,6 +42,12 @@ async function connect(scopes?: Scope[]): Promise<Client> {
   return client;
 }
 
+async function callRaw(client: Client, name: string, args: Record<string, unknown> = {}) {
+  const result = await client.callTool({ name, arguments: args });
+  const content = result.content as { type: string; text: string }[];
+  return { isError: Boolean(result.isError), parsed: JSON.parse(content[0].text) };
+}
+
 /** A tool's JSON result, failing the test if the tool reported an error. */
 async function call(client: Client, name: string, args: Record<string, unknown> = {}) {
   const result = await client.callTool({ name, arguments: args });
@@ -304,7 +310,12 @@ describe("the MCP server", () => {
       list: "Commander\n1 Beza, the Bounding Spring",
     });
     const suggestions = await call(client, "suggest_for_deck", { deckId });
-    expect(suggestions.profile.themes).toEqual(["tokens"]);
+    expect(suggestions.profile.themes).toEqual([
+      "tokens",
+      "creature-tokens",
+      "artifact-tokens",
+      "treasures",
+    ]);
     const toGet = await call(client, "cards_to_get");
     expect(toGet.cards.map((each: { name: string }) => each.name)).toEqual([
       "Beza, the Bounding Spring",
@@ -526,5 +537,238 @@ describe("signing in with a token (rule 1)", () => {
     });
     await core.accounts.revokeAccessToken(jack, created.value.token.id);
     expect(await core.accounts.actorFromToken(header)).toBeNull();
+  });
+});
+
+describe("line notes and snapshots (design doc 41)", () => {
+  it("sets and reads line notes and saves, compares, restores, and deletes snapshots", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Notes & Snapshots",
+      list: "Commander\n1 Beza, the Bounding Spring\n1 Banishing Light\n10 Plains",
+    });
+
+    await call(client, "set_deck_entry", {
+      deckId,
+      card: "Banishing Light",
+      quantity: 1,
+      note: "Clean enchantment removal",
+    });
+
+    const initial = await call(client, "get_deck", { deckId, includeText: false });
+
+    const snap1 = await call(client, "snapshot_deck", {
+      deckId,
+      action: "save",
+      label: "Before Carrot Cake",
+    });
+    expect(snap1.snapshotId).toBeGreaterThan(0);
+
+    await call(client, "apply_changes", {
+      deckId,
+      save: true,
+      fingerprint: initial.fingerprint,
+      changes: [
+        { card: "Carrot Cake", quantity: 1, note: "Lifegain + scry food" },
+        { card: "Banishing Light", quantity: 0 },
+      ],
+    });
+
+    let deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.lines).toContainEqual(
+      expect.objectContaining({ name: "Carrot Cake", note: "Lifegain + scry food" }),
+    );
+
+    const listOnly = await call(client, "deck_snapshots", { deckId });
+    expect(listOnly.snapshots).toHaveLength(1);
+    expect(listOnly.snapshots[0]).toMatchObject({ label: "Before Carrot Cake" });
+
+    const compared = await call(client, "deck_snapshots", {
+      deckId,
+      snapshotId: snap1.snapshotId,
+    });
+    expect(compared).toMatchObject({
+      compared: {
+        before: { label: "Before Carrot Cake" },
+        after: { label: "Current deck" },
+      },
+      changes: expect.arrayContaining([
+        expect.objectContaining({ card: "Banishing Light", before: 1, after: 0 }),
+        expect.objectContaining({ card: "Carrot Cake", before: 0, after: 1 }),
+      ]),
+    });
+
+    await call(client, "snapshot_deck", {
+      deckId,
+      action: "restore",
+      snapshotId: snap1.snapshotId,
+    });
+    deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.lines).toContainEqual(
+      expect.objectContaining({ name: "Banishing Light", note: "Clean enchantment removal" }),
+    );
+    expect(deck.lines.some((line: { name: string }) => line.name === "Carrot Cake")).toBe(false);
+
+    await call(client, "snapshot_deck", {
+      deckId,
+      action: "delete",
+      snapshotId: snap1.snapshotId,
+    });
+    const afterDelete = await call(client, "deck_snapshots", { deckId });
+    expect(afterDelete.snapshots).toEqual([]);
+  });
+});
+
+describe("token and emblem checklist (design doc 42)", () => {
+  it("surfaces token and emblem checklists in get_deck and deck_tokens", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Token Checklist Test",
+      format: "standard",
+      list: [
+        "1 Carrot Cake",
+        "20 Plains",
+        "Sideboard",
+        "1 Crumb and Get It",
+        "Maybeboard",
+        "1 Beza, the Bounding Spring",
+      ].join("\n"),
+    });
+
+    const deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.tokens).toMatchObject({
+      summary: { total: 2, tokens: 2, emblems: 0, helpers: 0, mainboard: 1, sideboardOnly: 1 },
+      items: [
+        { name: "Food", kind: "token", madeBy: ["Crumb and Get It"], sideboardOnly: true },
+        { name: "Rabbit", kind: "token", madeBy: ["Carrot Cake"], sideboardOnly: false },
+      ],
+    });
+
+    const allTokens = await call(client, "deck_tokens", { deckId });
+    expect(allTokens).toMatchObject({
+      deckId,
+      showing: 2,
+      summary: { total: 2, tokens: 2, emblems: 0, helpers: 0, mainboard: 1, sideboardOnly: 1 },
+    });
+    expect(allTokens.items).toEqual([
+      expect.objectContaining({
+        name: "Food",
+        kind: "token",
+        sideboardOnly: true,
+        madeBy: ["Crumb and Get It"],
+        boards: ["side"],
+        includedInProxies: true,
+      }),
+      expect.objectContaining({
+        name: "Rabbit",
+        kind: "token",
+        sideboardOnly: false,
+        madeBy: ["Carrot Cake"],
+        boards: ["main"],
+        includedInProxies: true,
+      }),
+    ]);
+
+    const playedOnly = await call(client, "deck_tokens", { deckId, board: "played" });
+    expect(playedOnly.showing).toBe(1);
+    expect(playedOnly.items.map((item: { name: string }) => item.name)).toEqual(["Rabbit"]);
+
+    const emblemsOnly = await call(client, "deck_tokens", { deckId, kind: "emblem" });
+    expect(emblemsOnly.showing).toBe(0);
+    expect(emblemsOnly.items).toEqual([]);
+  });
+});
+
+describe("opening-hand odds (design doc 43)", () => {
+  it("reports land-drop and turn-3 ramp probabilities in get_deck and opening_hand_odds", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Odds Test Deck",
+      format: "standard",
+      list: ["24 Plains", "4 Carrot Cake", "4 Banishing Light"].join("\n"),
+    });
+
+    const deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.openingHandOdds).toMatchObject({
+      librarySize: 32,
+      lands: 24,
+      earlyRamp: 0,
+    });
+    expect(deck.openingHandOdds.threeLandsByTurn3Percent).toBeGreaterThan(90);
+
+    const play = await call(client, "opening_hand_odds", {
+      deckId,
+      cardNames: ["Carrot Cake"],
+      byTurn: 3,
+      atLeast: 1,
+    });
+    const draw = await call(client, "opening_hand_odds", {
+      deckId,
+      onTheDraw: true,
+      cardNames: ["Carrot Cake"],
+      byTurn: 3,
+      atLeast: 1,
+    });
+
+    expect(play).toMatchObject({
+      deckId,
+      librarySize: 32,
+      lands: 24,
+      onTheDraw: false,
+      freeMulligan: false,
+      rampByTurn3: { cardsSeen: 9 },
+      customQuery: { cardNames: ["Carrot Cake"], matchingCopies: 4, byTurn: 3, atLeast: 1 },
+    });
+    expect(play.landDrops).toHaveLength(5);
+    expect(draw.rampByTurn3.cardsSeen).toBe(10);
+    expect(draw.customQuery.chancePercent).toBeGreaterThan(play.customQuery.chancePercent);
+  });
+});
+
+describe("60-card formats (design doc 44)", () => {
+  it("exposes formatRules, sideboardCount, 60-card roleTargets, cardLegalIn, and playset drafting", async () => {
+    await give("Banishing Light", 4);
+    await give("Carrot Cake", 4);
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Standard White Control",
+      format: "standard",
+      list: [
+        "Deck",
+        "2 Carrot Cake",
+        "24 Plains",
+        "Sideboard",
+        "4 Banishing Light",
+        "12 Plains",
+      ].join("\n"),
+    });
+
+    const deck = await call(client, "get_deck", { deckId, includeText: false });
+    expect(deck.stats.cardCount).toBe(26);
+    expect(deck.stats.sideboardCount).toBe(16);
+    expect(deck.formatRules).toEqual({
+      minMainCards: 60,
+      exactSize: false,
+      maxCopies: 4,
+      maxSideboard: 15,
+    });
+    expect(deck.roleTargets).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
+    expect(deck.cardLegalIn).toEqual(["standard", "modern"]);
+    expect(deck.problems).toEqual(
+      expect.arrayContaining(["The sideboard has 16 cards; the most is 15."]),
+    );
+
+    const draft = await call(client, "draft_deck", { deckId, includeStore: "none" });
+    expect(draft.totalAfterDraft).toBeLessThanOrEqual(60);
+    const carrot = draft.spells.find((spell: { name: string }) => spell.name === "Carrot Cake");
+    expect(carrot?.quantity).toBe(2);
+
+    const { deckId: limitedId } = await call(client, "create_deck", {
+      name: "Sealed",
+      format: "limited",
+    });
+    const limitedDraft = await callRaw(client, "draft_deck", { deckId: limitedId });
+    expect(limitedDraft.isError).toBe(true);
+    expect(limitedDraft.parsed).toMatchObject({ error: { kind: "LimitedDeck" } });
   });
 });

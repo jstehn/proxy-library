@@ -371,4 +371,130 @@ describe("draftDeck properties", () => {
       { numRuns: 50 },
     );
   });
+
+  it("drafts 60-card decks with multi-copy playsets, 60-card role targets, and restricted caps (design doc 44)", () => {
+    const ownedPool: DraftCandidate[] = [
+      candidate("Elvish Mystic", {
+        roles: ["ramp"],
+        manaCost: "{G}",
+        manaValue: 1,
+        ownedCopies: 4,
+      }),
+      candidate("Harmonize", {
+        roles: ["draw"],
+        manaCost: "{2}{G}{G}",
+        manaValue: 4,
+        ownedCopies: 4,
+      }),
+      candidate("Silverback Elder", {
+        roles: ["draw"],
+        manaCost: "{2}{G}{G}{G}",
+        manaValue: 5,
+        ownedCopies: 2,
+      }),
+      candidate("Prey Upon", {
+        roles: ["removal"],
+        manaCost: "{G}",
+        manaValue: 1,
+        ownedCopies: 4,
+      }),
+      candidate("Fade into Antiquity", {
+        roles: ["removal"],
+        manaCost: "{2}{G}",
+        manaValue: 3,
+        ownedCopies: 2,
+      }),
+      candidate("Pest Infestation", {
+        roles: ["wipe"],
+        manaCost: "{X}{G}{G}",
+        manaValue: 2,
+        ownedCopies: 4,
+      }),
+      candidate("Restricted Gem", {
+        typeLine: "Artifact",
+        roles: ["ramp"],
+        manaCost: "{0}",
+        manaValue: 0,
+        ownedCopies: 4,
+        isRestricted: true,
+      }),
+      ...manyCandidates(8, { ownedCopies: 4, manaCost: "{1}{G}", manaValue: 2 }, "Bear"),
+    ];
+
+    const draft = draftDeck({
+      format: "modern",
+      lines: [
+        {
+          quantity: 1,
+          manaValue: 1,
+          manaCost: "{G}",
+          typeLine: "Creature — Elf",
+          board: "main",
+          text: "",
+        },
+      ],
+      inDeck: new Map(),
+      candidates: ownedPool,
+      ownedLands: [],
+      basics: BASICS,
+      storeLands: [],
+      options: { includeStore: "none" },
+    });
+
+    expect(draft.targetTotal).toBe(60);
+    expect(draft.totalAfterDraft).toBe(60);
+    expect(draft.storeAddedCount).toBe(0);
+
+    const byName = new Map(draft.spells.map((spell) => [spell.name, spell]));
+    for (const spell of draft.spells) {
+      expect(spell.quantity).toBeGreaterThanOrEqual(1);
+      expect(spell.quantity).toBeLessThanOrEqual(spell.name === "Restricted Gem" ? 1 : 4);
+    }
+    expect(byName.get("Restricted Gem")?.quantity ?? 0).toBeLessThanOrEqual(1);
+    expect(byName.get("Elvish Mystic")?.quantity).toBe(4);
+    expect(byName.get("Prey Upon")?.quantity).toBe(4);
+
+    // 60-card role targets are satisfied using multi-copy playsets.
+    expect(draft.roleSummary).toEqual([
+      { tag: "ramp", target: 4, existing: 0, ownedAdded: 4, storeAdded: 0, total: 4 },
+      { tag: "draw", target: 6, existing: 0, ownedAdded: 6, storeAdded: 0, total: 6 },
+      { tag: "removal", target: 6, existing: 0, ownedAdded: 6, storeAdded: 0, total: 6 },
+      { tag: "wipe", target: 2, existing: 0, ownedAdded: 2, storeAdded: 0, total: 2 },
+    ]);
+  });
+
+  it("respects existing copies inDeck when completing 4-card playsets in 60-card formats", () => {
+    const bolt = candidate("Lightning Bolt", {
+      roles: ["removal"],
+      manaCost: "{R}",
+      manaValue: 1,
+      ownedCopies: 4,
+    });
+    const draft = draftDeck({
+      format: "modern",
+      lines: [
+        {
+          quantity: 2,
+          manaValue: 1,
+          manaCost: "{R}",
+          typeLine: "Instant",
+          board: "main",
+          text: "Lightning Bolt deals 3 damage to any target.",
+        },
+      ],
+      inDeck: new Map([["Lightning Bolt", 2]]),
+      candidates: [
+        bolt,
+        ...manyCandidates(15, { ownedCopies: 4, manaCost: "{1}{R}", manaValue: 2 }, "Goblin"),
+      ],
+      ownedLands: [],
+      basics: BASICS,
+      storeLands: [],
+      options: { includeStore: "none" },
+    });
+
+    const addedBolt = draft.spells.find((spell) => spell.name === "Lightning Bolt");
+    expect(addedBolt?.quantity).toBe(2); // 2 already in deck + 2 drafted = 4 max playset
+    expect(draft.totalAfterDraft).toBe(60);
+  });
 });

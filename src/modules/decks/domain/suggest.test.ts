@@ -87,8 +87,14 @@ describe("deckProfile", () => {
       line({ quantity: 1, typeLine: "Instant", text: "Destroy target creature." }),
       line({ quantity: 20, typeLine: "Basic Land — Plains", manaValue: 0 }),
     ];
-    // Only Commander has role targets, so only a Commander deck can be short of a role.
-    expect(deckProfile(lines, "standard").gaps).toEqual([]);
+    // Only Limited has no role targets; Commander and 60-card formats compute role gaps.
+    expect(deckProfile(lines, "limited").gaps).toEqual([]);
+    expect(deckProfile(lines, "standard").gaps).toEqual([
+      { tag: "ramp", count: 0, target: 4 },
+      { tag: "draw", count: 0, target: 6 },
+      { tag: "removal", count: 1, target: 6 },
+      { tag: "wipe", count: 0, target: 2 },
+    ]);
     expect(deckProfile(lines, "commander").gaps.map((gap) => gap.tag)).toEqual([
       "ramp",
       "draw",

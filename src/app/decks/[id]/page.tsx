@@ -5,6 +5,7 @@ import {
   deckComments,
   deckForViewer,
   deckText,
+  deckTokenLines,
   EXPORTERS,
   fingerprint,
   FORMATS,
@@ -59,10 +60,22 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   );
 
   if (!viewed.isOwner) {
-    const cards = await printingCards(
-      db,
-      view.lines.map((line) => line.printingId),
-    );
+    const [cards, tokens] = await Promise.all([
+      printingCards(
+        db,
+        view.lines.map((line) => line.printingId),
+      ),
+      deckTokenLines(
+        db,
+        deck.id,
+        view.lines.map((line) => ({
+          oracleId: line.oracleId,
+          printingId: line.printingId,
+          name: line.name,
+          board: line.board,
+        })),
+      ),
+    ]);
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
         <ManaStylesheet />
@@ -87,6 +100,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           listText={EXPORTERS.names(view.lines)}
           grouping={deck.grouping}
           headings={deck.headings}
+          tokens={tokens}
         />
         {commentSection}
       </main>
@@ -97,7 +111,10 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
-    .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}:${entry.heading ?? ""}`)
+    .map(
+      (entry) =>
+        `${entry.board}:${entry.oracleId}:${entry.quantity}:${entry.heading ?? ""}:${entry.note ?? ""}`,
+    )
     .join(",")}|${deck.grouping}|${deck.headings.join(",")}`;
 
   // The Edit as text box (design doc 23): printings only where pinned, so saving the text

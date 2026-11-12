@@ -106,6 +106,8 @@ export type DeckLine = Readonly<{
   pinnedFinish: "nonfoil" | "foil" | "etched" | null;
   /** The deck's own heading for this line ("Ramp"), or null (design doc 34). */
   heading: string | null;
+  /** Why this card is in the deck (design doc 41), or null. */
+  note: string | null;
   name: string;
   typeLine: string;
   manaValue: number;
@@ -230,6 +232,7 @@ export async function deckView(
     pinned_printing: string | null;
     pinned_finish: string | null;
     heading: string | null;
+    note: string | null;
     printing_id: string;
     finish: string;
     name: string;
@@ -253,7 +256,7 @@ export async function deckView(
     other_decks: unknown;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
-           e.heading, shown.id as printing_id,
+           e.heading, e.note, shown.id as printing_id,
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
@@ -332,6 +335,7 @@ export async function deckView(
       pinnedPrintingId: row.pinned_printing,
       pinnedFinish: row.pinned_finish === null ? null : FinishSchema.parse(row.pinned_finish),
       heading: row.heading,
+      note: row.note,
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),
@@ -373,6 +377,7 @@ export async function deckView(
       printingId: null,
       finish: null,
       heading: row.heading,
+      note: row.note,
     })),
   };
   return { deck, lines, rules };

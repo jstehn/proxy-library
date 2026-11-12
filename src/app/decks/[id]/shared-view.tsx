@@ -1,7 +1,15 @@
 "use client";
 import { useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { Bracket, BracketRule, CardRules, DeckLine, Format, Grouping } from "@/modules/decks";
+import type {
+  Bracket,
+  BracketRule,
+  CardRules,
+  DeckLine,
+  Format,
+  Grouping,
+  TokenLine,
+} from "@/modules/decks";
 import { bracketLine, estimateBracket } from "@/modules/decks/client";
 import type { Tag } from "@/shared/card-search";
 import { BracketPanel } from "./builder/bracket-panel";
@@ -9,6 +17,7 @@ import { DeckList } from "./builder/deck-list";
 import { problemsOf } from "./builder/derive";
 import { StatsPanel } from "./builder/stats-panel";
 import { TestHandPanel } from "./builder/test-hand";
+import { TokensPanel } from "./builder/tokens-panel";
 
 // Someone else's shared deck, read-only (design doc 21): its list (with how many of each card
 // you own), its statistics and problems as its owner has them, test hands, and the list as text
@@ -28,6 +37,8 @@ export function SharedDeckView(props: {
   /** The owner's grouping and headings (design doc 34, decision 4). */
   grouping: Grouping;
   headings: readonly string[];
+  /** Tokens, emblems, and helper cards created by counted cards (design doc 42). */
+  tokens?: readonly TokenLine[];
 }) {
   const [highlighted, setHighlightedRole] = useState<Tag | null>(null);
   const [highlightedRule, setHighlightedRule] = useState<BracketRule | null>(null);
@@ -44,6 +55,7 @@ export function SharedDeckView(props: {
     estimate?.findings.find((finding) => finding.rule === highlightedRule)?.cards ?? [],
   );
   const [showTestHand, setShowTestHand] = useState(false);
+  const [showTokens, setShowTokens] = useState(false);
   const problems = problemsOf(props.format, props.lines, props.rules);
   const problemsByName = new Map<string, string[]>();
   for (const problem of problems) {
@@ -120,7 +132,7 @@ export function SharedDeckView(props: {
           highlighted={highlighted}
           onHighlight={setHighlighted}
         />
-        <div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             aria-expanded={showTestHand}
@@ -129,6 +141,16 @@ export function SharedDeckView(props: {
           >
             {showTestHand ? "Hide test hand" : "Test hand"}
           </button>
+          {props.tokens !== undefined && props.tokens.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={showTokens}
+              onClick={() => setShowTokens((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showTokens ? "Hide tokens" : `Tokens (${props.tokens.length})`}
+            </button>
+          )}
         </div>
         {showTestHand && (
           <TestHandPanel
@@ -138,6 +160,9 @@ export function SharedDeckView(props: {
             cards={props.cards}
             onClose={() => setShowTestHand(false)}
           />
+        )}
+        {showTokens && props.tokens !== undefined && (
+          <TokensPanel tokens={props.tokens} onClose={() => setShowTokens(false)} />
         )}
       </aside>
     </div>

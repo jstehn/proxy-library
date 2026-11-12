@@ -37,6 +37,7 @@ describe("deckStats", () => {
       types: {},
       averageManaValue: 0,
       cardCount: 0,
+      sideboardCount: 0,
       lands: 0,
       otherManaSources: 0,
       pips: { W: 0, U: 0, B: 0, R: 0, G: 0 },
@@ -96,6 +97,7 @@ describe("deckStats", () => {
       },
     ]);
     expect(stats.cardCount).toBe(19);
+    expect(stats.sideboardCount).toBe(4);
     expect(stats.lands).toBe(13);
     expect(stats.otherManaSources).toBe(1);
     expect(stats.curve).toEqual([0, 1, 3, 2, 0, 0, 0, 0]);
@@ -185,9 +187,12 @@ describe("role tags in the statistics (design doc 19)", () => {
     });
   });
 
-  it("has role targets only in Commander, the one format with a common guide", () => {
+  it("has role targets in Commander and 60-card formats, and null in Limited", () => {
     expect(roleTargets("commander")).toEqual({ ramp: 10, draw: 10, removal: 8, wipe: 3 });
-    expect(roleTargets("modern")).toBeNull();
+    expect(roleTargets("standard")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
+    expect(roleTargets("pioneer")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
+    expect(roleTargets("modern")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
+    expect(roleTargets("casual")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
     expect(roleTargets("limited")).toBeNull();
   });
 });

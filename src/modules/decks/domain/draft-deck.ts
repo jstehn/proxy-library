@@ -16,8 +16,9 @@ import {
   type RoleGap,
 } from "./suggest";
 
-// Draft a 100-card Commander deck from owned cards first, then optional store gap-fill, plus lands
-// from planManaBase (design doc 37). Pure: queries load candidates, this picks and explains why.
+// Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first,
+// then optional store gap-fill, plus lands from planManaBase (design docs 37 & 44). Pure: queries
+// load candidates, this picks and explains why.
 
 export type DraftSection = "role" | "plan" | "curve";
 
@@ -32,12 +33,14 @@ export type DraftCandidate = CandidateCard &
     producedMana: readonly string[];
     ownedCopies: number;
     alsoIn: readonly string[];
+    /** True when the card is restricted to 1 copy in this format (e.g. Vintage). */
+    isRestricted?: boolean;
   }>;
 
 export type DraftOptions = Readonly<{
   /** Extra themes to seed into the deck profile (e.g. ["tokens", "aristocrats"]). */
   themes?: readonly Theme[];
-  /** Override default Commander role targets (ramp 10, draw 10, removal 8, wipe 3). */
+  /** Override default format role targets (Commander 10/10/8/3; 60-card 4/6/6/2). */
   roleTargets?: Partial<Record<TargetedTag, number>>;
   /**
    * Whether store cards can fill slots that owned cards cannot:
@@ -50,6 +53,7 @@ export type DraftOptions = Readonly<{
 export type DraftedSpell = Readonly<{
   oracleId: string;
   name: string;
+  quantity: number;
   manaCost: string | null;
   manaValue: number;
   typeLine: string;
@@ -129,9 +133,18 @@ export function curveBucket(manaValue: number): CurveBucket {
   return "5+";
 }
 
-function toProfileLine(candidate: DraftCandidate): ProfileLine {
+const ANY_NUMBER_NAMED = /a deck can have any number of cards named/i;
+
+function candidateCopyLimit(candidate: DraftCandidate, format: Format): number {
+  if (ANY_NUMBER_NAMED.test(candidate.text)) return 99;
+  if (format === "commander" || candidate.isRestricted) return 1;
+  if (format === "limited") return 99;
+  return 4;
+}
+
+function toProfileLine(candidate: DraftCandidate, quantity = 1): ProfileLine {
   return {
-    quantity: 1,
+    quantity,
     manaValue: candidate.manaValue,
     manaCost: candidate.manaCost,
     typeLine: candidate.typeLine,
@@ -141,6 +154,31 @@ function toProfileLine(candidate: DraftCandidate): ProfileLine {
     text: candidate.text,
     keywords: candidate.keywords,
   };
+}
+
+function takeSpellCopies(entries: readonly DraftEntry[], maxCopies: number): DraftEntry[] {
+  const limit = Math.max(0, maxCopies);
+  const kept: DraftEntry[] = [];
+  let remaining = limit;
+  for (const entry of entries) {
+    if (remaining <= 0) break;
+    const take = Math.min(entry.spell.quantity, remaining);
+    kept.push(
+      take === entry.spell.quantity
+        ? entry
+        : {
+            ...entry,
+            spell: { ...entry.spell, quantity: take },
+            line: { ...entry.line, quantity: take },
+          },
+    );
+    remaining -= take;
+  }
+  return kept;
+}
+
+function totalSpellCopies(entries: readonly DraftEntry[]): number {
+  return entries.reduce((sum, entry) => sum + entry.spell.quantity, 0);
 }
 
 function effectiveStorePrice(priceCents: number | null): number {
@@ -211,7 +249,7 @@ function compareStoreFit(
  */
 function pickCurveCandidate(
   pool: readonly DraftCandidate[],
-  chosenIds: ReadonlySet<string>,
+  hasRoom: (candidate: DraftCandidate) => boolean,
   bucketCounts: Readonly<Record<CurveBucket, number>>,
   totalSpells: number,
   preferCheaperPrice: boolean,
@@ -220,7 +258,7 @@ function pickCurveCandidate(
   const denominator = Math.max(1, totalSpells);
 
   for (const candidate of pool) {
-    if (chosenIds.has(candidate.oracleId)) continue;
+    if (!hasRoom(candidate)) continue;
     const bucket = curveBucket(candidate.manaValue);
     const currentShare = bucketCounts[bucket] / denominator;
     const deficit = CURVE_BUCKET_SHARES[bucket] - currentShare;
@@ -286,13 +324,26 @@ export function draftDeck(input: DraftInput): DeckDraft {
   const initialProfile = deckProfile(playedLines, input.format);
   const seedThemes = mergeThemes(initialProfile.themes, input.options?.themes);
 
+  const remainingCopyRoom = (candidate: DraftCandidate, addedCount: number): number => {
+    const already = input.inDeck.get(candidate.oracleId) ?? 0;
+    const formatRoom = Math.max(
+      0,
+      candidateCopyLimit(candidate, input.format) - already - addedCount,
+    );
+    if (candidate.pool === "owned") {
+      const ownedRoom = Math.max(0, candidate.ownedCopies - already - addedCount);
+      return Math.min(formatRoom, ownedRoom);
+    }
+    return formatRoom;
+  };
+
   // Deduplicate and normalize candidates deterministically so input order never changes output.
   const seenCandidateIds = new Set<string>();
   const uniqueCandidates = [...input.candidates]
     .filter((candidate) => {
-      if ((input.inDeck.get(candidate.oracleId) ?? 0) > 0) return false;
       if (isLand(candidate.typeLine)) return false;
-      return true;
+      const already = input.inDeck.get(candidate.oracleId) ?? 0;
+      return candidateCopyLimit(candidate, input.format) > already;
     })
     .sort(
       (a, b) =>
@@ -308,7 +359,11 @@ export function draftDeck(input: DraftInput): DeckDraft {
     });
 
   const ownedPool: DraftCandidate[] = uniqueCandidates
-    .filter((candidate) => candidate.ownedCopies > 0 && candidate.pool === "owned")
+    .filter(
+      (candidate) =>
+        candidate.pool === "owned" &&
+        candidate.ownedCopies > (input.inDeck.get(candidate.oracleId) ?? 0),
+    )
     .map((candidate) => ({ ...candidate, pool: "owned" }));
   const storePool: DraftCandidate[] = uniqueCandidates
     .filter((candidate) => candidate.ownedCopies === 0 || candidate.pool === "store")
@@ -360,7 +415,8 @@ export function draftDeck(input: DraftInput): DeckDraft {
 
   const maxNewSpells = targetTotal - existingCount;
   const drafted: DraftEntry[] = [];
-  const chosenIds = new Set<string>();
+  let draftedCopiesCount = 0;
+  const addedByOracle = new Map<string, number>();
   const roleCounts: Record<TargetedTag, number> = { ...existingRoles };
   const bucketCounts: Record<CurveBucket, number> = {
     "1-2": 0,
@@ -376,17 +432,30 @@ export function draftDeck(input: DraftInput): DeckDraft {
     totalSpellsCount += line.quantity;
   }
 
+  const headroomFor = (candidate: DraftCandidate) =>
+    remainingCopyRoom(candidate, addedByOracle.get(candidate.oracleId) ?? 0);
+
+  const hasHeadroom = (candidate: DraftCandidate) => headroomFor(candidate) > 0;
+
   const recordPick = (
     candidate: DraftCandidate,
     section: DraftSection,
     score: number,
     reasons: readonly DraftReason[],
+    desiredQuantity: number,
     primaryRole?: TargetedTag,
   ) => {
-    const line = toProfileLine(candidate);
+    const qty = Math.min(
+      desiredQuantity,
+      headroomFor(candidate),
+      Math.max(0, maxNewSpells - draftedCopiesCount),
+    );
+    if (qty <= 0) return;
+    const line = toProfileLine(candidate, qty);
     const spell: DraftedSpell = {
       oracleId: candidate.oracleId,
       name: candidate.name,
+      quantity: qty,
       manaCost: candidate.manaCost,
       manaValue: candidate.manaValue,
       typeLine: candidate.typeLine,
@@ -399,12 +468,13 @@ export function draftDeck(input: DraftInput): DeckDraft {
       alsoIn: candidate.alsoIn,
     };
     drafted.push({ spell, candidate, line });
-    chosenIds.add(candidate.oracleId);
-    bucketCounts[curveBucket(candidate.manaValue)] += 1;
-    totalSpellsCount += 1;
+    addedByOracle.set(candidate.oracleId, (addedByOracle.get(candidate.oracleId) ?? 0) + qty);
+    draftedCopiesCount += qty;
+    bucketCounts[curveBucket(candidate.manaValue)] += qty;
+    totalSpellsCount += qty;
     for (const tag of TARGETED_TAGS) {
       if (candidate.roles.includes(tag)) {
-        roleCounts[tag] += 1;
+        roleCounts[tag] += qty;
       }
     }
   };
@@ -426,7 +496,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
       .length;
 
   const exhaustedOwnedRoles = new Set<TargetedTag>();
-  while (drafted.length < maxNewSpells) {
+  while (draftedCopiesCount < maxNewSpells) {
     const activeRoles = TARGETED_TAGS.filter(
       (tag) => roleCounts[tag] < targets[tag] && !exhaustedOwnedRoles.has(tag),
     );
@@ -439,7 +509,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
     const profileSnapshot = currentProfile();
 
     const matches = ownedPool
-      .filter((candidate) => !chosenIds.has(candidate.oracleId))
+      .filter(hasHeadroom)
       .flatMap((candidate) => {
         const scored = scoreForRole(candidate, targetRole, profileSnapshot);
         return scored === null
@@ -460,13 +530,14 @@ export function draftDeck(input: DraftInput): DeckDraft {
     }
 
     const best = matches[0];
-    recordPick(best.card, "role", best.score, best.reasons, targetRole);
+    const deficit = Math.max(1, targets[targetRole] - roleCounts[targetRole]);
+    recordPick(best.card, "role", best.score, best.reasons, deficit, targetRole);
   }
 
   // Step B: Fill remaining role gaps from storePool when allowed.
   if (includeStore !== "none") {
     const exhaustedStoreRoles = new Set<TargetedTag>();
-    while (drafted.length < maxNewSpells) {
+    while (draftedCopiesCount < maxNewSpells) {
       const activeRoles = TARGETED_TAGS.filter(
         (tag) => roleCounts[tag] < targets[tag] && !exhaustedStoreRoles.has(tag),
       );
@@ -479,7 +550,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
       const profileSnapshot = currentProfile();
 
       const matches = storePool
-        .filter((candidate) => !chosenIds.has(candidate.oracleId))
+        .filter(hasHeadroom)
         .flatMap((candidate) => {
           const scored = scoreForRole(candidate, targetRole, profileSnapshot);
           if (scored === null) return [];
@@ -501,15 +572,16 @@ export function draftDeck(input: DraftInput): DeckDraft {
       }
 
       const best = matches[0];
-      recordPick(best.card, "role", best.score, best.reasons, targetRole);
+      const deficit = Math.max(1, targets[targetRole] - roleCounts[targetRole]);
+      recordPick(best.card, "role", best.score, best.reasons, deficit, targetRole);
     }
   }
 
   // Step C: Owned on-plan spells (themes, tribes, commander keywords).
-  if (drafted.length < maxNewSpells) {
+  if (draftedCopiesCount < maxNewSpells) {
     const planProfile: DeckProfile = { ...currentProfile(), gaps: [] };
     const planMatches = ownedPool
-      .filter((candidate) => !chosenIds.has(candidate.oracleId))
+      .filter(hasHeadroom)
       .flatMap((candidate) => {
         const scored = scoreForDeck(candidate, planProfile);
         return scored === null
@@ -519,23 +591,29 @@ export function draftDeck(input: DraftInput): DeckDraft {
       .sort(compareOwnedFit);
 
     for (const match of planMatches) {
-      if (drafted.length >= maxNewSpells) break;
-      recordPick(match.card, "plan", match.score, match.reasons);
+      if (draftedCopiesCount >= maxNewSpells) break;
+      recordPick(match.card, "plan", match.score, match.reasons, headroomFor(match.card));
     }
   }
 
   // Step D: Owned curve-smoothing playable spells.
-  while (drafted.length < maxNewSpells) {
-    const pick = pickCurveCandidate(ownedPool, chosenIds, bucketCounts, totalSpellsCount, false);
+  while (draftedCopiesCount < maxNewSpells) {
+    const pick = pickCurveCandidate(ownedPool, hasHeadroom, bucketCounts, totalSpellsCount, false);
     if (pick === null) break;
-    recordPick(pick.candidate, "curve", pick.score, [{ kind: "curve", bucket: pick.bucket }]);
+    recordPick(
+      pick.candidate,
+      "curve",
+      pick.score,
+      [{ kind: "curve", bucket: pick.bucket }],
+      headroomFor(pick.candidate),
+    );
   }
 
   // Step E: Store on-plan and curve fallback when ownedPool is exhausted and store is allowed.
-  if (includeStore !== "none" && drafted.length < maxNewSpells) {
+  if (includeStore !== "none" && draftedCopiesCount < maxNewSpells) {
     const planProfile: DeckProfile = { ...currentProfile(), gaps: [] };
     const storePlanMatches = storePool
-      .filter((candidate) => !chosenIds.has(candidate.oracleId))
+      .filter(hasHeadroom)
       .flatMap((candidate) => {
         const scored = scoreForDeck(candidate, planProfile);
         if (scored === null) return [];
@@ -552,48 +630,67 @@ export function draftDeck(input: DraftInput): DeckDraft {
       .sort(compareStoreFit);
 
     for (const match of storePlanMatches) {
-      if (drafted.length >= maxNewSpells) break;
-      recordPick(match.card, "plan", match.score, match.reasons);
+      if (draftedCopiesCount >= maxNewSpells) break;
+      recordPick(match.card, "plan", match.score, match.reasons, headroomFor(match.card));
     }
 
-    while (drafted.length < maxNewSpells) {
-      const pick = pickCurveCandidate(storePool, chosenIds, bucketCounts, totalSpellsCount, true);
+    while (draftedCopiesCount < maxNewSpells) {
+      const pick = pickCurveCandidate(storePool, hasHeadroom, bucketCounts, totalSpellsCount, true);
       if (pick === null) break;
-      recordPick(pick.candidate, "curve", pick.score, [{ kind: "curve", bucket: pick.bucket }]);
+      recordPick(
+        pick.candidate,
+        "curve",
+        pick.score,
+        [{ kind: "curve", bucket: pick.bucket }],
+        headroomFor(pick.candidate),
+      );
     }
   }
 
-  // Reconcile spell count with planManaBase so commanders + spells + lands = targetTotal (100).
-  const availableOwnedNonBasics = input.ownedLands.filter(
-    (land) =>
-      !land.isBasicLand && land.ownedCopies > 0 && (input.inDeck.get(land.oracleId) ?? 0) === 0,
-  ).length;
+  // Reconcile spell count with planManaBase so commanders + spells + lands = targetTotal.
+  const landCap = input.format === "commander" ? 1 : 4;
+  const availableOwnedNonBasics = input.ownedLands
+    .filter((land) => !land.isBasicLand)
+    .reduce((sum, land) => {
+      const already = input.inDeck.get(land.oracleId) ?? 0;
+      return sum + Math.max(0, Math.min(landCap, land.ownedCopies) - already);
+    }, 0);
   const maxAddableLands = input.basics.length > 0 ? maxNewSpells : availableOwnedNonBasics;
 
-  const landsAddedForPrefix = (prefixLength: number): number => {
+  const landsAddedForPrefix = (prefixCopies: number): number => {
     const trialLines = [
       ...playedLines,
-      ...drafted.slice(0, prefixLength).map((entry) => entry.line),
+      ...takeSpellCopies(drafted, prefixCopies).map((entry) => entry.line),
     ];
     const desiredLands = landTarget(input.format, deckStats(trialLines)).lands;
     const deficit = Math.max(0, desiredLands - existingLands);
     return Math.min(deficit, maxAddableLands);
   };
 
+  const initialLandHeadroom = Math.min(
+    draftedCopiesCount,
+    Math.max(
+      0,
+      maxNewSpells - Math.max(0, landTarget(input.format, initialStats).lands - existingLands),
+    ),
+  );
   let keptSpellCount = Math.min(
-    drafted.length,
-    Math.max(0, maxNewSpells - landsAddedForPrefix(Math.min(drafted.length, 62))),
+    draftedCopiesCount,
+    Math.max(0, maxNewSpells - landsAddedForPrefix(initialLandHeadroom)),
   );
   for (let iteration = 0; iteration < 3; iteration += 1) {
     const landsToAdd = landsAddedForPrefix(keptSpellCount);
-    keptSpellCount = Math.min(drafted.length, Math.max(0, maxNewSpells - landsToAdd));
+    keptSpellCount = Math.min(draftedCopiesCount, Math.max(0, maxNewSpells - landsToAdd));
   }
 
-  let keptEntries = drafted.slice(0, keptSpellCount);
+  let keptEntries = takeSpellCopies(drafted, keptSpellCount);
   const combinedLines = [...playedLines, ...keptEntries.map((entry) => entry.line)];
   const combinedInDeck = new Map(input.inDeck);
   for (const entry of keptEntries) {
-    combinedInDeck.set(entry.spell.oracleId, 1);
+    combinedInDeck.set(
+      entry.spell.oracleId,
+      (combinedInDeck.get(entry.spell.oracleId) ?? 0) + entry.spell.quantity,
+    );
   }
 
   const finalProfile = deckProfile(combinedLines, input.format);
@@ -613,16 +710,35 @@ export function draftDeck(input: DraftInput): DeckDraft {
   const manaBase = capManaBaseAdditions(rawManaBase, maxNewSpells);
   const plannedLandAdditions = manaBase.add.reduce((sum, addition) => sum + addition.quantity, 0);
 
-  // If a curve threshold boundary caused keptEntries.length + plannedLandAdditions to differ by 1
+  // If a curve threshold boundary caused spell copies + plannedLandAdditions to differ by 1
   // from maxNewSpells while we have enough drafted spells, align keptEntries to hit targetTotal.
   const exactSpellTarget = Math.max(0, maxNewSpells - plannedLandAdditions);
-  if (keptEntries.length !== exactSpellTarget && drafted.length >= exactSpellTarget) {
-    keptEntries = drafted.slice(0, exactSpellTarget);
-  } else if (existingCount + keptEntries.length + plannedLandAdditions > targetTotal) {
-    keptEntries = drafted.slice(0, exactSpellTarget);
+  const currentKeptCopies = totalSpellCopies(keptEntries);
+  if (
+    (currentKeptCopies !== exactSpellTarget && draftedCopiesCount >= exactSpellTarget) ||
+    existingCount + currentKeptCopies + plannedLandAdditions > targetTotal
+  ) {
+    keptEntries = takeSpellCopies(drafted, exactSpellTarget);
   }
 
-  const spells = keptEntries.map((entry) => entry.spell);
+  // Collapse repeated picks of the same card (e.g. partial role fill + extra plan/curve copies).
+  const mergedEntries = new Map<string, DraftEntry>();
+  for (const entry of keptEntries) {
+    const key = `${entry.spell.oracleId}:${entry.spell.pool}`;
+    const existing = mergedEntries.get(key);
+    if (existing === undefined) {
+      mergedEntries.set(key, entry);
+      continue;
+    }
+    const mergedQuantity = existing.spell.quantity + entry.spell.quantity;
+    mergedEntries.set(key, {
+      ...existing,
+      spell: { ...existing.spell, quantity: mergedQuantity },
+      line: { ...existing.line, quantity: mergedQuantity },
+    });
+  }
+  const finalEntries = [...mergedEntries.values()];
+  const spells = finalEntries.map((entry) => entry.spell);
   const ownedAddedByRole: Record<TargetedTag, number> = {
     ramp: 0,
     draw: 0,
@@ -636,7 +752,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
     wipe: 0,
   };
 
-  for (const entry of keptEntries) {
+  for (const entry of finalEntries) {
     const tags = new Set<Tag>([
       ...entry.candidate.roles,
       ...cardTags({
@@ -648,9 +764,9 @@ export function draftDeck(input: DraftInput): DeckDraft {
     for (const tag of TARGETED_TAGS) {
       if (!tags.has(tag)) continue;
       if (entry.spell.pool === "owned") {
-        ownedAddedByRole[tag] += 1;
+        ownedAddedByRole[tag] += entry.spell.quantity;
       } else {
-        storeAddedByRole[tag] += 1;
+        storeAddedByRole[tag] += entry.spell.quantity;
       }
     }
   }
@@ -669,12 +785,17 @@ export function draftDeck(input: DraftInput): DeckDraft {
     };
   });
 
-  const ownedSpellCount = spells.filter((spell) => spell.pool === "owned").length;
+  const ownedSpellCount = spells
+    .filter((spell) => spell.pool === "owned")
+    .reduce((sum, spell) => sum + spell.quantity, 0);
   const storeSpells = spells.filter((spell) => spell.pool === "store");
-  const storeAddedCount = storeSpells.length;
-  const storeCostCents = storeSpells.reduce((sum, spell) => sum + (spell.priceCents ?? 0), 0);
+  const storeAddedCount = storeSpells.reduce((sum, spell) => sum + spell.quantity, 0);
+  const storeCostCents = storeSpells.reduce(
+    (sum, spell) => sum + (spell.priceCents ?? 0) * spell.quantity,
+    0,
+  );
   const ownedAddedCount = ownedSpellCount + plannedLandAdditions;
-  const totalAfterDraft = existingCount + spells.length + plannedLandAdditions;
+  const totalAfterDraft = existingCount + totalSpellCopies(finalEntries) + plannedLandAdditions;
 
   return {
     existingCount,

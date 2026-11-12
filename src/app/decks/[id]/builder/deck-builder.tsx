@@ -17,6 +17,8 @@ import type {
 import {
   bracketLine,
   bracketWarning,
+  copyLimitFor,
+  deckSize,
   estimateBracket,
   headingMoved,
   isCounted,
@@ -32,6 +34,7 @@ import {
   headingAction,
   loadBuilderDeck,
   moveLineAction,
+  noteAction,
   otherDecksAction,
   setQuantityAction,
   setTargetBracketAction,
@@ -43,6 +46,9 @@ import { BracketPanel } from "./bracket-panel";
 import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";
 import { HeadingField } from "./heading-field";
+import { NoteField } from "./note-field";
+import { SnapshotsPanel } from "./snapshots-panel";
+import { TokensPanel } from "./tokens-panel";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
 import { SuggestionsPanel } from "./suggestions";
 import { CutsPanel } from "./cuts-panel";
@@ -170,6 +176,8 @@ export function DeckBuilder(props: {
   const [showCuts, setShowCuts] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
   const [showManaBase, setShowManaBase] = useState(false);
+  const [showSnapshots, setShowSnapshots] = useState(false);
+  const [showTokens, setShowTokens] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
     oracleId: string;
@@ -361,6 +369,7 @@ export function DeckBuilder(props: {
       priceCents: card.priceCents,
       tags: cardTags({ typeLine: card.typeLine, text: card.text, producedMana: card.producedMana }),
       bracketFlags: bracketFlags(card),
+      copyLimit: copyLimitFor(format, card.rules),
     });
   }
 
@@ -397,6 +406,7 @@ export function DeckBuilder(props: {
           producedMana: line.producedMana,
         }),
         bracketFlags: bracketFlags(line),
+        copyLimit: copyLimitFor(format, deck.rules[line.oracleId]),
       },
       line.otherDecks,
     );
@@ -483,16 +493,17 @@ export function DeckBuilder(props: {
     });
   }
 
-  function add(board: Board) {
+  function add(board: Board, amount = quantity) {
     if (selected === null) return;
+    const toAdd = Math.max(1, Math.min(99, amount));
     const current = inDeck(selected.oracleId)[board] ?? 0;
-    const next = board === "commander" ? 1 : Math.min(99, current + quantity);
+    const next = board === "commander" ? 1 : Math.min(99, current + toAdd);
     const added = next - current;
     saveQuantity(
       { oracleId: selected.oracleId, printingId: selected.printingId, board, quantity: next },
       board === "commander"
         ? `${selected.name} is now a commander.`
-        : `Added ${added} ${selected.name} (now ${next}${board === "side" ? " in the sideboard" : board === "maybe" ? " on the maybeboard" : ""}${added < quantity ? ", the most one line can hold" : ""}).`,
+        : `Added ${added} ${selected.name} (now ${next}${board === "side" ? " in the sideboard" : board === "maybe" ? " on the maybeboard" : ""}${added < toAdd ? ", the most one line can hold" : ""}).`,
     );
     setSelected({ ...selected, inDeck: { ...selected.inDeck, [board]: next } });
   }
@@ -613,6 +624,34 @@ export function DeckBuilder(props: {
     );
   }
 
+  function setLineNote(line: DeckLine, note: string | null) {
+    const request = ++latestChange.current;
+    setDeck((current) => ({
+      ...current,
+      lines: current.lines.map((each) => (each === line ? { ...each, note } : each)),
+    }));
+    startSaving(async () => {
+      const result = await noteAction({
+        deckId,
+        oracleId: line.oracleId,
+        board: line.board,
+        note,
+      });
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        setMessage({
+          tone: "ok",
+          text: note === null ? `${line.name}: note cleared.` : `${line.name}: note saved.`,
+        });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+        const fresh = await loadBuilderDeck(deckId);
+        if (fresh !== null) setDeck(fresh);
+      }
+    });
+  }
+
   function changeLine(line: DeckLine, next: number) {
     saveQuantity(
       { oracleId: line.oracleId, board: line.board, quantity: Math.max(0, Math.min(99, next)) },
@@ -679,6 +718,11 @@ export function DeckBuilder(props: {
   const cardTotal = deck.lines
     .filter((line) => isCounted(line.board))
     .reduce((sum, line) => sum + line.quantity, 0);
+  const draftTarget = deckSize(format).cards;
+  const selectedCopyLimit =
+    selected === null
+      ? null
+      : (selected.copyLimit ?? copyLimitFor(format, deck.rules[selected.oracleId]));
   const pill = (pressed: boolean) =>
     `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`;
 
@@ -923,6 +967,7 @@ export function DeckBuilder(props: {
                 quantity={quantity}
                 onQuantity={setQuantity}
                 onAdd={add}
+                copyLimit={selectedCopyLimit}
                 deckId={deckId}
                 isCommanderDeck={isCommanderDeck}
                 onClose={() => setSelected(null)}
@@ -947,6 +992,24 @@ export function DeckBuilder(props: {
                     />
                   </div>
                 ))}
+              {(() => {
+                const selectedLines = deck.lines.filter(
+                  (line) => line.oracleId === selected.oracleId,
+                );
+                return selectedLines.map((line) => (
+                  <div
+                    key={`note-${line.oracleId}-${line.board}-${line.note ?? ""}`}
+                    className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <NoteField
+                      line={line}
+                      showBoard={selectedLines.length > 1}
+                      busy={isSaving}
+                      onSave={setLineNote}
+                    />
+                  </div>
+                ));
+              })()}
               {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
                 <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
                   <PrintingPicker
@@ -1032,7 +1095,7 @@ export function DeckBuilder(props: {
             >
               {showManaBase ? "Hide mana base" : "Mana base"}
             </button>
-            {isCommanderDeck && (
+            {format !== "limited" && (
               <button
                 type="button"
                 aria-expanded={showDraft}
@@ -1041,8 +1104,8 @@ export function DeckBuilder(props: {
               >
                 {showDraft
                   ? "Hide draft"
-                  : cardTotal > 0 && cardTotal < 100
-                    ? `Draft deck (fill ${100 - cardTotal})`
+                  : cardTotal > 0 && cardTotal < draftTarget
+                    ? `Draft deck (fill ${draftTarget - cardTotal})`
                     : "Draft deck"}
               </button>
             )}
@@ -1054,11 +1117,28 @@ export function DeckBuilder(props: {
             >
               {showTestHand ? "Hide test hand" : "Test hand"}
             </button>
+            <button
+              type="button"
+              aria-expanded={showSnapshots}
+              onClick={() => setShowSnapshots((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showSnapshots ? "Hide snapshots" : "Snapshots"}
+            </button>
+            <button
+              type="button"
+              aria-expanded={showTokens}
+              onClick={() => setShowTokens((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showTokens ? "Hide tokens" : "Tokens"}
+            </button>
           </div>
           {showDraft && (
             <DraftPanel
               deckId={deckId}
               deckKey={`${deckKey}|${targetBracket ?? ""}`}
+              format={format}
               onAdd={(cards, count, label) => addLands(cards, count, label)}
               onClose={() => setShowDraft(false)}
               busy={isSaving}
@@ -1102,6 +1182,27 @@ export function DeckBuilder(props: {
               seed={props.seed}
               cards={deck.cards}
               onClose={() => setShowTestHand(false)}
+            />
+          )}
+          {showSnapshots && (
+            <SnapshotsPanel
+              deckId={deckId}
+              deckKey={deckKey}
+              busy={isSaving}
+              onRestored={(fresh, text) => {
+                setDeck(fresh);
+                setMessage({ tone: "ok", text });
+              }}
+              onError={(text) => setMessage({ tone: "error", text })}
+              onClose={() => setShowSnapshots(false)}
+            />
+          )}
+          {showTokens && (
+            <TokensPanel
+              deckId={deckId}
+              deckKey={deckKey}
+              showPrintLink
+              onClose={() => setShowTokens(false)}
             />
           )}
           <DeckList

@@ -7,34 +7,53 @@ import {
   commanderDetails,
   commandersICanBuild,
   bracketWarning,
+  chanceByTurn,
+  checkNote,
+  compareDeckSnapshot,
   deckChangePreview,
   deckProblems,
   deckStats,
   deckText,
+  deckTokenLines,
   deckView,
   DeckId,
   draftForDeck,
+  EARLY_RAMP_MAX_MV,
   estimateBracket,
   decksFor,
+  filterTokenChecklist,
   findCard,
   fingerprint,
+  formatRulesSummary,
   FORMATS,
   GROUPINGS,
+  legalFormatsForCards,
+  library,
+  listDeckSnapshots,
   manaBasePlan,
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
+  MAX_NOTE_LENGTH,
   MAX_QUANTITY,
+  MAX_SNAPSHOT_LABEL_LENGTH,
+  MAX_SNAPSHOTS_PER_DECK,
+  openingHandOdds,
   rankCuts,
   roleTargets,
+  SnapshotId,
   SPELL_SLOTS,
   shortList,
+  summarizeTokenChecklist,
+  TOKEN_KINDS,
+  toTokenChecklistItem,
   type CommanderCoverage,
   type DeckChange,
   type DeckChangePreview,
   type DeckProblem,
   type DeckView,
+  type SnapshotComparison,
 } from "@/modules/decks";
-import { canonicalTheme, THEMES } from "@/shared/card-search";
+import { canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
 import {
   bracketWarningText,
   cutReasonText,
@@ -226,10 +245,10 @@ export const planManaBaseTool = defineTool({
 
 export const draftDeckTool = defineTool({
   name: "draft_deck",
-  title: "Draft a rough heuristic 100-card starting point from owned cards",
+  title: "Draft a rough heuristic starting point from owned cards",
   description: [
-    "Assembles a coarse heuristic 100-card starting skeleton for a Commander deck that already has a commander: fills open slots from the player's owned cards first (every copy they own counts, even ones in other decks, with a note in alsoIn), starting with missing role targets (ramp, draw, removal, wipe), then spells matching the commander's regex theme tags, tribes and keywords, then generic on-color mana-curve filler; if owned cards can't finish a role or reach the spell count and includeStore is 'fill-gaps', fills the remaining gaps from the store with prices and a storeCost total; finally calls plan_mana_base on the drafted curve to add owned non-basic lands and basics to reach 100 cards.",
-    "Use it when: you want a fast initial survey of what the player's collection can contribute toward 100 cards (and what roles are still missing). WARNING: This tool is a blind tag-and-curve heuristic that does NOT understand how cards actually work together. Filling or creating a deck directly from this tool without further work will produce an AWFUL, unfocused deck (especially 'curve' section picks, which are merely random on-color cards that plug a mana cost).",
+    "Assembles a coarse heuristic starting skeleton for a constructed or casual deck (100-card Commander with a commander, or 60-card formats like Standard/Pioneer/Modern/Legacy/Vintage/Pauper/Casual with up to 4-of playsets): fills open slots from the player's owned cards first (every copy they own counts, even ones in other decks, with a note in alsoIn), starting with missing role targets (ramp, draw, removal, wipe), then spells matching the deck's regex theme tags, tribes and keywords, then generic on-color mana-curve filler; if owned cards can't finish a role or reach the spell count and includeStore is 'fill-gaps', fills the remaining gaps from the store with prices and a storeCost total; finally calls plan_mana_base on the drafted curve to add owned non-basic lands and basics to reach the deck's target size (100 Commander, 60 constructed/casual).",
+    "Use it when: you want a fast initial survey of what the player's collection can contribute toward a deck (and what roles are still missing). WARNING: This tool is a blind tag-and-curve heuristic that does NOT understand how cards actually work together. Filling or creating a deck directly from this tool without further work will produce an AWFUL, unfocused deck (especially 'curve' section picks, which are merely random on-color cards that plug a mana cost).",
     "Rules: treat this strictly as a starting point that requires additional investigation. Read the commander's and candidates' oracle text (get_deck), run analyze_cards and search_for_deck to find real enablers, payoffs and win conditions, replace weak matches and curve filler, and make sure the player knows this raw draft is only a rough starting skeleton before applying agreed cards with replace_deck_list or set_deck_entry.",
   ].join("\n"),
   scope: "read",
@@ -248,32 +267,32 @@ export const draftDeckTool = defineTool({
           .min(0)
           .max(30)
           .optional()
-          .describe("Target ramp count (default 10)."),
+          .describe("Target ramp count (defaults: Commander 10, 60-card 4)."),
         draw: z
           .number()
           .int()
           .min(0)
           .max(30)
           .optional()
-          .describe("Target card draw count (default 10)."),
+          .describe("Target card draw count (defaults: Commander 10, 60-card 6)."),
         removal: z
           .number()
           .int()
           .min(0)
           .max(30)
           .optional()
-          .describe("Target single-target removal count (default 8)."),
+          .describe("Target single-target removal count (defaults: Commander 8, 60-card 6)."),
         wipe: z
           .number()
           .int()
           .min(0)
           .max(30)
           .optional()
-          .describe("Target board wipe count (default 3)."),
+          .describe("Target board wipe count (defaults: Commander 3, 60-card 2)."),
       })
       .optional()
       .describe(
-        "Optional overrides for Commander role targets (defaults: ramp 10, draw 10, removal 8, wipe 3).",
+        "Optional overrides for role targets (defaults: Commander ramp 10/draw 10/removal 8/wipe 3; 60-card ramp 4/draw 6/removal 6/wipe 2).",
       ),
     includeStore: z
       .enum(["fill-gaps", "none"])
@@ -285,10 +304,13 @@ export const draftDeckTool = defineTool({
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
-    if (view.deck.format !== "commander") {
-      return failed("NotCommanderDeck", "draft_deck only drafts 100-card Commander decks.");
+    if (view.deck.format === "limited") {
+      return failed("LimitedDeck", "draft_deck only drafts constructed or casual decks.");
     }
-    if (!view.lines.some((line) => line.board === "commander")) {
+    if (
+      view.deck.format === "commander" &&
+      !view.lines.some((line) => line.board === "commander")
+    ) {
       return failed(
         "CommanderMissing",
         "Put a commander on the commander board first before calling draft_deck.",
@@ -302,7 +324,7 @@ export const draftDeckTool = defineTool({
     if (draft === null) return deckNotFound(input.deckId);
 
     return done({
-      deck: { id: view.deck.id, name: view.deck.name },
+      deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
       existingCount: draft.existingCount,
       totalAfterDraft: draft.totalAfterDraft,
       ownedAddedCount: draft.ownedAddedCount,
@@ -312,6 +334,7 @@ export const draftDeckTool = defineTool({
       roleSummary: draft.roleSummary,
       spells: draft.spells.map((spell) => ({
         name: spell.name,
+        quantity: spell.quantity,
         manaCost: spell.manaCost,
         typeLine: spell.typeLine,
         pool: spell.pool,
@@ -499,9 +522,9 @@ export const getDeck = defineTool({
   description: [
     "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats, roleTargets (commander decks: ramp, draw, removal, wipe), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
+    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
     'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
-    'Headings: the player may group the main deck under headings of their own ("Ramp", "Win conditions"): a line\'s heading, the deck\'s headings in order, and grouping ("custom" when the deck is shown by them, "type" when by card type). Change them with set_deck_entry\'s heading and arrange_headings.',
+    'Headings & notes: the player may group the main deck under headings of their own ("Ramp", "Win conditions"): a line\'s heading, the deck\'s headings in order, and grouping ("custom" when the deck is shown by them, "type" when by card type). Cards may also carry a short `note` explaining why they are in the deck. Change them with set_deck_entry, apply_changes, and arrange_headings.',
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -518,6 +541,22 @@ export const getDeck = defineTool({
     const problems = problemsOf(view);
     const stats = deckStats(view.lines);
     const { list, fingerprint: print } = listAndFingerprint(view);
+    const handOdds = openingHandOdds(library(view.lines), {
+      onTheDraw: false,
+      freeMulligan: view.deck.format === "commander",
+    });
+    const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
+    const rawTokens = await deckTokenLines(
+      context.container.db,
+      view.deck.id,
+      view.lines.map((line) => ({
+        oracleId: line.oracleId,
+        printingId: line.printingId,
+        name: line.name,
+        board: line.board,
+      })),
+    );
+    const checklist = rawTokens.map(toTokenChecklistItem);
     return done({
       deck: {
         id: view.deck.id,
@@ -535,6 +574,7 @@ export const getDeck = defineTool({
         board: line.board,
         quantity: line.quantity,
         ...(line.heading !== null ? { heading: line.heading } : {}),
+        ...(line.note !== null ? { note: line.note } : {}),
         owned: line.owned,
         ...(line.otherDecks.length > 0
           ? {
@@ -555,6 +595,7 @@ export const getDeck = defineTool({
       })),
       stats: {
         cardCount: stats.cardCount,
+        sideboardCount: stats.sideboardCount,
         lands: stats.lands,
         otherManaSources: stats.otherManaSources,
         averageManaValue: Math.round(stats.averageManaValue * 100) / 100,
@@ -565,9 +606,42 @@ export const getDeck = defineTool({
         roles: stats.tags,
         value: money(stats.priceCents),
       },
+      formatRules: formatRulesSummary(view.deck.format),
+      cardLegalIn:
+        view.deck.format !== "commander" && view.deck.format !== "limited"
+          ? legalFormatsForCards(view.deck, (oracleId) => view.rules[oracleId])
+          : null,
       roleTargets: roleTargets(view.deck.format),
       problems: problems.map(problemText),
       bracket: bracketOf(view),
+      openingHandOdds:
+        handOdds === null
+          ? null
+          : {
+              librarySize: handOdds.librarySize,
+              lands: handOdds.lands,
+              earlyRamp: handOdds.earlyRamp,
+              playableLandsInOpening7Percent: toPercent(handOdds.opening.playableLands),
+              playableAfterFirstMulliganPercent: toPercent(
+                handOdds.opening.playableAfterFirstMulligan,
+              ),
+              threeLandsByTurn3Percent: toPercent(handOdds.landDrops[2].chance),
+              fourLandsByTurn4Percent: toPercent(handOdds.landDrops[3].chance),
+              earlyRampByTurn3Percent: toPercent(handOdds.rampByTurn3.atLeastOneEarlyRamp),
+              twoLandsAndEarlyRampByTurn3Percent: toPercent(
+                handOdds.rampByTurn3.twoLandsAndEarlyRamp,
+              ),
+            },
+      tokens: {
+        summary: summarizeTokenChecklist(rawTokens),
+        items: checklist.map((item) => ({
+          name: item.name,
+          kind: item.kind,
+          description: item.description,
+          madeBy: item.madeBy,
+          sideboardOnly: item.sideboardOnly,
+        })),
+      },
       list,
       shortList: shortList(problems, view.lines),
     });
@@ -699,7 +773,7 @@ export const setDeckEntry = defineTool({
     "Sets how many copies of one card a deck has on one board: 0 removes it. It sets the count, it doesn't add to it.",
     "Use it when: adding, removing or changing a few cards. For many changes at once, use replace_deck_list.",
     'Rules: cards you don\'t own may be added (they show as short); prefer owned cards, and free ones (search free>0) over cards another deck uses. To move a card from another deck, set it to 0 there (the player decides; ask first). To set a card aside without removing it, set it to 0 on "main" and add it on "maybe". Check the result with get_deck.',
-    'Heading (optional): put the card under one of the deck\'s own headings ("Ramp"), or "" to take it off; leave it out to keep the current one. Main deck only. A new heading goes last.',
+    'Heading & note (optional): put the card under a heading ("Ramp", "" clears it; main deck only) and/or explain why it is in the deck with note ("Combos with Deadeye Navigator", "" clears it). Leave either out to keep its current value.',
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,
@@ -718,6 +792,13 @@ export const setDeckEntry = defineTool({
       .max(200)
       .optional()
       .describe('A heading of the deck\'s own for the card, e.g. "Ramp"; "" removes it.'),
+    note: z
+      .string()
+      .max(400)
+      .optional()
+      .describe(
+        `Why this card is in the deck (up to ${MAX_NOTE_LENGTH} characters); "" clears it.`,
+      ),
   }),
   async run(context, input) {
     const found = await findCard(context.container.db, input.card);
@@ -727,6 +808,9 @@ export const setDeckEntry = defineTool({
       oracleId: found.oracleId,
       board: input.board,
       quantity: input.quantity,
+      ...(input.note !== undefined && input.quantity > 0
+        ? { note: input.note === "" ? null : input.note }
+        : {}),
     });
     if (!result.ok) {
       switch (result.error.kind) {
@@ -736,6 +820,11 @@ export const setDeckEntry = defineTool({
           return cardNotFound(input.card);
         case "QuantityInvalid":
           return failed("QuantityInvalid", `Use 0 to ${result.error.maximum} copies.`);
+        case "NoteInvalid":
+          return failed(
+            "NoteInvalid",
+            `Use up to ${result.error.maximum} characters for a line note (or "" to clear).`,
+          );
       }
     }
     if (input.heading !== undefined && input.quantity > 0) {
@@ -760,6 +849,7 @@ export const setDeckEntry = defineTool({
       board: input.board,
       quantity: input.quantity,
       ...(input.heading !== undefined && input.quantity > 0 ? { heading: input.heading } : {}),
+      ...(input.note !== undefined && input.quantity > 0 ? { note: input.note } : {}),
     });
   },
 });
@@ -1041,6 +1131,13 @@ export const applyChangesTool = defineTool({
             .max(MAX_QUANTITY)
             .describe("How many copies the deck should have on this board; 0 removes the card."),
           board,
+          note: z
+            .string()
+            .max(400)
+            .optional()
+            .describe(
+              `Optional note explaining why this card is in the deck (up to ${MAX_NOTE_LENGTH} chars); "" clears it.`,
+            ),
         }),
       )
       .min(1)
@@ -1082,12 +1179,33 @@ export const applyChangesTool = defineTool({
       );
     }
 
-    const resolvedChanges: DeckChange[] = input.changes.flatMap((entry) => {
+    for (const entry of input.changes) {
+      if (entry.quantity > 0 && entry.note !== undefined && entry.note !== "") {
+        const checked = checkNote(entry.note);
+        if (!checked.ok) {
+          return failed(
+            "NoteInvalid",
+            `Line note for ${entry.card} must be 1 to ${checked.error.maximum} characters (or "" to clear).`,
+          );
+        }
+      }
+    }
+
+    const resolvedChanges: DeckChange[] = [];
+    const changesToSave: Array<DeckChange & { note?: string | null }> = [];
+    for (const entry of input.changes) {
       const oracleId = byName.get(entry.card);
-      return oracleId === undefined
-        ? []
-        : [{ oracleId, board: entry.board, quantity: entry.quantity }];
-    });
+      if (oracleId === undefined) continue;
+      resolvedChanges.push({ oracleId, board: entry.board, quantity: entry.quantity });
+      changesToSave.push({
+        oracleId,
+        board: entry.board,
+        quantity: entry.quantity,
+        ...(entry.note !== undefined && entry.quantity > 0
+          ? { note: entry.note === "" ? null : entry.note }
+          : {}),
+      });
+    }
 
     const preview = await deckChangePreview(
       context.container.db,
@@ -1106,7 +1224,7 @@ export const applyChangesTool = defineTool({
     const result = await context.container.decks.applyChanges(context.actor, {
       deckId: DeckId.of(input.deckId),
       fingerprint: saveFingerprint,
-      changes: resolvedChanges,
+      changes: changesToSave,
     });
     if (!result.ok) {
       switch (result.error.kind) {
@@ -1121,11 +1239,431 @@ export const applyChangesTool = defineTool({
           return failed("QuantityInvalid", `Use 0 to ${result.error.maximum} copies.`);
         case "CardNotFound":
           return cardNotFound("one of the changed cards");
+        case "NoteInvalid":
+          return failed(
+            "NoteInvalid",
+            `Line notes must be 1 to ${result.error.maximum} characters (or "" to clear).`,
+          );
       }
     }
 
     return done(
       formatPreviewResponse(preview, { saved: true, fingerprint: result.value.fingerprint }),
     );
+  },
+});
+
+function formatSnapshotComparison(comparison: SnapshotComparison) {
+  return {
+    ...formatPreviewResponse(comparison, { saved: true, fingerprint: comparison.fingerprint }),
+    compared: {
+      before: comparison.beforeSide,
+      after: comparison.afterSide,
+    },
+  };
+}
+
+export const deckSnapshotsTool = defineTool({
+  name: "deck_snapshots",
+  title: "List or compare deck snapshots",
+  description: [
+    "Lists a deck's saved point-in-time snapshots, or compares a saved snapshot against the current deck (or a second snapshot).",
+    "Use it when: reviewing before/after cuts across size, curve, roles vs targets, problems, Commander bracket, value and card changes.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    snapshotId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('The "before" snapshot id to compare. Omit to list saved snapshots.'),
+    compareToSnapshotId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Optional "after" snapshot id. Omit to compare against the live deck.'),
+  }),
+  async run(context, input) {
+    if (input.snapshotId === undefined) {
+      const list = await listDeckSnapshots(
+        context.container.db,
+        context.actor.userId,
+        input.deckId,
+      );
+      if (list === null) return deckNotFound(input.deckId);
+      return done({
+        deckId: input.deckId,
+        snapshots: list.map((snapshot) => ({
+          id: Number(snapshot.id),
+          label: snapshot.label,
+          format: snapshot.format,
+          cardCount: snapshot.cardCount,
+          createdAt: snapshot.createdAt.toISOString(),
+        })),
+      });
+    }
+    const comparison = await compareDeckSnapshot(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      input.snapshotId,
+      input.compareToSnapshotId,
+    );
+    if (comparison === null) {
+      const list = await listDeckSnapshots(
+        context.container.db,
+        context.actor.userId,
+        input.deckId,
+      );
+      if (list === null) return deckNotFound(input.deckId);
+      return failed(
+        "SnapshotNotFound",
+        `Deck ${input.deckId} does not have snapshot ${input.snapshotId}${
+          input.compareToSnapshotId !== undefined ? ` or ${input.compareToSnapshotId}` : ""
+        }.`,
+      );
+    }
+    return done(formatSnapshotComparison(comparison));
+  },
+});
+
+export const snapshotDeckTool = defineTool({
+  name: "snapshot_deck",
+  title: "Save, restore or delete a deck snapshot",
+  description: [
+    'Saves a point-in-time snapshot of a deck (e.g. "Before cuts", up to 30 per deck), restores a deck back to a snapshot, or deletes a snapshot.',
+    "Use it when: before starting multi-step cuts or swaps so you and the player can compare before/after with deck_snapshots, or when rolling back.",
+    "Rules: restoring overwrites the deck's current card list, ask the player first before restoring or deleting a snapshot.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    action: z
+      .enum(["save", "restore", "delete"])
+      .default("save")
+      .describe(
+        '"save" creates a snapshot, "restore" reverts the deck to one, "delete" removes one.',
+      ),
+    label: z
+      .string()
+      .max(200)
+      .optional()
+      .describe(
+        `Label when action is "save" (1 to ${MAX_SNAPSHOT_LABEL_LENGTH} characters, e.g. "Before cuts").`,
+      ),
+    snapshotId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Snapshot id when action is "restore" or "delete".'),
+    fingerprint: z
+      .string()
+      .optional()
+      .describe('Optional fingerprint from get_deck when action is "restore".'),
+  }),
+  async run(context, input) {
+    const id = DeckId.of(input.deckId);
+    if (input.action === "save") {
+      if (input.label === undefined) {
+        return failed("InputInvalid", 'Pass a label when action is "save" (e.g. "Before cuts").');
+      }
+      const saved = await context.container.decks.saveSnapshot(context.actor, {
+        deckId: id,
+        label: input.label,
+      });
+      if (!saved.ok) {
+        switch (saved.error.kind) {
+          case "DeckNotFound":
+            return deckNotFound(input.deckId);
+          case "SnapshotLabelInvalid":
+            return failed(
+              "SnapshotLabelInvalid",
+              `Snapshot label must be 1 to ${saved.error.maximum} characters.`,
+            );
+          case "TooManySnapshots":
+            return failed(
+              "TooManySnapshots",
+              `A deck can store up to ${MAX_SNAPSHOTS_PER_DECK} snapshots; delete an older one first.`,
+            );
+          default:
+            return assertNever(saved.error);
+        }
+      }
+      return done({
+        deckId: input.deckId,
+        snapshotId: Number(saved.value),
+        action: "saved",
+      });
+    }
+
+    if (input.snapshotId === undefined) {
+      return failed("InputInvalid", `Pass snapshotId when action is "${input.action}".`);
+    }
+    const snapshotId = SnapshotId.of(input.snapshotId);
+
+    if (input.action === "restore") {
+      const restored = await context.container.decks.restoreSnapshot(context.actor, {
+        deckId: id,
+        snapshotId,
+        ...(input.fingerprint !== undefined && input.fingerprint !== ""
+          ? { fingerprint: input.fingerprint }
+          : {}),
+      });
+      if (!restored.ok) {
+        switch (restored.error.kind) {
+          case "DeckNotFound":
+            return deckNotFound(input.deckId);
+          case "SnapshotNotFound":
+            return failed(
+              "SnapshotNotFound",
+              `Deck ${input.deckId} has no snapshot ${input.snapshotId}.`,
+            );
+          case "DeckChanged":
+            return failed(
+              "DeckChanged",
+              "The deck changed since your fingerprint. Call get_deck again before restoring.",
+            );
+          default:
+            return assertNever(restored.error);
+        }
+      }
+      return done({
+        deckId: input.deckId,
+        snapshotId: input.snapshotId,
+        action: "restored",
+        cards: restored.value.cards,
+        fingerprint: restored.value.fingerprint,
+      });
+    }
+
+    const deleted = await context.container.decks.deleteSnapshot(context.actor, {
+      deckId: id,
+      snapshotId,
+    });
+    if (!deleted.ok) {
+      switch (deleted.error.kind) {
+        case "DeckNotFound":
+          return deckNotFound(input.deckId);
+        case "SnapshotNotFound":
+          return failed(
+            "SnapshotNotFound",
+            `Deck ${input.deckId} has no snapshot ${input.snapshotId}.`,
+          );
+        default:
+          return assertNever(deleted.error);
+      }
+    }
+    return done({
+      deckId: input.deckId,
+      snapshotId: input.snapshotId,
+      action: "deleted",
+    });
+  },
+});
+
+export const deckTokensTool = defineTool({
+  name: "deck_tokens",
+  title: "List deck tokens and emblems",
+  description: [
+    "Lists every token, emblem, and helper card (such as The Monarch) created by a deck's cards, with types/stats, rules text, and which cards make each one.",
+    "Use it when: preparing a token/emblem checklist for game night or checking whether sideboard cards introduce extra tokens.",
+    "Rules: maybeboard cards are ignored. Use board: 'played' to hide sideboard-only tokens, or kind to filter to tokens, emblems, or helpers.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    board: z
+      .enum(["all", "played"])
+      .default("all")
+      .describe(
+        "'all' includes sideboard-only tokens; 'played' keeps only main deck and commander tokens.",
+      ),
+    kind: z
+      .enum(["all", ...TOKEN_KINDS])
+      .default("all")
+      .describe("Filter by kind: 'all', 'token', 'emblem', or 'helper'."),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const rawTokens = await deckTokenLines(
+      context.container.db,
+      view.deck.id,
+      view.lines.map((line) => ({
+        oracleId: line.oracleId,
+        printingId: line.printingId,
+        name: line.name,
+        board: line.board,
+      })),
+    );
+    const summary = summarizeTokenChecklist(rawTokens);
+    const items = filterTokenChecklist(rawTokens.map(toTokenChecklistItem), {
+      board: input.board,
+      kind: input.kind,
+    });
+    return done({
+      deckId: view.deck.id,
+      deckName: view.deck.name,
+      summary,
+      showing: items.length,
+      items: items.map((item) => ({
+        oracleId: item.oracleId,
+        name: item.name,
+        kind: item.kind,
+        description: item.description,
+        ...(item.text !== "" ? { text: item.text } : {}),
+        colors: item.colors,
+        hasBack: item.hasBack,
+        madeBy: item.madeBy,
+        boards: item.boards,
+        sideboardOnly: item.sideboardOnly,
+        includedInProxies: item.includedInProxies,
+        art: {
+          id: item.art.id,
+          setCode: item.art.setCode,
+          setName: item.art.setName,
+          collectorNumber: item.art.collectorNumber,
+        },
+      })),
+    });
+  },
+});
+
+export const openingHandOddsTool = defineTool({
+  name: "opening_hand_odds",
+  title: "Opening-hand and turn-3 ramp odds",
+  description: [
+    "Computes exact hypergeometric probabilities (as percentages 0–100) for a deck's main-deck library: opening 7 land distribution, 1-mulligan keep odds, land drops on curve (turns 1–5), early ramp (MV <= 3) by turn 3, joint odds of having both lands and early ramp by turn 3, and optional odds for a specific role tag or named card group.",
+    "Use it when: checking land count consistency, evaluating early ramp reliability, or calculating draw odds for a role or combo piece by a given turn.",
+    "Rules: only main-deck cards count (commanders start in the command zone; sideboard and maybeboard are excluded). Probabilities use exact hypergeometric sums without replacement.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    onTheDraw: z
+      .boolean()
+      .default(false)
+      .describe("True counts the extra draw step on turn 1 (going second)."),
+    freeMulligan: z
+      .boolean()
+      .optional()
+      .describe("Whether the first mulligan is free (defaults to true for Commander)."),
+    tag: z
+      .enum(TAGS)
+      .optional()
+      .describe("Optional role tag to compute custom draw probability by `byTurn`."),
+    cardNames: z
+      .array(z.string().min(1))
+      .max(20)
+      .optional()
+      .describe("Optional main-deck card names (case-insensitive) to group for draw probability."),
+    byTurn: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .default(3)
+      .describe("Turn number (1–10) for the optional tag or cardNames lookup."),
+    atLeast: z
+      .number()
+      .int()
+      .min(1)
+      .max(7)
+      .default(1)
+      .describe("Minimum copies needed for the optional tag or cardNames lookup."),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const cards = library(view.lines);
+    const freeMulligan = input.freeMulligan ?? view.deck.format === "commander";
+    const odds = openingHandOdds(cards, { onTheDraw: input.onTheDraw, freeMulligan });
+    if (odds === null) {
+      return done({
+        deckId: view.deck.id,
+        deckName: view.deck.name,
+        librarySize: 0,
+        odds: null,
+      });
+    }
+    const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
+
+    let customQuery: {
+      tag?: string;
+      cardNames?: string[];
+      byTurn: number;
+      atLeast: number;
+      matchingCopies: number;
+      chancePercent: number;
+    } | null = null;
+
+    if (input.tag !== undefined || (input.cardNames !== undefined && input.cardNames.length > 0)) {
+      const wantedNames = new Set(input.cardNames?.map((name) => name.trim().toLowerCase()) ?? []);
+      const matchingCopies = cards.filter((card) => {
+        if (input.tag !== undefined && card.tags.includes(input.tag)) return true;
+        if (wantedNames.size > 0 && wantedNames.has(card.name.toLowerCase())) return true;
+        return false;
+      }).length;
+      customQuery = {
+        ...(input.tag !== undefined ? { tag: input.tag } : {}),
+        ...(input.cardNames !== undefined && input.cardNames.length > 0
+          ? { cardNames: input.cardNames }
+          : {}),
+        byTurn: input.byTurn,
+        atLeast: input.atLeast,
+        matchingCopies,
+        chancePercent: toPercent(
+          chanceByTurn(
+            odds.librarySize,
+            matchingCopies,
+            input.byTurn,
+            input.onTheDraw,
+            input.atLeast,
+          ),
+        ),
+      };
+    }
+
+    return done({
+      deckId: view.deck.id,
+      deckName: view.deck.name,
+      librarySize: odds.librarySize,
+      lands: odds.lands,
+      ramp: odds.ramp,
+      earlyRamp: odds.earlyRamp,
+      earlyRampMaxManaValue: EARLY_RAMP_MAX_MV,
+      onTheDraw: odds.onTheDraw,
+      freeMulligan: odds.freeMulligan,
+      openingHand7: {
+        tooFewLands0To1Percent: toPercent(odds.opening.tooFewLands),
+        playableLands2To5Percent: toPercent(odds.opening.playableLands),
+        tooManyLands6To7Percent: toPercent(odds.opening.tooManyLands),
+        earlyRampPercent: toPercent(odds.opening.atLeastOneEarlyRamp),
+        playableAfterFirstMulliganPercent: toPercent(odds.opening.playableAfterFirstMulligan),
+      },
+      landDrops: odds.landDrops.map((row) => ({
+        turn: row.turn,
+        cardsSeen: row.cardsSeen,
+        targetLands: row.targetLands,
+        chancePercent: toPercent(row.chance),
+      })),
+      rampByTurn3: {
+        cardsSeen: odds.rampByTurn3.cardsSeen,
+        atLeastOneEarlyRampPercent: toPercent(odds.rampByTurn3.atLeastOneEarlyRamp),
+        atLeastOneAnyRampPercent: toPercent(odds.rampByTurn3.atLeastOneAnyRamp),
+        twoLandsAndEarlyRampPercent: toPercent(odds.rampByTurn3.twoLandsAndEarlyRamp),
+        threeLandsAndEarlyRampPercent: toPercent(odds.rampByTurn3.threeLandsAndEarlyRamp),
+      },
+      roles: odds.roles.map((row) => ({ label: row.label, chancePercent: toPercent(row.chance) })),
+      ...(customQuery !== null ? { customQuery } : {}),
+    });
   },
 });

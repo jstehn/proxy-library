@@ -16,18 +16,21 @@ import { landPoolsForDeck } from "./mana-base";
 import { ownedCopies } from "./owned";
 import { fitsDeck, suggestionContext, textArray, tribePattern } from "./suggestions";
 
-// Draft a 100-card Commander deck from owned cards first (design doc 37, section 9): SQL gathers
-// your legal non-land cards, store non-land candidates, and the mana-base land pools, and the pure
-// draftDeck assembles the 100-card draft.
+// Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
+// (design docs 37 & 44): SQL gathers your legal non-land cards, store non-land candidates, and the
+// mana-base land pools, and the pure draftDeck assembles the deck.
 
 const OWNED_SPELL_LIMIT = 1000;
 const STORE_SPELL_LIMIT = 500;
 
 const NON_LAND = sql`split_part(p.type_line, ' // ', 1) !~ '\\yLand\\y'`;
 
-const SPELL_COLUMNS = sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-  p.rarity, p.keywords, p.role_tags, p.theme_tags, p.produced_mana, p.is_game_changer,
-  coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
+function spellColumns(format: string) {
+  return sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
+    p.rarity, p.keywords, p.role_tags, p.theme_tags, p.produced_mana, p.is_game_changer,
+    coalesce((p.legalities->>${format}) = 'restricted', false) as is_restricted,
+    coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
+}
 
 type SpellRow = {
   oracle_id: string;
@@ -41,6 +44,7 @@ type SpellRow = {
   theme_tags: string[];
   produced_mana: string[] | null;
   is_game_changer: boolean;
+  is_restricted: boolean;
   face_text: string;
   owned: number;
   price_cents: number | null;
@@ -66,12 +70,14 @@ function toCandidate(row: SpellRow, pool: "owned" | "store"): DraftCandidate {
     pool,
     ownedCopies: Number(row.owned),
     alsoIn: row.also_in ?? [],
+    isRestricted: row.is_restricted,
   };
 }
 
 /**
- * Draft a 100-card Commander list for one of this player's decks, or null if the deck isn't theirs,
- * isn't a Commander deck, or has no commander yet.
+ * Draft a full deck list (100-card Commander or 60-card Constructed with playsets) for one of
+ * this player's decks, or null if the deck isn't theirs, is Limited, or is Commander without a
+ * commander yet.
  */
 export async function draftForDeck(
   db: DbExecutor,
@@ -81,9 +87,10 @@ export async function draftForDeck(
 ): Promise<DeckDraft | null> {
   const context = await suggestionContext(db, userId, deckId);
   if (context === null) return null;
-  if (context.format !== "commander") return null;
-  const hasCommander = context.lines.some((line) => line.board === "commander");
-  if (!hasCommander) return null;
+  if (context.format === "limited") return null;
+  if (context.format === "commander" && !context.lines.some((line) => line.board === "commander")) {
+    return null;
+  }
 
   const profile = deckProfile(context.lines, context.format);
   const wantedThemes = [...new Set([...profile.themes, ...(options.themes ?? [])])];
@@ -98,7 +105,7 @@ export async function draftForDeck(
         from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
        group by p.oracle_id
     )
-    select ${SPELL_COLUMNS}, owned.owned,
+    select ${spellColumns(context.format)}, owned.owned,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = p.id and s.finish = owned.finish
              order by s.day desc limit 1) as price_cents,
@@ -154,7 +161,7 @@ export async function draftForDeck(
                  limit 1
               ) best on true
           )
-          select ${SPELL_COLUMNS}, 0 as owned, cheapest.usd_cents as price_cents, null::text[] as also_in
+          select ${spellColumns(context.format)}, 0 as owned, cheapest.usd_cents as price_cents, null::text[] as also_in
             from cheapest join printings p on p.id = cheapest.printing_id
         `);
 

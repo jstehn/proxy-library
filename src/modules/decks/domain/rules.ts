@@ -58,7 +58,7 @@ const FORMAT_RULES: Record<Format, FormatRules> = {
 };
 
 /** Cards with no copy limit: basic lands, and "A deck can have any number of cards named …". */
-function isUnlimited(card: CardRules): boolean {
+function isUnlimited(card: Pick<CardRules, "isBasicLand" | "text">): boolean {
   return card.isBasicLand || /a deck can have any number of cards named/i.test(card.text);
 }
 
@@ -320,6 +320,71 @@ function countedCardProblems(
       problems.push(...legalityProblems(deck.format, copies, rules));
       return problems;
   }
+}
+
+export const CONSTRUCTED_60_FORMATS = [
+  "standard",
+  "pioneer",
+  "modern",
+  "legacy",
+  "vintage",
+  "pauper",
+] as const satisfies readonly Format[];
+
+export type FormatRulesSummary = Readonly<{
+  minMainCards: number;
+  exactSize: boolean;
+  maxCopies: number | null;
+  maxSideboard: number | null;
+}>;
+
+/** Size, copy-limit, and sideboard constraints for a format (null when unconstrained). */
+export function formatRulesSummary(format: string): FormatRulesSummary {
+  const rules = format in FORMAT_RULES ? FORMAT_RULES[format as Format] : FORMAT_RULES.casual;
+  switch (rules.kind) {
+    case "casual":
+      return { minMainCards: 60, exactSize: false, maxCopies: null, maxSideboard: null };
+    case "constructed":
+      return {
+        minMainCards: rules.minimum,
+        exactSize: false,
+        maxCopies: rules.copies,
+        maxSideboard: rules.sideboard,
+      };
+    case "commander":
+      return { minMainCards: rules.size, exactSize: true, maxCopies: 1, maxSideboard: null };
+    case "limited":
+      return { minMainCards: rules.minimum, exactSize: false, maxCopies: null, maxSideboard: null };
+  }
+}
+
+/**
+ * Maximum total copies (main + side) allowed for a card in `format`, or `null` when unlimited
+ * (basic lands, "any number of cards named", Casual, Limited). Restricted cards return `1`.
+ */
+export function copyLimitFor(
+  format: string,
+  card?: Pick<CardRules, "isBasicLand" | "text" | "legalities">,
+): number | null {
+  if (card !== undefined && isUnlimited(card)) return null;
+  const maxCopies = formatRulesSummary(format).maxCopies;
+  if (maxCopies === null) return null;
+  if (card !== undefined && card.legalities[format] === "restricted") return 1;
+  return maxCopies;
+}
+
+/**
+ * All 60-card constructed formats (`CONSTRUCTED_60_FORMATS`) in which the deck's current counted
+ * cards pass card legality and copy-limit rules (irrespective of unfinished main-deck size).
+ */
+export function legalFormatsForCards(deck: DeckToCheck, rules: RulesLookup): Format[] {
+  const counted = deck.entries.filter((entry) => isCounted(entry.board));
+  const copies = copiesByCard(counted);
+  return CONSTRUCTED_60_FORMATS.filter(
+    (format) =>
+      legalityProblems(format, copies, rules).length === 0 &&
+      copyLimitProblems(copies, rules, 4).length === 0,
+  );
 }
 
 /** How many cards short a deck is, in total (for the "short 3" badge). */

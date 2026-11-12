@@ -202,6 +202,35 @@ describe("a target bracket (design doc 31)", () => {
 
 const emptyList: SuggestionList = { owned: [], store: [], hiddenOverTarget: 0 };
 
+describe("60-card playset copy limits in suggestions (design doc 44)", () => {
+  it("keeps owned cards under the 4-copy limit in suggestions and excludes cards once 4 copies are in main + side", async () => {
+    await give("Carrot Cake", 4);
+    await give("Banishing Light", 2);
+
+    const created = await decks.createDeck(jack, { name: "Standard Tokens", format: "standard" });
+    if (!created.ok) throw new Error(created.error.kind);
+    await decks.importList(jack, {
+      deckId: created.value,
+      text: "Deck\n1 Carrot Cake\n1 Banishing Light\n24 Plains\nSideboard\n3 Carrot Cake",
+    });
+
+    const suggestions = await deckSuggestions(db, jack.userId, created.value);
+    if (suggestions === null) throw new Error("expected suggestions");
+
+    const allOwned = [
+      ...suggestions.forDeck.owned,
+      ...suggestions.forRoles.flatMap((role) => role.owned),
+    ];
+    // Carrot Cake is 1 main + 3 side = 4 (at playset cap) -> excluded.
+    expect(allOwned.some((entry) => entry.card.name === "Carrot Cake")).toBe(false);
+
+    // Banishing Light is 1 in deck out of 2 owned and cap 4 -> still suggested with inThisDeck: 1.
+    const banishing = allOwned.find((entry) => entry.card.name === "Banishing Light");
+    expect(banishing?.card.inThisDeck).toBe(1);
+    expect(banishing?.card.owned).toBe(2);
+  });
+});
+
 async function oracleIdOf(name: string): Promise<string> {
   const [row] = (
     await db.execute<{ oracle_id: string }>(

@@ -7,6 +7,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -77,12 +78,18 @@ export const deckEntries = pgTable(
     finish: text("finish"),
     // The deck's own heading for this line ("Ramp"), design doc 34; null: none.
     heading: text("heading"),
+    // Why this card is in the deck (design doc 41); null: none.
+    note: text("note"),
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.oracleId, table.board] }),
     check(
       "deck_entries_heading_length",
       sql`${table.heading} is null or char_length(${table.heading}) between 1 and 40`,
+    ),
+    check(
+      "deck_entries_note_length",
+      sql`${table.note} is null or char_length(${table.note}) between 1 and 200`,
     ),
     index("deck_entries_oracle_idx").on(table.oracleId),
     check(
@@ -136,4 +143,38 @@ export const deckTokenChoices = pgTable(
     included: boolean("included").notNull().default(true),
   },
   (table) => [primaryKey({ columns: [table.deckId, table.tokenOracleId] })],
+);
+
+/** Point-in-time snapshots of a deck for comparing before/after cuts (design doc 41). */
+export const deckSnapshots = pgTable(
+  "deck_snapshots",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    deckId: bigint("deck_id", { mode: "number" })
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    format: text("format").notNull(),
+    targetBracket: smallint("target_bracket"),
+    grouping: text("grouping").notNull().default("type"),
+    headingOrder: text("heading_order")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    entries: jsonb("entries").notNull(),
+    createdAt: timestamptz("created_at").notNull(),
+  },
+  (table) => [
+    index("deck_snapshots_deck_idx").on(table.deckId, table.createdAt),
+    check("deck_snapshots_label_length", sql`char_length(${table.label}) between 1 and 60`),
+    check("deck_snapshots_grouping_known", sql`${table.grouping} in ('type', 'custom')`),
+    check(
+      "deck_snapshots_target_bracket",
+      sql`${table.targetBracket} is null or (${table.targetBracket} between 1 and 5 and ${table.format} = 'commander')`,
+    ),
+    check(
+      "deck_snapshots_format_known",
+      sql`${table.format} in ('casual', 'standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander', 'limited')`,
+    ),
+  ],
 );

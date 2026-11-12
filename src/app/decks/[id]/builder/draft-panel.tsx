@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { DeckDraft, DraftedSpell } from "@/modules/decks";
+import type { DeckDraft, DraftedSpell, Format } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { draftReasonText, landReasonText, TAG_LABELS } from "../../labels";
@@ -15,6 +15,7 @@ const WAIT_MILLISECONDS = 400;
 export function DraftPanel(props: {
   deckId: number;
   deckKey: string;
+  format: Format;
   onAdd: (cards: LandsToAdd, count: number, label: string) => void;
   onClose: () => void;
   busy: boolean;
@@ -44,7 +45,7 @@ export function DraftPanel(props: {
   const landsAddedCount = draft?.manaBase.add.reduce((sum, entry) => sum + entry.quantity, 0) ?? 0;
   const fullAdditions: LandsToAdd = draft
     ? [
-        ...draft.spells.map((spell) => ({ oracleId: spell.oracleId, quantity: 1 })),
+        ...draft.spells.map((spell) => ({ oracleId: spell.oracleId, quantity: spell.quantity })),
         ...draft.manaBase.add.map((entry) => ({
           oracleId: entry.card.oracleId,
           quantity: entry.quantity,
@@ -55,14 +56,19 @@ export function DraftPanel(props: {
     ? [
         ...draft.spells
           .filter((spell) => spell.pool === "owned")
-          .map((spell) => ({ oracleId: spell.oracleId, quantity: 1 })),
+          .map((spell) => ({ oracleId: spell.oracleId, quantity: spell.quantity })),
         ...draft.manaBase.add.map((entry) => ({
           oracleId: entry.card.oracleId,
           quantity: entry.quantity,
         })),
       ]
     : [];
-  const fullCount = (draft?.spells.length ?? 0) + landsAddedCount;
+  const sumQuantities = (spells: readonly DraftedSpell[]) =>
+    spells.reduce((sum, spell) => sum + spell.quantity, 0);
+  const ownedSpellCount = draft
+    ? sumQuantities(draft.spells.filter((spell) => spell.pool === "owned"))
+    : 0;
+  const fullCount = (draft ? sumQuantities(draft.spells) : 0) + landsAddedCount;
 
   return (
     <section
@@ -103,7 +109,9 @@ export function DraftPanel(props: {
         <p className="text-zinc-500">
           {loading
             ? "Assembling draft…"
-            : "Set a commander first to draft a 100-card Commander list."}
+            : props.format === "commander"
+              ? "Set a commander first to draft a 100-card Commander list."
+              : "Drafting is available for constructed formats."}
         </p>
       ) : draft.existingCount >= draft.targetTotal ? (
         <p className="text-zinc-500">This deck already has {draft.existingCount} cards.</p>
@@ -111,8 +119,7 @@ export function DraftPanel(props: {
         <>
           <div className="flex flex-col gap-1 rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
             <p className="font-medium">
-              Existing: {draft.existingCount} · Owned spells: +
-              {draft.spells.length - draft.storeAddedCount}
+              Existing: {draft.existingCount} · Owned spells: +{ownedSpellCount}
               {draft.storeAddedCount > 0 && (
                 <>
                   {" "}
@@ -173,13 +180,19 @@ export function DraftPanel(props: {
           </div>
 
           {roleSpells.length > 0 && (
-            <SpellSection title={`Role picks (${roleSpells.length})`} spells={roleSpells} />
+            <SpellSection title={`Role picks (${sumQuantities(roleSpells)})`} spells={roleSpells} />
           )}
           {planSpells.length > 0 && (
-            <SpellSection title={`On-plan spells (${planSpells.length})`} spells={planSpells} />
+            <SpellSection
+              title={`On-plan spells (${sumQuantities(planSpells)})`}
+              spells={planSpells}
+            />
           )}
           {curveSpells.length > 0 && (
-            <SpellSection title={`Curve fill (${curveSpells.length})`} spells={curveSpells} />
+            <SpellSection
+              title={`Curve fill (${sumQuantities(curveSpells)})`}
+              spells={curveSpells}
+            />
           )}
           {draft.manaBase.add.length > 0 && (
             <div className="flex flex-col gap-1">
@@ -221,7 +234,10 @@ function SpellSection(props: { title: string; spells: readonly DraftedSpell[] })
         {props.spells.map((spell) => (
           <li key={spell.oracleId}>
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-medium">{spell.name}</span>
+              <span className="font-medium">
+                {spell.quantity > 1 ? `${spell.quantity}× ` : ""}
+                {spell.name}
+              </span>
               {spell.manaCost !== null && spell.manaCost !== "" && (
                 <span className="text-xs">
                   <ManaText text={spell.manaCost} />

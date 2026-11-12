@@ -2,10 +2,13 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { seededRng, shuffled } from "@/shared/kernel";
 import {
+  chanceByTurn,
   deckOdds,
   hypergeometricAtLeast,
+  hypergeometricAtLeast2Groups,
   library,
   nextHand,
+  openingHandOdds,
   startHand,
   type DrawLine,
   type LibraryCard,
@@ -191,5 +194,102 @@ describe("deckOdds", () => {
 
   it("is empty for an empty library", () => {
     expect(deckOdds([] as LibraryCard[], false)).toEqual([]);
+  });
+});
+
+describe("openingHandOdds and joint probabilities (design doc 43)", () => {
+  it("computes exact bivariate hypergeometric odds on a small deck", () => {
+    // 6-card deck: 3 lands (A), 2 early ramp (B), 1 other; draw 3.
+    // Total 3-card subsets = C(6,3) = 20.
+    // Need >= 2 lands AND >= 1 ramp -> must be 2 lands + 1 ramp: C(3,2)*C(2,1)*C(1,0) = 6 -> 6/20 = 0.3
+    expect(hypergeometricAtLeast2Groups(6, 3, 2, 3, 2, 1)).toBeCloseTo(0.3, 9);
+    // Impossible targets return 0 cleanly.
+    expect(hypergeometricAtLeast2Groups(6, 3, 2, 3, 3, 1)).toBe(0);
+    expect(hypergeometricAtLeast2Groups(6, 1, 2, 3, 2, 1)).toBe(0);
+  });
+
+  it("distinguishes early ramp (MV <= 3) from expensive ramp and tracks T1–T5 land drops", () => {
+    const commanderDeck = library([
+      line("Plains", 37, { typeLine: "Basic Land — Plains" }),
+      line("Arcane Signet", 8, {
+        typeLine: "Artifact",
+        manaValue: 2,
+        text: "{T}: Add one mana of any color in your commander's color identity.",
+        producedMana: ["W"],
+      }),
+      line("Gilded Lotus", 4, {
+        typeLine: "Artifact",
+        manaValue: 5,
+        text: "{T}: Add three mana of any one color.",
+        producedMana: ["W"],
+      }),
+      line("Swords to Plowshares", 50, {
+        typeLine: "Instant",
+        manaValue: 1,
+        text: "Exile target creature. Its controller gains life equal to its power.",
+      }),
+    ]);
+
+    const play = openingHandOdds(commanderDeck, { onTheDraw: false, freeMulligan: true });
+    const draw = openingHandOdds(commanderDeck, { onTheDraw: true, freeMulligan: true });
+    if (play === null || draw === null) throw new Error("expected odds");
+
+    expect(play.librarySize).toBe(99);
+    expect(play.lands).toBe(37);
+    expect(play.ramp).toBe(12);
+    expect(play.earlyRamp).toBe(8);
+
+    // Partition across opening 7 lands sums to 1.
+    expect(
+      play.opening.tooFewLands + play.opening.playableLands + play.opening.tooManyLands,
+    ).toBeCloseTo(1, 9);
+    expect(play.opening.playableAfterFirstMulligan).toBeGreaterThan(play.opening.playableLands);
+
+    // On-curve land drops turns 1..5.
+    expect(play.landDrops.map((row) => [row.turn, row.cardsSeen])).toEqual([
+      [1, 7],
+      [2, 8],
+      [3, 9],
+      [4, 10],
+      [5, 11],
+    ]);
+    expect(play.rampByTurn3.cardsSeen).toBe(9);
+    expect(play.rampByTurn3.atLeastOneAnyRamp).toBeGreaterThan(
+      play.rampByTurn3.atLeastOneEarlyRamp,
+    );
+    expect(play.rampByTurn3.twoLandsAndEarlyRamp).toBeLessThanOrEqual(
+      Math.min(play.landDrops[1].chance, play.rampByTurn3.atLeastOneEarlyRamp) + 1e-12,
+    );
+    expect(draw.landDrops[2].chance).toBeGreaterThan(play.landDrops[2].chance);
+    expect(draw.rampByTurn3.twoLandsAndEarlyRamp).toBeGreaterThan(
+      play.rampByTurn3.twoLandsAndEarlyRamp,
+    );
+  });
+
+  it("satisfies hypergeometric joint and range invariants across random decks", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 15, max: 100 }),
+        fc.integer({ min: 0, max: 45 }),
+        fc.integer({ min: 0, max: 20 }),
+        fc.integer({ min: 7, max: 12 }),
+        (population, rawA, rawB, draws) => {
+          const groupA = Math.min(rawA, population);
+          const groupB = Math.min(rawB, population - groupA);
+          const joint = hypergeometricAtLeast2Groups(population, groupA, groupB, draws, 2, 1);
+          const soloA = hypergeometricAtLeast(population, groupA, draws, 2);
+          const soloB = hypergeometricAtLeast(population, groupB, draws, 1);
+          expect(joint).toBeGreaterThanOrEqual(0);
+          expect(joint).toBeLessThanOrEqual(1);
+          expect(joint).toBeLessThanOrEqual(Math.min(soloA, soloB) + 1e-12);
+        },
+      ),
+    );
+  });
+
+  it("computes chanceByTurn and returns null for an empty library", () => {
+    expect(openingHandOdds([])).toBeNull();
+    expect(chanceByTurn(60, 4, 1, false, 1)).toBeCloseTo(hypergeometricAtLeast(60, 4, 7, 1), 9);
+    expect(chanceByTurn(60, 4, 3, true, 1)).toBeCloseTo(hypergeometricAtLeast(60, 4, 10, 1), 9);
   });
 });

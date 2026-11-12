@@ -5,6 +5,7 @@ import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import { isCounted, type Format } from "../domain/deck";
+import { copyLimitFor } from "../domain/rules";
 import {
   budgetPicks,
   creatureTypes,
@@ -65,8 +66,10 @@ export type SuggestionContext = Readonly<{
   usesRealCards: boolean;
   /** Colors a suggestion's identity must stay within, or null for any. */
   colorLimit: Array<z.infer<typeof ColorSchema>> | null;
-  /** Oracle cards already in the deck, never suggested. */
+  /** Oracle cards already at their format copy limit, not suggested again. */
   inDeck: string[];
+  /** Counted quantity per oracle id currently in this deck (main + side + commander). */
+  countedQuantities: ReadonlyMap<string, number>;
   /** The deck's lines, with their cards' oracle ids. */
   lines: Array<ProfileLine & Readonly<{ oracleId: string }>>;
   /** The bracket the owner chose (Commander only), and the deck as the estimate reads it. */
@@ -122,15 +125,31 @@ export async function suggestionContext(
       ? null
       : identity;
 
+  const countedQuantities = new Map<string, number>();
+  for (const line of view.lines) {
+    if (!isCounted(line.board)) continue;
+    countedQuantities.set(
+      line.oracleId,
+      (countedQuantities.get(line.oracleId) ?? 0) + line.quantity,
+    );
+  }
+  // Cards at their copy limit (1 in Commander / restricted, 4 in 60-card) won't be re-suggested
+  // (design docs 20, 32, & 44). Maybeboard copies are never counted.
+  const atLimit: string[] = [];
+  for (const [oracleId, qty] of countedQuantities) {
+    const rule = view.rules[oracleId];
+    const limit =
+      copyLimitFor(view.deck.format, rule) ?? (view.deck.format === "commander" ? 1 : 4);
+    if (qty >= limit) atLimit.push(oracleId);
+  }
+
   return {
     deckId,
     format: view.deck.format,
     usesRealCards: view.deck.usesRealCards,
     colorLimit,
-    // A card on the maybeboard can still be suggested (design doc 32, invariant 1).
-    inDeck: [
-      ...new Set(view.lines.filter((line) => isCounted(line.board)).map((line) => line.oracleId)),
-    ],
+    inDeck: atLimit,
+    countedQuantities,
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
     targetBracket: view.deck.targetBracket,
     bracketLines: view.lines.map(bracketLine),
@@ -264,7 +283,9 @@ async function ownedCandidates(
      order by ${sharedCount(want)} desc, p.name
      limit ${CANDIDATE_LIMIT}
   `);
-  return rows.rows.map((row) => toCard(row, "owned", context.format));
+  return rows.rows
+    .map((row) => toCard(row, "owned", context))
+    .filter((card) => card.owned > card.inThisDeck);
 }
 
 /**
@@ -312,10 +333,15 @@ async function storeCandidates(
            0 as owned, 0 as owned_real, 0 as other_decks, 0 as free
       from cheapest join printings p on p.id = cheapest.printing_id
   `);
-  return rows.rows.map((row) => toCard(row, "store", context.format));
+  return rows.rows.map((row) => toCard(row, "store", context));
 }
 
-function toCard(row: CandidateRow, pool: "owned" | "store", format: Format): SuggestionCard {
+function toCard(
+  row: CandidateRow,
+  pool: "owned" | "store",
+  context: SuggestionContext,
+): SuggestionCard {
+  const { format } = context;
   return {
     oracleId: row.oracle_id,
     printingId: row.printing_id,
@@ -325,7 +351,7 @@ function toCard(row: CandidateRow, pool: "owned" | "store", format: Format): Sug
     typeLine: row.type_line,
     owned: Number(row.owned),
     ownedReal: Number(row.owned_real),
-    inThisDeck: 0,
+    inThisDeck: context.countedQuantities.get(row.oracle_id) ?? 0,
     otherDecks: Number(row.other_decks),
     free: Number(row.free),
     misfit: null,
@@ -448,7 +474,7 @@ export async function similarCards(
     `)
   ).rows;
   if (targetRow === undefined) return EMPTY_LIST;
-  const target = toCard(targetRow, "store", context.format);
+  const target = toCard(targetRow, "store", context);
   const want: Wanted = {
     roles: target.roles,
     themes: target.themes,

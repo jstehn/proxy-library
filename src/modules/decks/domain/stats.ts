@@ -46,6 +46,8 @@ export type DeckStats = Readonly<{
   averageManaValue: number;
   /** Cards in play: the main deck and commander (not the sideboard). */
   cardCount: number;
+  /** Cards in the sideboard (excluded from played stats, included in price and copy limits). */
+  sideboardCount: number;
   /** Lands (a card whose front face is a land, artifact lands included). */
   lands: number;
   /** Non-land cards that make mana (rocks, dorks, rituals). */
@@ -92,15 +94,17 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
   let spells = 0;
   let totalManaValue = 0;
   let cardCount = 0;
+  let sideboardCount = 0;
   let lands = 0;
   let otherManaSources = 0;
   let priceCents = 0;
   const tags = Object.fromEntries(TAGS.map((tag) => [tag, 0])) as Record<Tag, number>;
 
   for (const line of lines) {
-    // The maybeboard is counted nowhere; the sideboard only in the deck's value.
+    // The maybeboard is counted nowhere; the sideboard only in count, limits, and deck's value.
     if (!isCounted(line.board)) continue;
     priceCents += (line.priceCents ?? 0) * line.quantity;
+    if (line.board === "side") sideboardCount += line.quantity;
     if (!isPlayed(line.board)) continue;
     cardCount += line.quantity;
     const type = mainType(line.typeLine);
@@ -136,6 +140,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     types,
     averageManaValue: spells === 0 ? 0 : totalManaValue / spells,
     cardCount,
+    sideboardCount,
     lands,
     otherManaSources,
     pips,
@@ -164,12 +169,26 @@ export function suggestedLands(format: string): number {
 export const TARGETED_TAGS = ["ramp", "draw", "removal", "wipe"] as const satisfies readonly Tag[];
 export type TargetedTag = (typeof TARGETED_TAGS)[number];
 
+export const COMMANDER_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
+  ramp: 10,
+  draw: 10,
+  removal: 8,
+  wipe: 3,
+};
+
+export const SIXTY_CARD_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
+  ramp: 4,
+  draw: 6,
+  removal: 6,
+  wipe: 2,
+};
+
 /**
- * Role counts to aim for (design doc 19, decision 2): a guide, not a rule. Only Commander has a
- * common community guide; other formats have none, so they get null and their roles are only
- * counted (your review, 2026-10-06).
+ * Role counts to aim for (design docs 19 & 44): a starting guide, not a rule.
+ * Limited (40-card sealed/draft) depends on the opened pool, so it returns null.
  */
 export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> | null {
-  if (format === "commander") return { ramp: 10, draw: 10, removal: 8, wipe: 3 };
-  return null;
+  if (format === "commander") return COMMANDER_ROLE_TARGETS;
+  if (format === "limited") return null;
+  return SIXTY_CARD_ROLE_TARGETS;
 }

@@ -4,6 +4,8 @@ import { err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
 import { fingerprint } from "../domain/list-format";
+import { MAX_NOTE_LENGTH } from "../domain/notes";
+import { MAX_SNAPSHOT_LABEL_LENGTH, MAX_SNAPSHOTS_PER_DECK, SnapshotId } from "../domain/snapshots";
 import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "../testing/fakes";
 import { makeDecks } from "./make-decks";
 
@@ -82,6 +84,7 @@ describe("decks (design doc 09)", () => {
         printingId: null,
         finish: null,
         heading: null,
+        note: null,
       },
     ]);
     await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 0 });
@@ -193,6 +196,7 @@ describe("decks (design doc 09)", () => {
         printingId: samplePrintingId("bolt-m11"),
         finish: "foil",
         heading: null,
+        note: null,
       },
     ]);
     await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
@@ -258,6 +262,7 @@ describe("decks (design doc 09)", () => {
           printingId: "bolt-m11",
           finish: "nonfoil",
           heading: null,
+          note: null,
         },
         {
           oracleId: "delver",
@@ -266,6 +271,7 @@ describe("decks (design doc 09)", () => {
           printingId: "delver-1",
           finish: "nonfoil",
           heading: null,
+          note: null,
         },
         {
           oracleId: "duress",
@@ -274,6 +280,7 @@ describe("decks (design doc 09)", () => {
           printingId: "duress-1",
           finish: "nonfoil",
           heading: null,
+          note: null,
         },
       ]),
     );
@@ -366,6 +373,7 @@ describe("replaceList", () => {
         printingId: null,
         finish: null,
         heading: null,
+        note: null,
       },
       // A card new to the deck gets your most special copy (rule 10).
       {
@@ -375,6 +383,7 @@ describe("replaceList", () => {
         printingId: "ring-foil",
         finish: "foil",
         heading: null,
+        note: null,
       },
     ]);
   });
@@ -464,6 +473,7 @@ describe("createDeckFromCards (opened precons)", () => {
         printingId: "delver-1",
         finish: "foil",
         heading: null,
+        note: null,
       },
       {
         oracleId: "bolt",
@@ -472,6 +482,7 @@ describe("createDeckFromCards (opened precons)", () => {
         printingId: "bolt-m11",
         finish: "nonfoil",
         heading: null,
+        note: null,
       },
     ]);
   });
@@ -702,5 +713,186 @@ describe("headings (design doc 34)", () => {
     const id = await newDeck();
     await decks.updateDeck(jack, { deckId: id, grouping: "custom" });
     expect(repository.get(id)?.grouping).toBe("custom");
+  });
+});
+
+describe("line notes (design doc 41)", () => {
+  it("sets, updates, preserves across moves/quantity updates, and clears notes", async () => {
+    const created = await decks.createDeck(jack, { name: "Red", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+
+    await decks.setEntry(jack, {
+      deckId: id,
+      oracleId: "bolt",
+      board: "main",
+      quantity: 1,
+      note: "  Cheap  removal ",
+    });
+    expect(repository.get(id)?.entries[0]?.note).toBe("Cheap removal");
+
+    // Moving to maybeboard and back preserves the note
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "main", to: "maybe" });
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
+    expect(repository.get(id)?.entries[0]?.note).toBe("Cheap removal");
+
+    // setEntryNote updates and clears it
+    expect(
+      await decks.setEntryNote(jack, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        note: "Kills mana dorks",
+      }),
+    ).toEqual({ ok: true, value: undefined });
+    expect(repository.get(id)?.entries[0]?.note).toBe("Kills mana dorks");
+
+    await decks.setEntryNote(jack, { deckId: id, oracleId: "bolt", board: "main", note: null });
+    expect(repository.get(id)?.entries[0]?.note).toBeNull();
+  });
+
+  it("rejects empty/overlong notes and checks ownership & entry existence", async () => {
+    const created = await decks.createDeck(jack, { name: "Red", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+
+    expect(
+      await decks.setEntryNote(jack, { deckId: id, oracleId: "bolt", board: "main", note: "  " }),
+    ).toEqual(err({ kind: "NoteInvalid", maximum: MAX_NOTE_LENGTH }));
+    expect(
+      await decks.setEntryNote(jack, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        note: "a".repeat(MAX_NOTE_LENGTH + 1),
+      }),
+    ).toEqual(err({ kind: "NoteInvalid", maximum: MAX_NOTE_LENGTH }));
+    expect(
+      await decks.setEntryNote(jack, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        note: "Valid",
+      }),
+    ).toEqual(err({ kind: "EntryNotFound" }));
+
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 1 });
+    expect(
+      await decks.setEntryNote(mallory, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        note: "Sneaky",
+      }),
+    ).toEqual(err({ kind: "DeckNotFound" }));
+  });
+
+  it("applyChanges sets, preserves, and clears notes safely", async () => {
+    const created = await decks.createDeck(jack, { name: "Red", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+    await decks.setEntry(jack, {
+      deckId: id,
+      oracleId: "bolt",
+      board: "main",
+      quantity: 1,
+      note: "Keep this",
+    });
+    const fp = fingerprint(repository.get(id)?.entries ?? []);
+    const applied = await decks.applyChanges(jack, {
+      deckId: id,
+      fingerprint: fp,
+      changes: [
+        { oracleId: "bolt", board: "main", quantity: 1 },
+        { oracleId: "ring", board: "main", quantity: 1, note: "Turn-1 fast mana" },
+      ],
+    });
+    expect(applied.ok).toBe(true);
+    const entries = repository.get(id)?.entries ?? [];
+    expect(entries.find((e) => e.oracleId === "bolt")?.note).toBe("Keep this");
+    expect(entries.find((e) => e.oracleId === "ring")?.note).toBe("Turn-1 fast mana");
+  });
+});
+
+describe("deck snapshots (design doc 41)", () => {
+  it("saves, restores, and deletes snapshots for the owner only", async () => {
+    const created = await decks.createDeck(jack, { name: "Burn", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+    await decks.setEntry(jack, {
+      deckId: id,
+      oracleId: "bolt",
+      board: "main",
+      quantity: 1,
+      note: "Core spell",
+    });
+
+    const saved = await decks.saveSnapshot(jack, { deckId: id, label: "  Before   cuts  " });
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) return;
+    expect(repository.snapshotsOf(id)[0]?.label).toBe("Before cuts");
+
+    // Modify deck after saving snapshot
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 0 });
+    await decks.setEntry(jack, { deckId: id, oracleId: "ring", board: "main", quantity: 1 });
+
+    // Stale fingerprint blocks restore
+    expect(
+      await decks.restoreSnapshot(jack, {
+        deckId: id,
+        snapshotId: saved.value,
+        fingerprint: "stale",
+      }),
+    ).toEqual(err({ kind: "DeckChanged" }));
+
+    // Restoring recovers bolt + note and leaves snapshot intact
+    const currentFp = fingerprint(repository.get(id)?.entries ?? []);
+    const restored = await decks.restoreSnapshot(jack, {
+      deckId: id,
+      snapshotId: saved.value,
+      fingerprint: currentFp,
+    });
+    expect(restored.ok).toBe(true);
+    expect(repository.get(id)?.entries).toHaveLength(1);
+    expect(repository.get(id)?.entries[0]).toMatchObject({
+      oracleId: "bolt",
+      quantity: 1,
+      note: "Core spell",
+    });
+    expect(repository.snapshotsOf(id)).toHaveLength(1);
+
+    // Other player cannot save, restore, or delete
+    expect(await decks.saveSnapshot(mallory, { deckId: id, label: "Steal" })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+    expect(await decks.deleteSnapshot(mallory, { deckId: id, snapshotId: saved.value })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+
+    expect(await decks.deleteSnapshot(jack, { deckId: id, snapshotId: saved.value })).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(repository.snapshotsOf(id)).toHaveLength(0);
+    expect(
+      await decks.restoreSnapshot(jack, { deckId: id, snapshotId: SnapshotId.of(999) }),
+    ).toEqual(err({ kind: "SnapshotNotFound" }));
+  });
+
+  it("enforces label rules and snapshot limit per deck", async () => {
+    const created = await decks.createDeck(jack, { name: "Cap", format: "casual" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+
+    expect(await decks.saveSnapshot(jack, { deckId: id, label: "  " })).toEqual(
+      err({ kind: "SnapshotLabelInvalid", maximum: MAX_SNAPSHOT_LABEL_LENGTH }),
+    );
+    for (let i = 0; i < MAX_SNAPSHOTS_PER_DECK; i++) {
+      const okSave = await decks.saveSnapshot(jack, { deckId: id, label: `v${i + 1}` });
+      expect(okSave.ok).toBe(true);
+    }
+    expect(await decks.saveSnapshot(jack, { deckId: id, label: "overflow" })).toEqual(
+      err({ kind: "TooManySnapshots", maximum: MAX_SNAPSHOTS_PER_DECK }),
+    );
   });
 });

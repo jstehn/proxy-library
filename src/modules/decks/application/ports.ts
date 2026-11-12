@@ -5,6 +5,7 @@ import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/
 import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
+import type { DeckSnapshot, SnapshotId } from "../domain/snapshots";
 import type { TokenChoice } from "../domain/token-proxies";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
@@ -30,6 +31,14 @@ export interface DeckRepository {
   delete(deckId: DeckId): Promise<void>;
   /** Deletes every deck a player has. Returns how many. */
   deleteAllOf(ownerId: UserId): Promise<number>;
+  /** How many saved snapshots this deck has (design doc 41). */
+  countSnapshots(deckId: DeckId): Promise<number>;
+  /** Saves a point-in-time snapshot of a deck and returns its new id. */
+  saveSnapshot(snapshot: Omit<DeckSnapshot, "id">): Promise<SnapshotId>;
+  /** One saved snapshot belonging to this deck, or null if absent. */
+  getSnapshot(deckId: DeckId, snapshotId: SnapshotId): Promise<DeckSnapshot | null>;
+  /** Deletes a snapshot belonging to this deck; returns false if it wasn't there. */
+  deleteSnapshot(deckId: DeckId, snapshotId: SnapshotId): Promise<boolean>;
 }
 
 /** A card named in a pasted list, found in the catalog. */
@@ -69,6 +78,10 @@ export interface CardLookup {
   printingFacts(printingId: PrintingId): Promise<PrintingFacts | null>;
   /** The oracle card of each printing (unknown printings are missing from the map). */
   oracleIdsOf(printingIds: readonly PrintingId[]): Promise<Map<PrintingId, string>>;
+  /** Which of these oracle cards exist in the catalog (for snapshot restores). */
+  existingOracleIds(oracleIds: readonly string[]): Promise<Set<string>>;
+  /** Which of these printing ids still exist in the catalog (for snapshot restores). */
+  existingPrintings(printingIds: readonly PrintingId[]): Promise<Set<PrintingId>>;
   /**
    * Finds each named card (matching front-face names too), preferring the exact printing asked
    * for, then this player's most special copy (design doc 23, section 14), then the card's

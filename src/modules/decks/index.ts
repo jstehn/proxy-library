@@ -27,6 +27,7 @@ export type {
   ChoosePrintingError,
   ChoosePrintingInput,
   CreateDeckError,
+  DeleteSnapshotError,
   ImportReport,
   OrderHeadingsError,
   RenameHeadingError,
@@ -34,10 +35,14 @@ export type {
   ReplaceListError,
   ReplaceListInput,
   ReplaceReport,
+  RestoreSnapshotError,
+  SaveSnapshotError,
   SetEntryError,
   SetEntryHeadingError,
   SetEntryHeadingInput,
   SetEntryInput,
+  SetEntryNoteError,
+  SetEntryNoteInput,
   UpdateDeckError,
 } from "./application/manage-decks";
 export type {
@@ -69,6 +74,16 @@ export {
   type Grouping,
 } from "./domain/deck";
 export { checkHeading, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
+export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
+export {
+  checkSnapshotLabel,
+  MAX_SNAPSHOT_LABEL_LENGTH,
+  MAX_SNAPSHOTS_PER_DECK,
+  SnapshotId,
+  type DeckSnapshot,
+  type SnapshotEntry,
+  type SnapshotSummary,
+} from "./domain/snapshots";
 export type {
   CardNotFound,
   CommentInvalid,
@@ -84,10 +99,14 @@ export type {
   ListTooLong,
   NotAllowed,
   NameInvalid,
+  NoteInvalid,
   PrintingNotOfCard,
   QuantityInvalid,
+  SnapshotLabelInvalid,
+  SnapshotNotFound,
   TooManyDecks,
   TooManyHeadings,
+  TooManySnapshots,
 } from "./domain/errors";
 export {
   deckText,
@@ -102,14 +121,27 @@ export {
 } from "./domain/list-format";
 export {
   canBeCommander,
+  CONSTRUCTED_60_FORMATS,
+  copyLimitFor,
   deckProblems,
+  formatRulesSummary,
   invalidCommanders,
+  legalFormatsForCards,
   pairProblem,
   shortCount,
   type CardRules,
   type DeckProblem,
+  type FormatRulesSummary,
 } from "./domain/rules";
-export { deckStats, mainType, roleTargets, TYPE_ORDER, type DeckStats } from "./domain/stats";
+export {
+  COMMANDER_ROLE_TARGETS,
+  deckStats,
+  mainType,
+  roleTargets,
+  SIXTY_CARD_ROLE_TARGETS,
+  TYPE_ORDER,
+  type DeckStats,
+} from "./domain/stats";
 export {
   BRACKET_NAMES,
   BRACKET_RULES,
@@ -285,14 +317,24 @@ export {
 export { deckTokenLines, tokenArtOptions } from "./queries/tokens";
 export {
   deckTokens,
+  filterTokenChecklist,
   sheetCards,
+  summarizeTokenChecklist,
+  TOKEN_KINDS,
   tokenDescription,
+  tokenKind,
+  tokenRulesText,
   tokensToPrint,
+  toTokenChecklistItem,
   type TokenArt,
+  type TokenChecklistItem,
+  type TokenChecklistSummary,
+  type TokenKind,
   type TokenLine,
   type TokenMaker,
 } from "./domain/token-proxies";
 export {
+  compareDeckStates,
   previewChanges,
   problemKey,
   type AppliedChange,
@@ -309,4 +351,29 @@ export {
   type ListPreviewError,
   type ListPreviewResult,
 } from "./queries/preview";
+export {
+  compareDeckSnapshot,
+  listDeckSnapshots,
+  type SnapshotComparison,
+  type SnapshotComparisonSide,
+} from "./queries/snapshots";
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
+export {
+  chanceByTurn,
+  deckOdds,
+  EARLY_RAMP_MAX_MV,
+  hypergeometricAtLeast,
+  hypergeometricAtLeast2Groups,
+  library,
+  nextHand,
+  OPENING_HAND,
+  openingHandOdds,
+  startHand,
+  type DrawLine,
+  type LandDropOdds,
+  type LibraryCard,
+  type OddsRow,
+  type OpeningHandOdds,
+  type TestHand,
+  type TestHandEvent,
+} from "./domain/draws";

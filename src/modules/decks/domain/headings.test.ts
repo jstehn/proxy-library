@@ -19,6 +19,7 @@ const entry = (oracleId: string, heading: string | null): DeckEntry => ({
   printingId: null,
   finish: null,
   heading,
+  note: null,
 });
 const deck = (entries: DeckEntry[], headings: string[] = []): Deck => ({
   id: DeckId.of(1),

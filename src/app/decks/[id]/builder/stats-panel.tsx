@@ -2,8 +2,12 @@
 import type { DeckLine } from "@/modules/decks";
 import {
   deckStats,
+  EARLY_RAMP_MAX_MV,
+  formatRulesSummary,
   MANA_COLORS,
   deckSize,
+  library,
+  openingHandOdds,
   roleTargets,
   TARGETED_TAGS,
   landTarget,
@@ -43,12 +47,17 @@ export function StatsPanel(props: {
     `text-left underline-offset-2 hover:underline ${props.highlighted === tag ? "font-semibold underline" : ""}`;
   const toggle = (tag: Tag) => props.onHighlight(props.highlighted === tag ? null : tag);
   const target = deckSize(props.format);
+  const rules = formatRulesSummary(props.format);
   // The mana base's land target (design doc 35): the usual count, moved by the curve.
   const landGoal = landTarget(props.format, stats).lands;
   const tallest = Math.max(...stats.curve, 1);
   const neededColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
   const mostPips = Math.max(...MANA_COLORS.map((color) => stats.pips[color]), 1);
   const mostSources = Math.max(...MANA_COLORS.map((color) => stats.sources[color]), 1);
+  const handOdds = openingHandOdds(library(props.lines), {
+    onTheDraw: false,
+    freeMulligan: props.format === "commander",
+  });
 
   return (
     <section aria-label="Deck statistics" className="flex flex-col gap-4 text-sm">
@@ -62,6 +71,13 @@ export function StatsPanel(props: {
               : "warn"
           }
         />
+        {rules.maxSideboard !== null && (
+          <Figure
+            label="Sideboard"
+            value={`${stats.sideboardCount} / ${rules.maxSideboard}`}
+            tone={stats.sideboardCount > rules.maxSideboard ? "warn" : undefined}
+          />
+        )}
         <Figure label="Average mana value" value={stats.averageManaValue.toFixed(2)} />
         <Figure
           label="Lands"
@@ -206,8 +222,10 @@ export function StatsPanel(props: {
         <p className="text-[10px] text-zinc-500">
           Read from each card&apos;s rules text, so a few may be missed or miscounted.{" "}
           {targets === null
-            ? "Only Commander has a common guide to aim for, so other formats show counts alone."
-            : "The targets are a common Commander guide."}{" "}
+            ? "Limited formats have no fixed role targets, so counts are shown alone."
+            : props.format === "commander"
+              ? "The targets are a common Commander guide."
+              : "The targets are a common 60-card guide."}{" "}
           Click a role to mark its cards in the list.
         </p>
       </div>
@@ -225,6 +243,32 @@ export function StatsPanel(props: {
             ))}
         </dl>
       </div>
+
+      {handOdds !== null && (
+        <div className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            Opening-hand odds (play)
+          </h3>
+          <dl className="flex flex-col gap-0.5">
+            <Figure
+              label="2–5 lands in opening 7"
+              value={`${Math.round(handOdds.opening.playableLands * 100)}% (mull: ${Math.round(handOdds.opening.playableAfterFirstMulligan * 100)}%)`}
+            />
+            <Figure
+              label="3+ lands by turn 3"
+              value={`${Math.round(handOdds.landDrops[2].chance * 100)}%`}
+            />
+            <Figure
+              label="4+ lands by turn 4"
+              value={`${Math.round(handOdds.landDrops[3].chance * 100)}%`}
+            />
+            <Figure
+              label={`Early ramp (MV ≤ ${EARLY_RAMP_MAX_MV}) by turn 3`}
+              value={`${Math.round(handOdds.rampByTurn3.atLeastOneEarlyRamp * 100)}% (2+ lands: ${Math.round(handOdds.rampByTurn3.twoLandsAndEarlyRamp * 100)}%)`}
+            />
+          </dl>
+        </div>
+      )}
     </section>
   );
 }
