@@ -896,3 +896,95 @@ describe("deck snapshots (design doc 41)", () => {
     );
   });
 });
+
+describe("copying a shared or public deck (design doc 48)", () => {
+  it("copies format, bracket, grouping, headings, and entries while clearing printings and notes", async () => {
+    const created = await decks.createDeck(jack, { name: "Beza Control", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const sourceId = created.value;
+    await decks.updateDeck(jack, {
+      deckId: sourceId,
+      name: "Beza Control",
+      format: "commander",
+      targetBracket: 3,
+      grouping: "custom",
+    });
+    await decks.setEntry(jack, {
+      deckId: sourceId,
+      oracleId: "ring",
+      board: "main",
+      quantity: 1,
+      note: "My special note",
+    });
+    await decks.choosePrinting(jack, {
+      deckId: sourceId,
+      oracleId: "ring",
+      board: "main",
+      pinned: { printingId: samplePrintingId("ring-c21"), finish: "etched" },
+    });
+    await decks.setEntryHeading(jack, {
+      deckId: sourceId,
+      oracleId: "ring",
+      board: "main",
+      heading: "Ramp",
+    });
+
+    // Private deck cannot be copied by another player.
+    expect(await decks.copyDeck(mallory, { kind: "deck", deckId: sourceId })).toEqual(
+      err({ kind: "DeckNotFound" }),
+    );
+
+    // Shared deck can be copied.
+    repository.setSharing(sourceId, { visibility: "shared" });
+    const copied = await decks.copyDeck(mallory, { kind: "deck", deckId: sourceId });
+    expect(copied.ok).toBe(true);
+    if (!copied.ok) return;
+
+    const copy = repository.get(copied.value);
+    expect(copy).toMatchObject({
+      ownerId: mallory.userId,
+      name: "Beza Control (copy)",
+      format: "commander",
+      targetBracket: 3,
+      grouping: "custom",
+      headings: ["Ramp"],
+      usesRealCards: true,
+    });
+    expect(copy?.entries).toEqual([
+      {
+        oracleId: "ring",
+        board: "main",
+        quantity: 1,
+        printingId: null,
+        finish: null,
+        heading: "Ramp",
+        note: null,
+      },
+    ]);
+  });
+
+  it("copies a private deck via its public token and enforces MAX_DECKS", async () => {
+    const created = await decks.createDeck(jack, { name: "Secret Brew", format: "modern" });
+    if (!created.ok) throw new Error("failed");
+    repository.setSharing(created.value, { publicToken: "abcDEF0123456789_-abcd" });
+
+    const copied = await decks.copyDeck(mallory, {
+      kind: "publicToken",
+      token: "abcDEF0123456789_-abcd",
+    });
+    expect(copied.ok).toBe(true);
+    if (!copied.ok) return;
+    expect(repository.get(copied.value)?.name).toBe("Secret Brew (copy)");
+
+    expect(
+      await decks.copyDeck(mallory, { kind: "publicToken", token: "missing-token-123456" }),
+    ).toEqual(err({ kind: "DeckNotFound" }));
+
+    for (let i = 1; i < MAX_DECKS; i++) {
+      await decks.createDeck(mallory, { name: `Deck ${i}`, format: "casual" });
+    }
+    expect(
+      await decks.copyDeck(mallory, { kind: "publicToken", token: "abcDEF0123456789_-abcd" }),
+    ).toEqual(err({ kind: "TooManyDecks", maximum: MAX_DECKS }));
+  });
+});

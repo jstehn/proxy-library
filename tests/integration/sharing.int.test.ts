@@ -217,4 +217,21 @@ describe("public deck links (design doc 47)", () => {
     await sharing.revokePublicLink(jack, { deckId });
     expect(await publicDeckByToken(db, rotated.value)).toBeNull();
   });
+
+  it("copies a shared or public deck into the viewer's own decks (design doc 48)", async () => {
+    const deckId = await deck("Shared Lights", "4 Banishing Light\n10 Plains");
+    await sharing.setVisibility(jack, { deckId, visibility: "shared" });
+
+    const copied = await decks.copyDeck(sam, { kind: "deck", deckId });
+    expect(copied.ok).toBe(true);
+    if (!copied.ok) return;
+
+    const samsView = await deckForViewer(db, sam.userId, copied.value);
+    expect(samsView?.isOwner).toBe(true);
+    expect(samsView?.view.deck.name).toBe("Shared Lights (copy)");
+    expect(samsView?.view.lines.map((line) => [line.name, line.quantity])).toEqual([
+      ["Banishing Light", 4],
+      ["Plains", 10],
+    ]);
+  });
 });

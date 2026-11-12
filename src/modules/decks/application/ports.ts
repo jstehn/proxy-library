@@ -10,6 +10,10 @@ import type { TokenChoice } from "../domain/token-proxies";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
+export type CopyDeckSource =
+  | Readonly<{ kind: "deck"; deckId: DeckId; viewerId: UserId }>
+  | Readonly<{ kind: "publicToken"; token: string }>;
+
 export interface DeckRepository {
   create(input: {
     ownerId: UserId;
@@ -23,6 +27,8 @@ export interface DeckRepository {
   countFor(ownerId: UserId): Promise<number>;
   /** The deck, locked until the transaction ends, if it exists and belongs to this player. */
   lockOwned(deckId: DeckId, ownerId: UserId): Promise<Deck | null>;
+  /** A deck the caller may read (owned, shared, or matching public token), or null. */
+  findReadable(source: CopyDeckSource): Promise<Deck | null>;
   /**
    * Saves the name, format, settings and every entry (replacing the old entries), with the
    * headings tidied to match the entries (`tidyHeadings`, design doc 34).

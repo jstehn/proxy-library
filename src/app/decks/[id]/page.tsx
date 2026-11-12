@@ -17,6 +17,7 @@ import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { WishForShortForm } from "../../wishlist/wish-forms";
 import {
+  copyDeckAction,
   deleteDeckAction,
   importListAction,
   setUsesRealCardsAction,
@@ -80,15 +81,27 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
         <ManaStylesheet />
-        <header className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">{deck.name}</h1>
-          <p className="text-sm text-zinc-500">
-            {FORMAT_LABELS[deck.format]} · shared by {viewed.ownerName} ·{" "}
-            <Link href="/decks/shared" className="underline">
-              All shared decks
-            </Link>
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-semibold">{deck.name}</h1>
+            <p className="text-sm text-zinc-500">
+              {FORMAT_LABELS[deck.format]} · shared by {viewed.ownerName} ·{" "}
+              <Link href="/decks/shared" className="underline">
+                All shared decks
+              </Link>
+            </p>
+          </div>
+          <form action={copyDeckAction}>
+            <input type="hidden" name="deckId" value={deck.id} />
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              Copy to my decks
+            </button>
+          </form>
         </header>
+        {typeof searchParams.error === "string" && <Alert tone="error">{searchParams.error}</Alert>}
         <SharedDeckView
           lines={view.lines}
           rules={view.rules}

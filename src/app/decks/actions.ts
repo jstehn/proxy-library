@@ -318,6 +318,37 @@ export async function revokePublicLinkAction(formData: FormData): Promise<void> 
   );
 }
 
+/** Copies a shared deck into the signed-in player's own decks (design doc 48). */
+export async function copyDeckAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  const deckId = Number(formData.get("deckId"));
+  const result = await getContainer().decks.copyDeck(actor, {
+    kind: "deck",
+    deckId: DeckId.of(deckId),
+  });
+  if (!result.ok) {
+    if (result.error.kind === "DeckNotFound") redirect("/decks");
+    redirect(deckPath(deckId, `You already have ${result.error.maximum} decks.`));
+  }
+  revalidatePath("/decks");
+  redirect(deckPath(result.value));
+}
+
+/** Copies a deck opened via its `/d/[token]` public link into the signed-in player's decks. */
+export async function copyPublicDeckAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  const token = String(formData.get("token") ?? "");
+  const result = await getContainer().decks.copyDeck(actor, { kind: "publicToken", token });
+  if (!result.ok) {
+    if (result.error.kind === "DeckNotFound") redirect("/decks");
+    redirect(
+      `/d/${encodeURIComponent(token)}?error=${encodeURIComponent(`You already have ${result.error.maximum} decks.`)}`,
+    );
+  }
+  revalidatePath("/decks");
+  redirect(deckPath(result.value));
+}
+
 /** Comments on a deck you can see. */
 export async function postCommentAction(formData: FormData): Promise<void> {
   const actor = await requireActor();

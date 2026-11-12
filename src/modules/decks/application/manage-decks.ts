@@ -5,6 +5,7 @@ import {
   checkName,
   checkTargetBracket,
   checkQuantity,
+  copyDeckName,
   MAX_DECKS,
   MAX_NAME_LENGTH,
   MAX_LIST_LINES,
@@ -77,6 +78,7 @@ export type OrderHeadingsError = DeckNotFound | HeadingOrderInvalid;
 export type SaveSnapshotError = DeckNotFound | SnapshotLabelInvalid | TooManySnapshots;
 export type RestoreSnapshotError = DeckNotFound | SnapshotNotFound | DeckChanged;
 export type DeleteSnapshotError = DeckNotFound | SnapshotNotFound;
+export type CopyDeckError = DeckNotFound | TooManyDecks;
 
 export type SetEntryHeadingInput = Readonly<{
   deckId: DeckId;
@@ -691,6 +693,54 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     });
   }
 
+  /** Copies a viewable deck (shared or public link) into a new private deck for the actor. */
+  async function copyDeck(
+    actor: Actor,
+    source: Readonly<{ kind: "deck"; deckId: DeckId } | { kind: "publicToken"; token: string }>,
+  ): Promise<Result<DeckId, CopyDeckError>> {
+    return unitOfWork.run<DeckId, CopyDeckError>(async ({ decks }) => {
+      if ((await decks.countFor(actor.userId)) >= MAX_DECKS) {
+        return err({ kind: "TooManyDecks", maximum: MAX_DECKS });
+      }
+      const original = await decks.findReadable(
+        source.kind === "deck"
+          ? { kind: "deck", deckId: source.deckId, viewerId: actor.userId }
+          : { kind: "publicToken", token: source.token },
+      );
+      if (original === null) return err({ kind: "DeckNotFound" });
+      const now = clock.now();
+      const newId = await decks.create({
+        ownerId: actor.userId,
+        name: copyDeckName(original.name),
+        format: original.format,
+        origin: null,
+        usesRealCards: true,
+        at: now,
+      });
+      const created = await decks.lockOwned(newId, actor.userId);
+      if (created === null) throw new Error(`deck ${newId} vanished inside its own transaction`);
+      await decks.save(
+        {
+          ...created,
+          targetBracket: original.targetBracket,
+          grouping: original.grouping,
+          headings: [...original.headings],
+          entries: original.entries.map((entry) => ({
+            oracleId: entry.oracleId,
+            board: entry.board,
+            quantity: entry.quantity,
+            printingId: null,
+            finish: null,
+            heading: entry.heading,
+            note: null,
+          })),
+        },
+        now,
+      );
+      return ok(newId);
+    });
+  }
+
   return {
     createDeck,
     updateDeck,
@@ -710,5 +760,6 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     replaceList,
     choosePrinting,
     createDeckFromCards,
+    copyDeck,
   };
 }

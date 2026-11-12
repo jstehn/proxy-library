@@ -1,4 +1,4 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId, type Finish } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
@@ -6,6 +6,7 @@ import { UserId } from "@/shared/kernel";
 import type {
   CardLookup,
   CardQuery,
+  CopyDeckSource,
   DeckRepository,
   ResolvedCard,
   ResolveOptions,
@@ -23,6 +24,7 @@ import {
 } from "../domain/deck";
 import { isBracket } from "../domain/brackets";
 import { tidyHeadings } from "../domain/headings";
+import { isValidPublicToken } from "../domain/sharing";
 import { SnapshotId, type DeckSnapshot, type SnapshotEntry } from "../domain/snapshots";
 import { deckEntries, decks, deckSnapshots } from "./schema";
 
@@ -67,14 +69,11 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
     return row.total;
   }
 
-  async function lockOwned(deckId: DeckId, ownerId: UserId): Promise<Deck | null> {
-    const [row] = await db
-      .select()
-      .from(decks)
-      .where(and(eq(decks.id, deckId), eq(decks.ownerId, ownerId)))
-      .for("update");
+  async function loadDeckWithEntries(
+    row: typeof decks.$inferSelect | undefined,
+  ): Promise<Deck | null> {
     if (row === undefined) return null;
-    const entries = await db.select().from(deckEntries).where(eq(deckEntries.deckId, deckId));
+    const entries = await db.select().from(deckEntries).where(eq(deckEntries.deckId, row.id));
     return {
       id: DeckId.of(row.id),
       ownerId: UserId.of(row.ownerId),
@@ -95,6 +94,33 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         note: entry.note,
       })),
     };
+  }
+
+  async function lockOwned(deckId: DeckId, ownerId: UserId): Promise<Deck | null> {
+    const [row] = await db
+      .select()
+      .from(decks)
+      .where(and(eq(decks.id, deckId), eq(decks.ownerId, ownerId)))
+      .for("update");
+    return loadDeckWithEntries(row);
+  }
+
+  async function findReadable(source: CopyDeckSource): Promise<Deck | null> {
+    if (source.kind === "deck") {
+      const [row] = await db
+        .select()
+        .from(decks)
+        .where(
+          and(
+            eq(decks.id, source.deckId),
+            or(eq(decks.ownerId, source.viewerId), eq(decks.visibility, "shared")),
+          ),
+        );
+      return loadDeckWithEntries(row);
+    }
+    if (!isValidPublicToken(source.token)) return null;
+    const [row] = await db.select().from(decks).where(eq(decks.publicToken, source.token));
+    return loadDeckWithEntries(row);
   }
 
   async function save(untidy: Deck, at: Date): Promise<void> {
@@ -207,6 +233,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
     create,
     countFor,
     lockOwned,
+    findReadable,
     save,
     delete: remove,
     deleteAllOf,

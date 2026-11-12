@@ -103,6 +103,16 @@ export function checkName(raw: string): Result<string, NameInvalid> {
   return ok(name);
 }
 
+const COPY_SUFFIX = " (copy)";
+
+/** Name for a copied deck, trimmed so `"<name> (copy)"` fits within `MAX_NAME_LENGTH`. */
+export function copyDeckName(sourceName: string): string {
+  const base = sourceName.trim();
+  const maxBase = MAX_NAME_LENGTH - COPY_SUFFIX.length;
+  const trimmed = base.length > maxBase ? base.slice(0, maxBase).trimEnd() : base;
+  return trimmed.length === 0 ? "Untitled deck (copy)" : `${trimmed}${COPY_SUFFIX}`;
+}
+
 /** A target bracket for a deck of this format: 1–5 on Commander decks, or null (design doc 31). */
 export function checkTargetBracket(
   format: Format,

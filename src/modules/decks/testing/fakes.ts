@@ -13,7 +13,13 @@ import type {
 } from "../application/ports";
 import { DeckId, type Deck } from "../domain/deck";
 import { tidyHeadings } from "../domain/headings";
-import { CommentId, type DeckForSharing } from "../domain/sharing";
+import {
+  CommentId,
+  canViewDeck,
+  isValidPublicToken,
+  type DeckForSharing,
+  type Visibility,
+} from "../domain/sharing";
 import { SnapshotId, type DeckSnapshot } from "../domain/snapshots";
 import type { TokenChoice } from "../domain/token-proxies";
 
@@ -21,6 +27,7 @@ import type { TokenChoice } from "../domain/token-proxies";
 
 export function inMemoryDeckRepository() {
   const decks = new Map<DeckId, Deck>();
+  const sharingMeta = new Map<DeckId, { visibility: Visibility; publicToken: string | null }>();
   const snapshots = new Map<SnapshotId, DeckSnapshot>();
   let lastId = 0;
   let lastSnapshotId = 0;
@@ -47,6 +54,19 @@ export function inMemoryDeckRepository() {
     async lockOwned(deckId, ownerId) {
       const deck = decks.get(deckId);
       return deck !== undefined && deck.ownerId === ownerId ? deck : null;
+    },
+    async findReadable(source) {
+      if (source.kind === "deck") {
+        const deck = decks.get(source.deckId);
+        if (deck === undefined) return null;
+        const visibility = sharingMeta.get(source.deckId)?.visibility ?? "private";
+        return canViewDeck(source.viewerId, { ownerId: deck.ownerId, visibility }) ? deck : null;
+      }
+      if (!isValidPublicToken(source.token)) return null;
+      for (const [id, meta] of sharingMeta) {
+        if (meta.publicToken === source.token) return decks.get(id) ?? null;
+      }
+      return null;
     },
     async save(deck) {
       decks.set(deck.id, tidyHeadings(deck));
@@ -88,6 +108,13 @@ export function inMemoryDeckRepository() {
   };
   return {
     ...repository,
+    setSharing(deckId: DeckId, meta: { visibility?: Visibility; publicToken?: string | null }) {
+      const prev = sharingMeta.get(deckId) ?? { visibility: "private", publicToken: null };
+      sharingMeta.set(deckId, {
+        visibility: meta.visibility ?? prev.visibility,
+        publicToken: meta.publicToken === undefined ? prev.publicToken : meta.publicToken,
+      });
+    },
     get: (deckId: DeckId) => decks.get(deckId),
     snapshotsOf: (deckId: DeckId) =>
       [...snapshots.values()].filter((snapshot) => snapshot.deckId === deckId),
