@@ -6,6 +6,7 @@ import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import { isCounted, type Format } from "../domain/deck";
 import { copyLimitFor } from "../domain/rules";
+import type { RatingPart } from "../domain/rate";
 import {
   budgetPicks,
   creatureTypes,
@@ -16,6 +17,7 @@ import {
   scoreLike,
   type CandidateCard,
   type DeckProfile,
+  type EdhrecSignal,
   type ProfileLine,
   type Scored,
 } from "../domain/suggest";
@@ -41,11 +43,15 @@ export type SuggestionCard = BrowseCard &
     roles: Tag[];
     themes: Theme[];
     rarity: string;
+    edhrecRank?: number | null;
+    edhrec?: EdhrecSignal | null;
   }>;
 
 export type Suggestion = Readonly<{
   card: SuggestionCard;
   reasons: Scored["reasons"];
+  rating: number;
+  ratingParts: readonly RatingPart[];
 }>;
 
 /** One list of suggestions: cards you own first, then cards in the store. */
@@ -240,13 +246,15 @@ type CandidateRow = {
   owned_real: number;
   other_decks: number;
   free: number;
+  edhrec_rank: number | null;
   edhrec_inclusion: number | null;
   edhrec_synergy: number | null;
+  edhrec_total_decks: number | null;
 };
 
 function edhrecCte(commanderOracleIds: string[]): SQL {
   if (commanderOracleIds.length === 0) {
-    return sql`select null::text as card_oracle_id, 0::real as inclusion_rate, 0::real as synergy where false`;
+    return sql`select null::text as card_oracle_id, 0::real as inclusion_rate, 0::real as synergy, 0::int as total_decks where false`;
   }
   const ids = sql.join(
     commanderOracleIds.map((id) => sql`${id}`),
@@ -254,8 +262,10 @@ function edhrecCte(commanderOracleIds: string[]): SQL {
   );
   return sql`select ec.card_oracle_id,
                     max(ec.inclusion_rate)::real as inclusion_rate,
-                    max(ec.synergy)::real as synergy
+                    max(ec.synergy)::real as synergy,
+                    max(e.total_decks)::int as total_decks
                from edhrec_commander_cards ec
+               join edhrec_commanders e on e.commander_oracle_id = ec.commander_oracle_id
               where ec.commander_oracle_id in (${ids})
               group by ec.card_oracle_id`;
 }
@@ -269,7 +279,7 @@ function candidateColumns(context: SuggestionContext): SQL {
     exists (select 1 from jsonb_array_elements(p.faces) f
              where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
     p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
-    p.produced_mana, p.is_game_changer, p.set_code, p.collector_number`;
+    p.produced_mana, p.is_game_changer, p.edhrec_rank, p.set_code, p.collector_number`;
 }
 
 /** Cards you own that share something with what's wanted: one per oracle card. */
@@ -304,7 +314,8 @@ async function ownedCandidates(
                                                and e.oracle_id = owned.oracle_id
                                                and e.board <> 'maybe'), 0), 0)::int as free,
            edhrec.inclusion_rate as edhrec_inclusion,
-           edhrec.synergy as edhrec_synergy
+           edhrec.synergy as edhrec_synergy,
+           edhrec.total_decks as edhrec_total_decks
       from owned join printings p on p.id = owned.printing_id
       left join edhrec on edhrec.card_oracle_id = p.oracle_id
      where ${fitsDeck(context)}
@@ -336,6 +347,7 @@ async function storeCandidates(
       select distinct on (p.oracle_id) p.oracle_id, ${sharedCount(want)} as shared,
              coalesce(edhrec.synergy, 0) as edhrec_synergy,
              coalesce(edhrec.inclusion_rate, 0) as edhrec_inclusion,
+             edhrec.total_decks as edhrec_total_decks,
              case p.rarity when 'mythic' then 3 when 'rare' then 2 when 'uncommon' then 1 else 0 end
                as rarity_rank
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
@@ -348,7 +360,7 @@ async function storeCandidates(
        order by p.oracle_id, rarity_rank desc
     ),
     kept as (
-      select oracle_id, edhrec_inclusion, edhrec_synergy from matching
+      select oracle_id, edhrec_inclusion, edhrec_synergy, edhrec_total_decks from matching
        order by shared desc, edhrec_synergy desc, edhrec_inclusion desc, rarity_rank desc, oracle_id
        limit ${CANDIDATE_LIMIT}
     ),
@@ -368,7 +380,7 @@ async function storeCandidates(
     )
     select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
            0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
-           kept.edhrec_inclusion, kept.edhrec_synergy
+           kept.edhrec_inclusion, kept.edhrec_synergy, kept.edhrec_total_decks
       from cheapest
       join kept on kept.oracle_id = cheapest.oracle_id
       join printings p on p.id = cheapest.printing_id
@@ -418,11 +430,15 @@ function toCard(
       (THEMES as readonly string[]).includes(theme),
     ),
     rarity: row.rarity,
+    edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
     ...(row.edhrec_inclusion !== null && row.edhrec_synergy !== null
       ? {
           edhrec: {
             inclusionRate: Number(row.edhrec_inclusion),
             synergy: Number(row.edhrec_synergy),
+            ...(row.edhrec_total_decks !== null
+              ? { totalDecks: Number(row.edhrec_total_decks) }
+              : {}),
           },
         }
       : {}),
@@ -445,7 +461,11 @@ function best(
     .slice(0, count)
     .flatMap((scored) => {
       const card = byId.get(scored.card.oracleId);
-      return card === undefined ? [] : [{ card, reasons: scored.reasons }];
+      if (card === undefined) return [];
+      const rating =
+        scored.rating?.rating ??
+        Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp(-scored.score)))));
+      return [{ card, reasons: scored.reasons, rating, ratingParts: scored.rating?.parts ?? [] }];
     });
 }
 
@@ -517,7 +537,8 @@ export async function similarCards(
   const [targetRow] = (
     await db.execute<CandidateRow>(sql`
       select ${candidateColumns(context)}, 'nonfoil' as finish, null as price_cents,
-             0 as owned, 0 as owned_real, 0 as other_decks, 0 as free
+             0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
+             null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
         from printings p join card_sets s on s.code = p.set_code
        where p.oracle_id = ${oracleId}
        order by ${STANDARD_FIRST} limit 1
@@ -578,7 +599,11 @@ export async function budgetList(
   const scored = rank(store.map((card) => scoreForDeck(candidate(card), profile)));
   const picks = budgetPicks(scored, budgetCents, BUDGET_LIST_MAXIMUM).flatMap((pick) => {
     const card = byId.get(pick.card.oracleId);
-    return card === undefined ? [] : [{ card, reasons: pick.reasons }];
+    if (card === undefined) return [];
+    const rating =
+      pick.rating?.rating ??
+      Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp(-pick.score)))));
+    return [{ card, reasons: pick.reasons, rating, ratingParts: pick.rating?.parts ?? [] }];
   });
   return {
     picks,

@@ -11,6 +11,8 @@ import {
   type ProfileLine,
   type Reason,
 } from "./suggest";
+import { qualityPrior } from "./rate";
+import { cardSignalIO, SIGNAL_LABELS, synergyMatches } from "./signals";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
 // each with the reasons for its score. The same local rules as suggestions (design doc 20) judge
@@ -31,6 +33,8 @@ export type CutLine = ProfileLine &
     owned: number;
     /** Community EDHREC stats under this deck's commander (design doc 45). */
     edhrec?: EdhrecSignal | null;
+    edhrecRank?: number | null;
+    preconCount?: number | null;
   }>;
 
 /** Why a card scores as it does; the builder and `rank_cuts` put these into words. */
@@ -122,9 +126,29 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         },
         fitProfile,
       );
-      if (fit.points === 0) reasons.push({ kind: "noFit" });
-      else reasons.push({ kind: "fits", reasons: fit.reasons });
-      score += fit.points;
+      const synergy = profile.signals
+        ? synergyMatches(
+            cardSignalIO({
+              name: line.name,
+              typeLine: line.typeLine,
+              text: line.text,
+              manaValue: line.manaValue,
+            }),
+            profile.signals,
+          )
+        : { total: 0, matches: [] };
+      const allFitReasons = [...fit.reasons];
+      if (synergy.total > 0 && synergy.matches.length > 0) {
+        const top = synergy.matches
+          .slice(0, 2)
+          .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
+          .join(", ");
+        allFitReasons.push({ kind: "synergy", label: `matches ${top}` });
+      }
+      const totalFitPoints = fit.points + Math.min(3, synergy.total * 0.75);
+      if (totalFitPoints === 0) reasons.push({ kind: "noFit" });
+      else reasons.push({ kind: "fits", reasons: allFitReasons });
+      score += totalFitPoints;
 
       if (targets !== null) {
         const roles = cardTags(facts);
@@ -175,9 +199,18 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         });
       }
 
-      score +=
-        CUT_WEIGHTS.strength *
-        strength({ rarity: line.rarity, priceCents: line.priceCents ?? null });
+      const hasRichPrior = line.edhrecRank != null || (line.preconCount ?? 0) > 0;
+      score += hasRichPrior
+        ? CUT_WEIGHTS.strength *
+          1.6 *
+          qualityPrior({
+            edhrecRank: line.edhrecRank,
+            preconCount: line.preconCount,
+            rarity: line.rarity,
+            priceCents: line.priceCents ?? null,
+          })
+        : CUT_WEIGHTS.strength *
+          strength({ rarity: line.rarity, priceCents: line.priceCents ?? null });
       return { oracleId: line.oracleId, name: line.name, keepScore: score, reasons };
     })
     .sort(

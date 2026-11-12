@@ -191,6 +191,12 @@ function suggestionView(suggestion: Suggestion, includeText: boolean) {
     ...(card.isGameChanger ? { isGameChanger: true } : {}),
     owned: card.owned,
     price: moneyOrNull(card.priceCents),
+    rating: suggestion.rating,
+    ratingParts: suggestion.ratingParts.map((part) => ({
+      kind: part.kind,
+      label: part.label,
+      contribution: Math.round(part.contribution * 100) / 100,
+    })),
     why: suggestion.reasons.map(reasonText),
   };
 }

@@ -139,6 +139,8 @@ export function reasonText(reason: Reason): string {
       return reason.keyword;
     case "edhrec":
       return edhrecReasonText(reason.inclusionPct, reason.synergyPct);
+    case "synergy":
+      return reason.label;
     default:
       return assertNever(reason);
   }

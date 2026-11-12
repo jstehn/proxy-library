@@ -1,5 +1,7 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
+import { rateCard, type CardRating, type RatingProfile } from "./rate";
+import { deckSignalProfile, type DeckSignalProfile } from "./signals";
 import {
   deckStats,
   isLand,
@@ -20,6 +22,7 @@ export type ProfileLine = StatsLine & Readonly<{ keywords?: readonly string[] }>
 export type EdhrecSignal = Readonly<{
   inclusionRate: number;
   synergy: number;
+  totalDecks?: number;
 }>;
 
 /** A card that could be suggested, from your collection or the store. */
@@ -28,6 +31,7 @@ export type CandidateCard = Readonly<{
   name: string;
   typeLine: string;
   manaValue: number;
+  text?: string;
   keywords: readonly string[];
   roles: readonly Tag[];
   themes: readonly Theme[];
@@ -35,12 +39,16 @@ export type CandidateCard = Readonly<{
   priceCents: number | null;
   pool: "owned" | "store";
   edhrec?: EdhrecSignal | null;
+  edhrecRank?: number | null;
+  preconCount?: number | null;
+  isGameChanger?: boolean;
 }>;
 
 export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
 
 /** What a deck is about: worked out from its lines, never stored. */
 export type DeckProfile = Readonly<{
+  format?: Format;
   themes: readonly Theme[];
   /** Creature types the deck cares about, singular: "Elf". */
   tribes: readonly string[];
@@ -48,6 +56,9 @@ export type DeckProfile = Readonly<{
   gaps: readonly RoleGap[];
   /** The commanders' keyword abilities. */
   keywords: readonly string[];
+  signals?: DeckSignalProfile;
+  averageManaValue?: number;
+  curveCounts?: ReadonlyMap<number, number>;
 }>;
 
 /** Why a card is suggested; the builder puts these into words. */
@@ -56,9 +67,15 @@ export type Reason =
   | Readonly<{ kind: "tribe"; tribe: string }>
   | Readonly<{ kind: "role"; tag: Tag; count?: number; target?: number }>
   | Readonly<{ kind: "keyword"; keyword: string }>
-  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>;
+  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>
+  | Readonly<{ kind: "synergy"; label: string }>;
 
-export type Scored = Readonly<{ card: CandidateCard; score: number; reasons: readonly Reason[] }>;
+export type Scored = Readonly<{
+  card: CandidateCard;
+  score: number;
+  reasons: readonly Reason[];
+  rating?: CardRating;
+}>;
 
 /** The points each kind of match is worth (section 3.2's table), in one place to tune. */
 export const WEIGHTS = {
@@ -170,7 +187,8 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
   }
 
   // Gaps: roles below the format's target. Formats without targets have none.
-  const counts = deckStats(lines).tags;
+  const stats = deckStats(lines);
+  const counts = stats.tags;
   const targets = roleTargets(format);
   const gaps =
     targets === null
@@ -181,8 +199,35 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
           target: targets[tag],
         }));
 
+  const signals = deckSignalProfile(
+    lines
+      .filter((line) => line.board === "commander" || line.board === "main")
+      .map((line) => ({
+        name: line.typeLine,
+        typeLine: line.typeLine,
+        text: line.text ?? "",
+        manaValue: line.manaValue,
+        board: line.board,
+        quantity: line.quantity,
+      })),
+  );
+  const curveCounts = new Map<number, number>();
+  for (const line of spells) {
+    const bucket = Math.min(6, Math.max(0, Math.floor(line.manaValue)));
+    curveCounts.set(bucket, (curveCounts.get(bucket) ?? 0) + line.quantity);
+  }
+
   const keywords = [...new Set(commanders.flatMap((line) => line.keywords ?? []))];
-  return { themes: [...themes], tribes: [...tribes], gaps, keywords };
+  return {
+    format,
+    themes: [...themes],
+    tribes: [...tribes],
+    gaps,
+    keywords,
+    signals,
+    averageManaValue: stats.averageManaValue,
+    curveCounts,
+  };
 }
 
 const RARITY_STRENGTH: Readonly<Record<string, number>> = {
@@ -263,14 +308,35 @@ function edhrecFit(
   };
 }
 
+function toRatingProfile(profile: DeckProfile): RatingProfile {
+  return {
+    format: profile.format ?? "commander",
+    themes: profile.themes,
+    tribes: profile.tribes,
+    gaps: profile.gaps,
+    keywords: profile.keywords,
+    signals: profile.signals ?? deckSignalProfile([]),
+    averageManaValue: profile.averageManaValue ?? 0,
+    curveCounts: profile.curveCounts ?? new Map(),
+  };
+}
+
 /** How well a card fits a deck, or null if it shares nothing with it. */
 export function scoreForDeck(card: CandidateCard, profile: DeckProfile): Scored | null {
   const { points, reasons } = deckFit(card, profile);
   const edhrec = edhrecFit(card.edhrec);
-  const totalPoints = points + (edhrec?.points ?? 0);
-  if (totalPoints === 0) return null;
+  const rating = rateCard(card, toRatingProfile(profile));
+  const synergyPart = rating.parts.find((part) => part.kind === "synergy");
+  const totalPoints = points + (edhrec?.points ?? 0) + (synergyPart ? synergyPart.contribution : 0);
+  if (totalPoints <= 0) return null;
+  if (synergyPart) reasons.push({ kind: "synergy", label: synergyPart.label });
   if (edhrec !== null) reasons.push(edhrec.reason);
-  return { card, score: totalPoints + WEIGHTS.strength * strength(card), reasons };
+  return {
+    card,
+    score: rating.rating + rating.logit * 0.001,
+    reasons,
+    rating,
+  };
 }
 
 /**

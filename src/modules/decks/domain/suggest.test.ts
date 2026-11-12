@@ -142,9 +142,10 @@ describe("scoring", () => {
       { kind: "role", tag: "removal", count: 2, target: 8 },
       { kind: "keyword", keyword: "Trample" },
     ]);
-    // 9 points, plus a sliver of strength: a 25¢ common.
-    expect(scored?.score).toBeGreaterThan(9);
-    expect(scored?.score).toBeLessThan(9.1);
+    // Calibrated 0-100 rating from theme + tribe + role gap + keyword + quality prior.
+    expect(scored?.rating?.rating).toBeGreaterThanOrEqual(70);
+    expect(scored?.rating?.rating).toBeLessThanOrEqual(100);
+    expect(scored?.score).toBeGreaterThan(70);
   });
 
   it("never suggests a card for strength alone, and counts changelings in every tribe", () => {

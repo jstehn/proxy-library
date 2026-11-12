@@ -153,8 +153,11 @@ export function SuggestionRow(props: {
   suggestion: Suggestion;
   onSelect: (card: SuggestionCard) => void;
 }) {
-  const { card, reasons } = props.suggestion;
+  const { card, reasons, rating, ratingParts } = props.suggestion;
   const reasonWords = reasons.map(reasonText).join(" · ");
+  const partsTitle = ratingParts
+    .map((p) => `${p.label} (${p.contribution >= 0 ? "+" : ""}${p.contribution.toFixed(2)})`)
+    .join(" · ");
   return (
     <li>
       <button
@@ -172,6 +175,12 @@ export function SuggestionRow(props: {
         />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-center gap-1">
+            <span
+              title={partsTitle || `Rating ${rating}/100`}
+              className="shrink-0 rounded bg-zinc-200 px-1 text-[11px] font-medium text-zinc-800 tabular-nums dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              {rating}
+            </span>
             <span className="truncate">{card.name}</span>
             {card.manaCost && (
               <span className="shrink-0 text-xs">
