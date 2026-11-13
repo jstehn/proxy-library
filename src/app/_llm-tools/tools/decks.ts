@@ -4,6 +4,7 @@ import {
   auditDeck,
   BOARDS,
   bracketLine,
+  bracketRuleReasons,
   COMMANDER_SORTS,
   commanderDetails,
   commandersICanBuild,
@@ -152,16 +153,18 @@ function bracketOf(view: DeckView, combos?: readonly DeckCombo[]) {
   const estimate = estimateBracket(view.deck.format, view.lines.map(bracketLine), { combos });
   if (estimate === null) return null;
   const warning = bracketWarning(estimate, view.deck.targetBracket);
+  const reasons = bracketRuleReasons(estimate.findings);
   return {
     target: view.deck.targetBracket,
     floor: estimate.floor,
     range: estimate.range,
     summary: `${estimateLabel(estimate)} (at least, from the cards)`,
     gameChangers: estimate.gameChangers,
-    findings: estimate.findings.map((finding) => ({
+    findings: estimate.findings.map((finding, idx) => ({
       rule: finding.rule,
       count: finding.count,
       forces: finding.forces,
+      threshold: reasons[idx]?.threshold,
       cards: finding.cards,
       text: findingWithCards(finding),
     })),

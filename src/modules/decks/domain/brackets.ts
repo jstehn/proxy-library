@@ -198,3 +198,45 @@ export function fitsTarget(
 export function flagsOverTarget(lines: readonly BracketLine[], target: Bracket): BracketFlag[] {
   return BRACKET_FLAGS.filter((flag) => !fitsTarget(lines, { name: flag, flags: [flag] }, target));
 }
+
+/** Human-readable explanation for one triggered Commander bracket rule. */
+export type BracketRuleReason = Readonly<{
+  rule: BracketRule;
+  bracketFloor: Bracket;
+  count: number;
+  threshold: string;
+  cards: readonly string[];
+  summary: string;
+}>;
+
+function thresholdForFinding(finding: BracketFinding): string {
+  switch (finding.rule) {
+    case "gameChangers":
+      return finding.count <= 3
+        ? "1–3 Game Changers allows Bracket 3 (0 for 1–2; 4+ forces 4)"
+        : "4+ Game Changers forces Bracket 4";
+    case "landDenial":
+      return "Any mass land denial forces Bracket 4";
+    case "extraTurns":
+      return finding.count <= 2
+        ? "1–2 extra-turn spells allows Bracket 2 (3+ forces 4)"
+        : "3+ extra-turn spells forces Bracket 4";
+    case "twoCardCombos":
+      return `Two-card combo forces Bracket ${finding.forces}`;
+  }
+}
+
+/** Formats bracket findings with the exact rule thresholds and card names. */
+export function bracketRuleReasons(findings: readonly BracketFinding[]): BracketRuleReason[] {
+  return findings.map((finding) => {
+    const threshold = thresholdForFinding(finding);
+    return {
+      rule: finding.rule,
+      bracketFloor: finding.forces,
+      count: finding.count,
+      threshold,
+      cards: finding.cards,
+      summary: `${threshold}: ${finding.cards.join(", ")}`,
+    };
+  });
+}

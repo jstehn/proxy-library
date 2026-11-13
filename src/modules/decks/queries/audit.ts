@@ -1,7 +1,14 @@
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
-import { bracketLine, bracketWarning, estimateBracket, type Bracket } from "../domain/brackets";
+import {
+  bracketLine,
+  bracketRuleReasons,
+  bracketWarning,
+  estimateBracket,
+  type Bracket,
+  type BracketRuleReason,
+} from "../domain/brackets";
 import { rankCuts } from "../domain/cuts";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
@@ -53,6 +60,7 @@ export type DeckAuditReport = Readonly<{
     overTarget: boolean;
     gameChangers: number;
     twoCardCombos: number;
+    reasons: readonly BracketRuleReason[];
   } | null;
   roles: readonly AuditRoleStatus[];
   mana: {
@@ -230,6 +238,7 @@ export async function auditDeck(
             overTarget: warning !== null,
             gameChangers: estimate.gameChangers,
             twoCardCombos: combos?.length ?? 0,
+            reasons: bracketRuleReasons(estimate.findings),
           },
     roles,
     mana: {

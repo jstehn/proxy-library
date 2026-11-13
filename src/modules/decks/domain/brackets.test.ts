@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BRACKET_FLAGS, type BracketFlag } from "@/shared/card-search";
 import {
   BRACKETS,
+  bracketRuleReasons,
   bracketWarning,
   estimateBracket,
   fitsTarget,
@@ -266,5 +267,23 @@ describe("flagsOverTarget", () => {
         },
       ),
     );
+  });
+});
+
+describe("bracketRuleReasons", () => {
+  it("formats each finding with its threshold and card names", () => {
+    const estimate = estimateBracket("commander", [
+      ...gameChangers(4),
+      line("Armageddon", ["landDenial"]),
+    ]);
+    const reasons = bracketRuleReasons(estimate?.findings ?? []);
+    expect(reasons).toHaveLength(2);
+    expect(reasons[0]).toMatchObject({
+      rule: "gameChangers",
+      bracketFloor: 4,
+      count: 4,
+    });
+    expect(reasons[0]?.threshold).toContain("4+ Game Changers");
+    expect(reasons[1]?.summary).toContain("Armageddon");
   });
 });
