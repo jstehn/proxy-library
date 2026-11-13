@@ -1,20 +1,26 @@
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import {
+  auditDeck,
   BOARDS,
   bracketLine,
   COMMANDER_SORTS,
   commanderDetails,
   commandersICanBuild,
+  combosForDeck,
   bracketWarning,
   chanceByTurn,
   checkNote,
   compareDeckSnapshot,
   deckChangePreview,
   deckProblems,
+  deckProfile,
+  deckSignalProfile,
   deckStats,
+  deckSuggestions,
   deckText,
   deckTokenLines,
+  deckUpgradeRoadmap,
   deckView,
   DeckId,
   draftForDeck,
@@ -27,6 +33,7 @@ import {
   formatRulesSummary,
   FORMATS,
   GROUPINGS,
+  isLand,
   legalFormatsForCards,
   library,
   listDeckSnapshots,
@@ -38,26 +45,34 @@ import {
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
   openingHandOdds,
+  optimizeDeckForView,
   rankCuts,
+  rateCard,
   roleTargets,
   SnapshotId,
   SPELL_SLOTS,
   shortList,
+  simulateOpeningHands,
+  suggestSwaps,
   summarizeTokenChecklist,
   TOKEN_KINDS,
   toTokenChecklistItem,
   type CommanderCoverage,
   type DeckChange,
   type DeckChangePreview,
+  type DeckCombo,
   type DeckProblem,
   type DeckView,
   type SnapshotComparison,
+  type SwapCutMeta,
 } from "@/modules/decks";
-import { canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
+import { cardTags, cardThemes, canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
+import { seededRng } from "@/shared/kernel";
 import {
   bracketWarningText,
   cutReasonText,
   draftReasonText,
+  swapReasonText,
   estimateLabel,
   findingWithCards,
   landReasonText,
@@ -66,7 +81,7 @@ import {
   problemText,
   reasonText,
   TAG_LABELS,
-  UNCHECKED_TEXT,
+  uncheckedText,
 } from "@/app/decks/labels";
 import {
   cardNotFound,
@@ -133,8 +148,8 @@ function problemsOf(view: DeckView): DeckProblem[] {
 }
 
 /** The bracket estimate and target, as get_deck reports them (design doc 31). Null outside Commander. */
-function bracketOf(view: DeckView) {
-  const estimate = estimateBracket(view.deck.format, view.lines.map(bracketLine));
+function bracketOf(view: DeckView, combos?: readonly DeckCombo[]) {
+  const estimate = estimateBracket(view.deck.format, view.lines.map(bracketLine), { combos });
   if (estimate === null) return null;
   const warning = bracketWarning(estimate, view.deck.targetBracket);
   return {
@@ -151,7 +166,7 @@ function bracketOf(view: DeckView) {
       text: findingWithCards(finding),
     })),
     overTarget: warning === null ? null : bracketWarningText(warning),
-    unchecked: UNCHECKED_TEXT,
+    unchecked: uncheckedText(estimate.unchecked),
   };
 }
 
@@ -197,6 +212,219 @@ export const rankCutsTool = defineTool({
         why: cut.reasons.map(cutReasonText),
       })),
       candidates: cuts.length,
+    });
+  },
+});
+
+const MAX_SWAPS = 15;
+
+export const suggestSwapsTool = defineTool({
+  name: "suggest_swaps",
+  title: "Suggest one-step card swaps for a deck",
+  description: [
+    "Pairs the deck's weakest main-deck cards (from rank_cuts) with top-rated replacements (owned or store), checking Commander singleton rules and target-bracket limits.",
+    "Use it when: the player asks what to swap out and what to put in.",
+    "Rules: suggest swaps, don't apply them unasked; preview with apply_changes (save: false) before saving.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    pool: z
+      .enum(["owned", "store"])
+      .default("owned")
+      .describe("Where to draw replacement candidates from."),
+    count: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_SWAPS)
+      .default(5)
+      .describe(`How many swaps to return (1 to ${MAX_SWAPS}).`),
+  }),
+  async run(context, input) {
+    const [view, suggestions] = await Promise.all([
+      viewFor(context, input.deckId),
+      deckSuggestions(context.container.db, context.actor.userId, input.deckId),
+    ]);
+    if (view === null) return deckNotFound(input.deckId);
+
+    const cuts = rankCuts(view.lines, {
+      format: view.deck.format,
+      targetBracket: view.deck.targetBracket,
+    });
+    const profile = deckProfile(view.lines, view.deck.format);
+    const stats = deckStats(view.lines);
+    const ratingProfile = {
+      format: view.deck.format,
+      themes: profile.themes,
+      tribes: profile.tribes,
+      gaps: profile.gaps,
+      keywords: profile.keywords,
+      signals: profile.signals ?? deckSignalProfile([]),
+      averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
+      curveCounts: profile.curveCounts ?? new Map(),
+    };
+
+    const cutMeta = new Map<string, SwapCutMeta>();
+    const existingOracleIds = new Set<string>();
+    for (const line of view.lines) {
+      existingOracleIds.add(line.oracleId);
+      if (line.board !== "main" || isLand(line.typeLine)) continue;
+      if (cutMeta.has(line.oracleId)) continue;
+      const facts = { typeLine: line.typeLine, text: line.text, producedMana: line.producedMana };
+      const r = rateCard(
+        {
+          oracleId: line.oracleId,
+          name: line.name,
+          typeLine: line.typeLine,
+          manaValue: line.manaValue,
+          text: line.text,
+          keywords: line.keywords,
+          roles: cardTags(facts),
+          themes: cardThemes(facts),
+          rarity: line.rarity,
+          priceCents: line.priceCents,
+          isGameChanger: line.isGameChanger,
+        },
+        ratingProfile,
+        { targetBracket: view.deck.targetBracket },
+      );
+      cutMeta.set(line.oracleId, {
+        manaValue: line.manaValue,
+        rating: r.rating,
+        isBasicLand: line.typeLine.includes("Basic Land"),
+      });
+    }
+
+    const poolItems = suggestions?.forDeck[input.pool] ?? [];
+    const candidates = poolItems.map((s) => ({
+      card: {
+        oracleId: s.card.oracleId,
+        name: s.card.name,
+        typeLine: s.card.typeLine,
+        manaValue: s.card.manaValue,
+        keywords: s.card.keywords,
+        roles: s.card.roles,
+        themes: s.card.themes,
+        rarity: s.card.rarity,
+        priceCents: s.card.priceCents,
+        pool: s.card.pool,
+        edhrecRank: s.card.edhrecRank,
+        edhrec: s.card.edhrec,
+      },
+      score: s.rating,
+      reasons: s.reasons,
+      rating: { rating: s.rating, logit: 0, parts: s.ratingParts },
+    }));
+
+    const neededRoles = new Set(profile.gaps.map((g) => g.tag));
+    const swaps = suggestSwaps(cuts, cutMeta, candidates, {
+      format: view.deck.format,
+      targetBracket: view.deck.targetBracket,
+      existingOracleIds,
+      neededRoles,
+      limit: input.count,
+    });
+
+    return done({
+      deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
+      swaps: swaps.map((s) => ({
+        cut: { name: s.cut.name, oracleId: s.cut.oracleId },
+        add: {
+          name: s.add.card.name,
+          oracleId: s.add.card.oracleId,
+          rating: s.add.rating?.rating ?? null,
+        },
+        netGain: s.netGain,
+        why: s.reasons.map(swapReasonText),
+      })),
+    });
+  },
+});
+
+export const optimizeDeckTool = defineTool({
+  name: "optimize_deck",
+  title: "Optimize a deck via multi-card Simulated Annealing",
+  description: [
+    "Runs a Simulated Annealing local search over the deck's non-land mainboard slots to find multi-card swaps that maximize the whole-deck objective (card quality, role coverage, mana curve, color balance, synergy cohesion, bracket compliance, and optional budget cap).",
+    "Use it when: the player asks to optimize or tune a deck as a whole rather than one card at a time.",
+    "Rules: read-only preview — does not mutate the deck; preview/apply accepted swaps with apply_changes.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    pool: z
+      .enum(["owned", "store", "both"])
+      .default("owned")
+      .describe("Candidate pool to optimize from: owned cards, store cards, or both."),
+    maxSwaps: z
+      .number()
+      .int()
+      .min(1)
+      .max(15)
+      .default(5)
+      .describe("Maximum number of simultaneous swaps to propose (1 to 15)."),
+    maxAddedPriceCents: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Optional budget ceiling in cents for total price of added cards."),
+    iterations: z
+      .number()
+      .int()
+      .min(50)
+      .max(1000)
+      .default(350)
+      .describe("Simulated Annealing iterations to run (50 to 1000)."),
+    seed: z
+      .string()
+      .max(64)
+      .optional()
+      .describe("Optional deterministic RNG seed for reproducible optimization runs."),
+  }),
+  async run(context, input) {
+    const outcome = await optimizeDeckForView(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      {
+        pool: input.pool,
+        maxSwaps: input.maxSwaps,
+        maxAddedPriceCents: input.maxAddedPriceCents ?? null,
+        iterations: input.iterations,
+        seed: input.seed,
+      },
+    );
+    if (outcome === null) return deckNotFound(input.deckId);
+
+    const { deck, result } = outcome;
+    return done({
+      deck: {
+        id: deck.id,
+        name: deck.name,
+        format: deck.format,
+        targetBracket: deck.targetBracket,
+      },
+      before: result.before,
+      after: result.after,
+      delta: result.delta,
+      iterationsRun: result.iterationsRun,
+      acceptedMoves: result.acceptedMoves,
+      improvedMoves: result.improvedMoves,
+      swaps: result.swaps.map((s) => ({
+        cut: { name: s.cut.name, oracleId: s.cut.oracleId, manaValue: s.cut.manaValue },
+        add: {
+          name: s.add.name,
+          oracleId: s.add.oracleId,
+          manaValue: s.add.manaValue,
+          pool: s.add.pool ?? "owned",
+          priceCents: s.priceCents,
+        },
+        netCardRatingGain: s.netCardRatingGain,
+      })),
     });
   },
 });
@@ -546,16 +774,26 @@ export const getDeck = defineTool({
       freeMulligan: view.deck.format === "commander",
     });
     const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
-    const rawTokens = await deckTokenLines(
-      context.container.db,
-      view.deck.id,
-      view.lines.map((line) => ({
-        oracleId: line.oracleId,
-        printingId: line.printingId,
-        name: line.name,
-        board: line.board,
-      })),
-    );
+    const [rawTokens, combos] = await Promise.all([
+      deckTokenLines(
+        context.container.db,
+        view.deck.id,
+        view.lines.map((line) => ({
+          oracleId: line.oracleId,
+          printingId: line.printingId,
+          name: line.name,
+          board: line.board,
+        })),
+      ),
+      view.deck.format === "commander"
+        ? combosForDeck(
+            context.container.db,
+            view.lines
+              .filter((line) => line.board === "main" || line.board === "commander")
+              .map((line) => line.oracleId),
+          )
+        : Promise.resolve(undefined),
+    ]);
     const checklist = rawTokens.map(toTokenChecklistItem);
     return done({
       deck: {
@@ -613,7 +851,7 @@ export const getDeck = defineTool({
           : null,
       roleTargets: roleTargets(view.deck.format),
       problems: problems.map(problemText),
-      bracket: bracketOf(view),
+      bracket: bracketOf(view, combos),
       openingHandOdds:
         handOdds === null
           ? null
@@ -1493,16 +1731,26 @@ export const deckTokensTool = defineTool({
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
-    const rawTokens = await deckTokenLines(
-      context.container.db,
-      view.deck.id,
-      view.lines.map((line) => ({
-        oracleId: line.oracleId,
-        printingId: line.printingId,
-        name: line.name,
-        board: line.board,
-      })),
-    );
+    const [rawTokens, combos] = await Promise.all([
+      deckTokenLines(
+        context.container.db,
+        view.deck.id,
+        view.lines.map((line) => ({
+          oracleId: line.oracleId,
+          printingId: line.printingId,
+          name: line.name,
+          board: line.board,
+        })),
+      ),
+      view.deck.format === "commander"
+        ? combosForDeck(
+            context.container.db,
+            view.lines
+              .filter((line) => line.board === "main" || line.board === "commander")
+              .map((line) => line.oracleId),
+          )
+        : Promise.resolve(undefined),
+    ]);
     const summary = summarizeTokenChecklist(rawTokens);
     const items = filterTokenChecklist(rawTokens.map(toTokenChecklistItem), {
       board: input.board,
@@ -1664,6 +1912,223 @@ export const openingHandOddsTool = defineTool({
       },
       roles: odds.roles.map((row) => ({ label: row.label, chancePercent: toPercent(row.chance) })),
       ...(customQuery !== null ? { customQuery } : {}),
+    });
+  },
+});
+
+export const auditDeckTool = defineTool({
+  name: "audit_deck",
+  title: "One-shot deck health audit",
+  description: [
+    "Runs a comprehensive read-only health check on a deck in one call: legality problems, Commander bracket & two-card combos, whole-deck objective score, role counts vs. targets, mana/color balance, ownership gaps, top 5 weakest cut candidates, 500-hand London-mulligan goldfish summary, and prioritized findings.",
+    "Use it when: starting a deck review or checking overall deck health before making targeted edits.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({ deckId }),
+  async run(context, input) {
+    const report = await auditDeck(context.container.db, context.actor.userId, input.deckId);
+    if (report === null) return deckNotFound(input.deckId);
+    return done(report);
+  },
+});
+
+export const simulateOpeningHandsTool = defineTool({
+  name: "simulate_opening_hands",
+  title: "Monte Carlo London-mulligan opening hand simulator",
+  description: [
+    "Simulates N opening hands (default 1,000) with London mulligans and smart bottoming to measure keepable-hand rate, mulligan distribution, early play & early ramp rates, turn-3 land drop rate, mana screw/flood, and 3 sample kept hands.",
+    "Use it when: testing whether a deck's land count and early curve actually produce playable opening hands.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    trials: z
+      .number()
+      .int()
+      .min(100)
+      .max(5000)
+      .default(1000)
+      .describe("Number of simulated opening hands (100 to 5000)."),
+    minLands: z
+      .number()
+      .int()
+      .min(0)
+      .max(7)
+      .default(2)
+      .describe("Minimum lands required for a keepable hand."),
+    maxLands: z
+      .number()
+      .int()
+      .min(0)
+      .max(7)
+      .default(4)
+      .describe("Maximum lands allowed for a keepable hand."),
+    requireEarlyPlay: z
+      .boolean()
+      .default(true)
+      .describe("Whether a keepable hand must contain a non-land card with mana value <= 3."),
+    freeMulligan: z
+      .boolean()
+      .optional()
+      .describe("Whether the first mulligan is free (defaults to true for Commander)."),
+    onTheDraw: z
+      .boolean()
+      .default(false)
+      .describe("True counts the extra draw step on turn 1 (going second)."),
+    seed: z
+      .string()
+      .max(64)
+      .optional()
+      .describe("Optional deterministic RNG seed for reproducible simulations."),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const cards = library(view.lines);
+    const freeMulligan = input.freeMulligan ?? view.deck.format === "commander";
+    const report = simulateOpeningHands(cards, {
+      rng: seededRng(input.seed ?? `sim-${view.deck.id}`),
+      trials: input.trials,
+      minLands: input.minLands,
+      maxLands: input.maxLands,
+      requireEarlyPlay: input.requireEarlyPlay,
+      freeMulligan,
+      onTheDraw: input.onTheDraw,
+    });
+    return done({
+      deckId: view.deck.id,
+      deckName: view.deck.name,
+      freeMulligan,
+      onTheDraw: input.onTheDraw,
+      ...report,
+    });
+  },
+});
+
+export const upgradeRoadmapTool = defineTool({
+  name: "upgrade_roadmap",
+  title: "Tiered cut/add upgrade roadmap",
+  description: [
+    "Builds a cumulative tiered upgrade plan across budget milestones (default $25 / $75 / $200), pairing weakest main-deck cuts with bracket-compliant store upgrades and scoring each milestone.",
+    "Use it when: the player asks for a phased upgrade path ('how should I upgrade this deck over $25, $75, and $200?'). Read-only.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    tiersCents: z
+      .array(z.number().int().min(100))
+      .min(1)
+      .max(5)
+      .optional()
+      .describe("Cumulative budget milestones in cents (defaults to [2500, 7500, 20000])."),
+    maxSwapsPerTier: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .default(5)
+      .describe("Maximum number of cut/add swaps per tier (1 to 10, default 5)."),
+  }),
+  async run(context, input) {
+    const result = await deckUpgradeRoadmap(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      {
+        tiersCents: input.tiersCents,
+        maxSwapsPerTier: input.maxSwapsPerTier,
+      },
+    );
+    if (result === null) return deckNotFound(input.deckId);
+    return done({
+      deckId: result.deck.id,
+      deckName: result.deck.name,
+      baseScore: result.roadmap.baseScore,
+      hiddenOverTarget: result.hiddenOverTarget,
+      tiers: result.roadmap.tiers.map((tier) => ({
+        tierBudget: money(tier.tierBudgetCents),
+        tierSpent: money(tier.tierSpentCents),
+        cumulativeBudget: money(tier.cumulativeBudgetCents),
+        cumulativeSpent: money(tier.cumulativeSpentCents),
+        scoreAfter: tier.scoreAfter,
+        scoreDeltaFromBase: tier.scoreDeltaFromBase,
+        swaps: tier.swaps.map((swap) => ({
+          cut: swap.cut.name,
+          cutKeepScore: swap.cut.keepScore,
+          add: swap.add.card.name,
+          addPrice: money(swap.priceCents),
+          addRating: swap.add.rating,
+          reasons: swap.add.reasons,
+        })),
+      })),
+    });
+  },
+});
+
+export const diffDeckTool = defineTool({
+  name: "diff_deck",
+  title: "Diff deck against a snapshot with score delta",
+  description: [
+    "Compares a deck's before/after state across cards, curve, roles, legality, Commander bracket, value, and whole-deck scoreDeck delta.",
+    "Defaults to comparing the deck's most recent saved snapshot against the live deck when snapshot ids are omitted. Read-only.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    beforeSnapshotId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Optional "before" snapshot id; defaults to the most recent saved snapshot.'),
+    afterSnapshotId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Optional "after" snapshot id; omit to compare against the live deck.'),
+  }),
+  async run(context, input) {
+    let beforeId = input.beforeSnapshotId;
+    if (beforeId === undefined) {
+      const list = await listDeckSnapshots(
+        context.container.db,
+        context.actor.userId,
+        input.deckId,
+      );
+      if (list === null) return deckNotFound(input.deckId);
+      if (list.length === 0) {
+        return failed(
+          "NoSnapshots",
+          `Deck ${input.deckId} has no saved snapshots yet. Save one with snapshot_deck first.`,
+        );
+      }
+      beforeId = Number(list[0].id);
+    }
+    const comparison = await compareDeckSnapshot(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      beforeId,
+      input.afterSnapshotId,
+    );
+    if (comparison === null) {
+      return failed(
+        "SnapshotNotFound",
+        `Deck ${input.deckId} does not have snapshot ${beforeId}${
+          input.afterSnapshotId !== undefined ? ` or ${input.afterSnapshotId}` : ""
+        }.`,
+      );
+    }
+    return done({
+      ...formatSnapshotComparison(comparison),
+      scoreBefore: comparison.scoreBefore,
+      scoreAfter: comparison.scoreAfter,
+      scoreDelta: comparison.scoreDelta,
     });
   },
 });

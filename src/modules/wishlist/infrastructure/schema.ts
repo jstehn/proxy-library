@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   bigserial,
+  boolean,
   check,
   index,
   pgTable,
@@ -57,3 +58,12 @@ export const wishes = pgTable(
     index("wishes_user_idx").on(table.userId, table.createdAt),
   ],
 );
+
+/** A player's choices about their wishlist. No row means the defaults (not shared). */
+export const wishlistSettings = pgTable("wishlist_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => players.userId, { onDelete: "cascade" }),
+  isShared: boolean("is_shared").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});

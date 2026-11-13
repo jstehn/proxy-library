@@ -1,4 +1,5 @@
 import type { Tag, Theme } from "@/shared/card-search";
+import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import {
   cardSignalIO as cardSignalIOFromText,
@@ -16,7 +17,9 @@ import type { TargetedTag } from "./stats";
 export type RatingPartKind =
   | "synergy"
   | "themeFit"
+  | "embedSim"
   | "edhrec"
+  | "combo"
   | "roleNeed"
   | "quality"
   | "curvePenalty"
@@ -71,32 +74,89 @@ export type RatingCandidate = Readonly<{
   edhrecRank?: number | null;
   preconCount?: number | null;
   isGameChanger?: boolean;
+  /** Names of cards already in the deck that form a two-card combo with this candidate. */
+  comboPartners?: readonly string[] | null;
+  /** Mean cosine similarity to top-5 most similar deck cards, in [0, 1] (design doc 53). */
+  embedSim?: number | null;
 }>;
 
 export type RatingOptions = Readonly<{
   maxCardPriceCents?: number | null;
   penalizeGameChanger?: boolean;
+  targetBracket?: Bracket | null;
+  weightsOverride?: RatingWeights;
 }>;
+
+export type PowerTier = "casual" | "upgraded" | "optimized";
+
+export function powerTierForBracket(bracket: Bracket | null): PowerTier {
+  if (bracket === null || bracket === 3) return "upgraded";
+  return bracket <= 2 ? "casual" : "optimized";
+}
 
 export const RATING_BIAS = -1.2;
 
+export const EMBED_SIM_BASELINE = 0.55;
+
 export const RATING_WEIGHTS = {
-  synergy: 0.45,
+  synergy: 0.35,
   synergyCap: 2.2,
-  theme: 0.65,
-  tribe: 0.7,
-  keyword: 0.25,
+  theme: 0.6,
+  tribe: 0.689,
+  keyword: 0.229,
   keywordCap: 2,
-  roleNeed: 0.85,
+  embedSim: 7.227,
+  roleNeed: 0.643,
   edhrecSynergy: 2.2,
   edhrecInclusion: 1.2,
   edhrecNegative: -0.9,
-  quality: 1.1,
-  topHeavyPenalty: -0.45,
-  saturatedSlotPenalty: -0.35,
+  combo: 1.0,
+  quality: 0.834,
+  topHeavyPenalty: -0.395,
+  saturatedSlotPenalty: -0.416,
   pricePenalty: -0.9,
   bracketPenalty: -1.4,
 } as const;
+
+export type RatingWeights = { readonly [K in keyof typeof RATING_WEIGHTS]: number };
+
+export const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
+  casual: {
+    ...RATING_WEIGHTS,
+    synergy: 0.35,
+    theme: 0.7,
+    tribe: 0.844,
+    keyword: 0.295,
+    embedSim: 8.141,
+    roleNeed: 0.69,
+    edhrecInclusion: 0.8,
+    combo: 0,
+    quality: 0.366,
+    topHeavyPenalty: -0.324,
+    saturatedSlotPenalty: -0.288,
+  },
+  upgraded: RATING_WEIGHTS,
+  optimized: {
+    ...RATING_WEIGHTS,
+    synergy: 0.4,
+    synergyCap: 2.5,
+    theme: 0.45,
+    tribe: 0.599,
+    keyword: 0.256,
+    embedSim: 5.85,
+    roleNeed: 0.708,
+    edhrecSynergy: 2.5,
+    edhrecInclusion: 1.5,
+    combo: 1.6,
+    quality: 1.294,
+    topHeavyPenalty: -0.465,
+    saturatedSlotPenalty: -0.538,
+  },
+};
+
+export function weightsForBracket(targetBracket: Bracket | null): RatingWeights {
+  return RATING_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
+}
 
 export function sigmoid(z: number): number {
   return 1 / (1 + Math.exp(-z));
@@ -143,17 +203,39 @@ function slotSaturationThreshold(format: Format): number {
   return format === "commander" ? 20 : 12;
 }
 
-/**
- * Compute a calibrated 0–100 rating and explainable parts for a candidate card in a deck.
- */
-export function rateCard(
+export type RatingFeatureVector = Readonly<{
+  synergyTotal: number;
+  themeCount: number;
+  tribeCount: number;
+  keywordCount: number;
+  embedSimDelta: number;
+  edhrecSynergy: number;
+  edhrecInclusion: number;
+  edhrecNegative: number;
+  comboCount: number;
+  roleNeed: number;
+  quality: number;
+  topHeavy: number;
+  saturatedSlot: number;
+  overPriceCap: number;
+  gameChanger: number;
+}>;
+
+type ComputedRatingFeatures = Readonly<{
+  features: RatingFeatureVector;
+  synergyMatches: readonly { tag: keyof typeof SIGNAL_LABELS; deckWeight: number }[];
+  fitLabels: readonly string[];
+  filledRoles: readonly string[];
+}>;
+
+function computeRatingFeatures(
   card: RatingCandidate,
   profile: RatingProfile,
   options: RatingOptions = {},
-): CardRating {
-  const parts: RatingPart[] = [];
-
-  // 1. Produces/consumes oracle-text synergy (#54)
+  keywordCap: number = RATING_WEIGHTS.keywordCap,
+): ComputedRatingFeatures {
+  let synergyTotal = 0;
+  let synergyMatchList: readonly { tag: keyof typeof SIGNAL_LABELS; deckWeight: number }[] = [];
   if (card.text !== undefined && card.text.length > 0) {
     const io = {
       name: card.name,
@@ -161,31 +243,19 @@ export function rateCard(
       text: card.text,
       manaValue: card.manaValue,
     };
-    const { total, matches } = synergyMatches(
-      // Lazily imported/computed via deckSignalProfile helper
-      cardSignalIOFromText(io),
-      profile.signals,
-    );
+    const { total, matches } = synergyMatches(cardSignalIOFromText(io), profile.signals);
     if (total > 0 && matches.length > 0) {
-      const contribution = Math.min(RATING_WEIGHTS.synergyCap, RATING_WEIGHTS.synergy * total);
-      const top = matches
-        .slice(0, 2)
-        .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
-        .join(", ");
-      parts.push({
-        kind: "synergy",
-        contribution,
-        label: `matches ${top}`,
-      });
+      synergyTotal = total;
+      synergyMatchList = matches;
     }
   }
 
-  // 2. Theme, tribe & commander keyword fit
-  let themeContribution = 0;
+  let themeCount = 0;
+  let tribeCount = 0;
   const fitLabels: string[] = [];
   for (const theme of profile.themes) {
     if (!card.themes.includes(theme)) continue;
-    themeContribution += RATING_WEIGHTS.theme;
+    themeCount += 1;
     fitLabels.push(theme);
   }
   for (const tribe of profile.tribes) {
@@ -195,14 +265,135 @@ export function rateCard(
       subtypes.split(" ").includes(tribe) ||
       card.keywords.some((k) => k.toLowerCase() === "changeling");
     if (!hasTribe) continue;
-    themeContribution += RATING_WEIGHTS.tribe;
+    tribeCount += 1;
     fitLabels.push(tribe);
   }
   const sharedKeywords = card.keywords.filter((k) => profile.keywords.includes(k));
-  for (const kw of sharedKeywords.slice(0, RATING_WEIGHTS.keywordCap)) {
-    themeContribution += RATING_WEIGHTS.keyword;
+  const cappedKeywords = sharedKeywords.slice(0, keywordCap);
+  for (const kw of cappedKeywords) {
     fitLabels.push(kw);
   }
+
+  const embedSimDelta =
+    card.embedSim != null && card.embedSim > EMBED_SIM_BASELINE
+      ? card.embedSim - EMBED_SIM_BASELINE
+      : 0;
+
+  let edhrecSynergy = 0;
+  let edhrecInclusion = 0;
+  let edhrecNegative = 0;
+  if (card.edhrec) {
+    const totalDecks = card.edhrec.totalDecks ?? 200;
+    const confidence = Math.min(1, Math.max(0.25, totalDecks / 100));
+    if (card.edhrec.synergy >= 0.05 || card.edhrec.inclusionRate >= 0.15) {
+      edhrecSynergy = confidence * Math.max(0, card.edhrec.synergy);
+      edhrecInclusion = confidence * Math.max(0, card.edhrec.inclusionRate);
+    } else if (card.edhrec.synergy <= -0.1 && totalDecks >= 50) {
+      edhrecNegative = Math.abs(card.edhrec.synergy);
+    }
+  }
+
+  const comboCount =
+    card.comboPartners && card.comboPartners.length > 0
+      ? Math.min(2, card.comboPartners.length)
+      : 0;
+
+  let roleNeed = 0;
+  const filledRoles: string[] = [];
+  for (const gap of profile.gaps) {
+    if (!card.roles.includes(gap.tag)) continue;
+    const deficitRatio = Math.max(0.1, (gap.target - gap.count) / Math.max(1, gap.target));
+    roleNeed += deficitRatio;
+    filledRoles.push(`${gap.tag} ${gap.count}/${gap.target}`);
+  }
+
+  const quality = qualityPrior(card);
+
+  const isHighCurve = profile.averageManaValue > curveGuide(profile.format);
+  const bucketCount = profile.curveCounts.get(curveBucket(card.manaValue)) ?? 0;
+  const saturated = bucketCount >= slotSaturationThreshold(profile.format);
+  const topHeavy = isHighCurve && card.manaValue >= 5 ? 1 : 0;
+  const saturatedSlot = saturated ? 1 : 0;
+
+  const overPriceCap =
+    options.maxCardPriceCents != null &&
+    card.priceCents !== null &&
+    card.priceCents > options.maxCardPriceCents
+      ? 1
+      : 0;
+
+  const gameChanger = options.penalizeGameChanger && card.isGameChanger ? 1 : 0;
+
+  return {
+    features: {
+      synergyTotal,
+      themeCount,
+      tribeCount,
+      keywordCount: cappedKeywords.length,
+      embedSimDelta,
+      edhrecSynergy,
+      edhrecInclusion,
+      edhrecNegative,
+      comboCount,
+      roleNeed,
+      quality,
+      topHeavy,
+      saturatedSlot,
+      overPriceCap,
+      gameChanger,
+    },
+    synergyMatches: synergyMatchList,
+    fitLabels,
+    filledRoles,
+  };
+}
+
+/** Extracts the raw feature vector used by `rateCard` and logistic-regression calibration. */
+export function ratingFeatureVector(
+  card: RatingCandidate,
+  profile: RatingProfile,
+  options: RatingOptions = {},
+): RatingFeatureVector {
+  const weights = weightsForBracket(options.targetBracket ?? null);
+  return computeRatingFeatures(card, profile, options, weights.keywordCap).features;
+}
+
+/**
+ * Compute a calibrated 0–100 rating and explainable parts for a candidate card in a deck.
+ */
+export function rateCard(
+  card: RatingCandidate,
+  profile: RatingProfile,
+  options: RatingOptions = {},
+): CardRating {
+  const weights = options.weightsOverride ?? weightsForBracket(options.targetBracket ?? null);
+  const {
+    features,
+    synergyMatches: matches,
+    fitLabels,
+    filledRoles,
+  } = computeRatingFeatures(card, profile, options, weights.keywordCap);
+  const parts: RatingPart[] = [];
+
+  // 1. Produces/consumes oracle-text synergy (#54)
+  if (features.synergyTotal > 0 && matches.length > 0) {
+    const contribution = Math.min(weights.synergyCap, weights.synergy * features.synergyTotal);
+    const top = matches
+      .slice(0, 2)
+      .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
+      .join(", ");
+    parts.push({
+      kind: "synergy",
+      contribution,
+      label: `matches ${top}`,
+    });
+  }
+
+  // 2. Theme, tribe & commander keyword fit
+  const themeContribution =
+    features.themeCount * weights.theme +
+    features.tribeCount * weights.tribe +
+    features.keywordCount * weights.keyword;
   if (themeContribution > 0) {
     parts.push({
       kind: "themeFit",
@@ -211,52 +402,58 @@ export function rateCard(
     });
   }
 
+  // 2b. Frozen text embedding similarity (#58, design doc 53)
+  if (features.embedSimDelta > 0 && weights.embedSim > 0 && card.embedSim != null) {
+    parts.push({
+      kind: "embedSim",
+      contribution: weights.embedSim * features.embedSimDelta,
+      label: `reads like deck (${Math.round(card.embedSim * 100)}% sim)`,
+    });
+  }
+
   // 3. EDHREC community signal (#86)
   if (card.edhrec) {
-    const totalDecks = card.edhrec.totalDecks ?? 200;
-    const confidence = Math.min(1, Math.max(0.25, totalDecks / 100));
-    if (card.edhrec.synergy >= 0.05 || card.edhrec.inclusionRate >= 0.15) {
+    if (features.edhrecSynergy > 0 || features.edhrecInclusion > 0) {
       const contribution =
-        confidence *
-        (RATING_WEIGHTS.edhrecSynergy * Math.max(0, card.edhrec.synergy) +
-          RATING_WEIGHTS.edhrecInclusion * Math.max(0, card.edhrec.inclusionRate));
+        weights.edhrecSynergy * features.edhrecSynergy +
+        weights.edhrecInclusion * features.edhrecInclusion;
       parts.push({
         kind: "edhrec",
         contribution,
         label: `EDHREC ${Math.round(card.edhrec.inclusionRate * 100)}% (${card.edhrec.synergy >= 0 ? "+" : ""}${Math.round(card.edhrec.synergy * 100)}% syn)`,
       });
-    } else if (card.edhrec.synergy <= -0.1 && totalDecks >= 50) {
+    } else if (features.edhrecNegative > 0) {
       parts.push({
         kind: "edhrec",
-        contribution: RATING_WEIGHTS.edhrecNegative * Math.abs(card.edhrec.synergy),
+        contribution: weights.edhrecNegative * features.edhrecNegative,
         label: `low EDHREC synergy (${Math.round(card.edhrec.synergy * 100)}%)`,
       });
     }
   }
 
-  // 4. Role need (#55) — scaled by how short the deck is
-  let roleContribution = 0;
-  const filledRoles: string[] = [];
-  for (const gap of profile.gaps) {
-    if (!card.roles.includes(gap.tag)) continue;
-    const deficitRatio = Math.max(0.1, (gap.target - gap.count) / Math.max(1, gap.target));
-    roleContribution += RATING_WEIGHTS.roleNeed * deficitRatio;
-    filledRoles.push(`${gap.tag} ${gap.count}/${gap.target}`);
+  // 3b. Commander Spellbook two-card combo partner (design doc 52)
+  if (features.comboCount > 0 && weights.combo > 0 && card.comboPartners) {
+    parts.push({
+      kind: "combo",
+      contribution: weights.combo * features.comboCount,
+      label: `Combos with ${card.comboPartners.slice(0, 2).join(", ")}`,
+    });
   }
-  if (roleContribution > 0) {
+
+  // 4. Role need (#55) — scaled by how short the deck is
+  if (features.roleNeed > 0) {
     parts.push({
       kind: "roleNeed",
-      contribution: roleContribution,
+      contribution: weights.roleNeed * features.roleNeed,
       label: `fills ${filledRoles.join(", ")}`,
     });
   }
 
   // 5. Global quality prior (#59)
-  const prior = qualityPrior(card);
-  if (prior > 0) {
+  if (features.quality > 0) {
     parts.push({
       kind: "quality",
-      contribution: RATING_WEIGHTS.quality * prior,
+      contribution: weights.quality * features.quality,
       label:
         card.edhrecRank != null
           ? `EDHREC rank #${card.edhrecRank}`
@@ -267,45 +464,34 @@ export function rateCard(
   }
 
   // 6. Curve & saturation penalty (#55 / #56)
-  const isHighCurve = profile.averageManaValue > curveGuide(profile.format);
-  const bucketCount = profile.curveCounts.get(curveBucket(card.manaValue)) ?? 0;
-  const saturated = bucketCount >= slotSaturationThreshold(profile.format);
-  let curvePenalty = 0;
-  if (isHighCurve && card.manaValue >= 5) {
-    curvePenalty += RATING_WEIGHTS.topHeavyPenalty;
-  }
-  if (saturated) {
-    curvePenalty += RATING_WEIGHTS.saturatedSlotPenalty;
-  }
+  const curvePenalty =
+    features.topHeavy * weights.topHeavyPenalty +
+    features.saturatedSlot * weights.saturatedSlotPenalty;
   if (curvePenalty < 0) {
     parts.push({
       kind: "curvePenalty",
       contribution: curvePenalty,
       label:
-        isHighCurve && card.manaValue >= 5
+        features.topHeavy > 0
           ? `heavy (${card.manaValue} MV in ${profile.averageManaValue.toFixed(1)} avg deck)`
           : `crowded ${curveBucket(card.manaValue)}-MV slot`,
     });
   }
 
   // 7. Optional price cap penalty (#56)
-  if (
-    options.maxCardPriceCents != null &&
-    card.priceCents !== null &&
-    card.priceCents > options.maxCardPriceCents
-  ) {
+  if (features.overPriceCap > 0 && options.maxCardPriceCents != null) {
     parts.push({
       kind: "pricePenalty",
-      contribution: RATING_WEIGHTS.pricePenalty,
+      contribution: weights.pricePenalty,
       label: `over $${(options.maxCardPriceCents / 100).toFixed(2)} cap`,
     });
   }
 
   // 8. Optional bracket penalty (#56)
-  if (options.penalizeGameChanger && card.isGameChanger) {
+  if (features.gameChanger > 0) {
     parts.push({
       kind: "bracketPenalty",
-      contribution: RATING_WEIGHTS.bracketPenalty,
+      contribution: weights.bracketPenalty,
       label: "Game Changer",
     });
   }
@@ -325,5 +511,158 @@ export function emptyRatingProfile(format: Format): RatingProfile {
     signals: deckSignalProfile([]),
     averageManaValue: 0,
     curveCounts: new Map(),
+  };
+}
+
+export type CalibrationSample = Readonly<{
+  features: RatingFeatureVector;
+  label: 0 | 1;
+}>;
+
+export type FitLogisticOptions = Readonly<{
+  learningRate?: number;
+  epochs?: number;
+  l2?: number;
+}>;
+
+type TrainableKey =
+  | "synergy"
+  | "theme"
+  | "tribe"
+  | "keyword"
+  | "embedSim"
+  | "roleNeed"
+  | "edhrecSynergy"
+  | "edhrecInclusion"
+  | "combo"
+  | "quality"
+  | "topHeavyPenalty"
+  | "saturatedSlotPenalty";
+
+const TRAINABLE_KEYS: readonly {
+  weight: TrainableKey;
+  feature: keyof RatingFeatureVector;
+  sign: 1 | -1;
+  maxAbs: number;
+}[] = [
+  { weight: "synergy", feature: "synergyTotal", sign: 1, maxAbs: 2.5 },
+  { weight: "theme", feature: "themeCount", sign: 1, maxAbs: 3.0 },
+  { weight: "tribe", feature: "tribeCount", sign: 1, maxAbs: 3.0 },
+  { weight: "keyword", feature: "keywordCount", sign: 1, maxAbs: 2.0 },
+  { weight: "embedSim", feature: "embedSimDelta", sign: 1, maxAbs: 14.0 },
+  { weight: "roleNeed", feature: "roleNeed", sign: 1, maxAbs: 3.0 },
+  { weight: "edhrecSynergy", feature: "edhrecSynergy", sign: 1, maxAbs: 6.0 },
+  { weight: "edhrecInclusion", feature: "edhrecInclusion", sign: 1, maxAbs: 5.0 },
+  { weight: "combo", feature: "comboCount", sign: 1, maxAbs: 3.0 },
+  { weight: "quality", feature: "quality", sign: 1, maxAbs: 4.0 },
+  { weight: "topHeavyPenalty", feature: "topHeavy", sign: -1, maxAbs: 2.0 },
+  { weight: "saturatedSlotPenalty", feature: "saturatedSlot", sign: -1, maxAbs: 2.0 },
+];
+
+/**
+ * Fits `RatingWeights` via L2-regularized, class-balanced logistic regression over
+ * `ratingFeatureVector` samples, shrinking toward `initial` and preserving feature signs.
+ */
+export function fitLogisticWeights(
+  samples: readonly CalibrationSample[],
+  initial: RatingWeights,
+  options: FitLogisticOptions = {},
+): RatingWeights {
+  if (samples.length === 0) return initial;
+  const lr = options.learningRate ?? 0.15;
+  const epochs = options.epochs ?? 120;
+  const l2 = options.l2 ?? 0.02;
+
+  let positives = 0;
+  let negatives = 0;
+  for (const s of samples) {
+    if (s.label === 1) positives += 1;
+    else negatives += 1;
+  }
+  const posWeight = positives > 0 ? samples.length / (2 * positives) : 1;
+  const negWeight = negatives > 0 ? samples.length / (2 * negatives) : 1;
+
+  const w: Record<TrainableKey, number> = {
+    synergy: initial.synergy,
+    theme: initial.theme,
+    tribe: initial.tribe,
+    keyword: initial.keyword,
+    embedSim: initial.embedSim,
+    roleNeed: initial.roleNeed,
+    edhrecSynergy: initial.edhrecSynergy,
+    edhrecInclusion: initial.edhrecInclusion,
+    combo: initial.combo,
+    quality: initial.quality,
+    topHeavyPenalty: initial.topHeavyPenalty,
+    saturatedSlotPenalty: initial.saturatedSlotPenalty,
+  };
+
+  for (let epoch = 0; epoch < epochs; epoch++) {
+    const grad: Record<TrainableKey, number> = {
+      synergy: 0,
+      theme: 0,
+      tribe: 0,
+      keyword: 0,
+      embedSim: 0,
+      roleNeed: 0,
+      edhrecSynergy: 0,
+      edhrecInclusion: 0,
+      combo: 0,
+      quality: 0,
+      topHeavyPenalty: 0,
+      saturatedSlotPenalty: 0,
+    };
+
+    for (const sample of samples) {
+      const f = sample.features;
+      const synPart = Math.min(initial.synergyCap, w.synergy * f.synergyTotal);
+      const logit =
+        RATING_BIAS +
+        synPart +
+        w.theme * f.themeCount +
+        w.tribe * f.tribeCount +
+        w.keyword * f.keywordCount +
+        w.embedSim * f.embedSimDelta +
+        w.roleNeed * f.roleNeed +
+        w.edhrecSynergy * f.edhrecSynergy +
+        w.edhrecInclusion * f.edhrecInclusion +
+        w.combo * f.comboCount +
+        w.quality * f.quality +
+        w.topHeavyPenalty * f.topHeavy +
+        w.saturatedSlotPenalty * f.saturatedSlot;
+      const pred = sigmoid(logit);
+      const err = (pred - sample.label) * (sample.label === 1 ? posWeight : negWeight);
+
+      for (const spec of TRAINABLE_KEYS) {
+        const val = f[spec.feature];
+        if (val !== 0) grad[spec.weight] += err * val;
+      }
+    }
+
+    for (const spec of TRAINABLE_KEYS) {
+      const key = spec.weight;
+      const step = grad[key] / samples.length + l2 * (w[key] - initial[key]);
+      const updated = w[key] - lr * step;
+      w[key] =
+        spec.sign === 1
+          ? Math.max(0, Math.min(spec.maxAbs, updated))
+          : Math.min(0, Math.max(-spec.maxAbs, updated));
+    }
+  }
+
+  return {
+    ...initial,
+    synergy: Number(w.synergy.toFixed(3)),
+    theme: Number(w.theme.toFixed(3)),
+    tribe: Number(w.tribe.toFixed(3)),
+    keyword: Number(w.keyword.toFixed(3)),
+    embedSim: Number(w.embedSim.toFixed(3)),
+    roleNeed: Number(w.roleNeed.toFixed(3)),
+    edhrecSynergy: Number(w.edhrecSynergy.toFixed(3)),
+    edhrecInclusion: Number(w.edhrecInclusion.toFixed(3)),
+    combo: Number(w.combo.toFixed(3)),
+    quality: Number(w.quality.toFixed(3)),
+    topHeavyPenalty: Number(w.topHeavyPenalty.toFixed(3)),
+    saturatedSlotPenalty: Number(w.saturatedSlotPenalty.toFixed(3)),
   };
 }

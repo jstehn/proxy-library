@@ -101,7 +101,15 @@ export function makeManageWishes(dependencies: WishlistDependencies) {
     });
   }
 
-  return { addWish, updateWish, removeWish };
+  /** Lets other players in the playgroup see this player's wishlist (design doc 50). */
+  async function setSharing(actor: Actor, isShared: boolean): Promise<void> {
+    await unitOfWork.run(async ({ wishes }) => {
+      await wishes.setSharing(actor.userId, isShared, clock.now());
+      return ok(undefined);
+    });
+  }
+
+  return { addWish, updateWish, removeWish, setSharing };
 }
 
 /** The wish's target, from the printing the card page was showing (rule 4). */

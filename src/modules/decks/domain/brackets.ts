@@ -43,8 +43,24 @@ export function bracketLine(line: BracketSource): BracketLine {
   return { name: line.name, quantity: line.quantity, board: line.board, flags: bracketFlags(line) };
 }
 
-export const BRACKET_RULE_NAMES = ["gameChangers", "landDenial", "extraTurns"] as const;
+export const BRACKET_FLAG_RULE_NAMES = ["gameChangers", "landDenial", "extraTurns"] as const;
+export type BracketFlagRule = (typeof BRACKET_FLAG_RULE_NAMES)[number];
+
+export const BRACKET_RULE_NAMES = [
+  "gameChangers",
+  "landDenial",
+  "extraTurns",
+  "twoCardCombos",
+] as const;
 export type BracketRule = (typeof BRACKET_RULE_NAMES)[number];
+
+/** A two-card combo present in the deck (from Commander Spellbook). */
+export type DeckCombo = Readonly<{
+  id: string;
+  cards: readonly [string, string];
+  produces: readonly string[];
+  forces: Bracket;
+}>;
 
 /** One reason for the floor: a rule, the cards that trip it, and the bracket it forces. */
 export type BracketFinding = Readonly<{
@@ -75,7 +91,7 @@ export type BracketEstimate = Readonly<{
  * Each rule maps a number of copies to the lowest bracket it allows; 0 copies never forces one.
  */
 export const BRACKET_RULES: Readonly<
-  Record<BracketRule, Readonly<{ flag: BracketFlag; forces: (count: number) => Bracket }>>
+  Record<BracketFlagRule, Readonly<{ flag: BracketFlag; forces: (count: number) => Bracket }>>
 > = {
   // None in 1–2, up to three in 3, any in 4–5.
   gameChangers: { flag: "gameChanger", forces: (count) => (count <= 3 ? 3 : 4) },
@@ -96,23 +112,37 @@ function rangeFor(floor: Bracket): BracketRange {
 export function estimateBracket(
   format: Format,
   lines: readonly BracketLine[],
+  options?: Readonly<{ combos?: readonly DeckCombo[] }>,
 ): BracketEstimate | null {
   if (format !== "commander") return null;
   const counted = lines.filter((line) => isPlayed(line.board));
   const findings: BracketFinding[] = [];
-  for (const rule of BRACKET_RULE_NAMES) {
+  for (const rule of BRACKET_FLAG_RULE_NAMES) {
     const { flag, forces } = BRACKET_RULES[rule];
     const tripping = counted.filter((line) => line.flags.includes(flag));
     const count = tripping.reduce((total, line) => total + line.quantity, 0);
     if (count === 0) continue;
     findings.push({ rule, cards: tripping.map((line) => line.name), count, forces: forces(count) });
   }
+  const combos = options?.combos;
+  if (combos !== undefined) {
+    for (const combo of combos) {
+      findings.push({
+        rule: "twoCardCombos",
+        cards: combo.cards,
+        count: 1,
+        forces: combo.forces,
+      });
+    }
+  }
   const floor = findings.reduce<Bracket>(
     (highest, finding) => (finding.forces > highest ? finding.forces : highest),
     1,
   );
   const gameChangers = findings.find((finding) => finding.rule === "gameChangers")?.count ?? 0;
-  return { floor, range: rangeFor(floor), findings, gameChangers, unchecked: ["intent", "combos"] };
+  const unchecked: readonly ("intent" | "combos")[] =
+    combos !== undefined ? ["intent"] : ["intent", "combos"];
+  return { floor, range: rangeFor(floor), findings, gameChangers, unchecked };
 }
 
 /** The cards go over the bracket the owner chose. A warning, never a deck problem. */
@@ -150,7 +180,7 @@ export function fitsTarget(
   target: Bracket,
 ): boolean {
   const counted = lines.filter((line) => isPlayed(line.board));
-  return BRACKET_RULE_NAMES.every((rule) => {
+  return BRACKET_FLAG_RULE_NAMES.every((rule) => {
     const { flag, forces } = BRACKET_RULES[rule];
     if (!card.flags.includes(flag)) return true;
     const already = counted

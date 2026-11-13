@@ -20,12 +20,16 @@ import {
   drizzleArtworkRepository,
   drizzleCatalogRepository,
   drizzleEdhrecRepository,
+  drizzleEmbeddingRepository,
+  drizzleSpellbookRepository,
   drizzleSyncRunRepository,
   httpEdhrecGateway,
   httpImageFetcher,
   httpMtgjsonGateway,
   httpScryfallGateway,
+  httpSpellbookGateway,
   httpWpnGateway,
+  huggingFaceTextEmbedder,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
 import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
@@ -113,6 +117,8 @@ export function buildCore(config: Config) {
       syncRuns: drizzleSyncRunRepository(transaction),
       artwork: drizzleArtworkRepository(transaction),
       edhrec: drizzleEdhrecRepository(transaction),
+      spellbook: drizzleSpellbookRepository(transaction),
+      embeddings: drizzleEmbeddingRepository(transaction),
       boosters: drizzleBoosterSource(transaction),
       collection: drizzleCollectionRepository(transaction),
       items: drizzleItemRepository(transaction),
@@ -166,6 +172,8 @@ export function buildCore(config: Config) {
     return withUserAgent(userAgent)(limited);
   }
 
+  const textEmbedder = huggingFaceTextEmbedder();
+
   const catalog = makeCatalog({
     unitOfWork,
     // Printings owned for real get nightly prices too (design doc 16, section 7).
@@ -181,6 +189,8 @@ export function buildCore(config: Config) {
     artworkFiles: diskArtworkStore(config.imageCacheDir),
     // EDHREC pages one a second (design doc 45, invariant 5).
     edhrec: httpEdhrecGateway(politeFetch(1)),
+    spellbook: httpSpellbookGateway(politeFetch(1)),
+    textEmbedder,
     clock,
     syncTime: config.syncTime,
   });
@@ -244,6 +254,7 @@ export function buildCore(config: Config) {
     realCollection,
     wishlist,
     social,
+    textEmbedder,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

@@ -8,6 +8,7 @@ import { sameTarget, WishId, type OwnedStack, type Wish } from "../domain/wish";
 export function inMemoryWishRepository() {
   let rows: Wish[] = [];
   let lastId = 0;
+  const shared = new Set<UserId>();
   const repository: WishRepository = {
     async lock() {},
     async find(wishId, userId) {
@@ -40,8 +41,12 @@ export function inMemoryWishRepository() {
       rows = rows.filter((wish) => wish.userId !== userId);
       return before - rows.length;
     },
+    async setSharing(userId, isShared) {
+      if (isShared) shared.add(userId);
+      else shared.delete(userId);
+    },
   };
-  return { ...repository, all: () => rows };
+  return { ...repository, all: () => rows, isShared: (userId: UserId) => shared.has(userId) };
 }
 
 /**

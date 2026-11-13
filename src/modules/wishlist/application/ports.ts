@@ -26,6 +26,8 @@ export interface WishRepository {
   delete(wishId: WishId): Promise<void>;
   /** Deletes every wish of a player (a reset). Returns how many. */
   deleteAllOf(userId: UserId): Promise<number>;
+  /** Sets whether the playgroup can see this player's wishlist (design doc 50). */
+  setSharing(userId: UserId, isShared: boolean, at: Date): Promise<void>;
 }
 
 /** What a printing is: its card and the finishes it was made in. */

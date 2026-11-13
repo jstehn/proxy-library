@@ -346,6 +346,14 @@ describe("the maybeboard and cards to cut (design doc 32)", () => {
       "Carrot Cake",
     ]);
     for (const cut of ranked.cuts) expect(cut.why.length).toBeGreaterThan(0);
+
+    const swapped = await call(client, "suggest_swaps", { deckId, pool: "store", count: 3 });
+    expect(Array.isArray(swapped.swaps)).toBe(true);
+    for (const swap of swapped.swaps) {
+      expect(swap.cut).toBeTruthy();
+      expect(swap.add).toBeTruthy();
+      expect(swap.why.length).toBeGreaterThan(0);
+    }
   });
 });
 

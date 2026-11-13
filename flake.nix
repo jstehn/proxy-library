@@ -16,7 +16,7 @@
           packages = with pkgs; [
             nodejs_22
             pnpm
-            postgresql_17
+            (postgresql_17.withPackages (ps: [ ps.pgvector ]))
             jq
             # Browsers for end-to-end tests. The npm package @playwright/test must be pinned to
             # the same version as this (check: nix eval --raw nixpkgs#playwright-driver.version).

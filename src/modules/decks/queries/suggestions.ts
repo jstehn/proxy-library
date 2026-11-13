@@ -15,14 +15,19 @@ import {
   scoreForDeck,
   scoreForRole,
   scoreLike,
+  toRatingProfile,
   type CandidateCard,
   type DeckProfile,
   type EdhrecSignal,
   type ProfileLine,
   type Scored,
 } from "../domain/suggest";
+import { rankBudgetReplacements } from "../domain/replacements";
+import { isLand } from "../domain/stats";
 import type { BrowseCard } from "./browse";
+import { comboPartnersForDeck } from "./combos";
 import { deckView } from "./decks";
+import { embedSimForCards } from "./embeddings";
 import { ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
@@ -45,6 +50,7 @@ export type SuggestionCard = BrowseCard &
     rarity: string;
     edhrecRank?: number | null;
     edhrec?: EdhrecSignal | null;
+    embedSim?: number | null;
   }>;
 
 export type Suggestion = Readonly<{
@@ -170,7 +176,10 @@ export async function suggestionContext(
 type TargetSplit = Readonly<{ kept: SuggestionCard[]; over: SuggestionCard[] }>;
 
 /** Leaves out cards that would take the deck over its target bracket (invariant 10). */
-function withinTarget(cards: readonly SuggestionCard[], context: SuggestionContext): TargetSplit {
+export function withinTarget(
+  cards: readonly SuggestionCard[],
+  context: SuggestionContext,
+): TargetSplit {
   const target = context.targetBracket;
   if (target === null) return { kept: [...cards], over: [] };
   const kept: SuggestionCard[] = [];
@@ -220,7 +229,7 @@ function sharedCount(want: Wanted): SQL {
             + ${tribes === null ? sql`0` : sql`(split_part(p.type_line, ' // ', 1) ~ ${tribes} or 'Changeling' = any(p.keywords))::int`})`;
 }
 
-type CandidateRow = {
+export type CandidateRow = {
   oracle_id: string;
   printing_id: string;
   name: string;
@@ -271,7 +280,7 @@ function edhrecCte(commanderOracleIds: string[]): SQL {
 }
 
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
-function candidateColumns(context: SuggestionContext): SQL {
+export function candidateColumns(context: SuggestionContext): SQL {
   return sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
     p.rarity, p.keywords, p.role_tags, p.theme_tags, p.color_identity,
     p.legalities->>${context.format} as legality,
@@ -282,12 +291,17 @@ function candidateColumns(context: SuggestionContext): SQL {
     p.produced_mana, p.is_game_changer, p.edhrec_rank, p.set_code, p.collector_number`;
 }
 
+function isComboPartnerSql(partnerIds: readonly string[], column: SQL = sql`p.oracle_id`): SQL {
+  return partnerIds.length === 0 ? sql`false` : sql`${column} = any(${textArray(partnerIds)})`;
+}
+
 /** Cards you own that share something with what's wanted: one per oracle card. */
 async function ownedCandidates(
   db: DbExecutor,
   userId: UserId,
   context: SuggestionContext,
   want: Wanted,
+  comboPartnerIds: readonly string[] = [],
 ): Promise<SuggestionCard[]> {
   const rows = await db.execute<CandidateRow>(sql`
     with owned as (
@@ -319,9 +333,9 @@ async function ownedCandidates(
       from owned join printings p on p.id = owned.printing_id
       left join edhrec on edhrec.card_oracle_id = p.oracle_id
      where ${fitsDeck(context)}
-       and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15)
-     order by ${sharedCount(want)} desc, coalesce(edhrec.synergy, 0) desc,
-              coalesce(edhrec.inclusion_rate, 0) desc, p.name
+       and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15 or ${isComboPartnerSql(comboPartnerIds)})
+     order by (${isComboPartnerSql(comboPartnerIds)}) desc, ${sharedCount(want)} desc,
+              coalesce(edhrec.synergy, 0) desc, coalesce(edhrec.inclusion_rate, 0) desc, p.name
      limit ${CANDIDATE_LIMIT}
   `);
   return rows.rows
@@ -338,6 +352,7 @@ async function storeCandidates(
   userId: UserId,
   context: SuggestionContext,
   want: Wanted,
+  comboPartnerIds: readonly string[] = [],
 ): Promise<SuggestionCard[]> {
   const rows = await db.execute<CandidateRow>(sql`
     with edhrec as (
@@ -353,7 +368,7 @@ async function storeCandidates(
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
         left join edhrec on edhrec.card_oracle_id = p.oracle_id
        where ${fitsDeck(context)}
-         and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15)
+         and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15 or ${isComboPartnerSql(comboPartnerIds)})
          and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
                            join printings op on op.id = c.printing_id
                           where op.oracle_id = p.oracle_id)
@@ -361,7 +376,8 @@ async function storeCandidates(
     ),
     kept as (
       select oracle_id, edhrec_inclusion, edhrec_synergy, edhrec_total_decks from matching
-       order by shared desc, edhrec_synergy desc, edhrec_inclusion desc, rarity_rank desc, oracle_id
+       order by (${isComboPartnerSql(comboPartnerIds, sql`oracle_id`)}) desc, shared desc,
+                edhrec_synergy desc, edhrec_inclusion desc, rarity_rank desc, oracle_id
        limit ${CANDIDATE_LIMIT}
     ),
     cheapest as (
@@ -388,7 +404,7 @@ async function storeCandidates(
   return rows.rows.map((row) => toCard(row, "store", context));
 }
 
-function toCard(
+export function toCard(
   row: CandidateRow,
   pool: "owned" | "store",
   context: SuggestionContext,
@@ -498,16 +514,52 @@ export async function deckSuggestions(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  if (nothingWanted(want) && context.commanderOracleIds.length === 0) {
+  const comboPartners =
+    context.format === "commander"
+      ? await comboPartnersForDeck(
+          db,
+          context.lines.filter((line) => isCounted(line.board)).map((line) => line.oracleId),
+          context.targetBracket,
+        )
+      : new Map<string, readonly string[]>();
+  const comboPartnerIds = Array.from(comboPartners.keys());
+  if (
+    nothingWanted(want) &&
+    context.commanderOracleIds.length === 0 &&
+    comboPartnerIds.length === 0
+  ) {
     return { profile, forDeck: EMPTY_LIST, forRoles: [] };
   }
 
-  const [owned, store] = await Promise.all([
-    ownedCandidates(db, userId, context, want).then((cards) => withinTarget(cards, context)),
-    storeCandidates(db, userId, context, want).then((cards) => withinTarget(cards, context)),
+  const [rawOwned, rawStore] = await Promise.all([
+    ownedCandidates(db, userId, context, want, comboPartnerIds),
+    storeCandidates(db, userId, context, want, comboPartnerIds),
   ]);
+  const deckSpellIds = context.lines
+    .filter(
+      (line) => isCounted(line.board) && (!isLand(line.typeLine) || line.board === "commander"),
+    )
+    .map((line) => line.oracleId);
+  const embedSims = await embedSimForCards(
+    db,
+    deckSpellIds,
+    [...rawOwned, ...rawStore].map((card) => card.oracleId),
+  );
+  const attachSignals = (cards: SuggestionCard[]): SuggestionCard[] =>
+    cards.map((card) => {
+      const partners = comboPartners.get(card.oracleId);
+      const embedSim = embedSims.get(card.oracleId);
+      return {
+        ...card,
+        ...(partners ? { comboPartners: partners } : {}),
+        ...(embedSim !== undefined ? { embedSim } : {}),
+      };
+    });
+  const owned = withinTarget(attachSignals(rawOwned), context);
+  const store = withinTarget(attachSignals(rawStore), context);
   const over = [...owned.over, ...store.over];
-  const forDeckScore = (card: CandidateCard) => scoreForDeck(card, profile);
+  const forDeckScore = (card: CandidateCard) =>
+    scoreForDeck(card, profile, { targetBracket: context.targetBracket });
   const forDeck = {
     owned: best(owned.kept, forDeckScore, 12),
     store: best(store.kept, forDeckScore, 12),
@@ -523,6 +575,55 @@ export async function deckSuggestions(
     };
   });
   return { profile, forDeck, forRoles };
+}
+
+export async function ownedCandidatesForIds(
+  db: DbExecutor,
+  userId: UserId,
+  context: SuggestionContext,
+  oracleIds: readonly string[],
+  maxPriceCents?: number,
+): Promise<SuggestionCard[]> {
+  if (oracleIds.length === 0) return [];
+  const priceFilter =
+    maxPriceCents !== undefined
+      ? sql`and ps.usd_cents is not null and ps.usd_cents <= ${maxPriceCents}`
+      : sql``;
+  const rows = await db.execute<CandidateRow>(sql`
+    with owned as (
+      select p.oracle_id, sum(c.quantity)::int as owned,
+             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
+             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
+             (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
+        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
+        join printings p on p.id = c.printing_id
+       where p.oracle_id = any(${textArray(oracleIds)})
+       group by p.oracle_id
+    )
+    select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
+           ps.usd_cents as price_cents,
+           (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
+             where d.owner_id = ${userId} and d.id <> ${context.deckId}
+               and e.oracle_id = owned.oracle_id and e.board <> 'maybe')::int as other_decks,
+           greatest(owned.owned - coalesce((select sum(e.quantity) from deck_entries e
+                                              join decks d on d.id = e.deck_id
+                                             where d.owner_id = ${userId} and d.id <> ${context.deckId}
+                                               and e.oracle_id = owned.oracle_id
+                                               and e.board <> 'maybe'), 0), 0)::int as free,
+           null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
+      from owned
+      join printings p on p.id = owned.printing_id
+      left join lateral (
+        select s.usd_cents from price_snapshots s
+         where s.printing_id = p.id and s.finish = owned.finish
+         order by s.day desc limit 1
+      ) ps on true
+     where ${fitsDeck(context)}
+       ${priceFilter}
+  `);
+  return rows.rows
+    .map((row) => toCard(row, "owned", context))
+    .filter((card) => card.owned > card.inThisDeck);
 }
 
 /** Cards like one card, for this deck (the selected-card panel). */
@@ -546,6 +647,68 @@ export async function similarCards(
   ).rows;
   if (targetRow === undefined) return EMPTY_LIST;
   const target = toCard(targetRow, "store", context);
+  // Check if the target card has a precomputed embedding for vector nearest-neighbor search.
+  const neighborRows = (
+    await db.execute<{ oracle_id: string; similarity: number }>(sql`
+      select e.oracle_id, (1 - (e.embedding <=> t.embedding))::float8 as similarity
+        from card_embeddings t
+        join card_embeddings e on e.oracle_id <> t.oracle_id
+       where t.oracle_id = ${oracleId}
+       order by e.embedding <=> t.embedding
+       limit 250
+    `)
+  ).rows;
+  if (neighborRows.length > 0) {
+    const simById = new Map(neighborRows.map((row) => [row.oracle_id, Number(row.similarity)]));
+    const neighborIds = neighborRows.map((row) => row.oracle_id);
+    const withoutTarget = { ...context, inDeck: [...context.inDeck, oracleId] };
+    const [ownedCards, storeRows] = await Promise.all([
+      ownedCandidatesForIds(db, userId, withoutTarget, neighborIds),
+      db.execute<CandidateRow>(sql`
+        with cheapest as (
+          select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
+            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+            join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
+                            from price_snapshots ps where ps.printing_id = p.id
+                           order by ps.finish, ps.day desc) latest on true
+           where p.oracle_id = any(${textArray(neighborIds)})
+             and ${fitsDeck(withoutTarget)}
+             and not exists (select 1 from ${ownedCopies(userId, sql`${withoutTarget.usesRealCards}`)} c
+                               join printings op on op.id = c.printing_id
+                              where op.oracle_id = p.oracle_id)
+           order by p.oracle_id, latest.usd_cents, p.id
+        )
+        select ${candidateColumns(withoutTarget)}, cheapest.finish, cheapest.usd_cents as price_cents,
+               0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
+               null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
+          from cheapest join printings p on p.id = cheapest.printing_id
+      `),
+    ]);
+    const owned = withinTarget(ownedCards, withoutTarget);
+    const store = withinTarget(
+      storeRows.rows.map((row) => toCard(row, "store", withoutTarget)),
+      withoutTarget,
+    );
+    const embedLikeScore = (card: CandidateCard): Scored | null => {
+      const sim = simById.get(card.oracleId) ?? 0;
+      const base = scoreLike(card, target);
+      const reasons: Scored["reasons"][number][] = [
+        ...(base?.reasons ?? []),
+        { kind: "embedSim", similarityPct: Math.round(sim * 100) },
+      ];
+      return {
+        card,
+        score: sim * 10 + (base?.score ?? 0) * 0.25,
+        reasons,
+      };
+    };
+    return {
+      owned: best(owned.kept, embedLikeScore, 6),
+      store: best(store.kept, embedLikeScore, 6),
+      hiddenOverTarget: countScoring([...owned.over, ...store.over], embedLikeScore),
+    };
+  }
+
   const want: Wanted = {
     roles: target.roles,
     themes: target.themes,
@@ -594,9 +757,26 @@ export async function budgetList(
     return { picks: [], totalCents: 0, listText: "", hiddenOverTarget: 0 };
   }
   const split = withinTarget(await storeCandidates(db, userId, context, want), context);
-  const store = split.kept;
+  const deckSpellIds = context.lines
+    .filter(
+      (line) => isCounted(line.board) && (!isLand(line.typeLine) || line.board === "commander"),
+    )
+    .map((line) => line.oracleId);
+  const embedSims = await embedSimForCards(
+    db,
+    deckSpellIds,
+    split.kept.map((card) => card.oracleId),
+  );
+  const store = split.kept.map((card) => {
+    const embedSim = embedSims.get(card.oracleId);
+    return embedSim !== undefined ? { ...card, embedSim } : card;
+  });
   const byId = new Map(store.map((card) => [card.oracleId, card]));
-  const scored = rank(store.map((card) => scoreForDeck(candidate(card), profile)));
+  const scored = rank(
+    store.map((card) =>
+      scoreForDeck(candidate(card), profile, { targetBracket: context.targetBracket }),
+    ),
+  );
   const picks = budgetPicks(scored, budgetCents, BUDGET_LIST_MAXIMUM).flatMap((pick) => {
     const card = byId.get(pick.card.oracleId);
     if (card === undefined) return [];
@@ -614,6 +794,190 @@ export async function budgetList(
           `1 ${card.name} (${card.setCode.toUpperCase()}) ${card.collectorNumber}${card.finish === "nonfoil" ? "" : card.finish === "foil" ? " *F*" : " *E*"}`,
       )
       .join("\n"),
-    hiddenOverTarget: countScoring(split.over, (card) => scoreForDeck(card, profile)),
+    hiddenOverTarget: countScoring(split.over, (card) =>
+      scoreForDeck(card, profile, { targetBracket: context.targetBracket }),
+    ),
   };
+}
+
+export type BudgetReplacementPick = Readonly<{
+  card: SuggestionCard;
+  similarityPct: number;
+  rating: number;
+  savedCents: number;
+}>;
+
+export type ExpensiveCardReplacements = Readonly<{
+  target: Readonly<{
+    oracleId: string;
+    name: string;
+    priceCents: number;
+    typeLine: string;
+  }>;
+  owned: BudgetReplacementPick[];
+  store: BudgetReplacementPick[];
+}>;
+
+export type BudgetReplacementsResult = Readonly<{
+  cards: ExpensiveCardReplacements[];
+  minPriceCents: number;
+  maxPriceCents: number;
+}>;
+
+/**
+ * Finds cheaper legal replacements for expensive cards in a deck using `card_embeddings`
+ * cosine similarity blended with `rateCard` deck fit (design doc 53).
+ */
+export async function budgetReplacements(
+  db: DbExecutor,
+  userId: UserId,
+  deckId: number,
+  options: {
+    oracleId?: string;
+    minPriceCents?: number;
+    maxPriceCents?: number;
+    limitPerCard?: number;
+    limitCards?: number;
+  } = {},
+): Promise<BudgetReplacementsResult | null> {
+  const context = await suggestionContext(db, userId, deckId);
+  if (context === null) return null;
+  const minPriceCents = options.minPriceCents ?? 500;
+  const maxPriceCents = options.maxPriceCents ?? 200;
+  const limitPerCard = options.limitPerCard ?? 5;
+  const limitCards = options.limitCards ?? 5;
+
+  const profile = deckProfile(context.lines, context.format);
+  const rProfile = toRatingProfile(profile);
+
+  // Determine target expensive non-land cards in the deck
+  const targetIds = options.oracleId
+    ? [options.oracleId]
+    : context.lines
+        .filter((line) => isCounted(line.board) && !isLand(line.typeLine))
+        .map((line) => line.oracleId);
+
+  if (targetIds.length === 0) {
+    return { cards: [], minPriceCents, maxPriceCents };
+  }
+
+  const targetRows = (
+    await db.execute<{
+      oracle_id: string;
+      name: string;
+      type_line: string;
+      price_cents: number | null;
+    }>(sql`
+      select distinct on (p.oracle_id) p.oracle_id, p.name, p.type_line, latest.usd_cents as price_cents
+        from printings p
+        join card_sets s on s.code = p.set_code and s.is_enabled
+        left join lateral (
+          select ps.usd_cents from price_snapshots ps
+           where ps.printing_id = p.id
+           order by ps.day desc, ps.usd_cents asc
+           limit 1
+        ) latest on true
+       where p.oracle_id = any(${textArray(targetIds)})
+       order by p.oracle_id, latest.usd_cents asc nulls last, p.id
+    `)
+  ).rows;
+
+  const expensiveTargets = targetRows
+    .filter((row) =>
+      options.oracleId
+        ? row.oracle_id === options.oracleId
+        : row.price_cents !== null && Number(row.price_cents) >= minPriceCents,
+    )
+    .sort((a, b) => Number(b.price_cents ?? 0) - Number(a.price_cents ?? 0))
+    .slice(0, options.oracleId ? 1 : limitCards);
+
+  const cards: ExpensiveCardReplacements[] = [];
+  for (const target of expensiveTargets) {
+    const targetPriceCents =
+      target.price_cents !== null ? Number(target.price_cents) : minPriceCents;
+    const effectiveMaxPrice = Math.min(maxPriceCents, Math.max(1, targetPriceCents - 1));
+
+    const neighborRows = (
+      await db.execute<{ oracle_id: string; similarity: number }>(sql`
+        select e.oracle_id, (1 - (e.embedding <=> t.embedding))::float8 as similarity
+          from card_embeddings t
+          join card_embeddings e on e.oracle_id <> t.oracle_id
+         where t.oracle_id = ${target.oracle_id}
+         order by e.embedding <=> t.embedding
+         limit 300
+      `)
+    ).rows;
+    if (neighborRows.length === 0) continue;
+
+    const simById = new Map(neighborRows.map((row) => [row.oracle_id, Number(row.similarity)]));
+    const neighborIds = neighborRows.map((row) => row.oracle_id);
+
+    const [rawOwnedCards, storeRows] = await Promise.all([
+      ownedCandidatesForIds(db, userId, context, neighborIds, effectiveMaxPrice),
+      db.execute<CandidateRow>(sql`
+        with cheapest as (
+          select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
+            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+            join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
+                            from price_snapshots ps where ps.printing_id = p.id
+                           order by ps.finish, ps.day desc) latest on true
+           where p.oracle_id = any(${textArray(neighborIds)})
+             and ${fitsDeck(context)}
+             and latest.usd_cents <= ${effectiveMaxPrice}
+             and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
+                               join printings op on op.id = c.printing_id
+                              where op.oracle_id = p.oracle_id)
+           order by p.oracle_id, latest.usd_cents, p.id
+        )
+        select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
+               0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
+               null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
+          from cheapest join printings p on p.id = cheapest.printing_id
+      `),
+    ]);
+
+    const ownedCards = withinTarget(rawOwnedCards, context).kept;
+    const storeCards = withinTarget(
+      storeRows.rows.map((row) => toCard(row, "store", context)),
+      context,
+    ).kept;
+
+    const toReplacementPicks = (pool: SuggestionCard[]): BudgetReplacementPick[] => {
+      const byId = new Map(pool.map((card) => [card.oracleId, card]));
+      return rankBudgetReplacements(
+        { priceCents: targetPriceCents },
+        pool.map((card) => ({ card, similarity: simById.get(card.oracleId) ?? 0 })),
+        rProfile,
+        {
+          targetBracket: context.targetBracket,
+          maxPriceCents: effectiveMaxPrice,
+          limit: limitPerCard,
+        },
+      ).flatMap((pick) => {
+        const card = byId.get(pick.card.oracleId);
+        if (!card) return [];
+        return [
+          {
+            card,
+            similarityPct: pick.similarityPct,
+            rating: pick.rating.rating,
+            savedCents: pick.savedCents,
+          },
+        ];
+      });
+    };
+
+    cards.push({
+      target: {
+        oracleId: target.oracle_id,
+        name: target.name,
+        priceCents: targetPriceCents,
+        typeLine: target.type_line,
+      },
+      owned: toReplacementPicks(ownedCards),
+      store: toReplacementPicks(storeCards),
+    });
+  }
+
+  return { cards, minPriceCents, maxPriceCents };
 }

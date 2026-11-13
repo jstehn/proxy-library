@@ -6,7 +6,7 @@ import type { WishCatalog, WishRepository } from "../application/ports";
 import { wishFromStored, type WishTarget } from "../domain/wish";
 import { offersOf, ownedOf } from "../queries/for-sale";
 import { printings } from "../../catalog/infrastructure/schema";
-import { wishes } from "./schema";
+import { wishes, wishlistSettings } from "./schema";
 
 // Real implementations of the wishlist's ports (design doc 26, sections 6 and 8).
 
@@ -99,6 +99,16 @@ export function drizzleWishRepository(db: DbExecutor): WishRepository {
         .where(eq(wishes.userId, userId))
         .returning({ id: wishes.id });
       return deleted.length;
+    },
+
+    async setSharing(userId, isShared, at) {
+      await db
+        .insert(wishlistSettings)
+        .values({ userId, isShared, updatedAt: at })
+        .onConflictDoUpdate({
+          target: wishlistSettings.userId,
+          set: { isShared, updatedAt: at },
+        });
     },
   };
   return repository;

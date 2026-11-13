@@ -5,6 +5,7 @@ import {
   bigserial,
   boolean,
   check,
+  customType,
   date,
   doublePrecision,
   index,
@@ -339,5 +340,64 @@ export const edhrecCommanderCards = pgTable(
       sql`${table.inclusionRate} >= 0 and ${table.inclusionRate} <= 1`,
     ),
     check("edhrec_synergy_range", sql`${table.synergy} >= -1 and ${table.synergy} <= 1`),
+  ],
+);
+
+/**
+ * Commander Spellbook two-card combos (design doc 52, ADR 0025).
+ * Canonicalized so `oracleIdA <= oracleIdB` and deduplicated per pair.
+ */
+export const spellbookTwoCardCombos = pgTable(
+  "spellbook_two_card_combos",
+  {
+    id: text("id").primaryKey(),
+    oracleIdA: text("oracle_id_a").notNull(),
+    oracleIdB: text("oracle_id_b").notNull(),
+    cardNameA: text("card_name_a").notNull(),
+    cardNameB: text("card_name_b").notNull(),
+    produces: jsonb("produces").$type<string[]>().notNull(),
+    bracketTag: text("bracket_tag"),
+    manaValue: integer("mana_value"),
+    forcesBracket: integer("forces_bracket").notNull(),
+    syncedAt: timestamptz("synced_at").notNull(),
+  },
+  (table) => [
+    index("spellbook_combos_a_idx").on(table.oracleIdA),
+    index("spellbook_combos_b_idx").on(table.oracleIdB),
+    check("spellbook_forces_bracket_range", sql`${table.forcesBracket} in (3, 4)`),
+  ],
+);
+
+const pgVector = (dimensions: number) =>
+  customType<{ data: number[]; driverData: string }>({
+    dataType() {
+      return `vector(${dimensions})`;
+    },
+    toDriver(value: number[]): string {
+      return `[${value.join(",")}]`;
+    },
+    fromDriver(value: string): number[] {
+      return value
+        .slice(1, -1)
+        .split(",")
+        .map((n) => Number(n));
+    },
+  });
+
+/**
+ * Frozen card text embeddings per oracle card (design doc 53, #58).
+ * Computed by the worker using `Xenova/bge-small-en-v1.5` over cleaned rules text.
+ */
+export const cardEmbeddings = pgTable(
+  "card_embeddings",
+  {
+    oracleId: text("oracle_id").primaryKey(),
+    model: text("model").notNull(),
+    textVersion: integer("text_version").notNull(),
+    embedding: pgVector(384)("embedding").notNull(),
+    updatedAt: timestamptz("updated_at").notNull(),
+  },
+  (table) => [
+    index("card_embeddings_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops")),
   ],
 );

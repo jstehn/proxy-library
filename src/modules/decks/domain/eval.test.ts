@@ -145,8 +145,22 @@ describe("evaluateHoldout (#57)", () => {
     }));
 
     const result = evaluateHoldout(deck, distractors, { holdoutCount: 10, k: 50 });
+    expect(result.tier).toBe("upgraded");
     expect(result.holdoutCount).toBe(10);
     expect(result.recallAtK).toBeGreaterThanOrEqual(0.9);
     expect(result.mrr).toBeGreaterThan(0.2);
+
+    const casual = evaluateHoldout(deck, distractors, {
+      holdoutCount: 10,
+      k: 50,
+      targetBracket: 2,
+    });
+    expect(casual.tier).toBe("casual");
+    const optimized = evaluateHoldout(deck, distractors, {
+      holdoutCount: 10,
+      k: 50,
+      targetBracket: 4,
+    });
+    expect(optimized.tier).toBe("optimized");
   });
 });

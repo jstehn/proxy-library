@@ -1,9 +1,12 @@
+import { cardTags, cardThemes } from "@/shared/card-search";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
+import { isPlayed } from "../domain/boards";
 import { isBracket, type Bracket } from "../domain/brackets";
 import { BOARDS, DeckId, FORMATS, type Format } from "../domain/deck";
+import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimize";
 import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
 import { decks, deckSnapshots } from "../infrastructure/schema";
@@ -40,7 +43,35 @@ export type SnapshotComparison = ChangePreview &
     fingerprint: string;
     beforeSide: SnapshotComparisonSide;
     afterSide: SnapshotComparisonSide;
+    scoreBefore: DeckScore;
+    scoreAfter: DeckScore;
+    scoreDelta: number;
   }>;
+
+function previewLineToOptimizerCard(line: PreviewLine): OptimizerCard {
+  const facts = {
+    typeLine: line.typeLine,
+    text: line.text,
+    producedMana: line.producedMana,
+  };
+  return {
+    oracleId: line.oracleId,
+    name: line.name,
+    typeLine: line.typeLine,
+    manaValue: line.manaValue,
+    manaCost: line.manaCost,
+    text: line.text,
+    producedMana: line.producedMana,
+    keywords: [],
+    roles: cardTags(facts),
+    themes: cardThemes(facts),
+    rarity: "common",
+    priceCents: line.priceCents,
+    isGameChanger: line.isGameChanger,
+    board: line.board,
+    quantity: line.quantity,
+  };
+}
 
 /** Lists saved snapshots for one of the player's decks, newest first; null if not owned. */
 export async function listDeckSnapshots(
@@ -169,6 +200,15 @@ export async function compareDeckSnapshot(
     after: afterLines,
   });
 
+  const scoreBefore = scoreDeck(
+    beforeLines.filter((line) => isPlayed(line.board)).map(previewLineToOptimizerCard),
+    { format: beforeSnap.format, targetBracket: beforeSnap.targetBracket },
+  );
+  const scoreAfter = scoreDeck(
+    afterLines.filter((line) => isPlayed(line.board)).map(previewLineToOptimizerCard),
+    { format, targetBracket },
+  );
+
   return {
     ...comparison,
     deck: { id: Number(view.deck.id), name: view.deck.name, format: view.deck.format },
@@ -193,5 +233,8 @@ export async function compareDeckSnapshot(
             format: view.deck.format,
             createdAt: null,
           },
+    scoreBefore,
+    scoreAfter,
+    scoreDelta: Number((scoreAfter.total - scoreBefore.total).toFixed(2)),
   };
 }

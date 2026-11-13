@@ -50,6 +50,20 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
+   * `pnpm worker embed-cards [limit]`: compute and store frozen text embeddings for oracle cards
+   * missing or with an outdated `(model, textVersion)` in `card_embeddings` (design doc 53).
+   */
+  async "embed-cards"(container) {
+    const rawLimit = process.argv[3];
+    const limit = rawLimit !== undefined ? Number(rawLimit) : undefined;
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+      throw new Error(`limit must be a positive whole number, got ${rawLimit}`);
+    }
+    const summary = await container.catalog.embedCards({ limit });
+    console.log(JSON.stringify(summary));
+  },
+
+  /**
    * `pnpm worker sync-edhrec [limit]`: fetch EDHREC community data for missing/stale commanders
    * (design doc 45).
    */

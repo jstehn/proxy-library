@@ -9,11 +9,14 @@ import {
 import { collectionPage, ownedCopies } from "@/modules/collection";
 import {
   budgetList,
+  budgetReplacements,
   cardsToGetFor,
+  deckCombosView,
   decksFor,
   decksUsing,
   deckSuggestions,
   findCard,
+  semanticSearchForDeck,
   similarCards,
   type Suggestion,
 } from "@/modules/decks";
@@ -299,6 +302,205 @@ export const budgetUpgrades = defineTool({
       total: money(result.totalCents),
       list: result.listText,
       hiddenOverTarget: result.hiddenOverTarget,
+    });
+  },
+});
+
+export const budgetReplacementsTool = defineTool({
+  name: "budget_replacements",
+  title: "Budget replacements for expensive cards",
+  description: [
+    "Finds cheaper legal cards with similar rules text (via card embeddings) and deck fit for expensive cards in a deck.",
+    "Use it when: the player wants budget alternatives for a specific expensive card or the priciest cards in their deck.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    card: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Optional card name or id to replace; omit to scan the deck's priciest non-land cards.",
+      ),
+    minPriceCents: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe(
+        "Minimum card price in cents to consider expensive when scanning (default 500 = $5).",
+      ),
+    maxPriceCents: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe("Maximum replacement price in cents (default 200 = $2)."),
+    includeText,
+  }),
+  async run(context, input) {
+    let oracleId: string | undefined;
+    if (input.card !== undefined) {
+      const found = await findCard(context.container.db, input.card);
+      if (found === null) return cardNotFound(input.card);
+      oracleId = found.oracleId;
+    }
+    const result = await budgetReplacements(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      {
+        oracleId,
+        minPriceCents: input.minPriceCents,
+        maxPriceCents: input.maxPriceCents,
+      },
+    );
+    if (result === null) return deckNotFound(input.deckId);
+    return done({
+      minPrice: money(result.minPriceCents),
+      maxPrice: money(result.maxPriceCents),
+      cards: result.cards.map((entry) => ({
+        target: {
+          name: entry.target.name,
+          oracleId: entry.target.oracleId,
+          typeLine: entry.target.typeLine,
+          price: money(entry.target.priceCents),
+        },
+        owned: entry.owned.map((pick) => ({
+          name: pick.card.name,
+          oracleId: pick.card.oracleId,
+          price: moneyOrNull(pick.card.priceCents),
+          saved: money(pick.savedCents),
+          similarityPct: pick.similarityPct,
+          rating: pick.rating,
+          ...(input.includeText ? { text: pick.card.text } : {}),
+        })),
+        store: entry.store.map((pick) => ({
+          name: pick.card.name,
+          oracleId: pick.card.oracleId,
+          price: moneyOrNull(pick.card.priceCents),
+          saved: money(pick.savedCents),
+          similarityPct: pick.similarityPct,
+          rating: pick.rating,
+          ...(input.includeText ? { text: pick.card.text } : {}),
+        })),
+      })),
+    });
+  },
+});
+
+export const semanticSearchForDeckTool = defineTool({
+  name: "semantic_search_for_deck",
+  title: "Semantic concept search for a deck",
+  description: [
+    "Finds legal cards in a deck's color identity matching a natural-language effect description (via card embeddings), optionally fused with a keyword filter.",
+    "Use it when: searching for an effect or mechanic by concept rather than exact MTG wording (e.g. 'free sacrifice outlets that draw cards').",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    concept: z
+      .string()
+      .min(2)
+      .describe("Natural-language description of the effect or role you want."),
+    filter: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Optional substring filter on name, type line, or rules text (fused via RRF)."),
+    maxPriceCents: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe("Optional maximum card price in cents."),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(25)
+      .optional()
+      .describe("Maximum results per pool (default 10, max 25)."),
+    includeText,
+  }),
+  async run(context, input) {
+    const result = await semanticSearchForDeck(
+      context.container.db,
+      context.container.textEmbedder,
+      context.actor.userId,
+      input.deckId,
+      {
+        concept: input.concept,
+        filter: input.filter,
+        maxPriceCents: input.maxPriceCents,
+        limit: input.limit,
+      },
+    );
+    if (result === null) return deckNotFound(input.deckId);
+    const mapPick = (pick: (typeof result.owned)[number]) => ({
+      name: pick.card.name,
+      oracleId: pick.card.oracleId,
+      typeLine: pick.card.typeLine,
+      manaCost: pick.card.manaCost,
+      price: moneyOrNull(pick.card.priceCents),
+      similarityPct: pick.similarityPct,
+      rating: pick.rating,
+      ...(input.includeText ? { text: pick.card.text } : {}),
+    });
+    return done({
+      concept: result.concept,
+      owned: result.owned.map(mapPick),
+      store: result.store.map(mapPick),
+      hiddenOverTarget: result.hiddenOverTarget,
+    });
+  },
+});
+
+export const findCombosForDeckTool = defineTool({
+  name: "find_combos_for_deck",
+  title: "Find combos and 1-card-away partners",
+  description: [
+    "Lists Commander Spellbook two-card combos already complete in the deck, plus cards you own or can buy that complete a two-card combo with something in the deck (respecting targetBracket).",
+    "Use it when: checking what combos a deck already runs or looking for combo finishers.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(30)
+      .optional()
+      .describe("Maximum 1-card-away partners per pool (default 15, max 30)."),
+    includeText,
+  }),
+  async run(context, input) {
+    const result = await deckCombosView(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      input.limit,
+    );
+    if (result === null) return deckNotFound(input.deckId);
+    const mapPartner = (entry: (typeof result.oneCardAway.owned)[number]) => ({
+      name: entry.card.name,
+      oracleId: entry.card.oracleId,
+      price: moneyOrNull(entry.card.priceCents),
+      partnersWith: entry.partnersWith,
+      ...(input.includeText ? { text: entry.card.text } : {}),
+    });
+    return done({
+      complete: result.complete,
+      oneCardAway: {
+        owned: result.oneCardAway.owned.map(mapPartner),
+        store: result.oneCardAway.store.map(mapPartner),
+        hiddenOverTarget: result.oneCardAway.hiddenOverTarget,
+      },
     });
   },
 });

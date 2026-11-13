@@ -13,6 +13,7 @@ import type {
 } from "../domain/types";
 import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
 import type { EdhrecCommanderPage } from "../domain/edhrec";
+import type { SpellbookTwoCardCombo } from "../domain/spellbook";
 
 // Ports: what the catalog needs from outside (design doc 04, section 6).
 
@@ -260,11 +261,50 @@ export interface EdhrecRepository {
   ): Promise<void>;
 }
 
+/** Commander Spellbook bulk two-card combo feed (design doc 52, ADR 0025). */
+export interface SpellbookGateway {
+  fetchTwoCardCombos(): Promise<readonly SpellbookTwoCardCombo[]>;
+}
+
+export interface SpellbookRepository {
+  lastSyncedAt(): Promise<Date | null>;
+  replaceTwoCardCombos(combos: readonly SpellbookTwoCardCombo[], syncedAt: Date): Promise<void>;
+}
+
+/** Local text embedding model adapter (design doc 53, #58). */
+export type TextEmbedder = (texts: readonly string[]) => Promise<number[][]>;
+
+export type CardTextToEmbed = Readonly<{
+  oracleId: string;
+  name: string;
+  typeLine: string;
+  text: string;
+}>;
+
+export type CardEmbeddingRow = Readonly<{
+  oracleId: string;
+  model: string;
+  textVersion: number;
+  embedding: number[];
+  updatedAt: Date;
+}>;
+
+export interface EmbeddingRepository {
+  listMissingOrStale(
+    model: string,
+    textVersion: number,
+    limit?: number,
+  ): Promise<CardTextToEmbed[]>;
+  upsertBatch(rows: readonly CardEmbeddingRow[]): Promise<void>;
+}
+
 export type CatalogServices = {
   catalog: CatalogRepository;
   syncRuns: SyncRunRepository;
   artwork: ArtworkRepository;
   edhrec?: EdhrecRepository;
+  spellbook?: SpellbookRepository;
+  embeddings?: EmbeddingRepository;
 };
 
 /**
@@ -286,6 +326,8 @@ export type CatalogDependencies = {
   wpn: WpnGateway;
   artworkFiles: ArtworkStore;
   edhrec?: EdhrecGateway;
+  spellbook?: SpellbookGateway;
+  textEmbedder?: TextEmbedder;
   clock: Clock;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;

@@ -9,12 +9,17 @@ import {
   browseCollection,
   budgetList,
   cardPrintings,
+  combosForDeck,
   type PrintingOption,
+  type DeckCombo,
   deckSuggestions,
   draftForDeck,
   type DeckDraft,
   manaBasePlan,
   type ManaBasePlan,
+  optimizeDeckForView,
+  type OptimizeDeckPool,
+  type OptimizeResult,
   similarCards,
   type BudgetList,
   type DeckSuggestions,
@@ -22,6 +27,7 @@ import {
   DeckId,
   deckTokenLines,
   deckView,
+  fingerprint,
   GROUPINGS,
   listDeckSnapshots,
   MAX_HEADING_LENGTH,
@@ -88,6 +94,8 @@ export type BuilderDeck = Readonly<{
   /** By type or by the deck's own headings, and those headings in order (design doc 34). */
   grouping: Grouping;
   headings: string[];
+  /** Two-card combos detected in the deck (design doc 52), or undefined if not synced. */
+  combos?: readonly DeckCombo[];
 }>;
 
 /** Loads the deck for the builder. */
@@ -96,16 +104,27 @@ export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | nul
   const { db } = getContainer();
   const view = await deckView(db, actor.userId, deckId);
   if (view === null) return null;
-  const cards = await printingCards(
-    db,
-    view.lines.map((line) => line.printingId),
-  );
+  const [cards, combos] = await Promise.all([
+    printingCards(
+      db,
+      view.lines.map((line) => line.printingId),
+    ),
+    view.deck.format === "commander"
+      ? combosForDeck(
+          db,
+          view.lines
+            .filter((line) => line.board === "main" || line.board === "commander")
+            .map((line) => line.oracleId),
+        )
+      : Promise.resolve(undefined),
+  ]);
   return {
     lines: view.lines,
     rules: { ...view.rules },
     cards: Object.fromEntries(cards),
     grouping: view.deck.grouping,
     headings: [...view.deck.headings],
+    combos,
   };
 }
 
@@ -174,6 +193,52 @@ export async function moveLineAction(input: z.input<typeof MoveInput>): Promise<
     return { ok: false, message: messages[result.error.kind] };
   }
   const deck = await loadBuilderDeck(parsed.data.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
+
+const SwapInput = z.object({
+  deckId: DeckIdInput,
+  cutOracleId: z.string().min(1),
+  addOracleId: z.string().min(1),
+});
+
+/** Atomically moves 1 copy of a cut card to the maybeboard and adds 1 copy of its replacement to main. */
+export async function swapCardsAction(input: z.input<typeof SwapInput>): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = SwapInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That swap wasn't understood." };
+  const { deckId, cutOracleId, addOracleId } = parsed.data;
+  const view = await deckView(getContainer().db, actor.userId, deckId);
+  if (view === null) return { ok: false, message: "That deck isn't yours." };
+
+  const cutMainQty =
+    view.lines.find((l) => l.oracleId === cutOracleId && l.board === "main")?.quantity ?? 0;
+  if (cutMainQty <= 0) return { ok: false, message: "That card isn't in the main deck any more." };
+  const cutMaybeQty =
+    view.lines.find((l) => l.oracleId === cutOracleId && l.board === "maybe")?.quantity ?? 0;
+  const addMainQty =
+    view.lines.find((l) => l.oracleId === addOracleId && l.board === "main")?.quantity ?? 0;
+
+  const result = await getContainer().decks.applyChanges(actor, {
+    deckId: DeckId.of(deckId),
+    fingerprint: fingerprint(view.lines),
+    changes: [
+      { oracleId: cutOracleId, board: "main", quantity: cutMainQty - 1 },
+      { oracleId: cutOracleId, board: "maybe", quantity: Math.min(99, cutMaybeQty + 1) },
+      { oracleId: addOracleId, board: "main", quantity: Math.min(99, addMainQty + 1) },
+    ],
+  });
+  if (!result.ok) {
+    return {
+      ok: false,
+      message:
+        result.error.kind === "DeckChanged"
+          ? "The deck changed in another tab — please try again."
+          : "Couldn't apply that swap.",
+    };
+  }
+  const deck = await loadBuilderDeck(deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
   return { ok: true, deck };
 }
@@ -294,6 +359,18 @@ export async function suggestionsAction(deckId: number): Promise<DeckSuggestions
   const parsed = DeckIdInput.safeParse(deckId);
   if (!parsed.success) return null;
   return deckSuggestions(getContainer().db, actor.userId, parsed.data);
+}
+
+/** Whole-deck Simulated Annealing optimizer preview (design doc 55). */
+export async function optimizeDeckAction(
+  deckId: number,
+  pool: OptimizeDeckPool = "owned",
+): Promise<OptimizeResult | null> {
+  const actor = await requireActor();
+  const parsed = DeckIdInput.safeParse(deckId);
+  if (!parsed.success) return null;
+  const outcome = await optimizeDeckForView(getContainer().db, actor.userId, parsed.data, { pool });
+  return outcome?.result ?? null;
 }
 
 /** A mana base you could start from (design doc 35). */

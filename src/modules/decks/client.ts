@@ -19,6 +19,8 @@ export {
   type ManaSource,
   type StatsLine,
 } from "./domain/stats";
+export { deckProfile } from "./domain/suggest";
+export { deckSignalProfile } from "./domain/signals";
 export {
   DEFAULT_PROXY_OPTIONS,
   GAPS_IN_MILLIMETERS,
@@ -56,12 +58,54 @@ export { copiesToTake } from "./domain/free-copies";
 export { landTarget, tapped } from "./domain/mana-base";
 export {
   CUT_WEIGHTS,
+  CUT_WEIGHTS_BY_TIER,
+  cutWeightsForBracket,
   rankCuts,
   type CutContext,
   type CutLine,
   type CutReason,
+  type CutWeights,
   type RankedCut,
 } from "./domain/cuts";
+export {
+  powerTierForBracket,
+  RATING_BIAS,
+  RATING_WEIGHTS,
+  RATING_WEIGHTS_BY_TIER,
+  rateCard,
+  weightsForBracket,
+  type CardRating,
+  type PowerTier,
+  type RatingCandidate,
+  type RatingOptions,
+  type RatingPart,
+  type RatingProfile,
+  type RatingWeights,
+} from "./domain/rate";
+export {
+  suggestSwaps,
+  type SwapCutMeta,
+  type SwapOptions,
+  type SwapReason,
+  type SwapSuggestion,
+} from "./domain/swaps";
+export {
+  optimizeDeck,
+  scoreDeck,
+  type DeckScore,
+  type DeckScoreMetrics,
+  type OptimizedSwap,
+  type OptimizeOptions,
+  type OptimizeResult,
+  type OptimizerCard,
+  type ScoreDeckContext,
+} from "./domain/optimize";
+export {
+  rankBudgetReplacements,
+  type BudgetReplacement,
+  type BudgetReplacementOptions,
+  type ReplacementCandidate,
+} from "./domain/replacements";
 export { BOARDS, COUNTED_BOARDS, isCounted, isPlayed, type Board } from "./domain/boards";
 export {
   canBeCommander,
@@ -94,6 +138,12 @@ export {
   type TestHand,
   type TestHandEvent,
 } from "./domain/draws";
+export {
+  simulateOpeningHands,
+  type GoldfishReport,
+  type SampleHand,
+  type SimulateHandsOptions,
+} from "./domain/goldfish";
 export { creatureTypes, plural, type Reason } from "./domain/suggest";
 export {
   BRACKET_NAMES,
@@ -110,6 +160,7 @@ export {
   type BracketRule,
   type BracketSource,
   type BracketWarning,
+  type DeckCombo,
 } from "./domain/brackets";
 export { checkHeading, headingMoved, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
@@ -118,3 +169,13 @@ export {
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
 } from "./domain/snapshots";
+export {
+  buildUpgradeRoadmap,
+  DEFAULT_UPGRADE_TIERS_CENTS,
+  type BuildUpgradeRoadmapInput,
+  type UpgradeCandidate,
+  type UpgradeCut,
+  type UpgradeRoadmap,
+  type UpgradeSwap,
+  type UpgradeTierPlan,
+} from "./domain/upgrade-roadmap";

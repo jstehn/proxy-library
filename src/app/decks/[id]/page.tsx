@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { printingCards } from "@/modules/catalog";
 import {
+  combosForDeck,
   deckComments,
   deckForViewer,
   deckText,
@@ -62,7 +63,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   );
 
   if (!viewed.isOwner) {
-    const [cards, tokens] = await Promise.all([
+    const [cards, tokens, combos] = await Promise.all([
       printingCards(
         db,
         view.lines.map((line) => line.printingId),
@@ -77,6 +78,14 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           board: line.board,
         })),
       ),
+      deck.format === "commander"
+        ? combosForDeck(
+            db,
+            view.lines
+              .filter((line) => line.board === "main" || line.board === "commander")
+              .map((line) => line.oracleId),
+          )
+        : Promise.resolve(undefined),
     ]);
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
@@ -113,6 +122,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           yourCopies={viewed.yourCopies}
           listText={EXPORTERS.names(view.lines)}
           grouping={deck.grouping}
+          combos={combos}
           headings={deck.headings}
           tokens={tokens}
         />

@@ -1,7 +1,7 @@
 "use client";
 import type { Bracket, BracketEstimate, BracketRule } from "@/modules/decks";
 import { BRACKET_NAMES, BRACKETS, bracketWarning } from "@/modules/decks/client";
-import { estimateLabel, findingText, UNCHECKED_TEXT } from "../../labels";
+import { estimateLabel, findingText, uncheckedText } from "../../labels";
 
 // The Commander bracket (design doc 31, section 5.2): the lowest bracket the cards allow, why,
 // and the bracket the owner is aiming for. Worked out in the browser, like the statistics.
@@ -88,7 +88,7 @@ export function BracketPanel(props: {
 
       <p className="text-muted text-[10px]">
         Game Changers come from Wizards&apos; list; land denial and extra turns are read from rules
-        text. {UNCHECKED_TEXT}
+        text. {uncheckedText(estimate.unchecked)}
         {estimate.findings.length > 0 && " Click a reason to mark its cards in the list."}
       </p>
     </section>

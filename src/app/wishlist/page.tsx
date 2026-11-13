@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import {
+  isWishlistShared,
+  sharedWishlists,
   totals,
   wishLines,
   wishlistAnswers,
@@ -13,7 +15,7 @@ import { requireActor } from "@/server/session";
 import { assertNever, Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { removeWishAction } from "./actions";
+import { removeWishAction, setWishlistSharingAction } from "./actions";
 import { offerLabel } from "./labels";
 import { BuyWishForm, EditWishForm, RemoveWishButton } from "./wish-forms";
 
@@ -31,12 +33,15 @@ function targetText(target: WishTarget): string {
 export default async function WishlistPage(props: PageProps<"/wishlist">) {
   const actor = await requireActor();
   const { db, wallet, clock } = getContainer();
-  const [answers, balance, settings] = await Promise.all([
+  const [answers, balance, settings, isShared, shared] = await Promise.all([
     wishlistAnswers(db, actor.userId),
     // Also pays any allowance that has come due, as the header does (design doc 03).
     wallet.refreshWallet(actor.userId),
     currentEconomySettings(db),
+    isWishlistShared(db, actor.userId),
+    sharedWishlists(db),
   ]);
+  const others = shared.filter((player) => player.userId !== actor.userId);
   const schedule = { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays };
   const lines = wishLines(answers, {
     balance,
@@ -66,6 +71,35 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
             <strong>{Cents.format(sum.all)}</strong> · you have{" "}
             <strong>{Cents.format(balance)}</strong>
             {sum.affordable > 0 && <> · you can afford {Cents.format(sum.affordable)} of it now</>}
+          </p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+          <form action={setWishlistSharingAction} className="flex items-center gap-2">
+            <input type="hidden" name="shared" value={isShared ? "off" : "on"} />
+            <button
+              type="submit"
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              {isShared ? "Stop sharing with playgroup" : "Share with playgroup"}
+            </button>
+            {isShared && (
+              <span className="text-muted text-xs">
+                Trading partners can see your wishes (not your target prices).
+              </span>
+            )}
+          </form>
+        </div>
+        {others.length > 0 && (
+          <p className="text-muted text-xs">
+            Shared wishlists:{" "}
+            {others.map((player, index) => (
+              <span key={player.userId}>
+                {index > 0 && " · "}
+                <Link href={`/players/${player.userId}/wishlist`} className="underline">
+                  {player.displayName} ({player.count})
+                </Link>
+              </span>
+            ))}
           </p>
         )}
       </header>

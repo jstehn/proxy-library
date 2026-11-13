@@ -1,10 +1,15 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  fitLogisticWeights,
+  powerTierForBracket,
   qualityPrior,
   rateCard,
   RATING_BIAS,
+  RATING_WEIGHTS,
+  ratingFeatureVector,
   sigmoid,
+  weightsForBracket,
   type RatingCandidate,
   type RatingProfile,
 } from "./rate";
@@ -153,5 +158,62 @@ describe("rateCard rich signals", () => {
       emptyProfile,
     );
     expect(negative.parts.some((p) => p.kind === "edhrec" && p.contribution < 0)).toBe(true);
+  });
+
+  it("rewards embedSim above the baseline and ignores baseline/null embedSim", () => {
+    const baseline = rateCard({ ...baseCard, roles: [], embedSim: 0.5 }, emptyProfile);
+    const highSim = rateCard({ ...baseCard, roles: [], embedSim: 0.8 }, emptyProfile);
+    expect(baseline.parts.some((p) => p.kind === "embedSim")).toBe(false);
+    expect(highSim.parts.some((p) => p.kind === "embedSim" && p.contribution > 0)).toBe(true);
+    expect(highSim.rating).toBeGreaterThan(baseline.rating);
+  });
+});
+
+describe("powerTierForBracket & weightsForBracket", () => {
+  it("maps brackets to the three power tiers", () => {
+    expect(powerTierForBracket(1)).toBe("casual");
+    expect(powerTierForBracket(2)).toBe("casual");
+    expect(powerTierForBracket(3)).toBe("upgraded");
+    expect(powerTierForBracket(null)).toBe("upgraded");
+    expect(powerTierForBracket(4)).toBe("optimized");
+    expect(powerTierForBracket(5)).toBe("optimized");
+  });
+
+  it("weights theme higher in casual and quality higher in optimized", () => {
+    const casual = weightsForBracket(2);
+    const optimized = weightsForBracket(4);
+    expect(casual.theme).toBeGreaterThan(optimized.theme);
+    expect(optimized.quality).toBeGreaterThan(casual.quality);
+  });
+
+  it("ratingFeatureVector matches rateCard features and fitLogisticWeights preserves signs", () => {
+    const features = ratingFeatureVector(
+      { ...baseCard, roles: ["ramp"], embedSim: 0.8 },
+      { ...emptyProfile, gaps: [{ tag: "ramp", count: 2, target: 10 }] },
+    );
+    expect(features.roleNeed).toBeGreaterThan(0);
+    expect(features.embedSimDelta).toBeCloseTo(0.25, 5);
+
+    const negFeatures = ratingFeatureVector(
+      {
+        ...baseCard,
+        roles: [],
+        edhrecRank: null,
+        preconCount: null,
+        priceCents: 0,
+        rarity: "common",
+      },
+      emptyProfile,
+    );
+    const fitted = fitLogisticWeights(
+      [
+        { features, label: 1 },
+        { features: negFeatures, label: 0 },
+      ],
+      RATING_WEIGHTS,
+      { epochs: 20 },
+    );
+    expect(fitted.embedSim).toBeGreaterThan(0);
+    expect(fitted.topHeavyPenalty).toBeLessThanOrEqual(0);
   });
 });

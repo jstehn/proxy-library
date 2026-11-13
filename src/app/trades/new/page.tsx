@@ -2,6 +2,7 @@ import Link from "next/link";
 import { printingCards, type PrintingCard } from "@/modules/catalog";
 import { collectionPage, type CollectionRow } from "@/modules/collection";
 import { tradingPartners } from "@/modules/trades";
+import { sharedWishlistFor } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents, UserId } from "@/shared/kernel";
@@ -139,15 +140,18 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
       sort: "name",
       page: 1,
     });
-  const [mine, theirs] = await Promise.all([
+  const [mine, theirs, partnerWishlist] = await Promise.all([
     search(actor.userId, draft.mine),
     search(partner.userId, draft.theirs),
+    sharedWishlistFor(db, actor.userId, UserId.of(partner.userId)),
   ]);
   const cards = await printingCards(db, [
     ...mine.rows.map((row) => row.printingId),
     ...theirs.rows.map((row) => row.printingId),
     ...draft.give.map((card) => card.printingId),
     ...draft.get.map((card) => card.printingId),
+    ...(partnerWishlist?.lines.flatMap((line) => line.viewerOwned.map((copy) => copy.printingId)) ??
+      []),
   ]);
 
   return (
@@ -207,6 +211,73 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
 
       <DraftSync />
       <ProposeForm isCounter={draft.replaces !== null} />
+
+      {partnerWishlist !== null && partnerWishlist.lines.length > 0 && (
+        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-medium">Cards {partner.displayName} wants</h2>
+            <Link
+              href={`/players/${partner.userId}/wishlist`}
+              className="text-muted text-xs underline"
+            >
+              Full wishlist
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-2 text-sm">
+            {partnerWishlist.lines.map((line) => (
+              <li key={line.id} className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    {line.quantity}× {line.cardName}
+                  </span>
+                  <span className="text-muted text-xs">
+                    {line.setCode && line.collectorNumber
+                      ? `${line.setCode} #${line.collectorNumber}, ${line.finish}`
+                      : line.finish === "cheapest"
+                        ? "any printing"
+                        : `any printing, ${line.finish}`}
+                  </span>
+                </div>
+                {line.note !== "" && <p className="text-muted text-xs">{line.note}</p>}
+                {line.viewerOwned.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {line.viewerOwned.map((copy) => {
+                      const chosen =
+                        draft.give.find(
+                          (item) =>
+                            item.printingId === copy.printingId && item.finish === copy.finish,
+                        )?.quantity ?? 0;
+                      const canAdd = chosen < copy.quantity;
+                      const label = cardName({ ...copy, quantity: 1 }, cards);
+                      return (
+                        <span
+                          key={`${copy.printingId}/${copy.finish}`}
+                          className="flex items-center gap-1.5 text-xs"
+                        >
+                          <span className="text-emerald-700 dark:text-emerald-400">
+                            you have {copy.quantity} ({cards.get(copy.printingId)?.setCode ?? ""}
+                            {copy.finish === "nonfoil" ? "" : ` ${copy.finish}`})
+                          </span>
+                          {canAdd && (
+                            <DraftButton
+                              side="give"
+                              card={{ printingId: copy.printingId, finish: copy.finish }}
+                              delta={1}
+                              label={`Add ${label}`}
+                            >
+                              + add
+                            </DraftButton>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

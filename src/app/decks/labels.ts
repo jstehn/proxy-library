@@ -11,6 +11,7 @@ import type {
   LandReason,
   LandTargetReason,
   Reason,
+  SwapReason,
 } from "@/modules/decks";
 import { BRACKET_NAMES, plural } from "@/modules/decks/client";
 import { THEME_LABELS, type BracketFlag, type Tag } from "@/shared/card-search";
@@ -90,6 +91,10 @@ export function findingText(finding: BracketFinding): string {
       return finding.forces === 2
         ? `${copies(finding.count, "extra-turn card", "extra-turn cards")} (a few are fine in bracket 2)`
         : `${finding.count} extra-turn cards (3 or more is chaining: bracket 4)`;
+    case "twoCardCombos":
+      return finding.forces >= 4
+        ? `Two-card combo (early-game: bracket ${finding.forces})`
+        : "Two-card combo (late-game only: bracket 3)";
     default:
       return assertNever(finding.rule);
   }
@@ -97,7 +102,9 @@ export function findingText(finding: BracketFinding): string {
 
 /** A finding with its cards: "2 Game Changers (up to 3 in bracket 3): Rhystic Study, …". */
 export function findingWithCards(finding: BracketFinding): string {
-  return `${findingText(finding)}: ${finding.cards.join(", ")}`;
+  return finding.rule === "twoCardCombos"
+    ? `${findingText(finding)}: ${finding.cards.join(" + ")}`
+    : `${findingText(finding)}: ${finding.cards.join(", ")}`;
 }
 
 /** The over-target warning in words. */
@@ -107,6 +114,10 @@ export function bracketWarningText(warning: BracketWarning): string {
 
 /** What the estimate can't check, in words. */
 export const UNCHECKED_TEXT = "Not checked: two-card combos, and how you play the deck.";
+
+export function uncheckedText(unchecked: readonly ("intent" | "combos")[]): string {
+  return unchecked.includes("combos") ? UNCHECKED_TEXT : "Not checked: how you play the deck.";
+}
 
 /** Role tags as the builder names them (design doc 19). */
 export const TAG_LABELS: Record<Tag, string> = {
@@ -141,6 +152,10 @@ export function reasonText(reason: Reason): string {
       return edhrecReasonText(reason.inclusionPct, reason.synergyPct);
     case "synergy":
       return reason.label;
+    case "combo":
+      return `Combos with ${reason.partners.slice(0, 2).join(", ")}`;
+    case "embedSim":
+      return `Reads like deck (${reason.similarityPct}% sim)`;
     default:
       return assertNever(reason);
   }
@@ -172,6 +187,30 @@ export function cutReasonText(reason: CutReason): string {
       return `You're short ${reason.short}`;
     case "edhrec":
       return edhrecReasonText(reason.inclusionPct, reason.synergyPct);
+    case "embedSim":
+      return `Reads like deck (${reason.similarityPct}% sim)`;
+    default:
+      return assertNever(reason);
+  }
+}
+
+/** Why a one-step swap is suggested, in words (design doc 47). */
+export function swapReasonText(reason: SwapReason): string {
+  switch (reason.kind) {
+    case "ratingGain":
+      return `Rating ${reason.cutRating} → ${reason.addRating}`;
+    case "fillsRole":
+      return `Fills ${TAG_LABELS[reason.tag]}`;
+    case "preservesRole":
+      return `Preserves ${TAG_LABELS[reason.tag]}`;
+    case "similarEffect":
+      return `Similar effect (${reason.similarityPct}% match)`;
+    case "fixesOverBracket":
+      return `Fixes bracket ${reason.target} limit`;
+    case "fixesNotOwned":
+      return "Replaces an unowned card";
+    case "lowersCurve":
+      return `Lowers curve (${reason.cutMv} → ${reason.addMv} MV)`;
     default:
       return assertNever(reason);
   }

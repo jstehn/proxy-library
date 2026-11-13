@@ -1,4 +1,6 @@
+import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
+import { powerTierForBracket, type PowerTier, type RatingWeights } from "./rate";
 import { isLand } from "./stats";
 import { deckProfile, rank, scoreForDeck, type CandidateCard, type ProfileLine } from "./suggest";
 
@@ -14,6 +16,7 @@ export type EvalDeckLine = ProfileLine &
   }>;
 
 export type EvalResult = Readonly<{
+  tier: PowerTier;
   holdoutCount: number;
   k: number;
   hits: number;
@@ -24,11 +27,19 @@ export type EvalResult = Readonly<{
 export function evaluateHoldout(
   lines: readonly EvalDeckLine[],
   distractors: readonly CandidateCard[],
-  options: { format?: Format; holdoutCount?: number; k?: number } = {},
+  options: {
+    format?: Format;
+    holdoutCount?: number;
+    k?: number;
+    targetBracket?: Bracket | null;
+    embedSimByOracleId?: ReadonlyMap<string, number>;
+    weightsOverride?: RatingWeights;
+  } = {},
 ): EvalResult {
   const format = options.format ?? "commander";
   const holdoutCount = options.holdoutCount ?? 10;
   const k = options.k ?? 50;
+  const targetBracket = options.targetBracket ?? null;
 
   const eligible = lines.filter((line) => line.board === "main" && !isLand(line.typeLine));
   // Deterministic stride selection so tests and weight-tuning runs are reproducible.
@@ -53,7 +64,16 @@ export function evaluateHoldout(
     if (!poolById.has(card.oracleId)) poolById.set(card.oracleId, card);
   }
 
-  const ranked = rank([...poolById.values()].map((card) => scoreForDeck(card, profile)));
+  const ranked = rank(
+    [...poolById.values()].map((card) => {
+      const embedSim = options.embedSimByOracleId?.get(card.oracleId);
+      const withSim = embedSim !== undefined ? { ...card, embedSim } : card;
+      return scoreForDeck(withSim, profile, {
+        targetBracket,
+        weightsOverride: options.weightsOverride,
+      });
+    }),
+  );
   const topK = ranked.slice(0, k);
   const hits = topK.filter((entry) => heldOutIds.has(entry.card.oracleId)).length;
 
@@ -66,6 +86,7 @@ export function evaluateHoldout(
 
   const actualHoldout = heldOutIds.size;
   return {
+    tier: powerTierForBracket(targetBracket),
     holdoutCount: actualHoldout,
     k,
     hits,

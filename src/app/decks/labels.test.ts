@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cutReasonText } from "./labels";
+import { cutReasonText, findingText, findingWithCards, reasonText, uncheckedText } from "./labels";
 
 // Cut reasons in words (design doc 32): what the builder's panel and rank_cuts say. They're hints
 // from simple checks, so they describe what was found rather than tell the player what to do.
@@ -25,6 +25,34 @@ describe("cutReasonText", () => {
     expect(cutReasonText({ kind: "notOwned", short: 1 })).toBe("You're short 1");
     expect(cutReasonText({ kind: "edhrec", inclusionPct: 45, synergyPct: 18 })).toBe(
       "EDHREC: 45% of decks (+18% synergy)",
+    );
+  });
+});
+
+describe("twoCardCombos labels", () => {
+  it("formats early-game and late-game two-card combo findings and unchecked text", () => {
+    expect(
+      findingText({
+        rule: "twoCardCombos",
+        cards: ["Thassa's Oracle", "Demonic Consultation"],
+        count: 1,
+        forces: 4,
+      }),
+    ).toBe("Two-card combo (early-game: bracket 4)");
+    expect(
+      findingWithCards({
+        rule: "twoCardCombos",
+        cards: ["Kiki-Jiki", "Zealous Conscripts"],
+        count: 1,
+        forces: 3,
+      }),
+    ).toBe("Two-card combo (late-game only: bracket 3): Kiki-Jiki + Zealous Conscripts");
+    expect(uncheckedText(["intent"])).toBe("Not checked: how you play the deck.");
+    expect(uncheckedText(["intent", "combos"])).toBe(
+      "Not checked: two-card combos, and how you play the deck.",
+    );
+    expect(reasonText({ kind: "combo", partners: ["Kiki-Jiki, Mirror Breaker"] })).toBe(
+      "Combos with Kiki-Jiki, Mirror Breaker",
     );
   });
 });

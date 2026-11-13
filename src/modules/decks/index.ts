@@ -136,6 +136,7 @@ export {
 export {
   COMMANDER_ROLE_TARGETS,
   deckStats,
+  isLand,
   mainType,
   roleTargets,
   SIXTY_CARD_ROLE_TARGETS,
@@ -159,7 +160,9 @@ export {
   type BracketRule,
   type BracketSource,
   type BracketWarning,
+  type DeckCombo,
 } from "./domain/brackets";
+export { combosForDeck } from "./queries/combos";
 export {
   decksUsing,
   deckView,
@@ -182,6 +185,52 @@ export {
   type RankedCut,
 } from "./domain/cuts";
 export {
+  suggestSwaps,
+  type SwapCutMeta,
+  type SwapOptions,
+  type SwapReason,
+  type SwapSuggestion,
+} from "./domain/swaps";
+export {
+  optimizeDeck,
+  scoreDeck,
+  type DeckScore,
+  type DeckScoreMetrics,
+  type OptimizedSwap,
+  type OptimizeOptions,
+  type OptimizeResult,
+  type OptimizerCard,
+  type ScoreDeckContext,
+} from "./domain/optimize";
+export {
+  optimizeDeckForView,
+  type OptimizeDeckPool,
+  type OptimizeDeckQueryOptions,
+  type OptimizeDeckViewResult,
+} from "./queries/optimize";
+export {
+  simulateOpeningHands,
+  type GoldfishReport,
+  type SampleHand,
+  type SimulateHandsOptions,
+} from "./domain/goldfish";
+export {
+  auditDeck,
+  type AuditFinding,
+  type AuditRoleStatus,
+  type DeckAuditReport,
+} from "./queries/audit";
+export {
+  rateCard,
+  weightsForBracket,
+  powerTierForBracket,
+  type CardRating,
+  type PowerTier,
+  type RatingProfile,
+} from "./domain/rate";
+export { deckSignalProfile } from "./domain/signals";
+export { deckProfile } from "./domain/suggest";
+export {
   BROWSE_PAGE_SIZE,
   BROWSE_SORTS,
   browseCollection,
@@ -202,14 +251,31 @@ export {
 export {
   BUDGET_LIST_MAXIMUM,
   budgetList,
+  budgetReplacements,
   deckSuggestions,
   similarCards,
   type BudgetList,
+  type BudgetReplacementPick,
+  type BudgetReplacementsResult,
   type DeckSuggestions,
+  type ExpensiveCardReplacements,
   type Suggestion,
   type SuggestionCard,
   type SuggestionList,
 } from "./queries/suggestions";
+export { embedSimForCards } from "./queries/embeddings";
+export {
+  semanticSearchForDeck,
+  type SemanticSearchPick,
+  type SemanticSearchResult,
+} from "./queries/semantic-search";
+export { deckCombosView, type DeckCombosView, type OneCardAwayCombo } from "./queries/deck-combos";
+export {
+  rankBudgetReplacements,
+  type BudgetReplacement,
+  type BudgetReplacementOptions,
+  type ReplacementCandidate,
+} from "./domain/replacements";
 export type { DeckProfile, Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
@@ -379,3 +445,18 @@ export {
   type TestHand,
   type TestHandEvent,
 } from "./domain/draws";
+export {
+  buildUpgradeRoadmap,
+  DEFAULT_UPGRADE_TIERS_CENTS,
+  type BuildUpgradeRoadmapInput,
+  type UpgradeCandidate,
+  type UpgradeCut,
+  type UpgradeRoadmap,
+  type UpgradeSwap,
+  type UpgradeTierPlan,
+} from "./domain/upgrade-roadmap";
+export {
+  deckUpgradeRoadmap,
+  type UpgradeRoadmapOptions,
+  type UpgradeRoadmapResult,
+} from "./queries/upgrade-roadmap";

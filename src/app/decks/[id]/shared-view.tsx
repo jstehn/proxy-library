@@ -5,6 +5,7 @@ import type {
   Bracket,
   BracketRule,
   CardRules,
+  DeckCombo,
   DeckLine,
   Format,
   Grouping,
@@ -39,6 +40,8 @@ export function SharedDeckView(props: {
   headings: readonly string[];
   /** Tokens, emblems, and helper cards created by counted cards (design doc 42). */
   tokens?: readonly TokenLine[];
+  /** Two-card combos detected in the deck (design doc 52). */
+  combos?: readonly DeckCombo[];
 }) {
   const [highlighted, setHighlightedRole] = useState<Tag | null>(null);
   const [highlightedRule, setHighlightedRule] = useState<BracketRule | null>(null);
@@ -50,7 +53,9 @@ export function SharedDeckView(props: {
     setHighlightedRule(rule);
     setHighlightedRole(null);
   };
-  const estimate = estimateBracket(props.format, props.lines.map(bracketLine));
+  const estimate = estimateBracket(props.format, props.lines.map(bracketLine), {
+    combos: props.combos,
+  });
   const highlightedNames = new Set(
     estimate?.findings.find((finding) => finding.rule === highlightedRule)?.cards ?? [],
   );

@@ -39,6 +39,7 @@ import {
   setQuantityAction,
   setTargetBracketAction,
   similarAction,
+  swapCardsAction,
   takeFromDeckAction,
   type BuilderDeck,
 } from "./actions";
@@ -142,7 +143,7 @@ export function DeckBuilder(props: {
   const commanderColors = commanderColorsOf(format, deck.lines, deck.rules);
   const problems = problemsOf(format, deck.lines, deck.rules);
   // The bracket, live like the problems (design doc 31). Null outside Commander.
-  const estimate = estimateBracket(format, deck.lines.map(bracketLine));
+  const estimate = estimateBracket(format, deck.lines.map(bracketLine), { combos: deck.combos });
   const [targetBracket, setTargetBracket] = useState(props.targetBracket);
   const [isSavingTarget, startSavingTarget] = useTransition();
   const warning = bracketWarning(estimate, targetBracket);
@@ -538,6 +539,23 @@ export function DeckBuilder(props: {
             to === "maybe"
               ? `Moved ${line.name} to the maybeboard.`
               : `Moved ${line.name} into the deck.`,
+        });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+      }
+    });
+  }
+
+  function swapCards(cutOracleId: string, cutName: string, addOracleId: string, addName: string) {
+    const request = ++latestChange.current;
+    startSaving(async () => {
+      const result = await swapCardsAction({ deckId, cutOracleId, addOracleId });
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        setMessage({
+          tone: "ok",
+          text: `Swapped ${cutName} (to maybeboard) for ${addName}.`,
         });
       } else {
         setMessage({ tone: "error", text: result.message });
@@ -1155,10 +1173,13 @@ export function DeckBuilder(props: {
           )}
           {showCuts && (
             <CutsPanel
+              deckId={deckId}
+              deckKey={`${deckKey}|${targetBracket ?? ""}`}
               lines={deck.lines}
               format={format}
               targetBracket={targetBracket}
               onMove={moveLine}
+              onSwap={swapCards}
               onSelect={(line) => {
                 selectFromDeck(line);
                 setTab("collection");

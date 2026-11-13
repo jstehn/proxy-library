@@ -1,5 +1,6 @@
 import { makeCatalogAdmin } from "./admin";
 import { makeEdhrecSync } from "./edhrec";
+import { makeEmbedCards } from "./embed";
 import type { CatalogDependencies } from "./ports";
 import { makeSync } from "./sync";
 
@@ -9,6 +10,7 @@ export function makeCatalog(dependencies: CatalogDependencies) {
     ...makeSync(dependencies),
     ...makeCatalogAdmin(dependencies),
     ...makeEdhrecSync(dependencies),
+    ...makeEmbedCards(dependencies),
   };
 }
 

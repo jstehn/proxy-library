@@ -43,8 +43,15 @@ export {
   type WishTarget,
 } from "./domain/wish";
 export {
+  isWishlistShared,
+  sharedWishlistFor,
+  sharedWishlists,
   wishedPrintings,
   wishesAtTarget,
   wishesForCard,
   wishlistAnswers,
+  type SharedWishCopy,
+  type SharedWishLine,
+  type SharedWishlist,
+  type SharedWishlistSummary,
 } from "./queries/wishlist";

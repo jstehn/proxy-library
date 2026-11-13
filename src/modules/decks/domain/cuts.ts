@@ -11,7 +11,7 @@ import {
   type ProfileLine,
   type Reason,
 } from "./suggest";
-import { qualityPrior } from "./rate";
+import { EMBED_SIM_BASELINE, qualityPrior, powerTierForBracket, type PowerTier } from "./rate";
 import { cardSignalIO, SIGNAL_LABELS, synergyMatches } from "./signals";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
@@ -35,6 +35,8 @@ export type CutLine = ProfileLine &
     edhrec?: EdhrecSignal | null;
     edhrecRank?: number | null;
     preconCount?: number | null;
+    /** Mean cosine similarity to top-5 other non-land/commander cards in the deck. */
+    embedSim?: number | null;
   }>;
 
 /** Why a card scores as it does; the builder and `rank_cuts` put these into words. */
@@ -54,7 +56,9 @@ export type CutReason =
   /** It takes the deck over the bracket the player aims for (design doc 31). */
   | Readonly<{ kind: "overBracket"; target: Bracket; flags: readonly BracketFlag[] }>
   /** You don't own every copy. */
-  | Readonly<{ kind: "notOwned"; short: number }>;
+  | Readonly<{ kind: "notOwned"; short: number }>
+  /** Strong text similarity to other cards in the deck (design doc 53). */
+  | Readonly<{ kind: "embedSim"; similarityPct: number }>;
 
 export type RankedCut = Readonly<{
   oracleId: string;
@@ -81,7 +85,33 @@ export const CUT_WEIGHTS = {
   strength: 0.5,
   edhrecSynergy: 2,
   edhrecInclusion: 1.5,
+  embedSim: 8,
 } as const;
+
+export type CutWeights = { readonly [K in keyof typeof CUT_WEIGHTS]: number };
+
+export const CUT_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, CutWeights>> = {
+  casual: {
+    ...CUT_WEIGHTS,
+    topHeavyPerMana: -0.5,
+    topHeavyMost: -1.5,
+    strength: 0.3,
+    edhrecInclusion: 1.0,
+  },
+  upgraded: CUT_WEIGHTS,
+  optimized: {
+    ...CUT_WEIGHTS,
+    topHeavyPerMana: -1.5,
+    topHeavyMost: -4.5,
+    strength: 0.8,
+    edhrecSynergy: 2.5,
+    edhrecInclusion: 2.0,
+  },
+};
+
+export function cutWeightsForBracket(targetBracket: Bracket | null): CutWeights {
+  return CUT_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
+}
 
 /** Average non-land mana value above which a curve counts as high (a rough guide per format). */
 function curveGuide(format: Format): number {
@@ -93,6 +123,7 @@ function curveGuide(format: Format): number {
  * Equal scores sort by name, then oracle id (invariant 5).
  */
 export function rankCuts(lines: readonly CutLine[], context: CutContext): RankedCut[] {
+  const weights = cutWeightsForBracket(context.targetBracket);
   const profile = deckProfile(lines, context.format);
   // Roles are judged below, against the targets; the fit is only themes, tribes and keywords.
   const fitProfile = { ...profile, gaps: [] };
@@ -156,20 +187,17 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
           const count = stats.tags[tag];
           const target = targets[tag];
           if (count <= target) {
-            score += CUT_WEIGHTS.neededRole;
+            score += weights.neededRole;
             reasons.push({ kind: "neededRole", tag, count, target });
-          } else if (count > target + CUT_WEIGHTS.surplusMargin) {
-            score += CUT_WEIGHTS.surplusRole;
+          } else if (count > target + weights.surplusMargin) {
+            score += weights.surplusRole;
             reasons.push({ kind: "surplusRole", tag, count, target });
           }
         }
       }
 
-      if (isHigh && line.manaValue >= CUT_WEIGHTS.topHeavyFrom) {
-        score += Math.max(
-          CUT_WEIGHTS.topHeavyMost,
-          CUT_WEIGHTS.topHeavyPerMana * (line.manaValue - 4),
-        );
+      if (isHigh && line.manaValue >= weights.topHeavyFrom) {
+        score += Math.max(weights.topHeavyMost, weights.topHeavyPerMana * (line.manaValue - 4));
         reasons.push({
           kind: "topHeavy",
           manaValue: line.manaValue,
@@ -179,19 +207,19 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
 
       const flags = bracketFlags(line).filter((flag) => overFlags.includes(flag));
       if (context.targetBracket !== null && flags.length > 0) {
-        score += CUT_WEIGHTS.overBracket;
+        score += weights.overBracket;
         reasons.push({ kind: "overBracket", target: context.targetBracket, flags });
       }
 
       if (line.owned < line.quantity) {
-        score += CUT_WEIGHTS.notOwned;
+        score += weights.notOwned;
         reasons.push({ kind: "notOwned", short: line.quantity - line.owned });
       }
 
       if (line.edhrec && (line.edhrec.synergy >= 0.15 || line.edhrec.inclusionRate >= 0.3)) {
         score +=
-          CUT_WEIGHTS.edhrecSynergy * Math.max(0, line.edhrec.synergy) +
-          CUT_WEIGHTS.edhrecInclusion * Math.max(0, line.edhrec.inclusionRate);
+          weights.edhrecSynergy * Math.max(0, line.edhrec.synergy) +
+          weights.edhrecInclusion * Math.max(0, line.edhrec.inclusionRate);
         reasons.push({
           kind: "edhrec",
           inclusionPct: Math.round(line.edhrec.inclusionRate * 100),
@@ -199,9 +227,14 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         });
       }
 
+      if (line.embedSim != null && line.embedSim > EMBED_SIM_BASELINE) {
+        score += weights.embedSim * (line.embedSim - EMBED_SIM_BASELINE);
+        reasons.push({ kind: "embedSim", similarityPct: Math.round(line.embedSim * 100) });
+      }
+
       const hasRichPrior = line.edhrecRank != null || (line.preconCount ?? 0) > 0;
       score += hasRichPrior
-        ? CUT_WEIGHTS.strength *
+        ? weights.strength *
           1.6 *
           qualityPrior({
             edhrecRank: line.edhrecRank,
@@ -209,8 +242,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
             rarity: line.rarity,
             priceCents: line.priceCents ?? null,
           })
-        : CUT_WEIGHTS.strength *
-          strength({ rarity: line.rarity, priceCents: line.priceCents ?? null });
+        : weights.strength * strength({ rarity: line.rarity, priceCents: line.priceCents ?? null });
       return { oracleId: line.oracleId, name: line.name, keepScore: score, reasons };
     })
     .sort(

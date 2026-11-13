@@ -114,6 +114,15 @@ export async function removeWishAction(formData: FormData): Promise<void> {
   refresh();
 }
 
+/** "Let other players see my wishlist" (design doc 50, off by default). */
+export async function setWishlistSharingAction(formData: FormData): Promise<void> {
+  const actor = await requireActor();
+  await getContainer().wishlist.setSharing(actor, formData.get("shared") === "on");
+  revalidatePath("/wishlist");
+  revalidatePath("/trades");
+  redirect("/wishlist");
+}
+
 const BuyForm = z.object({
   wishId: z.coerce.number().int().positive(),
   printingId: z.string().min(1),

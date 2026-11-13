@@ -131,4 +131,15 @@ describe("rankCuts", () => {
       synergyPct: 45,
     });
   });
+
+  it("gives a keep bonus for cards with high embedSim to the deck", () => {
+    const synergistic = line("Synergy Piece", { embedSim: 0.82 });
+    const offPlan = line("Random Bear", { embedSim: 0.45 });
+    const cuts = rankCuts([commander, synergistic, offPlan], {
+      format: "commander",
+      targetBracket: null,
+    });
+    expect(cuts.map((cut) => cut.name)).toEqual(["Random Bear", "Synergy Piece"]);
+    expect(cuts[1].reasons).toContainEqual({ kind: "embedSim", similarityPct: 82 });
+  });
 });

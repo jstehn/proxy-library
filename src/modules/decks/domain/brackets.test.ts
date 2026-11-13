@@ -94,6 +94,47 @@ describe("estimateBracket", () => {
     expect(estimate?.findings[0]?.cards).toEqual(["Rhystic Study", "Smothering Tithe"]);
   });
 
+  it("checks two-card combos when provided and removes combos from unchecked", () => {
+    const clean = estimateBracket("commander", [line("Llanowar Elves")], { combos: [] });
+    expect(clean?.floor).toBe(1);
+    expect(clean?.unchecked).toEqual(["intent"]);
+
+    const late = estimateBracket("commander", [line("Kiki-Jiki"), line("Zealous Conscripts")], {
+      combos: [
+        {
+          id: "c-late",
+          cards: ["Kiki-Jiki", "Zealous Conscripts"],
+          produces: ["Infinite creature tokens"],
+          forces: 3,
+        },
+      ],
+    });
+    expect(late?.floor).toBe(3);
+    expect(late?.unchecked).toEqual(["intent"]);
+    expect(late?.findings).toContainEqual({
+      rule: "twoCardCombos",
+      cards: ["Kiki-Jiki", "Zealous Conscripts"],
+      count: 1,
+      forces: 3,
+    });
+
+    const early = estimateBracket(
+      "commander",
+      [line("Thassa's Oracle"), line("Demonic Consultation")],
+      {
+        combos: [
+          {
+            id: "c-early",
+            cards: ["Thassa's Oracle", "Demonic Consultation"],
+            produces: ["Win the game"],
+            forces: 4,
+          },
+        ],
+      },
+    );
+    expect(early?.floor).toBe(4);
+  });
+
   it("never lowers the floor when a card is added, and never reaches 5 (invariants 2, 3)", () => {
     fc.assert(
       fc.property(fc.array(lineArbitrary, { maxLength: 12 }), lineArbitrary, (lines, added) => {

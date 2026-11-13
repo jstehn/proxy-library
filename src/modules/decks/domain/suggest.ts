@@ -1,6 +1,6 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
-import { rateCard, type CardRating, type RatingProfile } from "./rate";
+import { rateCard, type CardRating, type RatingOptions, type RatingProfile } from "./rate";
 import { deckSignalProfile, type DeckSignalProfile } from "./signals";
 import {
   deckStats,
@@ -42,6 +42,8 @@ export type CandidateCard = Readonly<{
   edhrecRank?: number | null;
   preconCount?: number | null;
   isGameChanger?: boolean;
+  comboPartners?: readonly string[] | null;
+  embedSim?: number | null;
 }>;
 
 export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
@@ -68,7 +70,9 @@ export type Reason =
   | Readonly<{ kind: "role"; tag: Tag; count?: number; target?: number }>
   | Readonly<{ kind: "keyword"; keyword: string }>
   | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>
-  | Readonly<{ kind: "synergy"; label: string }>;
+  | Readonly<{ kind: "synergy"; label: string }>
+  | Readonly<{ kind: "combo"; partners: readonly string[] }>
+  | Readonly<{ kind: "embedSim"; similarityPct: number }>;
 
 export type Scored = Readonly<{
   card: CandidateCard;
@@ -308,7 +312,7 @@ function edhrecFit(
   };
 }
 
-function toRatingProfile(profile: DeckProfile): RatingProfile {
+export function toRatingProfile(profile: DeckProfile): RatingProfile {
   return {
     format: profile.format ?? "commander",
     themes: profile.themes,
@@ -322,14 +326,31 @@ function toRatingProfile(profile: DeckProfile): RatingProfile {
 }
 
 /** How well a card fits a deck, or null if it shares nothing with it. */
-export function scoreForDeck(card: CandidateCard, profile: DeckProfile): Scored | null {
+export function scoreForDeck(
+  card: CandidateCard,
+  profile: DeckProfile,
+  options?: RatingOptions,
+): Scored | null {
   const { points, reasons } = deckFit(card, profile);
   const edhrec = edhrecFit(card.edhrec);
-  const rating = rateCard(card, toRatingProfile(profile));
+  const rating = rateCard(card, toRatingProfile(profile), options);
   const synergyPart = rating.parts.find((part) => part.kind === "synergy");
-  const totalPoints = points + (edhrec?.points ?? 0) + (synergyPart ? synergyPart.contribution : 0);
+  const comboPart = rating.parts.find((part) => part.kind === "combo");
+  const embedPart = rating.parts.find((part) => part.kind === "embedSim");
+  const totalPoints =
+    points +
+    (edhrec?.points ?? 0) +
+    (synergyPart ? synergyPart.contribution : 0) +
+    (comboPart ? comboPart.contribution : 0) +
+    (embedPart ? embedPart.contribution : 0);
   if (totalPoints <= 0) return null;
   if (synergyPart) reasons.push({ kind: "synergy", label: synergyPart.label });
+  if (comboPart && card.comboPartners && card.comboPartners.length > 0) {
+    reasons.push({ kind: "combo", partners: card.comboPartners });
+  }
+  if (embedPart && card.embedSim != null) {
+    reasons.push({ kind: "embedSim", similarityPct: Math.round(card.embedSim * 100) });
+  }
   if (edhrec !== null) reasons.push(edhrec.reason);
   return {
     card,

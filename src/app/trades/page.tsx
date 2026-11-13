@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { sharedRealCollections } from "@/modules/real-collection";
 import { tradesFor, type TradeView } from "@/modules/trades";
+import { sharedWishlists } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
 
-function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }) {
+function TradeLine(props: {
+  trade: TradeView;
+  sharingReal: ReadonlySet<string>;
+  sharingWishlist: ReadonlySet<string>;
+}) {
   const { trade } = props;
   const other = trade.yourSide === "proposer" ? trade.recipient : trade.proposer;
   const yours = trade.items.filter((item) => item.from === trade.yourSide);
@@ -16,10 +21,19 @@ function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }
       <Link href={`/trades/${trade.id}`} className="font-medium underline">
         {trade.yourSide === "proposer" ? `To ${other.displayName}` : `From ${other.displayName}`}
       </Link>
-      {props.sharingReal.has(other.userId) && (
-        <Link href={`/players/${other.userId}/real`} className="text-muted text-xs underline">
-          {other.displayName}&apos;s real collection
-        </Link>
+      {(props.sharingReal.has(other.userId) || props.sharingWishlist.has(other.userId)) && (
+        <span className="text-muted flex flex-wrap gap-2 text-xs">
+          {props.sharingReal.has(other.userId) && (
+            <Link href={`/players/${other.userId}/real`} className="underline">
+              {other.displayName}&apos;s real collection
+            </Link>
+          )}
+          {props.sharingWishlist.has(other.userId) && (
+            <Link href={`/players/${other.userId}/wishlist`} className="underline">
+              {other.displayName}&apos;s wishlist
+            </Link>
+          )}
+        </span>
       )}
       <span className="text-sm">
         You give: {yours.map(itemText).join(", ") || "nothing"} · You get:{" "}
@@ -36,12 +50,14 @@ function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }
 export default async function TradesPage() {
   const actor = await requireActor();
   const { db } = getContainer();
-  const [trades, shared] = await Promise.all([
+  const [trades, shared, sharedWishes] = await Promise.all([
     tradesFor(db, actor.userId),
     sharedRealCollections(db),
+    sharedWishlists(db),
   ]);
-  // Players who share their real collection get a link next to their name (design doc 16).
+  // Players who share their real collection or wishlist get a link next to their name.
   const sharingReal = new Set(shared.map((player) => player.userId));
+  const sharingWishlist = new Set(sharedWishes.map((player) => player.userId));
   const forYou = trades.filter(
     (trade) => trade.status === "proposed" && trade.yourSide === "recipient",
   );
@@ -58,7 +74,12 @@ export default async function TradesPage() {
       ) : (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
           {list.map((trade) => (
-            <TradeLine key={trade.id} trade={trade} sharingReal={sharingReal} />
+            <TradeLine
+              key={trade.id}
+              trade={trade}
+              sharingReal={sharingReal}
+              sharingWishlist={sharingWishlist}
+            />
           ))}
         </ul>
       )}

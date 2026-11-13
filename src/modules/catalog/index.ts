@@ -22,8 +22,16 @@ export type {
   ArtworkStore,
   SyncKind,
   SyncRunRepository,
+  TextEmbedder,
+  EmbeddingRepository,
   WpnGateway,
 } from "./application/ports";
+export {
+  cleanCardText,
+  EMBEDDING_DIMS,
+  EMBEDDING_MODEL,
+  EMBEDDING_TEXT_VERSION,
+} from "./domain/embedding-text";
 export type { SyncSummary } from "./application/sync";
 export {
   FINISHES,

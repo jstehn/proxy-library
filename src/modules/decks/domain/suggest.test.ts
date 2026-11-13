@@ -293,3 +293,20 @@ describe("EDHREC community signal scoring", () => {
     expect(scoreForDeck(lowSignal, EMPTY)).toBeNull();
   });
 });
+
+describe("Commander Spellbook combo partner scoring", () => {
+  it("boosts combo partners in bracket 3/4+ and ignores them in casual bracket 2", () => {
+    const partner = candidate("Zealous Conscripts", {
+      comboPartners: ["Kiki-Jiki, Mirror Breaker"],
+    });
+    const upgraded = scoreForDeck(partner, EMPTY, { targetBracket: 3 });
+    expect(upgraded).not.toBeNull();
+    expect(upgraded?.reasons).toContainEqual({
+      kind: "combo",
+      partners: ["Kiki-Jiki, Mirror Breaker"],
+    });
+
+    const casual = scoreForDeck(partner, EMPTY, { targetBracket: 2 });
+    expect(casual).toBeNull();
+  });
+});
