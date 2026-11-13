@@ -107,9 +107,8 @@ export const RATING_WEIGHTS = {
   keywordCap: 2,
   embedSim: 7.227,
   roleNeed: 0.643,
-  edhrecSynergy: 2.2,
+  edhrecLift: 0.95,
   edhrecInclusion: 1.2,
-  edhrecNegative: -0.9,
   combo: 1.0,
   quality: 0.834,
   topHeavyPenalty: -0.395,
@@ -145,7 +144,7 @@ export const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> 
     keyword: 0.256,
     embedSim: 5.85,
     roleNeed: 0.708,
-    edhrecSynergy: 2.5,
+    edhrecLift: 1.1,
     edhrecInclusion: 1.5,
     combo: 1.6,
     quality: 1.294,
@@ -203,15 +202,26 @@ function slotSaturationThreshold(format: Format): number {
   return format === "commander" ? 20 : 12;
 }
 
+const LIFT_EPS = 0.005;
+
+/**
+ * Smoothed log-lift from EDHREC inclusion rate and synergy (`baseline = inclusionRate - synergy`).
+ * Symmetric around 0: staples with `synergy ≈ 0` score `≈ 0` lift instead of being penalized.
+ */
+export function edhrecLogLift(inclusionRate: number, synergy: number): number {
+  const inc = Math.max(LIFT_EPS, Math.min(1, inclusionRate));
+  const baseline = Math.max(LIFT_EPS, Math.min(1, inclusionRate - synergy));
+  return Math.log(inc / baseline);
+}
+
 export type RatingFeatureVector = Readonly<{
   synergyTotal: number;
   themeCount: number;
   tribeCount: number;
   keywordCount: number;
   embedSimDelta: number;
-  edhrecSynergy: number;
+  edhrecLift: number;
   edhrecInclusion: number;
-  edhrecNegative: number;
   comboCount: number;
   roleNeed: number;
   quality: number;
@@ -279,17 +289,18 @@ function computeRatingFeatures(
       ? card.embedSim - EMBED_SIM_BASELINE
       : 0;
 
-  let edhrecSynergy = 0;
+  let edhrecLift = 0;
   let edhrecInclusion = 0;
-  let edhrecNegative = 0;
   if (card.edhrec) {
     const totalDecks = card.edhrec.totalDecks ?? 200;
     const confidence = Math.min(1, Math.max(0.25, totalDecks / 100));
-    if (card.edhrec.synergy >= 0.05 || card.edhrec.inclusionRate >= 0.15) {
-      edhrecSynergy = confidence * Math.max(0, card.edhrec.synergy);
-      edhrecInclusion = confidence * Math.max(0, card.edhrec.inclusionRate);
-    } else if (card.edhrec.synergy <= -0.1 && totalDecks >= 50) {
-      edhrecNegative = Math.abs(card.edhrec.synergy);
+    edhrecInclusion = confidence * Math.max(0, card.edhrec.inclusionRate);
+    const rawLift = Math.max(
+      -2,
+      Math.min(2, edhrecLogLift(card.edhrec.inclusionRate, card.edhrec.synergy)),
+    );
+    if (rawLift >= 0 || totalDecks >= 50) {
+      edhrecLift = confidence * rawLift;
     }
   }
 
@@ -331,9 +342,8 @@ function computeRatingFeatures(
       tribeCount,
       keywordCount: cappedKeywords.length,
       embedSimDelta,
-      edhrecSynergy,
+      edhrecLift,
       edhrecInclusion,
-      edhrecNegative,
       comboCount,
       roleNeed,
       quality,
@@ -411,22 +421,20 @@ export function rateCard(
     });
   }
 
-  // 3. EDHREC community signal (#86)
+  // 3. EDHREC community signal (#86, Phase 58: separate inclusion staple power from log-lift)
   if (card.edhrec) {
-    if (features.edhrecSynergy > 0 || features.edhrecInclusion > 0) {
-      const contribution =
-        weights.edhrecSynergy * features.edhrecSynergy +
-        weights.edhrecInclusion * features.edhrecInclusion;
+    if (features.edhrecInclusion > 0) {
       parts.push({
         kind: "edhrec",
-        contribution,
-        label: `EDHREC ${Math.round(card.edhrec.inclusionRate * 100)}% (${card.edhrec.synergy >= 0 ? "+" : ""}${Math.round(card.edhrec.synergy * 100)}% syn)`,
+        contribution: weights.edhrecInclusion * features.edhrecInclusion,
+        label: `EDHREC ${Math.round(card.edhrec.inclusionRate * 100)}% inclusion`,
       });
-    } else if (features.edhrecNegative > 0) {
+    }
+    if (Math.abs(features.edhrecLift) >= 0.05) {
       parts.push({
         kind: "edhrec",
-        contribution: weights.edhrecNegative * features.edhrecNegative,
-        label: `low EDHREC synergy (${Math.round(card.edhrec.synergy * 100)}%)`,
+        contribution: weights.edhrecLift * features.edhrecLift,
+        label: `EDHREC ${features.edhrecLift >= 0 ? "+" : ""}${features.edhrecLift.toFixed(2)} lift`,
       });
     }
   }
@@ -532,7 +540,7 @@ type TrainableKey =
   | "keyword"
   | "embedSim"
   | "roleNeed"
-  | "edhrecSynergy"
+  | "edhrecLift"
   | "edhrecInclusion"
   | "combo"
   | "quality"
@@ -551,7 +559,7 @@ const TRAINABLE_KEYS: readonly {
   { weight: "keyword", feature: "keywordCount", sign: 1, maxAbs: 2.0 },
   { weight: "embedSim", feature: "embedSimDelta", sign: 1, maxAbs: 14.0 },
   { weight: "roleNeed", feature: "roleNeed", sign: 1, maxAbs: 3.0 },
-  { weight: "edhrecSynergy", feature: "edhrecSynergy", sign: 1, maxAbs: 6.0 },
+  { weight: "edhrecLift", feature: "edhrecLift", sign: 1, maxAbs: 4.0 },
   { weight: "edhrecInclusion", feature: "edhrecInclusion", sign: 1, maxAbs: 5.0 },
   { weight: "combo", feature: "comboCount", sign: 1, maxAbs: 3.0 },
   { weight: "quality", feature: "quality", sign: 1, maxAbs: 4.0 },
@@ -589,7 +597,7 @@ export function fitLogisticWeights(
     keyword: initial.keyword,
     embedSim: initial.embedSim,
     roleNeed: initial.roleNeed,
-    edhrecSynergy: initial.edhrecSynergy,
+    edhrecLift: initial.edhrecLift,
     edhrecInclusion: initial.edhrecInclusion,
     combo: initial.combo,
     quality: initial.quality,
@@ -605,7 +613,7 @@ export function fitLogisticWeights(
       keyword: 0,
       embedSim: 0,
       roleNeed: 0,
-      edhrecSynergy: 0,
+      edhrecLift: 0,
       edhrecInclusion: 0,
       combo: 0,
       quality: 0,
@@ -624,7 +632,7 @@ export function fitLogisticWeights(
         w.keyword * f.keywordCount +
         w.embedSim * f.embedSimDelta +
         w.roleNeed * f.roleNeed +
-        w.edhrecSynergy * f.edhrecSynergy +
+        w.edhrecLift * f.edhrecLift +
         w.edhrecInclusion * f.edhrecInclusion +
         w.combo * f.comboCount +
         w.quality * f.quality +
@@ -658,7 +666,7 @@ export function fitLogisticWeights(
     keyword: Number(w.keyword.toFixed(3)),
     embedSim: Number(w.embedSim.toFixed(3)),
     roleNeed: Number(w.roleNeed.toFixed(3)),
-    edhrecSynergy: Number(w.edhrecSynergy.toFixed(3)),
+    edhrecLift: Number(w.edhrecLift.toFixed(3)),
     edhrecInclusion: Number(w.edhrecInclusion.toFixed(3)),
     combo: Number(w.combo.toFixed(3)),
     quality: Number(w.quality.toFixed(3)),

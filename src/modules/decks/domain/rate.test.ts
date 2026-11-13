@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  edhrecLogLift,
   fitLogisticWeights,
   powerTierForBracket,
   qualityPrior,
@@ -215,5 +216,26 @@ describe("powerTierForBracket & weightsForBracket", () => {
     );
     expect(fitted.embedSim).toBeGreaterThan(0);
     expect(fitted.topHeavyPenalty).toBeLessThanOrEqual(0);
+  });
+});
+
+describe("edhrecLogLift & staple protection", () => {
+  it("computes symmetric log-lift around 0 and protects ubiquitous staples from negative lift", () => {
+    expect(edhrecLogLift(0.8, 0)).toBeCloseTo(0, 5);
+    expect(edhrecLogLift(0.6, 0.4)).toBeGreaterThan(1);
+    expect(edhrecLogLift(0.2, -0.4)).toBeCloseTo(-edhrecLogLift(0.6, 0.4), 5);
+
+    const staple = rateCard(
+      {
+        ...baseCard,
+        name: "Rhystic Study",
+        roles: [],
+        edhrec: { inclusionRate: 0.65, synergy: -0.02, totalDecks: 1500 },
+      },
+      emptyProfile,
+    );
+    const edhrecParts = staple.parts.filter((p) => p.kind === "edhrec");
+    expect(edhrecParts.some((p) => p.contribution > 0 && p.label.includes("inclusion"))).toBe(true);
+    expect(edhrecParts.every((p) => p.contribution >= 0)).toBe(true);
   });
 });

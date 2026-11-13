@@ -1,6 +1,12 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
-import { rateCard, type CardRating, type RatingOptions, type RatingProfile } from "./rate";
+import {
+  edhrecLogLift,
+  rateCard,
+  type CardRating,
+  type RatingOptions,
+  type RatingProfile,
+} from "./rate";
 import { deckSignalProfile, type DeckSignalProfile } from "./signals";
 import {
   deckStats,
@@ -69,7 +75,7 @@ export type Reason =
   | Readonly<{ kind: "tribe"; tribe: string }>
   | Readonly<{ kind: "role"; tag: Tag; count?: number; target?: number }>
   | Readonly<{ kind: "keyword"; keyword: string }>
-  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>
+  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number; lift?: number }>
   | Readonly<{ kind: "synergy"; label: string }>
   | Readonly<{ kind: "combo"; partners: readonly string[] }>
   | Readonly<{ kind: "embedSim"; similarityPct: number }>;
@@ -299,8 +305,9 @@ function edhrecFit(
   if (edhrec.synergy < EDHREC_MIN_SYNERGY && edhrec.inclusionRate < EDHREC_MIN_INCLUSION) {
     return null;
   }
+  const lift = Math.max(0, Math.min(2, edhrecLogLift(edhrec.inclusionRate, edhrec.synergy)));
   const points =
-    WEIGHTS.edhrecSynergy * Math.max(0, edhrec.synergy) +
+    WEIGHTS.edhrecSynergy * (lift / 2) +
     WEIGHTS.edhrecInclusion * Math.max(0, edhrec.inclusionRate);
   return {
     points,
@@ -308,6 +315,7 @@ function edhrecFit(
       kind: "edhrec",
       inclusionPct: Math.round(edhrec.inclusionRate * 100),
       synergyPct: Math.round(edhrec.synergy * 100),
+      lift: Math.round(lift * 100) / 100,
     },
   };
 }

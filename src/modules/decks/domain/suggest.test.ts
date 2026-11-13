@@ -289,6 +289,7 @@ describe("EDHREC community signal scoring", () => {
       kind: "edhrec",
       inclusionPct: 68,
       synergyPct: 34,
+      lift: 0.69,
     });
     expect(scoreForDeck(lowSignal, EMPTY)).toBeNull();
   });

@@ -129,7 +129,9 @@ describe("rankCuts", () => {
       kind: "edhrec",
       inclusionPct: 72,
       synergyPct: 45,
+      lift: 0.98,
     });
+    expect(cuts[1].reasons.some((r) => r.kind === "noFit")).toBe(false);
   });
 
   it("gives a keep bonus for cards with high embedSim to the deck", () => {

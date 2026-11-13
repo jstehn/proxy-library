@@ -11,7 +11,13 @@ import {
   type ProfileLine,
   type Reason,
 } from "./suggest";
-import { EMBED_SIM_BASELINE, qualityPrior, powerTierForBracket, type PowerTier } from "./rate";
+import {
+  EMBED_SIM_BASELINE,
+  edhrecLogLift,
+  qualityPrior,
+  powerTierForBracket,
+  type PowerTier,
+} from "./rate";
 import { cardSignalIO, SIGNAL_LABELS, synergyMatches } from "./signals";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
@@ -46,7 +52,7 @@ export type CutReason =
   /** What it does fit (design doc 20's reasons): why to keep it. */
   | Readonly<{ kind: "fits"; reasons: readonly Reason[] }>
   /** Popular or high-synergy with this commander on EDHREC (design doc 45). */
-  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number }>
+  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number; lift?: number }>
   /** The deck has more of this role than its target needs. */
   | Readonly<{ kind: "surplusRole"; tag: TargetedTag; count: number; target: number }>
   /** The deck has no more of this role than it needs: cutting it would leave a gap. */
@@ -177,8 +183,9 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         allFitReasons.push({ kind: "synergy", label: `matches ${top}` });
       }
       const totalFitPoints = fit.points + Math.min(3, synergy.total * 0.75);
-      if (totalFitPoints === 0) reasons.push({ kind: "noFit" });
-      else reasons.push({ kind: "fits", reasons: allFitReasons });
+      const isStaple = Boolean(line.edhrec && line.edhrec.inclusionRate >= 0.25);
+      if (totalFitPoints === 0 && !isStaple) reasons.push({ kind: "noFit" });
+      else if (totalFitPoints > 0) reasons.push({ kind: "fits", reasons: allFitReasons });
       score += totalFitPoints;
 
       if (targets !== null) {
@@ -216,14 +223,19 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         reasons.push({ kind: "notOwned", short: line.quantity - line.owned });
       }
 
-      if (line.edhrec && (line.edhrec.synergy >= 0.15 || line.edhrec.inclusionRate >= 0.3)) {
+      if (line.edhrec && (line.edhrec.synergy >= 0.15 || line.edhrec.inclusionRate >= 0.25)) {
+        const lift = Math.max(
+          0,
+          Math.min(2, edhrecLogLift(line.edhrec.inclusionRate, line.edhrec.synergy)),
+        );
         score +=
-          weights.edhrecSynergy * Math.max(0, line.edhrec.synergy) +
+          weights.edhrecSynergy * lift +
           weights.edhrecInclusion * Math.max(0, line.edhrec.inclusionRate);
         reasons.push({
           kind: "edhrec",
           inclusionPct: Math.round(line.edhrec.inclusionRate * 100),
           synergyPct: Math.round(line.edhrec.synergy * 100),
+          lift: Math.round(lift * 100) / 100,
         });
       }
 
