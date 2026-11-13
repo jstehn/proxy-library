@@ -21,6 +21,7 @@ describe("parseList", () => {
         finish: null,
         board: "main",
         heading: null,
+        tags: [],
       },
       {
         quantity: 2,
@@ -30,6 +31,7 @@ describe("parseList", () => {
         finish: null,
         board: "main",
         heading: null,
+        tags: [],
       },
       {
         quantity: 1,
@@ -39,6 +41,7 @@ describe("parseList", () => {
         finish: null,
         board: "main",
         heading: null,
+        tags: [],
       },
       {
         quantity: 1,
@@ -48,6 +51,7 @@ describe("parseList", () => {
         finish: null,
         board: "main",
         heading: null,
+        tags: [],
       },
     ]);
   });
@@ -144,5 +148,29 @@ describe("parseList", () => {
     expect(count("commander")).toBe(1);
     expect(count("main")).toBe(99);
     expect(lines.some((line) => /\(\d+\)$/.test(line.name))).toBe(false);
+  });
+
+  it("parses Moxfield #Tags and Archidekt [Category] markers into tags and heading", () => {
+    const { lines, unreadable } = parseList(
+      ["1 Sol Ring (C21) 263 *F* #Ramp #Fast_Mana", "1 Rhystic Study [Draw, Staple{top}]"].join(
+        "\n",
+      ),
+    );
+    expect(unreadable).toEqual([]);
+    expect(lines[0]).toMatchObject({
+      quantity: 1,
+      name: "Sol Ring",
+      setCode: "C21",
+      collectorNumber: "263",
+      finish: "foil",
+      heading: "Ramp",
+      tags: ["Ramp", "Fast Mana"],
+    });
+    expect(lines[1]).toMatchObject({
+      quantity: 1,
+      name: "Rhystic Study",
+      heading: "Draw",
+      tags: ["Draw", "Staple"],
+    });
   });
 });

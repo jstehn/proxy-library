@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { parseList } from "@/shared/card-search";
-import { deckText, EXPORTERS, exportWithHeadings, shortList, type ExportLine } from "./list-format";
+import {
+  deckText,
+  EXPORTERS,
+  exportWithHeadings,
+  exportWithTags,
+  shortList,
+  type ExportLine,
+} from "./list-format";
 
 describe("exporters (Strategy)", () => {
   const line = (overrides: Partial<ExportLine> & Pick<ExportLine, "name">): ExportLine => ({
@@ -109,6 +116,36 @@ describe("shortList", () => {
     expect(parseList(text).lines.map((line) => [line.quantity, line.name, line.finish])).toEqual([
       [4, "Lightning Bolt", null],
       [1, "The One Ring", "foil"],
+    ]);
+  });
+});
+
+describe("exportWithTags", () => {
+  it("exports main-deck headings as Moxfield #Tags and round-trips through parseList", () => {
+    const exported = exportWithTags([
+      {
+        quantity: 1,
+        name: "Sol Ring",
+        board: "main",
+        setCode: "C21",
+        collectorNumber: "263",
+        heading: "Mana Fixers",
+      },
+      {
+        quantity: 1,
+        name: "Forest",
+        board: "main",
+        setCode: null,
+        collectorNumber: null,
+        heading: null,
+      },
+    ]);
+    expect(exported).toContain("1 Sol Ring (C21) 263 #Mana_Fixers");
+    const reparsed = parseList(exported);
+    expect(reparsed.unreadable).toEqual([]);
+    expect(reparsed.lines.map((l) => [l.name, l.heading])).toEqual([
+      ["Sol Ring", "Mana Fixers"],
+      ["Forest", null],
     ]);
   });
 });

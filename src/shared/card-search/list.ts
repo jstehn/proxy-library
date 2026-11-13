@@ -19,6 +19,8 @@ export type ListLine = Readonly<{
    * null under a board header or a card type's title ("Creatures (30)"). Design doc 34.
    */
   heading: string | null;
+  /** Moxfield `#Tag` or Archidekt `[Category]` tags found on the line. */
+  tags: readonly string[];
 }>;
 
 export type ParsedList = Readonly<{ lines: ListLine[]; unreadable: string[] }>;
@@ -109,6 +111,31 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
       ).trim();
     }
 
+    // Trailing Moxfield #Tags and Archidekt [Category] / [Tag1, Tag2] markers.
+    const tags: string[] = [];
+    let stripped = true;
+    while (stripped) {
+      stripped = false;
+      const hashMatch = /\s+#([A-Za-z0-9_/-]+)$/.exec(line);
+      if (hashMatch !== null) {
+        const tag = hashMatch[1].replace(/_/g, " ").trim();
+        if (tag !== "") tags.unshift(tag);
+        line = line.slice(0, hashMatch.index).trim();
+        stripped = true;
+        continue;
+      }
+      const bracketMatch = /\s+\[([^\]]+)\]$/.exec(line);
+      if (bracketMatch !== null) {
+        const rawCats = bracketMatch[1]
+          .split(",")
+          .map((c) => c.replace(/\{[^}]*\}/g, "").trim())
+          .filter((c) => c !== "");
+        tags.unshift(...rawCats);
+        line = line.slice(0, bracketMatch.index).trim();
+        stripped = true;
+      }
+    }
+
     const match = LINE.exec(line);
     const quantity = match?.[1] === undefined ? 1 : Number(match[1]);
     const name = match?.[2]?.trim() ?? "";
@@ -116,6 +143,12 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
       unreadable.push(raw.trim());
       continue;
     }
+
+    const tagHeading =
+      heading === null && lineBoard === "main"
+        ? (tags.find((t) => !isReservedTitle(t)) ?? null)
+        : heading;
+
     lines.push({
       quantity,
       name,
@@ -123,7 +156,8 @@ export function parseList(text: string, options: ListOptions = {}): ParsedList {
       collectorNumber: match[4] ?? null,
       finish,
       board: lineBoard,
-      heading: lineBoard === "main" ? heading : null,
+      heading: lineBoard === "main" ? tagHeading : null,
+      tags,
     });
   }
   return { lines, unreadable };

@@ -87,6 +87,21 @@ export function exportWithHeadings(
   return sections(lines, withPrinting, headings);
 }
 
+/**
+ * Exports the list with Moxfield-style inline `#Tag` markers for main-deck headings
+ * (spaces replaced with `_`), which `parseList` reads back into `heading` and `tags`.
+ */
+export function exportWithTags(lines: readonly ExportLine[]): string {
+  return sections(lines, (line) => {
+    const base = withPrinting(line);
+    if (line.board !== "main" || line.heading === null || line.heading.trim() === "") {
+      return base;
+    }
+    const tag = line.heading.trim().replace(/\s+/g, "_");
+    return `${base} #${tag}`;
+  });
+}
+
 /** A deck line for the Edit as text box (design doc 23). */
 export type DeckTextLine = Readonly<{
   quantity: number;
