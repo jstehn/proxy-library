@@ -39,7 +39,7 @@ export default async function SetPage(props: PageProps<"/sets/[code]">) {
         <SetSymbol keyruneCode={set.keyruneCode} className="text-4xl" />
         <div>
           <h1 className="text-2xl font-semibold">{set.name}</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {set.code} · released {set.releaseDate} · {printings.length} printings · hover a card to
             read it
           </p>

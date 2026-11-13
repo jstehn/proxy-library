@@ -15,7 +15,7 @@ function Table(props: { rows: readonly SearchHelpRow[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
-        <thead className="text-xs text-zinc-500">
+        <thead className="text-muted text-xs">
           <tr>
             <th className="py-1 pr-4 font-medium">Write</th>
             <th className="py-1 pr-4 font-medium">Finds</th>
@@ -54,7 +54,7 @@ export default async function SearchHelpPage() {
       </section>
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Keywords</h2>
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           Numbers and colors take <code>:</code> <code>=</code> <code>!=</code> <code>&lt;</code>{" "}
           <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code>.
         </p>
@@ -68,7 +68,7 @@ export default async function SearchHelpPage() {
               <dt className="font-mono">
                 {IS_VALUES[group].map((value) => `is:${value}`).join("  ")}
               </dt>
-              <dd className="text-zinc-500">{IS_DESCRIPTIONS[group]}</dd>
+              <dd className="text-muted">{IS_DESCRIPTIONS[group]}</dd>
             </div>
           ))}
         </dl>

@@ -116,7 +116,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
       />
 
       {result.rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           {isFiltered ? "No real cards match these filters." : "No real cards yet. "}
           {!isFiltered && (
             <>
@@ -145,7 +145,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
         <section className="flex flex-col gap-2">
           <h2 className="font-medium">Products you own for real</h2>
           {products.length === 0 ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-muted text-sm">
               None yet. On a set&apos;s{" "}
               <Link href="/store" className="underline">
                 store page
@@ -160,7 +160,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
                     <Link href={`/store/${product.setCode}`} className="font-medium underline">
                       {product.name}
                     </Link>{" "}
-                    <span className="text-zinc-500">
+                    <span className="text-muted">
                       added <LocalTime iso={product.addedAt} />
                     </span>
                   </span>

@@ -48,7 +48,7 @@ export function RealProductForm(props: {
             I own this for real
           </SubmitButton>
           {props.ownedForReal > 0 && (
-            <span className="text-xs text-zinc-500">You own {props.ownedForReal} for real</span>
+            <span className="text-muted text-xs">You own {props.ownedForReal} for real</span>
           )}
         </form>
       )}

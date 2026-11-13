@@ -193,7 +193,7 @@ export function DeckList(props: {
 
       {commanders.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
             Commander ({count(commanders)})
           </h3>
           <div className="grid grid-cols-2 gap-3">
@@ -232,7 +232,7 @@ export function DeckList(props: {
       )}
 
       {props.lines.length === 0 && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           {props.readOnly
             ? "Nothing in this deck yet."
             : "Empty so far. Select cards from your collection and add them."}
@@ -283,7 +283,7 @@ export function DeckList(props: {
         // The maybeboard isn't part of the deck: it stays closed until you open it.
         return group.collapsed ? (
           <details key={group.title} className="flex flex-col gap-1">
-            <summary className="cursor-pointer text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            <summary className="text-muted cursor-pointer text-xs font-medium tracking-wide uppercase">
               {heading} · not counted
             </summary>
             {body}
@@ -300,9 +300,7 @@ export function DeckList(props: {
                 onRename={props.onRenameHeading}
               />
             ) : (
-              <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-                {heading}
-              </h3>
+              <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{heading}</h3>
             )}
             {body}
           </div>
@@ -377,7 +375,7 @@ function HeadingTitle(props: {
   }
   return (
     <div className="flex items-center gap-1">
-      <h3 className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-zinc-500 uppercase">
+      <h3 className="text-muted min-w-0 flex-1 truncate text-xs font-medium tracking-wide uppercase">
         {props.title}
       </h3>
       {props.onMove !== undefined && (

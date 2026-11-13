@@ -93,7 +93,7 @@ export function SelectedCard(props: {
               type="button"
               onClick={props.onClose}
               aria-label="Close the selected card"
-              className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
             >
               ✕
             </button>
@@ -248,12 +248,12 @@ export function SelectedCard(props: {
             Cards like this
           </button>
         ) : props.similar === "loading" ? (
-          <p className="text-xs text-zinc-500">Looking for cards like this…</p>
+          <p className="text-muted text-xs">Looking for cards like this…</p>
         ) : props.similar.owned.length + props.similar.store.length === 0 ? (
-          <p className="text-xs text-zinc-500">Nothing like it in your collection or the store.</p>
+          <p className="text-muted text-xs">Nothing like it in your collection or the store.</p>
         ) : (
           <>
-            <h4 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            <h4 className="text-muted text-xs font-medium tracking-wide uppercase">
               Cards like this
             </h4>
             <HiddenOverTarget count={props.similar.hiddenOverTarget} />
@@ -285,10 +285,10 @@ function OtherDecks(props: {
   free: number;
   onTake: (use: OtherDeckUse, count: number) => void;
 }) {
-  if (props.uses === "loading") return <p className="text-zinc-500">Finding your other decks…</p>;
+  if (props.uses === "loading") return <p className="text-muted">Finding your other decks…</p>;
   return (
     <div>
-      <p className="text-zinc-500">Also in your other decks:</p>
+      <p className="text-muted">Also in your other decks:</p>
       <ul aria-label="Other decks using it" className="mt-1 flex flex-col gap-1">
         {props.uses.map((use) => {
           const count = copiesToTake(props.wanted, props.free, use.available);
@@ -297,7 +297,7 @@ function OtherDecks(props: {
               <Link href={`/decks/${use.deckId}`} className="font-medium underline">
                 {use.name}
               </Link>
-              <span className="text-zinc-500 tabular-nums">
+              <span className="text-muted tabular-nums">
                 {use.quantity === use.available
                   ? `has ${use.quantity}`
                   : use.available === 0
@@ -324,7 +324,7 @@ function OtherDecks(props: {
 function Fact(props: { label: string; value: string }) {
   return (
     <div className="flex gap-1">
-      <dt className="text-zinc-500">{props.label}</dt>
+      <dt className="text-muted">{props.label}</dt>
       <dd className="font-medium tabular-nums">{props.value}</dd>
     </div>
   );

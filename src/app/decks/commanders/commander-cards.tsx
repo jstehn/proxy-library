@@ -92,9 +92,9 @@ export function CommanderCards(props: { oracleId: string; withReal: boolean }) {
       {open && (
         <div className="flex w-full flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
           {cards === "loading" || cards === null ? (
-            <p className="text-zinc-500">Looking through your cards…</p>
+            <p className="text-muted">Looking through your cards…</p>
           ) : cards === "failed" ? (
-            <p className="text-zinc-500">Couldn&apos;t look this commander up.</p>
+            <p className="text-muted">Couldn&apos;t look this commander up.</p>
           ) : (
             <CardsView cards={cards} />
           )}
@@ -110,9 +110,9 @@ function CardsView(props: { cards: CommanderCardsView }) {
   return (
     <>
       <section className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium text-zinc-500 uppercase">Your on-plan cards</h3>
+        <h3 className="text-muted text-xs font-medium uppercase">Your on-plan cards</h3>
         {cards.onPlan.length === 0 ? (
-          <p className="text-zinc-500">
+          <p className="text-muted">
             {cards.plan === ""
               ? "Its text leads nothing these rules read, so no card counts as on-plan."
               : `None of your cards share ${cards.plan}.`}
@@ -121,14 +121,14 @@ function CardsView(props: { cards: CommanderCardsView }) {
           <ul className="flex flex-col gap-0.5">
             {cards.onPlan.map((card) => (
               <li key={card.name}>
-                {card.name} <span className="text-xs text-zinc-500">{card.reasons}</span>
+                {card.name} <span className="text-muted text-xs">{card.reasons}</span>
               </li>
             ))}
           </ul>
         )}
       </section>
       <section className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium text-zinc-500 uppercase">Your cards by role</h3>
+        <h3 className="text-muted text-xs font-medium uppercase">Your cards by role</h3>
         <ul className="flex flex-col gap-1">
           {cards.roles.map((role) => (
             <li key={role.label}>
@@ -146,9 +146,9 @@ function CardsView(props: { cards: CommanderCardsView }) {
         </ul>
       </section>
       <section className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium text-zinc-500 uppercase">What the rest might cost</h3>
+        <h3 className="text-muted text-xs font-medium uppercase">What the rest might cost</h3>
         {cards.missing.picks.length === 0 ? (
-          <p className="text-zinc-500">Nothing to add from the store for the roles or slots.</p>
+          <p className="text-muted">Nothing to add from the store for the roles or slots.</p>
         ) : (
           <>
             <p>
@@ -163,7 +163,7 @@ function CardsView(props: { cards: CommanderCardsView }) {
               <ul className="mt-1 flex flex-col gap-0.5 text-xs">
                 {cards.missing.picks.map((pick) => (
                   <li key={pick.name}>
-                    {pick.name} <span className="text-zinc-500">({pick.fills})</span>{" "}
+                    {pick.name} <span className="text-muted">({pick.fills})</span>{" "}
                     {pick.priceCents !== null && Cents.format(Cents.of(pick.priceCents))}
                   </li>
                 ))}

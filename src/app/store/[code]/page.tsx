@@ -62,7 +62,7 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
         />
         <div>
           <h1 className="text-2xl font-semibold">{set.name}</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {set.code} · released {set.releaseDate} · prices are MSRP, or more when the cards inside
             sell back for more
           </p>
@@ -99,9 +99,9 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     <span className="flex flex-col text-sm tabular-nums">
                       <span>
                         {Cents.format(product.msrp)}{" "}
-                        <s className="text-zinc-500">{Cents.format(product.listPrice)}</s>
+                        <s className="text-muted">{Cents.format(product.listPrice)}</s>
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-muted text-xs">
                         Priced at what its contents sell back for
                       </span>
                     </span>
@@ -165,7 +165,7 @@ function ProductDetails(props: { product: ProductForSale }) {
         {description?.split("\n").map((paragraph, index) => (
           <p key={index}>{paragraph}</p>
         ))}
-        <p className="text-[10px] text-zinc-500">From Wizards of the Coast&apos;s product page.</p>
+        <p className="text-muted text-[10px]">From Wizards of the Coast&apos;s product page.</p>
       </div>
     </details>
   );

@@ -47,7 +47,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Unopened</h2>
         {groups.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             Nothing unopened.{" "}
             <Link href="/store" className="underline">
               Visit the store
@@ -73,7 +73,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                   />
                   <span className="flex-1 font-medium">
                     {group.name}
-                    {count > 1 && <span className="text-zinc-500"> × {count}</span>}
+                    {count > 1 && <span className="text-muted"> × {count}</span>}
                   </span>
                   <form action={openAction}>
                     <input type="hidden" name="itemIds" value={group.itemIds[0]} />
@@ -124,7 +124,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                 <Link href={`/inventory/opened?items=${opening.itemId}`} className="underline">
                   {opening.name}
                 </Link>{" "}
-                <span className="text-zinc-500">
+                <span className="text-muted">
                   <LocalTime iso={opening.openedAt} withTime />
                 </span>
               </li>

@@ -23,12 +23,12 @@ export function DeckComments(props: {
   const contents = (
     <>
       {props.isOwner && !props.isShared && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           This deck is private: only you can read these. Share it to let the playgroup comment.
         </p>
       )}
       {props.comments.length === 0 ? (
-        <p className="text-sm text-zinc-500">No comments yet.</p>
+        <p className="text-muted text-sm">No comments yet.</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {props.comments.map((comment) => (
@@ -39,7 +39,7 @@ export function DeckComments(props: {
             >
               <div className="flex flex-wrap items-baseline gap-2">
                 <strong>{comment.authorName}</strong>
-                <span className="text-xs text-zinc-500">
+                <span className="text-muted text-xs">
                   <LocalTime iso={comment.at} withTime />
                 </span>
                 <span className="flex-1" />
@@ -58,7 +58,7 @@ export function DeckComments(props: {
                 )}
               </div>
               {comment.body === null ? (
-                <p className="text-zinc-500 italic">Comment removed.</p>
+                <p className="text-muted italic">Comment removed.</p>
               ) : (
                 <p className="break-words whitespace-pre-wrap">{comment.body}</p>
               )}

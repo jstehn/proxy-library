@@ -32,7 +32,7 @@ export function CreateTokenForm(props: { mcpUrl: string; openApiUrl: string }) {
             <input type="checkbox" name="scope" value="wishlist:write" defaultChecked /> add to and
             change your wishlist
           </label>
-          <span className="text-xs text-zinc-500">
+          <span className="text-muted text-xs">
             No token can buy, sell, open packs, trade or delete anything.
           </span>
         </fieldset>

@@ -28,7 +28,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
       <header>
         <h1 className="text-2xl font-semibold">Export: {view.deck.name}</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           Select the text and copy it.{" "}
           <Link href={`/decks/${view.deck.id}`} className="underline">
             Back to the deck

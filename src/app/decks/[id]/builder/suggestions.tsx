@@ -61,7 +61,7 @@ export function SuggestionsPanel(props: {
         <div>
           <h2 className="font-medium">Suggestions</h2>
           {profile && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-muted text-xs">
               {about.length > 0 ? `Builds around ${about.join(", ")}. ` : ""}
               {profile.gaps.length > 0
                 ? `Short of ${profile.gaps.map((gap) => TAG_LABELS[gap.tag].toLowerCase()).join(", ")}.`
@@ -75,9 +75,7 @@ export function SuggestionsPanel(props: {
       </div>
 
       {suggestions === null ? (
-        <p className="text-zinc-500">
-          {loading ? "Looking through the cards…" : "No suggestions."}
-        </p>
+        <p className="text-muted">{loading ? "Looking through the cards…" : "No suggestions."}</p>
       ) : (
         <div className={`flex flex-col gap-4 ${loading ? "opacity-60" : ""}`}>
           <SuggestionSection
@@ -99,7 +97,7 @@ export function SuggestionsPanel(props: {
       )}
 
       <BudgetForm deckId={deckId} deckKey={deckKey} onSelect={props.onSelect} />
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         To finish the deck as it is:{" "}
         <Link href={`/singles/list?deck=${deckId}`} className="underline">
           buy what it&apos;s short
@@ -130,10 +128,10 @@ function SuggestionSection(props: {
   const all = [...props.list.owned, ...props.list.store];
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{props.title}</h3>
+      <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{props.title}</h3>
       <HiddenOverTarget count={props.list.hiddenOverTarget} />
       {all.length === 0 ? (
-        <p className="text-xs text-zinc-500">{props.empty}</p>
+        <p className="text-muted text-xs">{props.empty}</p>
       ) : (
         <ul aria-label={props.title} className="flex flex-col">
           {all.map((suggestion) => (
@@ -188,7 +186,7 @@ export function SuggestionRow(props: {
               </span>
             )}
           </span>
-          <span className="truncate text-xs text-zinc-500">{reasonWords}</span>
+          <span className="text-muted truncate text-xs">{reasonWords}</span>
         </span>
         <span
           className={`shrink-0 rounded px-1.5 text-xs ${card.pool === "owned" ? "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200" : "tabular-nums"}`}
@@ -254,7 +252,7 @@ function BudgetForm(props: {
       {result !== null && <HiddenOverTarget count={result.list.hiddenOverTarget} />}
       {result !== null &&
         (result.list.picks.length === 0 ? (
-          <p className="text-xs text-zinc-500">Nothing in the store fits this deck and budget.</p>
+          <p className="text-muted text-xs">Nothing in the store fits this deck and budget.</p>
         ) : (
           <div className={`flex flex-col gap-1 ${stale ? "opacity-60" : ""}`}>
             <p>
@@ -277,7 +275,7 @@ function BudgetForm(props: {
             >
               Buy these
             </Link>
-            <p className="text-xs text-zinc-500">
+            <p className="text-muted text-xs">
               Opens Buy a list with these cards filled in: prices are checked again there, and
               nothing is bought until you say so.
             </p>

@@ -3,6 +3,7 @@ import { currentEconomySettings, walletSummary } from "@/modules/wallet";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { InstallAppButton } from "../_components/install-app-button";
 import { CONFIRMATION_WORD } from "./confirmation";
 import { StartOverForm } from "./start-over-form";
 
@@ -21,7 +22,7 @@ export default async function AccountPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Account</h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          {actor.displayName} <span className="text-zinc-500">@{actor.username}</span>
+          {actor.displayName} <span className="text-muted">@{actor.username}</span>
         </p>
       </div>
 
@@ -41,6 +42,8 @@ export default async function AccountPage() {
           Access tokens
         </Link>
       </section>
+
+      <InstallAppButton />
 
       <section className="flex flex-col gap-3 rounded-lg border border-red-300 p-4 dark:border-red-900">
         <h2 className="font-medium">Start over</h2>

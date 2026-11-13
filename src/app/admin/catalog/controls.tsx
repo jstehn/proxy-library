@@ -93,15 +93,15 @@ export function SetsTable(props: { sets: AdminSetRow[] }) {
           />
           Enabled only
         </label>
-        <span className="text-zinc-500">{shown.length} sets</span>
+        <span className="text-muted">{shown.length} sets</span>
       </div>
       <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
         {shown.map((set) => (
           <li key={set.code} className="flex flex-wrap items-center gap-3 px-3 py-2">
             <span className="w-14 font-mono text-xs">{set.code}</span>
             <span className="min-w-48 flex-1">{set.name}</span>
-            <span className="w-24 text-zinc-500">{set.releaseDate}</span>
-            <span className="w-28 text-zinc-500">{set.type}</span>
+            <span className="text-muted w-24">{set.releaseDate}</span>
+            <span className="text-muted w-28">{set.type}</span>
             <span className="flex w-40 gap-1 text-xs">
               {set.isStandard && <Tag>Standard</Tag>}
               {set.isSupporting && <Tag>supporting</Tag>}

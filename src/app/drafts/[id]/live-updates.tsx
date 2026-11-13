@@ -59,7 +59,7 @@ export function LiveUpdates(props: { draftId: number; version: number }) {
     polling: "updating every few seconds",
   }[connection];
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500" aria-live="polite">
+    <span className="text-muted inline-flex items-center gap-1.5 text-xs" aria-live="polite">
       <span
         aria-hidden
         className={`h-2 w-2 rounded-full ${connection === "live" ? "bg-green-500" : "bg-amber-500"}`}

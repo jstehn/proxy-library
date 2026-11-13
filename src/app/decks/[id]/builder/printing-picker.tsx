@@ -84,7 +84,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
   if (!isOpen) {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-zinc-500">
+        <span className="text-muted">
           Printing: {line.setCode} #{line.collectorNumber} · {FINISH_WORDS[line.finish]}
           {line.pinnedPrintingId === null ? " (automatic)" : " (chosen)"}
         </span>
@@ -146,7 +146,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
             className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
           />
         )}
-        {isSaving && <span className="text-zinc-500">Saving…</span>}
+        {isSaving && <span className="text-muted">Saving…</span>}
         <button
           type="button"
           onClick={() => setIsOpen(false)}
@@ -167,13 +167,13 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
         />
         <span>
           <span className="font-medium">Follow my copies (automatic)</span>
-          <span className="block text-zinc-500">
+          <span className="text-muted block">
             Your most valuable copy, or the standard printing if you own none.
           </span>
         </span>
       </label>
 
-      {printings === "loading" && <p className="text-zinc-500">Loading the printings…</p>}
+      {printings === "loading" && <p className="text-muted">Loading the printings…</p>}
       {owned.length > 0 && (
         <PrintingGroup
           title="You own"
@@ -195,7 +195,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
         />
       )}
       {Array.isArray(printings) && shown.length === 0 && (
-        <p className="text-zinc-500">No printings match.</p>
+        <p className="text-muted">No printings match.</p>
       )}
     </fieldset>
   );
@@ -211,7 +211,7 @@ function PrintingGroup(props: {
 }) {
   return (
     <section aria-label={props.title} className="flex flex-col gap-1">
-      <h4 className="font-medium text-zinc-500">{props.title}</h4>
+      <h4 className="text-muted font-medium">{props.title}</h4>
       <ul className="flex flex-col gap-1">
         {props.printings.map((printing) => (
           <li
@@ -235,7 +235,7 @@ function PrintingGroup(props: {
                 · {printing.setName} · {printing.releaseDate.slice(0, 4)}
               </p>
               {printing.labels.length > 0 && (
-                <p className="text-zinc-500">{printing.labels.join(" · ")}</p>
+                <p className="text-muted">{printing.labels.join(" · ")}</p>
               )}
               <div className="flex flex-wrap gap-1">
                 {printing.finishes.map((option) => {
@@ -257,7 +257,7 @@ function PrintingGroup(props: {
                       />
                       <span>{FINISH_WORDS[option.finish]}</span>
                       {option.priceCents !== null && (
-                        <span className="text-zinc-500">
+                        <span className="text-muted">
                           {Cents.format(Cents.of(option.priceCents))}
                         </span>
                       )}

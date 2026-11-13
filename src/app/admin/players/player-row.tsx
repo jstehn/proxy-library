@@ -24,8 +24,8 @@ export function PlayerRow(props: PlayerRowProps) {
     <li className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="font-medium">{player.displayName}</span>
-        <span className="text-sm text-zinc-500">@{player.username}</span>
-        {isYou && <span className="text-xs text-zinc-500">(you)</span>}
+        <span className="text-muted text-sm">@{player.username}</span>
+        {isYou && <span className="text-muted text-xs">(you)</span>}
         {player.isAdmin && <Badge>admin</Badge>}
         {player.canSelfFund && <Badge>self-funding</Badge>}
         {player.isDisabled && <Badge tone="danger">disabled</Badge>}
@@ -95,7 +95,7 @@ function ActionButton(props: ActionButtonProps) {
 function MoneyFigure(props: { label: string; value: string }) {
   return (
     <div className="flex gap-1">
-      <dt className="text-zinc-500">{props.label}</dt>
+      <dt className="text-muted">{props.label}</dt>
       <dd className="font-medium tabular-nums">{props.value}</dd>
     </div>
   );

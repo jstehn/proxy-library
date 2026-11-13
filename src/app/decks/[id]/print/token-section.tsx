@@ -22,7 +22,7 @@ export function TokenList({ deckId, tokens, onTokensChange }: Props) {
   const [message, setMessage] = useState<string | null>(null);
 
   if (tokens.length === 0) {
-    return <p className="text-sm text-zinc-500">None of this deck&apos;s cards make tokens.</p>;
+    return <p className="text-muted text-sm">None of this deck&apos;s cards make tokens.</p>;
   }
 
   async function save(token: TokenLine, change: TokenChange) {
@@ -106,10 +106,10 @@ function TokenRow({ token, save }: TokenRowProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm">
           <p>
             <span className="font-medium">{token.name}</span>{" "}
-            <span className="text-zinc-500">{tokenDescription(token.art)}</span>
+            <span className="text-muted">{tokenDescription(token.art)}</span>
           </p>
-          <p className="text-xs text-zinc-500">Made by {token.madeBy.join(", ")}</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-muted text-xs">Made by {token.madeBy.join(", ")}</p>
+          <p className="text-muted text-xs">
             Art: {artLabel(token.art)}
             {token.artChosen ? " (chosen)" : " (default)"}
           </p>
@@ -183,7 +183,7 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
           <span>
             Default
             {defaultArt !== undefined && (
-              <span className="text-zinc-500"> ({artLabel(defaultArt)})</span>
+              <span className="text-muted"> ({artLabel(defaultArt)})</span>
             )}
           </span>
         </label>
@@ -197,10 +197,10 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
             className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
           />
         )}
-        {isSaving && <span className="text-zinc-500">Saving…</span>}
+        {isSaving && <span className="text-muted">Saving…</span>}
       </div>
-      {arts === "loading" && <p className="text-zinc-500">Loading the art…</p>}
-      {arts !== "loading" && shown.length === 0 && <p className="text-zinc-500">No art matches.</p>}
+      {arts === "loading" && <p className="text-muted">Loading the art…</p>}
+      {arts !== "loading" && shown.length === 0 && <p className="text-muted">No art matches.</p>}
       <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         {shown.map((art) => {
           const isChecked = checked === art.id;
@@ -222,7 +222,7 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
                 <span className="truncate">
                   {art.setCode.toUpperCase()} #{art.collectorNumber}
                 </span>
-                <span className="truncate text-zinc-500">{art.releasedAt.slice(0, 4)}</span>
+                <span className="text-muted truncate">{art.releasedAt.slice(0, 4)}</span>
               </label>
             </li>
           );

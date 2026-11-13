@@ -81,7 +81,7 @@ export function DraftPanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close deck draft"
-          className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           ✕
         </button>
@@ -106,7 +106,7 @@ export function DraftPanel(props: {
         Include store cards for gaps your collection can&apos;t fill
       </label>
       {draft === null ? (
-        <p className="text-zinc-500">
+        <p className="text-muted">
           {loading
             ? "Assembling draft…"
             : props.format === "commander"
@@ -114,7 +114,7 @@ export function DraftPanel(props: {
               : "Drafting is available for constructed formats."}
         </p>
       ) : draft.existingCount >= draft.targetTotal ? (
-        <p className="text-zinc-500">This deck already has {draft.existingCount} cards.</p>
+        <p className="text-muted">This deck already has {draft.existingCount} cards.</p>
       ) : (
         <>
           <div className="flex flex-col gap-1 rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
@@ -196,7 +196,7 @@ export function DraftPanel(props: {
           )}
           {draft.manaBase.add.length > 0 && (
             <div className="flex flex-col gap-1">
-              <h3 className="text-xs font-medium text-zinc-500 uppercase">
+              <h3 className="text-muted text-xs font-medium uppercase">
                 Lands (+{landsAddedCount})
               </h3>
               <ul className="flex flex-col gap-1">
@@ -206,7 +206,7 @@ export function DraftPanel(props: {
                       {land.quantity > 1 ? `${land.quantity} ` : ""}
                       {land.card.name}
                     </span>
-                    <span className="text-zinc-500">
+                    <span className="text-muted">
                       {" · "}
                       {[
                         ...land.reasons.map(landReasonText),
@@ -229,7 +229,7 @@ export function DraftPanel(props: {
 function SpellSection(props: { title: string; spells: readonly DraftedSpell[] }) {
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-xs font-medium text-zinc-500 uppercase">{props.title}</h3>
+      <h3 className="text-muted text-xs font-medium uppercase">{props.title}</h3>
       <ul className="flex flex-col gap-1.5">
         {props.spells.map((spell) => (
           <li key={spell.oracleId}>

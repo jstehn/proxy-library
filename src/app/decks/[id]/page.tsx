@@ -84,7 +84,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-semibold">{deck.name}</h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-muted text-sm">
               {FORMAT_LABELS[deck.format]} · shared by {viewed.ownerName} ·{" "}
               <Link href="/decks/shared" className="underline">
                 All shared decks
@@ -156,7 +156,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{deck.name}</h1>
-          <div className="text-sm text-zinc-500">
+          <div className="text-muted text-sm">
             {FORMAT_LABELS[deck.format]} ·{" "}
             <a href="#edit-as-text" className="underline">
               Edit as text
@@ -187,7 +187,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
               name="visibility"
               value={viewed.visibility === "shared" ? "private" : "shared"}
             />
-            <span className="text-zinc-500">
+            <span className="text-muted">
               {viewed.visibility === "shared"
                 ? "Shared: every player can see it and comment."
                 : "Private: only you can see it."}
@@ -205,7 +205,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <form action={setUsesRealCardsAction} className="flex flex-wrap items-center gap-2 text-sm">
         <input type="hidden" name="deckId" value={deck.id} />
         <input type="hidden" name="usesRealCards" value={deck.usesRealCards ? "off" : "on"} />
-        <span className="text-zinc-500">
+        <span className="text-muted">
           {deck.usesRealCards
             ? "Using your real cards: cards you own for real count as owned here."
             : "Game cards only: cards you own for real don't count here."}
@@ -251,7 +251,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
               Add these cards
             </button>
           </form>
-          <p className="text-xs text-zinc-500">
+          <p className="text-muted text-xs">
             Cards you don&apos;t own are added too, and show as short.
           </p>
         </details>

@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { ManaText } from "@/ui/mana";
 
@@ -93,6 +93,68 @@ export function FaceText(props: { face: CardFace; isBackFace: boolean }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** Touch-friendly native modal preview with scrollable card text and an explicit close button. */
+export function CardPreviewDialog(props: {
+  printing: PrintingCard;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { printing, open, onClose } = props;
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    else if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
+      aria-label={printing.name}
+      className="border-border-subtle m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border bg-zinc-950 p-4 text-white shadow-2xl backdrop:bg-black/70"
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold">{printing.name}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close card preview"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-zinc-700 px-3 text-sm font-medium text-white hover:bg-zinc-800"
+        >
+          Close
+        </button>
+      </div>
+      {printing.hasImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/images/${printing.id}/normal/front`}
+          alt={printing.name}
+          width={488}
+          height={680}
+          className="mb-3 aspect-[488/680] w-full rounded-[4.5%] bg-zinc-800"
+        />
+      )}
+      <div className="flex flex-col gap-3 text-xs">
+        {printing.faces.map((face, index) => (
+          <FaceText key={index} face={face} isBackFace={index > 0} />
+        ))}
+        {(printing.variantLabel || printing.artist) && (
+          <p className="text-[11px] text-white/70">
+            {printing.variantLabel && `${printing.variantLabel} · `}
+            {printing.artist && `Illustrated by ${printing.artist}`}
+          </p>
+        )}
+      </div>
+    </dialog>
   );
 }
 

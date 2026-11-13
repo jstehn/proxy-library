@@ -61,7 +61,7 @@ export function RealCopiesBox(props: {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-medium">Real copies</h2>
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         Copies you own in real life. They count in decks that use your real cards, and never in the
         game.
       </p>

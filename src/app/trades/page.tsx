@@ -17,7 +17,7 @@ function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }
         {trade.yourSide === "proposer" ? `To ${other.displayName}` : `From ${other.displayName}`}
       </Link>
       {props.sharingReal.has(other.userId) && (
-        <Link href={`/players/${other.userId}/real`} className="text-xs text-zinc-500 underline">
+        <Link href={`/players/${other.userId}/real`} className="text-muted text-xs underline">
           {other.displayName}&apos;s real collection
         </Link>
       )}
@@ -25,7 +25,7 @@ function TradeLine(props: { trade: TradeView; sharingReal: ReadonlySet<string> }
         You give: {yours.map(itemText).join(", ") || "nothing"} · You get:{" "}
         {theirs.map(itemText).join(", ") || "nothing"}
       </span>
-      <span className="text-xs text-zinc-500">
+      <span className="text-muted text-xs">
         {STATUS_LABELS[trade.status]} ·{" "}
         <LocalTime iso={trade.decidedAt ?? trade.createdAt} withTime />
       </span>
@@ -54,7 +54,7 @@ export default async function TradesPage() {
     <section className="flex flex-col gap-1">
       <h2 className="font-medium">{title}</h2>
       {list.length === 0 ? (
-        <p className="text-sm text-zinc-500">{empty}</p>
+        <p className="text-muted text-sm">{empty}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
           {list.map((trade) => (

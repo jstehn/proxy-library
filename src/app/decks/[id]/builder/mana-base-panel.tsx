@@ -55,18 +55,18 @@ export function ManaBasePanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close mana base"
-          className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           ✕
         </button>
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         A mana base you could start from: a land count and colored sources from rules of thumb,
         filled with lands you own (even ones in other decks), then basics. It only adds lands; which
         to cut is up to you.
       </p>
       {plan === null ? (
-        <p className="text-zinc-500">{loading ? "Working it out…" : "Couldn't plan this deck."}</p>
+        <p className="text-muted">{loading ? "Working it out…" : "Couldn't plan this deck."}</p>
       ) : (
         <>
           <div>
@@ -93,7 +93,7 @@ export function ManaBasePanel(props: {
                     {source.have} of {source.target} sources
                   </span>
                   {source.heaviestCost > 1 && (
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-muted text-xs">
                       (a card costs{" "}
                       <ManaText text={`{${source.color}}`.repeat(source.heaviestCost)} />)
                     </span>
@@ -109,7 +109,7 @@ export function ManaBasePanel(props: {
           )}
           {plan.add.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium text-zinc-500 uppercase">Lands you could add</h3>
+              <h3 className="text-muted text-xs font-medium uppercase">Lands you could add</h3>
               <LandList lands={plan.add} />
               <button
                 type="button"
@@ -130,13 +130,11 @@ export function ManaBasePanel(props: {
             </div>
           )}
           {plan.over === 0 && plan.add.length === 0 && (
-            <p className="text-zinc-500">The deck is at its land target.</p>
+            <p className="text-muted">The deck is at its land target.</p>
           )}
           {plan.considerBuying.length > 0 && (
             <div className="flex flex-col gap-1">
-              <h3 className="text-xs font-medium text-zinc-500 uppercase">
-                Lands to consider buying
-              </h3>
+              <h3 className="text-muted text-xs font-medium uppercase">Lands to consider buying</h3>
               <LandList lands={plan.considerBuying} prices />
               <Link
                 href={`/singles/list?list=${encodeURIComponent(
@@ -170,7 +168,7 @@ function LandList(props: { lands: readonly PlannedLand[]; prices?: boolean }) {
               </span>
             )}
             {props.prices === true && land.card.priceCents !== null && (
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 {Cents.format(Cents.of(land.card.priceCents))}
               </span>
             )}

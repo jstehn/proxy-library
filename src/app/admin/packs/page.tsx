@@ -98,7 +98,7 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
 
 function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: number }) {
   if (props.choices.length === 0) {
-    return <p className="text-sm text-zinc-500">No enabled set has booster recipes yet.</p>;
+    return <p className="text-muted text-sm">No enabled set has booster recipes yet.</p>;
   }
   return (
     <form method="get" className="flex flex-wrap items-end gap-3 text-sm">
@@ -242,7 +242,7 @@ function SamplePack(props: { pack: Pack; number: number; cards: Map<string, Prin
     <section className="flex flex-col gap-3" aria-label={`Pack ${props.number}`}>
       <h2 className="text-lg font-medium">
         Pack {props.number}{" "}
-        <span className="text-sm font-normal text-zinc-500">
+        <span className="text-muted text-sm font-normal">
           {pack.cards.length} cards in reveal order · worth {Cents.format(value)}
         </span>
       </h2>

@@ -85,7 +85,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
         </label>
         <fieldset className="flex items-center gap-3 text-sm">
           <legend className="sr-only">Which printing</legend>
-          <span className="text-zinc-500">Printing:</span>
+          <span className="text-muted">Printing:</span>
           {(["cheapest", "newest"] as const).map((option) => (
             <label key={option} className="flex items-center gap-1">
               <input
@@ -101,7 +101,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
             </label>
           ))}
         </fieldset>
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           A set and number in a line, like <code>(M11) 149</code>, picks that printing. Section
           headers and comments are fine; a sideboard is bought like the rest.
         </p>
@@ -109,7 +109,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
 
       <section aria-label="What it would buy" className="flex min-w-0 flex-1 flex-col gap-3">
         {quote === null || quote.lines.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {isQuoting ? "Pricing…" : "Paste a list to see what it would buy."}
           </p>
         ) : (
@@ -195,7 +195,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
           <span className="block text-xs text-amber-700 dark:text-amber-400">⚠ {line.problem}</span>
         )}
         {choice !== null && line.toBuy < request.quantity && (
-          <span className="block text-xs text-zinc-500">
+          <span className="text-muted block text-xs">
             {line.toBuy === 0
               ? `You have ${line.owned}: nothing to buy`
               : `${request.quantity} wanted, you have ${line.owned}`}
@@ -221,7 +221,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
           </select>
           <span className="w-24 shrink-0 text-right tabular-nums">
             {money(line.totalCents)}
-            <span className="block text-xs text-zinc-500">
+            <span className="text-muted block text-xs">
               {money(choice.priceCents)} each{finishLabel}
             </span>
           </span>

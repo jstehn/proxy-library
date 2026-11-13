@@ -98,7 +98,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
       )}
 
       {settings.allowance > 0 && lines.some((line) => line.status.kind === "shortBy") && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           Paydays assume you spend nothing else and prices stay where they are today.
         </p>
       )}
@@ -143,11 +143,11 @@ function WishRow(props: { line: WishLine }) {
               line.name
             )}
           </h2>
-          <span className="text-xs text-zinc-500 tabular-nums">
+          <span className="text-muted text-xs tabular-nums">
             own {line.owned} of {wish.quantity}
           </span>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           {targetText(wish.target)}
           {wish.note && <> · &ldquo;{wish.note}&rdquo;</>}
         </p>
@@ -219,7 +219,7 @@ function Status(props: { status: WishStatus; total: number | null; missing: numb
       );
     case "notForSale":
       return (
-        <p className="text-zinc-500">
+        <p className="text-muted">
           Not for sale: no printing that fits is in an enabled set with a price.
         </p>
       );

@@ -69,9 +69,9 @@ export function EconomyForm(props: { values: EconomyFormValues; maxPeriodDays: n
             className="w-60 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
           />
         ) : (
-          <span className="text-zinc-500">Loading…</span>
+          <span className="text-muted">Loading…</span>
         )}
-        <span className="text-xs text-zinc-500">
+        <span className="text-muted text-xs">
           Every other payday is this one plus or minus a whole number of periods.
         </span>
       </label>

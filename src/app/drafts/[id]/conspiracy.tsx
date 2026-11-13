@@ -71,7 +71,7 @@ function CardWithNotes(props: { card: SeenCard; names: Names }) {
     <li className="leading-snug">
       {props.names.printing(props.card.printingId)}
       {props.card.notes.length > 0 && (
-        <span className="text-zinc-500">
+        <span className="text-muted">
           {" "}
           ({props.card.notes.map((note) => noteText(note, props.names)).join("; ")})
         </span>
@@ -108,7 +108,7 @@ export function SeatAbilities(props: { seat: SeatSeen | undefined; names: Names 
         </ul>
       )}
       {seat.removedFaceUp.length > 0 && (
-        <span className="text-zinc-500">
+        <span className="text-muted">
           removed:{" "}
           {seat.removedFaceUp.map((card) => props.names.printing(card.printingId)).join(", ")}
         </span>
@@ -309,7 +309,7 @@ export function Dealing(props: {
           <SubmitButton>Decide</SubmitButton>
         </form>
       )}
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         Waiting for {deal.waitingFor.map((seat) => names.seat(seat)).join(", ") || "nobody"}.
         {deal.deadline !== null && (
           <>

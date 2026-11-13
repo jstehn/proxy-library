@@ -63,21 +63,21 @@ export default async function WalletPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">History</h2>
-        {history.length === 0 && <p className="text-sm text-zinc-500">Nothing yet.</p>}
+        {history.length === 0 && <p className="text-muted text-sm">Nothing yet.</p>}
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {history.map((entry) => (
             <li
               key={entry.id}
               className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 text-sm"
             >
-              <span className="w-32 text-zinc-500">
+              <span className="text-muted w-32">
                 <LocalTime iso={entry.effectiveAt} />
               </span>
               <span className="flex-1">
                 {ledgerKindLabel(entry.kind)}
-                {entry.note && <span className="text-zinc-500"> · {entry.note}</span>}
+                {entry.note && <span className="text-muted"> · {entry.note}</span>}
                 {entry.createdByUsername && entry.createdByUsername !== actor.username && (
-                  <span className="text-zinc-500"> · by @{entry.createdByUsername}</span>
+                  <span className="text-muted"> · by @{entry.createdByUsername}</span>
                 )}
               </span>
               <span
@@ -97,7 +97,7 @@ export default async function WalletPage() {
 function Stat(props: { label: string; value: Cents }) {
   return (
     <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-      <dt className="text-xs text-zinc-500">{props.label}</dt>
+      <dt className="text-muted text-xs">{props.label}</dt>
       <dd className="text-lg font-medium tabular-nums">{Cents.format(props.value)}</dd>
     </div>
   );

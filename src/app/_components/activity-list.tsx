@@ -78,7 +78,7 @@ function Line(props: { item: FeedItem }) {
 }
 
 export function ActivityList(props: { items: readonly FeedItem[] }) {
-  if (props.items.length === 0) return <p className="text-sm text-zinc-500">Nothing yet.</p>;
+  if (props.items.length === 0) return <p className="text-muted text-sm">Nothing yet.</p>;
   return (
     <ul className="flex flex-col divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
       {props.items.map((item) => (
@@ -86,7 +86,7 @@ export function ActivityList(props: { items: readonly FeedItem[] }) {
           <span>
             <Line item={item} />
           </span>
-          <span className="text-xs text-zinc-500">
+          <span className="text-muted text-xs">
             <LocalTime iso={item.at} withTime />
           </span>
         </li>

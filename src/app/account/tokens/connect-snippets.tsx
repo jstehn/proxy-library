@@ -7,7 +7,7 @@ function Snippet(props: { title: string; note: string; code: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <h3 className="text-sm font-medium">{props.title}</h3>
-      <p className="text-xs text-zinc-500">{props.note}</p>
+      <p className="text-muted text-xs">{props.note}</p>
       <pre className="overflow-x-auto rounded bg-zinc-100 p-2 text-xs dark:bg-zinc-800">
         <code>{props.code}</code>
       </pre>

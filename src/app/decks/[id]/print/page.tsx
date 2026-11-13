@@ -16,7 +16,7 @@ export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Proxies: {deck.view.deck.name}</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           A PDF of real-size cards (2.5 × 3.5 inches) with cutting guides.{" "}
           <Link href={`/decks/${deck.view.deck.id}`} className="underline">
             Back to the deck

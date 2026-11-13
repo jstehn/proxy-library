@@ -83,7 +83,7 @@ export default async function AuthorizePage(props: PageProps<"/oauth/authorize">
                   {choice.words}
                 </label>
               ))}
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 It can never buy, sell, open packs, trade or delete anything. You can disconnect it
                 any time under Account → Access tokens.
               </span>

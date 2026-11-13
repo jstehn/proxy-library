@@ -86,7 +86,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       )}
 
       {decks.length === 0 ? (
-        <p className="text-sm text-zinc-500">No decks yet.</p>
+        <p className="text-muted text-sm">No decks yet.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
           {decks.map((deck) => (
@@ -111,7 +111,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                   Shared
                 </span>
               )}
-              <span className="text-sm text-zinc-500">
+              <span className="text-muted text-sm">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards
               </span>
               {deck.usesRealCards && (
@@ -132,7 +132,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                 </span>
               )}
               <span className="flex-1" />
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 changed <LocalTime iso={deck.updatedAt} />
               </span>
             </li>

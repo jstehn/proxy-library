@@ -23,9 +23,9 @@ export function BracketPanel(props: {
   return (
     <section aria-label="Commander bracket" className="flex flex-col gap-1 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Bracket</h3>
+        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Bracket</h3>
         {props.onTargetChange !== undefined ? (
-          <label className="flex items-center gap-1 text-xs text-zinc-500">
+          <label className="text-muted flex items-center gap-1 text-xs">
             Target
             <select
               value={target ?? ""}
@@ -47,7 +47,7 @@ export function BracketPanel(props: {
           </label>
         ) : (
           target !== null && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-muted text-xs">
               Built for bracket {target} · {BRACKET_NAMES[target]}
             </span>
           )
@@ -55,7 +55,7 @@ export function BracketPanel(props: {
       </div>
 
       <p className="font-medium">
-        {estimateLabel(estimate)} <span className="font-normal text-zinc-500">(at least)</span>
+        {estimateLabel(estimate)} <span className="text-muted font-normal">(at least)</span>
       </p>
 
       {warning !== null && (
@@ -80,13 +80,13 @@ export function BracketPanel(props: {
               >
                 {findingText(finding)}
               </button>
-              <span className="text-zinc-500">: {finding.cards.join(", ")}</span>
+              <span className="text-muted">: {finding.cards.join(", ")}</span>
             </li>
           ))}
         </ul>
       )}
 
-      <p className="text-[10px] text-zinc-500">
+      <p className="text-muted text-[10px]">
         Game Changers come from Wizards&apos; list; land denial and extra turns are read from rules
         text. {UNCHECKED_TEXT}
         {estimate.findings.length > 0 && " Click a reason to mark its cards in the list."}

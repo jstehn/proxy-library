@@ -25,7 +25,7 @@ export default async function TokensPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-12">
       <div className="flex flex-col gap-1">
-        <Link href="/account" className="text-sm text-zinc-500 underline">
+        <Link href="/account" className="text-muted text-sm underline">
           Account
         </Link>
         <h1 className="text-2xl font-semibold">Connect an LLM</h1>
@@ -53,14 +53,14 @@ export default async function TokensPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Your tokens</h2>
         {tokens.length === 0 ? (
-          <p className="text-sm text-zinc-500">None yet.</p>
+          <p className="text-muted text-sm">None yet.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
             {tokens.map((token) => (
               <li key={token.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="font-medium break-words">{token.name}</span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-muted text-xs">
                     <code>pl_{token.prefix}…</code> ·{" "}
                     {token.scopes.map((scope) => SCOPE_WORDS[scope] ?? scope).join(", ")} · made{" "}
                     <LocalTime iso={token.createdAt.toISOString()} /> ·{" "}

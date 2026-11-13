@@ -256,7 +256,7 @@ export function ProxyForm(props: ProxyFormProps) {
             {cardCount === 0 ? "Preview one token" : "Preview one card"}
           </a>
         )}
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           Print at &quot;actual size&quot; (100%), not &quot;fit to page&quot;. Big decks take a few
           seconds the first time: each image is fetched once and then kept.
         </p>
@@ -348,7 +348,7 @@ function OptionGroup<Key extends keyof ProxyOptions>(props: {
           </label>
         ))}
       </div>
-      {question.help && <p className="text-xs text-zinc-500">{question.help}</p>}
+      {question.help && <p className="text-muted text-xs">{question.help}</p>}
     </fieldset>
   );
 }

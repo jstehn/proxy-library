@@ -30,7 +30,7 @@ export function HeadingField(props: {
         if (changed) props.onSave(line, text.trim() === "" ? null : text.trim());
       }}
     >
-      <label htmlFor={`${listId}-input`} className="text-xs text-zinc-500">
+      <label htmlFor={`${listId}-input`} className="text-muted text-xs">
         Heading
       </label>
       <input

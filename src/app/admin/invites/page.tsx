@@ -30,7 +30,7 @@ export default async function AdminInvitesPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">All invites</h2>
-        {invites.length === 0 && <p className="text-sm text-zinc-500">No invites yet.</p>}
+        {invites.length === 0 && <p className="text-muted text-sm">No invites yet.</p>}
         <ul className="flex flex-col gap-2">
           {invites.map((invite) => (
             <li
@@ -38,8 +38,8 @@ export default async function AdminInvitesPage() {
               className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
             >
               <code className="font-semibold">{invite.code}</code>
-              <span className="text-zinc-500">{invite.status}</span>
-              <span className="text-zinc-500">
+              <span className="text-muted">{invite.status}</span>
+              <span className="text-muted">
                 {invite.usedBy !== null
                   ? `used by @${invite.usedBy}`
                   : `expires ${invite.expiresAt.slice(0, 10)}`}

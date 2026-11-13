@@ -88,7 +88,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
         <div className="flex flex-1 flex-col gap-4">
           <header className="flex flex-col gap-1">
             <h1 className="text-2xl font-semibold">{card.name}</h1>
-            <p className="flex items-center gap-2 text-sm text-zinc-500">
+            <p className="text-muted flex items-center gap-2 text-sm">
               <SetSymbol keyruneCode={detail.keyruneCode} />
               <Link href={`/sets/${detail.setCode}`} className="underline">
                 {detail.setName}
@@ -120,7 +120,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
           <section className="flex flex-col gap-1 text-sm">
             <h2 className="font-medium">In your decks</h2>
             {decks.length === 0 ? (
-              <p className="text-zinc-500">No deck uses this card.</p>
+              <p className="text-muted">No deck uses this card.</p>
             ) : (
               <ul className="flex flex-wrap gap-x-3">
                 {decks.map((deck) => (
@@ -128,7 +128,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                     <Link href={`/decks/${deck.id}`} className="underline">
                       {deck.name}
                     </Link>{" "}
-                    <span className="text-zinc-500">({deck.quantity})</span>
+                    <span className="text-muted">({deck.quantity})</span>
                   </li>
                 ))}
               </ul>
@@ -172,7 +172,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                 </div>
               );
             })}
-            <p className="text-xs text-zinc-500">
+            <p className="text-muted text-xs">
               The store buys cards at {rateBps / 100}% of market price, rounded down.
             </p>
           </section>
@@ -209,7 +209,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                   printingLabel={`${detail.setCode.toUpperCase()} #${card.collectorNumber}${card.variantLabel ? `, ${card.variantLabel}` : ""}`}
                 />
               </div>
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="text-muted mt-2 text-xs">
                 Wishing for the same thing again changes that wish instead of adding another.
               </p>
             </details>
@@ -228,7 +228,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price history</h2>
         {Object.values(history).every((points) => (points?.length ?? 0) <= 1) && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             Prices are recorded once a day, so the chart fills in as the nightly syncs run.
           </p>
         )}
@@ -263,7 +263,7 @@ function TradeHistory(props: { trades: SingleHistoryRow[] }) {
           <li key={trade.id}>
             <LocalTime iso={trade.at} withTime /> · {trade.direction === "buy" ? "Bought" : "Sold"}{" "}
             {trade.quantity} {trade.finish} for {Cents.format(trade.total)}
-            <span className="text-zinc-500">
+            <span className="text-muted">
               {" "}
               ({Cents.format(trade.unitPrice)} each; market {Cents.format(trade.unitMarket)} on{" "}
               {trade.priceDay}

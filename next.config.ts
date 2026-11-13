@@ -9,6 +9,27 @@ const nextConfig: NextConfig = {
   // pages showed but nothing on them responded: the pack opener ignored clicks and Space.
   // Allow addresses on the home network. Development only; production builds don't check this.
   allowedDevOrigins: ["192.168.*.*", "*.local"],
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self'",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

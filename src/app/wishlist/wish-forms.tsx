@@ -139,7 +139,7 @@ function DetailFields(props: { quantity: number; targetPrice: number | null; not
           }
           className={`${field} w-28`}
         />
-        <span className="text-xs text-zinc-500">$ per copy, optional</span>
+        <span className="text-muted text-xs">$ per copy, optional</span>
       </label>
       <label className="flex items-center gap-2 text-sm">
         <span className="w-24 shrink-0">Note</span>

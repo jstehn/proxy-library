@@ -171,7 +171,7 @@ export function Pagination(props: {
   return (
     <nav aria-label="Pages" className="flex items-center gap-4 text-sm">
       {props.page > 1 ? <Link href={hrefFor(props.page - 1)}>← Previous</Link> : <span />}
-      <span className="text-zinc-500">
+      <span className="text-muted">
         Page {props.page} of {props.pageCount}
       </span>
       {props.page < props.pageCount && <Link href={hrefFor(props.page + 1)}>Next →</Link>}

@@ -45,7 +45,7 @@ export function NoteField(props: {
   return (
     <form onSubmit={submit} className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={inputId} className="text-xs font-medium text-zinc-500">
+        <label htmlFor={inputId} className="text-muted text-xs font-medium">
           {props.showBoard ? `Note (${BOARD_LABELS[line.board]})` : "Note"}
         </label>
         <span className="text-[11px] text-zinc-400 tabular-nums">

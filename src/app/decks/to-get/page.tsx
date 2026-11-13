@@ -47,7 +47,7 @@ export default async function CardsToGetPage() {
             <WishForShortForm label="Wish for them all" look="button" />
           </div>
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-zinc-500">
+            <thead className="text-muted text-left text-xs">
               <tr>
                 <th className="py-1 font-medium">Card</th>
                 <th className="py-1 text-right font-medium">To get</th>
@@ -60,14 +60,14 @@ export default async function CardsToGetPage() {
                 <tr key={card.oracleId}>
                   <td className="py-1.5">
                     {card.name}
-                    <span className="block text-xs text-zinc-500 sm:hidden">
+                    <span className="text-muted block text-xs sm:hidden">
                       {card.decks.map((deck) => deck.name).join(", ")}
                     </span>
                   </td>
                   <td className="py-1.5 text-right tabular-nums">
                     {card.missing}
                     {card.owned > 0 && (
-                      <span className="text-xs text-zinc-500"> (own {card.owned})</span>
+                      <span className="text-muted text-xs"> (own {card.owned})</span>
                     )}
                   </td>
                   <td className="hidden py-1.5 sm:table-cell">
@@ -87,7 +87,7 @@ export default async function CardsToGetPage() {
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-zinc-500">
+          <p className="text-muted text-xs">
             &quot;Buy them all&quot; opens Buy a list with these cards filled in, where you can
             check each line and choose printings before anything is bought. &quot;Wish for them
             all&quot; puts each card on your wishlist in any printing, at the cheapest price, and

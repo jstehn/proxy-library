@@ -12,7 +12,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
     return (
       <form action={enablePublicLinkAction} className="flex items-center gap-2 text-sm">
         <input type="hidden" name="deckId" value={props.deckId} />
-        <span className="text-zinc-500">Public link: off.</span>
+        <span className="text-muted">Public link: off.</span>
         <button
           type="submit"
           className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
@@ -34,7 +34,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="text-zinc-500">Public link:</span>
+      <span className="text-muted">Public link:</span>
       <Link href={path} className="font-mono text-xs underline">
         {path}
       </Link>

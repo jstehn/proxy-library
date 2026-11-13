@@ -43,7 +43,7 @@ function DraftRow(props: { draft: DraftSummary; canJoin: boolean }) {
         {draft.setName}
       </Link>
       <StatusBadge status={draft.status} />
-      <span className="text-sm text-zinc-500">
+      <span className="text-muted text-sm">
         hosted by {draft.hostName} · {draft.seats}/{draft.maxSeats} players ·{" "}
         {Cents.format(draft.entryFee)} · {timerLabel(draft.secondsPerPick)}
       </span>
@@ -106,7 +106,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Open tables</h2>
         {overview.open.length === 0 ? (
-          <p className="text-sm text-zinc-500">No drafts right now. Host one below.</p>
+          <p className="text-muted text-sm">No drafts right now. Host one below.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
             {overview.open.map((draft) => (
@@ -120,7 +120,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
         <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="font-medium">Host a draft</h2>
           {choices.length === 0 ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-muted text-sm">
               No set with a draft booster is enabled and priced. An admin can enable one.
             </p>
           ) : (
@@ -169,7 +169,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
                   </select>
                 </label>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-muted text-xs">
                 You pay the entry fee now and get it back if you close the lobby before it starts.
                 When the timer runs out, the app picks for you: a card that suits what you have.
                 Someone who loses their connection gets up to 5 extra minutes.
@@ -185,7 +185,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Your finished drafts</h2>
         {overview.finished.length === 0 ? (
-          <p className="text-sm text-zinc-500">None yet.</p>
+          <p className="text-muted text-sm">None yet.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
             {overview.finished.map((draft) => (
@@ -194,7 +194,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
                 <Link href={`/drafts/${draft.id}`} className="underline">
                   {draft.setName}
                 </Link>
-                <span className="text-sm text-zinc-500">{draft.seats} players</span>
+                <span className="text-muted text-sm">{draft.seats} players</span>
                 {draft.deckId !== null && (
                   <Link href={`/decks/${draft.deckId}`} className="text-sm underline">
                     your deck
@@ -202,7 +202,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
                 )}
                 <span className="flex-1" />
                 {draft.finishedAt !== null && (
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-muted text-xs">
                     <LocalTime iso={draft.finishedAt} />
                   </span>
                 )}

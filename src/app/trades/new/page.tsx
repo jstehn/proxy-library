@@ -27,7 +27,7 @@ function Offerable(props: {
   side: "give" | "get";
 }) {
   const { draft, side } = props;
-  if (props.rows.length === 0) return <p className="text-sm text-zinc-500">No cards match.</p>;
+  if (props.rows.length === 0) return <p className="text-muted text-sm">No cards match.</p>;
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {props.rows.map((row) => {
@@ -41,7 +41,7 @@ function Offerable(props: {
           <li key={`${row.printingId}/${row.finish}`} className="flex items-center gap-2">
             <span className="flex-1">
               {cardName({ ...card, quantity: 1 }, props.cards)}{" "}
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 has {row.quantity}
                 {row.price !== null && ` · ${Cents.format(Cents.of(row.price))}`}
               </span>
@@ -74,7 +74,7 @@ function Chosen(props: {
     <div className="flex flex-col gap-1">
       <h3 className="text-sm font-medium">{props.title}</h3>
       {draft[side].length === 0 ? (
-        <p className="text-sm text-zinc-500">No cards yet.</p>
+        <p className="text-muted text-sm">No cards yet.</p>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {draft[side].map((card) => (
@@ -112,7 +112,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
         <h1 className="text-2xl font-semibold">New trade</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Who do you want to trade with?</p>
         {partners.length === 0 ? (
-          <p className="text-sm text-zinc-500">There&apos;s nobody else to trade with yet.</p>
+          <p className="text-muted text-sm">There&apos;s nobody else to trade with yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {partners.map((candidate) => (
@@ -123,7 +123,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
                 >
                   {candidate.displayName}
                 </Link>{" "}
-                <span className="text-xs text-zinc-500">@{candidate.username}</span>
+                <span className="text-muted text-xs">@{candidate.username}</span>
               </li>
             ))}
           </ul>
@@ -156,7 +156,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
         <h1 className="text-2xl font-semibold">
           {draft.replaces ? "Counter-offer" : "Trade"} with {partner.displayName}
         </h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           Add cards from both collections and any money, then send it. Nothing moves until{" "}
           {partner.displayName} accepts.{" "}
           <Link href="/trades/new" className="underline">

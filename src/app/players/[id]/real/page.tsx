@@ -91,7 +91,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
         notes={result.notes}
       />
       {result.rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No real cards here.</p>
+        <p className="text-muted text-sm">No real cards here.</p>
       ) : (
         <RealCardGrid rows={result.rows} cards={cards} />
       )}

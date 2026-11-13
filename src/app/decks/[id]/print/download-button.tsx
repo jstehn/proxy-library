@@ -103,7 +103,7 @@ export function DownloadButton(props: { href: string; disabled: boolean }) {
               style={{ width: `${fraction * 100}%` }}
             />
           </div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-muted text-xs">
             {state.progress ? progressLabel(state.progress) : "Starting…"}
           </p>
         </div>

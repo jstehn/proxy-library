@@ -179,7 +179,7 @@ export function PackOpener(props: PackOpenerProps) {
               className={`absolute inset-x-0 top-0 h-[9%] rounded-t-sm bg-white/30 ${state.phase === "tearing" ? "animate-tear-strip" : ""}`}
             />
           </button>
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {state.phase === "sealed" ? "Click the pack (or press Space) to tear it open." : "…"}
           </p>
         </div>
@@ -309,7 +309,7 @@ function CardCaption(props: { card: OpenerCard }) {
     <p className="text-sm leading-tight">
       <span className="font-medium">{props.card.name}</span>
       <br />
-      <span className="text-zinc-500">{cardDetails(props.card)}</span>
+      <span className="text-muted">{cardDetails(props.card)}</span>
     </p>
   );
 }
@@ -322,9 +322,7 @@ function Spotlight(props: { card: OpenerCard | null }) {
       {card === null ? (
         <>
           <CardBack />
-          <p className="text-sm text-zinc-500">
-            Each card appears here, full size, as you flip it.
-          </p>
+          <p className="text-muted text-sm">Each card appears here, full size, as you flip it.</p>
         </>
       ) : (
         <>
@@ -388,8 +386,8 @@ function RevealStack(props: {
           {faceUp ? <CardFace card={top} /> : <CardBack />}
         </div>
       </button>
-      {faceUp ? <CardCaption card={top} /> : <p className="text-sm text-zinc-500">Tap to flip</p>}
-      <p className="text-xs text-zinc-500">
+      {faceUp ? <CardCaption card={top} /> : <p className="text-muted text-sm">Tap to flip</p>}
+      <p className="text-muted text-xs">
         {revealed} of {cards.length} flipped
         {pickedIndex !== null && " · tap the big card to go back"}
       </p>

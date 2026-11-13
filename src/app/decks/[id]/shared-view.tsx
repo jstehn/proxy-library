@@ -83,7 +83,7 @@ export function SharedDeckView(props: {
         />
         <details className="text-sm">
           <summary className="cursor-pointer underline">The list as text</summary>
-          <p className="my-2 text-xs text-zinc-500">
+          <p className="text-muted my-2 text-xs">
             Paste it into one of your decks to build your own version.
           </p>
           <textarea

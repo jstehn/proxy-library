@@ -22,7 +22,7 @@ export default async function StorePage() {
         </p>
       </header>
       {sets.length === 0 ? (
-        <p className="text-sm text-zinc-500">Nothing is for sale yet.</p>
+        <p className="text-muted text-sm">Nothing is for sale yet.</p>
       ) : (
         <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {sets.map((set) => (
@@ -54,7 +54,7 @@ export default async function StorePage() {
                   />
                   {set.name}
                 </span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-muted text-xs">
                   {set.productsForSale} products · released {set.releaseDate}
                 </span>
               </Link>

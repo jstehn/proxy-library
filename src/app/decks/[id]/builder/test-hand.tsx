@@ -83,7 +83,7 @@ export function TestHandPanel(props: {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium">Test hand</h2>
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           {hand.mulligans === 0
             ? "No mulligans"
             : `Mulligans: ${hand.mulligans}${hand.freeMulligan ? " (first free)" : ""}`}
@@ -98,7 +98,7 @@ export function TestHandPanel(props: {
       </div>
 
       {cards.length === 0 ? (
-        <p className="text-zinc-500">Add cards to the main deck to draw a hand.</p>
+        <p className="text-muted">Add cards to the main deck to draw a hand.</p>
       ) : (
         <>
           {hand.toBottom > 0 && (
@@ -162,7 +162,7 @@ export function TestHandPanel(props: {
           {odds !== null && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
                   Odds ({odds.librarySize}-card library)
                 </h3>
                 <label className="flex items-center gap-1 text-xs">
@@ -176,17 +176,17 @@ export function TestHandPanel(props: {
               </div>
               <dl aria-label="Opening hand distribution" className="flex flex-col">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-zinc-500">2–5 lands in opening 7</dt>
+                  <dt className="text-muted">2–5 lands in opening 7</dt>
                   <dd className="tabular-nums">
                     {Math.round(odds.opening.playableLands * 100)}%{" "}
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-muted text-xs">
                       (after 1 mulligan: {Math.round(odds.opening.playableAfterFirstMulligan * 100)}
                       %)
                     </span>
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-zinc-500">0–1 lands / 6–7 lands in opening 7</dt>
+                  <dt className="text-muted">0–1 lands / 6–7 lands in opening 7</dt>
                   <dd className="tabular-nums">
                     {Math.round(odds.opening.tooFewLands * 100)}% /{" "}
                     {Math.round(odds.opening.tooManyLands * 100)}%
@@ -196,7 +196,7 @@ export function TestHandPanel(props: {
               <dl aria-label="Land drops and turn 3 ramp" className="flex flex-col">
                 {odds.landDrops.map((row) => (
                   <div key={row.turn} className="flex justify-between gap-2">
-                    <dt className="text-zinc-500">
+                    <dt className="text-muted">
                       {row.targetLands}+ {row.targetLands === 1 ? "land" : "lands"} by turn{" "}
                       {row.turn}
                     </dt>
@@ -204,19 +204,19 @@ export function TestHandPanel(props: {
                   </div>
                 ))}
                 <div className="flex justify-between gap-2">
-                  <dt className="text-zinc-500">
+                  <dt className="text-muted">
                     Early ramp (MV ≤ {EARLY_RAMP_MAX_MV}, {odds.earlyRamp}) by turn 3
                   </dt>
                   <dd className="tabular-nums">
                     {Math.round(odds.rampByTurn3.atLeastOneEarlyRamp * 100)}%{" "}
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-muted text-xs">
                       (with 2+ lands: {Math.round(odds.rampByTurn3.twoLandsAndEarlyRamp * 100)}%)
                     </span>
                   </dd>
                 </div>
                 {odds.ramp > odds.earlyRamp && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-zinc-500">Any ramp ({odds.ramp}) by turn 3</dt>
+                    <dt className="text-muted">Any ramp ({odds.ramp}) by turn 3</dt>
                     <dd className="tabular-nums">
                       {Math.round(odds.rampByTurn3.atLeastOneAnyRamp * 100)}%
                     </dd>
@@ -231,12 +231,12 @@ export function TestHandPanel(props: {
                   )
                   .map((row) => (
                     <div key={row.label} className="flex justify-between gap-2">
-                      <dt className="text-zinc-500">{row.label}</dt>
+                      <dt className="text-muted">{row.label}</dt>
                       <dd className="tabular-nums">{Math.round(row.chance * 100)}%</dd>
                     </div>
                   ))}
               </dl>
-              <p className="text-[10px] text-zinc-500">
+              <p className="text-muted text-[10px]">
                 Exact hypergeometric odds without replacement. By turn 3 counts{" "}
                 {odds.rampByTurn3.cardsSeen} cards ({onTheDraw ? "on the draw" : "on the play"}).
               </p>

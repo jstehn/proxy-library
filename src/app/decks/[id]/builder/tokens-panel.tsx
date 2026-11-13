@@ -93,25 +93,23 @@ export function TokensPanel(props: Props) {
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="font-medium">Tokens &amp; emblems</h2>
           {summary !== null && summary.total > 0 && (
-            <span className="text-xs text-zinc-500 tabular-nums">
-              {formatSummaryCounts(summary)}
-            </span>
+            <span className="text-muted text-xs tabular-nums">{formatSummaryCounts(summary)}</span>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close tokens and emblems"
-          className="min-h-7 min-w-7 rounded px-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted min-h-7 min-w-7 rounded px-1.5 hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           ✕
         </button>
       </div>
 
       {activeTokens === null ? (
-        <p className="text-zinc-500">{loading ? "Loading tokens…" : "Couldn't load tokens."}</p>
+        <p className="text-muted">{loading ? "Loading tokens…" : "Couldn't load tokens."}</p>
       ) : activeTokens.length === 0 ? (
-        <p className="text-zinc-500">
+        <p className="text-muted">
           None of the counted cards in this deck create tokens, emblems, or helper cards.
         </p>
       ) : (
@@ -155,7 +153,7 @@ export function TokensPanel(props: Props) {
           )}
 
           {filtered.length === 0 ? (
-            <p className="text-xs text-zinc-500">No items match the current filters.</p>
+            <p className="text-muted text-xs">No items match the current filters.</p>
           ) : (
             <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
               {filtered.map((item) => (
@@ -186,7 +184,7 @@ export function TokensPanel(props: Props) {
                         </span>
                       )}
                       {!item.includedInProxies && (
-                        <span className="text-[11px] text-zinc-500">(unchecked for PDF)</span>
+                        <span className="text-muted text-[11px]">(unchecked for PDF)</span>
                       )}
                     </div>
                     {item.description !== "" && (
@@ -195,19 +193,19 @@ export function TokensPanel(props: Props) {
                     {item.text !== "" && (
                       <p className="text-zinc-600 dark:text-zinc-400">{item.text}</p>
                     )}
-                    <p className="text-zinc-500">Made by {item.madeBy.join(", ")}</p>
+                    <p className="text-muted">Made by {item.madeBy.join(", ")}</p>
                   </div>
                 </li>
               ))}
             </ul>
           )}
 
-          {loading && <p className="text-xs text-zinc-500">Updating checklist…</p>}
+          {loading && <p className="text-muted text-xs">Updating checklist…</p>}
         </>
       )}
 
       {showPrintLink && deckId !== undefined && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           <Link href={`/decks/${deckId}/print`} className="underline">
             Choose token art &amp; print proxies
           </Link>

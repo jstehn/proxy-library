@@ -31,7 +31,7 @@ export function PriceChart(props: {
     ...markers.map((marker) => ({ day: marker.day, cents: marker.cents })),
   ];
   if (allPoints.length === 0) {
-    return <p className="text-sm text-zinc-500">No price history yet.</p>;
+    return <p className="text-muted text-sm">No price history yet.</p>;
   }
 
   const days = allPoints.map((point) => dayNumber(point.day));

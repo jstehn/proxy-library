@@ -94,7 +94,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
       />
 
       {result.rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           No cards here.{" "}
           <Link href="/store" className="underline">
             Buy a pack

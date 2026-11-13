@@ -143,7 +143,7 @@ export function RealImporter() {
               className="max-w-full text-sm"
             />
           </label>
-          {fileName !== null && <span className="text-zinc-500">{fileName}</span>}
+          {fileName !== null && <span className="text-muted">{fileName}</span>}
         </div>
         <fieldset className="flex flex-wrap gap-4 text-sm">
           <legend className="sr-only">How to import</legend>
@@ -206,7 +206,7 @@ export function RealImporter() {
           {matched.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-xs text-zinc-500">
+                <thead className="text-muted text-left text-xs">
                   <tr>
                     <th className="py-1 pr-2 font-normal">Copies</th>
                     <th className="py-1 pr-2 font-normal">Card</th>
@@ -227,7 +227,7 @@ export function RealImporter() {
                         <td className="py-1 pr-2">
                           {line.line.name}
                           {line.line.finish !== "nonfoil" && (
-                            <span className="text-xs text-zinc-500"> ({line.line.finish})</span>
+                            <span className="text-muted text-xs"> ({line.line.finish})</span>
                           )}
                         </td>
                         <td className="py-1">
@@ -255,7 +255,7 @@ export function RealImporter() {
                 </tbody>
               </table>
               {matched.length > SHOWN_LINES && (
-                <p className="mt-2 text-xs text-zinc-500">
+                <p className="text-muted mt-2 text-xs">
                   …and {matched.length - SHOWN_LINES} more lines, imported as matched. Change their
                   printing later on each card&apos;s page.
                 </p>
@@ -323,7 +323,7 @@ export function RealImporter() {
             >
               {isWorking ? "Importing…" : "Import"}
             </button>
-            <span className="text-xs text-zinc-500">Nothing is saved until you press Import.</span>
+            <span className="text-muted text-xs">Nothing is saved until you press Import.</span>
           </div>
         </section>
       )}

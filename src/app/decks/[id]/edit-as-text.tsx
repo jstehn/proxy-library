@@ -79,7 +79,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
       <form action={formAction} className="mt-3 flex flex-col gap-2">
         <input type="hidden" name="deckId" value={deckId} />
         <input type="hidden" name="fingerprint" value={fingerprint} />
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           Saving replaces the whole deck with this list: cards you delete here leave the deck.
           Headings like &quot;Commander&quot;, &quot;Sideboard&quot; or &quot;Lands (36)&quot;
           choose the board. Cards without &quot;(SET) number&quot; keep their printing, and new ones
@@ -127,14 +127,14 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <div>
-                <span className="text-xs text-zinc-500">Cards</span>
+                <span className="text-muted text-xs">Cards</span>
                 <p>
                   {preview.beforeCards} → {preview.afterCards} (
                   {preview.exactSize ? `needs ${preview.targetSize}` : `min ${preview.targetSize}`})
                 </p>
               </div>
               <div>
-                <span className="text-xs text-zinc-500">Avg. mana value</span>
+                <span className="text-muted text-xs">Avg. mana value</span>
                 <p>
                   {preview.beforeAverageManaValue.toFixed(2)} →{" "}
                   {preview.afterAverageManaValue.toFixed(2)}
@@ -142,7 +142,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
               </div>
               {preview.bracketAfter !== null && (
                 <div>
-                  <span className="text-xs text-zinc-500">Bracket</span>
+                  <span className="text-muted text-xs">Bracket</span>
                   <p>
                     {preview.bracketBefore} → {preview.bracketAfter}
                   </p>
@@ -160,7 +160,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
               </div>
             )}
             {preview.changes.length === 0 ? (
-              <p className="mt-2 text-xs text-zinc-500">No card quantities changed.</p>
+              <p className="text-muted mt-2 text-xs">No card quantities changed.</p>
             ) : (
               <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
                 {preview.changes.length} line{preview.changes.length === 1 ? "" : "s"} changed:{" "}
@@ -202,7 +202,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
             {preview.problemsAdded.length === 0 &&
               preview.problemsResolved.length === 0 &&
               preview.problemsRemainingCount > 0 && (
-                <p className="mt-2 text-xs text-zinc-500">
+                <p className="text-muted mt-2 text-xs">
                   {preview.problemsRemainingCount} existing problem
                   {preview.problemsRemainingCount === 1 ? "" : "s"} unchanged.
                 </p>

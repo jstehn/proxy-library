@@ -26,7 +26,7 @@ export function TextField(props: TextFieldProps) {
         required={required}
         className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
       />
-      {hint && <span className="text-xs text-zinc-500">{hint}</span>}
+      {hint && <span className="text-muted text-xs">{hint}</span>}
     </label>
   );
 }

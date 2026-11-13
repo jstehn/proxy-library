@@ -23,7 +23,7 @@ export default async function SharedDecksPage() {
         </p>
       </header>
       {decks.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           Nobody has shared a deck yet. Open one of yours and choose &quot;Share with the
           playgroup&quot;.
         </p>
@@ -34,12 +34,12 @@ export default async function SharedDecksPage() {
               <Link href={`/decks/${deck.id}`} className="font-medium underline">
                 {deck.name}
               </Link>
-              <span className="text-sm text-zinc-500">
+              <span className="text-muted text-sm">
                 by {deck.ownerName} · {FORMAT_LABELS[deck.format]} · {deck.cards} cards
                 {deck.commanders.length > 0 && ` · led by ${deck.commanders.join(" and ")}`}
               </span>
               <span className="flex-1" />
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 {deck.comments > 0 &&
                   `${deck.comments} ${deck.comments === 1 ? "comment" : "comments"} · `}
                 changed <LocalTime iso={deck.updatedAt} />

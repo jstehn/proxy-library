@@ -39,7 +39,7 @@ export default async function AdminCatalogPage() {
 }
 
 function SyncRunsList(props: { runs: SyncRunRow[] }) {
-  if (props.runs.length === 0) return <p className="text-sm text-zinc-500">No syncs yet.</p>;
+  if (props.runs.length === 0) return <p className="text-muted text-sm">No syncs yet.</p>;
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {props.runs.map((run) => {
@@ -56,11 +56,11 @@ function SyncRunsList(props: { runs: SyncRunRow[] }) {
                 #{run.id} {run.kind}
               </span>
               <StatusBadge status={run.status} />
-              <span className="text-zinc-500">
+              <span className="text-muted">
                 requested <LocalTime iso={run.requestedAt} withTime />
               </span>
               {run.startedAt && run.finishedAt && (
-                <span className="text-zinc-500">
+                <span className="text-muted">
                   took {Math.round((Date.parse(run.finishedAt) - Date.parse(run.startedAt)) / 1000)}
                   s
                 </span>
@@ -75,7 +75,7 @@ function SyncRunsList(props: { runs: SyncRunRow[] }) {
             {run.error && <p className="mt-1 text-red-700 dark:text-red-400">{run.error}</p>}
             {run.summary && (
               <details className="mt-1">
-                <summary className="cursor-pointer text-zinc-500">Details</summary>
+                <summary className="text-muted cursor-pointer">Details</summary>
                 <pre className="mt-2 max-h-80 overflow-auto rounded bg-zinc-100 p-2 text-xs dark:bg-zinc-900">
                   {JSON.stringify(run.summary, null, 2)}
                 </pre>

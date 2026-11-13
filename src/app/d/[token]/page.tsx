@@ -52,7 +52,7 @@ export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{deck.name}</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {FORMAT_LABELS[deck.format]} · shared by {ownerName}
           </p>
         </div>

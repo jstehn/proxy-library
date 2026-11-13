@@ -40,19 +40,19 @@ export function CutsPanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close possible cuts"
-          className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           ✕
         </button>
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         Ideas to consider, not rules: the cards that score lowest on a few simple checks (the themes
         the app found, role counts, the curve and your target bracket). The checks read rules text,
         so they miss combos, synergies they have no rule for and how you play the deck. Lands and
         commanders aren&apos;t listed.
       </p>
       {cuts.length === 0 ? (
-        <p className="text-zinc-500">No cards to judge yet: add some spells to the main deck.</p>
+        <p className="text-muted">No cards to judge yet: add some spells to the main deck.</p>
       ) : (
         <ol className="flex flex-col gap-2">
           {cuts.map((cut) => {

@@ -27,7 +27,7 @@ export default async function SetsPage() {
               <SetSymbol keyruneCode={set.keyruneCode} className="text-3xl" />
               <span className="flex flex-col">
                 <span className="font-medium">{set.name}</span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-muted text-xs">
                   {set.code} · {set.releaseDate.slice(0, 4)} · {set.printingCount} cards
                 </span>
               </span>

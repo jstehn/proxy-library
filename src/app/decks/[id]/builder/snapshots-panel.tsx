@@ -175,7 +175,7 @@ export function SnapshotsPanel(props: {
         <div className="flex items-baseline gap-2">
           <h3 className="text-sm font-medium">Snapshots</h3>
           {snapshots !== null && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-muted text-xs">
               {snapshots.length}/{MAX_SNAPSHOTS_PER_DECK}
             </span>
           )}
@@ -183,14 +183,14 @@ export function SnapshotsPanel(props: {
         <button
           type="button"
           onClick={props.onClose}
-          className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted text-xs hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           Close
         </button>
       </div>
 
       <form onSubmit={save} className="flex flex-col gap-1.5">
-        <label htmlFor={labelId} className="text-xs text-zinc-500">
+        <label htmlFor={labelId} className="text-muted text-xs">
           Save a snapshot before making cuts
         </label>
         <div className="flex gap-1.5">
@@ -239,9 +239,9 @@ export function SnapshotsPanel(props: {
       {loadError !== null ? (
         <p className="text-xs text-red-700 dark:text-red-300">{loadError}</p>
       ) : snapshots === null ? (
-        <p className="text-xs text-zinc-500">Loading snapshots…</p>
+        <p className="text-muted text-xs">Loading snapshots…</p>
       ) : snapshots.length === 0 ? (
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           No snapshots saved yet. Save one to compare before and after edits.
         </p>
       ) : (
@@ -263,11 +263,11 @@ export function SnapshotsPanel(props: {
                   <span className="truncate font-medium" title={snapshot.label}>
                     {snapshot.label}
                   </span>
-                  <span className="shrink-0 text-zinc-500 tabular-nums">
+                  <span className="text-muted shrink-0 tabular-nums">
                     {snapshot.cardCount} {snapshot.cardCount === 1 ? "card" : "cards"}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-zinc-500">
+                <div className="text-muted flex flex-wrap items-center justify-between gap-2">
                   <span>{formatTimestamp(snapshot.createdAt)}</span>
                   <div className="flex flex-wrap gap-1.5">
                     <button
@@ -339,13 +339,13 @@ export function SnapshotsPanel(props: {
                 setAfterId(null);
                 setComparison(null);
               }}
-              className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
             >
               Hide diff
             </button>
           </div>
           {snapshots.length > 1 && beforeId !== null && (
-            <label className="flex items-center gap-2 text-zinc-500">
+            <label className="text-muted flex items-center gap-2">
               <span>Compare against:</span>
               <select
                 value={afterId ?? ""}
@@ -370,13 +370,13 @@ export function SnapshotsPanel(props: {
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div>
-              <span className="text-zinc-500">Cards</span>
+              <span className="text-muted">Cards</span>
               <p className="font-medium tabular-nums">
                 {comparison.before.stats.cardCount} → {comparison.after.stats.cardCount}
               </p>
             </div>
             <div>
-              <span className="text-zinc-500">Avg. mana value</span>
+              <span className="text-muted">Avg. mana value</span>
               <p className="font-medium tabular-nums">
                 {comparison.before.stats.averageManaValue.toFixed(2)} →{" "}
                 {comparison.after.stats.averageManaValue.toFixed(2)}
@@ -384,7 +384,7 @@ export function SnapshotsPanel(props: {
             </div>
             {comparison.bracket.before !== null && comparison.bracket.after !== null && (
               <div>
-                <span className="text-zinc-500">Bracket</span>
+                <span className="text-muted">Bracket</span>
                 <p className="font-medium tabular-nums">
                   {estimateLabel(comparison.bracket.before)} →{" "}
                   {estimateLabel(comparison.bracket.after)}
@@ -404,7 +404,7 @@ export function SnapshotsPanel(props: {
           )}
 
           {comparison.changes.length === 0 ? (
-            <p className="text-zinc-500">No card changes between these two lists.</p>
+            <p className="text-muted">No card changes between these two lists.</p>
           ) : (
             <ul className="flex max-h-44 flex-col gap-0.5 overflow-y-auto">
               {comparison.changes.map((change) => {
@@ -425,9 +425,9 @@ export function SnapshotsPanel(props: {
                         {delta > 0 ? `+${delta}` : delta}
                       </span>
                       {change.name}{" "}
-                      <span className="text-zinc-500">({BOARD_NAMES[change.board]})</span>
+                      <span className="text-muted">({BOARD_NAMES[change.board]})</span>
                     </span>
-                    <span className="shrink-0 text-zinc-500 tabular-nums">
+                    <span className="text-muted shrink-0 tabular-nums">
                       {change.beforeQuantity} → {change.afterQuantity}
                     </span>
                   </li>

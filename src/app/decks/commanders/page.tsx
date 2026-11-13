@@ -141,7 +141,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           ))}
         </fieldset>
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-zinc-500">Theme</span>
+          <span className="text-muted text-xs">Theme</span>
           <select name="theme" defaultValue={theme ?? ""} className={fieldClass}>
             <option value="">Any theme</option>
             {THEMES.map((entry) => (
@@ -152,7 +152,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           </select>
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-zinc-500">Tribe</span>
+          <span className="text-muted text-xs">Tribe</span>
           <input
             type="text"
             name="tribe"
@@ -162,7 +162,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           />
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-zinc-500">Order by</span>
+          <span className="text-muted text-xs">Order by</span>
           <select name="sort" defaultValue={sort} className={fieldClass}>
             {COMMANDER_SORTS.map((mode) => (
               <option key={mode} value={mode}>
@@ -186,21 +186,21 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           Show
         </button>
         {(colors.length > 0 || theme !== undefined || tribe !== "" || sort !== "coverage") && (
-          <Link href="/decks/commanders" className="text-xs text-zinc-500 underline">
+          <Link href="/decks/commanders" className="text-muted text-xs underline">
             Reset filters
           </Link>
         )}
       </form>
 
       {ranked.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           {includeStore
             ? "No card that could lead a deck matches these filters."
             : "You don't own a card that could lead a deck matching these filters. Try “Also legends I don't own”."}
         </p>
       ) : (
         <>
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             {ranked.length} {ranked.length === 1 ? "commander" : "commanders"}
             {theme !== undefined && ` leading ${THEME_LABELS[theme]}`}
             {tribe !== "" && ` matching tribe “${tribe}”`}
@@ -264,7 +264,7 @@ function CommanderRow(props: {
           ) : (
             <ManaText text={identity} />
           )}
-          <span className="text-xs text-zinc-500" title="Color identity">
+          <span className="text-muted text-xs" title="Color identity">
             ({<ManaText text={identity} />})
           </span>
           {commander.isGameChanger && (
@@ -350,7 +350,7 @@ function CommanderRow(props: {
           </span>{" "}
           spells from your cards · {coverage.ownedLands}{" "}
           {coverage.ownedLands === 1 ? "land" : "lands"}
-          <span className="text-xs text-zinc-500">
+          <span className="text-muted text-xs">
             {" "}
             · coverage {coverage.score} · power {coverage.powerScore}
           </span>
@@ -370,7 +370,7 @@ function CommanderRow(props: {
           ))}
         </ul>
         {commander.leads.length > 0 && (
-          <p className="text-xs text-zinc-500">Already leads {commander.leads.join(", ")}.</p>
+          <p className="text-muted text-xs">Already leads {commander.leads.join(", ")}.</p>
         )}
         <div className="flex flex-wrap items-start gap-2 pt-1">
           <form action={startDeckAction}>

@@ -37,7 +37,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
           ← All sets
         </Link>
         <h1 className="text-2xl font-semibold">
-          {view.setName} <span className="text-zinc-500">{view.setCode}</span>
+          {view.setName} <span className="text-muted">{view.setCode}</span>
         </h1>
       </header>
       {message && <Alert tone="success">{message}</Alert>}
@@ -62,7 +62,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
         </p>
         <form action={setPageSlugAction} className="flex flex-wrap items-center gap-2 text-sm">
           <input type="hidden" name="code" value={view.setCode} />
-          <span className="text-zinc-500">wpn.wizards.com/en/products/</span>
+          <span className="text-muted">wpn.wizards.com/en/products/</span>
           <input
             name="slug"
             defaultValue={view.slugOverride ?? ""}
@@ -108,7 +108,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
               </div>
               <div className="flex min-w-60 flex-1 flex-col">
                 <span className="font-medium">{product.name}</span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-muted text-xs">
                   {product.wpnName ?? "no WPN product"}
                   {product.match && ` · ${MATCH_LABELS[product.match]}`}
                   {product.photo === "none" && product.match !== null && " · generated art"}
@@ -169,7 +169,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
                 )}
               </div>
               <span className="font-medium">{offer.name}</span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-muted text-xs">
                 {offer.msrpCents === null
                   ? "no MSRP listed"
                   : `MSRP ${Cents.format(Cents.of(offer.msrpCents))}`}

@@ -151,7 +151,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
       )}
       {view.status === "finished" && <Finished view={view} seen={seen} printings={printings} />}
       {view.status === "cancelled" && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           The host closed this lobby before it started. Everyone got their entry fee back.
         </p>
       )}
@@ -219,10 +219,10 @@ function Lobby(props: { view: DraftView; canAddBots: boolean }) {
           <li key={seat.seatNumber} className="flex items-center gap-2 py-2 text-sm">
             {seat.botNumber === null ? <Presence away={seat.away} /> : <BotMark />}
             <span className="font-medium">{seat.name}</span>
-            {seat.isHost && <span className="text-xs text-zinc-500">host</span>}
-            {seat.isYou && <span className="text-xs text-zinc-500">you</span>}
+            {seat.isHost && <span className="text-muted text-xs">host</span>}
+            {seat.isYou && <span className="text-muted text-xs">you</span>}
             {seat.botNumber !== null && (
-              <span className="text-xs text-zinc-500">its picks go to {view.hostName}</span>
+              <span className="text-muted text-xs">its picks go to {view.hostName}</span>
             )}
             {seat.botNumber !== null && view.isHost && (
               <form action={removeBotAction} className="ml-auto">
@@ -271,7 +271,7 @@ function Lobby(props: { view: DraftView; canAddBots: boolean }) {
           </form>
         )}
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         Everyone opens {view.packsPerPlayer} packs, one per round. Packs go left, then right, then
         left. Basic lands are taken out of the packs and dealt out evenly to the players instead.
         Keep this page open: when the host starts, your first pack appears here.
@@ -340,7 +340,7 @@ function Drafting(props: {
       <Table view={view} seen={seen} names={names} serverNow={props.serverNow} />
 
       {you === null || mySeat === undefined ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           You&apos;re watching. Only the players see their packs.
         </p>
       ) : (
@@ -349,7 +349,7 @@ function Drafting(props: {
             <span>
               Round {view.round} of {view.packsPerPlayer}, pick {you.pile.length + 1}
             </span>
-            <span className="text-sm font-normal text-zinc-500">
+            <span className="text-muted text-sm font-normal">
               passing {view.passDirection} {arrow}
             </span>
             {(you.pack !== null || you.awaiting !== null) && mySeat.deadline !== null && (
@@ -387,7 +387,7 @@ function Drafting(props: {
               />
             ))
           ) : you.pack === null ? (
-            <p className="rounded-md border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
+            <p className="text-muted rounded-md border border-dashed border-zinc-300 p-6 text-center text-sm dark:border-zinc-700">
               Waiting for {neighbourName(view, mySeat)} to pass you a pack…
             </p>
           ) : you.pack.cards === null ? (
@@ -402,7 +402,7 @@ function Drafting(props: {
             />
           )}
           {mySeat.waiting > 1 && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-muted text-xs">
               {mySeat.waiting - 1} more pack{mySeat.waiting > 2 ? "s" : ""} waiting behind this one.
             </p>
           )}
@@ -417,7 +417,7 @@ function Drafting(props: {
 
       {you !== null && <Picks cards={you.pool} printings={names.printings} />}
       {view.you !== null && view.you.basicsReceived.length > 0 && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-muted text-xs">
           Basic lands aren&apos;t drafted: {basicCount(view.you)} from the packs were dealt to you
           and are in your collection. Your draft deck will use your own basics, topped up if
           you&apos;re short.
@@ -464,9 +464,9 @@ function Table(props: { view: DraftView; seen: DraftSeen; names: Names; serverNo
             <span className="flex items-center gap-1.5 font-medium">
               {seat.botNumber === null ? <Presence away={seat.away} /> : <BotMark />}
               {seat.name}
-              {seat.isYou && <span className="text-xs font-normal text-zinc-500">you</span>}
+              {seat.isYou && <span className="text-muted text-xs font-normal">you</span>}
             </span>
-            <span className="text-xs text-zinc-500">
+            <span className="text-muted text-xs">
               {seat.picks} picked ·{" "}
               {seat.waiting === 0
                 ? "waiting"
@@ -496,7 +496,7 @@ function Table(props: { view: DraftView; seen: DraftSeen; names: Names; serverNo
           </li>
         ))}
       </ol>
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         {view.passDirection === "left"
           ? "This round, packs move along the list (→), from the last player back to the first."
           : "This round, packs move back along the list (←), from the first player to the last."}{" "}
@@ -524,7 +524,7 @@ function Picks(props: {
       <div className="flex flex-wrap gap-4">
         {columns.map(({ column, cards }) => (
           <div key={column} className="flex w-36 flex-col gap-1">
-            <h3 className="text-xs font-semibold text-zinc-500">
+            <h3 className="text-muted text-xs font-semibold">
               {COLUMN_LABELS[column]} ({cards.length})
             </h3>
             <ul className="flex flex-col gap-0.5 text-sm">
@@ -544,7 +544,7 @@ function Picks(props: {
                       <span className="text-xs text-violet-600 dark:text-violet-300"> face up</span>
                     )}
                     {all.some((each) => each.pick?.auto) && (
-                      <span className="text-xs text-zinc-500"> (auto)</span>
+                      <span className="text-muted text-xs"> (auto)</span>
                     )}
                   </li>
                 ),
@@ -568,10 +568,7 @@ function Curve(props: { counts: readonly number[] }) {
   return (
     <figure className="flex items-end gap-1" aria-label="Mana curve of your spells">
       {props.counts.map((count, index) => (
-        <span
-          key={index}
-          className="flex w-6 flex-col items-center gap-0.5 text-[10px] text-zinc-500"
-        >
+        <span key={index} className="text-muted flex w-6 flex-col items-center gap-0.5 text-[10px]">
           <span className="tabular-nums">{count}</span>
           <span
             aria-hidden
@@ -596,7 +593,7 @@ function Finished(props: {
   return (
     <div className="flex flex-col gap-6">
       {you === null || seen === null ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           {view.seats.map((seat) => seat.name).join(", ")} drafted this one.
         </p>
       ) : (

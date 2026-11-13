@@ -320,7 +320,7 @@ export function PickGrid(props: {
       )}
       <div className="flex min-h-10 flex-wrap items-center gap-3">
         {chosen === null ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-muted text-sm">
             Tap a card to look at it, then pick it. Double-click picks straight away.
           </p>
         ) : (

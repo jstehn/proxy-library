@@ -152,7 +152,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               <tr key={row.kind} className="border-b border-zinc-100 dark:border-zinc-900">
                 <td className="py-1.5">
                   <code>{row.kind}</code>
-                  <div className="text-xs text-zinc-500">e.g. {row.example}</div>
+                  <div className="text-muted text-xs">e.g. {row.example}</div>
                 </td>
                 <td className="py-1.5 tabular-nums">{row.products}</td>
                 <td className="py-1.5">
@@ -215,7 +215,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                   <tr key={product.id} className="border-b border-zinc-100 dark:border-zinc-900">
                     <td className="py-1.5">
                       {product.name}
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-muted text-xs">
                         <code>{product.kind}</code>
                       </div>
                     </td>
@@ -248,7 +248,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                         ? "not for sale"
                         : Cents.format(product.storePrice)}
                       {product.isRaised && (
-                        <div className="text-xs text-zinc-500">raised to the resale value</div>
+                        <div className="text-muted text-xs">raised to the resale value</div>
                       )}
                     </td>
                   </tr>

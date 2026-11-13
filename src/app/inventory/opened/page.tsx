@@ -71,7 +71,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           </p>
         )}
         {openings.length === 0 ? (
-          <p className="text-sm text-zinc-500">Nothing to show.</p>
+          <p className="text-muted text-sm">Nothing to show.</p>
         ) : (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {packs.length > 0 && `${packs.length} pack${packs.length === 1 ? "" : "s"} · `}
@@ -213,7 +213,7 @@ function Unpacked(props: { opening: OpeningView }) {
         </p>
       )}
       {opening.extras.length > 0 && (
-        <p className="text-zinc-500">Also inside: {opening.extras.join(", ")}</p>
+        <p className="text-muted">Also inside: {opening.extras.join(", ")}</p>
       )}
     </div>
   );

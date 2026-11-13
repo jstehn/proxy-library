@@ -15,7 +15,7 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
     <section className="flex flex-1 flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
       <h2 className="font-medium">{props.title}</h2>
       {props.items.length === 0 ? (
-        <p className="text-sm text-zinc-500">Nothing.</p>
+        <p className="text-muted text-sm">Nothing.</p>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {props.items.map((item, index) => (
@@ -28,7 +28,7 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
                 itemText(item)
               )}
               {item.kind === "card" && (
-                <span className="text-xs text-zinc-500">
+                <span className="text-muted text-xs">
                   {" "}
                   {item.setCode} ·{" "}
                   {item.priceCents === null
@@ -40,7 +40,7 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
           ))}
         </ul>
       )}
-      <p className="text-xs text-zinc-500">
+      <p className="text-muted text-xs">
         About {Cents.format(sideValue(props.items))} at market price.
       </p>
     </section>
@@ -99,7 +99,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
         <h1 className="text-2xl font-semibold">
           Trade: {trade.proposer.displayName} ⇄ {trade.recipient.displayName}
         </h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-muted text-sm">
           {STATUS_LABELS[trade.status]} · proposed <LocalTime iso={trade.createdAt} withTime />
           {trade.replacesId !== null && (
             <>
@@ -142,7 +142,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       )}
       {isOpen && trade.yourSide === "proposer" && (
         <div className="flex gap-3">
-          <p className="text-sm text-zinc-500">Waiting for {trade.recipient.displayName}.</p>
+          <p className="text-muted text-sm">Waiting for {trade.recipient.displayName}.</p>
           {decide("cancel", "Cancel this offer", "border border-zinc-300 dark:border-zinc-700")}
         </div>
       )}

@@ -89,7 +89,7 @@ export function StatsPanel(props: {
       </dl>
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Mana curve</h3>
+        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Mana curve</h3>
         <div
           className="flex h-24 items-end gap-1"
           role="img"
@@ -114,14 +114,14 @@ export function StatsPanel(props: {
             );
           })}
         </div>
-        <div className="flex gap-1 text-[10px] text-zinc-500">
+        <div className="text-muted flex gap-1 text-[10px]">
           {stats.curve.map((_, manaValue) => (
             <span key={manaValue} className="flex-1 text-center">
               {manaValue === 7 ? "7+" : manaValue}
             </span>
           ))}
         </div>
-        <p className="flex gap-3 text-[10px] text-zinc-500">
+        <p className="text-muted flex gap-3 text-[10px]">
           <span className="flex items-center gap-1">
             <span className="inline-block h-2 w-2 bg-sky-600 dark:bg-sky-400" /> creatures
           </span>
@@ -133,7 +133,7 @@ export function StatsPanel(props: {
 
       {neededColors.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
             Colors: needed vs. made
           </h3>
           {neededColors.map((color) => (
@@ -151,7 +151,7 @@ export function StatsPanel(props: {
               />
             </div>
           ))}
-          <p className="text-[10px] text-zinc-500">
+          <p className="text-muted text-[10px]">
             Left: colored symbols in your spells&apos; costs. Right: lands and other cards that make
             that color.
           </p>
@@ -159,7 +159,7 @@ export function StatsPanel(props: {
       )}
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Roles</h3>
+        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Roles</h3>
         {TARGETED_TAGS.map((tag) => {
           const count = stats.tags[tag];
           if (targets === null) {
@@ -219,7 +219,7 @@ export function StatsPanel(props: {
             ))}
           </p>
         )}
-        <p className="text-[10px] text-zinc-500">
+        <p className="text-muted text-[10px]">
           Read from each card&apos;s rules text, so a few may be missed or miscounted.{" "}
           {targets === null
             ? "Limited formats have no fixed role targets, so counts are shown alone."
@@ -231,13 +231,13 @@ export function StatsPanel(props: {
       </div>
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Types</h3>
+        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Types</h3>
         <dl className="flex flex-wrap gap-x-3 gap-y-1">
           {[...TYPE_ORDER, "Other"]
             .filter((type) => (stats.types[type] ?? 0) > 0)
             .map((type) => (
               <div key={type} className="flex gap-1">
-                <dt className="text-zinc-500">{type}</dt>
+                <dt className="text-muted">{type}</dt>
                 <dd className="tabular-nums">{stats.types[type]}</dd>
               </div>
             ))}
@@ -246,7 +246,7 @@ export function StatsPanel(props: {
 
       {handOdds !== null && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
             Opening-hand odds (play)
           </h3>
           <dl className="flex flex-col gap-0.5">
@@ -282,7 +282,7 @@ function Figure(props: { label: string; value: string; tone?: "good" | "warn" })
         : "";
   return (
     <div className="flex justify-between gap-2">
-      <dt className="text-zinc-500">{props.label}</dt>
+      <dt className="text-muted">{props.label}</dt>
       <dd className={`font-medium tabular-nums ${color}`}>{props.value}</dd>
     </div>
   );

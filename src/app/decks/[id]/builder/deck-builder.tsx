@@ -765,7 +765,7 @@ export function DeckBuilder(props: {
         >
           <div className="flex flex-col gap-2">
             <div role="group" aria-label="Search in" className="flex items-center gap-1">
-              <span className="mr-1 text-xs text-zinc-500">Search</span>
+              <span className="text-muted mr-1 text-xs">Search</span>
               {(["mine", "all"] as const).map((option) => (
                 <button
                   key={option}
@@ -778,7 +778,7 @@ export function DeckBuilder(props: {
                 </button>
               ))}
               {source === "all" && (
-                <span className="ml-1 text-xs text-zinc-500">
+                <span className="text-muted ml-1 text-xs">
                   Cards you don&apos;t own show as short; buy them when you&apos;re done.
                 </span>
               )}
@@ -794,7 +794,7 @@ export function DeckBuilder(props: {
                 className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
               />
               <div role="group" aria-label="Card size" className="flex shrink-0 items-center gap-1">
-                <span className="mr-1 hidden text-xs text-zinc-500 sm:inline">Card size</span>
+                <span className="text-muted mr-1 hidden text-xs sm:inline">Card size</span>
                 {CARD_SIZE_NAMES.map((size) => (
                   <button
                     key={size}
@@ -885,7 +885,7 @@ export function DeckBuilder(props: {
                   </button>
                 );
               })}
-              <span className="mx-1 text-xs text-zinc-500">Mana value</span>
+              <span className="text-muted mx-1 text-xs">Mana value</span>
               {MANA_VALUE_FILTERS.map((term) => (
                 <button
                   key={term}
@@ -901,7 +901,7 @@ export function DeckBuilder(props: {
                 </button>
               ))}
             </div>
-            <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
+            <div className="text-muted flex items-center justify-between gap-2 text-xs">
               <span aria-live="polite">
                 {isFirstPageLoading
                   ? "Loading…"
@@ -950,13 +950,13 @@ export function DeckBuilder(props: {
             })}
           </ul>
           {!isFirstPageLoading && browse.cards.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-muted text-sm">
               {source === "mine" ? "None of your cards match" : "No cards match"}. Try fewer
               filters, or &quot;Show cards that don&apos;t fit&quot;.
             </p>
           )}
           <div ref={endRef} className="h-1" />
-          {browse.loadingMore && <p className="text-center text-xs text-zinc-500">Loading more…</p>}
+          {browse.loadingMore && <p className="text-muted text-center text-xs">Loading more…</p>}
 
           {selected !== null && (
             // Stays at the bottom of the screen while the grid scrolls: a sheet on a phone.
@@ -1027,7 +1027,7 @@ export function DeckBuilder(props: {
 
         <aside
           aria-label="The deck"
-          className={`w-full flex-col gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[26rem] lg:overflow-y-auto lg:pr-1 ${tab === "deck" ? "flex" : "hidden lg:flex"}`}
+          className={`w-full flex-col gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:w-[26rem] lg:overflow-y-auto lg:pr-1 ${tab === "deck" ? "flex" : "hidden lg:flex"}`}
         >
           <section aria-label="Problems" className="flex flex-col gap-1 text-sm">
             {problems.length === 0 ? (
@@ -1249,7 +1249,7 @@ function GridCard(props: {
   return (
     <>
       {props.heading !== null && (
-        <li className="col-span-full pt-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+        <li className="text-muted col-span-full pt-2 text-xs font-medium tracking-wide uppercase">
           {props.heading}
         </li>
       )}
@@ -1296,7 +1296,7 @@ function GridCard(props: {
               </span>
             )}
           </span>
-          <span className="block text-xs text-zinc-500">
+          <span className="text-muted block text-xs">
             {card.owned === 0 ? (
               <>
                 <span className="font-medium text-amber-700 dark:text-amber-400">Not owned</span>

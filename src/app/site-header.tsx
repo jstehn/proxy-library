@@ -5,6 +5,8 @@ import { wishesAtTarget } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { getCurrentActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { MobileBottomNav } from "./_components/mobile-bottom-nav";
+import { NavLink } from "./_components/nav-link";
 import { PhoneMenu } from "./_components/phone-menu";
 import { signOutAction } from "./actions";
 
@@ -39,18 +41,25 @@ export async function SiteHeader() {
       ? null
       : [
           ...MAIN_LINKS.map(([href, label]) => (
-            <Link
+            <NavLink
               key={href}
               href={href === "/drafts" && draft !== null ? `/drafts/${draft.id}` : href}
+              matchPrefix={href}
             >
               {label}
               {href === "/drafts" && draft !== null && (
-                <span
-                  className={`ml-1 inline-block h-2 w-2 rounded-full ${draft.status === "drafting" ? "bg-amber-500" : "bg-sky-500"}`}
-                  title={
-                    draft.status === "drafting" ? "Your draft is running" : "You're in a lobby"
-                  }
-                />
+                <>
+                  <span
+                    aria-hidden="true"
+                    className={`ml-1 inline-block h-2 w-2 rounded-full ${draft.status === "drafting" ? "bg-amber-500" : "bg-sky-500"}`}
+                    title={
+                      draft.status === "drafting" ? "Your draft is running" : "You're in a lobby"
+                    }
+                  />
+                  <span className="sr-only">
+                    {draft.status === "drafting" ? " (drafting)" : " (in lobby)"}
+                  </span>
+                </>
               )}
               {href === "/wishlist" && wishesOnTarget > 0 && (
                 <span
@@ -58,6 +67,7 @@ export async function SiteHeader() {
                   title={`${wishesOnTarget} at or under your target price`}
                 >
                   {wishesOnTarget}
+                  <span className="sr-only"> at or under target price</span>
                 </span>
               )}
               {href === "/trades" && waitingTrades > 0 && (
@@ -66,22 +76,26 @@ export async function SiteHeader() {
                   title={`${waitingTrades} waiting for you`}
                 >
                   {waitingTrades}
+                  <span className="sr-only"> waiting for you</span>
                 </span>
               )}
-            </Link>
+            </NavLink>
           )),
           ...(actor.isAdmin
             ? [
-                <Link key="/admin" href="/admin">
+                <NavLink key="/admin" href="/admin">
                   Admin
-                </Link>,
+                </NavLink>,
               ]
             : []),
         ];
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <nav className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm">
+      <nav
+        aria-label="Primary"
+        className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"
+      >
         <Link href="/" className="font-semibold">
           Proxy Library
         </Link>
@@ -120,6 +134,9 @@ export async function SiteHeader() {
           </>
         )}
       </nav>
+      {actor !== null && (
+        <MobileBottomNav draftId={draft?.id ?? null} draftStatus={draft?.status ?? null} />
+      )}
     </header>
   );
 }

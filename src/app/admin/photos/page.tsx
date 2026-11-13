@@ -42,7 +42,7 @@ export default async function PhotosPage() {
                 <Link href={`/admin/photos/${set.setCode}`} className="underline">
                   {set.setName}
                 </Link>{" "}
-                <span className="text-zinc-500">{set.setCode}</span>
+                <span className="text-muted">{set.setCode}</span>
               </td>
               <td
                 className={`py-1.5 ${set.status === "found" ? "" : "text-amber-700 dark:text-amber-400"}`}
