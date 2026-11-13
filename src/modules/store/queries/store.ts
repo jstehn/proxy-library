@@ -18,14 +18,15 @@ const LIST_PRICE = sql`coalesce(o.cents, w.msrp_cents, k.cents)`;
 const RESALE_FLOOR = sql`ceil(v.value_cents * ss.buylist_rate_bps / 10000.0)::bigint`;
 /**
  * The store price in SQL (design doc 27): an override as typed; in MSRP pricing (design doc 33,
- * the default) an official MSRP as published; otherwise the list price, raised to the resale
- * floor. A product priced only by its kind waits for its first valuation. The same rule as
- * `storePrice` in domain/pricing.ts; an integration test checks they agree.
+ * the default) any list price (official MSRP or kind price) as published; in value-based pricing
+ * the list price raised to the resale floor, and a product priced only by its kind waits for its
+ * first valuation. The same rule as `storePrice` in domain/pricing.ts; an integration test checks
+ * they agree.
  */
 const MSRP = sql`(case
   when o.cents is not null then o.cents
   when coalesce(w.msrp_cents, k.cents) is null then null
-  when w.msrp_cents is not null and ss.pricing_mode = 'msrp' then w.msrp_cents
+  when ss.pricing_mode = 'msrp' then coalesce(w.msrp_cents, k.cents)
   when w.msrp_cents is null and v.value_cents is null then null
   else greatest(coalesce(w.msrp_cents, k.cents), coalesce(${RESALE_FLOOR}, 0))
 end)`;
@@ -461,8 +462,9 @@ export async function singleHistory(
 }
 
 /**
- * How many products for sale have an official MSRP below what their contents sell back for:
- * the products value-based pricing raises and MSRP pricing doesn't (design doc 33).
+ * How many products for sale have a list price (official MSRP or kind price) below what their
+ * contents sell back for: the products value-based pricing raises and MSRP pricing doesn't
+ * (design doc 33).
  */
 export async function msrpsBelowResale(db: DbExecutor): Promise<number> {
   const [row] = (
@@ -471,8 +473,8 @@ export async function msrpsBelowResale(db: DbExecutor): Promise<number> {
         from sealed_products sp
         join card_sets s on s.code = sp.set_code and s.is_enabled
         ${PRICE_JOINS}
-       where ${HAS_CONTENTS} and o.cents is null and w.msrp_cents is not null
-         and ${RESALE_FLOOR} > w.msrp_cents`)
+       where ${HAS_CONTENTS} and o.cents is null and ${LIST_PRICE} is not null
+         and ${RESALE_FLOOR} > ${LIST_PRICE}`)
   ).rows;
   return row?.count ?? 0;
 }

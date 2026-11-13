@@ -66,6 +66,13 @@ import {
   drizzleTradePlayers,
   drizzleTradeRepository,
 } from "@/modules/trades/infrastructure";
+import { makeSocial } from "@/modules/social";
+import {
+  drizzleFriendshipRepository,
+  drizzleProfileRepository,
+  drizzleShowcaseValidator,
+  drizzleSocialPlayerLookup,
+} from "@/modules/social/infrastructure";
 import { makeWallet } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
@@ -132,6 +139,10 @@ export function buildCore(config: Config) {
       productContents: drizzleProductCatalog(transaction),
       wishes: drizzleWishRepository(transaction),
       wishCatalog: drizzleWishCatalog(transaction),
+      profiles: drizzleProfileRepository(transaction),
+      friendships: drizzleFriendshipRepository(transaction),
+      socialPlayers: drizzleSocialPlayerLookup(transaction),
+      showcaseValidator: drizzleShowcaseValidator(transaction),
     };
   }
 
@@ -208,6 +219,7 @@ export function buildCore(config: Config) {
   const resetPlayer = makeResetPlayer({ unitOfWork, clock });
   const realCollection = makeRealCollection({ unitOfWork, clock });
   const wishlist = makeWishlist({ unitOfWork, clock });
+  const social = makeSocial({ unitOfWork, clock });
 
   return {
     config,
@@ -231,6 +243,7 @@ export function buildCore(config: Config) {
     resetPlayer,
     realCollection,
     wishlist,
+    social,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

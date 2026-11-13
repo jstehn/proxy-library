@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { activeDraftOf } from "@/modules/drafts";
+import { incomingRequestCount } from "@/modules/social";
 import { tradesWaitingForYou } from "@/modules/trades";
 import { wishesAtTarget } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
@@ -21,6 +22,7 @@ const MAIN_LINKS = [
   ["/drafts", "Drafts"],
   ["/sets", "Sets"],
   ["/activity", "Activity"],
+  ["/friends", "Friends"],
 ] as const;
 
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
@@ -34,6 +36,8 @@ export async function SiteHeader() {
   const wishesOnTarget = actor === null ? 0 : await wishesAtTarget(getContainer().db, actor.userId);
   // A lobby or draft you're seated at: the link goes straight back to it (design doc 17).
   const draft = actor === null ? null : await activeDraftOf(getContainer().db, actor.userId);
+  const friendRequests =
+    actor === null ? 0 : await incomingRequestCount(getContainer().db, actor.userId);
 
   // The same links in two layouts: inline on larger screens, in the "Menu" on phones.
   const links =
@@ -77,6 +81,15 @@ export async function SiteHeader() {
                 >
                   {waitingTrades}
                   <span className="sr-only"> waiting for you</span>
+                </span>
+              )}
+              {href === "/friends" && friendRequests > 0 && (
+                <span
+                  className="ml-1 rounded-full bg-sky-600 px-1.5 text-xs font-semibold text-white"
+                  title={`${friendRequests} friend request${friendRequests === 1 ? "" : "s"}`}
+                >
+                  {friendRequests}
+                  <span className="sr-only"> friend requests</span>
                 </span>
               )}
             </NavLink>

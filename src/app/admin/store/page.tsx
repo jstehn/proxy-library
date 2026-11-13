@@ -101,10 +101,9 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               className="mt-1"
             />
             <span>
-              <strong>MSRP pricing</strong> (the default): a product with Wizards&apos; official
-              MSRP sells at that price. A product priced by its kind (a generic guess, like $3.99 a
-              pack) is raised to what its cards sell back for, so old sets aren&apos;t sold for less
-              than their cards are worth.
+              <strong>MSRP pricing</strong> (the default): every product sells at its MSRP
+              (Wizards&apos; official MSRP, or its kind&apos;s MSRP below), regardless of what its
+              cards sell back for.
             </span>
           </label>
           <label className="flex items-start gap-2">
@@ -116,14 +115,14 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               className="mt-1"
             />
             <span>
-              <strong>Value-based pricing</strong>: official MSRPs are raised too, so no product
-              sells for less than its cards sell back for.
+              <strong>Value-based pricing</strong>: prices are raised to what the cards sell back
+              for whenever that&apos;s higher than the MSRP.
             </span>
           </label>
           <p className="text-zinc-600 dark:text-zinc-400">
             {belowResale === 0
-              ? "No product with an official MSRP sells for less than its cards sell back for, so both choices give the same prices today."
-              : `${belowResale} ${belowResale === 1 ? "product has" : "products have"} an official MSRP below what ${belowResale === 1 ? "its" : "their"} cards sell back for: value-based pricing raises ${belowResale === 1 ? "it" : "them"}, MSRP pricing doesn't.`}
+              ? "No product has an MSRP below what its cards sell back for, so both choices give the same prices today."
+              : `${belowResale} ${belowResale === 1 ? "product has" : "products have"} an MSRP below what ${belowResale === 1 ? "its" : "their"} cards sell back for: value-based pricing raises ${belowResale === 1 ? "it" : "them"}, MSRP pricing doesn't.`}
           </p>
           <div>
             <button type="submit" className={buttonClass}>

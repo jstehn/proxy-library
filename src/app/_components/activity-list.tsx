@@ -12,13 +12,23 @@ const RARITY_COLORS: Record<string, string> = {
   mythic: "text-orange-600 dark:text-orange-400",
 };
 
+function ActorName(props: { name: string; username?: string }) {
+  if (!props.username) return <strong>{props.name}</strong>;
+  return (
+    <Link href={`/players/${props.username}`} className="font-semibold underline">
+      {props.name}
+    </Link>
+  );
+}
+
 function Line(props: { item: FeedItem }) {
   const { item } = props;
+  const actor = <ActorName name={item.actor} username={item.actorUsername} />;
   switch (item.kind) {
     case "pull":
       return (
         <>
-          <strong>{item.actor}</strong> opened {item.itemName} and pulled{" "}
+          {actor} opened {item.itemName} and pulled{" "}
           {item.cards.map((card, index) => (
             <span key={card.printingId + index}>
               {index > 0 && ", "}
@@ -37,14 +47,14 @@ function Line(props: { item: FeedItem }) {
     case "purchase":
       return (
         <>
-          <strong>{item.actor}</strong> bought {item.quantity > 1 ? `${item.quantity} × ` : ""}
+          {actor} bought {item.quantity > 1 ? `${item.quantity} × ` : ""}
           {item.productName}
         </>
       );
     case "trade":
       return (
         <>
-          <strong>{item.actor}</strong> and <strong>{item.other}</strong> traded
+          {actor} and <strong>{item.other}</strong> traded
           {item.cardsMoved > 0 ? ` ${item.cardsMoved} card${item.cardsMoved === 1 ? "" : "s"}` : ""}
           {item.moneyChanged ? (item.cardsMoved > 0 ? " and some money" : " money") : ""}
         </>
@@ -52,13 +62,13 @@ function Line(props: { item: FeedItem }) {
     case "draft":
       return (
         <>
-          <strong>{item.actor}</strong> hosted a {item.setName} draft for {item.players} players
+          {actor} hosted a {item.setName} draft for {item.players} players
         </>
       );
     case "deckShared":
       return (
         <>
-          <strong>{item.actor}</strong> shared a deck:{" "}
+          {actor} shared a deck:{" "}
           <Link href={`/decks/${item.deckId}`} className="underline">
             {item.deckName}
           </Link>{" "}
@@ -68,7 +78,7 @@ function Line(props: { item: FeedItem }) {
     case "deckComment":
       return (
         <>
-          <strong>{item.actor}</strong> commented on <strong>{item.other}</strong>&apos;s deck{" "}
+          {actor} commented on <strong>{item.other}</strong>&apos;s deck{" "}
           <Link href={`/decks/${item.deckId}#comments`} className="underline">
             {item.deckName}
           </Link>

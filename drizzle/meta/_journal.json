@@ -281,6 +281,13 @@
       "when": 1794484059142,
       "tag": "0039_fair_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794541303669,
+      "tag": "0040_salty_bishop",
+      "breakpoints": true
     }
   ]
 }

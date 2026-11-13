@@ -77,8 +77,13 @@ describe("storePrice in MSRP pricing, the default (design doc 33)", () => {
     expect(storePrice({ ...bundle, pricingMode: "value" })?.price).toBe(17_462);
   });
 
-  it("still raises a kind price, the generic guess, to the resale value", () => {
-    expect(storePrice(msrp)).toEqual({ price: 63_814, listPrice: 399, isRaised: true });
+  it("sells a kind-priced product at its kind MSRP too, without raising to resale value", () => {
+    expect(storePrice(msrp)).toEqual({ price: 399, listPrice: 399, isRaised: false });
+    expect(storePrice({ ...msrp, contentsValue: null })).toEqual({
+      price: 399,
+      listPrice: 399,
+      isRaised: false,
+    });
   });
 });
 
@@ -139,24 +144,23 @@ describe("storePrice (design doc 27, in value-based pricing)", () => {
     pricingMode: fc.constantFrom(...PRICING_MODES),
   });
 
-  it("never sells below the resale value without an override (rule 1; doc 33, invariant 2)", () => {
+  it("never sells below the resale value without an override in value-based pricing (rule 1)", () => {
     fc.assert(
       fc.property(inputs, (input) => {
-        const result = storePrice(input);
+        const result = storePrice({ ...input, pricingMode: "value" });
         if (result === null || input.override !== null || input.contentsValue === null) return true;
-        // MSRP pricing sells an official MSRP as published, below the floor or not.
-        if (input.pricingMode === "msrp" && input.officialMsrp !== null) return true;
         return result.price * 10_000 >= input.contentsValue * input.buylistRateBps;
       }),
     );
   });
 
-  it("in MSRP pricing, sells an official MSRP as published (design doc 33, invariant 1)", () => {
+  it("in MSRP pricing, always sells at the list price without raising (design doc 33)", () => {
     fc.assert(
       fc.property(inputs, (input) => {
         const result = storePrice({ ...input, pricingMode: "msrp" });
-        if (input.override !== null || input.officialMsrp === null) return true;
-        return result?.price === input.officialMsrp && !result.isRaised;
+        const listPrice = msrpFor(input);
+        if (listPrice === null) return result === null;
+        return result?.price === listPrice && result.listPrice === listPrice && !result.isRaised;
       }),
     );
   });

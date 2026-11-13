@@ -196,11 +196,9 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
     .first()
     .click();
   const pack = page.getByRole("listitem").filter({ hasText: "Bloomburrow Play Booster Pack" });
-  // In the fixture catalog its cards sell back for more than its $5.49 MSRP, so the store asks
-  // that instead (design doc 27), and says why.
-  await expect(pack.getByText("$7.24")).toBeVisible();
+  // By default (MSRP pricing), even when its cards sell back for more, it sells at its $5.49 MSRP.
   await expect(pack.getByText("$5.49")).toBeVisible();
-  await expect(pack.getByText("Priced at what its contents sell back for")).toBeVisible();
+  await expect(pack.getByText("Priced at what its contents sell back for")).toHaveCount(0);
   // Screenshots for review: dark mode, and a phone's width (user preference).
   await page.emulateMedia({ colorScheme: "dark" });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -231,7 +229,7 @@ test("the admin buys a pack in the store, opens it, and finds the cards in their
   ).toBeVisible();
   await pack.getByRole("button", { name: "Buy" }).click();
   await expect(pack.getByText(/waiting in your inventory/)).toBeVisible();
-  await expect(page.getByTitle("Your wallet")).toHaveText("$42.76");
+  await expect(page.getByTitle("Your wallet")).toHaveText("$44.51");
 
   await page.getByRole("link", { name: "Inventory", exact: true }).click();
   await page.getByRole("button", { name: "Open Bloomburrow Play Booster Pack" }).click();

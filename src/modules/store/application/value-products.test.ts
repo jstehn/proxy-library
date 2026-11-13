@@ -22,6 +22,7 @@ import {
   inMemoryStoreLedger,
   inMemoryStoreSettings,
 } from "../testing/fakes";
+import type { PricingMode } from "../domain/pricing";
 import type { Listing } from "./ports";
 import { makeStore } from "./make-store";
 
@@ -46,7 +47,7 @@ let productValues: ReturnType<typeof inMemoryProductValues>;
 let storeLedger: ReturnType<typeof inMemoryStoreLedger>;
 let store: ReturnType<typeof makeStore>;
 
-function setUp(listing: Partial<Listing> = {}) {
+function setUp(listing: Partial<Listing> = {}, pricingMode: PricingMode = "msrp") {
   productValues = inMemoryProductValues(["pack", "box", "bundle", "kit", "gone"], "2026-11-06");
   storeLedger = inMemoryStoreLedger();
   const wallet = inMemoryWalletServices(["jack"]);
@@ -71,7 +72,7 @@ function setUp(listing: Partial<Listing> = {}) {
     ]),
     storeLedger,
     marketPrices: inMemoryMarketPrices({}),
-    storeSettings: inMemoryStoreSettings(5000),
+    storeSettings: inMemoryStoreSettings(5000, pricingMode),
     productValues,
     events: inMemoryEventRecorder(),
   };
@@ -113,7 +114,14 @@ describe("valueProducts", () => {
 });
 
 describe("buySealed at the store price", () => {
-  it("charges what the contents sell back for when that's more than the MSRP (rule 1)", async () => {
+  it("charges the MSRP in MSRP pricing even when contents sell back for more", async () => {
+    const result = await store.buySealed(jack, { productId: SAMPLE_PRODUCTS.pack.id, quantity: 1 });
+    expect(result.ok).toBe(true);
+    expect(storeLedger.purchases.at(-1)).toMatchObject({ unitPrice: 399 });
+  });
+
+  it("charges what the contents sell back for when that's more than the MSRP in value-based pricing (rule 1)", async () => {
+    setUp({}, "value");
     const result = await store.buySealed(jack, { productId: SAMPLE_PRODUCTS.pack.id, quantity: 1 });
     // $3.99 a pack whose cards average $1,276.27: sold back at 50%, $638.14 (rounded up).
     // (The in-memory unit of work doesn't roll back the store's record; Postgres does.)
@@ -122,7 +130,7 @@ describe("buySealed at the store price", () => {
       error: { kind: "InsufficientFunds", required: 63_814 },
     });
 
-    setUp({ contentsValue: Cents.of(9_000) });
+    setUp({ contentsValue: Cents.of(9_000) }, "value");
     const affordable = await store.buySealed(jack, {
       productId: SAMPLE_PRODUCTS.pack.id,
       quantity: 1,
@@ -131,8 +139,8 @@ describe("buySealed at the store price", () => {
     expect(storeLedger.purchases.at(-1)).toMatchObject({ unitPrice: 4_500 });
   });
 
-  it("doesn't sell a kind-priced product before its first valuation (decision 3)", async () => {
-    setUp({ contentsValue: null });
+  it("doesn't sell a kind-priced product before its first valuation in value-based pricing (decision 3)", async () => {
+    setUp({ contentsValue: null }, "value");
     expect(
       await store.buySealed(jack, { productId: SAMPLE_PRODUCTS.pack.id, quantity: 1 }),
     ).toEqual({ ok: false, error: { kind: "ProductNotForSale" } });

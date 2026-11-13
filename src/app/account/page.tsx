@@ -27,6 +27,21 @@ export default async function AccountPage() {
       </div>
 
       <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Profile</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Share your bio, favorite colors and formats, showcase decks, and privacy preferences.
+        </p>
+        <div className="flex gap-4">
+          <Link href={`/players/${actor.username}`} className="w-fit underline">
+            View profile
+          </Link>
+          <Link href="/account/profile" className="w-fit underline">
+            Edit profile
+          </Link>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
         <h2 className="font-medium">Password</h2>
         <Link href="/account/password" className="w-fit underline">
           Change password

@@ -161,7 +161,8 @@ describe("official photos, MSRPs and details from WPN (design doc 13)", () => {
 describe("the resale floor (design doc 27)", () => {
   beforeEach(() => db.execute(sql`update store_settings set buylist_rate_bps = 5000 where id = 1`));
 
-  it("charges what the contents sell back for when that's more than the MSRP", async () => {
+  it("charges what the contents sell back for when that's more than the MSRP in value-based pricing", async () => {
+    await db.execute(sql`update store_settings set pricing_mode = 'value' where id = 1`);
     // In the fixture catalog a Bloomburrow play pack's cards sell back for more than $5.49.
     const [row] = (
       await db.execute<{ value_cents: number }>(
@@ -184,7 +185,9 @@ describe("the resale floor (design doc 27)", () => {
     );
     for (const pricingMode of PRICING_MODES) {
       await db.execute(sql`update store_settings set pricing_mode = ${pricingMode} where id = 1`);
-      expect(await pricesAgree(pricingMode)).toBeGreaterThan(0);
+      const raised = await pricesAgree(pricingMode);
+      if (pricingMode === "msrp") expect(raised).toBe(0);
+      else expect(raised).toBeGreaterThan(0);
     }
     await db.execute(sql`update wpn_products set msrp_cents = null`);
   });
@@ -242,7 +245,8 @@ describe("the resale floor (design doc 27)", () => {
     expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp).toBe(549);
   });
 
-  it("keeps kind-priced products off sale until they're valued, and values them again", async () => {
+  it("keeps kind-priced products off sale until they're valued in value-based pricing, and values them again", async () => {
+    await db.execute(sql`update store_settings set pricing_mode = 'value' where id = 1`);
     await db.execute(sql`delete from product_values`);
     expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)).toBeUndefined();
     expect(await store.valueProductsIfStale()).toMatchObject({ partial: 0 });
