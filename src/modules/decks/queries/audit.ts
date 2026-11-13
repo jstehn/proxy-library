@@ -9,6 +9,7 @@ import {
   type Bracket,
   type BracketRuleReason,
 } from "../domain/brackets";
+import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
 import { rankCuts } from "../domain/cuts";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
@@ -68,6 +69,8 @@ export type DeckAuditReport = Readonly<{
     suggestedLands: number;
     averageManaValue: number;
     underservedColors: readonly string[];
+    averageCastOnCurvePct: number;
+    strugglingSpells: readonly CardCastability[];
   };
   ownership: {
     ownedCards: number;
@@ -161,6 +164,11 @@ export async function auditDeck(
     freeMulligan: view.deck.format === "commander",
   });
 
+  const castability = simulateCastOnCurve(view.lines, {
+    rng: seededRng(`audit-mana-${deckId}`),
+    trials: 400,
+  });
+
   const findings: AuditFinding[] = [];
   if (problems.length > 0) {
     findings.push({
@@ -189,6 +197,17 @@ export async function auditDeck(
       severity: "warning",
       area: "mana",
       message: `Color source share trails pip demand for: ${underservedColors.join(", ")}.`,
+    });
+  }
+  if (castability.struggling.length > 0) {
+    const worst = castability.struggling
+      .slice(0, 3)
+      .map((s) => `${s.name} (${Math.round(s.castOnCurvePct * 100)}%)`)
+      .join(", ");
+    findings.push({
+      severity: "warning",
+      area: "mana",
+      message: `${castability.struggling.length} spell(s) below 75% cast-on-curve: ${worst}.`,
     });
   }
   for (const r of roles) {
@@ -246,6 +265,8 @@ export async function auditDeck(
       suggestedLands: landTarget,
       averageManaValue: Math.round(stats.averageManaValue * 100) / 100,
       underservedColors,
+      averageCastOnCurvePct: Math.round(castability.averageCastOnCurvePct * 100),
+      strugglingSpells: castability.struggling.slice(0, 5),
     },
     ownership: {
       ownedCards,

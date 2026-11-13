@@ -470,6 +470,22 @@ export const planManaBaseTool = defineTool({
         ...describeLand(land),
         price: moneyOrNull(land.card.priceCents),
       })),
+      castability: {
+        averageBeforePct: Math.round(plan.castability.before.averageCastOnCurvePct * 100),
+        averageAfterPct: Math.round(plan.castability.after.averageCastOnCurvePct * 100),
+        strugglingBefore: plan.castability.before.struggling.slice(0, 8).map((s) => ({
+          name: s.name,
+          manaCost: s.manaCost,
+          castOnCurvePct: Math.round(s.castOnCurvePct * 100),
+          bottleneckColor: s.bottleneckColor,
+        })),
+        strugglingAfter: plan.castability.after.struggling.slice(0, 8).map((s) => ({
+          name: s.name,
+          manaCost: s.manaCost,
+          castOnCurvePct: Math.round(s.castOnCurvePct * 100),
+          bottleneckColor: s.bottleneckColor,
+        })),
+      },
     });
   },
 });

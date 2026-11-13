@@ -1,9 +1,14 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import type { UserId } from "@/shared/kernel";
+import { seededRng, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
+import {
+  simulateCastOnCurve,
+  type CastabilityLine,
+  type CastabilitySummary,
+} from "../domain/castability";
 import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
 import { deckStats, MANA_COLORS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
@@ -186,12 +191,20 @@ export async function landPoolsForDeck(
   };
 }
 
+export type ManaBasePlanWithCastability = ManaBasePlan &
+  Readonly<{
+    castability: Readonly<{
+      before: CastabilitySummary;
+      after: CastabilitySummary;
+    }>;
+  }>;
+
 /** A mana base plan for one of this player's decks, or null if the deck isn't theirs. */
 export async function manaBasePlan(
   db: DbExecutor,
   userId: UserId,
   deckId: number,
-): Promise<ManaBasePlan | null> {
+): Promise<ManaBasePlanWithCastability | null> {
   const context = await suggestionContext(db, userId, deckId);
   if (context === null) return null;
   const pools = await landPoolsForDeck(db, userId, context);
@@ -203,7 +216,7 @@ export async function manaBasePlan(
     inDeck.set(line.oracleId, (inDeck.get(line.oracleId) ?? 0) + line.quantity);
   }
 
-  return planManaBase({
+  const plan = planManaBase({
     format: context.format,
     lines: context.lines,
     inDeck,
@@ -213,4 +226,44 @@ export async function manaBasePlan(
     deckRoles: profile.gaps.map((gap) => gap.tag),
     deckThemes: profile.themes,
   });
+
+  const beforeLines: CastabilityLine[] = context.lines.map((line) => ({
+    oracleId: line.oracleId,
+    name: line.oracleId,
+    board: line.board,
+    quantity: line.quantity,
+    typeLine: line.typeLine,
+    manaValue: line.manaValue,
+    manaCost: line.manaCost ?? null,
+    producedMana: line.producedMana ?? [],
+    text: line.text ?? "",
+  }));
+  const afterLines: CastabilityLine[] = [
+    ...beforeLines,
+    ...plan.add.map((added) => ({
+      oracleId: added.card.oracleId,
+      name: added.card.name,
+      board: "main" as const,
+      quantity: added.quantity,
+      typeLine: added.card.typeLine,
+      manaValue: 0,
+      manaCost: null,
+      producedMana: added.card.producedMana,
+      text: added.card.text,
+    })),
+  ];
+
+  const before = simulateCastOnCurve(beforeLines, {
+    rng: seededRng(`mana-base-${deckId}`),
+    trials: 400,
+  });
+  const after = simulateCastOnCurve(afterLines, {
+    rng: seededRng(`mana-base-${deckId}`),
+    trials: 400,
+  });
+
+  return {
+    ...plan,
+    castability: { before, after },
+  };
 }
