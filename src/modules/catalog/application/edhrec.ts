@@ -2,8 +2,8 @@ import { ok } from "@/shared/kernel";
 import { commanderSlug, dedupeEdhrecEntries } from "../domain/edhrec";
 import type { CatalogDependencies, CatalogServices } from "./ports";
 
-export const EDHREC_STALE_DAYS = 14;
-export const EDHREC_NIGHTLY_LIMIT = 50;
+export const EDHREC_STALE_DAYS = 30;
+export const EDHREC_NIGHTLY_LIMIT = 200;
 
 export type EdhrecSyncSummary = {
   synced: number;

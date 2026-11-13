@@ -15,6 +15,7 @@ export function drizzleEdhrecRepository(db: DbExecutor): EdhrecRepository {
                  p.oracle_id,
                  p.name,
                  p.edhrec_rank,
+                 (ec.commander_oracle_id is null) as unsynced,
                  exists (
                    select 1 from deck_entries e
                     where e.oracle_id = p.oracle_id and e.board = 'commander'
@@ -36,7 +37,7 @@ export function drizzleEdhrecRepository(db: DbExecutor): EdhrecRepository {
         )
         select oracle_id, name
           from candidates
-         order by in_deck desc, edhrec_rank asc nulls last, name
+         order by in_deck desc, unsynced desc, edhrec_rank asc nulls last, name
          limit ${limit}
       `);
       return rows.rows.map((row) => ({ oracleId: row.oracle_id, name: row.name }));
