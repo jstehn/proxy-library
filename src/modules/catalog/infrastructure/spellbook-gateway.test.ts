@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseManaNeededValue, parseSpellbookVariantsJson } from "./spellbook-gateway";
+import {
+  httpSpellbookGateway,
+  parseManaNeededValue,
+  parseSpellbookVariantsJson,
+} from "./spellbook-gateway";
 
 describe("parseManaNeededValue", () => {
   it("sums generic and colored mana symbols while treating X as 0", () => {
@@ -86,6 +90,62 @@ describe("parseSpellbookVariantsJson", () => {
         bracketTag: "S",
         manaValue: 5,
         forcesBracket: 3,
+      },
+    ]);
+  });
+});
+
+describe("httpSpellbookGateway", () => {
+  it("streams variants across arbitrary chunk boundaries without buffering the whole payload", async () => {
+    const payload = JSON.stringify({
+      timestamp: "2026-11-13T00:00:00Z",
+      other: ["variants", { nested: [1, 2] }],
+      variants: [
+        {
+          id: "200",
+          bracketTag: "R",
+          manaNeeded: "{U}{U}{B}",
+          uses: [
+            { quantity: 1, card: { name: "Thassa's Oracle", oracleId: "zzz-oracle" } },
+            { quantity: 1, card: { name: "Demonic Consultation", oracleId: "aaa-consult" } },
+          ],
+          produces: [{ feature: { name: 'Win {the} "game"' } }],
+        },
+        {
+          id: "201",
+          uses: [
+            { quantity: 1, card: { name: "A", oracleId: "a" } },
+            { quantity: 1, card: { name: "B", oracleId: "b" } },
+            { quantity: 1, card: { name: "C", oracleId: "c" } },
+          ],
+        },
+      ],
+    });
+
+    const bytes = new TextEncoder().encode(payload);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let i = 0; i < bytes.length; i += 7) {
+          controller.enqueue(bytes.slice(i, i + 7));
+        }
+        controller.close();
+      },
+    });
+
+    const gateway = httpSpellbookGateway(async () => new Response(stream, { status: 200 }));
+    const combos = await gateway.fetchTwoCardCombos();
+
+    expect(combos).toEqual([
+      {
+        id: "200",
+        oracleIdA: "aaa-consult",
+        oracleIdB: "zzz-oracle",
+        cardNameA: "Demonic Consultation",
+        cardNameB: "Thassa's Oracle",
+        produces: ['Win {the} "game"'],
+        bracketTag: "R",
+        manaValue: 3,
+        forcesBracket: 4,
       },
     ]);
   });
