@@ -82,6 +82,8 @@
 }
 
 .phone-menu-popover:popover-open {
+  display: flex;
+  flex-direction: column;
   position: fixed;
   inset: auto;
   top: calc(3.5rem + env(safe-area-inset-top, 0px));

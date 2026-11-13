@@ -30,7 +30,7 @@ export function PhoneMenu(props: { children: React.ReactNode }) {
         id={menuId}
         ref={menu}
         popover="auto"
-        className="phone-menu-popover bg-background text-foreground flex w-56 flex-col gap-1 rounded-md border border-zinc-200 p-2 text-sm shadow-lg dark:border-zinc-800 dark:bg-zinc-900 [&>a]:rounded [&>a]:px-2 [&>a]:py-1.5 [&>a:hover]:bg-zinc-100 dark:[&>a:hover]:bg-zinc-800"
+        className="phone-menu-popover bg-background text-foreground max-h-[calc(100dvh-5rem)] w-56 gap-1 overflow-y-auto rounded-md border border-zinc-200 p-2 text-sm shadow-lg dark:border-zinc-800 dark:bg-zinc-900 [&>a]:rounded [&>a]:px-2 [&>a]:py-1.5 [&>a:hover]:bg-zinc-100 dark:[&>a:hover]:bg-zinc-800"
       >
         {props.children}
         <InstallAppButton variant="menu" />
