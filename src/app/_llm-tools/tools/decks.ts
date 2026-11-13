@@ -37,7 +37,10 @@ import {
   isLand,
   legalFormatsForCards,
   library,
+  listCardPackages,
   listDeckSnapshots,
+  applyCardPackageToDeck,
+  createCardPackage,
   manaBasePlan,
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
@@ -2148,6 +2151,93 @@ export const diffDeckTool = defineTool({
       scoreBefore: comparison.scoreBefore,
       scoreAfter: comparison.scoreAfter,
       scoreDelta: comparison.scoreDelta,
+    });
+  },
+});
+
+export const listPackagesTool = defineTool({
+  name: "list_packages",
+  title: "List saved card packages",
+  description: [
+    "Lists the player's reusable card packages (named themed bundles such as 'Sultai self-mill' or 'Sacrifice outlets').",
+    "Use it when: the player asks what packages they have saved or before applying one with apply_package.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({}),
+  async run(context) {
+    const packages = await listCardPackages(context.container.db, context.actor.userId);
+    return done({ packages });
+  },
+});
+
+export const createPackageTool = defineTool({
+  name: "create_package",
+  title: "Save a reusable card package",
+  description: [
+    "Saves a named, reusable bundle of cards that can be dropped into any deck later with apply_package.",
+    "Use it when: the player wants to save a themed group of cards (ramp package, self-mill core, interaction suite) for reuse across decks.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    name: z.string().min(1).max(80).describe("Package name, up to 80 characters."),
+    description: z.string().max(400).optional().describe("Optional short description."),
+    tags: z.array(z.string().min(1).max(40)).optional().describe("Optional theme or role tags."),
+    entries: z
+      .array(
+        z.object({
+          oracleId: z.string().min(1).describe("Oracle id of the card."),
+          quantity: z.number().int().min(1).max(99).default(1).describe("Number of copies."),
+          heading: z.string().max(MAX_HEADING_LENGTH).optional().describe("Optional deck heading."),
+          note: z.string().max(MAX_NOTE_LENGTH).optional().describe("Optional card note."),
+        }),
+      )
+      .min(1)
+      .describe("Cards to include in the package."),
+  }),
+  async run(context, input) {
+    const created = await createCardPackage(context.container.db, context.actor.userId, {
+      name: input.name,
+      description: input.description,
+      tags: input.tags,
+      entries: input.entries,
+    });
+    return done(created);
+  },
+});
+
+export const applyPackageTool = defineTool({
+  name: "apply_package",
+  title: "Apply a card package to a deck",
+  description: [
+    "Inserts the cards from a saved package into a deck's mainboard, skipping cards already in the deck, outside the Commander color identity, or illegal in the deck's format.",
+    "Use it when: the player wants to drop a reusable card package into a deck.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    packageId: z.number().int().positive().describe("The saved package's id."),
+  }),
+  async run(context, input) {
+    const plan = await applyCardPackageToDeck(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      input.packageId,
+    );
+    if (plan === null) {
+      return failed(
+        "NotFound",
+        `Deck ${input.deckId} or package ${input.packageId} was not found.`,
+      );
+    }
+    return done({
+      addedCount: plan.toAdd.length,
+      added: plan.toAdd,
+      skippedCount: plan.skipped.length,
+      skipped: plan.skipped,
     });
   },
 });

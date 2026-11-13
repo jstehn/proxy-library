@@ -282,6 +282,19 @@ export type { DeckProfile, Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
 export {
+  planPackageInsert,
+  type PackageEntrySpec,
+  type PackageInsertItem,
+  type PackageInsertPlan,
+  type PackageSkipReason,
+} from "./domain/packages";
+export {
+  listCardPackages,
+  createCardPackage,
+  applyCardPackageToDeck,
+  type CardPackageSummary,
+} from "./queries/packages";
+export {
   curveBucket,
   draftDeck,
   type CurveBucket,

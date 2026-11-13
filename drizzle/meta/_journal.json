@@ -309,6 +309,13 @@
       "when": 1794570000000,
       "tag": "0043_card_embeddings",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794614105843,
+      "tag": "0044_minor_doctor_doom",
+      "breakpoints": true
     }
   ]
 }

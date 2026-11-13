@@ -182,3 +182,43 @@ export const deckSnapshots = pgTable(
     ),
   ],
 );
+
+/** Reusable named card packages (Phase 59). */
+export const cardPackages = pgTable(
+  "card_packages",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => players.userId),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    createdAt: timestamptz("created_at").notNull(),
+    updatedAt: timestamptz("updated_at").notNull(),
+  },
+  (table) => [
+    index("card_packages_owner_idx").on(table.ownerId),
+    check("card_packages_name_length", sql`char_length(${table.name}) between 1 and 60`),
+  ],
+);
+
+export const cardPackageEntries = pgTable(
+  "card_package_entries",
+  {
+    packageId: bigint("package_id", { mode: "number" })
+      .notNull()
+      .references(() => cardPackages.id, { onDelete: "cascade" }),
+    oracleId: text("oracle_id").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    heading: text("heading"),
+    note: text("note"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.packageId, table.oracleId] }),
+    check("card_package_entries_quantity_positive", sql`${table.quantity} between 1 and 99`),
+  ],
+);
