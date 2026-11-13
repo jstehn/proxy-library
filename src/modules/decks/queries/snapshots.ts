@@ -9,8 +9,9 @@ import { BOARDS, DeckId, FORMATS, type Format } from "../domain/deck";
 import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimize";
 import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
+import type { EdhrecSignal } from "../domain/suggest";
 import { decks, deckSnapshots } from "../infrastructure/schema";
-import { deckView, type DeckLine } from "./decks";
+import { deckView, loadEdhrecSignals, type DeckLine } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
 import { lineToPreview, loadCardsForPreview, viewFingerprint } from "./preview";
 
@@ -49,7 +50,11 @@ export type SnapshotComparison = ChangePreview &
     scoreDelta: number;
   }>;
 
-function previewLineToOptimizerCard(line: PreviewLine, liveLine?: DeckLine): OptimizerCard {
+function previewLineToOptimizerCard(
+  line: PreviewLine,
+  liveLine?: DeckLine,
+  edhrecSignal?: EdhrecSignal | null,
+): OptimizerCard {
   if (liveLine !== undefined) {
     return {
       ...lineToOptimizerCard(liveLine),
@@ -70,12 +75,14 @@ function previewLineToOptimizerCard(line: PreviewLine, liveLine?: DeckLine): Opt
     manaCost: line.manaCost,
     text: line.text,
     producedMana: line.producedMana,
-    keywords: [],
+    keywords: line.keywords ?? [],
     roles: cardTags(facts),
     themes: cardThemes(facts),
-    rarity: "common",
+    rarity: line.rarity ?? "common",
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,
+    edhrec: edhrecSignal ?? line.edhrec ?? null,
+    edhrecRank: line.edhrecRank ?? null,
     board: line.board,
     quantity: line.quantity,
   };
@@ -209,17 +216,44 @@ export async function compareDeckSnapshot(
   });
 
   const liveByOracle = new Map(view.lines.map((line) => [line.oracleId, line]));
+  const commanderIds =
+    format === "commander"
+      ? [
+          ...new Set(
+            [...beforeLines, ...afterLines]
+              .filter((line) => line.board === "commander")
+              .map((line) => line.oracleId),
+          ),
+        ]
+      : [];
+  const edhrecByCard =
+    missingIds.length > 0 && commanderIds.length > 0
+      ? await loadEdhrecSignals(db, commanderIds)
+      : new Map<string, EdhrecSignal>();
+
   const scoreBefore = scoreDeck(
     beforeLines
       .filter((line) => isPlayed(line.board))
-      .map((line) => previewLineToOptimizerCard(line, liveByOracle.get(line.oracleId))),
+      .map((line) =>
+        previewLineToOptimizerCard(
+          line,
+          liveByOracle.get(line.oracleId),
+          edhrecByCard.get(line.oracleId),
+        ),
+      ),
     { format: beforeSnap.format, targetBracket: beforeSnap.targetBracket },
   );
   const scoreAfter = scoreDeck(
     afterSnap !== undefined
       ? afterLines
           .filter((line) => isPlayed(line.board))
-          .map((line) => previewLineToOptimizerCard(line, liveByOracle.get(line.oracleId)))
+          .map((line) =>
+            previewLineToOptimizerCard(
+              line,
+              liveByOracle.get(line.oracleId),
+              edhrecByCard.get(line.oracleId),
+            ),
+          )
       : view.lines.filter((line) => isPlayed(line.board)).map(lineToOptimizerCard),
     { format, targetBracket },
   );

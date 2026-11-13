@@ -9,6 +9,7 @@ import {
   type BracketSource,
   type BracketWarning,
 } from "./brackets";
+import type { EdhrecSignal } from "./suggest";
 import { BOARDS, type Board, type Format } from "./deck";
 import { deckProblems, shortCount, type CardRules, type DeckProblem } from "./rules";
 import {
@@ -39,6 +40,10 @@ export type PreviewLine = StatsLine &
     name: string;
     owned: number;
     rules: CardRules;
+    keywords?: readonly string[];
+    rarity?: string;
+    edhrecRank?: number | null;
+    edhrec?: EdhrecSignal | null;
   }>;
 
 export type AppliedChange = Readonly<{

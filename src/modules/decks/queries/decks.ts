@@ -405,7 +405,7 @@ export async function deckView(
   return { deck, lines: linesWithEdhrec, rules };
 }
 
-async function loadEdhrecSignals(
+export async function loadEdhrecSignals(
   db: DbExecutor,
   commanderOracleIds: readonly string[],
 ): Promise<Map<string, EdhrecSignal>> {

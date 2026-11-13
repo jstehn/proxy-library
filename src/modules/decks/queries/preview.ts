@@ -58,6 +58,10 @@ export function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
     isGameChanger: line.isGameChanger,
     owned: line.owned,
     rules,
+    keywords: line.keywords,
+    rarity: line.rarity,
+    edhrecRank: line.edhrecRank,
+    edhrec: line.edhrec,
   };
 }
 
@@ -86,12 +90,18 @@ export async function loadCardsForPreview(
     color_identity: string[];
     legalities: Record<string, string> | null;
     owned: number;
+    rarity: string;
+    edhrec_rank: number | null;
+    keywords: string[] | null;
   }>(sql`
     with wanted as (
       select unnest(${sql.param(unique)}::text[]) as oracle_id
     )
     select w.oracle_id,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
+           shown.rarity, shown.edhrec_rank,
+           (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
+             where kp.oracle_id = w.oracle_id) as keywords,
            (select s.usd_cents from price_snapshots s
              where s.printing_id = shown.id
                and s.finish = coalesce(owned_finish.finish,
@@ -158,6 +168,9 @@ export async function loadCardsForPreview(
       isGameChanger: row.is_game_changer,
       owned: row.owned,
       rules,
+      keywords: row.keywords ?? [],
+      rarity: row.rarity,
+      edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
     });
   }
   return loaded;
