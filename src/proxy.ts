@@ -32,6 +32,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Skip Next's own files, static assets, and public PWA metadata/service-worker files.
   matcher: [
-    "/((?!_next/static|_next/image|(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js|icon\\.svg|apple-icon\\.png)$|icons/).*)",
+    "/((?!_next/static|_next/image|(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js|offline\\.html|icon\\.svg|apple-icon\\.png)$|icons/).*)",
   ],
 };

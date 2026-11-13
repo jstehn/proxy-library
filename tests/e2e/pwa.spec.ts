@@ -21,14 +21,43 @@ test.describe("PWA & mobile UI", () => {
     expect(await offlineResponse.text()).toContain("You&apos;re offline");
   });
 
-  test("mobile menu popover light-dismisses on Escape and bottom nav is visible on phones", async ({
+  test("mobile menu popover is hidden on load, toggles cleanly, and bottom nav renders", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/sign-in");
-    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await page.goto("/register");
 
-    // Ensure no horizontal overflow at 390px.
+    // Register first user (admin) if needed, or sign in if already seeded.
+    const noInviteBanner = page.getByText("The first account becomes the admin");
+    if (await noInviteBanner.isVisible().catch(() => false)) {
+      await page.getByLabel("Username").fill("pwa_tester");
+      await page.getByLabel("Display name").fill("PWA Tester");
+      await page.getByLabel("Password").fill("secret-password");
+      await page.getByRole("button", { name: "Create account" }).click();
+    } else {
+      await page.goto("/sign-in");
+      await page.getByLabel("Username").fill("admin");
+      await page.getByLabel("Password").fill("secret-password");
+      await page.getByRole("button", { name: "Sign in" }).click();
+    }
+
+    await expect(page.getByRole("navigation", { name: "Quick navigation" })).toBeVisible();
+
+    const menuButton = page.getByRole("button", { name: "Menu" });
+    await expect(menuButton).toBeVisible();
+
+    const popover = page.locator(".phone-menu-popover");
+    await expect(popover).not.toBeVisible();
+
+    await page.screenshot({ path: "/tmp/pwa-mobile-closed.png" });
+
+    await menuButton.click();
+    await expect(popover).toBeVisible();
+    await page.screenshot({ path: "/tmp/pwa-mobile-open.png" });
+
+    await page.keyboard.press("Escape");
+    await expect(popover).not.toBeVisible();
+
     const hasOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
