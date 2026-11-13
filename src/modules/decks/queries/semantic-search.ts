@@ -32,6 +32,16 @@ export type SemanticSearchResult = Readonly<{
 
 const RRF_K = 60;
 
+function typeRegexClause(terms: readonly string[] | undefined): ReturnType<typeof sql> | null {
+  if (!terms || terms.length === 0) return null;
+  const cleaned = terms
+    .map((t) => t.trim().replace(/[^a-zA-Z0-9_-]/g, ""))
+    .filter((t) => t.length > 0);
+  if (cleaned.length === 0) return null;
+  const pattern = `\\y(${cleaned.join("|")})\\y`;
+  return sql`tp.type_line ~* ${pattern}`;
+}
+
 /**
  * Natural-language concept search for a deck (design doc 54): embeds `concept`, queries
  * `card_embeddings` with `pgvector` cosine similarity, optionally fuses with a `filter` text
@@ -45,6 +55,8 @@ export async function semanticSearchForDeck(
   options: {
     concept: string;
     filter?: string;
+    types?: readonly string[];
+    excludeTypes?: readonly string[];
     maxPriceCents?: number;
     limit?: number;
   },
@@ -59,10 +71,26 @@ export async function semanticSearchForDeck(
   const vecLiteral = `[${queryVec.join(",")}]`;
   const limit = Math.max(1, Math.min(25, options.limit ?? 10));
 
+  const includeTypeSql = typeRegexClause(options.types);
+  const excludeTypeSql = typeRegexClause(options.excludeTypes);
+  const typeConditions = [
+    includeTypeSql,
+    excludeTypeSql ? sql`not (${excludeTypeSql})` : null,
+  ].filter((c): c is NonNullable<typeof c> => c !== null);
+  const typeWhere =
+    typeConditions.length > 0
+      ? sql`where exists (
+              select 1 from printings tp
+               where tp.oracle_id = e.oracle_id
+                 and ${sql.join(typeConditions, sql` and `)}
+            )`
+      : sql``;
+
   const neighborRows = (
     await db.execute<{ oracle_id: string; similarity: number }>(sql`
       select e.oracle_id, (1 - (e.embedding <=> ${vecLiteral}::vector))::float8 as similarity
         from card_embeddings e
+        ${typeWhere}
        order by e.embedding <=> ${vecLiteral}::vector
        limit 300
     `)

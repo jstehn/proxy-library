@@ -137,10 +137,24 @@ describe("card embeddings & budget replacements", () => {
     const semantic = await semanticSearchForDeck(db, fakeEmbedder, jack.userId, created.value, {
       concept: "exile target nonland permanent until it leaves",
       filter: "Banishing",
+      types: ["enchantment"],
       maxPriceCents: 200,
     });
     expect(semantic).not.toBeNull();
     expect(semantic?.store.some((s) => s.card.oracleId === banishing.oracle_id)).toBe(true);
+
+    const excludedByType = await semanticSearchForDeck(
+      db,
+      fakeEmbedder,
+      jack.userId,
+      created.value,
+      {
+        concept: "exile target nonland permanent until it leaves",
+        excludeTypes: ["enchantment"],
+        maxPriceCents: 200,
+      },
+    );
+    expect(excludedByType?.store.some((s) => s.card.oracleId === banishing.oracle_id)).toBe(false);
 
     // 6. deckCombosView returns complete & 1-card-away combos from spellbook_two_card_combos
     await db.execute(sql`

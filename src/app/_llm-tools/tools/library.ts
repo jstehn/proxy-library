@@ -411,6 +411,18 @@ export const semanticSearchForDeckTool = defineTool({
       .min(1)
       .optional()
       .describe("Optional substring filter on name, type line, or rules text (fused via RRF)."),
+    types: z
+      .array(z.string().min(1))
+      .max(10)
+      .optional()
+      .describe(
+        "Optional card types to include (OR-matched on type line before ranking, e.g. ['creature', 'artifact', 'enchantment', 'planeswalker', 'land']).",
+      ),
+    excludeTypes: z
+      .array(z.string().min(1))
+      .max(10)
+      .optional()
+      .describe("Optional card types to exclude before ranking (e.g. ['instant', 'sorcery'])."),
     maxPriceCents: z
       .number()
       .int()
@@ -435,6 +447,8 @@ export const semanticSearchForDeckTool = defineTool({
       {
         concept: input.concept,
         filter: input.filter,
+        types: input.types,
+        excludeTypes: input.excludeTypes,
         maxPriceCents: input.maxPriceCents,
         limit: input.limit,
       },
