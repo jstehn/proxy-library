@@ -295,6 +295,13 @@ function isComboPartnerSql(partnerIds: readonly string[], column: SQL = sql`p.or
   return partnerIds.length === 0 ? sql`false` : sql`${column} = any(${textArray(partnerIds)})`;
 }
 
+function isComboPartnerOrderSql(
+  partnerIds: readonly string[],
+  column: SQL = sql`p.oracle_id`,
+): SQL {
+  return partnerIds.length === 0 ? sql`` : sql`(${column} = any(${textArray(partnerIds)})) desc,`;
+}
+
 /** Cards you own that share something with what's wanted: one per oracle card. */
 async function ownedCandidates(
   db: DbExecutor,
@@ -334,7 +341,7 @@ async function ownedCandidates(
       left join edhrec on edhrec.card_oracle_id = p.oracle_id
      where ${fitsDeck(context)}
        and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15 or ${isComboPartnerSql(comboPartnerIds)})
-     order by (${isComboPartnerSql(comboPartnerIds)}) desc, ${sharedCount(want)} desc,
+     order by ${isComboPartnerOrderSql(comboPartnerIds)} ${sharedCount(want)} desc,
               coalesce(edhrec.synergy, 0) desc, coalesce(edhrec.inclusion_rate, 0) desc, p.name
      limit ${CANDIDATE_LIMIT}
   `);
@@ -376,7 +383,7 @@ async function storeCandidates(
     ),
     kept as (
       select oracle_id, edhrec_inclusion, edhrec_synergy, edhrec_total_decks from matching
-       order by (${isComboPartnerSql(comboPartnerIds, sql`oracle_id`)}) desc, shared desc,
+       order by ${isComboPartnerOrderSql(comboPartnerIds, sql`oracle_id`)} shared desc,
                 edhrec_synergy desc, edhrec_inclusion desc, rarity_rank desc, oracle_id
        limit ${CANDIDATE_LIMIT}
     ),
