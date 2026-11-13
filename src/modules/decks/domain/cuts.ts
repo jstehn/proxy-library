@@ -235,7 +235,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       const hasRichPrior = line.edhrecRank != null || (line.preconCount ?? 0) > 0;
       score += hasRichPrior
         ? weights.strength *
-          3.0 *
+          5.0 *
           qualityPrior({
             edhrecRank: line.edhrecRank,
             preconCount: line.preconCount,

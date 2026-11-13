@@ -1,4 +1,3 @@
-import { cardTags, cardThemes } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
@@ -7,7 +6,7 @@ import { rankCuts } from "../domain/cuts";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
 import { simulateOpeningHands, type GoldfishReport } from "../domain/goldfish";
-import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimize";
+import { scoreDeck, type DeckScore } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
 import {
   deckStats,
@@ -18,7 +17,8 @@ import {
   type TargetedTag,
 } from "../domain/stats";
 import { combosForDeck } from "./combos";
-import { deckView, type DeckLine } from "./decks";
+import { deckView } from "./decks";
+import { lineToOptimizerCard } from "./optimize";
 
 export type AuditFinding = Readonly<{
   severity: "error" | "warning" | "info";
@@ -70,32 +70,6 @@ export type DeckAuditReport = Readonly<{
   goldfish: GoldfishReport;
   findings: readonly AuditFinding[];
 }>;
-
-function lineToOptimizerCard(line: DeckLine): OptimizerCard {
-  const facts = {
-    typeLine: line.typeLine,
-    text: line.text,
-    producedMana: line.producedMana,
-  };
-  return {
-    oracleId: line.oracleId,
-    name: line.name,
-    typeLine: line.typeLine,
-    manaValue: line.manaValue,
-    manaCost: line.manaCost,
-    text: line.text,
-    producedMana: line.producedMana,
-    keywords: line.keywords,
-    roles: cardTags(facts),
-    themes: cardThemes(facts),
-    rarity: line.rarity,
-    priceCents: line.priceCents,
-    isGameChanger: line.isGameChanger,
-    edhrec: line.edhrec,
-    board: line.board,
-    quantity: line.quantity,
-  };
-}
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,

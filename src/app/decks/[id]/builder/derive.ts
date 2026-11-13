@@ -88,6 +88,7 @@ export function provisionalLine(
     // Not in the grid's facts; the server's answer brings them (they only nudge the cut ranking).
     rarity: "common",
     keywords: [],
+    edhrecRank: null,
     owned: card.owned,
     ownedReal: card.ownedReal,
     isBasicLand: card.rules.isBasicLand,

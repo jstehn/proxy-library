@@ -128,6 +128,8 @@ export type DeckLine = Readonly<{
   rarity: string;
   /** Keyword abilities on any printing of the card ("Flying", "Ward"). */
   keywords: string[];
+  /** Scryfall's EDHREC popularity rank (1 = most popular), or null if unranked. */
+  edhrecRank: number | null;
   /** Copies counted as owned: game copies, plus real ones when the deck uses them. */
   owned: number;
   /** How many of `owned` are real copies (design doc 16: "3 game · 1 real"). */
@@ -248,6 +250,7 @@ export async function deckView(
     collector_number: string;
     rarity: string;
     keywords: string[] | null;
+    edhrec_rank: number | null;
     is_basic_land: boolean;
     face_text: string;
     is_game_changer: boolean;
@@ -269,6 +272,7 @@ export async function deckView(
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
              order by s.day desc limit 1) as price_cents,
            shown.set_code, shown.collector_number, shown.rarity,
+           shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
              where kp.oracle_id = e.oracle_id) as keywords,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
@@ -351,6 +355,7 @@ export async function deckView(
       collectorNumber: row.collector_number,
       rarity: row.rarity,
       keywords: row.keywords ?? [],
+      edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
       owned: row.owned,
       ownedReal: row.owned_real,
       isBasicLand: row.is_basic_land,

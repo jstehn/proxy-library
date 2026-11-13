@@ -45,6 +45,7 @@ export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,
     edhrec: line.edhrec,
+    edhrecRank: line.edhrecRank,
     board: line.board,
     quantity: line.quantity,
   };

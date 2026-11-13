@@ -60,6 +60,7 @@ export async function deckUpgradeRoadmap(
       isGameChanger: line.isGameChanger,
       owned: line.owned,
       edhrec: line.edhrec,
+      edhrecRank: line.edhrecRank,
     })),
     { format: view.deck.format, targetBracket: view.deck.targetBracket },
   );

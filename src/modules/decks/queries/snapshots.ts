@@ -10,7 +10,8 @@ import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimiz
 import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
 import { decks, deckSnapshots } from "../infrastructure/schema";
-import { deckView } from "./decks";
+import { deckView, type DeckLine } from "./decks";
+import { lineToOptimizerCard } from "./optimize";
 import { lineToPreview, loadCardsForPreview, viewFingerprint } from "./preview";
 
 // Read models for deck snapshots and before/after comparisons (design doc 41).
@@ -48,7 +49,14 @@ export type SnapshotComparison = ChangePreview &
     scoreDelta: number;
   }>;
 
-function previewLineToOptimizerCard(line: PreviewLine): OptimizerCard {
+function previewLineToOptimizerCard(line: PreviewLine, liveLine?: DeckLine): OptimizerCard {
+  if (liveLine !== undefined) {
+    return {
+      ...lineToOptimizerCard(liveLine),
+      board: line.board,
+      quantity: line.quantity,
+    };
+  }
   const facts = {
     typeLine: line.typeLine,
     text: line.text,
@@ -200,12 +208,19 @@ export async function compareDeckSnapshot(
     after: afterLines,
   });
 
+  const liveByOracle = new Map(view.lines.map((line) => [line.oracleId, line]));
   const scoreBefore = scoreDeck(
-    beforeLines.filter((line) => isPlayed(line.board)).map(previewLineToOptimizerCard),
+    beforeLines
+      .filter((line) => isPlayed(line.board))
+      .map((line) => previewLineToOptimizerCard(line, liveByOracle.get(line.oracleId))),
     { format: beforeSnap.format, targetBracket: beforeSnap.targetBracket },
   );
   const scoreAfter = scoreDeck(
-    afterLines.filter((line) => isPlayed(line.board)).map(previewLineToOptimizerCard),
+    afterSnap !== undefined
+      ? afterLines
+          .filter((line) => isPlayed(line.board))
+          .map((line) => previewLineToOptimizerCard(line, liveByOracle.get(line.oracleId)))
+      : view.lines.filter((line) => isPlayed(line.board)).map(lineToOptimizerCard),
     { format, targetBracket },
   );
 
