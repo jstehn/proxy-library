@@ -84,7 +84,7 @@ export function SelectedCard(props: {
           alt={selection.name}
           width={488}
           height={680}
-          className="aspect-[488/680] w-40 shrink-0 rounded-[4.5%] bg-zinc-100 shadow-md sm:w-48 dark:bg-zinc-800"
+          className="aspect-[488/680] h-auto w-32 shrink-0 self-start rounded-[4.5%] bg-zinc-100 shadow-md sm:w-48 dark:bg-zinc-800"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-2 text-xs">
           <div className="flex items-start justify-between gap-2">

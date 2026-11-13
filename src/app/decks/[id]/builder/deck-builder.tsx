@@ -959,8 +959,9 @@ export function DeckBuilder(props: {
           {browse.loadingMore && <p className="text-muted text-center text-xs">Loading more…</p>}
 
           {selected !== null && (
-            // Stays at the bottom of the screen while the grid scrolls: a sheet on a phone.
-            <div className="sticky bottom-2 z-10 max-h-[70vh] overflow-y-auto rounded-lg shadow-xl">
+            // Stays at the bottom of the screen while the grid scrolls: a sheet on a phone,
+            // clearing the mobile bottom navigation bar.
+            <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-20 max-h-[65dvh] overflow-y-auto rounded-lg shadow-xl md:bottom-2">
               <SelectedCard
                 selection={{ ...selected, inDeck: inDeck(selected.oracleId) }}
                 detail={detail}
