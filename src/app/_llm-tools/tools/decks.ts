@@ -9,6 +9,8 @@ import {
   commanderDetails,
   commandersICanBuild,
   combosForDeck,
+  dealMulliganDrill,
+  deckScorecard,
   bracketWarning,
   chanceByTurn,
   checkNote,
@@ -2238,6 +2240,74 @@ export const applyPackageTool = defineTool({
       added: plan.toAdd,
       skippedCount: plan.skipped.length,
       skipped: plan.skipped,
+    });
+  },
+});
+
+export const mulliganDrillTool = defineTool({
+  name: "mulligan_drill",
+  title: "Deal a mulligan trainer hand",
+  description: [
+    "Deals a 7-card opening hand from a deck for a keep-or-mulligan drill, with land count, early ramp count, and a recommended keep/mulligan decision.",
+    "Use it when: the player wants to practice mulligan decisions on a deck.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    mulliganCount: z
+      .number()
+      .int()
+      .min(0)
+      .max(4)
+      .default(0)
+      .describe("How many mulligans have already been taken (0–4)."),
+  }),
+  async run(context, input) {
+    const view = await deckView(context.container.db, context.actor.userId, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const cards = library(view.lines);
+    const rng = seededRng(context.container.seeds.newSeed());
+    const drill = dealMulliganDrill(cards, rng, { mulliganCount: input.mulliganCount });
+    return done({
+      hand: drill.hand.map((c) => ({
+        name: c.name,
+        isLand: c.isLand,
+        manaValue: c.manaValue ?? null,
+        tags: c.tags,
+      })),
+      mulliganCount: drill.mulliganCount,
+      keepCount: drill.keepCount,
+      landCount: drill.landCount,
+      earlyRampCount: drill.earlyRampCount,
+      earlyPlayCount: drill.earlyPlayCount,
+      recommended: drill.recommended,
+      reasons: drill.reasons,
+    });
+  },
+});
+
+export const deckScorecardTool = defineTool({
+  name: "deck_scorecard",
+  title: "Get a deck scorecard summary",
+  description: [
+    "Returns a compact scorecard for a deck: overall score, bracket with reasons, role coverage, cast-on-curve %, and goldfish keepable rate.",
+    "Use it when: the player wants a shareable summary or quick health check of a deck.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({ deckId }),
+  async run(context, input) {
+    const report = await deckScorecard(context.container.db, context.actor.userId, input.deckId);
+    if (report === null) return deckNotFound(input.deckId);
+    return done({
+      deck: report.deck,
+      score: report.score.total,
+      bracket: report.bracket,
+      roles: report.roles,
+      averageCastOnCurvePct: report.mana.averageCastOnCurvePct,
+      keepableRatePct: report.goldfish.keepableRatePct,
+      legality: report.legality,
     });
   },
 });

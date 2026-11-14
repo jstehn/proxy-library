@@ -295,6 +295,15 @@ export {
   type CardPackageSummary,
 } from "./queries/packages";
 export {
+  dealMulliganDrill,
+  evaluateMulliganDecision,
+  type MulliganChoice,
+  type MulliganDrill,
+  type MulliganDrillOptions,
+  type MulliganEvaluation,
+} from "./domain/mulligan-trainer";
+export { deckScorecard, publicDeckScorecard, type PublicDeckScorecard } from "./queries/scorecard";
+export {
   curveBucket,
   draftDeck,
   type CurveBucket,

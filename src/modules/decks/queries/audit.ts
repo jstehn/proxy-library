@@ -25,7 +25,7 @@ import {
   type TargetedTag,
 } from "../domain/stats";
 import { combosForDeck } from "./combos";
-import { deckView } from "./decks";
+import { deckView, type DeckView } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
 
 export type AuditFinding = Readonly<{
@@ -93,7 +93,14 @@ export async function auditDeck(
 ): Promise<DeckAuditReport | null> {
   const view = await deckView(db, userId, deckId);
   if (view === null) return null;
+  return auditDeckView(db, view);
+}
 
+/**
+ * Runs the full diagnostic audit on an already-loaded `DeckView` (used by both
+ * authenticated `auditDeck` and public shareable scorecards).
+ */
+export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<DeckAuditReport> {
   const playedOracleIds = view.lines.filter((l) => isPlayed(l.board)).map((l) => l.oracleId);
   const combos = await combosForDeck(db, playedOracleIds);
 
@@ -159,13 +166,13 @@ export async function auditDeck(
     .map((c) => ({ name: c.name, oracleId: c.oracleId, score: c.keepScore }));
 
   const goldfish = simulateOpeningHands(library(view.lines), {
-    rng: seededRng(`audit-${deckId}`),
+    rng: seededRng(`audit-${view.deck.id}`),
     trials: 500,
     freeMulligan: view.deck.format === "commander",
   });
 
   const castability = simulateCastOnCurve(view.lines, {
-    rng: seededRng(`audit-mana-${deckId}`),
+    rng: seededRng(`audit-mana-${view.deck.id}`),
     trials: 400,
   });
 
