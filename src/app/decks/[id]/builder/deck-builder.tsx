@@ -1,5 +1,12 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Board,
@@ -102,6 +109,21 @@ const TYPE_FILTERS = [
 ] as const;
 const MANA_VALUE_FILTERS = ["mv=0", "mv=1", "mv=2", "mv=3", "mv=4", "mv=5", "mv=6", "mv>=7"];
 const MANA_VALUE_FAMILY = /^(mv|cmc)[<>=:!]/i;
+const LARGE_SCREEN_QUERY = "(min-width: 64rem)";
+
+function subscribeLargeScreen(onChange: () => void) {
+  const media = window.matchMedia(LARGE_SCREEN_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function getLargeScreenSnapshot() {
+  return window.matchMedia(LARGE_SCREEN_QUERY).matches;
+}
+
+function getLargeScreenServerSnapshot() {
+  return false;
+}
 
 type BrowseState = Readonly<{
   /** The filters these cards were found with (the grid is loading while they differ). */
@@ -226,6 +248,11 @@ export function DeckBuilder(props: {
   const [otherDecks, setOtherDecks] = useState<readonly OtherDeckUse[] | "loading">([]);
   const [quantity, setQuantity] = useState(1);
   const [tab, setTab] = useState<"collection" | "deck">("collection");
+  const isLargeScreen = useSyncExternalStore(
+    subscribeLargeScreen,
+    getLargeScreenSnapshot,
+    getLargeScreenServerSnapshot,
+  );
   const searchRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLUListElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -317,6 +344,8 @@ export function DeckBuilder(props: {
       } else if (event.key.toLowerCase() === "s") {
         event.preventDefault();
         setShowSuggestions((value) => !value);
+      } else if (event.key === "Escape") {
+        setSelected(null);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -374,10 +403,9 @@ export function DeckBuilder(props: {
     });
   }
 
-  /** A suggestion is selected like a grid card; on a phone, the selected card is on the left tab. */
+  /** A suggestion is selected like a grid card; on a phone, it opens over the current tab. */
   function selectSuggestion(card: SuggestionCard) {
     selectFromGrid(card);
-    setTab("collection");
   }
 
   function showSimilar(oracleId: string) {
@@ -744,6 +772,78 @@ export function DeckBuilder(props: {
   const pill = (pressed: boolean) =>
     `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`;
 
+  // On wide screens this sticks to the bottom of the collection column; on a phone it floats over
+  // whichever tab is active (clearing the bottom nav) so inspecting a card keeps your place.
+  const selectedSheet =
+    selected !== null ? (
+      <div
+        className={
+          isLargeScreen
+            ? "sticky bottom-2 z-20 max-h-[65dvh] overflow-y-auto overscroll-contain rounded-lg shadow-xl"
+            : "fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-20 max-h-[65dvh] overflow-y-auto overscroll-contain rounded-lg shadow-xl md:bottom-2"
+        }
+      >
+        <SelectedCard
+          selection={{ ...selected, inDeck: inDeck(selected.oracleId) }}
+          detail={detail}
+          quantity={quantity}
+          onQuantity={setQuantity}
+          onAdd={add}
+          copyLimit={selectedCopyLimit}
+          deckId={deckId}
+          isCommanderDeck={isCommanderDeck}
+          onClose={() => setSelected(null)}
+          similar={similar?.oracleId === selected.oracleId ? similar.list : null}
+          onShowSimilar={() => showSimilar(selected.oracleId)}
+          onSelectSimilar={selectSuggestion}
+          otherDecks={otherDecks}
+          onTake={takeFrom}
+        />
+        {deck.lines
+          .filter((line) => line.oracleId === selected.oracleId && line.board === "main")
+          .map((line) => (
+            <div
+              key={`heading-${line.oracleId}-${line.heading ?? ""}`}
+              className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <HeadingField
+                line={line}
+                headings={deck.headings}
+                busy={isSaving}
+                onSave={setLineHeading}
+              />
+            </div>
+          ))}
+        {(() => {
+          const selectedLines = deck.lines.filter((line) => line.oracleId === selected.oracleId);
+          return selectedLines.map((line) => (
+            <div
+              key={`note-${line.oracleId}-${line.board}-${line.note ?? ""}`}
+              className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <NoteField
+                line={line}
+                showBoard={selectedLines.length > 1}
+                busy={isSaving}
+                onSave={setLineNote}
+              />
+            </div>
+          ));
+        })()}
+        {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
+          <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+            <PrintingPicker
+              key={selected.oracleId}
+              deckId={deckId}
+              lines={deck.lines.filter((line) => line.oracleId === selected.oracleId)}
+              onChosen={printingChosen}
+              onError={(text) => setMessage({ tone: "error", text })}
+            />
+          </div>
+        )}
+      </div>
+    ) : null;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Phone: two tabs. Wide screens show both sides at once. */}
@@ -976,72 +1076,7 @@ export function DeckBuilder(props: {
           <div ref={endRef} className="h-1" />
           {browse.loadingMore && <p className="text-muted text-center text-xs">Loading more…</p>}
 
-          {selected !== null && (
-            // Stays at the bottom of the screen while the grid scrolls: a sheet on a phone,
-            // clearing the mobile bottom navigation bar.
-            <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-20 max-h-[65dvh] overflow-y-auto rounded-lg shadow-xl md:bottom-2">
-              <SelectedCard
-                selection={{ ...selected, inDeck: inDeck(selected.oracleId) }}
-                detail={detail}
-                quantity={quantity}
-                onQuantity={setQuantity}
-                onAdd={add}
-                copyLimit={selectedCopyLimit}
-                deckId={deckId}
-                isCommanderDeck={isCommanderDeck}
-                onClose={() => setSelected(null)}
-                similar={similar?.oracleId === selected.oracleId ? similar.list : null}
-                onShowSimilar={() => showSimilar(selected.oracleId)}
-                onSelectSimilar={selectSuggestion}
-                otherDecks={otherDecks}
-                onTake={takeFrom}
-              />
-              {deck.lines
-                .filter((line) => line.oracleId === selected.oracleId && line.board === "main")
-                .map((line) => (
-                  <div
-                    key={`heading-${line.oracleId}-${line.heading ?? ""}`}
-                    className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-                  >
-                    <HeadingField
-                      line={line}
-                      headings={deck.headings}
-                      busy={isSaving}
-                      onSave={setLineHeading}
-                    />
-                  </div>
-                ))}
-              {(() => {
-                const selectedLines = deck.lines.filter(
-                  (line) => line.oracleId === selected.oracleId,
-                );
-                return selectedLines.map((line) => (
-                  <div
-                    key={`note-${line.oracleId}-${line.board}-${line.note ?? ""}`}
-                    className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-                  >
-                    <NoteField
-                      line={line}
-                      showBoard={selectedLines.length > 1}
-                      busy={isSaving}
-                      onSave={setLineNote}
-                    />
-                  </div>
-                ));
-              })()}
-              {deck.lines.some((line) => line.oracleId === selected.oracleId) && (
-                <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-                  <PrintingPicker
-                    key={selected.oracleId}
-                    deckId={deckId}
-                    lines={deck.lines.filter((line) => line.oracleId === selected.oracleId)}
-                    onChosen={printingChosen}
-                    onError={(text) => setMessage({ tone: "error", text })}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {isLargeScreen && selectedSheet}
         </section>
 
         <aside
@@ -1180,10 +1215,7 @@ export function DeckBuilder(props: {
               targetBracket={targetBracket}
               onMove={moveLine}
               onSwap={swapCards}
-              onSelect={(line) => {
-                selectFromDeck(line);
-                setTab("collection");
-              }}
+              onSelect={selectFromDeck}
               onClose={() => setShowCuts(false)}
               busy={isSaving}
             />
@@ -1233,10 +1265,7 @@ export function DeckBuilder(props: {
             problemsByName={problemsByName}
             onChange={changeLine}
             onMove={moveLine}
-            onSelect={(line) => {
-              selectFromDeck(line);
-              setTab("collection");
-            }}
+            onSelect={selectFromDeck}
             busy={isSaving}
             highlighted={highlightedRole}
             highlightedNames={highlightedNames}
@@ -1248,6 +1277,7 @@ export function DeckBuilder(props: {
           />
         </aside>
       </div>
+      {!isLargeScreen && selectedSheet}
     </div>
   );
 }
