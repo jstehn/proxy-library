@@ -165,10 +165,17 @@ export function CardPreviewDialog(props: {
 export function CardWithPreview(props: { printing: PrintingCard; caption?: string }) {
   const { printing } = props;
   const [isOpen, setIsOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [align, setAlign] = useState<"center" | "left" | "right">("center");
   const frameRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  function isTouchOrNarrow() {
+    return window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768;
+  }
 
   function open() {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     const frame = frameRef.current?.getBoundingClientRect();
     if (frame !== undefined) {
       const overhang = frame.width * 0.4;
@@ -179,6 +186,21 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
     setIsOpen(true);
   }
 
+  function handleFocus() {
+    if (buttonRef.current?.matches(":focus-visible")) open();
+  }
+
+  function handleActivate() {
+    if (isTouchOrNarrow()) {
+      setIsOpen(false);
+      setIsDialogOpen(true);
+    } else if (isOpen) {
+      setIsOpen(false);
+    } else {
+      open();
+    }
+  }
+
   return (
     <div
       ref={frameRef}
@@ -187,11 +209,12 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
+        ref={buttonRef}
         type="button"
-        onFocus={open}
+        onFocus={handleFocus}
         onBlur={() => setIsOpen(false)}
-        onClick={() => (isOpen ? setIsOpen(false) : open())}
-        aria-expanded={isOpen}
+        onClick={handleActivate}
+        aria-expanded={isOpen || isDialogOpen}
         aria-label={`${printing.name}: show card text`}
         className="block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
       >
@@ -215,6 +238,13 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{props.caption}</p>
       )}
       {isOpen && <EnlargedCard printing={printing} align={align} />}
+      {isDialogOpen && (
+        <CardPreviewDialog
+          printing={printing}
+          open={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -237,8 +267,10 @@ export function NamePreview(props: {
 }) {
   const [spot, setSpot] = useState<PreviewSpot | null>(null);
   const nameRef = useRef<HTMLButtonElement>(null);
+  const suppressedRef = useRef(false);
 
   function show() {
+    if (suppressedRef.current) return;
     const box = nameRef.current?.getBoundingClientRect();
     if (box === undefined || props.printing === undefined) return;
     // To the left of the name when there's room (deck lists sit on the right), else the right.
@@ -250,16 +282,36 @@ export function NamePreview(props: {
     setSpot({ left, top });
   }
 
+  function handleFocus() {
+    if (nameRef.current?.matches(":focus-visible")) show();
+  }
+
+  function handleClick() {
+    if (props.onSelect) {
+      suppressedRef.current = true;
+      setSpot(null);
+      props.onSelect();
+    } else if (spot) {
+      setSpot(null);
+    } else {
+      suppressedRef.current = false;
+      show();
+    }
+  }
+
   return (
     <>
       <button
         ref={nameRef}
         type="button"
         onMouseEnter={show}
-        onMouseLeave={() => setSpot(null)}
-        onFocus={show}
+        onMouseLeave={() => {
+          suppressedRef.current = false;
+          setSpot(null);
+        }}
+        onFocus={handleFocus}
         onBlur={() => setSpot(null)}
-        onClick={props.onSelect}
+        onClick={handleClick}
         className={`truncate text-left hover:underline ${props.className ?? ""}`}
       >
         {props.name}

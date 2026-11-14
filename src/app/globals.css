@@ -81,6 +81,14 @@
   }
 }
 
+dialog:modal {
+  overscroll-behavior: contain;
+}
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 .phone-menu-popover:popover-open {
   display: flex;
   flex-direction: column;

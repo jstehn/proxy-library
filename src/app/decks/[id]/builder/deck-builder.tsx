@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
   useTransition,
 } from "react";
+import { ScrollToTopButton } from "@/app/_components/scroll-to-top";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Board,
@@ -846,6 +847,7 @@ export function DeckBuilder(props: {
 
   return (
     <div className="flex flex-col gap-4">
+      <ScrollToTopButton />
       {/* Phone: two tabs. Wide screens show both sides at once. */}
       <div role="tablist" aria-label="Builder" className="flex gap-2 lg:hidden">
         {(["collection", "deck"] as const).map((option) => (

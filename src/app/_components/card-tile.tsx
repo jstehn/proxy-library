@@ -31,6 +31,7 @@ export function CardTile(props: CardTileProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [align, setAlign] = useState<"center" | "left" | "right">("center");
   const tileRef = useRef<HTMLLIElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   function isTouchOrNarrow() {
     return window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768;
@@ -48,6 +49,10 @@ export function CardTile(props: CardTileProps) {
       else setAlign("center");
     }
     setIsOpen(true);
+  }
+
+  function handleFocus() {
+    if (buttonRef.current?.matches(":focus-visible")) open();
   }
 
   function handleActivate() {
@@ -69,8 +74,9 @@ export function CardTile(props: CardTileProps) {
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
+        ref={buttonRef}
         type="button"
-        onFocus={open}
+        onFocus={handleFocus}
         onBlur={() => setIsOpen(false)}
         onClick={handleActivate}
         aria-expanded={isOpen || isDialogOpen}

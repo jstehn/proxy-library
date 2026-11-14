@@ -132,7 +132,13 @@ async function featuredArt(db: DbExecutor, setCodes: readonly string[]) {
 }
 
 /** Enabled sets with at least one product for sale, newest first. */
-export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
+export async function storeSets(db: DbExecutor, query?: string): Promise<StoreSet[]> {
+  const trimmed = (query ?? "").trim();
+  const pattern = `%${trimmed.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+  const filter =
+    trimmed === ""
+      ? sql``
+      : sql`and (s.name ilike ${pattern} escape '\\' or s.code ilike ${pattern} escape '\\')`;
   const rows = await db.execute<{
     code: string;
     name: string;
@@ -148,6 +154,7 @@ export async function storeSets(db: DbExecutor): Promise<StoreSet[]> {
       join sealed_products sp on sp.set_code = s.code
       ${PRICE_JOINS}
      where s.is_enabled and ${MSRP} is not null and ${HAS_CONTENTS}
+       ${filter}
      group by s.code
      order by s.release_date desc, s.code
   `);
@@ -252,6 +259,129 @@ export async function storePage(db: DbExecutor, code: string): Promise<StorePage
       description: row.description,
       contents: row.contents ?? [],
       releaseDate: row.wpn_release_date,
+    })),
+  };
+}
+
+export type StoreSearchProduct = ProductForSale &
+  Readonly<{
+    setCode: string;
+    setName: string;
+    keyruneCode: string;
+    parentKeyruneCode: string | null;
+    setFeatured: FeaturedArt | null;
+  }>;
+
+export type StoreSearchResult = Readonly<{
+  sets: StoreSet[];
+  products: StoreSearchProduct[];
+  categories: readonly string[];
+}>;
+
+/**
+ * Search the store across enabled sets and products for sale (by set, deck, sealed product,
+ * category, description, or commander name).
+ */
+export async function storeSearch(
+  db: DbExecutor,
+  input: { query?: string; category?: string },
+): Promise<StoreSearchResult> {
+  const trimmed = (input.query ?? "").trim();
+  const category = (input.category ?? "").trim();
+
+  const categoryRows = await db.execute<{ category: string }>(sql`
+    select distinct sp.category
+      from sealed_products sp
+      join card_sets s on s.code = sp.set_code
+      ${PRICE_JOINS}
+     where s.is_enabled and ${MSRP} is not null and ${HAS_CONTENTS}
+     order by sp.category
+  `);
+  const categories = categoryRows.rows.map((row) => row.category);
+
+  if (trimmed === "" && category === "") {
+    return { sets: await storeSets(db), products: [], categories };
+  }
+
+  const pattern = `%${trimmed.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+  const categoryFilter = category === "" ? sql`` : sql`and sp.category = ${category}`;
+  const queryFilter =
+    trimmed === ""
+      ? sql``
+      : sql`and (
+          sp.name ilike ${pattern} escape '\\'
+          or sp.category ilike ${pattern} escape '\\'
+          or coalesce(sp.subtype, '') ilike ${pattern} escape '\\'
+          or s.name ilike ${pattern} escape '\\'
+          or s.code ilike ${pattern} escape '\\'
+          or coalesce(w.description, '') ilike ${pattern} escape '\\'
+          or coalesce(cp.name, '') ilike ${pattern} escape '\\'
+        )`;
+
+  const [sets, productRows] = await Promise.all([
+    category === "" ? storeSets(db, trimmed) : Promise.resolve([]),
+    db.execute<{
+      id: string;
+      name: string;
+      category: string;
+      subtype: string | null;
+      msrp: number;
+      list_price: number;
+      photo_ids: string[];
+      commander_printing_id: string | null;
+      commander_artist: string | null;
+      description: string | null;
+      contents: Array<{ depth: number; text: string }> | null;
+      wpn_release_date: string | null;
+      set_code: string;
+      set_name: string;
+      keyrune_code: string;
+      parent_keyrune_code: string | null;
+    }>(sql`
+      select sp.id, sp.name, sp.category, sp.subtype, ${MSRP} as msrp,
+             ${LIST_PRICE} as list_price, ${PHOTO_IDS} as photo_ids,
+             cp.id as commander_printing_id, cp.artist as commander_artist,
+             w.description, w.contents, w.release_date as wpn_release_date,
+             s.code as set_code, s.name as set_name, s.keyrune_code,
+             (select p.keyrune_code from card_sets p where p.code = s.parent_code) as parent_keyrune_code
+        from sealed_products sp
+        join card_sets s on s.code = sp.set_code
+        ${PRICE_JOINS}
+        left join printings cp on cp.id = ${COMMANDER_PRINTING} and cp.image_uris is not null
+       where s.is_enabled and ${MSRP} is not null and ${HAS_CONTENTS}
+         ${categoryFilter}
+         ${queryFilter}
+       order by s.release_date desc, sp.category, ${MSRP}, sp.name
+       limit 60
+    `),
+  ]);
+
+  const setCodes = [...new Set(productRows.rows.map((row) => row.set_code))];
+  const featured = await featuredArt(db, setCodes);
+
+  return {
+    sets,
+    categories,
+    products: productRows.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      subtype: row.subtype,
+      msrp: Cents.of(Number(row.msrp)),
+      listPrice: Cents.of(Number(row.list_price)),
+      photoIds: row.photo_ids,
+      featured:
+        row.commander_printing_id === null
+          ? null
+          : { printingId: row.commander_printing_id, artist: row.commander_artist },
+      description: row.description,
+      contents: row.contents ?? [],
+      releaseDate: row.wpn_release_date,
+      setCode: row.set_code,
+      setName: row.set_name,
+      keyruneCode: row.keyrune_code,
+      parentKeyruneCode: row.parent_keyrune_code,
+      setFeatured: featured.get(row.set_code) ?? null,
     })),
   };
 }
