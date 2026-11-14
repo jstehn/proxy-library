@@ -316,6 +316,14 @@ describe("the MCP server", () => {
       "artifact-tokens",
       "treasures",
     ]);
+    const pool = [...suggestions.forDeck.owned, ...suggestions.forDeck.store];
+    expect(pool.length).toBeGreaterThan(0);
+    for (const card of pool) {
+      expect(typeof card.text).toBe("string");
+      expect(card).not.toHaveProperty("rating");
+      expect(card).not.toHaveProperty("ratingParts");
+      expect(card).not.toHaveProperty("why");
+    }
     const toGet = await call(client, "cards_to_get");
     expect(toGet.cards.map((each: { name: string }) => each.name)).toEqual([
       "Beza, the Bounding Spring",
@@ -323,8 +331,8 @@ describe("the MCP server", () => {
   });
 });
 
-describe("the maybeboard and cards to cut (design doc 32)", () => {
-  it("ranks possible cuts, and keeps maybeboard cards out of everything", async () => {
+describe("the maybeboard and disabled cut suggestions", () => {
+  it("keeps maybeboard cards out of deck stats and omits rank_cuts, suggest_swaps, and audit_deck topCuts", async () => {
     await give("Banishing Light");
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
@@ -338,22 +346,40 @@ describe("the maybeboard and cards to cut (design doc 32)", () => {
     );
     expect(deck.stats.cardCount).toBe(13); // the maybeboard isn't counted
     expect(deck.shortList).not.toContain("Agate Assault");
-
-    const ranked = await call(client, "rank_cuts", { deckId, count: 5 });
-    // Lands, the commander and the maybeboard aren't ranked.
-    expect(ranked.cuts.map((cut: { name: string }) => cut.name).sort()).toEqual([
-      "Banishing Light",
+    expect(typeof deck.stats.costToComplete.cents).toBe("number");
+    expect(deck.stats.costToComplete.text).toMatch(/^\$\d+\.\d{2}$/);
+    expect(deck.toComplete.missingCopies).toBe(2);
+    expect(deck.toComplete.total).toEqual(deck.stats.costToComplete);
+    expect(deck.toComplete.cards.map((c: { name: string }) => c.name).sort()).toEqual([
+      "Beza, the Bounding Spring",
       "Carrot Cake",
     ]);
-    for (const cut of ranked.cuts) expect(cut.why.length).toBeGreaterThan(0);
-
-    const swapped = await call(client, "suggest_swaps", { deckId, pool: "store", count: 3 });
-    expect(Array.isArray(swapped.swaps)).toBe(true);
-    for (const swap of swapped.swaps) {
-      expect(swap.cut).toBeTruthy();
-      expect(swap.add).toBeTruthy();
-      expect(swap.why.length).toBeGreaterThan(0);
+    for (const card of deck.toComplete.cards) {
+      expect(card.missing).toBe(1);
+      expect(card.owned).toBe(0);
+      expect(card).toHaveProperty("price");
+      expect(card).toHaveProperty("subtotal");
     }
+    expect(deck.toComplete.maybeboard).toEqual([
+      expect.objectContaining({
+        name: "Agate Assault",
+        quantity: 1,
+        owned: 0,
+        missing: 1,
+      }),
+    ]);
+    expect(deck.toComplete.maybeboard[0]).toHaveProperty("price");
+
+    const tools = await client.listTools();
+    const names = tools.tools.map((t) => t.name);
+    expect(names).not.toContain("rank_cuts");
+    expect(names).not.toContain("suggest_swaps");
+
+    const audit = await call(client, "audit_deck", { deckId });
+    expect(audit).not.toHaveProperty("topCuts");
+    expect(audit.legality).toBeDefined();
+    expect(audit.mana).toBeDefined();
+    expect(audit.ownership).toBeDefined();
   });
 });
 

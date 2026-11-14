@@ -56,8 +56,7 @@ const PROMPTS: readonly Prompt[] = [
         "3. List 3-8 synergies, each split into enablers and payoffs.",
         "4. Call search_for_deck with one query per synergy. Rewrite queries that found nothing or were capped, and run again.",
         "5. Read the candidates' text and shortlist the best 10-15 with one reason each, owned cards first.",
-        "6. Compare with suggest_for_deck for anything the queries missed.",
-        "7. Ask me before changing the deck; then use set_deck_entry, and add_wish for cards to buy later.",
+        "6. Ask me before changing the deck; then use set_deck_entry, and add_wish for cards to buy later.",
       ].join("\n"),
   },
   {
@@ -85,7 +84,7 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Improve deck ${args.deckId}.`,
-        "Call get_deck, analyze_cards and rank_cuts; look for cards that don't fit what the deck does, or roles below target. rank_cuts gives ideas from simple checks: weigh them against the cards' text.",
+        "Call get_deck (with includeText: true) and analyze_cards; look for cards that don't fit what the deck does, or roles below target, judging each card by its oracle text.",
         "Find replacements with search_for_deck and similar_cards, owned first; offer swaps as options with your reasons, and apply them with set_deck_entry only when I agree.",
       ].join("\n"),
   },

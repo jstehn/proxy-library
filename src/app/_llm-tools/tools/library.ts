@@ -219,6 +219,29 @@ function suggestionView(suggestion: Suggestion, includeText: boolean) {
   };
 }
 
+function searchResultView(suggestion: Suggestion, includeText: boolean) {
+  const card = suggestion.card;
+  return {
+    name: card.name,
+    oracleId: card.oracleId,
+    printingId: card.printingId,
+    manaCost: card.manaCost,
+    typeLine: card.typeLine,
+    ...(includeText ? { text: card.text } : {}),
+    roleTags: card.roles,
+    themes: card.themes,
+    ...(card.isGameChanger ? { isGameChanger: true } : {}),
+    owned: card.owned,
+    price: moneyOrNull(card.priceCents),
+  };
+}
+
+function asSearchResults(suggestions: readonly Suggestion[], includeText: boolean) {
+  return suggestions
+    .map((each) => searchResultView(each, includeText))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 const includeText = z
   .boolean()
   .default(false)
@@ -226,31 +249,37 @@ const includeText = z
 
 export const suggestForDeck = defineTool({
   name: "suggest_for_deck",
-  title: "The app's suggestions for a deck",
+  title: "Opt-in candidate search pools for a deck",
   description: [
-    "The app's own suggestions for a deck: its profile (themes, creature types and keywords it read from the commander and deck, and roles below target), then cards for the deck and for each short role, from your collection first and then the store, each with why.",
-    "Use it when: you want a second opinion next to your own search_for_deck queries, or quick picks for missing roles (ramp, draw, removal, wipe). These are ideas to consider, not a ranking of the best cards: its themes come from fixed rules, so it can miss what a deck is really about; analyze_cards and search_for_deck can find more.",
+    "Opt-in fallback: returns the app's candidate pools for the deck and for each short role, from your collection first and then the store, formatted as unranked search results (alphabetical by name, no scores or pick reasons).",
+    "Use it only when: the player explicitly asks for the app's candidate pools. Prefer search_for_deck for finding cards; its themes come from fixed rules, so judge every card by its rules text.",
     "With a target bracket on the deck, cards that would take it over are left out; hiddenOverTarget says how many.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
-  input: z.object({ deckId, includeText }),
+  input: z.object({
+    deckId,
+    includeText: z
+      .boolean()
+      .default(true)
+      .describe("Include rules text. Set false to save space; you can't judge fit without it."),
+  }),
   async run(context, input) {
     const result = await deckSuggestions(context.container.db, context.actor.userId, input.deckId);
     if (result === null) return deckNotFound(input.deckId);
     return done({
       profile: result.profile,
       forDeck: {
-        owned: result.forDeck.owned.map((each) => suggestionView(each, input.includeText)),
-        store: result.forDeck.store.map((each) => suggestionView(each, input.includeText)),
+        owned: asSearchResults(result.forDeck.owned, input.includeText),
+        store: asSearchResults(result.forDeck.store, input.includeText),
         hiddenOverTarget: result.forDeck.hiddenOverTarget,
       },
       forRoles: result.forRoles.map((role) => ({
         role: role.tag,
         count: role.count,
         target: role.target,
-        owned: role.owned.map((each) => suggestionView(each, input.includeText)),
-        store: role.store.map((each) => suggestionView(each, input.includeText)),
+        owned: asSearchResults(role.owned, input.includeText),
+        store: asSearchResults(role.store, input.includeText),
         hiddenOverTarget: role.hiddenOverTarget,
       })),
     });

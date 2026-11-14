@@ -10,7 +10,6 @@ import {
   type BracketRuleReason,
 } from "../domain/brackets";
 import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
-import { rankCuts } from "../domain/cuts";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
 import { simulateOpeningHands, type GoldfishReport } from "../domain/goldfish";
@@ -77,14 +76,13 @@ export type DeckAuditReport = Readonly<{
     missingCards: number;
     estimatedMissingCents: number;
   };
-  topCuts: readonly { name: string; oracleId: string; score: number }[];
   goldfish: GoldfishReport;
   findings: readonly AuditFinding[];
 }>;
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,
- * role deficits, mana/color balance, ownership gaps, top cut candidates, and 500-hand goldfish stats.
+ * role deficits, mana/color balance, ownership gaps, and 500-hand goldfish stats.
  */
 export async function auditDeck(
   db: DbExecutor,
@@ -157,13 +155,6 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     format: view.deck.format,
     targetBracket: view.deck.targetBracket,
   });
-
-  const topCuts = rankCuts(view.lines, {
-    format: view.deck.format,
-    targetBracket: view.deck.targetBracket,
-  })
-    .slice(0, 5)
-    .map((c) => ({ name: c.name, oracleId: c.oracleId, score: c.keepScore }));
 
   const goldfish = simulateOpeningHands(library(view.lines), {
     rng: seededRng(`audit-${view.deck.id}`),
@@ -280,7 +271,6 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       missingCards,
       estimatedMissingCents,
     },
-    topCuts,
     goldfish,
     findings,
   };

@@ -17,10 +17,7 @@ import {
   compareDeckSnapshot,
   deckChangePreview,
   deckProblems,
-  deckProfile,
-  deckSignalProfile,
   deckStats,
-  deckSuggestions,
   deckText,
   deckTokenLines,
   deckUpgradeRoadmap,
@@ -36,7 +33,6 @@ import {
   formatRulesSummary,
   FORMATS,
   GROUPINGS,
-  isLand,
   legalFormatsForCards,
   library,
   listCardPackages,
@@ -52,14 +48,11 @@ import {
   MAX_SNAPSHOTS_PER_DECK,
   openingHandOdds,
   optimizeDeckForView,
-  rankCuts,
-  rateCard,
   roleTargets,
   SnapshotId,
   SPELL_SLOTS,
   shortList,
   simulateOpeningHands,
-  suggestSwaps,
   summarizeTokenChecklist,
   TOKEN_KINDS,
   toTokenChecklistItem,
@@ -70,15 +63,12 @@ import {
   type DeckProblem,
   type DeckView,
   type SnapshotComparison,
-  type SwapCutMeta,
 } from "@/modules/decks";
-import { cardTags, cardThemes, canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
+import { canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
 import { seededRng } from "@/shared/kernel";
 import {
   bracketWarningText,
-  cutReasonText,
   draftReasonText,
-  swapReasonText,
   estimateLabel,
   findingWithCards,
   landReasonText,
@@ -181,175 +171,6 @@ function bracketOf(view: DeckView, combos?: readonly DeckCombo[]) {
 async function viewFor(context: ToolContext, id: number) {
   return deckView(context.container.db, context.actor.userId, id);
 }
-
-/** The most cut candidates rank_cuts returns at once. */
-const MAX_CUTS = 30;
-
-export const rankCutsTool = defineTool({
-  name: "rank_cuts",
-  title: "Possible cuts for a deck",
-  description: [
-    "Ideas for what a deck could cut: the main-deck cards that score lowest on a few simple checks, lowest first, each with a rough keep score and the reasons in words (matches none of the themes the app found, a role the deck has more of than its target, expensive in a high curve, over the target bracket, not owned; reasons a card scored higher are listed too). Lands and commanders aren't ranked.",
-    "Use it when: the deck is over its size, or the player asks what to cut. It's a starting point, not a verdict: the checks read rules text with fixed patterns, so they miss combos, synergies they have no rule for, and the player's plan. Judge each card by its text (get_deck with includeText) and present cuts as options with your reasons.",
-    'Rules: suggest cuts, don\'t make them unasked; the player decides. To set a card aside, move it to the maybeboard with set_deck_entry (0 on "main", then the same count on "maybe").',
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    count: z
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_CUTS)
-      .default(10)
-      .describe(`How many cards to return, lowest score first (1 to ${MAX_CUTS}).`),
-  }),
-  async run(context, input) {
-    const view = await viewFor(context, input.deckId);
-    if (view === null) return deckNotFound(input.deckId);
-    const cuts = rankCuts(view.lines, {
-      format: view.deck.format,
-      targetBracket: view.deck.targetBracket,
-    });
-    return done({
-      deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
-      cuts: cuts.slice(0, input.count).map((cut) => ({
-        name: cut.name,
-        keepScore: Math.round(cut.keepScore * 10) / 10,
-        why: cut.reasons.map(cutReasonText),
-      })),
-      candidates: cuts.length,
-    });
-  },
-});
-
-const MAX_SWAPS = 15;
-
-export const suggestSwapsTool = defineTool({
-  name: "suggest_swaps",
-  title: "Suggest one-step card swaps for a deck",
-  description: [
-    "Pairs the deck's weakest main-deck cards (from rank_cuts) with top-rated replacements (owned or store), checking Commander singleton rules and target-bracket limits.",
-    "Use it when: the player asks what to swap out and what to put in.",
-    "Rules: suggest swaps, don't apply them unasked; preview with apply_changes (save: false) before saving.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    pool: z
-      .enum(["owned", "store"])
-      .default("owned")
-      .describe("Where to draw replacement candidates from."),
-    count: z
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_SWAPS)
-      .default(5)
-      .describe(`How many swaps to return (1 to ${MAX_SWAPS}).`),
-  }),
-  async run(context, input) {
-    const [view, suggestions] = await Promise.all([
-      viewFor(context, input.deckId),
-      deckSuggestions(context.container.db, context.actor.userId, input.deckId),
-    ]);
-    if (view === null) return deckNotFound(input.deckId);
-
-    const cuts = rankCuts(view.lines, {
-      format: view.deck.format,
-      targetBracket: view.deck.targetBracket,
-    });
-    const profile = deckProfile(view.lines, view.deck.format);
-    const stats = deckStats(view.lines);
-    const ratingProfile = {
-      format: view.deck.format,
-      themes: profile.themes,
-      tribes: profile.tribes,
-      gaps: profile.gaps,
-      keywords: profile.keywords,
-      signals: profile.signals ?? deckSignalProfile([]),
-      averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
-      curveCounts: profile.curveCounts ?? new Map(),
-    };
-
-    const cutMeta = new Map<string, SwapCutMeta>();
-    const existingOracleIds = new Set<string>();
-    for (const line of view.lines) {
-      existingOracleIds.add(line.oracleId);
-      if (line.board !== "main" || isLand(line.typeLine)) continue;
-      if (cutMeta.has(line.oracleId)) continue;
-      const facts = { typeLine: line.typeLine, text: line.text, producedMana: line.producedMana };
-      const r = rateCard(
-        {
-          oracleId: line.oracleId,
-          name: line.name,
-          typeLine: line.typeLine,
-          manaValue: line.manaValue,
-          text: line.text,
-          keywords: line.keywords,
-          roles: cardTags(facts),
-          themes: cardThemes(facts),
-          rarity: line.rarity,
-          priceCents: line.priceCents,
-          isGameChanger: line.isGameChanger,
-        },
-        ratingProfile,
-        { targetBracket: view.deck.targetBracket },
-      );
-      cutMeta.set(line.oracleId, {
-        manaValue: line.manaValue,
-        rating: r.rating,
-        isBasicLand: line.typeLine.includes("Basic Land"),
-      });
-    }
-
-    const poolItems = suggestions?.forDeck[input.pool] ?? [];
-    const candidates = poolItems.map((s) => ({
-      card: {
-        oracleId: s.card.oracleId,
-        name: s.card.name,
-        typeLine: s.card.typeLine,
-        manaValue: s.card.manaValue,
-        keywords: s.card.keywords,
-        roles: s.card.roles,
-        themes: s.card.themes,
-        rarity: s.card.rarity,
-        priceCents: s.card.priceCents,
-        pool: s.card.pool,
-        edhrecRank: s.card.edhrecRank,
-        edhrec: s.card.edhrec,
-      },
-      score: s.rating,
-      reasons: s.reasons,
-      rating: { rating: s.rating, logit: 0, parts: s.ratingParts },
-    }));
-
-    const neededRoles = new Set(profile.gaps.map((g) => g.tag));
-    const swaps = suggestSwaps(cuts, cutMeta, candidates, {
-      format: view.deck.format,
-      targetBracket: view.deck.targetBracket,
-      existingOracleIds,
-      neededRoles,
-      limit: input.count,
-    });
-
-    return done({
-      deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
-      swaps: swaps.map((s) => ({
-        cut: { name: s.cut.name, oracleId: s.cut.oracleId },
-        add: {
-          name: s.add.card.name,
-          oracleId: s.add.card.oracleId,
-          rating: s.add.rating?.rating ?? null,
-        },
-        netGain: s.netGain,
-        why: s.reasons.map(swapReasonText),
-      })),
-    });
-  },
-});
 
 export const optimizeDeckTool = defineTool({
   name: "optimize_deck",
@@ -774,7 +595,7 @@ export const getDeck = defineTool({
   description: [
     "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned, ownedReal when > 0, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
+    'Returns: lines (board, quantity, owned, ownedReal when > 0, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount, value, costToComplete), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list), toComplete (missingCopies, total cost to complete the deck, each missing card with its unit price and subtotal, and maybeboard ownership/price excluded from total).',
     'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. When usesRealCards is true, owned includes both game collection and real cards (ownedReal shows how many are real). Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
     'Headings & notes: the player may group the main deck under headings of their own ("Ramp", "Win conditions"): a line\'s heading, the deck\'s headings in order, and grouping ("custom" when the deck is shown by them, "type" when by card type). Cards may also carry a short `note` explaining why they are in the deck. Change them with set_deck_entry, apply_changes, and arrange_headings.',
   ].join("\n"),
@@ -825,6 +646,48 @@ export const getDeck = defineTool({
         : Promise.resolve(undefined),
     ]);
     const checklist = rawTokens.map(toTokenChecklistItem);
+    const missingCards = problems.flatMap((problem) => {
+      if (problem.kind !== "Short") return [];
+      const missing = Math.max(0, problem.needed - problem.owned);
+      const line =
+        view.lines.find((l) => l.oracleId === problem.oracleId && l.board !== "maybe") ??
+        view.lines.find((l) => l.oracleId === problem.oracleId);
+      const priceCents = line?.priceCents ?? null;
+      const subtotalCents = priceCents === null ? null : missing * priceCents;
+      return [
+        {
+          name: problem.name,
+          oracleId: problem.oracleId,
+          needed: problem.needed,
+          owned: problem.owned,
+          missing,
+          price: moneyOrNull(priceCents),
+          subtotal: moneyOrNull(subtotalCents),
+          subtotalCents,
+        },
+      ];
+    });
+    const missingCopies = missingCards.reduce((sum, c) => sum + c.missing, 0);
+    const missingTotalCents = missingCards.reduce((sum, c) => sum + (c.subtotalCents ?? 0), 0);
+    const unpricedCount = missingCards.filter((c) => c.subtotalCents === null).length;
+    const maybeboardCards = view.lines
+      .filter((l) => l.board === "maybe")
+      .map((l) => {
+        const isBasic = /\bBasic\b.*\bLand\b/.test(l.typeLine);
+        const missing = isBasic ? 0 : Math.max(0, l.quantity - l.owned);
+        const subtotalCents = missing > 0 && l.priceCents !== null ? missing * l.priceCents : null;
+        return {
+          name: l.name,
+          oracleId: l.oracleId,
+          quantity: l.quantity,
+          owned: l.owned,
+          ...(l.ownedReal > 0 ? { ownedReal: l.ownedReal } : {}),
+          missing,
+          price: moneyOrNull(l.priceCents),
+          ...(subtotalCents !== null ? { subtotal: money(subtotalCents) } : {}),
+        };
+      });
+
     return done({
       deck: {
         id: view.deck.id,
@@ -878,6 +741,7 @@ export const getDeck = defineTool({
         sources: stats.sources,
         roles: stats.tags,
         value: money(stats.priceCents),
+        costToComplete: money(missingTotalCents),
       },
       formatRules: formatRulesSummary(view.deck.format),
       cardLegalIn:
@@ -917,6 +781,21 @@ export const getDeck = defineTool({
       },
       list,
       shortList: shortList(problems, view.lines),
+      toComplete: {
+        missingCopies,
+        total: money(missingTotalCents),
+        ...(unpricedCount > 0 ? { unpricedCount } : {}),
+        cards: missingCards.map((c) => ({
+          name: c.name,
+          oracleId: c.oracleId,
+          needed: c.needed,
+          owned: c.owned,
+          missing: c.missing,
+          price: c.price,
+          subtotal: c.subtotal,
+        })),
+        ...(maybeboardCards.length > 0 ? { maybeboard: maybeboardCards } : {}),
+      },
     });
   },
 });
@@ -1955,7 +1834,7 @@ export const auditDeckTool = defineTool({
   name: "audit_deck",
   title: "One-shot deck health audit",
   description: [
-    "Runs a comprehensive read-only health check on a deck in one call: legality problems, Commander bracket & two-card combos, whole-deck objective score, role counts vs. targets, mana/color balance, ownership gaps, top 5 weakest cut candidates, 500-hand London-mulligan goldfish summary, and prioritized findings.",
+    "Runs a comprehensive read-only health check on a deck in one call: legality problems, Commander bracket & two-card combos, whole-deck objective score, role counts vs. targets, mana/color balance, ownership gaps, 500-hand London-mulligan goldfish summary, and prioritized findings.",
     "Use it when: starting a deck review or checking overall deck health before making targeted edits.",
   ].join("\n"),
   scope: "read",
