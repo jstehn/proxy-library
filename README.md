@@ -1,8 +1,20 @@
 # Proxy Library
 
-A self-hosted web app for a Magic: The Gathering playgroup—combining a virtual sealed/singles economy, collection tracker, deck builder, proxy PDF generator, live booster drafts, and AI deck-building tools.
+A self-hosted web app for a Magic: The Gathering playgroup—combining a virtual sealed/singles economy, collection tracker, deck builder, proxy PDF generator, live booster drafts, and AI deck-building tools. **Everything uses play money and prints proxies for casual play; it is not a real store.**
 
 > **How this is built:** This project is primarily implemented by AI coding assistants. It started as a hands-on way for a Python/SQL developer to learn TypeScript and team software engineering practices, and has since grown into a full-featured playgroup app. I set the requirements and scope, **review and approve every design document** before implementation begins, test against real data with my playgroup, and run the server—while delegating the specific engineering decisions and implementation details.
+
+---
+
+## Screenshots
+
+| Desktop (Light — Store)                                               | Desktop (Dark — Deck Builder)                                              |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ![Store in light mode on desktop](docs/screenshots/desktop-light.png) | ![Deck builder in dark mode on desktop](docs/screenshots/desktop-dark.png) |
+
+| Phone (Light — Store)                                                                          | Phone (Dark — Deck Builder)                                                                         |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/mobile-light.png" alt="Store in light mode on phone" width="260" /> | <img src="docs/screenshots/mobile-dark.png" alt="Deck builder in dark mode on phone" width="260" /> |
 
 ---
 
