@@ -324,6 +324,42 @@ export async function printingChoices(
   return choices;
 }
 
+/** Every copy of a card (any printing) a player owns in their real collection. */
+export async function realOwnedByOracle(
+  db: DbExecutor,
+  userId: UserId,
+  oracleId: string,
+): Promise<
+  Array<{
+    printingId: string;
+    setCode: string;
+    collectorNumber: string;
+    finish: Finish;
+    quantity: number;
+  }>
+> {
+  const rows = await db.execute<{
+    printing_id: string;
+    set_code: string;
+    collector_number: string;
+    finish: Finish;
+    quantity: number;
+  }>(sql`
+    select c.printing_id, p.set_code, p.collector_number, c.finish, c.quantity
+      from real_cards c
+      join printings p on p.id = c.printing_id
+     where c.user_id = ${userId} and p.oracle_id = ${oracleId}
+     order by p.set_code, p.collector_number, c.finish
+  `);
+  return rows.rows.map((row) => ({
+    printingId: row.printing_id,
+    setCode: row.set_code,
+    collectorNumber: row.collector_number,
+    finish: row.finish,
+    quantity: row.quantity,
+  }));
+}
+
 /** Every printing of the same card as this one, for moving real copies between printings. */
 export async function printingsOfSameCard(
   db: DbExecutor,

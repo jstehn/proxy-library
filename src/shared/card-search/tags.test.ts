@@ -200,6 +200,14 @@ const EXAMPLES: ReadonlyArray<readonly [Example, readonly Tag[]]> = [
     ["removal"],
   ],
   [card("Evacuation", "Instant", "Return all creatures to their owners' hands."), ["wipe"]],
+  [
+    card(
+      "Bane of Progress",
+      "Creature — Elemental",
+      "When Bane of Progress enters, destroy all artifacts and enchantments. Put a +1/+1 counter on Bane of Progress for each permanent destroyed this way.",
+    ),
+    ["wipe"],
+  ],
 
   // Counters
   [card("Counterspell", "Instant", "Counter target spell."), ["counter"]],

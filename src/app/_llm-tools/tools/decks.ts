@@ -774,8 +774,8 @@ export const getDeck = defineTool({
   description: [
     "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
     "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
-    'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
+    'Returns: lines (board, quantity, owned, ownedReal when > 0, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list).',
+    'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. When usesRealCards is true, owned includes both game collection and real cards (ownedReal shows how many are real). Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
     'Headings & notes: the player may group the main deck under headings of their own ("Ramp", "Win conditions"): a line\'s heading, the deck\'s headings in order, and grouping ("custom" when the deck is shown by them, "type" when by card type). Cards may also carry a short `note` explaining why they are in the deck. Change them with set_deck_entry, apply_changes, and arrange_headings.',
   ].join("\n"),
   scope: "read",
@@ -786,6 +786,12 @@ export const getDeck = defineTool({
       .boolean()
       .default(true)
       .describe("Include each card's rules text. Set false to save space on big decks."),
+    includeOtherDecks: z
+      .boolean()
+      .default(true)
+      .describe(
+        "Include the list of other decks using each card (free count is still kept). Set false to save space on big decks.",
+      ),
   }),
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
@@ -838,14 +844,19 @@ export const getDeck = defineTool({
         ...(line.heading !== null ? { heading: line.heading } : {}),
         ...(line.note !== null ? { note: line.note } : {}),
         owned: line.owned,
+        ...(line.ownedReal > 0 ? { ownedReal: line.ownedReal } : {}),
         ...(line.otherDecks.length > 0
           ? {
               free: line.free,
-              otherDecks: line.otherDecks.map((use) => ({
-                deckId: use.deckId,
-                name: use.name,
-                quantity: use.quantity,
-              })),
+              ...(input.includeOtherDecks
+                ? {
+                    otherDecks: line.otherDecks.map((use) => ({
+                      deckId: use.deckId,
+                      name: use.name,
+                      quantity: use.quantity,
+                    })),
+                  }
+                : {}),
             }
           : {}),
         manaCost: line.manaCost,
@@ -916,7 +927,7 @@ export const createDeck = defineTool({
   description: [
     "Makes a new, empty deck and returns its id. Optionally fills it from a list in the usual text format.",
     'Use it when: the player wants a new deck. Then add cards with set_deck_entry, or pass a whole list here ("Commander" / "Deck" / "Sideboard" / "Maybeboard" headings, or headings of the player\'s own such as "Ramp (2)", then lines like "1 Sol Ring").',
-    "Rules: cards you don't own may be added; they show as short.",
+    `Rules: cards you don't own may be added; they show as short. ${HEADING_RULE} (So "Lands (37)" or "Creatures (25)" are ignored as custom headings; use e.g. "Mana base" if you want a custom heading.)`,
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,

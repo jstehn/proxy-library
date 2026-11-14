@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { printingCards, searchPrintings } from "@/modules/catalog";
 import { collectionPage } from "@/modules/collection";
+import { realCollectionPage } from "@/modules/real-collection";
 import {
   deckSignalCards,
   ownedSignalCards,
@@ -132,9 +133,11 @@ export const searchCards = defineTool({
       .max(SEARCH_MAX_LENGTH)
       .describe("The card search, in the search syntax."),
     where: z
-      .enum(["owned", "store"])
+      .enum(["owned", "game", "real", "store"])
       .default("store")
-      .describe('"owned": your collection; "store": everything for sale in this app.'),
+      .describe(
+        '"owned": your game collection and real cards; "game": only your game collection; "real": only your real cards; "store": everything for sale in this app.',
+      ),
     page: z.number().int().min(1).default(1).describe("Which page, from 1."),
     oneRowPerCard: z
       .boolean()
@@ -145,22 +148,27 @@ export const searchCards = defineTool({
   }),
   async run(context, input) {
     const { db } = context.container;
-    if (input.where === "owned") {
-      const result = await collectionPage(db, context.actor.userId, {
+    if (input.where !== "store") {
+      const filter = {
         search: input.search,
-        sections: "none",
-        sort: "name",
+        sections: "none" as const,
+        sort: "name" as const,
         page: input.page,
-      });
+      };
+      const [game, real] = await Promise.all([
+        input.where === "real" ? null : collectionPage(db, context.actor.userId, filter),
+        input.where === "game" ? null : realCollectionPage(db, context.actor.userId, filter),
+      ]);
+      const combinedRows = [
+        ...(game?.rows.map((row) => ({ ...row, source: "game" as const })) ?? []),
+        ...(real?.rows.map((row) => ({ ...row, source: "real" as const })) ?? []),
+      ];
       const cards = await printingCards(
         db,
-        result.rows.map((row) => row.printingId),
+        combinedRows.map((row) => row.printingId),
       );
-      return done({
-        notes: result.notes,
-        totals: { cards: result.totals.different, copies: result.totals.copies },
-        pageCount: result.pageCount,
-        cards: result.rows.map((row) => {
+      const formatted = combinedRows
+        .map((row) => {
           const card = cards.get(row.printingId);
           return {
             name: card?.name ?? "",
@@ -168,10 +176,20 @@ export const searchCards = defineTool({
             set: card?.setCode,
             finish: row.finish,
             quantity: row.quantity,
+            source: row.source,
             text: card?.faces.map((face) => face.text).join("\n"),
             price: moneyOrNull(row.price),
           };
-        }),
+        })
+        .sort((a, b) => a.name.localeCompare(b.name) || (a.set ?? "").localeCompare(b.set ?? ""));
+      return done({
+        notes: game?.notes ?? real?.notes ?? [],
+        totals: {
+          cards: (game?.totals.different ?? 0) + (real?.totals.different ?? 0),
+          copies: (game?.totals.copies ?? 0) + (real?.totals.copies ?? 0),
+        },
+        pageCount: Math.max(game?.pageCount ?? 1, real?.pageCount ?? 1),
+        cards: formatted,
       });
     }
     const result = await searchPrintings(db, {

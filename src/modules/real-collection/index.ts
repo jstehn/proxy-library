@@ -35,6 +35,7 @@ export {
   REAL_COLLECTION_PAGE_SIZE,
   realCollectionPage,
   realCopiesOf,
+  realOwnedByOracle,
   realExportRows,
   realPrintingIds,
   realCollectionSets,

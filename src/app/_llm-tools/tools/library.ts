@@ -6,7 +6,8 @@ import {
   printingDetail,
   searchPrintings,
 } from "@/modules/catalog";
-import { collectionPage, ownedCopies } from "@/modules/collection";
+import { collectionPage, ownedByOracle, ownedCopies } from "@/modules/collection";
+import { realOwnedByOracle } from "@/modules/real-collection";
 import {
   budgetList,
   budgetReplacements,
@@ -88,7 +89,7 @@ export const getCard = defineTool({
   name: "get_card",
   title: "Get a card",
   description: [
-    "One card in full: rules text of every face, type, mana cost, its printings for sale in the store with prices, how its price has moved, how many you own, which of your decks use it, and your wishes for it.",
+    "One card in full: rules text of every face, type, mana cost, its printings for sale in the store with prices, how its price has moved, how many you own (across all printings, split into game and real copies — matching get_deck when usesRealCards is on), which of your decks use it, and your wishes for it.",
     "Use it when: checking a card before recommending it, finding a printing id (for choose_printing or add_wish), or answering a question about one card.",
   ].join("\n"),
   scope: "read",
@@ -101,19 +102,24 @@ export const getCard = defineTool({
     const userId = context.actor.userId;
     const found = await findCard(db, input.card);
     if (found === null) return cardNotFound(input.card);
-    const [detail, history, owned, using, wishes, printings] = await Promise.all([
-      printingDetail(db, found.printingId),
-      priceHistory(db, found.printingId),
-      ownedCopies(db, userId, found.printingId),
-      decksUsing(db, userId, [found.printingId]),
-      wishesForCard(db, userId, found.printingId),
-      searchPrintings(db, {
-        userId,
-        search: `!"${found.name.replace(/"/g, "")}"`,
-        sort: "price",
-        page: 1,
-      }),
-    ]);
+    const [detail, history, owned, gameCopies, realCopies, using, wishes, printings] =
+      await Promise.all([
+        printingDetail(db, found.printingId),
+        priceHistory(db, found.printingId),
+        ownedCopies(db, userId, found.printingId),
+        ownedByOracle(db, userId, found.oracleId),
+        realOwnedByOracle(db, userId, found.oracleId),
+        decksUsing(db, userId, [found.printingId]),
+        wishesForCard(db, userId, found.printingId),
+        searchPrintings(db, {
+          userId,
+          search: `!"${found.name.replace(/"/g, "")}"`,
+          sort: "price",
+          page: 1,
+        }),
+      ]);
+    const gameTotal = gameCopies.reduce((sum, copy) => sum + copy.quantity, 0);
+    const realTotal = realCopies.reduce((sum, copy) => sum + copy.quantity, 0);
     const printingList = await printingsFor(context, printings.printingIds.slice(0, 20));
     return done({
       name: found.name,
@@ -134,6 +140,15 @@ export const getCard = defineTool({
         low: points.length === 0 ? null : money(Math.min(...points.map((point) => point.price))),
         high: points.length === 0 ? null : money(Math.max(...points.map((point) => point.price))),
       })),
+      owned: {
+        total: gameTotal + realTotal,
+        game: gameTotal,
+        real: realTotal,
+        printings: [
+          ...gameCopies.map((copy) => ({ ...copy, source: "game" as const })),
+          ...realCopies.map((copy) => ({ ...copy, source: "real" as const })),
+        ],
+      },
       ownedOfThisPrinting: owned,
       decksUsing: using.get(found.printingId) ?? [],
       wishes: wishes.map((wish) => ({ wishId: wish.id, quantity: wish.quantity })),

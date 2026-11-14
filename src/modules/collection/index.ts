@@ -11,9 +11,11 @@ export {
   collectionFor,
   collectionPage,
   exportRows,
+  ownedByOracle,
   ownedCopies,
   type CollectionFilter,
   type CollectionPage,
   type CollectionRow,
   type OwnedCard,
+  type OwnedPrintingCopy,
 } from "./queries/collection";

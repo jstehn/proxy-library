@@ -780,3 +780,72 @@ describe("60-card formats (design doc 44)", () => {
     expect(limitedDraft.parsed).toMatchObject({ error: { kind: "LimitedDeck" } });
   });
 });
+
+describe("ownership consistency and get_deck includeOtherDecks", () => {
+  it("matches owned counts across get_deck, get_card, and search_cards including real cards", async () => {
+    await give("Banishing Light", 1);
+    await db.execute(sql`
+      insert into real_cards (user_id, printing_id, finish, quantity, added_at, updated_at)
+      select ${jack.userId}, p.id, 'nonfoil', 1, now(), now() from printings p
+       where p.name = 'Carrot Cake' order by p.collector_number limit 1
+    `);
+    const client = await connect();
+
+    const { deckId: deck1 } = await call(client, "create_deck", {
+      name: "First",
+      format: "casual",
+      list: "Deck\n1 Banishing Light\n1 Carrot Cake",
+    });
+    const { deckId: deck2 } = await call(client, "create_deck", {
+      name: "Second",
+      format: "casual",
+      list: "Deck\n1 Carrot Cake",
+    });
+
+    const deck = await call(client, "get_deck", {
+      deckId: deck1,
+      includeText: false,
+      includeOtherDecks: false,
+    });
+    const carrotLine = deck.lines.find((line: { name: string }) => line.name === "Carrot Cake");
+    expect(carrotLine.owned).toBe(1);
+    expect(carrotLine.ownedReal).toBe(1);
+    expect(carrotLine.free).toBe(0);
+    expect(carrotLine.otherDecks).toBeUndefined();
+
+    const deckWithOthers = await call(client, "get_deck", {
+      deckId: deck2,
+      includeText: false,
+    });
+    const carrotWithOthers = deckWithOthers.lines.find(
+      (line: { name: string }) => line.name === "Carrot Cake",
+    );
+    expect(carrotWithOthers.otherDecks).toHaveLength(1);
+
+    const card = await call(client, "get_card", { card: "Carrot Cake" });
+    expect(card.owned).toMatchObject({ total: 1, game: 0, real: 1 });
+
+    const ownedSearch = await call(client, "search_cards", {
+      search: "Carrot Cake",
+      where: "owned",
+    });
+    expect(ownedSearch.totals.copies).toBe(1);
+    expect(ownedSearch.cards[0]).toMatchObject({
+      name: "Carrot Cake",
+      source: "real",
+      quantity: 1,
+    });
+
+    const gameOnly = await call(client, "search_cards", {
+      search: "Carrot Cake",
+      where: "game",
+    });
+    expect(gameOnly.totals.copies).toBe(0);
+
+    const realOnly = await call(client, "search_cards", {
+      search: "Carrot Cake",
+      where: "real",
+    });
+    expect(realOnly.totals.copies).toBe(1);
+  });
+});
