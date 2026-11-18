@@ -64,6 +64,20 @@ export function moneyOrNull(cents: number | null | undefined): MoneyView | null 
   return cents === null || cents === undefined ? null : money(cents);
 }
 
+/** Provenance header attached to every heuristic tool output so callers verify against primary sources. */
+export type HeuristicProvenance = Readonly<{
+  source: string;
+  reliability: "low";
+  verify_with: readonly string[];
+}>;
+
+export function heuristicProvenance(
+  source = "regex heuristic",
+  verifyWith: readonly string[] = ["card text", "edhrec"],
+): HeuristicProvenance {
+  return { source, reliability: "low", verify_with: [...verifyWith] };
+}
+
 /** The usual answer when a deck id isn't the caller's. */
 export function deckNotFound(deckId: number): ToolOutcome<never> {
   return failed(

@@ -309,7 +309,11 @@ describe("the MCP server", () => {
       name: "Beza",
       list: "Commander\n1 Beza, the Bounding Spring",
     });
-    const suggestions = await call(client, "suggest_for_deck", { deckId });
+    const suggestions = await call(client, "idea_candidates", { deckId });
+    expect(suggestions.provenance).toMatchObject({
+      source: "regex heuristic",
+      reliability: "low",
+    });
     expect(suggestions.profile.themes).toEqual([
       "tokens",
       "creature-tokens",
@@ -332,7 +336,7 @@ describe("the MCP server", () => {
 });
 
 describe("the maybeboard and disabled cut suggestions", () => {
-  it("keeps maybeboard cards out of deck stats and omits rank_cuts, suggest_swaps, and audit_deck topCuts", async () => {
+  it("keeps maybeboard cards out of deck stats and omits rank_cuts, suggest_swaps, and deck_facts topCuts", async () => {
     await give("Banishing Light");
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
@@ -375,8 +379,11 @@ describe("the maybeboard and disabled cut suggestions", () => {
     expect(names).not.toContain("rank_cuts");
     expect(names).not.toContain("suggest_swaps");
 
-    const audit = await call(client, "audit_deck", { deckId });
+    const audit = await call(client, "deck_facts", { deckId });
+    expect(audit.provenance).toMatchObject({ reliability: "low" });
     expect(audit).not.toHaveProperty("topCuts");
+    expect(audit).not.toHaveProperty("score");
+    expect(audit.heuristicScore).toBeDefined();
     expect(audit.legality).toBeDefined();
     expect(audit.mana).toBeDefined();
     expect(audit.ownership).toBeDefined();
@@ -391,6 +398,8 @@ describe("the mana base (design doc 35)", () => {
       list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n30 Plains",
     });
     const plan = await call(client, "plan_mana_base", { deckId });
+    expect(plan.provenance).toMatchObject({ reliability: "low" });
+    expect(plan.outputKind).toBe("skeleton");
     expect(plan).toMatchObject({ lands: 30, landTarget: 37, over: 0 });
     expect(plan.landTargetWhy[0]).toBe("37 is the usual count");
     expect(plan.sources).toEqual([{ color: "W", have: 30, target: 37, mostOfItInOneCost: 2 }]);
@@ -464,6 +473,8 @@ describe("draft_deck (design doc 37)", () => {
       deckId,
       includeStore: "none",
     });
+    expect(ownedOnly.provenance).toMatchObject({ reliability: "low" });
+    expect(ownedOnly.outputKind).toBe("skeleton");
     expect(ownedOnly.existingCount).toBe(1);
     expect(ownedOnly.storeAddedCount).toBe(0);
     expect(ownedOnly.storeCost).toEqual({ cents: 0, text: "$0.00" });

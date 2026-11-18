@@ -51,12 +51,12 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Help me find cards for deck ${args.deckId}${args.goal ? ` (${args.goal})` : ""}.`,
-        "1. Call get_deck and read the commander's text and the deck's problems.",
-        "2. Call analyze_cards on the deck to see what its cards keep doing.",
-        "3. List 3-8 synergies, each split into enablers and payoffs.",
-        "4. Call search_for_deck with one query per synergy. Rewrite queries that found nothing or were capped, and run again.",
-        "5. Read the candidates' text and shortlist the best 10-15 with one reason each, owned cards first.",
-        "6. Ask me before changing the deck; then use set_deck_entry, and add_wish for cards to buy later.",
+        "1. Call get_deck and deck_facts; read the commander's and deck cards' oracle text.",
+        "2. Gather outside evidence (EDHREC, deckbuilding guides, Commander Spellbook, Scryfall rulings) and cite it.",
+        "3. Call analyze_cards on the deck and list 3-8 synergies, each split into enablers and payoffs.",
+        "4. Call search_for_deck with one query per synergy to check catalog availability and ownership. Rewrite queries that found nothing or were capped, and run again.",
+        "5. Read the candidates' rules text and shortlist 10-15 options, citing an outside source or rules text for every card, owned cards first.",
+        "6. Ask me before changing the deck; then use set_deck_entry or apply_changes, and add_wish for cards to buy later.",
       ].join("\n"),
   },
   {
@@ -73,8 +73,8 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Build a Commander deck led by ${args.commander}, from my cards first${args.budget ? `, spending at most ${args.budget} on store cards` : ""}.`,
-        "Create it with create_deck (commander on the Commander board), then follow the find_synergies steps, fill the role targets get_deck shows (ramp, draw, removal, wipe), and finish the mana base with lands in the deck's colors.",
-        "Use budget_upgrades for purchases and add_wish for what I can't afford yet.",
+        "Create it with create_deck (commander on the Commander board), gather outside evidence (EDHREC, primers, Spellbook) and cite it, then follow the find_synergies steps, fill the role targets get_deck shows (ramp, draw, removal, wipe), and finish the mana base with lands in the deck's colors.",
+        "Use search_cards / search_for_deck (or idea_budget_upgrades as a rough idea pool) for purchases and add_wish for what I can't afford yet. Cite an outside source or rules text for every card you suggest.",
       ].join("\n"),
   },
   {
@@ -84,8 +84,8 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Improve deck ${args.deckId}.`,
-        "Call get_deck (with includeText: true) and analyze_cards; look for cards that don't fit what the deck does, or roles below target, judging each card by its oracle text.",
-        "Find replacements with search_for_deck and similar_cards, owned first; offer swaps as options with your reasons, and apply them with set_deck_entry only when I agree.",
+        "Call get_deck (with includeText: true), deck_facts, and analyze_cards; gather outside evidence (EDHREC, Spellbook, Scryfall rulings) and cite it. Judge each card by its oracle text and outside sources.",
+        "Find replacements with search_for_deck and similar_cards, owned first; offer swaps as options citing an outside source or rules text for every add or cut, and apply them with apply_changes or set_deck_entry only when I agree.",
       ].join("\n"),
   },
 ];

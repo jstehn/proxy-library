@@ -85,6 +85,7 @@ import {
   defineTool,
   done,
   failed,
+  heuristicProvenance,
   money,
   moneyOrNull,
   type ToolContext,
@@ -173,11 +174,11 @@ async function viewFor(context: ToolContext, id: number) {
 }
 
 export const optimizeDeckTool = defineTool({
-  name: "optimize_deck",
-  title: "Optimize a deck via multi-card Simulated Annealing",
+  name: "idea_optimize_deck",
+  title: "Multi-card swap ideas via Simulated Annealing",
   description: [
-    "Runs a Simulated Annealing local search over the deck's non-land mainboard slots to find multi-card swaps that maximize the whole-deck objective (card quality, role coverage, mana curve, color balance, synergy cohesion, bracket compliance, and optional budget cap).",
-    "Use it when: the player asks to optimize or tune a deck as a whole rather than one card at a time.",
+    "Runs a Simulated Annealing local search over the deck's non-land mainboard slots using regex role/theme heuristics to surface multi-card swap ideas (sorted alphabetically by cut card, no per-card verdict). Raw heuristic ideas to verify against card text and outside sources, not recommendations.",
+    "Use it when: the player asks for heuristic multi-card swap ideas rather than researching one card at a time.",
     "Rules: read-only preview — does not mutate the deck; preview/apply accepted swaps with apply_changes.",
   ].join("\n"),
   scope: "read",
@@ -187,7 +188,7 @@ export const optimizeDeckTool = defineTool({
     pool: z
       .enum(["owned", "store", "both"])
       .default("owned")
-      .describe("Candidate pool to optimize from: owned cards, store cards, or both."),
+      .describe("Candidate pool to search from: owned cards, store cards, or both."),
     maxSwaps: z
       .number()
       .int()
@@ -212,7 +213,7 @@ export const optimizeDeckTool = defineTool({
       .string()
       .max(64)
       .optional()
-      .describe("Optional deterministic RNG seed for reproducible optimization runs."),
+      .describe("Optional deterministic RNG seed for reproducible runs."),
   }),
   async run(context, input) {
     const outcome = await optimizeDeckForView(
@@ -231,29 +232,34 @@ export const optimizeDeckTool = defineTool({
 
     const { deck, result } = outcome;
     return done({
+      provenance: heuristicProvenance("simulated annealing over regex heuristic", [
+        "card text",
+        "edhrec",
+      ]),
       deck: {
         id: deck.id,
         name: deck.name,
         format: deck.format,
         targetBracket: deck.targetBracket,
       },
-      before: result.before,
-      after: result.after,
-      delta: result.delta,
+      heuristicBefore: result.before,
+      heuristicAfter: result.after,
+      heuristicDelta: result.delta,
       iterationsRun: result.iterationsRun,
       acceptedMoves: result.acceptedMoves,
       improvedMoves: result.improvedMoves,
-      swaps: result.swaps.map((s) => ({
-        cut: { name: s.cut.name, oracleId: s.cut.oracleId, manaValue: s.cut.manaValue },
-        add: {
-          name: s.add.name,
-          oracleId: s.add.oracleId,
-          manaValue: s.add.manaValue,
-          pool: s.add.pool ?? "owned",
-          priceCents: s.priceCents,
-        },
-        netCardRatingGain: s.netCardRatingGain,
-      })),
+      swaps: result.swaps
+        .map((s) => ({
+          cut: { name: s.cut.name, oracleId: s.cut.oracleId, manaValue: s.cut.manaValue },
+          add: {
+            name: s.add.name,
+            oracleId: s.add.oracleId,
+            manaValue: s.add.manaValue,
+            pool: s.add.pool ?? "owned",
+            priceCents: s.priceCents,
+          },
+        }))
+        .sort((a, b) => a.cut.name.localeCompare(b.cut.name)),
     });
   },
 });
@@ -281,6 +287,11 @@ export const planManaBaseTool = defineTool({
       alsoIn: land.card.alsoIn,
     });
     return done({
+      provenance: heuristicProvenance("mana-curve & pip-share heuristic", [
+        "card text",
+        "edhrec",
+      ]),
+      outputKind: "skeleton",
       lands: plan.lands,
       landTarget: plan.landTarget.lands,
       landTargetWhy: plan.landTarget.reasons.map(landTargetReasonText),
@@ -397,6 +408,11 @@ export const draftDeckTool = defineTool({
     if (draft === null) return deckNotFound(input.deckId);
 
     return done({
+      provenance: heuristicProvenance("regex heuristic + mana-cost buckets", [
+        "card text",
+        "edhrec",
+      ]),
+      outputKind: "skeleton",
       deck: { id: view.deck.id, name: view.deck.name, format: view.deck.format },
       existingCount: draft.existingCount,
       totalAfterDraft: draft.totalAfterDraft,
@@ -486,6 +502,10 @@ export const commandersICanBuildTool = defineTool({
         return failed("NotACommander", `${found.name} can't lead a Commander deck.`);
       }
       return done({
+        provenance: heuristicProvenance("regex heuristic + scryfall metadata", [
+          "card text",
+          "edhrec",
+        ]),
         ...describeCoverage(details.coverage),
         onPlanCards: details.onPlan.map((entry) => ({
           name: entry.card.name,
@@ -526,6 +546,10 @@ export const commandersICanBuildTool = defineTool({
       sort: input.sort,
     });
     return done({
+      provenance: heuristicProvenance("regex heuristic + scryfall metadata", [
+        "card text",
+        "edhrec",
+      ]),
       found: ranked.length,
       sort: input.sort,
       ...(resolvedTheme ? { theme: resolvedTheme } : {}),
@@ -858,7 +882,7 @@ export const updateDeck = defineTool({
   title: "Rename a deck, change its format or target bracket",
   description: [
     "Changes a deck's name, format, target bracket, grouping, or whether your real cards count as owned in it. Leave out what stays the same.",
-    "Target bracket (Commander decks only): the Commander bracket the player means the deck for, 1–5 (1 Exhibition, 2 Core, 3 Upgraded, 4 Optimized, 5 cEDH), or 0 for none. With one, get_deck warns when the cards go over it, and suggest_for_deck, similar_cards, budget_upgrades and search_for_deck leave out cards that would. Changing the format away from Commander clears it.",
+    "Target bracket (Commander decks only): the Commander bracket the player means the deck for, 1–5 (1 Exhibition, 2 Core, 3 Upgraded, 4 Optimized, 5 cEDH), or 0 for none. With one, get_deck warns when the cards go over it, and idea_candidates, similar_cards, idea_budget_upgrades and search_for_deck leave out cards that would. Changing the format away from Commander clears it.",
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,
@@ -1831,11 +1855,11 @@ export const openingHandOddsTool = defineTool({
 });
 
 export const auditDeckTool = defineTool({
-  name: "audit_deck",
-  title: "One-shot deck health audit",
+  name: "deck_facts",
+  title: "Deck facts and heuristic diagnostics",
   description: [
-    "Runs a comprehensive read-only health check on a deck in one call: legality problems, Commander bracket & two-card combos, whole-deck objective score, role counts vs. targets, mana/color balance, ownership gaps, 500-hand London-mulligan goldfish summary, and prioritized findings.",
-    "Use it when: starting a deck review or checking overall deck health before making targeted edits.",
+    "Returns read-only deck facts in one call: legality problems, Commander bracket & two-card combos, role counts vs. targets, mana/color balance, ownership gaps, 500-hand London-mulligan goldfish summary, and a low-reliability heuristic score (never a verdict or cut list).",
+    "Use it when: checking a deck's construction facts, role counts, mana curve, and legality before researching cards.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -1843,7 +1867,12 @@ export const auditDeckTool = defineTool({
   async run(context, input) {
     const report = await auditDeck(context.container.db, context.actor.userId, input.deckId);
     if (report === null) return deckNotFound(input.deckId);
-    return done(report);
+    const { score, ...facts } = report;
+    return done({
+      provenance: heuristicProvenance("regex heuristic & deck stats", ["card text", "edhrec"]),
+      ...facts,
+      heuristicScore: score,
+    });
   },
 });
 
@@ -1922,11 +1951,11 @@ export const simulateOpeningHandsTool = defineTool({
 });
 
 export const upgradeRoadmapTool = defineTool({
-  name: "upgrade_roadmap",
-  title: "Tiered cut/add upgrade roadmap",
+  name: "idea_upgrade_roadmap",
+  title: "Tiered cut/add upgrade ideas by budget",
   description: [
-    "Builds a cumulative tiered upgrade plan across budget milestones (default $25 / $75 / $200), pairing weakest main-deck cuts with bracket-compliant store upgrades and scoring each milestone.",
-    "Use it when: the player asks for a phased upgrade path ('how should I upgrade this deck over $25, $75, and $200?'). Read-only.",
+    "Builds a heuristic tiered upgrade idea list across budget milestones (default $25 / $75 / $200), pairing regex-matched cuts with bracket-compliant store cards. Raw ideas to verify against card text and outside sources, not recommendations.",
+    "Use it when: the player asks for rough phased upgrade ideas across budget milestones ($25, $75, $200). Read-only.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -1944,7 +1973,7 @@ export const upgradeRoadmapTool = defineTool({
       .min(1)
       .max(10)
       .default(5)
-      .describe("Maximum number of cut/add swaps per tier (1 to 10, default 5)."),
+      .describe("Maximum number of cut/add ideas per tier (1 to 10, default 5)."),
   }),
   async run(context, input) {
     const result = await deckUpgradeRoadmap(
@@ -1958,25 +1987,26 @@ export const upgradeRoadmapTool = defineTool({
     );
     if (result === null) return deckNotFound(input.deckId);
     return done({
+      provenance: heuristicProvenance("regex heuristic + cut ranking", ["card text", "edhrec"]),
       deckId: result.deck.id,
       deckName: result.deck.name,
-      baseScore: result.roadmap.baseScore,
+      heuristicBaseScore: result.roadmap.baseScore,
       hiddenOverTarget: result.hiddenOverTarget,
       tiers: result.roadmap.tiers.map((tier) => ({
         tierBudget: money(tier.tierBudgetCents),
         tierSpent: money(tier.tierSpentCents),
         cumulativeBudget: money(tier.cumulativeBudgetCents),
         cumulativeSpent: money(tier.cumulativeSpentCents),
-        scoreAfter: tier.scoreAfter,
-        scoreDeltaFromBase: tier.scoreDeltaFromBase,
-        swaps: tier.swaps.map((swap) => ({
-          cut: swap.cut.name,
-          cutKeepScore: swap.cut.keepScore,
-          add: swap.add.card.name,
-          addPrice: money(swap.priceCents),
-          addRating: swap.add.rating,
-          reasons: swap.add.reasons,
-        })),
+        heuristicScoreAfter: tier.scoreAfter,
+        heuristicScoreDeltaFromBase: tier.scoreDeltaFromBase,
+        swaps: tier.swaps
+          .map((swap) => ({
+            cut: swap.cut.name,
+            add: swap.add.card.name,
+            addPrice: money(swap.priceCents),
+            regexReasons: swap.add.reasons,
+          }))
+          .sort((a, b) => a.cut.localeCompare(b.cut)),
       })),
     });
   },
@@ -2191,8 +2221,9 @@ export const deckScorecardTool = defineTool({
     const report = await deckScorecard(context.container.db, context.actor.userId, input.deckId);
     if (report === null) return deckNotFound(input.deckId);
     return done({
+      provenance: heuristicProvenance("regex heuristic & deck stats", ["card text", "edhrec"]),
       deck: report.deck,
-      score: report.score.total,
+      heuristicScore: report.score.total,
       bracket: report.bracket,
       roles: report.roles,
       averageCastOnCurvePct: report.mana.averageCastOnCurvePct,

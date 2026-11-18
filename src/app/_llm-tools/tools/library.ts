@@ -29,6 +29,7 @@ import {
   deckNotFound,
   defineTool,
   done,
+  heuristicProvenance,
   money,
   moneyOrNull,
   type ToolContext,
@@ -230,6 +231,7 @@ function searchResultView(suggestion: Suggestion, includeText: boolean) {
     ...(includeText ? { text: card.text } : {}),
     roleTags: card.roles,
     themes: card.themes,
+    regexReasons: suggestion.reasons.map(reasonText),
     ...(card.isGameChanger ? { isGameChanger: true } : {}),
     owned: card.owned,
     price: moneyOrNull(card.priceCents),
@@ -248,11 +250,11 @@ const includeText = z
   .describe("Include each card's rules text (off by default to save space).");
 
 export const suggestForDeck = defineTool({
-  name: "suggest_for_deck",
-  title: "Opt-in candidate search pools for a deck",
+  name: "idea_candidates",
+  title: "Unranked candidate pools from regex rules",
   description: [
-    "Opt-in fallback: returns the app's candidate pools for the deck and for each short role, from your collection first and then the store, formatted as unranked search results (alphabetical by name, no scores or pick reasons).",
-    "Use it only when: the player explicitly asks for the app's candidate pools. Prefer search_for_deck for finding cards; its themes come from fixed rules, so judge every card by its rules text.",
+    "Opt-in raw heuristic fallback: returns unranked candidate pools for the deck and for each short role, from your collection first and then the store, sorted alphabetically by name with no scores or verdicts — only the regex tags/reasons that matched.",
+    "Use it only when: the player explicitly asks for the app's regex candidate pools. Prefer outside research (EDHREC, Spellbook, guides) and search_for_deck; verify every card against its rules text before suggesting it.",
     "With a target bracket on the deck, cards that would take it over are left out; hiddenOverTarget says how many.",
   ].join("\n"),
   scope: "read",
@@ -268,6 +270,7 @@ export const suggestForDeck = defineTool({
     const result = await deckSuggestions(context.container.db, context.actor.userId, input.deckId);
     if (result === null) return deckNotFound(input.deckId);
     return done({
+      provenance: heuristicProvenance("regex heuristic", ["card text", "edhrec"]),
       profile: result.profile,
       forDeck: {
         owned: asSearchResults(result.forDeck.owned, input.includeText),
@@ -320,11 +323,11 @@ export const similarCardsTool = defineTool({
 });
 
 export const budgetUpgrades = defineTool({
-  name: "budget_upgrades",
-  title: "Upgrade ideas within a budget",
+  name: "idea_budget_upgrades",
+  title: "Unranked upgrade ideas within a budget",
   description: [
-    "Store cards a deck could buy within a budget, picked greedily by how well they fit the app's simple rules, as a list Buy a list accepts. Ideas to consider, not the best possible upgrades.",
-    "Use it when: the player asks what to buy for a deck for $N. Nothing is bought: the player buys in the web app, or you add the picks to the wishlist with add_wish.",
+    "Store cards a deck could buy within a budget, picked greedily by simple regex rules and sorted alphabetically here with no scores. Raw ideas to verify against card text and outside sources, not recommendations.",
+    "Use it when: the player asks for rough store ideas within $N. Nothing is bought: verify against rules text and outside sources, then suggest purchases or add them to the wishlist with add_wish.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -342,7 +345,8 @@ export const budgetUpgrades = defineTool({
     );
     if (result === null) return deckNotFound(input.deckId);
     return done({
-      picks: result.picks.map((each) => suggestionView(each, input.includeText)),
+      provenance: heuristicProvenance("regex heuristic + greedy price", ["card text", "edhrec"]),
+      picks: asSearchResults(result.picks, input.includeText),
       total: money(result.totalCents),
       list: result.listText,
       hiddenOverTarget: result.hiddenOverTarget,
@@ -351,10 +355,10 @@ export const budgetUpgrades = defineTool({
 });
 
 export const budgetReplacementsTool = defineTool({
-  name: "budget_replacements",
-  title: "Budget replacements for expensive cards",
+  name: "idea_budget_replacements",
+  title: "Cheaper similar-text ideas for expensive cards",
   description: [
-    "Finds cheaper legal cards with similar rules text (via card embeddings) and deck fit for expensive cards in a deck.",
+    "Finds cheaper legal cards with similar rules text (via card embeddings) and regex deck fit for expensive cards in a deck. Raw ideas to verify against card text and outside sources, not recommendations.",
     "Use it when: the player wants budget alternatives for a specific expensive card or the priciest cards in their deck.",
   ].join("\n"),
   scope: "read",
@@ -403,6 +407,10 @@ export const budgetReplacementsTool = defineTool({
     );
     if (result === null) return deckNotFound(input.deckId);
     return done({
+      provenance: heuristicProvenance("embedding similarity + regex heuristic", [
+        "card text",
+        "edhrec",
+      ]),
       minPrice: money(result.minPriceCents),
       maxPrice: money(result.maxPriceCents),
       cards: result.cards.map((entry) => ({
