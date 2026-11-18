@@ -13,6 +13,10 @@ export type CompactLineSource = Readonly<{
   heading: string | null;
   note: string | null;
   tags?: readonly string[];
+  /** The card's one-line job in this deck. */
+  role?: string | null;
+  /** Pinned on the line or a keyCard in the deck profile: never suggested as a cut. */
+  pinned?: boolean;
   manaCost: string | null;
   typeLine: string;
   text: string;
@@ -96,7 +100,10 @@ export function shortenOracleText(
   return shortened.filter((faceText) => faceText !== "").join(" // ");
 }
 
-/** "1 Sol Ring · {1} · Artifact · ramp — {T}: Add {C}{C}." with flags only when true. */
+/**
+ * "1 Sol Ring · {1} · Artifact · ramp — {T}: Add {C}{C}." with flags only when true:
+ * SHORT n, GC, PINNED, role and note.
+ */
 export function compactCardLine(line: CompactLineSource, options: CompactLineOptions): string {
   const parts = [`${line.quantity} ${line.name}`];
   if (line.manaCost !== null && line.manaCost !== "") parts.push(line.manaCost);
@@ -107,6 +114,10 @@ export function compactCardLine(line: CompactLineSource, options: CompactLineOpt
   const missing = line.isBasicLand ? 0 : Math.max(0, line.quantity - line.owned);
   if (missing > 0) parts.push(`SHORT ${missing}`);
   if (line.isGameChanger) parts.push("GC");
+  if (line.pinned === true) parts.push("PINNED");
+  if (line.role !== undefined && line.role !== null && line.role !== "") {
+    parts.push(`role: ${line.role}`);
+  }
   if (line.note !== null && line.note.trim() !== "") parts.push(`note: ${line.note.trim()}`);
   let result = parts.join(" · ");
   if (options.includeText && !line.isBasicLand) {

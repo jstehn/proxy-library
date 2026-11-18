@@ -64,12 +64,14 @@ describe("compactCardLine", () => {
           tags: [],
           owned: 0,
           isGameChanger: true,
+          pinned: true,
+          role: "Returns everything that died",
           note: "centerpiece",
         }),
         { includeText: false },
       ),
     ).toBe(
-      "1 Avacyn, Angel of Horror · {3}{W}{W}{B}{B} · Legendary Creature — Angel 8/8 · SHORT 1 · GC · note: centerpiece",
+      "1 Avacyn, Angel of Horror · {3}{W}{W}{B}{B} · Legendary Creature — Angel 8/8 · SHORT 1 · GC · PINNED · role: Returns everything that died · note: centerpiece",
     );
   });
 

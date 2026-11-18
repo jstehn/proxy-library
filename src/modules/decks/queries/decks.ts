@@ -111,6 +111,10 @@ export type DeckLine = Readonly<{
   note: string | null;
   /** Structured role/synergy tags on this line. */
   tags?: readonly string[];
+  /** The card's one-line job in this deck, or null (design doc 61). */
+  role?: string | null;
+  /** Pinned: tools never suggest cutting or replacing it (design doc 61). */
+  pinned?: boolean;
   name: string;
   typeLine: string;
   manaValue: number;
@@ -245,6 +249,8 @@ export async function deckView(
     heading: string | null;
     note: string | null;
     tags: string[] | null;
+    role: string | null;
+    pinned: boolean;
     printing_id: string;
     finish: string;
     name: string;
@@ -271,7 +277,7 @@ export async function deckView(
     other_decks: unknown;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
-           e.heading, e.note, e.tags, shown.id as printing_id,
+           e.heading, e.note, e.tags, e.role, e.pinned, shown.id as printing_id,
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
@@ -363,6 +369,8 @@ export async function deckView(
       heading: row.heading,
       note: row.note,
       tags: row.tags ?? [],
+      role: row.role,
+      pinned: row.pinned,
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),

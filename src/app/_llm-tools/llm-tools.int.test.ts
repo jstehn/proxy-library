@@ -171,6 +171,38 @@ describe("the MCP server", () => {
     expect(detail.notInDeck).toEqual(["Sol Ring"]);
   });
 
+  it("keeps a card's role and pin through later edits and shows them in get_deck", async () => {
+    const client = await connect();
+    const created = await call(client, "create_deck", {
+      name: "Roles",
+      list: "Commander\n1 Beza, the Bounding Spring\n\nDeck\n1 Banishing Light\n3 Plains",
+    });
+    const deckId = created.deckId;
+    const { fingerprint } = await call(client, "get_deck", { deckId, text: false });
+    await call(client, "apply_changes", {
+      deckId,
+      save: true,
+      fingerprint,
+      changes: [{ card: "Banishing Light", role: "Answers anything for {2}{W}", pinned: true }],
+    });
+    // A later edit to another card saves the whole deck again: the role and pin must survive it.
+    const after = await call(client, "get_deck", { deckId, text: false });
+    await call(client, "apply_changes", {
+      deckId,
+      save: true,
+      fingerprint: after.fingerprint,
+      changes: [{ card: "Plains", quantity: 4 }],
+    });
+    const deck = await call(client, "get_deck", { deckId, text: false });
+    const line = Object.values(deck.cards as Record<string, string[]>)
+      .flat()
+      .find((entry) => entry.includes("Banishing Light"));
+    expect(line).toContain("PINNED");
+    expect(line).toContain("role: Answers anything for {2}{W}");
+    const detail = await call(client, "get_deck", { deckId, cards: ["Banishing Light"] });
+    expect(detail.cards[0]).toMatchObject({ role: "Answers anything for {2}{W}", pinned: true });
+  });
+
   it("replaces a list only with a fresh fingerprint (rule 11)", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", { name: "Test", format: "casual" });

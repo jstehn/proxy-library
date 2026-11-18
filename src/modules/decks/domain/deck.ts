@@ -72,7 +72,21 @@ export type DeckEntry = Readonly<{
   note: string | null;
   /** Structured role/synergy tags on this line (e.g. ["Blitz", "Sac"]). */
   tags?: readonly string[];
+  /** The card's one-line job in this deck ("Free sac outlet for Avacyn"), design doc 61. */
+  role?: string | null;
+  /** Pinned: tools never suggest cutting or replacing this card (design doc 61). */
+  pinned?: boolean;
 }>;
+
+/** A card's role in a deck is at most this long (the database checks it too). */
+export const MAX_ROLE_LENGTH = 160;
+
+/** A role trimmed to one line and at most `MAX_ROLE_LENGTH`; empty means none. */
+export function tidyRole(role: string | null): string | null {
+  if (role === null) return null;
+  const oneLine = role.replace(/\s+/g, " ").trim();
+  return oneLine === "" ? null : oneLine.slice(0, MAX_ROLE_LENGTH);
+}
 
 export const GROUPINGS = ["type", "custom"] as const;
 /** How the main deck is grouped: by card type (the default) or by its own headings. */
@@ -194,7 +208,10 @@ export function normalizeTags(
  */
 export function withEntry(
   deck: Deck,
-  change: Omit<DeckEntry, "printingId" | "finish" | "heading" | "note" | "tags"> & {
+  change: Omit<
+    DeckEntry,
+    "printingId" | "finish" | "heading" | "note" | "tags" | "role" | "pinned"
+  > & {
     printingId?: PrintingId | null;
     finish?: Finish | null;
     /** A heading, null to clear it, or left out to keep the line's (design doc 34). */
@@ -203,6 +220,10 @@ export function withEntry(
     note?: string | null;
     /** Structured tags, or left out to keep the line's. */
     tags?: readonly string[];
+    /** A role, null to clear it, or left out to keep the line's. */
+    role?: string | null;
+    /** Pinned or not, or left out to keep the line's. */
+    pinned?: boolean;
   },
 ): Deck {
   const same = (entry: DeckEntry) =>
@@ -223,7 +244,14 @@ export function withEntry(
     note: change.note !== undefined ? change.note : (existing?.note ?? null),
     ...(resolvedTags.length > 0 ? { tags: resolvedTags } : {}),
   };
-  return { ...deck, entries: [...others, entry] };
+  const role = change.role !== undefined ? tidyRole(change.role) : (existing?.role ?? null);
+  const pinned = change.pinned ?? existing?.pinned ?? false;
+  const withMetadata: DeckEntry = {
+    ...entry,
+    ...(role !== null ? { role } : {}),
+    ...(pinned ? { pinned: true } : {}),
+  };
+  return { ...deck, entries: [...others, withMetadata] };
 }
 
 /** Moving a card's line to another board (design doc 32): to the maybeboard and back. */

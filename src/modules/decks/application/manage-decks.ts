@@ -139,6 +139,8 @@ export type ApplyChangesInput = Readonly<{
       note?: string | null;
       heading?: string | null;
       tags?: readonly string[];
+      role?: string | null;
+      pinned?: boolean;
     }>
   >;
 }>;
@@ -317,6 +319,8 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       note?: string | null;
       heading?: string | null;
       tags?: readonly string[];
+      role?: string | null;
+      pinned?: boolean;
     }> = [];
     for (const change of input.changes) {
       let qty: number | undefined;
@@ -340,6 +344,8 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         ...(note.value !== undefined ? { note: note.value } : {}),
         ...(headingVal !== undefined ? { heading: headingVal } : {}),
         ...(change.tags !== undefined ? { tags: change.tags } : {}),
+        ...(change.role !== undefined ? { role: change.role } : {}),
+        ...(change.pinned !== undefined ? { pinned: change.pinned } : {}),
       });
     }
     return unitOfWork.run<ApplyChangesReport, ApplyChangesError>(async ({ decks, cards }) => {

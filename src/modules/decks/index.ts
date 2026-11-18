@@ -78,6 +78,7 @@ export {
 } from "./domain/deck";
 export { checkHeading, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
+export { MAX_ROLE_LENGTH, tidyRole } from "./domain/deck";
 export {
   checkSnapshotLabel,
   MAX_SNAPSHOT_LABEL_LENGTH,
@@ -532,7 +533,6 @@ export {
 } from "./domain/deck-profile";
 export {
   getDeckProfile,
-  updateDeckEntryMetadata,
   updateDeckPrimer,
   updateDeckProfile,
   type StoredDeckProfile,

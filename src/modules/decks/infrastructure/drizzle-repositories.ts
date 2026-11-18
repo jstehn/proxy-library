@@ -38,6 +38,8 @@ const SnapshotEntrySchema = z.object({
   heading: z.string().nullable(),
   note: z.string().nullable().default(null),
   tags: z.array(z.string()).default([]),
+  role: z.string().nullable().default(null),
+  pinned: z.boolean().default(false),
 });
 
 export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
@@ -94,6 +96,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         heading: entry.heading,
         note: entry.note,
         tags: entry.tags,
+        ...(entry.role !== null ? { role: entry.role } : {}),
+        ...(entry.pinned ? { pinned: true } : {}),
       })),
     };
   }
@@ -146,6 +150,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         deck.entries.map((entry) => ({
           ...entry,
           tags: [...(entry.tags ?? [])],
+          role: entry.role ?? null,
+          pinned: entry.pinned ?? false,
           deckId: deck.id,
         })),
       );
@@ -191,6 +197,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
           heading: entry.heading,
           note: entry.note,
           tags: [...(entry.tags ?? [])],
+          role: entry.role ?? null,
+          pinned: entry.pinned ?? false,
         })),
         createdAt: snapshot.createdAt,
       })
@@ -214,6 +222,8 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
       heading: entry.heading,
       note: entry.note,
       tags: entry.tags,
+      ...(entry.role !== null ? { role: entry.role } : {}),
+      ...(entry.pinned ? { pinned: true } : {}),
     }));
     return {
       id: SnapshotId.of(row.id),

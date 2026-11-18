@@ -12,6 +12,7 @@ import {
 import { cardSignals, searchHelpText } from "@/shared/card-search";
 import { cookbookText } from "../cookbook";
 import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../tool";
+import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
 
 // The search tools (design doc 28, sections 3.3, 3.6 and 3.7): the synergy search for a deck,
 // a plain search, the deck analysis that suggests what to search for, and the search guide.
@@ -87,12 +88,18 @@ export const searchForDeckTool = defineTool({
       maxPriceCents: input.maxPriceCents ?? null,
     });
     if (result === null) return deckNotFound(input.deckId);
+    const { kept, avoided } = withoutAvoidCards(
+      result.cards,
+      (card) => card.name,
+      await deckProfileFor(context, input.deckId),
+    );
     return done({
       deck: result.deck,
       leftOutOverTarget: result.leftOutOverTarget,
+      ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
       goal: input.goal === "" ? null : input.goal,
       queries: result.queries,
-      cards: result.cards.map((card) => ({
+      cards: kept.map((card) => ({
         name: card.name,
         oracleId: card.oracleId,
         printingId: card.printingId,

@@ -50,6 +50,7 @@ import {
   updateDeckProfile,
   effectiveManaValue,
   type DeckPlanProfile,
+  isKeyCard,
   listCardPackages,
   listDeckSnapshots,
   listDeckSources,
@@ -59,6 +60,7 @@ import {
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
   MAX_NOTE_LENGTH,
+  MAX_ROLE_LENGTH,
   MAX_QUANTITY,
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
@@ -86,6 +88,7 @@ import {
   type SnapshotComparison,
 } from "@/modules/decks";
 import { canonicalTheme, cardTags, TAGS, THEMES } from "@/shared/card-search";
+import { deckProfileFor } from "../avoid-cards";
 import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
 import { groupCompactLines, pageCompactGroups } from "../compact-deck";
 import { seededRng } from "@/shared/kernel";
@@ -733,7 +736,7 @@ export const getDeck = defineTool({
   name: "get_deck",
   title: "Get a deck",
   description: [
-    "Returns a deck as readable lines grouped by its headings: \"qty name · cost · type [P/T] · tags · SHORT n · GC · note — oracle text\" (the card's own name is ~ in its text), plus the commander, bracket, profile summary, stats (curve, types, pips vs sources, roles), problems, what's short, and the fingerprint. Maybeboard cards are listed by name only.",
+    "Returns a deck as readable lines grouped by its headings: \"qty name · cost · type [P/T] · tags · SHORT n · GC · PINNED · role · note — oracle text\" (the card's own name is ~ in its text), plus the commander, bracket, profile summary, stats (curve, types, pips vs sources, roles), problems, what's short, and the fingerprint. Maybeboard cards are listed by name only.",
     'Use it when: reading a deck before researching or editing; it is usually one call. For full detail on a few cards pass cards: [names]; for maybeboard text pass boards: ["maybe"]; for prices, ids, other decks, tokens, odds or sources pass include. A big deck returns `next`: call again with cursor: next.',
     "Rules: SHORT n means n copies aren't owned; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.",
   ].join("\n"),
@@ -751,7 +754,8 @@ export const getDeck = defineTool({
       view,
     );
     if (input.view === "full") return done(fullPayload);
-    return done(compactDeckPayload(view, input, fullPayload));
+    const profile = await deckProfileFor(context, input.deckId);
+    return done(compactDeckPayload(view, input, fullPayload, profile));
   },
 });
 
@@ -998,6 +1002,7 @@ function compactDeckPayload(
   view: DeckView,
   input: GetDeckInputValue,
   fullPayload: Record<string, unknown>,
+  profile: DeckPlanProfile | null,
 ): Record<string, unknown> {
   const requestedBoards = input.boards && input.boards.length > 0 ? input.boards : null;
   const shownBoards: readonly DeckLine["board"][] = requestedBoards ?? [
@@ -1009,11 +1014,13 @@ function compactDeckPayload(
     (line) => shownBoards.includes(line.board) && passesLineFilters(line, input),
   );
   const groups = groupCompactLines(
-    shownLines.map((line) =>
-      line.board === "side" || line.board === "maybe"
-        ? { ...line, heading: line.board === "side" ? "Sideboard" : "Maybeboard" }
-        : line,
-    ),
+    shownLines.map((line) => ({
+      ...line,
+      pinned: isKeyCard(line.name, profile, line.pinned === true),
+      ...(line.board === "side" || line.board === "maybe"
+        ? { heading: line.board === "side" ? "Sideboard" : "Maybeboard" }
+        : {}),
+    })),
     {
       byHeading: view.deck.grouping === "custom",
       headings: [...view.deck.headings, "Sideboard", "Maybeboard"],
@@ -1211,6 +1218,8 @@ function deckCardDetails(view: DeckView, names: readonly string[]): Record<strin
       ...(line.heading !== null ? { heading: line.heading } : {}),
       ...(line.note !== null ? { note: line.note } : {}),
       ...((line.tags ?? []).length > 0 ? { tags: line.tags } : {}),
+      ...(line.role ? { role: line.role } : {}),
+      ...(line.pinned ? { pinned: true } : {}),
       manaCost: line.manaCost,
       typeLine: line.typeLine,
       ...(line.printedStats ? { stats: line.printedStats } : {}),
@@ -1730,6 +1739,8 @@ type StoredPreview = {
     note?: string | null;
     heading?: string | null;
     tags?: readonly string[];
+    role?: string | null;
+    pinned?: boolean;
   }>;
   preview: DeckChangePreview;
   expiresAtMs: number;
@@ -1741,7 +1752,7 @@ export const applyChangesTool = defineTool({
   name: "apply_changes",
   title: "Preview or apply a batch of changes to a deck",
   description: [
-    "Pre-evaluates (and optionally saves) a batch of card changes to a deck: returns before/after for card count, curve, average mana value, roles vs targets, colors, Commander bracket, problems added/resolved/remaining, newly short cards, price difference, fingerprint, and a previewId. Each change can set quantity (0 removes; omit to update only note/heading/tags on an existing line), note, heading, and tags.",
+    "Pre-evaluates (and optionally saves) a batch of card changes to a deck: returns before/after for card count, curve, average mana value, roles vs targets, colors, Commander bracket, problems added/resolved/remaining, newly short cards, price difference, fingerprint, and a previewId. Each change can set quantity (0 removes; omit to update only note/heading/tags/role/pinned on an existing line), note, heading, tags, role (one-line job) and pinned.",
     "Use it when: testing swaps, cuts or additions before changing the player's deck, or applying multiple changes/notes/headings/tags at once. Leave save false (the default) to preview first, then save without resending changes by calling with { deckId, previewId, save: true } (or pass changes + fingerprint).",
     'Rules: all card names must match the catalog or nothing is previewed or saved. To move a card to the maybeboard, send two changes: 0 on "main" and its count on "maybe".',
   ].join("\n"),
@@ -1782,6 +1793,17 @@ export const applyChangesTool = defineTool({
             .describe(
               `Optional structured tags (prefer core tags: ${CORE_DECK_TAGS.join(", ")}; custom tags like "Blitz" allowed up to 25 distinct tags/deck); [] clears them.`,
             ),
+          role: z
+            .string()
+            .max(MAX_ROLE_LENGTH)
+            .optional()
+            .describe(
+              'Optional one-line job of this card in the deck (e.g. "Free sac outlet for Avacyn"); "" clears it.',
+            ),
+          pinned: z
+            .boolean()
+            .optional()
+            .describe("Pin the card: tools never suggest cutting or replacing a pinned card."),
         }),
       )
       .min(1)
@@ -1941,6 +1963,10 @@ export const applyChangesTool = defineTool({
           ? { heading: entry.heading === "" ? null : entry.heading }
           : {}),
         ...(entry.tags !== undefined && resolvedQty > 0 ? { tags: entry.tags } : {}),
+        ...(entry.role !== undefined && resolvedQty > 0
+          ? { role: entry.role === "" ? null : entry.role }
+          : {}),
+        ...(entry.pinned !== undefined && resolvedQty > 0 ? { pinned: entry.pinned } : {}),
       });
     }
 

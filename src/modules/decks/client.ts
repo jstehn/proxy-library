@@ -164,6 +164,7 @@ export {
 } from "./domain/brackets";
 export { checkHeading, headingMoved, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
+export { MAX_ROLE_LENGTH, tidyRole } from "./domain/deck";
 export {
   checkSnapshotLabel,
   MAX_SNAPSHOT_LABEL_LENGTH,
@@ -179,3 +180,12 @@ export {
   type UpgradeSwap,
   type UpgradeTierPlan,
 } from "./domain/upgrade-roadmap";
+export {
+  EMPTY_DECK_PROFILE,
+  FIXED_CARD_ROLE_TAGS,
+  patchPrimerSection,
+  summarizeDeckProfile,
+  type AvoidCard,
+  type DeckProfile as DeckPlanProfile,
+  type KeyCardPin,
+} from "./domain/deck-profile";

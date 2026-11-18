@@ -27,6 +27,7 @@ import {
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
 import { reasonText } from "@/app/decks/labels";
+import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
 import { findSharedRules, matchRelatedRules } from "../related-rules";
 import {
   cardNotFound,
@@ -332,11 +333,16 @@ export const similarCardsTool = defineTool({
       found.oracleId,
     );
     if (result === null) return deckNotFound(input.deckId);
+    const profile = await deckProfileFor(context, input.deckId);
+    const owned = withoutAvoidCards(result.owned, (each) => each.card.name, profile);
+    const store = withoutAvoidCards(result.store, (each) => each.card.name, profile);
+    const avoided = [...new Set([...owned.avoided, ...store.avoided])];
     return done({
       like: found.name,
-      owned: result.owned.map((each) => suggestionView(each, input.includeText)),
-      store: result.store.map((each) => suggestionView(each, input.includeText)),
+      owned: owned.kept.map((each) => suggestionView(each, input.includeText)),
+      store: store.kept.map((each) => suggestionView(each, input.includeText)),
       hiddenOverTarget: result.hiddenOverTarget,
+      ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
     });
   },
 });
@@ -537,11 +543,16 @@ export const semanticSearchForDeckTool = defineTool({
       rating: pick.rating,
       ...(input.includeText ? { text: pick.card.text } : {}),
     });
+    const profile = await deckProfileFor(context, input.deckId);
+    const owned = withoutAvoidCards(result.owned, (pick) => pick.card.name, profile);
+    const store = withoutAvoidCards(result.store, (pick) => pick.card.name, profile);
+    const avoided = [...new Set([...owned.avoided, ...store.avoided])];
     return done({
       concept: result.concept,
-      owned: result.owned.map(mapPick),
-      store: result.store.map(mapPick),
+      owned: owned.kept.map(mapPick),
+      store: store.kept.map(mapPick),
       hiddenOverTarget: result.hiddenOverTarget,
+      ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
     });
   },
 });
