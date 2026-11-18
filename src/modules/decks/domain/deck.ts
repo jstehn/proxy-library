@@ -286,6 +286,9 @@ export function movedEntry(
       finish: moving.printingId === null ? (there?.finish ?? null) : moving.finish,
       heading: moving.heading ?? there?.heading ?? null,
       note: moving.note ?? there?.note ?? null,
+      tags: moving.tags ?? there?.tags ?? [],
+      role: moving.role ?? there?.role ?? null,
+      pinned: (moving.pinned ?? false) || (there?.pinned ?? false),
     }),
   );
 }

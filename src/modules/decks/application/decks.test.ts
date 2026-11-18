@@ -751,6 +751,49 @@ describe("line notes (design doc 41)", () => {
     expect(repository.get(id)?.entries[0]?.note).toBeNull();
   });
 
+  it("sets, keeps and clears a line's role and pin (design doc 61)", async () => {
+    const created = await decks.createDeck(jack, { name: "Red", format: "commander" });
+    if (!created.ok) throw new Error("failed");
+    const id = created.value;
+    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 1 });
+
+    expect(
+      await decks.setEntryDetails(jack, {
+        deckId: id,
+        oracleId: "bolt",
+        board: "main",
+        role: "  Kills   mana dorks ",
+        pinned: true,
+      }),
+    ).toEqual({ ok: true, value: undefined });
+    expect(repository.get(id)?.entries[0]).toMatchObject({
+      role: "Kills mana dorks",
+      pinned: true,
+    });
+
+    // Other edits keep them; leaving a field out keeps it too.
+    await decks.setEntryNote(jack, { deckId: id, oracleId: "bolt", board: "main", note: "Cheap" });
+    await decks.setEntryDetails(jack, {
+      deckId: id,
+      oracleId: "bolt",
+      board: "main",
+      pinned: false,
+    });
+    expect(repository.get(id)?.entries[0]?.role).toBe("Kills mana dorks");
+    expect(repository.get(id)?.entries[0]?.pinned).toBeUndefined();
+
+    // Moving the card to the maybeboard and back keeps its role.
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "main", to: "maybe" });
+    await decks.moveEntry(jack, { deckId: id, oracleId: "bolt", from: "maybe", to: "main" });
+    expect(repository.get(id)?.entries[0]?.role).toBe("Kills mana dorks");
+
+    await decks.setEntryDetails(jack, { deckId: id, oracleId: "bolt", board: "main", role: "" });
+    expect(repository.get(id)?.entries[0]?.role).toBeUndefined();
+    expect(
+      await decks.setEntryDetails(jack, { deckId: id, oracleId: "nope", board: "main", role: "x" }),
+    ).toEqual({ ok: false, error: { kind: "EntryNotFound" } });
+  });
+
   it("rejects empty/overlong notes and checks ownership & entry existence", async () => {
     const created = await decks.createDeck(jack, { name: "Red", format: "commander" });
     if (!created.ok) throw new Error("failed");

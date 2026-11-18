@@ -73,6 +73,7 @@ export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListT
 export type ChoosePrintingError = DeckNotFound | PrintingRuleError;
 export type SetEntryHeadingError = DeckNotFound | EntryNotFound | HeadingInvalid | TooManyHeadings;
 export type SetEntryNoteError = DeckNotFound | EntryNotFound | NoteInvalid;
+export type SetEntryDetailsError = DeckNotFound | EntryNotFound;
 export type RenameHeadingError = DeckNotFound | HeadingInvalid | HeadingNotFound;
 export type OrderHeadingsError = DeckNotFound | HeadingOrderInvalid;
 export type SaveSnapshotError = DeckNotFound | SnapshotLabelInvalid | TooManySnapshots;
@@ -112,6 +113,16 @@ export type SetEntryInput = Readonly<{
   finish?: Finish;
   note?: string | null;
   tags?: readonly string[];
+}>;
+
+export type SetEntryDetailsInput = Readonly<{
+  deckId: DeckId;
+  oracleId: string;
+  board: Board;
+  /** The card's one-line job (trimmed, at most 160 characters), null to clear, or left out. */
+  role?: string | null;
+  /** Pin it (tools never suggest cutting it) or unpin it, or left out (design doc 61). */
+  pinned?: boolean;
 }>;
 
 export type SetEntryNoteInput = Readonly<{
@@ -637,6 +648,28 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     });
   }
 
+  /** Sets a line's role and whether it's pinned (design doc 61); either may be left out. */
+  async function setEntryDetails(
+    actor: Actor,
+    input: SetEntryDetailsInput,
+  ): Promise<Result<void, SetEntryDetailsError>> {
+    return unitOfWork.run<void, SetEntryDetailsError>(async ({ decks }) => {
+      const deck = await decks.lockOwned(input.deckId, actor.userId);
+      if (deck === null) return err({ kind: "DeckNotFound" });
+      const line = deck.entries.find(
+        (entry) => entry.oracleId === input.oracleId && entry.board === input.board,
+      );
+      if (line === undefined) return err({ kind: "EntryNotFound" });
+      const changed = withEntry(deck, {
+        ...line,
+        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
+      });
+      await decks.save(changed, clock.now());
+      return ok();
+    });
+  }
+
   /** Saves a point-in-time snapshot of a deck for before/after comparisons (design doc 41). */
   async function saveSnapshot(
     actor: Actor,
@@ -781,6 +814,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     updateDeck,
     setEntryHeading,
     setEntryNote,
+    setEntryDetails,
     renameHeading,
     orderHeadings,
     deleteDeck,
