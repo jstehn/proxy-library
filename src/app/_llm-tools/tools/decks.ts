@@ -2470,6 +2470,18 @@ export const edhrecCommanderTool = defineTool({
       .enum(["budget", "expensive"])
       .optional()
       .describe("Optional EDHREC budget filter: budget or expensive."),
+    category: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Optional category filter (e.g. "High Synergy Cards", "Creatures").'),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(200)
+      .default(60)
+      .describe("Maximum number of cards to return (default 60, max 200)."),
   }),
   async run(context, input) {
     let data;
@@ -2487,6 +2499,9 @@ export const edhrecCommanderTool = defineTool({
     if (data === null) {
       return failed("EdhrecNotFound", `No EDHREC page found for "${input.commander}".`);
     }
+    const filteredCards = input.category
+      ? data.cards.filter((c) => c.category.toLowerCase() === input.category?.toLowerCase())
+      : data.cards;
     return done({
       framing: EDHREC_FRAMING,
       sourceUrl: data.sourceUrl,
@@ -2494,8 +2509,9 @@ export const edhrecCommanderTool = defineTool({
       cached: data.cached,
       commander: data.commander,
       deckCount: data.deckCount,
-      themes: data.themes,
-      cards: data.cards,
+      themes: data.themes.slice(0, 20),
+      totalCards: filteredCards.length,
+      cards: filteredCards.slice(0, input.limit),
       averageDecklist: data.averageDecklist,
     });
   },

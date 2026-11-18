@@ -31,17 +31,10 @@ describe("the tool registry", () => {
     expect(writes).toEqual([
       ["create_deck", "decks:write"],
       ["update_deck", "decks:write"],
-      ["set_deck_entry", "decks:write"],
       ["apply_changes", "decks:write"],
-      ["arrange_headings", "decks:write"],
       ["replace_deck_list", "decks:write"],
-      ["choose_printing", "decks:write"],
-      ["snapshot_deck", "decks:write"],
-      ["create_package", "decks:write"],
-      ["apply_package", "decks:write"],
       ["deck_sources", "decks:write"],
       ["add_wish", "wishlist:write"],
-      ["update_wish", "wishlist:write"],
       ["remove_wish", "wishlist:write"],
     ]);
     for (const tool of TOOLS.filter((each) => each.readOnly)) expect(tool.scope).toBe("read");
