@@ -1,7 +1,7 @@
 # Design: Proxy Library MCP Commander Awareness, Output Caps & Deck Primers
 
 - **Phase:** 61
-- **Status:** In review (awaiting review gate approval before implementation)
+- **Status:** Approved
 - **Related ADRs:** 0007 (ACLs), 0016 (client-safe module API), 0023 (design doc sizing)
 - **Lesson:** yes (cost-reducer modeling, stateful turn-simulator invariants, response-size budgeting)
 
@@ -96,7 +96,21 @@ Whenever `deck_facts`, `mana_base_skeleton`, `simulate_opening_hands`, `idea_bud
 6. **Combo board accuracy:** `find_combos` classifies combos as `complete` only when all pieces are in `main`/`commander` (never `maybe`).
 7. **Response ceiling:** No MCP tool response exceeds ~40 KB; oversized list responses return a `next` cursor cleanly.
 
-## 5. Use cases & MCP tools
+## 5. Output size caps & `get_deck` reduction (Top Priority)
+
+Several tools (`get_deck` at 98.6 KB, `find_combos` cutting off near 97 KB, `deck_sources` returning the whole list) exceed comfortable LLM context budgets.
+
+1. **`get_deck` `fields` and `boards` filters:**
+   - `boards?: ("commander" | "main" | "sideboard" | "maybe")[]` — filter which boards are returned.
+   - `fields?: ("summary" | "entries" | "stats" | "bracket" | "tokens" | "odds" | "list" | "profile")[]` — select only the sections needed; omit `entries` / `text` when only stats or list are requested.
+   - Include a 1-paragraph `profileSummary` at the top when a deck profile exists.
+2. **Global ~40 KB response capper (`src/app/_llm-tools/`):**
+   - Measure serialized JSON byte length (`Buffer.byteLength(json, "utf8")`) before returning from any MCP tool.
+   - If a response exceeds `MAX_MCP_RESPONSE_BYTES` (40,000 bytes), paginate the primary array/map field and attach `{ next: <cursor>, truncatedByCap: true, totalCount }` rather than slicing raw strings or exceeding client limits.
+   - `find_combos` / `find_combos_for_deck` additionally support explicit `limit`, `offset`, and `bracket` filters.
+   - `deck_sources` returns only the newly added row on `add`.
+
+## 6. Use cases & MCP tools
 
 | Tool / Use case | Actor / authz | Input | Output / Behavior |
 | --------------- | ------------- | ----- | ----------------- |
@@ -147,7 +161,7 @@ Migration generated via `drizzle-kit` with safe defaults (`NULL` / `[]` / `false
   - `pnpm check` green.
   - Live MCP smoke check against Deck 51 (Henzie) covering all Top 5 fixes and Nov 18 retest items.
 
-## 9. Open questions
+## 10. Resolved decisions
 
-1. Should `goldfish_step` default `strict` to `true` or `false`? *(Recommendation: `false` by default for backwards compatibility, or `true` when `manaPool` is explicitly tracked — confirm preference.)*
-2. Fixed per-card `tags` vocabulary: start with `["ramp", "draw", "removal", "wipe", "protection", "wincon", "recursion", "combo", "land"]` plus arbitrary custom tags?
+1. `goldfish_step` defaults `strict` to `true` (refuse casts you cannot pay for unless `strict: false` is passed).
+2. Fixed per-card `tags` vocabulary: `["ramp", "draw", "removal", "wipe", "protection", "wincon", "recursion", "combo", "land"]` plus arbitrary custom tags.
