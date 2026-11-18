@@ -1,7 +1,7 @@
 # Design: Proxy Library MCP Commander Awareness, Output Caps & Deck Primers
 
 - **Phase:** 61
-- **Status:** Approved
+- **Status:** Done (lesson: [61](../../lessons/61-answers-a-model-can-read.md))
 - **Related ADRs:** 0007 (ACLs), 0016 (client-safe module API), 0023 (design doc sizing)
 - **Lesson:** yes (cost-reducer modeling, stateful turn-simulator invariants, response-size budgeting)
 
