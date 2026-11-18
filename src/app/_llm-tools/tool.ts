@@ -69,6 +69,11 @@ export function moneyOrNull(cents: number | null | undefined): MoneyView | null 
   return cents === null || cents === undefined ? null : money(cents);
 }
 
+/** Compact price in integer cents, or null when unpriced. */
+export function priceCents(cents: number | null | undefined): number | null {
+  return cents === null || cents === undefined ? null : Math.round(cents);
+}
+
 /** Provenance header attached to every heuristic tool output so callers verify against primary sources. */
 export type HeuristicProvenance = Readonly<{
   source: string;

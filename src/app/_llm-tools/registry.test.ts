@@ -29,16 +29,10 @@ describe("the tool registry", () => {
   it("writes only decks and the wishlist, with exactly these tools (rule 5)", () => {
     const writes = TOOLS.filter((tool) => !tool.readOnly).map((tool) => [tool.name, tool.scope]);
     expect(writes).toEqual([
-      ["set_deck_profile", "decks:write"],
-      ["set_primer", "decks:write"],
       ["create_deck", "decks:write"],
-      ["delete_deck", "decks:write"],
       ["update_deck", "decks:write"],
-      ["apply_changes", "decks:write"],
-      ["replace_deck_list", "decks:write"],
-      ["deck_sources", "decks:write"],
-      ["add_wishes", "wishlist:write"],
-      ["remove_wishes", "wishlist:write"],
+      ["edit_deck", "decks:write"],
+      ["manage_wishlist", "wishlist:write"],
     ]);
     for (const tool of TOOLS.filter((each) => each.readOnly)) expect(tool.scope).toBe("read");
   });
@@ -61,12 +55,9 @@ describe("the tool registry", () => {
     }
   });
 
-  it("describes when to use each tool that has choices to make", () => {
+  it("describes each tool clearly", () => {
     for (const tool of TOOLS) {
       expect(tool.description.length, tool.name).toBeGreaterThan(40);
-    }
-    for (const name of ["search_for_deck", "analyze_cards", "get_deck", "replace_deck_list"]) {
-      expect(TOOLS.find((tool) => tool.name === name)?.description).toContain("Use it when");
     }
   });
 

@@ -51,12 +51,11 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Help me find cards for deck ${args.deckId}${args.goal ? ` (${args.goal})` : ""}.`,
-        "1. Call get_deck and deck_facts; read the commander's and deck cards' oracle text.",
-        "2. Gather outside evidence (EDHREC, deckbuilding guides, Commander Spellbook, Scryfall rulings) and cite it.",
-        "3. Call analyze_cards on the deck and list 3-8 synergies, each split into enablers and payoffs.",
-        "4. Call search_for_deck with one query per synergy to check catalog availability and ownership. Rewrite queries that found nothing or were capped, and run again.",
-        "5. Read the candidates' rules text and shortlist 10-15 options, citing an outside source or rules text for every card, owned cards first.",
-        "6. Ask me before changing the deck; then use apply_changes, and add_wishes for cards to buy later.",
+        "1. Call get_deck (include: ['facts', 'signals']) to read the commander, profile, and deck stats.",
+        "2. Gather outside evidence (edhrec_lookup, find_combos, rules_lookup, youtube_research) and cite it.",
+        "3. Call search_cards with deckId and synergy queries to check catalog availability and ownership.",
+        "4. Fetch rules text for shortlisted candidates via get_cards, citing an outside source or rules text for every card, owned first.",
+        "5. Ask me before changing the deck; then use edit_deck, and manage_wishlist for cards to buy later.",
       ].join("\n"),
   },
   {
@@ -73,8 +72,7 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Build a Commander deck led by ${args.commander}, from my cards first${args.budget ? `, spending at most ${args.budget} on store cards` : ""}.`,
-        "Create it with create_deck (commander on the Commander board), gather outside evidence (EDHREC, primers, Spellbook) and cite it, then follow the find_synergies steps, fill the role targets get_deck shows (ramp, draw, removal, wipe), and finish the mana base with lands in the deck's colors.",
-        "Use search_cards / search_for_deck for purchases and add_wishes for what I can't afford yet. Cite an outside source or rules text for every card you suggest.",
+        "Create it with create_deck (commander on the Commander board), gather outside evidence (edhrec_lookup, youtube_research, find_combos) and cite it, search with search_cards (deckId), fill role targets shown by get_deck, and use manage_wishlist for what I can't afford yet.",
       ].join("\n"),
   },
   {
@@ -84,20 +82,15 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Improve deck ${args.deckId}.`,
-        "Call get_deck (with includeText: true), deck_facts, and analyze_cards; gather outside evidence (EDHREC, Spellbook, Scryfall rulings) and cite it. Judge each card by its oracle text and outside sources.",
-        "Find replacements with search_for_deck and similar_cards, owned first; offer swaps as options citing an outside source or rules text for every add or cut, and apply them with apply_changes or set_deck_entry only when I agree.",
+        "Call get_deck (include: ['facts', 'signals', 'text']); gather outside evidence (edhrec_lookup, find_combos, rules_lookup) and cite it.",
+        "Find replacements with search_cards and find_replacements, owned first; offer swaps citing an outside source or rules text, and apply them with edit_deck only when I agree.",
       ].join("\n"),
   },
 ];
 
 function asContent(value: unknown, isError: boolean): CallToolResult {
-  const structured = (typeof value === "object" && value !== null ? value : { value }) as Record<
-    string,
-    unknown
-  >;
   return {
     content: [{ type: "text", text: JSON.stringify(value) }],
-    structuredContent: structured,
     isError,
   };
 }

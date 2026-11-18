@@ -12,7 +12,7 @@ import {
   type WishRequest,
 } from "@/modules/wishlist";
 import { Cents } from "@/shared/kernel";
-import { defineTool, done, failed, money, moneyOrNull } from "../tool";
+import { defineTool, done, failed, money, moneyOrNull, type ToolContext } from "../tool";
 
 // The wishlist (design doc 28, section 5.2; design doc 26). Saving a wish costs nothing; buying
 // stays in the web app (decision 2).
@@ -35,6 +35,102 @@ const note = z
   .max(MAX_NOTE_LENGTH)
   .default("")
   .describe("Optional note: which deck it's for, say.");
+
+function compactLineView(line: WishLine) {
+  return {
+    wishId: line.wish.id,
+    name: line.name,
+    quantity: line.wish.quantity,
+    owned: line.owned,
+    missing: line.missing,
+    bestPriceCents: line.offer === null ? null : Math.round(line.offer.price),
+    totalForMissingCents: line.total === null ? null : Math.round(line.total),
+    targetPriceCents: line.wish.targetPrice === null ? null : Math.round(line.wish.targetPrice),
+    atTarget: line.atTarget,
+    status:
+      line.status.kind === "shortBy"
+        ? `shortBy:${Math.round(line.status.shortfall)}c/${line.status.paydays}p`
+        : line.status.kind,
+    ...(line.wish.note ? { note: line.wish.note } : {}),
+  };
+}
+
+export async function compactWishlistPayload(context: ToolContext) {
+  const { db, clock, wallet } = context.container;
+  const userId = context.actor.userId;
+  const [answers, balance, settings] = await Promise.all([
+    wishlistAnswers(db, userId),
+    wallet.refreshWallet(userId),
+    currentEconomySettings(db),
+  ]);
+  const lines = wishLines(answers, {
+    balance,
+    allowance: settings.allowance,
+    allowancePeriodDays: settings.allowancePeriodDays,
+    nextPayday: nextPayday(
+      { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
+      clock.now(),
+    ),
+  });
+  const sum = totals(lines);
+  return {
+    balanceCents: Math.round(balance),
+    totalForMissingCents: Math.round(sum.all),
+    wishes: lines.map(compactLineView),
+  };
+}
+
+export const manageWishlist = defineTool({
+  name: "manage_wishlist",
+  title: "Manage wishlist",
+  description:
+    "List, add/update, or remove cards on your wishlist. Use action 'list' (default), 'add' (with wishes), or 'remove' (with wishIds).",
+  scope: "wishlist:write",
+  readOnly: false,
+  input: z.object({
+    action: z
+      .enum(["list", "add", "remove"])
+      .default("list")
+      .describe("Action: 'list', 'add' (upserts by card), or 'remove' (by wishIds)."),
+    wishes: z
+      .array(
+        z.object({
+          card: z.string().min(1).describe("Card name or printing id."),
+          printing: z.enum(["any", "exact"]).default("any").describe("'any' or 'exact' printing."),
+          finish: z
+            .enum(["nonfoil", "foil", "etched", "cheapest"])
+            .default("nonfoil")
+            .describe("Finish ('cheapest' only with 'any'; 'etched' only with 'exact')."),
+          quantity: quantity.default(1),
+          targetPriceCents,
+          note,
+        }),
+      )
+      .max(50)
+      .optional()
+      .describe("Cards to add/update (for action='add')."),
+    wishIds: z
+      .array(wishId)
+      .max(50)
+      .optional()
+      .describe("Wish ids to remove (for action='remove')."),
+  }),
+  async run(context, input) {
+    if (input.action === "list") {
+      return done(await compactWishlistPayload(context));
+    }
+    if (input.action === "add") {
+      if (!input.wishes || input.wishes.length === 0) {
+        return failed("InvalidInput", "Provide at least 1 item in `wishes` for action='add'.");
+      }
+      return addWish.run(context, { wishes: input.wishes });
+    }
+    if (!input.wishIds || input.wishIds.length === 0) {
+      return failed("InvalidInput", "Provide at least 1 id in `wishIds` for action='remove'.");
+    }
+    return removeWish.run(context, { wishIds: input.wishIds });
+  },
+});
 
 function lineView(line: WishLine) {
   return {

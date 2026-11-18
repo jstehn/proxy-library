@@ -3,91 +3,50 @@ import { allows, type Scope } from "@/modules/accounts";
 import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
 import {
-  applyChangesTool,
-  auditDeckTool,
-  compareToEdhrecTool,
-  createDeck,
-  deleteDeckTool,
-  deckSourcesTool,
-  edhrecCommanderTool,
-  getDeck,
-  getDeckProfileTool,
-  goldfishStartTool,
-  goldfishStepTool,
-  listDecks,
-  planManaBaseTool,
-  replaceDeckList,
-  setDeckProfileTool,
-  setPrimerTool,
-  simulateOpeningHandsTool,
-  updateDeck,
-} from "./tools/decks";
-import {
-  budgetReplacementsTool,
-  checkInteractionTool,
-  checkOwnedTool,
-  findCombosForDeckTool,
-  getAccount,
-  getCard,
-  getRulingsTool,
-  lookupRulesTool,
-  semanticSearchForDeckTool,
-  similarCardsTool,
-} from "./tools/library";
-import { analyzeCards, getSearchGuide, searchCards, searchForDeckTool } from "./tools/search";
-import { addWish, getWishlist, removeWish } from "./tools/wishlist";
-import { getYoutubeTranscriptTool, searchYoutubeDeckTechsTool } from "./tools/youtube";
+  drawSampleTool,
+  edhrecLookupTool,
+  editDeckConsolidated,
+  findReplacementsTool,
+  getAccountCompact,
+  getCardsConsolidated,
+  getDeckConsolidated,
+  rulesLookupTool,
+  searchCardsConsolidated,
+  updateDeckConsolidated,
+} from "./tools/consolidated";
+import { createDeck, listDecks } from "./tools/decks";
+import { findCombosForDeckTool } from "./tools/library";
+import { manageWishlist } from "./tools/wishlist";
+import { youtubeResearchTool } from "./tools/youtube";
 
-// The tool registry (design doc 28, section 3.2): every LLM tool, once. Both endpoints are built
-// from this list, so they always offer the same tools (rule 6).
+// The tool registry (design doc 28, section 3.2): consolidated, token-efficient tools served
+// identically by /api/mcp and /api/tools/<name>.
 
 export const TOOLS: readonly LlmTool[] = [
-  getAccount,
+  getAccountCompact,
   listDecks,
-  getDeckProfileTool,
-  getDeck,
-  setDeckProfileTool,
-  setPrimerTool,
-  simulateOpeningHandsTool,
-  auditDeckTool,
-  analyzeCards,
-  searchForDeckTool,
-  searchCards,
-  getSearchGuide,
-  getCard,
-  getRulingsTool,
-  checkInteractionTool,
-  lookupRulesTool,
-  checkOwnedTool,
-  edhrecCommanderTool,
-  compareToEdhrecTool,
-  similarCardsTool,
-  semanticSearchForDeckTool,
-  budgetReplacementsTool,
-  findCombosForDeckTool,
-  planManaBaseTool,
-  getWishlist,
+  getDeckConsolidated,
   createDeck,
-  deleteDeckTool,
-  updateDeck,
-  applyChangesTool,
-  replaceDeckList,
-  goldfishStartTool,
-  goldfishStepTool,
-  deckSourcesTool,
-  searchYoutubeDeckTechsTool,
-  getYoutubeTranscriptTool,
-  addWish,
-  removeWish,
+  updateDeckConsolidated,
+  editDeckConsolidated,
+  searchCardsConsolidated,
+  getCardsConsolidated,
+  edhrecLookupTool,
+  findCombosForDeckTool,
+  findReplacementsTool,
+  drawSampleTool,
+  rulesLookupTool,
+  youtubeResearchTool,
+  manageWishlist,
 ];
 
 /** House rules, for MCP's server instructions and OpenAPI's description (rule 10 repeats them). */
 export const INSTRUCTIONS = [
-  "Proxy Library: self-hosted Magic: The Gathering collection with play money (cents: $1.23 = 123), a store of singles, decks, and a wishlist.",
-  "No app tool output is a recommendation. Cite an outside source or the card's rules text for every add or cut you suggest.",
-  "Read the deck profile (get_deck_profile) before suggesting changes; never suggest cutting a keyCard or adding an avoid card.",
-  "Workflow: (1) Read the deck profile (get_deck_profile), then get_deck and deck_facts. (2) Gather outside evidence (edhrec_commander, compare_to_edhrec, search_youtube_deck_techs, get_youtube_transcript, find_combos, get_rulings, lookup_rules, guides) and cite it. (3) Check catalog/ownership/prices with check_owned, search_for_deck, search_cards, get_cards, and analyze_cards. (4) Preview changes with apply_changes (save: false) and commit with { deckId, previewId, save: true } (or replace_deck_list with fingerprint). Save research links with deck_sources.",
-  'Rules: decks may hold unowned cards (shown as short); prefer owned cards. Move agreed cuts to the "maybe" board instead of deleting. Only cards in this catalog exist here, not all of Scryfall. Keep Commander brackets (1-5) within target (-is:gc excludes Game Changers). Nothing here buys or sells; use add_wishes for cards to buy later.',
+  "Proxy Library: self-hosted MTG collection (prices in integer cents: $1.23 = 123), store, decks, and wishlist.",
+  "No tool output is a recommendation; heuristic outputs (role tags, signals, mana_plan, replacements) are low-reliability and must be verified against card rules text or outside sources.",
+  "Read get_deck before suggesting changes; never suggest cutting a keyCard or adding an avoid card.",
+  "Workflow: (1) get_deck (pass include: ['facts'] if needed). (2) Outside research: edhrec_lookup, youtube_research, find_combos, rules_lookup. (3) Catalog/ownership: search_cards (includeText=false by default) and get_cards. (4) Preview/save with edit_deck (save=false -> previewId -> save=true); save research links with update_deck.",
+  'Rules: prefer owned cards; move agreed cuts to "maybe" instead of deleting. Only cards in this catalog exist here. Keep Commander brackets (1-5) within target. Use manage_wishlist to save cards to buy later.',
 ].join("\n");
 
 export function findTool(name: string): LlmTool | undefined {

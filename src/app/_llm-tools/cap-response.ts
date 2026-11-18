@@ -1,4 +1,4 @@
-export const MAX_TOOL_RESPONSE_BYTES = 40_000;
+export const MAX_TOOL_RESPONSE_BYTES = 14_000;
 
 function jsonBytes(value: unknown): number {
   return Buffer.byteLength(JSON.stringify(value), "utf8");
