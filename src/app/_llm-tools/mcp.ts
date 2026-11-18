@@ -52,7 +52,7 @@ const PROMPTS: readonly Prompt[] = [
       [
         `Help me find cards for deck ${args.deckId}${args.goal ? ` (${args.goal})` : ""}.`,
         "1. Call get_deck (include: ['facts', 'signals']) to read the commander, profile, and deck stats.",
-        "2. Gather outside evidence (edhrec_lookup, find_combos, rules_lookup, youtube_research) and cite it.",
+        "2. Gather outside evidence (edhrec_lookup, find_combos, rules_lookup, youtube_research, reddit_research) and cite it.",
         "3. Call search_cards with deckId and synergy queries to check catalog availability and ownership.",
         "4. Fetch rules text for shortlisted candidates via get_cards, citing an outside source or rules text for every card, owned first.",
         "5. Ask me before changing the deck; then use edit_deck, and manage_wishlist for cards to buy later.",
@@ -72,7 +72,7 @@ const PROMPTS: readonly Prompt[] = [
     text: (args) =>
       [
         `Build a Commander deck led by ${args.commander}, from my cards first${args.budget ? `, spending at most ${args.budget} on store cards` : ""}.`,
-        "Create it with create_deck (commander on the Commander board), gather outside evidence (edhrec_lookup, youtube_research, find_combos) and cite it, search with search_cards (deckId), fill role targets shown by get_deck, and use manage_wishlist for what I can't afford yet.",
+        "Create it with create_deck (commander on the Commander board), gather outside evidence (edhrec_lookup, youtube_research, reddit_research, find_combos) and cite it, search with search_cards (deckId), fill role targets shown by get_deck, and use manage_wishlist for what I can't afford yet.",
       ].join("\n"),
   },
   {

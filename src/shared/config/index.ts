@@ -22,6 +22,8 @@ const EnvSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be a 24-hour time like 04:00")
     .default("04:00"),
+  REDDIT_CLIENT_ID: z.string().optional(),
+  REDDIT_CLIENT_SECRET: z.string().optional(),
 });
 
 export type Config = Readonly<{
@@ -37,6 +39,9 @@ export type Config = Readonly<{
   syncCacheDir: string;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;
+  /** Optional Reddit OAuth app credentials for oauth.reddit.com. */
+  redditClientId?: string;
+  redditClientSecret?: string;
 }>;
 
 /** Parse the environment once at startup and fail fast with a readable message. */
@@ -58,5 +63,9 @@ export function loadConfig(
       hour: Number(parsed.data.SYNC_TIME.slice(0, 2)),
       minute: Number(parsed.data.SYNC_TIME.slice(3, 5)),
     },
+    ...(parsed.data.REDDIT_CLIENT_ID ? { redditClientId: parsed.data.REDDIT_CLIENT_ID } : {}),
+    ...(parsed.data.REDDIT_CLIENT_SECRET
+      ? { redditClientSecret: parsed.data.REDDIT_CLIENT_SECRET }
+      : {}),
   };
 }

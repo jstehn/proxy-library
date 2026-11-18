@@ -90,6 +90,8 @@ import {
 import { makeWallet } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
+import { makeReddit } from "@/modules/reddit";
+import { redditHttpGateway } from "@/modules/reddit/infrastructure";
 import { makeYoutube } from "@/modules/youtube";
 import { youtubeiGateway } from "@/modules/youtube/infrastructure";
 import {
@@ -252,6 +254,12 @@ export function buildCore(config: Config) {
   const social = makeSocial({ unitOfWork, clock });
   const outsideData = makeOutsideData(clock);
   const youtube = makeYoutube({ gateway: youtubeiGateway(clock) });
+  const reddit = makeReddit({
+    gateway: redditHttpGateway(clock, {
+      clientId: config.redditClientId,
+      clientSecret: config.redditClientSecret,
+    }),
+  });
 
   return {
     config,
@@ -279,6 +287,7 @@ export function buildCore(config: Config) {
     social,
     outsideData,
     youtube,
+    reddit,
     textEmbedder,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
