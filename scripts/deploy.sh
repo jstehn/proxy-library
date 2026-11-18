@@ -60,7 +60,7 @@ random_hex() {
 }
 
 echo "==> Building $IMAGE"
-docker build --tag "$IMAGE" --tag proxy-library:latest .
+docker build --progress=plain --tag "$IMAGE" --tag proxy-library:latest .
 
 echo "==> Copying the image to $HOST (compressed)"
 docker save "$IMAGE" | gzip -1 | ssh "$HOST" 'gunzip | docker load'
