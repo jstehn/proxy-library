@@ -9,7 +9,10 @@ import {
   type CastabilityLine,
   type CastabilitySummary,
 } from "../domain/castability";
-import type { DeckProfile as DeckPlanProfile } from "../domain/deck-profile";
+import {
+  resolveDeckProfileTargets,
+  type DeckProfile as DeckPlanProfile,
+} from "../domain/deck-profile";
 import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
 import { decks } from "../infrastructure/schema";
 import { deckStats, MANA_COLORS } from "../domain/stats";
@@ -239,7 +242,10 @@ export async function manaBasePlan(
     store: pools.store,
     deckRoles: profile.gaps.map((gap) => gap.tag),
     deckThemes: profile.themes,
-    landTargetOverride: deckPlanProfile?.landTarget ?? null,
+    landTargetOverride:
+      deckPlanProfile !== null
+        ? (deckPlanProfile.landTarget ?? resolveDeckProfileTargets(deckPlanProfile).landTarget)
+        : null,
   });
 
   const beforeLines: CastabilityLine[] = context.lines.map((line) => ({

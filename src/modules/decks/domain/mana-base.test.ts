@@ -133,14 +133,14 @@ describe("sourceTargets", () => {
     expect(targets(azorius)).toEqual({ W: 19, U: 19 });
   });
 
-  it("aims for at least 10 of a splash color", () => {
-    expect(targets([spell("{2}{W}", 3, 58), spell("{2}{U}", 3, 2)])).toEqual({ W: 36, U: 10 });
+  it("aims for at least 12 of a splash color", () => {
+    expect(targets([spell("{2}{W}", 3, 58), spell("{2}{U}", 3, 2)])).toEqual({ W: 36, U: 12 });
   });
 
   it("aims for more of a color a card needs two or three of", () => {
     const splash = [spell("{2}{W}", 3, 58)];
-    expect(targets([...splash, spell("{U}{U}", 2)]).U).toBe(15);
-    expect(targets([...splash, spell("{U}{U}{U}", 3)]).U).toBe(19);
+    expect(targets([...splash, spell("{U}{U}", 2)]).U).toBe(18);
+    expect(targets([...splash, spell("{U}{U}{U}", 3)]).U).toBe(24);
     expect(targets([...splash, spell("{U}{U}", 2)], "modern").U).toBe(12);
   });
 

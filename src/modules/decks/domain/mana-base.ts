@@ -126,7 +126,7 @@ export const LAND_WEIGHTS = {
 
 /** Sources to aim for in a color, by the most symbols of it in one cost (1, 2, 3 or more). */
 const SOURCE_FLOORS: Readonly<Record<"commander" | "other", readonly [number, number, number]>> = {
-  commander: [10, 15, 19],
+  commander: [12, 18, 24],
   other: [8, 12, 15],
 };
 
