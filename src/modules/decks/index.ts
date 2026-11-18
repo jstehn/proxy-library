@@ -219,6 +219,7 @@ export {
 export {
   simulateOpeningHands,
   type GoldfishReport,
+  type MustCastByOption,
   type SampleHand,
   type SimulateHandsOptions,
 } from "./domain/goldfish";

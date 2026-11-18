@@ -2158,12 +2158,59 @@ export const simulateOpeningHandsTool = defineTool({
       .max(64)
       .optional()
       .describe("Optional deterministic RNG seed for reproducible simulations."),
+    mustCastBy: z
+      .object({
+        card: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Card name (defaults to the deck's commander)."),
+        turn: z.number().int().min(1).max(10).describe("Target turn by which the card must be castable."),
+      })
+      .optional()
+      .describe("Measure % of games where a card (commander by default) is castable by turn N, counting dorks, rocks, and profile cost reducers."),
   }),
   async run(context, input) {
-    const view = await viewFor(context, input.deckId);
+    const [view, storedProfile] = await Promise.all([
+      viewFor(context, input.deckId),
+      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
+    ]);
     if (view === null) return deckNotFound(input.deckId);
     const cards = library(view.lines);
     const freeMulligan = input.freeMulligan ?? view.deck.format === "commander";
+
+    let mustCastByOption:
+      | { cardName: string; manaValue: number; turn: number; inLibrary: boolean }
+      | undefined;
+    if (input.mustCastBy) {
+      const cmdLine = view.lines.find((l) => l.board === "commander");
+      const targetName = input.mustCastBy.card ?? cmdLine?.name;
+      if (!targetName) {
+        return failed("CardNotFound", "No commander found; specify mustCastBy.card.");
+      }
+      const line =
+        view.lines.find((l) => l.name.toLowerCase() === targetName.toLowerCase()) ?? cmdLine;
+      if (!line) {
+        return failed("CardNotFound", `Card "${targetName}" is not in the deck.`);
+      }
+      const effMv = effectiveManaValue(
+        line.manaValue ?? 0,
+        {
+          typeLine: line.typeLine,
+          oracleText: line.text,
+          isCommander: line.board === "commander",
+        },
+        storedProfile?.profile,
+        0,
+      );
+      mustCastByOption = {
+        cardName: line.name,
+        manaValue: effMv,
+        turn: input.mustCastBy.turn,
+        inLibrary: line.board !== "commander",
+      };
+    }
+
     const report = simulateOpeningHands(cards, {
       rng: seededRng(input.seed ?? `sim-${view.deck.id}`),
       trials: input.trials,
@@ -2172,12 +2219,23 @@ export const simulateOpeningHandsTool = defineTool({
       requireEarlyPlay: input.requireEarlyPlay,
       freeMulligan,
       onTheDraw: input.onTheDraw,
+      ...(mustCastByOption ? { mustCastBy: mustCastByOption } : {}),
     });
     return done({
       deckId: view.deck.id,
       deckName: view.deck.name,
       freeMulligan,
       onTheDraw: input.onTheDraw,
+      ...(mustCastByOption
+        ? {
+            mustCastBy: {
+              card: mustCastByOption.cardName,
+              turn: mustCastByOption.turn,
+              effectiveManaValue: mustCastByOption.manaValue,
+              castablePct: report.mustCastByPct ?? 0,
+            },
+          }
+        : {}),
       ...report,
     });
   },

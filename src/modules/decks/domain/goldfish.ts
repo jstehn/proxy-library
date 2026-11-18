@@ -4,6 +4,14 @@ import { EARLY_RAMP_MAX_MV, OPENING_HAND, type LibraryCard } from "./draws";
 // Monte Carlo London-mulligan opening hand simulator (design doc 56):
 // pure and deterministic via injected Rng (ADR 0008).
 
+export type MustCastByOption = Readonly<{
+  cardName: string;
+  manaValue: number;
+  turn: number;
+  /** True if the card must be drawn from the library; false if in the command zone. */
+  inLibrary?: boolean;
+}>;
+
 export type SimulateHandsOptions = Readonly<{
   rng: Rng;
   trials?: number;
@@ -13,6 +21,7 @@ export type SimulateHandsOptions = Readonly<{
   freeMulligan?: boolean;
   maxMulligans?: number;
   onTheDraw?: boolean;
+  mustCastBy?: MustCastByOption;
 }>;
 
 export type SampleHand = Readonly<{
@@ -35,6 +44,7 @@ export type GoldfishReport = Readonly<{
   manaFloodPct: number;
   keptByMulligan: readonly number[];
   sampleHands: readonly SampleHand[];
+  mustCastByPct?: number;
 }>;
 
 function round1(n: number): number {
@@ -103,6 +113,52 @@ function bottomCards(
   return remaining;
 }
 
+function canCastByTurn(
+  finalHand: readonly LibraryCard[],
+  restOfLibrary: readonly LibraryCard[],
+  mustCast: MustCastByOption,
+  onTheDraw: boolean,
+): boolean {
+  const handPool = [...finalHand];
+  let drawIdx = 0;
+  let landsInPlay = 0;
+  let rampBonusMana = 0;
+  const targetLower = mustCast.cardName.trim().toLowerCase();
+
+  for (let turn = 1; turn <= mustCast.turn; turn++) {
+    if ((turn > 1 || onTheDraw) && drawIdx < restOfLibrary.length) {
+      handPool.push(restOfLibrary[drawIdx++]);
+    }
+    const landIdx = handPool.findIndex((c) => c.isLand);
+    if (landIdx !== -1) {
+      handPool.splice(landIdx, 1);
+      landsInPlay += 1;
+    }
+
+    let available = landsInPlay + rampBonusMana;
+    const hasTarget =
+      mustCast.inLibrary === false ||
+      handPool.some((c) => c.name.trim().toLowerCase() === targetLower);
+    if (hasTarget && available >= mustCast.manaValue) {
+      return true;
+    }
+
+    // Greedily cast affordable ramp spells on earlier turns to accelerate mana.
+    if (turn < mustCast.turn) {
+      while (true) {
+        const rampIdx = handPool.findIndex(
+          (c) => !c.isLand && c.tags.includes("ramp") && (c.manaValue ?? 99) <= available,
+        );
+        if (rampIdx === -1) break;
+        const [rampCard] = handPool.splice(rampIdx, 1);
+        available -= rampCard.manaValue ?? 0;
+        rampBonusMana += 1;
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Simulates `trials` opening hands with London mulligans using an injected `Rng`.
  */
@@ -143,6 +199,7 @@ export function simulateOpeningHands(
   let turn3LandCount = 0;
   let manaScrewCount = 0;
   let manaFloodCount = 0;
+  let mustCastCount = 0;
   const keptByMulligan = Array.from({ length: maxMulligans + 1 }, () => 0);
   const sampleHands: SampleHand[] = [];
 
@@ -191,6 +248,9 @@ export function simulateOpeningHands(
     const drawnByT3 = restOfLibrary.slice(0, drawsByTurn3);
     const totalLandsByT3 = lands + drawnByT3.filter((c) => c.isLand).length;
     if (totalLandsByT3 >= 3) turn3LandCount += 1;
+    if (options.mustCastBy && canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, onTheDraw)) {
+      mustCastCount += 1;
+    }
 
     if (sampleHands.length < 3) {
       sampleHands.push({
@@ -215,5 +275,6 @@ export function simulateOpeningHands(
     manaFloodPct: pct(manaFloodCount, trials),
     keptByMulligan,
     sampleHands,
+    ...(options.mustCastBy ? { mustCastByPct: pct(mustCastCount, trials) } : {}),
   };
 }
