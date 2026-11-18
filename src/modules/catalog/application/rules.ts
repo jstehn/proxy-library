@@ -2,7 +2,8 @@ import { ok } from "@/shared/kernel";
 import { parseComprehensiveRules, ruleEmbeddingText } from "../domain/comprehensive-rules";
 import type { CatalogDependencies, CatalogServices, ComprehensiveRuleRow } from "./ports";
 
-const EMBED_BATCH_SIZE = 64;
+// Keep batches small so ONNX padding on long rules doesn't spike RAM on constrained hosts.
+const EMBED_BATCH_SIZE = 8;
 
 export type ComprehensiveRulesSyncSummary = Readonly<{
   skipped: boolean;
