@@ -278,12 +278,11 @@ export const optimizeDeckTool = defineTool({
 });
 
 export const planManaBaseTool = defineTool({
-  name: "plan_mana_base",
-  title: "Plan a deck's mana base",
+  name: "mana_base_skeleton",
+  title: "Starting mana base skeleton",
   description: [
-    "A mana base you could start from: a land count for the deck (the usual count, moved by its curve and its other mana sources, with reasons), how many sources of each of its colors to aim for and how many it has, then lands to add to reach the count: lands the player owns first (any copy: decks share cards, so a land in another deck counts, with a note where else it's played), picked for the colors the deck is short of, untapped first, plus owned lands that do something the deck needs; basics fill the rest. Also up to five store lands to consider buying, with prices; these are never in the lands to add.",
-    "Use it when: building a deck, after the spells are chosen, or when the player asks about lands or colors. It's a starting point from rules of thumb, not the best mana base: check the lands against the deck and present them as options.",
-    'Rules: it only adds lands, never cuts them ("over" says how many lands the deck has beyond the target). Add the lands the player agrees to with set_deck_entry; suggest store lands, or add them to the wishlist with add_wish, never buy.',
+    "Returns a rough starting land skeleton (not a finished mana base): target land count, color source targets vs. current, owned lands first then basics, plus up to 5 store lands to consider.",
+    "Use it when: drafting an initial land count/mana skeleton after spells are chosen; verify lands against card text and EDHREC.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -627,11 +626,9 @@ export const getDeck = defineTool({
   name: "get_deck",
   title: "Get a deck",
   description: [
-    "One deck in full: every card with how many you own, the deck's statistics (mana curve, colors, types, role counts against the format's targets), what's wrong with it (short cards, size, legality, color identity), its Commander bracket, its list as text, and its fingerprint.",
-    "Use it when: starting work on a deck (read the commander's text first), before replace_deck_list (pass its fingerprint), and to check your changes.",
-    'Returns: lines (board, quantity, owned, ownedReal when > 0, isGameChanger; "owned < quantity" means short; free and otherDecks when another of your decks also uses the card), stats (including sideboardCount, value, costToComplete), formatRules (minMainCards, exactSize, maxCopies, maxSideboard), cardLegalIn (for 60-card decks: Standard/Pioneer/Modern/Legacy/Vintage/Pauper where its current cards and copy counts are legal), roleTargets (Commander and 60-card formats: ramp, draw, removal, wipe; null for Limited), problems in words, bracket (commander decks: the target the player chose, the lowest bracket the cards allow and why, and overTarget when the cards go over the target), tokens (summary counts and checklist of tokens, emblems, and helper cards created by counted cards; use deck_tokens for full rules text and art), list (the text replace_deck_list takes), shortList (the missing cards as a list), toComplete (missingCopies, total cost to complete the deck, each missing card with its unit price and subtotal, and maybeboard ownership/price excluded from total).',
-    'Rules: decks may hold cards you don\'t own; they show as short. Basic lands are never short. When usesRealCards is true, owned includes both game collection and real cards (ownedReal shows how many are real). Your decks share the copies you own: free is how many no other deck uses, and otherDecks lists the decks holding the rest (deckId, name, quantity). Lines on the "maybe" board (the maybeboard) are cards being considered: they count in nothing (size, stats, problems, bracket, short).',
-    'Headings & notes: the player may group the main deck under headings of their own ("Ramp", "Win conditions"): a line\'s heading, the deck\'s headings in order, and grouping ("custom" when the deck is shown by them, "type" when by card type). Cards may also carry a short `note` explaining why they are in the deck. Change them with set_deck_entry, apply_changes, and arrange_headings.',
+    "Returns a deck's cards (with oracle text, ownership, tags, headings, notes), stats, legality problems, Commander bracket, tokens, saved deckSources, and fingerprint.",
+    "Use it when: reading a deck before researching/editing, filtering lines by board/tag/singleTagOnly, or fetching specific fields (use fields/boards/includeText:false to save tokens).",
+    'Rules: unowned cards show as short; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.',
   ].join("\n"),
   scope: "read",
   readOnly: true,

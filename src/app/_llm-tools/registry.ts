@@ -12,11 +12,13 @@ import {
   goldfishStartTool,
   goldfishStepTool,
   listDecks,
+  planManaBaseTool,
   replaceDeckList,
   simulateOpeningHandsTool,
   updateDeck,
 } from "./tools/decks";
 import {
+  budgetReplacementsTool,
   checkOwnedTool,
   findCombosForDeckTool,
   getAccount,
@@ -50,7 +52,9 @@ export const TOOLS: readonly LlmTool[] = [
   compareToEdhrecTool,
   similarCardsTool,
   semanticSearchForDeckTool,
+  budgetReplacementsTool,
   findCombosForDeckTool,
+  planManaBaseTool,
   getWishlist,
   createDeck,
   updateDeck,

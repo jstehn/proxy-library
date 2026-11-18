@@ -23,20 +23,15 @@ import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../t
 const SEARCH_MAX_LENGTH = 2000;
 
 const SYNTAX_SUMMARY =
-  'Search syntax (Scryfall-style): words match names; o:/regex/ or o:"phrase" rules text (~ is the card\'s own name); t: type; c: colors; id<= color identity; mv<=3; pow>tou; kw:flying; tag:ramp|draw|removal|wipe|counter|tutor|protection; is:gamechanger (is:gc), is:landdenial, is:extraturn for Commander brackets; theme:counters|tokens|sacrifice|graveyard|artifacts|enchantments|lifegain|spells|landfall|equipment; is:commander, is:shockland and other land cycles; usd<2; own>0; or, -, parentheses. Call get_search_guide for everything.';
+  "Scryfall-style syntax: o:/regex/, t:type, c:colors, id<=, mv<=3, kw:, tag:, theme:, is:gc, usd<2, own>0. Call get_search_guide for full syntax and cookbook.";
 
 export const searchForDeckTool = defineTool({
   name: "search_for_deck",
   title: "Search cards for a deck, one query per synergy",
   description: [
-    "Runs several card searches for one deck at once, one per synergy you name, and merges the results. Every search is automatically limited to the deck's commander colors and format and leaves out cards already in the deck, so don't add color or legality terms yourself.",
-    'Use it when: building or upgrading a deck around a commander or a plan; finding enablers and payoffs; "what do I own that fits"; replacing cards in a role. Don\'t use it for one known card (get_card).',
-    'How to write the queries: first read the commander\'s text with get_deck, and call analyze_cards to see what the rest of the deck keeps doing (counters, tokens, triggers). List 3 to 8 synergies, splitting each mechanic into enablers (cards that create Treasures, sacrifice artifacts, make tokens) and payoffs (cards that say "whenever …" or "for each …" about it). Write one query per synergy. Use o:/regex/ for rules text, with [^.]* between words to stay inside one sentence: o:/whenever [^.]*artifact[^.]* sacrificed/. Narrow with t:, mv<=3, tag: or theme:. get_search_guide has tested patterns (topic "cookbook").',
+    "Runs up to 8 card searches for a deck (auto-filtered to its colors, format, target bracket, and excluding cards already in the deck).",
+    'Use it when: finding enablers, payoffs, or role cards in your collection/store. Example: {"synergy":"Treasure makers","search":"o:/create[^.]*treasure/"}.',
     SYNTAX_SUMMARY,
-    "Reading the result: cards that matched several synergies are the strongest leads. Read each card's text before recommending it: the searches find candidates, you judge fit. If a query found 0, loosen it; if it was capped, narrow it; then run again. Prefer owned cards (owned > 0); price is what a store card would cost.",
-    'Example (Jolene, the Plunder Queen): queries [{"synergy":"Treasure makers","search":"o:/create[^.]*treasure/"}, {"synergy":"Sacrifice outlets","search":"o:/sacrifice (a|an|another) [^.]*artifact/"}, {"synergy":"Cheap ramp","search":"tag:ramp mv<=3"}].',
-    "Only cards in this app's catalog are searched (expansion, core and Commander sets), with your real ownership and the store's prices.",
-    "Target bracket: when the deck has one (get_deck's bracket.target), cards that would take it over are left out automatically; leftOutOverTarget names what was left out (gameChanger, landDenial, extraTurn).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -119,9 +114,8 @@ export const searchCards = defineTool({
   name: "search_cards",
   title: "Search cards",
   description: [
-    "One card search with no deck rules, in your collection or the store. Paged, 60 cards at a time. In the store each card shows once, as its cheapest printing (set oneRowPerCard false to list every printing).",
-    'Use it to check many cards at once by name: "Craterhoof Behemoth" or "Doubling Season" or "Skullclamp".',
-    "Use it when: looking up cards outside a deck's context, or checking what a search finds. For a deck, use search_for_deck: it applies the deck's colors and legality and merges several searches.",
+    "Paged card search (60/page) across your collection (owned/game/real) or the store, with no deck filters.",
+    "Use it when: looking up cards outside a deck's context. For a deck, use search_for_deck.",
     SYNTAX_SUMMARY,
   ].join("\n"),
   scope: "read",
@@ -229,9 +223,8 @@ export const analyzeCards = defineTool({
   name: "analyze_cards",
   title: "What a deck keeps doing",
   description: [
-    "Counts the mechanics a group of cards has in common: kinds of counters (spore, +1/+1, oil…), tokens they make (Saproling, Treasure…), creature types, keywords, triggers (dies, enters, landfall…), costs (sacrifice a creature, remove counters…), zones, card types, role tags, themes, and recurring phrases no rule names. Each comes with how many cards show it, examples, and a followUp search that finds more like it.",
-    "Use it when: starting on a deck (before search_for_deck), or to see what your collection could build (search instead of deckId). It finds what the commander's own text doesn't say: a deck full of spore counters wants proliferate and counter doublers even if the commander never mentions counters.",
-    "Reading the result: look for signals on many cards and ask what rewards them: counters → proliferate and doublers; one kind of token → its payoffs and token doublers; a trigger family → trigger doublers and more enablers; a cost → cards that make the cost cheap. Then turn those ideas into search_for_deck queries, starting from the followUp searches.",
+    "Counts recurring mechanics, counters, tokens, creature types, keywords, triggers, and themes across a deck or owned search, returning followUp search queries.",
+    "Use it when: starting on a deck or surveying owned cards before running search_for_deck.",
   ].join("\n"),
   scope: "read",
   readOnly: true,

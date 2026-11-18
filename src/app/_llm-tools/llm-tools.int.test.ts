@@ -397,7 +397,7 @@ describe("the mana base (design doc 35)", () => {
       name: "Beza",
       list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n30 Plains",
     });
-    const plan = await call(client, "plan_mana_base", { deckId });
+    const plan = await call(client, "mana_base_skeleton", { deckId });
     expect(plan.provenance).toMatchObject({ reliability: "low" });
     expect(plan.outputKind).toBe("skeleton");
     expect(plan).toMatchObject({ lands: 30, landTarget: 37, over: 0 });
