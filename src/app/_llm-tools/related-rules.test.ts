@@ -39,7 +39,7 @@ describe("related-rules", () => {
     expect(shared.some((s) => s.rule === "CR 513" && s.cards.length === 2)).toBe(true);
   });
 
-  it("matches Mortuary graveyard-from-battlefield triggers and split second vs sacrifice outlets", () => {
+  it("distinguishes mana-ability altars (CR 605.1a, beat split second) from non-mana sacrifice outlets (CR 602.2)", () => {
     const mortuary = matchRelatedRules(
       "Whenever a creature is put into your graveyard from the battlefield, put that card on top of your library.",
     );
@@ -48,9 +48,16 @@ describe("related-rules", () => {
     const krosanGrip = matchRelatedRules("Split second (As long as this spell is on the stack...)");
     expect(krosanGrip.map((r) => r.rule)).toContain("CR 702.61a");
 
-    const altar = matchRelatedRules(
-      "Sacrifice a creature: Put a +1/+1 counter on target creature.",
-    );
-    expect(altar.map((r) => r.rule)).toContain("CR 605.1a");
+    const ashnods = matchRelatedRules("Sacrifice a creature: Add {C}{C}.");
+    expect(ashnods.map((r) => r.rule)).toContain("CR 605.1a");
+    expect(ashnods.map((r) => r.rule)).not.toContain("CR 602.2");
+
+    const phyrexian = matchRelatedRules("Sacrifice a creature: Add one mana of any color.");
+    expect(phyrexian.map((r) => r.rule)).toContain("CR 605.1a");
+    expect(phyrexian.map((r) => r.rule)).not.toContain("CR 602.2");
+
+    const visceraSeer = matchRelatedRules("Sacrifice a creature: Scry 1.");
+    expect(visceraSeer.map((r) => r.rule)).toContain("CR 602.2");
+    expect(visceraSeer.map((r) => r.rule)).not.toContain("CR 605.1a");
   });
 });

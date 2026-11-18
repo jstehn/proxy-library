@@ -34,15 +34,22 @@ const RULE_PATTERNS: ReadonlyArray<{
     rule: "CR 702.61a",
     title: "Split Second",
     reason:
-      "While a spell with split second is on the stack, players can't cast spells or activate abilities that aren't mana abilities (e.g., sacrifice outlets).",
+      "While a spell with split second is on the stack, players can't cast spells or activate abilities that aren't mana abilities. Mana abilities (CR 605.1a) and triggered abilities still work.",
     pattern: /\bsplit\s+second\b/i,
   },
   {
     rule: "CR 605.1a",
-    title: "Activated Abilities vs. Mana Abilities",
+    title: "Mana Abilities (Beat Split Second)",
     reason:
-      "Non-mana activated abilities (including free sacrifice outlets) use the stack and are blocked by split second (CR 702.61a).",
-    pattern: /\bsacrifice\s+(?:a|another|this)\b[^:\n]*:/i,
+      "Activated mana ability (adds mana, no target, not a loyalty ability): does not use the stack and CAN be activated while a spell with split second (CR 702.61a) is on the stack.",
+    pattern: /^(?!.*\btarget\b)[^:\n]*:\s*add\b/im,
+  },
+  {
+    rule: "CR 602.2",
+    title: "Non-Mana Activated Abilities (Blocked by Split Second)",
+    reason:
+      "Non-mana sacrifice/activated ability: uses the stack and CANNOT be activated while a spell with split second (CR 702.61a) is on the stack.",
+    pattern: /\bsacrifice\s+(?:a|another|this)\b[^:\n]*:(?!\s*add\b)/i,
   },
   {
     rule: "CR 614",
