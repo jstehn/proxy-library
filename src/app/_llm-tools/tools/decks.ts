@@ -2720,10 +2720,14 @@ function compactCard(card: GoldfishCard) {
 
 function compactGoldfishBoard(state: GoldfishState) {
   return {
+    kept: state.kept,
     turn: state.turn,
     mulligans: state.mulligans,
     toBottom: state.toBottom,
     landsPlayedThisTurn: state.landsPlayedThisTurn,
+    commandCasts: state.commandCasts,
+    manaPool: state.manaPool,
+    ...(state.endStepQueue.length > 0 ? { endStepQueue: state.endStepQueue } : {}),
     libraryCount: state.library.length,
     lastActionNote: state.lastActionNote,
     hand: state.hand.map(compactCard),
@@ -2731,6 +2735,8 @@ function compactGoldfishBoard(state: GoldfishState) {
       ...compactCard(p.card),
       tapped: p.tapped,
       enteredTurn: p.enteredTurn,
+      ...(p.haste ? { haste: true } : {}),
+      ...(p.blitzed ? { blitzed: true } : {}),
     })),
     commandZone: state.commandZone.map(compactCard),
     graveyard: state.graveyard.map(compactCard),
@@ -2811,7 +2817,9 @@ export const goldfishStepTool = defineTool({
       .enum([
         "mulligan",
         "bottom",
+        "keep",
         "next_turn",
+        "end_step",
         "draw",
         "play_land",
         "cast",
@@ -2848,6 +2856,21 @@ export const goldfishStepTool = defineTool({
       .optional()
       .describe("Destination zone for 'cast' or 'move'."),
     tapped: z.boolean().optional().describe("Enter tapped for 'play_land' or 'cast'."),
+    alt: z
+      .enum(["blitz"])
+      .optional()
+      .describe("Alternative casting mode (e.g. 'blitz' grants haste and queues end-step sacrifice + draw)."),
+    strict: z
+      .boolean()
+      .default(true)
+      .describe("Enforce manaPool payment on 'cast' (defaults to true; set false to bypass)."),
+    costReductionGeneric: z
+      .number()
+      .int()
+      .min(0)
+      .max(20)
+      .optional()
+      .describe("Generic mana cost reduction to apply to 'cast' (e.g. Henzie blitz discount)."),
     ignoreLandLimit: z
       .boolean()
       .optional()
@@ -2876,8 +2899,14 @@ export const goldfishStepTool = defineTool({
       case "bottom":
         stepInput = { kind: "action", action: { kind: "bottom", keys: input.keys ?? [] } };
         break;
+      case "keep":
+        stepInput = { kind: "action", action: { kind: "keep" } };
+        break;
       case "next_turn":
         stepInput = { kind: "action", action: { kind: "next_turn" } };
+        break;
+      case "end_step":
+        stepInput = { kind: "action", action: { kind: "end_step" } };
         break;
       case "draw":
         stepInput = { kind: "action", action: { kind: "draw", count: input.count } };
@@ -2915,6 +2944,9 @@ export const goldfishStepTool = defineTool({
             from: castFrom,
             to: castTo,
             tapped: input.tapped,
+            alt: input.alt,
+            strict: input.strict,
+            costReductionGeneric: input.costReductionGeneric,
           },
         };
         break;

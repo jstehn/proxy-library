@@ -4,11 +4,21 @@ import type { Board } from "./deck";
 import { OPENING_HAND } from "./draws";
 import { isLand } from "./stats";
 
-// Interactive turn-by-turn tabletop goldfish state machine (design doc 60).
+// Interactive turn-by-turn tabletop goldfish state machine (design doc 60 + 61).
 // Pure and deterministic via injected Rng (ADR 0008).
 
 export type GoldfishZone =
-  "library" | "hand" | "battlefield" | "graveyard" | "exile" | "commandZone";
+  | "library"
+  | "hand"
+  | "battlefield"
+  | "graveyard"
+  | "exile"
+  | "commandZone";
+
+export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
+export type ManaPool = Record<ManaColor, number>;
+
+export const EMPTY_MANA_POOL: ManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
 
 export type GoldfishDeckLine = Readonly<{
   oracleId: string;
@@ -31,6 +41,8 @@ export type GoldfishCard = Readonly<{
   typeLine: string;
   manaCost?: string | null;
   manaValue?: number;
+  text?: string;
+  producedMana?: readonly string[];
   isLand: boolean;
   isCommander: boolean;
   tags: readonly Tag[];
@@ -40,16 +52,27 @@ export type BattlefieldPermanent = Readonly<{
   card: GoldfishCard;
   tapped: boolean;
   enteredTurn: number;
+  haste?: boolean;
+  blitzed?: boolean;
+}>;
+
+export type EndStepTrigger = Readonly<{
+  key: string;
+  kind: "sacrifice_blitz";
 }>;
 
 export type GoldfishState = Readonly<{
   format: string;
   onTheDraw: boolean;
   freeMulligan: boolean;
+  kept: boolean;
   turn: number;
   mulligans: number;
   toBottom: number;
   landsPlayedThisTurn: number;
+  commandCasts: number;
+  manaPool: ManaPool;
+  endStepQueue: readonly EndStepTrigger[];
   library: readonly GoldfishCard[];
   hand: readonly GoldfishCard[];
   battlefield: readonly BattlefieldPermanent[];
@@ -62,7 +85,9 @@ export type GoldfishState = Readonly<{
 export type GoldfishAction =
   | Readonly<{ kind: "mulligan"; rng: Rng }>
   | Readonly<{ kind: "bottom"; keys: readonly string[] }>
+  | Readonly<{ kind: "keep" }>
   | Readonly<{ kind: "next_turn" }>
+  | Readonly<{ kind: "end_step" }>
   | Readonly<{ kind: "draw"; count?: number }>
   | Readonly<{ kind: "play_land"; key: string; tapped?: boolean; ignoreLandLimit?: boolean }>
   | Readonly<{
@@ -71,6 +96,9 @@ export type GoldfishAction =
       from?: "hand" | "commandZone" | "graveyard" | "exile";
       to?: "battlefield" | "graveyard" | "exile";
       tapped?: boolean;
+      alt?: "blitz";
+      strict?: boolean;
+      costReductionGeneric?: number;
     }>
   | Readonly<{ kind: "tap"; key: string }>
   | Readonly<{ kind: "untap"; key: string }>
@@ -89,6 +117,8 @@ export type GoldfishError =
   | Readonly<{ kind: "NotALand"; key: string; name: string }>
   | Readonly<{ kind: "LandLimitReached"; landsPlayedThisTurn: number }>
   | Readonly<{ kind: "InvalidBottomSelection"; expected: number; received: number }>
+  | Readonly<{ kind: "CastNotAllowed"; reason: string }>
+  | Readonly<{ kind: "InsufficientMana"; card: string; required: string; available: ManaPool }>
   | Readonly<{ kind: "EmptyLibrary" }>;
 
 export type StartGoldfishOptions = Readonly<{
@@ -104,6 +134,9 @@ export function buildGoldfishDeck(lines: readonly GoldfishDeckLine[]): {
 } {
   const libraryCards: GoldfishCard[] = [];
   const commandZone: GoldfishCard[] = [];
+  let cmdSeq = 1;
+  let libSeq = 1;
+
   for (const line of lines) {
     if (line.board !== "main" && line.board !== "commander") continue;
     const isCommander = line.board === "commander";
@@ -113,14 +146,19 @@ export function buildGoldfishDeck(lines: readonly GoldfishDeckLine[]): {
       producedMana: line.producedMana,
     });
     for (let copy = 0; copy < line.quantity; copy++) {
+      const key = isCommander ? `c${cmdSeq++}` : `k${libSeq++}`;
       const card: GoldfishCard = {
-        key: `${line.oracleId}#${isCommander ? "cmd" : copy + 1}`,
+        key,
         oracleId: line.oracleId,
         name: line.name,
         printingId: line.printingId,
         typeLine: line.typeLine,
         ...(line.manaCost ? { manaCost: line.manaCost } : {}),
         ...(line.manaValue !== undefined ? { manaValue: line.manaValue } : {}),
+        ...(line.text ? { text: line.text } : {}),
+        ...(line.producedMana && line.producedMana.length > 0
+          ? { producedMana: line.producedMana }
+          : {}),
         isLand: isLand(line.typeLine),
         isCommander,
         tags,
@@ -145,10 +183,14 @@ export function startGoldfishState(
     format: options.format,
     onTheDraw: options.onTheDraw ?? false,
     freeMulligan,
+    kept: false,
     turn: 0,
     mulligans: 0,
     toBottom: 0,
     landsPlayedThisTurn: 0,
+    commandCasts: 0,
+    manaPool: { ...EMPTY_MANA_POOL },
+    endStepQueue: [],
     library,
     hand,
     battlefield: [],
@@ -200,7 +242,7 @@ function addToZone(
   state: GoldfishState,
   to: Exclude<GoldfishZone, "library"> | "library_top" | "library_bottom",
   card: GoldfishCard,
-  tapped = false,
+  opts: { tapped?: boolean; haste?: boolean; blitzed?: boolean } = {},
 ): GoldfishState {
   switch (to) {
     case "hand":
@@ -208,7 +250,16 @@ function addToZone(
     case "battlefield":
       return {
         ...state,
-        battlefield: [...state.battlefield, { card, tapped, enteredTurn: state.turn }],
+        battlefield: [
+          ...state.battlefield,
+          {
+            card,
+            tapped: opts.tapped ?? false,
+            enteredTurn: state.turn,
+            ...(opts.haste ? { haste: true } : {}),
+            ...(opts.blitzed ? { blitzed: true } : {}),
+          },
+        ],
       };
     case "graveyard":
       return { ...state, graveyard: [...state.graveyard, card] };
@@ -223,14 +274,112 @@ function addToZone(
   }
 }
 
+interface ParsedManaCost {
+  pips: ManaPool;
+  generic: number;
+}
+
+function parseManaCost(manaCost: string | null | undefined, fallbackMv = 0): ParsedManaCost {
+  if (!manaCost) {
+    return { pips: { ...EMPTY_MANA_POOL }, generic: Math.max(0, fallbackMv) };
+  }
+  const pips: ManaPool = { ...EMPTY_MANA_POOL };
+  let generic = 0;
+  const symbols = manaCost.match(/\{([^}]+)\}/g) ?? [];
+  for (const raw of symbols) {
+    const sym = raw.slice(1, -1).toUpperCase();
+    if (/^\d+$/.test(sym)) {
+      generic += Number(sym);
+    } else if (sym === "W" || sym === "U" || sym === "B" || sym === "R" || sym === "G" || sym === "C") {
+      pips[sym] += 1;
+    } else if (sym === "X") {
+      // X=0 for base cost check
+    } else if (sym.includes("/")) {
+      // Hybrid or Phyrexian: treat first colored symbol if present, else generic 1
+      const first = sym.split("/")[0];
+      if (first === "W" || first === "U" || first === "B" || first === "R" || first === "G") {
+        pips[first] += 1;
+      } else {
+        generic += 1;
+      }
+    }
+  }
+  return { pips, generic };
+}
+
+function spendMana(pool: ManaPool, cost: ParsedManaCost): ManaPool | null {
+  const next: ManaPool = { ...pool };
+  const colors: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
+  for (const c of colors) {
+    if (next[c] < cost.pips[c]) return null;
+    next[c] -= cost.pips[c];
+  }
+  let rem = cost.generic;
+  // Spend colorless first, then colored mana
+  for (const c of ["C", "W", "U", "B", "R", "G"] as const) {
+    if (rem <= 0) break;
+    const take = Math.min(next[c], rem);
+    next[c] -= take;
+    rem -= take;
+  }
+  return rem === 0 ? next : null;
+}
+
+function manaProducedOnTap(permanent: BattlefieldPermanent, currentTurn: number): ManaPool {
+  const isCreature = /\bCreature\b/i.test(permanent.card.typeLine);
+  if (isCreature && permanent.enteredTurn === currentTurn && !permanent.haste) {
+    return { ...EMPTY_MANA_POOL };
+  }
+  const added: ManaPool = { ...EMPTY_MANA_POOL };
+  const text = permanent.card.text ?? "";
+  // Check explicit "{T}: Add {C}{C}" style patterns first
+  const tapAddMatch = text.match(/\{T\}[^.]*Add\s+((?:\{[WUBRGC]\})+)/i);
+  if (tapAddMatch) {
+    const syms = tapAddMatch[1].match(/\{([WUBRGC])\}/gi) ?? [];
+    for (const s of syms) {
+      const c = s.slice(1, -1).toUpperCase() as ManaColor;
+      added[c] += 1;
+    }
+    return added;
+  }
+  if (permanent.card.producedMana && permanent.card.producedMana.length > 0) {
+    const first = permanent.card.producedMana[0].toUpperCase();
+    if (first === "W" || first === "U" || first === "B" || first === "R" || first === "G" || first === "C") {
+      added[first] += 1;
+      return added;
+    }
+  }
+  if (permanent.card.isLand) {
+    const tl = permanent.card.typeLine;
+    if (tl.includes("Plains")) added.W += 1;
+    else if (tl.includes("Island")) added.U += 1;
+    else if (tl.includes("Swamp")) added.B += 1;
+    else if (tl.includes("Mountain")) added.R += 1;
+    else if (tl.includes("Forest")) added.G += 1;
+    else added.C += 1;
+  }
+  return added;
+}
+
+function addMana(pool: ManaPool, delta: ManaPool): ManaPool {
+  return {
+    W: pool.W + delta.W,
+    U: pool.U + delta.U,
+    B: pool.B + delta.B,
+    R: pool.R + delta.R,
+    G: pool.G + delta.G,
+    C: pool.C + delta.C,
+  };
+}
+
 export function stepGoldfishState(
   state: GoldfishState,
   action: GoldfishAction,
 ): Result<GoldfishState, GoldfishError> {
   switch (action.kind) {
     case "mulligan": {
-      if (state.turn > 0) {
-        return err({ kind: "MulliganNotAllowed", reason: "Cannot mulligan after turn 1 starts." });
+      if (state.turn > 0 || state.kept) {
+        return err({ kind: "MulliganNotAllowed", reason: "Cannot mulligan after keeping or starting turn 1." });
       }
       if (state.toBottom > 0) {
         return err({
@@ -284,6 +433,15 @@ export function stepGoldfishState(
       });
     }
 
+    case "keep": {
+      if (state.toBottom > 0) return err({ kind: "PendingBottom", remaining: state.toBottom });
+      return ok({
+        ...state,
+        kept: true,
+        lastActionNote: `Kept opening hand of ${state.hand.length} cards.`,
+      });
+    }
+
     case "next_turn": {
       if (state.toBottom > 0) return err({ kind: "PendingBottom", remaining: state.toBottom });
       const nextTurn = state.turn + 1;
@@ -304,13 +462,39 @@ export function stepGoldfishState(
       }
       return ok({
         ...state,
+        kept: true,
         turn: nextTurn,
         landsPlayedThisTurn: 0,
+        manaPool: { ...EMPTY_MANA_POOL },
         battlefield: untapped,
         hand,
         library,
         lastActionNote: `Turn ${nextTurn}: untapped, ${drawNote}.`,
       });
+    }
+
+    case "end_step": {
+      let next: GoldfishState = { ...state, manaPool: { ...EMPTY_MANA_POOL } };
+      const sacrificed: string[] = [];
+      let drawn = 0;
+      for (const trigger of state.endStepQueue) {
+        if (trigger.kind !== "sacrifice_blitz") continue;
+        const removed = removeFromZone(next, "battlefield", trigger.key);
+        if (!removed) continue;
+        next = addToZone(removed.next, "graveyard", removed.card);
+        sacrificed.push(removed.card.name);
+        if (next.library.length > 0) {
+          const [top, ...rest] = next.library;
+          next = { ...next, hand: [...next.hand, top], library: rest };
+          drawn += 1;
+        }
+      }
+      next = { ...next, endStepQueue: [] };
+      const note =
+        sacrificed.length > 0
+          ? `End step: sacrificed ${sacrificed.join(", ")} (blitz) and drew ${drawn} card(s).`
+          : "End step: emptied mana pool.";
+      return ok({ ...next, lastActionNote: note });
     }
 
     case "draw": {
@@ -331,6 +515,12 @@ export function stepGoldfishState(
 
     case "play_land": {
       if (state.toBottom > 0) return err({ kind: "PendingBottom", remaining: state.toBottom });
+      if (!state.kept || state.turn === 0) {
+        return err({
+          kind: "CastNotAllowed",
+          reason: "Must keep hand and advance to turn 1 before playing a land.",
+        });
+      }
       if (state.landsPlayedThisTurn >= 1 && !action.ignoreLandLimit) {
         return err({ kind: "LandLimitReached", landsPlayedThisTurn: state.landsPlayedThisTurn });
       }
@@ -339,7 +529,9 @@ export function stepGoldfishState(
       if (!removed.card.isLand) {
         return err({ kind: "NotALand", key: action.key, name: removed.card.name });
       }
-      const next = addToZone(removed.next, "battlefield", removed.card, action.tapped ?? false);
+      const next = addToZone(removed.next, "battlefield", removed.card, {
+        tapped: action.tapped ?? false,
+      });
       return ok({
         ...next,
         landsPlayedThisTurn: state.landsPlayedThisTurn + 1,
@@ -349,15 +541,54 @@ export function stepGoldfishState(
 
     case "cast": {
       if (state.toBottom > 0) return err({ kind: "PendingBottom", remaining: state.toBottom });
+      if (!state.kept || state.turn === 0) {
+        return err({
+          kind: "CastNotAllowed",
+          reason: "Must keep hand and advance to turn 1 before casting spells.",
+        });
+      }
       const from = action.from ?? "hand";
       const removed = removeFromZone(state, from, action.key);
       if (!removed) return err({ kind: "CardNotFound", key: action.key, zone: from });
+
+      const baseCost = parseManaCost(removed.card.manaCost, removed.card.manaValue ?? 0);
+      const commanderTax = from === "commandZone" ? state.commandCasts * 2 : 0;
+      const reduction = Math.max(0, action.costReductionGeneric ?? 0);
+      const totalCost: ParsedManaCost = {
+        pips: baseCost.pips,
+        generic: Math.max(0, baseCost.generic + commanderTax - reduction),
+      };
+
+      const strict = action.strict ?? true;
+      const spentPool = spendMana(state.manaPool, totalCost);
+      if (strict && spentPool === null) {
+        return err({
+          kind: "InsufficientMana",
+          card: removed.card.name,
+          required: `${removed.card.manaCost ?? totalCost.generic}${commanderTax > 0 ? ` + {${commanderTax}} tax` : ""}`,
+          available: state.manaPool,
+        });
+      }
+
       const destination =
         action.to ?? (isSpellOnlyType(removed.card.typeLine) ? "graveyard" : "battlefield");
-      const next = addToZone(removed.next, destination, removed.card, action.tapped ?? false);
+      const isBlitz = action.alt === "blitz";
+      const next = addToZone(removed.next, destination, removed.card, {
+        tapped: action.tapped ?? false,
+        haste: isBlitz,
+        blitzed: isBlitz,
+      });
+      const nextEndStepQueue =
+        isBlitz && destination === "battlefield"
+          ? [...next.endStepQueue, { key: removed.card.key, kind: "sacrifice_blitz" as const }]
+          : next.endStepQueue;
+
       return ok({
         ...next,
-        lastActionNote: `Cast ${removed.card.name} from ${from} → ${destination}.`,
+        manaPool: spentPool ?? next.manaPool,
+        commandCasts: from === "commandZone" ? next.commandCasts + 1 : next.commandCasts,
+        endStepQueue: nextEndStepQueue,
+        lastActionNote: `Cast ${removed.card.name}${isBlitz ? " (blitz)" : ""} from ${from} → ${destination}.`,
       });
     }
 
@@ -365,12 +596,16 @@ export function stepGoldfishState(
     case "untap": {
       const idx = state.battlefield.findIndex((p) => p.card.key === action.key);
       if (idx === -1) return err({ kind: "CardNotFound", key: action.key, zone: "battlefield" });
+      const perm = state.battlefield[idx];
       const tapped = action.kind === "tap";
       const battlefield = state.battlefield.map((p, i) => (i === idx ? { ...p, tapped } : p));
+      const added = tapped && !perm.tapped ? manaProducedOnTap(perm, state.turn) : EMPTY_MANA_POOL;
+      const manaPool = addMana(state.manaPool, added);
       return ok({
         ...state,
         battlefield,
-        lastActionNote: `${tapped ? "Tapped" : "Untapped"} ${state.battlefield[idx].card.name}.`,
+        manaPool,
+        lastActionNote: `${tapped ? "Tapped" : "Untapped"} ${perm.card.name}.`,
       });
     }
 

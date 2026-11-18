@@ -237,4 +237,108 @@ describe("goldfish-session", () => {
       ),
     );
   });
+
+  it("enforces keep/turn-1, strict mana, commander tax, blitz, and short keys (Goldfish v2)", () => {
+    const built = buildGoldfishDeck(sampleDeckLines());
+    expect(built.commandZone[0]?.key).toBe("c1");
+    expect(built.library[0]?.key).toBe("k1");
+
+    const start = startGoldfishState(built, { format: "commander", rng: seededRng("99") });
+    expect(start.ok).toBe(true);
+    if (!start.ok) return;
+
+    // Cannot cast on turn 0 before keeping
+    const preKeep = stepGoldfishState(start.value, {
+      kind: "cast",
+      key: start.value.hand[0]!.key,
+    });
+    expect(preKeep.ok).toBe(false);
+    if (!preKeep.ok) expect(preKeep.error.kind).toBe("CastNotAllowed");
+
+    const kept = stepGoldfishState(start.value, { kind: "keep" });
+    expect(kept.ok).toBe(true);
+    if (!kept.ok) return;
+    expect(kept.value.kept).toBe(true);
+
+    // Still turn 0 -> cannot cast yet
+    const turn0Cast = stepGoldfishState(kept.value, {
+      kind: "cast",
+      key: kept.value.hand[0]!.key,
+    });
+    expect(turn0Cast.ok).toBe(false);
+
+    const t1 = stepGoldfishState(kept.value, { kind: "next_turn" });
+    expect(t1.ok).toBe(true);
+    if (!t1.ok) return;
+
+    // Strict mode blocks casting Sol Ring without tapping mana
+    const sol = t1.value.hand.find((c) => c.name === "Sol Ring");
+    const forest = t1.value.hand.find((c) => c.name === "Forest");
+    if (sol && forest) {
+      const noMana = stepGoldfishState(t1.value, { kind: "cast", key: sol.key });
+      expect(noMana.ok).toBe(false);
+      if (!noMana.ok) expect(noMana.error.kind).toBe("InsufficientMana");
+
+      const played = stepGoldfishState(t1.value, { kind: "play_land", key: forest.key });
+      expect(played.ok).toBe(true);
+      if (!played.ok) return;
+      const tapped = stepGoldfishState(played.value, { kind: "tap", key: forest.key });
+      expect(tapped.ok).toBe(true);
+      if (!tapped.ok) return;
+      expect(tapped.value.manaPool.G).toBe(1);
+
+      // Cast Sol Ring with alt: "blitz" and verify end_step sacrifices & draws
+      const blitzed = stepGoldfishState(tapped.value, {
+        kind: "cast",
+        key: sol.key,
+        alt: "blitz",
+      });
+      expect(blitzed.ok).toBe(true);
+      if (!blitzed.ok) return;
+      expect(blitzed.value.manaPool.G).toBe(0);
+      expect(blitzed.value.endStepQueue).toHaveLength(1);
+
+      const handBeforeEnd = blitzed.value.hand.length;
+      const ended = stepGoldfishState(blitzed.value, { kind: "end_step" });
+      expect(ended.ok).toBe(true);
+      if (!ended.ok) return;
+      expect(ended.value.graveyard.some((c) => c.key === sol.key)).toBe(true);
+      expect(ended.value.hand.length).toBe(handBeforeEnd + 1);
+      expect(ended.value.endStepQueue).toHaveLength(0);
+    }
+
+    // Commander cast increments commandCasts and adds +2 tax on next cast
+    const cmdCast1 = stepGoldfishState(t1.value, {
+      kind: "cast",
+      key: "c1",
+      from: "commandZone",
+      strict: false,
+    });
+    expect(cmdCast1.ok).toBe(true);
+    if (!cmdCast1.ok) return;
+    expect(cmdCast1.value.commandCasts).toBe(1);
+
+    const movedBack = stepGoldfishState(cmdCast1.value, {
+      kind: "move",
+      key: "c1",
+      from: "battlefield",
+      to: "commandZone",
+    });
+    expect(movedBack.ok).toBe(true);
+    if (!movedBack.ok) return;
+
+    const cmdCast2Strict = stepGoldfishState(movedBack.value, {
+      kind: "cast",
+      key: "c1",
+      from: "commandZone",
+      strict: true,
+    });
+    expect(cmdCast2Strict.ok).toBe(false);
+    if (!cmdCast2Strict.ok) {
+      expect(cmdCast2Strict.error.kind).toBe("InsufficientMana");
+      if (cmdCast2Strict.error.kind === "InsufficientMana") {
+        expect(cmdCast2Strict.error.required).toContain("tax");
+      }
+    }
+  });
 });
