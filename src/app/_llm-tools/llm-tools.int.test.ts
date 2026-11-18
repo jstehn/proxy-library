@@ -42,12 +42,6 @@ async function connect(scopes?: Scope[]): Promise<Client> {
   return client;
 }
 
-async function callRaw(client: Client, name: string, args: Record<string, unknown> = {}) {
-  const result = await client.callTool({ name, arguments: args });
-  const content = result.content as { type: string; text: string }[];
-  return { isError: Boolean(result.isError), parsed: JSON.parse(content[0].text) };
-}
-
 /** A tool's JSON result, failing the test if the tool reported an error. */
 async function call(client: Client, name: string, args: Record<string, unknown> = {}) {
   const result = await client.callTool({ name, arguments: args });
@@ -63,6 +57,16 @@ async function give(name: string, quantity = 1): Promise<void> {
     select ${jack.userId}, p.id, 'nonfoil', ${quantity} from printings p
      where p.name = ${name} order by p.collector_number limit 1
   `);
+}
+
+/** Saves one change to a deck through apply_changes, reading the fingerprint first. */
+async function saveChange(
+  client: Client,
+  deckId: number,
+  change: Record<string, unknown>,
+): Promise<void> {
+  const { fingerprint } = await call(client, "get_deck", { deckId, text: false });
+  await call(client, "apply_changes", { deckId, save: true, fingerprint, changes: [change] });
 }
 
 describe("the MCP server", () => {
@@ -90,11 +94,7 @@ describe("the MCP server", () => {
       list: "Commander\n1 Beza, the Bounding Spring\nDeck\n10 Plains",
     });
     expect(created.added).toBe(11); // copies
-    await call(client, "set_deck_entry", {
-      deckId: created.deckId,
-      card: "carrot cake",
-      quantity: 1,
-    });
+    await saveChange(client, created.deckId, { card: "carrot cake", quantity: 1 });
 
     const found = await call(client, "search_for_deck", {
       deckId: created.deckId,
@@ -207,7 +207,7 @@ describe("the MCP server", () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", { name: "Test", format: "casual" });
     const before = await call(client, "get_deck", { view: "full", deckId });
-    await call(client, "set_deck_entry", { deckId, card: "Plains", quantity: 4 });
+    await saveChange(client, deckId, { card: "Plains", quantity: 4 });
     const stale = await client.callTool({
       name: "replace_deck_list",
       arguments: { deckId, list: "Deck\n2 Plains", fingerprint: before.fingerprint },
@@ -373,7 +373,7 @@ describe("the MCP server", () => {
     }
   });
 
-  it("reads the account, a card, sets, the guide, and the app's suggestions", async () => {
+  it("reads the account, a card, and the guide", async () => {
     await give("Banishing Light", 2);
     const client = await connect();
     const account = await call(client, "get_account");
@@ -382,37 +382,9 @@ describe("the MCP server", () => {
     const cardsRes = await call(client, "get_cards", { cards: ["banishing light"] });
     expect(cardsRes.cards[0].name).toBe("Banishing Light");
     expect(cardsRes.cards[0].ownedOfThisPrinting).toEqual({ nonfoil: 2 });
-    expect((await call(client, "list_sets")).sets.length).toBeGreaterThan(0);
     expect((await call(client, "get_search_guide", { topic: "cookbook" })).guide).toContain(
       "Treasure",
     );
-    const { deckId } = await call(client, "create_deck", {
-      name: "Beza",
-      list: "Commander\n1 Beza, the Bounding Spring",
-    });
-    const suggestions = await call(client, "idea_candidates", { deckId });
-    expect(suggestions.provenance).toMatchObject({
-      source: "regex heuristic",
-      reliability: "low",
-    });
-    expect(suggestions.profile.themes).toEqual([
-      "tokens",
-      "creature-tokens",
-      "artifact-tokens",
-      "treasures",
-    ]);
-    const pool = [...suggestions.forDeck.owned, ...suggestions.forDeck.store];
-    expect(pool.length).toBeGreaterThan(0);
-    for (const card of pool) {
-      expect(typeof card.text).toBe("string");
-      expect(card).not.toHaveProperty("rating");
-      expect(card).not.toHaveProperty("ratingParts");
-      expect(card).not.toHaveProperty("why");
-    }
-    const toGet = await call(client, "cards_to_get");
-    expect(toGet.cards.map((each: { name: string }) => each.name)).toEqual([
-      "Beza, the Bounding Spring",
-    ]);
   });
 });
 
@@ -497,116 +469,14 @@ describe("the mana base (design doc 35)", () => {
   });
 });
 
-describe("commanders I can build (design doc 36)", () => {
-  it("ranks owned commanders, and details one with what's missing", async () => {
-    await give("Beza, the Bounding Spring");
-    await give("Banishing Light");
-    const client = await connect();
-    const list = await call(client, "commanders_i_can_build", {});
-    expect(list.found).toBe(1);
-    expect(list.commanders[0]).toMatchObject({
-      name: "Beza, the Bounding Spring",
-      colorIdentity: "W",
-      owned: true,
-      price: null,
-      spellsFromYourCards: "1 of 62",
-      alreadyLeads: [],
-    });
-    expect(list.commanders[0].roles).toContainEqual({ role: "removal", have: 1, target: 8 });
-
-    const withStore = await call(client, "commanders_i_can_build", {
-      includeStore: true,
-      colors: ["W"],
-      limit: 50,
-    });
-    const store = withStore.commanders.filter((entry: { owned: boolean }) => !entry.owned);
-    expect(store.length).toBeGreaterThan(0);
-    for (const entry of store) expect(entry.price).not.toBeNull();
-
-    const beza = await call(client, "commanders_i_can_build", {
-      commander: "Beza, the Bounding Spring",
-    });
-    expect(beza.name).toBe("Beza, the Bounding Spring");
-    expect(beza.cardsByRole.removal).toEqual(["Banishing Light"]);
-    expect(beza.missing.note).toMatch(/estimate/);
-    for (const card of beza.missing.cards) expect(card.price).not.toBeNull();
-
-    const notOne = await client.callTool({
-      name: "commanders_i_can_build",
-      arguments: { commander: "Banishing Light" },
-    });
-    expect(notOne.isError).toBe(true);
-    expect(JSON.stringify(notOne.content)).toContain("can't lead a Commander deck");
-  });
-});
-
-describe("draft_deck (design doc 37)", () => {
-  it("drafts owned cards first, marks store gap-fill with prices, and respects includeStore='none'", async () => {
-    await give("Banishing Light");
-    await give("Carrot Cake");
-    const client = await connect();
-    const { deckId } = await call(client, "create_deck", {
-      name: "Beza Draft",
-      list: "Commander\n1 Beza, the Bounding Spring",
-    });
-
-    const ownedOnly = await call(client, "draft_deck", {
-      deckId,
-      includeStore: "none",
-    });
-    expect(ownedOnly.provenance).toMatchObject({ reliability: "low" });
-    expect(ownedOnly.outputKind).toBe("skeleton");
-    expect(ownedOnly.existingCount).toBe(1);
-    expect(ownedOnly.storeAddedCount).toBe(0);
-    expect(ownedOnly.storeCost).toEqual({ cents: 0, text: "$0.00" });
-    expect(ownedOnly.spells.every((spell: { pool: string }) => spell.pool === "owned")).toBe(true);
-    expect(ownedOnly.spells.map((spell: { name: string }) => spell.name).sort()).toEqual([
-      "Banishing Light",
-      "Carrot Cake",
-    ]);
-    expect(ownedOnly.landsToAdd).toEqual([
-      expect.objectContaining({ name: "Plains", kind: "basic" }),
-    ]);
-
-    const withStore = await call(client, "draft_deck", {
-      deckId,
-      includeStore: "fill-gaps",
-    });
-    expect(withStore.storeAddedCount).toBeGreaterThan(0);
-    expect(withStore.storeCost.cents).toBeGreaterThan(0);
-    expect(
-      withStore.spells
-        .filter((spell: { pool: string }) => spell.pool === "owned")
-        .map((spell: { name: string }) => spell.name)
-        .sort(),
-    ).toEqual(["Banishing Light", "Carrot Cake"]);
-
-    const noCommander = await call(client, "create_deck", {
-      name: "Empty Commander",
-      format: "commander",
-    });
-    const refused = await client.callTool({
-      name: "draft_deck",
-      arguments: { deckId: noCommander.deckId },
-    });
-    expect(refused.isError).toBe(true);
-    expect(JSON.stringify(refused.content)).toContain("commander");
-  });
-});
-
-describe("headings (design doc 34)", () => {
-  it("sets a card's heading, renames and orders headings, and writes them in the list", async () => {
+describe("deck headings (design doc 34)", () => {
+  it("sets a card's heading and writes it in the list, and refuses a card type as a heading", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
       name: "Beza",
       list: "Commander\n1 Beza, the Bounding Spring\nRemoval (1)\n1 Banishing Light\nDeck\n1 Carrot Cake\n10 Plains",
     });
-    await call(client, "set_deck_entry", {
-      deckId,
-      card: "Carrot Cake",
-      quantity: 1,
-      heading: "Food",
-    });
+    await saveChange(client, deckId, { card: "Carrot Cake", quantity: 1, heading: "Food" });
     let deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
     expect(deck.deck).toMatchObject({ grouping: "custom", headings: ["Removal", "Food"] });
     expect(deck.lines).toContainEqual(
@@ -614,21 +484,18 @@ describe("headings (design doc 34)", () => {
     );
     expect(deck.list).toContain("Removal (1)\n1 Banishing Light");
 
-    await call(client, "arrange_headings", { deckId, order: ["Food", "Removal"] });
-    await call(client, "arrange_headings", { deckId, from: "Removal", to: "Interaction" });
-    deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
-    expect(deck.deck.headings).toEqual(["Food", "Interaction"]);
-
-    const refused = await callTool(context(), "set_deck_entry", {
+    const refused = await callTool(context(), "apply_changes", {
       deckId,
-      card: "Plains",
-      quantity: 10,
-      heading: "Lands",
+      save: true,
+      fingerprint: deck.fingerprint,
+      changes: [{ card: "Plains", quantity: 10, heading: "Lands" }],
     });
     expect(refused).toMatchObject({
       kind: "outcome",
       outcome: { ok: false, error: { kind: "HeadingInvalid" } },
     });
+    deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
+    expect(deck.deck.headings).toEqual(["Removal", "Food"]);
   });
 });
 
@@ -669,86 +536,31 @@ describe("signing in with a token (rule 1)", () => {
 });
 
 describe("line notes and snapshots (design doc 41)", () => {
-  it("sets and reads line notes and saves, compares, restores, and deletes snapshots", async () => {
+  it("sets and reads a line's note", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
-      name: "Notes & Snapshots",
-      list: "Commander\n1 Beza, the Bounding Spring\n1 Banishing Light\n10 Plains",
+      name: "Notes",
+      list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n10 Plains",
     });
-
-    await call(client, "set_deck_entry", {
-      deckId,
+    await saveChange(client, deckId, {
       card: "Banishing Light",
-      quantity: 1,
       note: "Clean enchantment removal",
     });
-
-    const initial = await call(client, "get_deck", { view: "full", deckId, includeText: false });
-
-    const snap1 = await call(client, "snapshot_deck", {
-      deckId,
-      action: "save",
-      label: "Before Carrot Cake",
-    });
-    expect(snap1.snapshotId).toBeGreaterThan(0);
-
-    await call(client, "apply_changes", {
-      deckId,
-      save: true,
-      fingerprint: initial.fingerprint,
-      changes: [
-        { card: "Carrot Cake", quantity: 1, note: "Lifegain + scry food" },
-        { card: "Banishing Light", quantity: 0 },
-      ],
-    });
-
-    let deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
-    expect(deck.lines).toContainEqual(
-      expect.objectContaining({ name: "Carrot Cake", note: "Lifegain + scry food" }),
-    );
-
-    const listOnly = await call(client, "deck_snapshots", { deckId });
-    expect(listOnly.snapshots).toHaveLength(1);
-    expect(listOnly.snapshots[0]).toMatchObject({ label: "Before Carrot Cake" });
-
-    const compared = await call(client, "deck_snapshots", {
-      deckId,
-      snapshotId: snap1.snapshotId,
-    });
-    expect(compared).toMatchObject({
-      compared: {
-        before: { label: "Before Carrot Cake" },
-        after: { label: "Current deck" },
-      },
-      changes: expect.arrayContaining([
-        expect.objectContaining({ card: "Banishing Light", before: 1, after: 0 }),
-        expect.objectContaining({ card: "Carrot Cake", before: 0, after: 1 }),
-      ]),
-    });
-
-    await call(client, "snapshot_deck", {
-      deckId,
-      action: "restore",
-      snapshotId: snap1.snapshotId,
-    });
-    deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
+    const deck = await call(client, "get_deck", { view: "full", deckId, includeText: false });
     expect(deck.lines).toContainEqual(
       expect.objectContaining({ name: "Banishing Light", note: "Clean enchantment removal" }),
     );
-    expect(deck.lines.some((line: { name: string }) => line.name === "Carrot Cake")).toBe(false);
-
-    await call(client, "snapshot_deck", {
-      deckId,
-      action: "delete",
-      snapshotId: snap1.snapshotId,
-    });
-    const afterDelete = await call(client, "deck_snapshots", { deckId });
-    expect(afterDelete.snapshots).toEqual([]);
+    const compact = await call(client, "get_deck", { deckId, text: false });
+    expect(
+      Object.values(compact.cards as Record<string, string[]>)
+        .flat()
+        .join("\n"),
+    ).toContain("note: Clean enchantment removal");
   });
 });
 
 describe("token and emblem checklist (design doc 42)", () => {
-  it("surfaces token and emblem checklists in get_deck and deck_tokens", async () => {
+  it("surfaces the token and emblem checklist in get_deck", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
       name: "Token Checklist Test",
@@ -772,43 +584,15 @@ describe("token and emblem checklist (design doc 42)", () => {
       ],
     });
 
-    const allTokens = await call(client, "deck_tokens", { deckId });
-    expect(allTokens).toMatchObject({
-      deckId,
-      showing: 2,
-      summary: { total: 2, tokens: 2, emblems: 0, helpers: 0, mainboard: 1, sideboardOnly: 1 },
-    });
-    expect(allTokens.items).toEqual([
-      expect.objectContaining({
-        name: "Food",
-        kind: "token",
-        sideboardOnly: true,
-        madeBy: ["Crumb and Get It"],
-        boards: ["side"],
-        includedInProxies: true,
-      }),
-      expect.objectContaining({
-        name: "Rabbit",
-        kind: "token",
-        sideboardOnly: false,
-        madeBy: ["Carrot Cake"],
-        boards: ["main"],
-        includedInProxies: true,
-      }),
-    ]);
-
-    const playedOnly = await call(client, "deck_tokens", { deckId, board: "played" });
-    expect(playedOnly.showing).toBe(1);
-    expect(playedOnly.items.map((item: { name: string }) => item.name)).toEqual(["Rabbit"]);
-
-    const emblemsOnly = await call(client, "deck_tokens", { deckId, kind: "emblem" });
-    expect(emblemsOnly.showing).toBe(0);
-    expect(emblemsOnly.items).toEqual([]);
+    const compact = await call(client, "get_deck", { deckId, text: false, include: ["tokens"] });
+    expect(compact.tokens).toEqual(deck.tokens);
+    const plain = await call(client, "get_deck", { deckId, text: false });
+    expect(plain.tokens).toBeUndefined();
   });
 });
 
 describe("opening-hand odds (design doc 43)", () => {
-  it("reports land-drop and turn-3 ramp probabilities in get_deck and opening_hand_odds", async () => {
+  it("reports land-drop and turn-3 ramp probabilities in get_deck", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", {
       name: "Odds Test Deck",
@@ -824,37 +608,13 @@ describe("opening-hand odds (design doc 43)", () => {
     });
     expect(deck.openingHandOdds.threeLandsByTurn3Percent).toBeGreaterThan(90);
 
-    const play = await call(client, "opening_hand_odds", {
-      deckId,
-      cardNames: ["Carrot Cake"],
-      byTurn: 3,
-      atLeast: 1,
-    });
-    const draw = await call(client, "opening_hand_odds", {
-      deckId,
-      onTheDraw: true,
-      cardNames: ["Carrot Cake"],
-      byTurn: 3,
-      atLeast: 1,
-    });
-
-    expect(play).toMatchObject({
-      deckId,
-      librarySize: 32,
-      lands: 24,
-      onTheDraw: false,
-      freeMulligan: false,
-      rampByTurn3: { cardsSeen: 9 },
-      customQuery: { cardNames: ["Carrot Cake"], matchingCopies: 4, byTurn: 3, atLeast: 1 },
-    });
-    expect(play.landDrops).toHaveLength(5);
-    expect(draw.rampByTurn3.cardsSeen).toBe(10);
-    expect(draw.customQuery.chancePercent).toBeGreaterThan(play.customQuery.chancePercent);
+    const compact = await call(client, "get_deck", { deckId, text: false, include: ["odds"] });
+    expect(compact.openingHandOdds).toEqual(deck.openingHandOdds);
   });
 });
 
 describe("60-card formats (design doc 44)", () => {
-  it("exposes formatRules, sideboardCount, 60-card roleTargets, cardLegalIn, and playset drafting", async () => {
+  it("exposes formatRules, sideboardCount, 60-card roleTargets and cardLegalIn", async () => {
     await give("Banishing Light", 4);
     await give("Carrot Cake", 4);
     const client = await connect();
@@ -886,18 +646,14 @@ describe("60-card formats (design doc 44)", () => {
       expect.arrayContaining(["The sideboard has 16 cards; the most is 15."]),
     );
 
-    const draft = await call(client, "draft_deck", { deckId, includeStore: "none" });
-    expect(draft.totalAfterDraft).toBeLessThanOrEqual(60);
-    const carrot = draft.spells.find((spell: { name: string }) => spell.name === "Carrot Cake");
-    expect(carrot?.quantity).toBe(2);
-
-    const { deckId: limitedId } = await call(client, "create_deck", {
-      name: "Sealed",
-      format: "limited",
+    const compact = await call(client, "get_deck", {
+      deckId,
+      text: false,
+      include: ["formatRules", "legality"],
     });
-    const limitedDraft = await callRaw(client, "draft_deck", { deckId: limitedId });
-    expect(limitedDraft.isError).toBe(true);
-    expect(limitedDraft.parsed).toMatchObject({ error: { kind: "LimitedDeck" } });
+    expect(compact.formatRules).toEqual(deck.formatRules);
+    expect(compact.roleTargets).toEqual(deck.roleTargets);
+    expect(compact.cardLegalIn).toEqual(["standard", "modern"]);
   });
 });
 

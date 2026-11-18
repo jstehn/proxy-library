@@ -229,9 +229,10 @@ describe("public deck links (design doc 47)", () => {
     const samsView = await deckForViewer(db, sam.userId, copied.value);
     expect(samsView?.isOwner).toBe(true);
     expect(samsView?.view.deck.name).toBe("Shared Lights (copy)");
+    // deckView lists lines by mana value, then name.
     expect(samsView?.view.lines.map((line) => [line.name, line.quantity])).toEqual([
-      ["Banishing Light", 4],
       ["Plains", 10],
+      ["Banishing Light", 4],
     ]);
   });
 });

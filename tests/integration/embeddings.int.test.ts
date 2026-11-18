@@ -114,7 +114,9 @@ describe("card embeddings & budget replacements", () => {
     expect(simResult).not.toBeNull();
     expect(simResult?.store.some((s) => s.card.oracleId === banishing.oracle_id)).toBe(true);
 
-    // 4. budgetReplacements finds Banishing Light ($1) as a cheaper replacement for Caretaker's Talent ($15)
+    // 4. budgetReplacements only offers cards that share a role with the target (design doc 61,
+    // invariant 5): Banishing Light is removal and Caretaker's Talent is draw, so however similar
+    // their text, it isn't offered, and every offer it does make names the role it matched.
     const replacements = await budgetReplacements(db, jack.userId, created.value, {
       minPriceCents: 500,
       maxPriceCents: 200,
@@ -123,14 +125,14 @@ describe("card embeddings & budget replacements", () => {
     const caretakerEntry = replacements?.cards.find(
       (c) => c.target.oracleId === caretaker.oracle_id,
     );
-    expect(caretakerEntry).toBeDefined();
-    const pick = caretakerEntry?.store.find((p) => p.card.oracleId === banishing.oracle_id);
-    expect(pick).toBeDefined();
-    expect(pick?.savedCents).toBe(
-      (caretakerEntry?.target.priceCents ?? 0) - (pick?.card.priceCents ?? 0),
-    );
-    expect(pick?.savedCents).toBeGreaterThan(0);
-    expect(pick?.similarityPct).toBeGreaterThan(90);
+    expect(
+      caretakerEntry?.store.some((p) => p.card.oracleId === banishing.oracle_id) ?? false,
+    ).toBe(false);
+    for (const entry of replacements?.cards ?? []) {
+      for (const pick of [...entry.owned, ...entry.store]) {
+        expect(pick.matchedRoles.length).toBeGreaterThan(0);
+      }
+    }
 
     // 5. semanticSearchForDeck finds Banishing Light via injected embedder + optional RRF filter
     const fakeEmbedder = async () => [unitVec(0, 1, 0.25)];
