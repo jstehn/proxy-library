@@ -28,7 +28,21 @@ const RULE_PATTERNS: ReadonlyArray<{
     title: "Zone Changes & New Objects",
     reason: "Moves objects between zones or tracks dies/leaves-the-battlefield triggers.",
     pattern:
-      /\b(?:leaves\s+the\s+battlefield|when(?:ever)?\s+.*\bdies\b|put\s+into\s+a\s+graveyard\s+from\s+anywhere|return\s+.*\s+from\s+your\s+graveyard)\b/i,
+      /\b(?:leaves\s+the\s+battlefield|when(?:ever)?\s+.*\bdies\b|put\s+into\s+(?:a|your|an\s+opponent's)\s+graveyard\s+from\s+(?:anywhere|the\s+battlefield)|return\s+.*\s+from\s+(?:your|a)\s+graveyard)\b/i,
+  },
+  {
+    rule: "CR 702.61a",
+    title: "Split Second",
+    reason:
+      "While a spell with split second is on the stack, players can't cast spells or activate abilities that aren't mana abilities (e.g., sacrifice outlets).",
+    pattern: /\bsplit\s+second\b/i,
+  },
+  {
+    rule: "CR 605.1a",
+    title: "Activated Abilities vs. Mana Abilities",
+    reason:
+      "Non-mana activated abilities (including free sacrifice outlets) use the stack and are blocked by split second (CR 702.61a).",
+    pattern: /\bsacrifice\s+(?:a|another|this)\b[^:\n]*:/i,
   },
   {
     rule: "CR 614",

@@ -38,4 +38,17 @@ describe("related-rules", () => {
     ]);
     expect(shared.some((s) => s.rule === "CR 513" && s.cards.length === 2)).toBe(true);
   });
+
+  it("matches Mortuary graveyard-from-battlefield triggers and split second vs sacrifice outlets", () => {
+    const mortuary = matchRelatedRules(
+      "Whenever a creature is put into your graveyard from the battlefield, put that card on top of your library.",
+    );
+    expect(mortuary.map((r) => r.rule)).toContain("CR 400.7");
+
+    const krosanGrip = matchRelatedRules("Split second (As long as this spell is on the stack...)");
+    expect(krosanGrip.map((r) => r.rule)).toContain("CR 702.61a");
+
+    const altar = matchRelatedRules("Sacrifice a creature: Put a +1/+1 counter on target creature.");
+    expect(altar.map((r) => r.rule)).toContain("CR 605.1a");
+  });
 });

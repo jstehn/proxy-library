@@ -20,7 +20,7 @@ export type LookupRulesResult = Readonly<{
 
 const RRF_K = 60;
 const CANDIDATE_LIMIT = 30;
-const RULE_NUMBER_RE = /^\d{3}(?:\.\d+[a-z]?)?$/i;
+const LEADING_RULE_NUMBER_RE = /^(\d{3}(?:\.\d+[a-z]?)?)(?:\s+.*)?$/i;
 
 type RuleRow = {
   rule_number: string;
@@ -60,9 +60,11 @@ export async function lookupRules(
   const limit = Math.max(1, Math.min(20, options.limit ?? 8));
   if (!trimmed) return { crVersion: null, hits: [] };
 
-  if (RULE_NUMBER_RE.test(trimmed)) {
-    const normalized = trimmed.toLowerCase();
+  const leadingRule = trimmed.match(LEADING_RULE_NUMBER_RE)?.[1];
+  if (leadingRule) {
+    const normalized = leadingRule.toLowerCase();
     const prefix = `${normalized}%`;
+    const ruleLimit = Math.max(limit, 12);
     const rows = (
       await db.execute<RuleRow>(sql`
         select rule_number, kind, section, parent_number, title, text, cr_version
@@ -71,7 +73,7 @@ export async function lookupRules(
             or lower(parent_number) = ${normalized}
             or lower(rule_number) like ${prefix}
          order by (lower(rule_number) = ${normalized}) desc, rule_number asc
-         limit ${limit}
+         limit ${ruleLimit}
       `)
     ).rows;
     if (rows.length > 0) {
