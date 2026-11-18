@@ -77,6 +77,7 @@ import {
   type DeckChangePreview,
   type DeckCombo,
   type DeckProblem,
+  type DeckLine,
   type DeckView,
   type GoldfishAction,
   type GoldfishCard,
@@ -84,7 +85,7 @@ import {
   type GoldfishStepInput,
   type SnapshotComparison,
 } from "@/modules/decks";
-import { canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
+import { canonicalTheme, cardTags, TAGS, THEMES } from "@/shared/card-search";
 import { seededRng } from "@/shared/kernel";
 import {
   bracketWarningText,
@@ -635,7 +636,7 @@ export const getDeck = defineTool({
   description: [
     "Returns a deck's cards (with oracle text, ownership, tags, headings, notes), stats, legality problems, Commander bracket, tokens, saved deckSources, and fingerprint.",
     "Use it when: reading a deck before researching/editing, filtering lines by board/tag/singleTagOnly, or fetching specific fields (use fields/boards/includeText:false to save tokens).",
-    'Rules: unowned cards show as short; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.',
+    "Rules: unowned cards show as short; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -658,7 +659,9 @@ export const getDeck = defineTool({
       .int()
       .min(0)
       .optional()
-      .describe("Optional pagination cursor returned as `next` when a response is capped at 40 KB."),
+      .describe(
+        "Optional pagination cursor returned as `next` when a response is capped at 40 KB.",
+      ),
     boards: z
       .array(z.enum(BOARDS))
       .optional()
@@ -2087,6 +2090,27 @@ export const openingHandOddsTool = defineTool({
   },
 });
 
+const COUNTED_ROLES = ["ramp", "draw", "removal", "wipe"] as const;
+
+/** The cards behind each role count in deck_facts, tagged the same way the counts are. */
+function cardsBehindRoleCounts(lines: readonly DeckLine[]): Record<string, string[]> {
+  const roleCards: Record<string, string[]> = { ramp: [], draw: [], removal: [], wipe: [] };
+  for (const line of lines) {
+    if (!isPlayed(line.board)) continue;
+    const tags = cardTags({
+      typeLine: line.typeLine,
+      text: line.text ?? "",
+      producedMana: line.producedMana,
+    });
+    for (const role of COUNTED_ROLES) {
+      if (tags.includes(role) && !roleCards[role].includes(line.name)) {
+        roleCards[role].push(line.name);
+      }
+    }
+  }
+  return roleCards;
+}
+
 export const auditDeckTool = defineTool({
   name: "deck_facts",
   title: "Deck facts and heuristic diagnostics",
@@ -2096,14 +2120,35 @@ export const auditDeckTool = defineTool({
   ].join("\n"),
   scope: "read",
   readOnly: true,
-  input: z.object({ deckId }),
+  input: z.object({
+    deckId,
+    includeMaybe: z
+      .boolean()
+      .default(false)
+      .describe("Include maybeboard cards in the bracket estimate."),
+  }),
   async run(context, input) {
-    const report = await auditDeck(context.container.db, context.actor.userId, input.deckId);
-    if (report === null) return deckNotFound(input.deckId);
+    const [report, view] = await Promise.all([
+      auditDeck(context.container.db, context.actor.userId, input.deckId),
+      viewFor(context, input.deckId),
+    ]);
+    if (report === null || view === null) return deckNotFound(input.deckId);
     const { score, ...facts } = report;
+    const roleCards = cardsBehindRoleCounts(view.lines);
+
+    const bracketWithMaybe =
+      input.includeMaybe && view.deck.format === "commander"
+        ? estimateBracket(
+            view.deck.format,
+            view.lines.filter((l) => isPlayed(l.board) || l.board === "maybe").map(bracketLine),
+          )
+        : undefined;
+
     return done({
       provenance: heuristicProvenance("regex heuristic & deck stats", ["card text", "edhrec"]),
       ...facts,
+      roleCards,
+      ...(bracketWithMaybe ? { bracketWithMaybe } : {}),
       heuristicScore: score,
     });
   },
@@ -2165,10 +2210,17 @@ export const simulateOpeningHandsTool = defineTool({
           .min(1)
           .optional()
           .describe("Card name (defaults to the deck's commander)."),
-        turn: z.number().int().min(1).max(10).describe("Target turn by which the card must be castable."),
+        turn: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .describe("Target turn by which the card must be castable."),
       })
       .optional()
-      .describe("Measure % of games where a card (commander by default) is castable by turn N, counting dorks, rocks, and profile cost reducers."),
+      .describe(
+        "Measure % of games where a card (commander by default) is castable by turn N, counting dorks, rocks, and profile cost reducers.",
+      ),
   }),
   async run(context, input) {
     const [view, storedProfile] = await Promise.all([
@@ -2180,8 +2232,7 @@ export const simulateOpeningHandsTool = defineTool({
     const freeMulligan = input.freeMulligan ?? view.deck.format === "commander";
 
     let mustCastByOption:
-      | { cardName: string; manaValue: number; turn: number; inLibrary: boolean }
-      | undefined;
+      { cardName: string; manaValue: number; turn: number; inLibrary: boolean } | undefined;
     if (input.mustCastBy) {
       const cmdLine = view.lines.find((l) => l.board === "commander");
       const targetName = input.mustCastBy.card ?? cmdLine?.name;
@@ -2758,7 +2809,8 @@ export const deckSourcesTool = defineTool({
         context.container.clock.now(),
       );
       if (sources === null) return deckNotFound(input.deckId);
-      return done({ deckId: input.deckId, sources });
+      const added = sources.find((s) => s.url === input.url) ?? sources[sources.length - 1] ?? null;
+      return done({ deckId: input.deckId, source: added, totalCount: sources.length });
     }
     const sources = await listDeckSources(context.container.db, context.actor.userId, input.deckId);
     if (sources === null) return deckNotFound(input.deckId);
@@ -2917,7 +2969,9 @@ export const goldfishStepTool = defineTool({
     alt: z
       .enum(["blitz"])
       .optional()
-      .describe("Alternative casting mode (e.g. 'blitz' grants haste and queues end-step sacrifice + draw)."),
+      .describe(
+        "Alternative casting mode (e.g. 'blitz' grants haste and queues end-step sacrifice + draw).",
+      ),
     strict: z
       .boolean()
       .default(true)
@@ -3102,8 +3156,18 @@ export const setDeckProfileTool = defineTool({
   readOnly: false,
   input: z.object({
     deckId,
-    plan: z.string().max(1000).optional().describe("One or two sentences describing the deck's plan."),
-    landTarget: z.number().int().min(0).max(99).optional().describe("Target land count for the deck."),
+    plan: z
+      .string()
+      .max(1000)
+      .optional()
+      .describe("One or two sentences describing the deck's plan."),
+    landTarget: z
+      .number()
+      .int()
+      .min(0)
+      .max(99)
+      .optional()
+      .describe("Target land count for the deck."),
     roleTargets: z
       .object({
         ramp: z.number().int().min(0).max(99).optional(),
@@ -3117,7 +3181,9 @@ export const setDeckProfileTool = defineTool({
       .array(keyCardPinSchema)
       .max(50)
       .optional()
-      .describe("Pinned key cards with a one-line reason (never suggested for cut or replacement)."),
+      .describe(
+        "Pinned key cards with a one-line reason (never suggested for cut or replacement).",
+      ),
     avoid: z
       .array(avoidCardSchema)
       .max(100)
@@ -3127,8 +3193,14 @@ export const setDeckProfileTool = defineTool({
       .array(costReducerSchema)
       .max(20)
       .optional()
-      .describe("Declarative cost reducers (e.g. Henzie blitz -1 per cast; Goreclaw -2 for power 4+)."),
-    winCons: z.array(z.string().min(1).max(300)).max(20).optional().describe("Win condition lines."),
+      .describe(
+        "Declarative cost reducers (e.g. Henzie blitz -1 per cast; Goreclaw -2 for power 4+).",
+      ),
+    winCons: z
+      .array(z.string().min(1).max(300))
+      .max(20)
+      .optional()
+      .describe("Win condition lines."),
     declaredCombos: z
       .array(z.string().min(1).max(300))
       .max(30)

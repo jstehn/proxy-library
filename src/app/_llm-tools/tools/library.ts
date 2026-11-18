@@ -27,6 +27,7 @@ import {
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
 import { reasonText } from "@/app/decks/labels";
+import { findSharedRules, matchRelatedRules } from "../related-rules";
 import {
   cardNotFound,
   deckNotFound,
@@ -582,6 +583,7 @@ export const getRulingsTool = defineTool({
             fetchedAt: fetched.fetchedAt,
             cached: fetched.cached,
             rulings: fetched.rulings,
+            ...(found ? { relatedRules: matchRelatedRules(found.text) } : {}),
           };
         } catch (error) {
           return {
@@ -594,6 +596,53 @@ export const getRulingsTool = defineTool({
       }),
     );
     return done({ cards: results });
+  },
+});
+
+export const checkInteractionTool = defineTool({
+  name: "check_interaction",
+  title: "Check rules & CR overlap between cards",
+  description: [
+    "Returns each card's Scryfall rulings plus the Comprehensive Rules sections their oracle texts share (e.g. CR 513 end step, CR 118.9 alternative costs, CR 400.7 zone changes). Lookup only, not a verdict.",
+    "Use it when: checking how 2+ cards interact (e.g. Bolas's Citadel + blitz, Mortuary + Avacyn) before recommending them.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    cards: z
+      .array(z.string().min(1))
+      .min(2)
+      .max(10)
+      .describe("2 to 10 card names or ids to check for rulings and shared CR sections."),
+  }),
+  async run(context, input) {
+    const resolved = await Promise.all(
+      input.cards.map(async (query) => {
+        const found = await findCard(context.container.db, query);
+        const relatedRules = found ? matchRelatedRules(found.text) : [];
+        let rulings: unknown[] = [];
+        try {
+          const fetched = await context.container.outsideData.fetchScryfallRulings(
+            found ? { name: found.name, scryfallId: found.scryfallId } : { name: query },
+          );
+          if (fetched) rulings = [...fetched.rulings];
+        } catch {
+          // Non-fatal: still return relatedRules even if Scryfall rulings are unreachable.
+        }
+        return {
+          query,
+          found: found !== null,
+          name: found?.name ?? query,
+          relatedRules,
+          rulings,
+        };
+      }),
+    );
+    const sharedRules = findSharedRules(resolved);
+    return done({
+      cards: resolved,
+      sharedRules,
+    });
   },
 });
 
@@ -665,12 +714,7 @@ export const findCombosForDeckTool = defineTool({
       .max(100)
       .default(20)
       .describe("Max combos to return per status list (default 20, max 100)."),
-    offset: z
-      .number()
-      .int()
-      .min(0)
-      .default(0)
-      .describe("Pagination offset into the combo lists."),
+    offset: z.number().int().min(0).default(0).describe("Pagination offset into the combo lists."),
   }),
   async run(context, input) {
     const view = await deckView(context.container.db, context.actor.userId, input.deckId);

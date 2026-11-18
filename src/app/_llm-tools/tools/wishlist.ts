@@ -119,10 +119,7 @@ export const addWish = defineTool({
     wishes: z
       .array(
         z.object({
-          card: z
-            .string()
-            .min(1)
-            .describe("The card's exact English name, or a printing id."),
+          card: z.string().min(1).describe("The card's exact English name, or a printing id."),
           printing: z
             .enum(["any", "exact"])
             .default("any")
@@ -132,9 +129,7 @@ export const addWish = defineTool({
           finish: z
             .enum(["nonfoil", "foil", "etched", "cheapest"])
             .default("nonfoil")
-            .describe(
-              'The finish. "cheapest" only with "any"; "etched" only with "exact".',
-            ),
+            .describe('The finish. "cheapest" only with "any"; "etched" only with "exact".'),
           quantity: quantity.default(1),
           targetPriceCents,
           note,
