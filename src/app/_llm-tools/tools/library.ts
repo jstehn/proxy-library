@@ -29,7 +29,7 @@ import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
 import { reasonText } from "@/app/decks/labels";
 import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
-import { findSharedRules, matchRelatedRules } from "../related-rules";
+import { findRuleInteractions, findSharedRules, matchRelatedRules } from "../related-rules";
 import {
   cardNotFound,
   deckNotFound,
@@ -657,9 +657,11 @@ export const checkInteractionTool = defineTool({
       }),
     );
     const sharedRules = findSharedRules(resolved);
+    const ruleInteractions = findRuleInteractions(resolved);
     return done({
       cards: resolved,
       sharedRules,
+      ruleInteractions,
     });
   },
 });

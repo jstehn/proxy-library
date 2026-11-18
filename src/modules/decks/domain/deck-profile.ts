@@ -1,3 +1,5 @@
+import { countMinimumPips } from "./mana";
+
 export const FIXED_CARD_ROLE_TAGS = [
   "ramp",
   "draw",
@@ -24,9 +26,23 @@ export const COST_REDUCER_SCOPES = [
   "commander",
   "creature_power_gte_4",
   "blitz",
+  "colorless",
+  "graveyard",
 ] as const;
 
 export type CostReducerScope = (typeof COST_REDUCER_SCOPES)[number];
+
+export type CostReducerCard = Readonly<{
+  oracleText?: string;
+  typeLine?: string;
+  manaCost?: string | null;
+  power?: string | number | null;
+  isCommander?: boolean;
+  isBlitz?: boolean;
+  fromZone?: string;
+}>;
+
+export type ScopePredicate = (card: CostReducerCard) => boolean;
 
 export interface CostReducer {
   cardName: string;
@@ -120,72 +136,40 @@ function parsePower(power: string | number | null | undefined): number | null {
   return null;
 }
 
-function matchesReducerScope(
-  scope: CostReducerScope,
-  card: {
-    oracleText?: string;
-    typeLine?: string;
-    power?: string | number | null;
-    isCommander?: boolean;
-    isBlitz?: boolean;
+export const DEFAULT_SCOPE_PREDICATES: Readonly<Record<CostReducerScope, ScopePredicate>> = {
+  all_spells: () => true,
+  creatures: (card) => (card.typeLine ? /\bCreature\b/i.test(card.typeLine) : false),
+  noncreature: (card) => (card.typeLine ? !/\bCreature\b/i.test(card.typeLine) : false),
+  artifacts: (card) => (card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false),
+  enchantments: (card) => (card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false),
+  instants_sorceries: (card) =>
+    card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false,
+  commander: (card) => card.isCommander === true,
+  creature_power_gte_4: (card) => {
+    const isCreature = card.typeLine ? /\bCreature\b/i.test(card.typeLine) : true;
+    const p = parsePower(card.power);
+    return isCreature && p !== null && p >= 4;
   },
-): boolean {
-  switch (scope) {
-    case "all_spells":
-      return true;
-    case "creatures":
-      return card.typeLine ? /\bCreature\b/i.test(card.typeLine) : false;
-    case "noncreature":
-      return card.typeLine ? !/\bCreature\b/i.test(card.typeLine) : false;
-    case "artifacts":
-      return card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false;
-    case "enchantments":
-      return card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false;
-    case "instants_sorceries":
-      return card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false;
-    case "commander":
-      return card.isCommander === true;
-    case "creature_power_gte_4": {
-      const isCreature = card.typeLine ? /\bCreature\b/i.test(card.typeLine) : true;
-      const p = parsePower(card.power);
-      return isCreature && p !== null && p >= 4;
-    }
-    case "blitz":
-      return (
-        card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false)
-      );
-  }
-}
+  blitz: (card) =>
+    card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false),
+  colorless: (card) => (card.manaCost ? !/\{[WUBRG]\}/i.test(card.manaCost) : false),
+  graveyard: (card) => card.fromZone === "graveyard",
+};
 
 function matchesReducer(
   reducer: CostReducer,
   baseManaValue: number,
-  card: {
-    oracleText?: string;
-    typeLine?: string;
-    power?: string | number | null;
-    isCommander?: boolean;
-    isBlitz?: boolean;
-  },
+  card: CostReducerCard,
+  scopePredicates: Readonly<Record<string, ScopePredicate>> = DEFAULT_SCOPE_PREDICATES,
 ): boolean {
-  if (!matchesReducerScope(reducer.scope, card)) return false;
+  const pred = scopePredicates[reducer.scope];
+  if (!pred || !pred(card)) return false;
   if (reducer.minManaValue !== undefined && baseManaValue < reducer.minManaValue) return false;
   if (reducer.minPower !== undefined) {
     const p = parsePower(card.power);
     if (p === null || p < reducer.minPower) return false;
   }
   return true;
-}
-
-function countColoredPips(manaCost: string | null | undefined): number {
-  if (!manaCost) return 0;
-  let pips = 0;
-  for (const match of manaCost.matchAll(/\{([^}]+)\}/g)) {
-    const sym = match[1]?.toUpperCase() ?? "";
-    if (!sym || /^\d+$/.test(sym) || sym === "X" || sym === "Y" || sym === "Z") continue;
-    pips += 1;
-  }
-  return pips;
 }
 
 /**
@@ -195,22 +179,16 @@ function countColoredPips(manaCost: string | null | undefined): number {
  */
 export function effectiveManaValue(
   baseManaValue: number,
-  card: {
-    oracleText?: string;
-    typeLine?: string;
-    manaCost?: string | null;
-    power?: string | number | null;
-    isCommander?: boolean;
-    isBlitz?: boolean;
-  },
+  card: CostReducerCard,
   profile: DeckProfile | null | undefined,
   commandCasts = 1,
+  scopePredicates: Readonly<Record<string, ScopePredicate>> = DEFAULT_SCOPE_PREDICATES,
 ): number {
-  const minPips = countColoredPips(card.manaCost);
+  const minPips = countMinimumPips(card.manaCost);
   if (!profile || profile.costReducers.length === 0) return Math.max(minPips, baseManaValue);
   let reduction = 0;
   for (const reducer of profile.costReducers) {
-    if (!matchesReducer(reducer, baseManaValue, card)) continue;
+    if (!matchesReducer(reducer, baseManaValue, card, scopePredicates)) continue;
     const multiplier = reducer.perCommandCast ? Math.max(0, commandCasts) : 1;
     reduction += reducer.genericReduction * multiplier;
   }

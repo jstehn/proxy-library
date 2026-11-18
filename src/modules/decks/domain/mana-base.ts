@@ -1,5 +1,6 @@
 import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
+import { getFormatRules } from "./format-rules";
 import {
   colorPips,
   deckStats,
@@ -169,7 +170,7 @@ export function sourceTargets(
 ): SourceTarget[] {
   const stats = deckStats(lines);
   const allPips = MANA_COLORS.reduce((sum, color) => sum + stats.pips[color], 0);
-  const floors = SOURCE_FLOORS[format === "commander" ? "commander" : "other"];
+  const floors = SOURCE_FLOORS[getFormatRules(format).hasCommandZone ? "commander" : "other"];
   const heaviest = heaviestCosts(lines);
   return MANA_COLORS.filter((color) => stats.pips[color] > 0).map((color) => {
     const share = Math.round((target.lands * stats.pips[color]) / allPips);
@@ -250,7 +251,7 @@ export function planManaBase(input: ManaBaseInput): ManaBasePlan {
 
 /** How many copies of a card a deck of this format may hold. */
 function copyLimit(format: Format): number {
-  return format === "commander" ? 1 : 4;
+  return getFormatRules(format).copyLimit;
 }
 
 /** A non-basic's score against what the deck still needs, with its reasons. */

@@ -6,10 +6,13 @@ import {
   peekLibrary,
   startGoldfishState,
   stepGoldfishState,
+  type CastModifier,
   type GoldfishAction,
   type GoldfishDeckLine,
   type GoldfishState,
+  type TriggerHandler,
 } from "./goldfish-session";
+import { DEFAULT_CAST_MODIFIERS, DEFAULT_TRIGGER_HANDLERS } from "./sim-pipeline";
 
 function sampleDeckLines(): GoldfishDeckLine[] {
   return [
@@ -425,5 +428,109 @@ describe("goldfish-session", () => {
         expect(cmdCast2Strict.error.required).toContain("tax");
       }
     }
+  });
+
+  it("handles Undying/Persist counter state and supports custom OCP CastModifier & TriggerHandler plugins", () => {
+    const undyingDeck: GoldfishDeckLine[] = [
+      {
+        oracleId: "geralf",
+        name: "Geralf's Messenger",
+        printingId: "p-geralf",
+        board: "main",
+        quantity: 7,
+        typeLine: "Creature — Zombie",
+        manaCost: "{B}{B}{B}",
+        manaValue: 3,
+        text: "Undying (When this creature dies, if it had no +1/+1 counters on it, return it to the battlefield under its owner's control with a +1/+1 counter on it.)",
+      },
+      {
+        oracleId: "forest",
+        name: "Forest",
+        printingId: "p-forest",
+        board: "main",
+        quantity: 7,
+        typeLine: "Basic Land — Forest",
+        manaValue: 0,
+        producedMana: ["G"],
+      },
+    ];
+    const start = startGoldfishState(buildGoldfishDeck(undyingDeck), {
+      format: "standard",
+      rng: seededRng("undying-1"),
+    });
+    expect(start.ok).toBe(true);
+    if (!start.ok) return;
+    const t1 = stepGoldfishState(start.value, { kind: "next_turn" });
+    expect(t1.ok).toBe(true);
+    if (!t1.ok) return;
+
+    const messenger = t1.value.hand.find((c) => c.name === "Geralf's Messenger");
+    expect(messenger).toBeDefined();
+    if (!messenger) return;
+
+    const cast = stepGoldfishState(t1.value, {
+      kind: "cast",
+      key: messenger.key,
+      strict: false,
+    });
+    expect(cast.ok).toBe(true);
+    if (!cast.ok) return;
+
+    // First death: returns to battlefield with a +1/+1 counter
+    const diedOnce = stepGoldfishState(cast.value, {
+      kind: "move",
+      key: messenger.key,
+      from: "battlefield",
+      to: "graveyard",
+    });
+    expect(diedOnce.ok).toBe(true);
+    if (!diedOnce.ok) return;
+    const returnedPerm = diedOnce.value.battlefield.find((p) => p.card.key === messenger.key);
+    expect(returnedPerm).toBeDefined();
+    expect(returnedPerm?.counters?.["+1/+1"]).toBe(1);
+
+    // Second death: already has +1/+1 counter, so it stays in graveyard
+    const diedTwice = stepGoldfishState(diedOnce.value, {
+      kind: "move",
+      key: messenger.key,
+      from: "battlefield",
+      to: "graveyard",
+    });
+    expect(diedTwice.ok).toBe(true);
+    if (!diedTwice.ok) return;
+    expect(diedTwice.value.battlefield.some((p) => p.card.key === messenger.key)).toBe(false);
+    expect(diedTwice.value.graveyard.some((c) => c.key === messenger.key)).toBe(true);
+
+    // Custom CastModifier (affinity-style discount) + custom TriggerHandler (landfall +1G)
+    const artifactDiscount: CastModifier = {
+      id: "test_artifact_discount",
+      applies: (ctx) => ctx.alt === "affinity",
+      apply: (ctx) => ({
+        allowed: true,
+        genericDelta: -ctx.state.battlefield.length,
+      }),
+    };
+    const landfallMana: TriggerHandler = {
+      id: "test_landfall_mana",
+      handles: (event) => event.kind === "PermanentEntered" && event.permanent.card.isLand,
+      run: (_event, s) => ({
+        state: { ...s, manaPool: { ...s.manaPool, G: s.manaPool.G + 1 } },
+      }),
+    };
+
+    const forest = diedTwice.value.hand.find((c) => c.name === "Forest");
+    expect(forest).toBeDefined();
+    if (!forest) return;
+    const afterLandfall = stepGoldfishState(
+      diedTwice.value,
+      { kind: "play_land", key: forest.key },
+      {
+        castModifiers: [...DEFAULT_CAST_MODIFIERS, artifactDiscount],
+        triggerHandlers: [...DEFAULT_TRIGGER_HANDLERS, landfallMana],
+      },
+    );
+    expect(afterLandfall.ok).toBe(true);
+    if (!afterLandfall.ok) return;
+    expect(afterLandfall.value.manaPool.G).toBe(1);
   });
 });

@@ -55,6 +55,16 @@ export {
   type BracketFlag,
 } from "./brackets";
 export {
+  DEFAULT_EFFECT_EXTRACTORS,
+  extractEffects,
+  isFrontFaceLand,
+  withoutReminders,
+  type EffectExtractor,
+  type EffectPrimitive,
+  type EffectSubject,
+  type TagFacts,
+} from "./primitives";
+export {
   CARD_FEATURES_VERSION,
   cardTags,
   cardThemes,
@@ -65,6 +75,5 @@ export {
   THEME_RULES,
   THEMES,
   type Tag,
-  type TagFacts,
   type Theme,
 } from "./tags";

@@ -1,8 +1,15 @@
 import { randomInt, seededRng, type Rng } from "@/shared/kernel";
 import { isPlayed, type Board } from "./boards";
 import { effectiveManaValue, type DeckProfile } from "./deck-profile";
+import {
+  extractTapManaProduction,
+  hasTapManaAbility,
+  parseManaCost,
+  totalMana,
+  type ManaColor as PoolManaColor,
+} from "./mana";
 import { tapped } from "./mana-base";
-import { colorPips, isLand, MANA_COLORS, type ManaColor } from "./stats";
+import { isLand, MANA_COLORS, type ManaColor } from "./stats";
 
 export type CastabilityLine = Readonly<{
   oracleId: string;
@@ -38,15 +45,23 @@ export type CastabilitySummary = Readonly<{
   spells: readonly CardCastability[];
 }>;
 
-type SimLand = Readonly<{
+type SimSource = Readonly<{
   isLand: true;
-  untappedOnPlay: boolean;
-  colors: readonly ManaColor[];
+  tapKind: "never" | "sometimes" | "always";
+  manaProduced: number;
+  requiresFiveLands: boolean;
+  colors: readonly PoolManaColor[];
 }>;
 
 type SimCard =
-  | SimLand
-  | Readonly<{ isLand: false; isRamp: true; manaValue: number; colors: readonly ManaColor[] }>
+  | SimSource
+  | Readonly<{
+      isLand: false;
+      isRamp: true;
+      manaValue: number;
+      manaProduced: number;
+      colors: readonly PoolManaColor[];
+    }>
   | Readonly<{ isLand: false; isRamp: false }>;
 
 type SpellSpec = Readonly<{
@@ -55,47 +70,68 @@ type SpellSpec = Readonly<{
   manaValue: number;
   manaCost: string | null;
   targetTurn: number;
-  pips: readonly ManaColor[];
+  /** Each entry is a list of acceptable colors for that pip (length 1 = strict, length 2+ = hybrid). */
+  pipOptions: ReadonlyArray<readonly PoolManaColor[]>;
 }>;
 
-function toColors(producedMana: readonly string[]): ManaColor[] {
-  const out: ManaColor[] = [];
+function toPoolColors(producedMana: readonly string[]): PoolManaColor[] {
+  const valid = new Set<string>(["W", "U", "B", "R", "G", "C"]);
+  const out: PoolManaColor[] = [];
   for (const c of producedMana) {
-    if ((MANA_COLORS as readonly string[]).includes(c)) {
-      out.push(c as ManaColor);
-    }
+    const up = c.toUpperCase();
+    if (valid.has(up)) out.push(up as PoolManaColor);
   }
   return out;
 }
 
-function expandPips(manaCost: string | null): ManaColor[] {
-  const counts = colorPips(manaCost);
-  const pips: ManaColor[] = [];
-  for (const color of MANA_COLORS) {
-    for (let i = 0; i < counts[color]; i++) pips.push(color);
+function hasBackFaceLand(typeLine: string): boolean {
+  const faces = typeLine.split(" // ");
+  return faces.length > 1 && /\bLand\b/i.test(faces[1] ?? "");
+}
+
+function buildPipOptions(manaCost: string | null): ReadonlyArray<readonly PoolManaColor[]> {
+  const parsed = parseManaCost(manaCost, 0);
+  const options: PoolManaColor[][] = [];
+  for (const color of ["W", "U", "B", "R", "G", "C"] as const) {
+    for (let i = 0; i < parsed.pips[color]; i++) {
+      options.push([color]);
+    }
   }
-  return pips;
+  for (const hybrid of parsed.hybridPips) {
+    options.push([...hybrid]);
+  }
+  // Phyrexian pips are payable with 2 life so they don't block castability on color
+  return options;
 }
 
 /**
- * Checks whether `lands` (up to `maxLands` tapped for mana) can pay `pips`.
- * Returns `null` if all pips are paid, or the first missing color pip.
+ * Checks whether `sources` can pay `pipOptions` (strict + hybrid + colorless).
+ * Returns `null` if all pips are paid, or the first missing WUBRG color pip.
  */
-function missingPip(lands: readonly SimLand[], pips: readonly ManaColor[]): ManaColor | null {
-  if (pips.length === 0) return null;
-  // Prefer lands with fewer produced colors first so monocolor lands are consumed before duals.
-  const ordered = [...lands].sort((a, b) => a.colors.length - b.colors.length);
+function missingPip(
+  sources: readonly SimSource[],
+  pipOptions: ReadonlyArray<readonly PoolManaColor[]>,
+): ManaColor | null {
+  if (pipOptions.length === 0) return null;
+  // Prefer sources with fewer produced colors first so monocolor lands are consumed before duals.
+  const ordered = [...sources].sort((a, b) => a.colors.length - b.colors.length);
   const used = new Array<boolean>(ordered.length).fill(false);
 
-  for (const pip of pips) {
+  // Pay strict single-color pips before flexible hybrid pips
+  const sortedPips = [...pipOptions].sort((a, b) => a.length - b.length);
+  for (const choices of sortedPips) {
     let found = -1;
     for (let i = 0; i < ordered.length; i++) {
-      if (!used[i] && ordered[i].colors.includes(pip)) {
+      if (used[i]) continue;
+      if (choices.some((c) => ordered[i].colors.includes(c))) {
         found = i;
         break;
       }
     }
-    if (found === -1) return pip;
+    if (found === -1) {
+      const wubrg = choices.find((c): c is ManaColor => c !== "C");
+      return wubrg ?? null;
+    }
     used[found] = true;
   }
   return null;
@@ -120,22 +156,39 @@ export function simulateCastOnCurve(
   for (const line of lines) {
     if (!isPlayed(line.board) || line.quantity <= 0) continue;
     const land = isLand(line.typeLine);
+    const mdfcLand = !land && hasBackFaceLand(line.typeLine);
 
     if (line.board === "main") {
-      const produces = toColors(line.producedMana ?? []);
-      const isManaSource =
-        !land &&
-        line.manaValue <= 3 &&
-        (produces.length > 0 || /\{T\}[^.]*Add\s+\{/.test(line.text ?? ""));
-      const card: SimCard = land
-        ? {
-            isLand: true,
-            untappedOnPlay: tapped(line.text ?? "") !== "always",
-            colors: produces,
-          }
-        : isManaSource
-          ? { isLand: false, isRamp: true, manaValue: line.manaValue, colors: produces }
-          : { isLand: false, isRamp: false };
+      const produces = toPoolColors(line.producedMana ?? []);
+      const tapPool = extractTapManaProduction({
+        typeLine: line.typeLine,
+        text: line.text,
+        producedMana: line.producedMana,
+        isLand: land || mdfcLand,
+      });
+      const manaProduced = Math.max(1, totalMana(tapPool));
+      const requiresFiveLands = /activate only if you control five or more lands/i.test(
+        line.text ?? "",
+      );
+      const isManaSource = !land && !mdfcLand && line.manaValue <= 4 && hasTapManaAbility(line);
+      const card: SimCard =
+        land || mdfcLand
+          ? {
+              isLand: true,
+              tapKind: mdfcLand ? "always" : tapped(line.text ?? ""),
+              manaProduced: requiresFiveLands ? 2 : manaProduced,
+              requiresFiveLands,
+              colors: produces.length > 0 ? produces : ["C"],
+            }
+          : isManaSource
+            ? {
+                isLand: false,
+                isRamp: true,
+                manaValue: line.manaValue,
+                manaProduced,
+                colors: produces.length > 0 ? produces : ["C"],
+              }
+            : { isLand: false, isRamp: false };
       for (let i = 0; i < line.quantity; i++) library.push(card);
     }
 
@@ -160,7 +213,7 @@ export function simulateCastOnCurve(
         manaValue: effMv,
         manaCost: line.manaCost ?? null,
         targetTurn: Math.max(1, Math.min(8, mv)),
-        pips: expandPips(line.manaCost ?? null),
+        pipOptions: buildPipOptions(line.manaCost ?? null),
       });
     }
   }
@@ -190,11 +243,11 @@ export function simulateCastOnCurve(
       deck[j] = tmp;
     }
 
-    // Precompute seen lands and ramp sources by turn 1..8
-    const landsByTurn: SimLand[][] = [];
-    const rampByTurn: Array<readonly SimLand[]> = [];
-    const currentLands: SimLand[] = [];
-    const currentRamp: SimLand[] = [];
+    const landsByTurn: SimSource[][] = [];
+    const rampByTurn: Array<readonly SimSource[]> = [];
+    const currentLands: SimSource[] = [];
+    const currentRamp: SimSource[] = [];
+    let priorRampMana = 0;
     for (let turn = 1; turn <= 8; turn++) {
       const endIdx = Math.min(maxSeen, 6 + turn);
       const startIdx = turn === 1 ? 0 : Math.min(maxSeen, 6 + turn - 1);
@@ -205,10 +258,16 @@ export function simulateCastOnCurve(
         } else if (
           c.isRamp &&
           turn < 8 &&
-          c.manaValue <= Math.min(turn, currentLands.length + currentRamp.length)
+          c.manaValue <= Math.min(turn, currentLands.length + priorRampMana)
         ) {
-          // Ramp cast on an earlier turn contributes +1 mana on subsequent turns
-          currentRamp.push({ isLand: true, untappedOnPlay: true, colors: c.colors });
+          currentRamp.push({
+            isLand: true,
+            tapKind: "never",
+            manaProduced: c.manaProduced,
+            requiresFiveLands: false,
+            colors: c.colors,
+          });
+          priorRampMana += c.manaProduced;
         }
       }
       landsByTurn.push([...currentLands]);
@@ -220,14 +279,27 @@ export function simulateCastOnCurve(
       const turn = spell.targetTurn;
       const seenLands = landsByTurn[turn - 1];
       const priorRamp = turn > 1 ? rampByTurn[turn - 2] : [];
-      const hasUntapped = seenLands.some((l) => l.untappedOnPlay);
-      const landMana =
-        seenLands.length >= turn ? (hasUntapped ? turn : Math.max(0, turn - 1)) : seenLands.length;
-      const effectiveMana = landMana + priorRamp.length;
+      const activeLands = seenLands.slice(0, turn);
+      const landCount = activeLands.length;
+
+      const hasAlwaysUntapped = activeLands.some((l) => l.tapKind === "never");
+      const hasSometimesUntapped = activeLands.some((l) => l.tapKind === "sometimes");
+      const lastLandTapPenalty =
+        seenLands.length >= turn && !hasAlwaysUntapped ? (hasSometimesUntapped ? 0.5 : 1) : 0;
+
+      let landMana = 0;
+      for (const l of activeLands) {
+        if (l.requiresFiveLands && landCount < 5) continue;
+        landMana += l.manaProduced;
+      }
+      landMana = Math.max(0, landMana - lastLandTapPenalty);
+
+      const rampMana = priorRamp.reduce((sum, r) => sum + r.manaProduced, 0);
+      const effectiveMana = landMana + rampMana;
 
       if (effectiveMana < spell.manaValue) continue;
 
-      const missed = missingPip([...seenLands, ...priorRamp], spell.pips);
+      const missed = missingPip([...activeLands, ...priorRamp], spell.pipOptions);
       if (missed === null) {
         castCounts[sIdx] += 1;
       } else {

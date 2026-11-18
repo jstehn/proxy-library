@@ -1,81 +1,71 @@
-import { cardTags, type Tag } from "@/shared/card-search";
+import { cardTags } from "@/shared/card-search";
 import { err, ok, shuffled, type Result, type Rng } from "@/shared/kernel";
-import type { Board } from "./deck";
+import { getFormatRules, type FormatRuleSet } from "./format-rules";
+import type {
+  BattlefieldPermanent,
+  EndStepTrigger,
+  GoldfishCard,
+  GoldfishDeckLine,
+  GoldfishState,
+  GoldfishZone,
+} from "./goldfish-types";
+import {
+  addMana,
+  EMPTY_MANA_POOL,
+  extractTapManaProduction,
+  parseManaCost,
+  spendMana,
+  type ManaPool,
+  type ParsedManaCost,
+} from "./mana";
 import { OPENING_HAND } from "./draws";
+import {
+  addCardToZone,
+  allowedLandDropsThisTurn,
+  DEFAULT_ACTIVATED_ABILITIES,
+  DEFAULT_CAST_MODIFIERS,
+  DEFAULT_REPLACEMENT_EFFECTS,
+  DEFAULT_TRIGGER_HANDLERS,
+  DEFAULT_ZONE_PERMISSIONS,
+  dispatchGameEvents,
+  permanentHasKeyword,
+  removeCardFromZone,
+  type SimulationPipeline,
+  type ZoneChangeIntent,
+} from "./sim-pipeline";
 import { isLand } from "./stats";
 
-// Interactive turn-by-turn tabletop goldfish state machine (design doc 60 + 61).
+export { EMPTY_MANA_POOL, type ManaColor, type ManaPool, type ParsedManaCost } from "./mana";
+export type {
+  BattlefieldPermanent,
+  EndStepTrigger,
+  GoldfishCard,
+  GoldfishDeckLine,
+  GoldfishState,
+  GoldfishZone,
+} from "./goldfish-types";
+export type {
+  ActivatedAbility,
+  ActivatedAbilityContext,
+  ActivatedAbilityResult,
+  CastModifier,
+  CastModifierContext,
+  CastModifierResult,
+  EnterBattlefieldIntent,
+  GameEvent,
+  ReplacementEffect,
+  SimulationPipeline,
+  TriggerHandler,
+  TriggerOutcome,
+  ZoneChangeIntent,
+  ZoneChangeReplacement,
+  ZoneCastPermission,
+  ZonePermissionContext,
+  ZonePermissionResult,
+} from "./sim-pipeline";
+
+// Interactive turn-by-turn tabletop goldfish state machine (design doc 60 + 61, Phase 63).
 // Pure and deterministic via injected Rng (ADR 0008).
-
-export type GoldfishZone =
-  "library" | "hand" | "battlefield" | "graveyard" | "exile" | "commandZone";
-
-export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
-export type ManaPool = Record<ManaColor, number>;
-
-export const EMPTY_MANA_POOL: ManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
-
-export type GoldfishDeckLine = Readonly<{
-  oracleId: string;
-  name: string;
-  printingId: string;
-  board: Board;
-  quantity: number;
-  typeLine: string;
-  manaCost?: string | null;
-  manaValue?: number;
-  text?: string;
-  producedMana?: readonly string[];
-}>;
-
-export type GoldfishCard = Readonly<{
-  key: string;
-  oracleId: string;
-  name: string;
-  printingId: string;
-  typeLine: string;
-  manaCost?: string | null;
-  manaValue?: number;
-  text?: string;
-  producedMana?: readonly string[];
-  isLand: boolean;
-  isCommander: boolean;
-  tags: readonly Tag[];
-}>;
-
-export type BattlefieldPermanent = Readonly<{
-  card: GoldfishCard;
-  tapped: boolean;
-  enteredTurn: number;
-  haste?: boolean;
-  blitzed?: boolean;
-}>;
-
-export type EndStepTrigger = Readonly<{
-  key: string;
-  kind: "sacrifice_blitz" | "return_to_battlefield";
-}>;
-
-export type GoldfishState = Readonly<{
-  format: string;
-  onTheDraw: boolean;
-  freeMulligan: boolean;
-  kept: boolean;
-  turn: number;
-  mulligans: number;
-  toBottom: number;
-  landsPlayedThisTurn: number;
-  commandCasts: number;
-  manaPool: ManaPool;
-  endStepQueue: readonly EndStepTrigger[];
-  library: readonly GoldfishCard[];
-  hand: readonly GoldfishCard[];
-  battlefield: readonly BattlefieldPermanent[];
-  graveyard: readonly GoldfishCard[];
-  exile: readonly GoldfishCard[];
-  commandZone: readonly GoldfishCard[];
-  lastActionNote: string;
-}>;
 
 export type GoldfishAction =
   | Readonly<{ kind: "mulligan"; rng: Rng }>
@@ -88,15 +78,20 @@ export type GoldfishAction =
   | Readonly<{
       kind: "cast";
       key: string;
-      from?: "hand" | "commandZone" | "graveyard" | "exile";
+      from?: "hand" | "commandZone" | "graveyard" | "exile" | "library";
       to?: "battlefield" | "graveyard" | "exile";
       tapped?: boolean;
-      alt?: "blitz";
+      alt?: string;
       strict?: boolean;
       costReductionGeneric?: number;
     }>
   | Readonly<{ kind: "tap"; key: string }>
   | Readonly<{ kind: "untap"; key: string }>
+  | Readonly<{ kind: "activate"; key: string; sacrificeKey?: string }>
+  | Readonly<{ kind: "attach"; key: string; targetKey: string }>
+  | Readonly<{ kind: "mill"; count?: number }>
+  | Readonly<{ kind: "attack"; keys: readonly string[]; opponentCount?: number }>
+  | Readonly<{ kind: "end_combat" }>
   | Readonly<{
       kind: "move";
       key: string;
@@ -173,7 +168,8 @@ export function startGoldfishState(
   const shuffledLibrary = shuffled(options.rng, deck.library);
   const hand = shuffledLibrary.slice(0, OPENING_HAND);
   const library = shuffledLibrary.slice(OPENING_HAND);
-  const freeMulligan = options.freeMulligan ?? options.format === "commander";
+  const rules = getFormatRules(options.format);
+  const freeMulligan = options.freeMulligan ?? rules.freeFirstMulligan;
   return ok({
     format: options.format,
     onTheDraw: options.onTheDraw ?? false,
@@ -213,178 +209,30 @@ function isSpellOnlyType(typeLine: string): boolean {
   );
 }
 
-function removeFromZone(
-  state: GoldfishState,
-  zone: GoldfishZone,
-  key: string,
-): { card: GoldfishCard; next: GoldfishState } | null {
-  if (zone === "battlefield") {
-    const idx = state.battlefield.findIndex((p) => p.card.key === key);
-    if (idx === -1) return null;
-    const card = state.battlefield[idx].card;
-    const battlefield = state.battlefield.filter((_, i) => i !== idx);
-    return { card, next: { ...state, battlefield } };
-  }
-  const list = state[zone];
-  const idx = list.findIndex((c) => c.key === key);
-  if (idx === -1) return null;
-  const card = list[idx];
-  const updated = list.filter((_, i) => i !== idx);
-  return { card, next: { ...state, [zone]: updated } };
-}
-
-function addToZone(
-  state: GoldfishState,
-  to: Exclude<GoldfishZone, "library"> | "library_top" | "library_bottom",
-  card: GoldfishCard,
-  opts: { tapped?: boolean; haste?: boolean; blitzed?: boolean } = {},
-): GoldfishState {
-  switch (to) {
-    case "hand":
-      return { ...state, hand: [...state.hand, card] };
-    case "battlefield":
-      return {
-        ...state,
-        battlefield: [
-          ...state.battlefield,
-          {
-            card,
-            tapped: opts.tapped ?? false,
-            enteredTurn: state.turn,
-            ...(opts.haste ? { haste: true } : {}),
-            ...(opts.blitzed ? { blitzed: true } : {}),
-          },
-        ],
-      };
-    case "graveyard":
-      return { ...state, graveyard: [...state.graveyard, card] };
-    case "exile":
-      return { ...state, exile: [...state.exile, card] };
-    case "commandZone":
-      return { ...state, commandZone: [...state.commandZone, card] };
-    case "library_top":
-      return { ...state, library: [card, ...state.library] };
-    case "library_bottom":
-      return { ...state, library: [...state.library, card] };
-  }
-}
-
-interface ParsedManaCost {
-  pips: ManaPool;
-  generic: number;
-}
-
-function parseManaCost(manaCost: string | null | undefined, fallbackMv = 0): ParsedManaCost {
-  if (!manaCost) {
-    return { pips: { ...EMPTY_MANA_POOL }, generic: Math.max(0, fallbackMv) };
-  }
-  const pips: ManaPool = { ...EMPTY_MANA_POOL };
-  let generic = 0;
-  const symbols = manaCost.match(/\{([^}]+)\}/g) ?? [];
-  for (const raw of symbols) {
-    const sym = raw.slice(1, -1).toUpperCase();
-    if (/^\d+$/.test(sym)) {
-      generic += Number(sym);
-    } else if (
-      sym === "W" ||
-      sym === "U" ||
-      sym === "B" ||
-      sym === "R" ||
-      sym === "G" ||
-      sym === "C"
-    ) {
-      pips[sym] += 1;
-    } else if (sym === "X") {
-      // X=0 for base cost check
-    } else if (sym.includes("/")) {
-      // Hybrid or Phyrexian: treat first colored symbol if present, else generic 1
-      const first = sym.split("/")[0];
-      if (first === "W" || first === "U" || first === "B" || first === "R" || first === "G") {
-        pips[first] += 1;
-      } else {
-        generic += 1;
-      }
-    }
-  }
-  return { pips, generic };
-}
-
-function spendMana(pool: ManaPool, cost: ParsedManaCost): ManaPool | null {
-  const next: ManaPool = { ...pool };
-  const colors: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
-  for (const c of colors) {
-    if (next[c] < cost.pips[c]) return null;
-    next[c] -= cost.pips[c];
-  }
-  let rem = cost.generic;
-  // Spend colorless first, then colored mana
-  for (const c of ["C", "W", "U", "B", "R", "G"] as const) {
-    if (rem <= 0) break;
-    const take = Math.min(next[c], rem);
-    next[c] -= take;
-    rem -= take;
-  }
-  return rem === 0 ? next : null;
-}
-
-function manaProducedOnTap(permanent: BattlefieldPermanent, currentTurn: number): ManaPool {
+function manaProducedOnTap(permanent: BattlefieldPermanent, state: GoldfishState): ManaPool {
   const isCreature = /\bCreature\b/i.test(permanent.card.typeLine);
-  if (isCreature && permanent.enteredTurn === currentTurn && !permanent.haste) {
+  const hasHaste = permanentHasKeyword(permanent, "haste", state);
+  if (isCreature && permanent.enteredTurn === state.turn && !hasHaste) {
     return { ...EMPTY_MANA_POOL };
   }
-  const added: ManaPool = { ...EMPTY_MANA_POOL };
-  const text = permanent.card.text ?? "";
-  // Check explicit "{T}: Add {C}{C}" style patterns first
-  const tapAddMatch = text.match(/\{T\}[^.]*Add\s+((?:\{[WUBRGC]\})+)/i);
-  if (tapAddMatch) {
-    const syms = tapAddMatch[1].match(/\{([WUBRGC])\}/gi) ?? [];
-    for (const s of syms) {
-      const c = s.slice(1, -1).toUpperCase() as ManaColor;
-      added[c] += 1;
-    }
-    return added;
-  }
-  if (permanent.card.producedMana && permanent.card.producedMana.length > 0) {
-    const first = permanent.card.producedMana[0].toUpperCase();
-    if (
-      first === "W" ||
-      first === "U" ||
-      first === "B" ||
-      first === "R" ||
-      first === "G" ||
-      first === "C"
-    ) {
-      added[first] += 1;
-      return added;
-    }
-  }
-  if (permanent.card.isLand) {
-    const tl = permanent.card.typeLine;
-    if (tl.includes("Plains")) added.W += 1;
-    else if (tl.includes("Island")) added.U += 1;
-    else if (tl.includes("Swamp")) added.B += 1;
-    else if (tl.includes("Mountain")) added.R += 1;
-    else if (tl.includes("Forest")) added.G += 1;
-    else added.C += 1;
-  }
-  return added;
+  return extractTapManaProduction(permanent.card, state.battlefield);
 }
 
-function addMana(pool: ManaPool, delta: ManaPool): ManaPool {
-  return {
-    W: pool.W + delta.W,
-    U: pool.U + delta.U,
-    B: pool.B + delta.B,
-    R: pool.R + delta.R,
-    G: pool.G + delta.G,
-    C: pool.C + delta.C,
-  };
-}
+export type StepGoldfishOptions = SimulationPipeline & Readonly<{ formatRules?: FormatRuleSet }>;
 
 export function stepGoldfishState(
   state: GoldfishState,
   action: GoldfishAction,
+  options: StepGoldfishOptions = {},
 ): Result<GoldfishState, GoldfishError> {
+  const castModifiers = options.castModifiers ?? DEFAULT_CAST_MODIFIERS;
+  const zonePermissions = options.zonePermissions ?? DEFAULT_ZONE_PERMISSIONS;
+  const replacementEffects = options.replacementEffects ?? DEFAULT_REPLACEMENT_EFFECTS;
+  const zoneReplacements = options.zoneReplacements ?? [];
+  const triggerHandlers = options.triggerHandlers ?? DEFAULT_TRIGGER_HANDLERS;
+  const activatedAbilities = options.activatedAbilities ?? DEFAULT_ACTIVATED_ABILITIES;
+  const formatRules = options.formatRules ?? getFormatRules(state.format);
+
   switch (action.kind) {
     case "mulligan": {
       if (state.turn > 0 || state.kept) {
@@ -433,9 +281,9 @@ export function stepGoldfishState(
       let next = state;
       const bottomed: string[] = [];
       for (const key of action.keys) {
-        const removed = removeFromZone(next, "hand", key);
+        const removed = removeCardFromZone(next, "hand", key);
         if (!removed) return err({ kind: "CardNotFound", key, zone: "hand" });
-        next = addToZone(removed.next, "library_bottom", removed.card);
+        next = addCardToZone(removed.next, "library_bottom", removed.card);
         bottomed.push(removed.card.name);
       }
       return ok({
@@ -476,7 +324,10 @@ export function stepGoldfishState(
         ...state,
         kept: true,
         turn: nextTurn,
+        phase: "main",
         landsPlayedThisTurn: 0,
+        turnUsage: {},
+        spellsCastThisTurn: 0,
         manaPool: { ...EMPTY_MANA_POOL },
         battlefield: untapped,
         hand,
@@ -486,47 +337,21 @@ export function stepGoldfishState(
     }
 
     case "end_step": {
-      let next: GoldfishState = { ...state, manaPool: { ...EMPTY_MANA_POOL } };
-      const sacrificed: string[] = [];
-      const returned: string[] = [];
-      let drawn = 0;
-      for (const trigger of state.endStepQueue) {
-        if (trigger.kind === "sacrifice_blitz") {
-          const removed = removeFromZone(next, "battlefield", trigger.key);
-          if (!removed) continue;
-          next = addToZone(removed.next, "graveyard", removed.card);
-          sacrificed.push(removed.card.name);
-          if (next.library.length > 0) {
-            const [top, ...rest] = next.library;
-            next = { ...next, hand: [...next.hand, top], library: rest };
-            drawn += 1;
-          }
-          const text = removed.card.text ?? "";
-          if (/\bundying\b|\bpersist\b/i.test(text)) {
-            const back = removeFromZone(next, "graveyard", trigger.key);
-            if (back) {
-              next = addToZone(back.next, "battlefield", back.card);
-              returned.push(back.card.name);
-            }
-          }
-        } else if (trigger.kind === "return_to_battlefield") {
-          const back = removeFromZone(next, "graveyard", trigger.key);
-          if (!back) continue;
-          next = addToZone(back.next, "battlefield", back.card);
-          returned.push(back.card.name);
-        }
-      }
-      next = { ...next, endStepQueue: [] };
-      const parts: string[] = [];
-      if (sacrificed.length > 0) {
-        parts.push(`sacrificed ${sacrificed.join(", ")} (blitz) and drew ${drawn} card(s)`);
-      }
-      if (returned.length > 0) {
-        parts.push(`returned ${returned.join(", ")} to the battlefield`);
-      }
+      const baseState: GoldfishState = {
+        ...state,
+        phase: "end_step",
+        manaPool: { ...EMPTY_MANA_POOL },
+      };
+      const dispatched = dispatchGameEvents(
+        baseState,
+        [{ kind: "PhaseEnded", phase: "end_step" }],
+        triggerHandlers,
+      );
       const note =
-        parts.length > 0 ? `End step: ${parts.join("; ")}.` : "End step: emptied mana pool.";
-      return ok({ ...next, lastActionNote: note });
+        dispatched.notes.length > 0
+          ? `End step: ${dispatched.notes.join("; ")}.`
+          : "End step: emptied mana pool.";
+      return ok({ ...dispatched.state, lastActionNote: note });
     }
 
     case "draw": {
@@ -553,20 +378,33 @@ export function stepGoldfishState(
           reason: "Must keep hand and advance to turn 1 before playing a land.",
         });
       }
-      if (state.landsPlayedThisTurn >= 1 && !action.ignoreLandLimit) {
+      if (state.landsPlayedThisTurn >= allowedLandDropsThisTurn(state) && !action.ignoreLandLimit) {
         return err({ kind: "LandLimitReached", landsPlayedThisTurn: state.landsPlayedThisTurn });
       }
-      const removed = removeFromZone(state, "hand", action.key);
+      const removed = removeCardFromZone(state, "hand", action.key);
       if (!removed) return err({ kind: "CardNotFound", key: action.key, zone: "hand" });
       if (!removed.card.isLand) {
         return err({ kind: "NotALand", key: action.key, name: removed.card.name });
       }
-      const next = addToZone(removed.next, "battlefield", removed.card, {
+      const next = addCardToZone(removed.next, "battlefield", removed.card, {
         tapped: action.tapped ?? false,
+        from: "hand",
+        replacementEffects,
       });
+      const entered = next.battlefield[next.battlefield.length - 1];
+      const dispatched = dispatchGameEvents(
+        {
+          ...next,
+          landsPlayedThisTurn: state.landsPlayedThisTurn + 1,
+        },
+        [
+          { kind: "ZoneChanged", card: removed.card, from: "hand", to: "battlefield" },
+          ...(entered ? [{ kind: "PermanentEntered" as const, permanent: entered }] : []),
+        ],
+        triggerHandlers,
+      );
       return ok({
-        ...next,
-        landsPlayedThisTurn: state.landsPlayedThisTurn + 1,
+        ...dispatched.state,
         lastActionNote: `Played land ${removed.card.name}${action.tapped ? " (tapped)" : ""}.`,
       });
     }
@@ -580,67 +418,160 @@ export function stepGoldfishState(
         });
       }
       const from = action.from ?? "hand";
-      const removed = removeFromZone(state, from, action.key);
+      const removed = removeCardFromZone(state, from, action.key);
       if (!removed) return err({ kind: "CardNotFound", key: action.key, zone: from });
 
+      const usageIncrements: string[] = [];
+      for (const perm of zonePermissions) {
+        if (!perm.applies({ state, card: removed.card, from })) continue;
+        const pRes = perm.check({ state, card: removed.card, from });
+        if (!pRes.allowed) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: pRes.reason ?? `Cannot cast ${removed.card.name} from ${from}.`,
+          });
+        }
+        if (pRes.usageKey) usageIncrements.push(pRes.usageKey);
+      }
+      if (
+        from === "library" &&
+        !zonePermissions.some((p) => p.applies({ state, card: removed.card, from }))
+      ) {
+        return err({
+          kind: "CastNotAllowed",
+          reason: `No permission active to cast ${removed.card.name} from library.`,
+        });
+      }
+
+      const modCtx = {
+        state,
+        card: removed.card,
+        from,
+        alt: action.alt,
+        explicitReductionGeneric: action.costReductionGeneric,
+        formatRules,
+      };
+
+      // CR 601.2f strict cost order: base/alt -> increase (tax) -> reduction -> minimum (e.g. Trinisphere)
+      const phaseOrder: Record<string, number> = {
+        base: 0,
+        increase: 1,
+        reduction: 2,
+        minimum: 3,
+      };
+      const orderedModifiers = [...castModifiers].sort(
+        (a, b) =>
+          (phaseOrder[a.phase ?? "increase"] ?? 1) - (phaseOrder[b.phase ?? "increase"] ?? 1),
+      );
+
+      let genericDelta = 0;
+      let minimumTotalCost = 0;
+      const grantAbilities: string[] = [];
+      const enqueueTriggers: EndStepTrigger[] = [];
+      const taxLabels: string[] = [];
+
+      for (const modifier of orderedModifiers) {
+        if (!modifier.applies(modCtx)) continue;
+        const res = modifier.apply(modCtx);
+        if (!res.allowed) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: res.reason ?? `Cast blocked by modifier ${modifier.id}.`,
+          });
+        }
+        if (res.genericDelta) genericDelta += res.genericDelta;
+        if (res.minimumTotalCost !== undefined) {
+          minimumTotalCost = Math.max(minimumTotalCost, res.minimumTotalCost);
+        }
+        if (res.grantAbilities) grantAbilities.push(...res.grantAbilities);
+        if (res.enqueueTriggers) enqueueTriggers.push(...res.enqueueTriggers);
+        if (res.taxLabel) taxLabels.push(res.taxLabel);
+      }
+
       const baseCost = parseManaCost(removed.card.manaCost, removed.card.manaValue ?? 0);
-      const commanderTax = from === "commandZone" ? state.commandCasts * 2 : 0;
-      const reduction = Math.max(0, action.costReductionGeneric ?? 0);
+      let genericCost = Math.max(0, baseCost.generic + genericDelta);
+      if (minimumTotalCost > 0) {
+        const pipCount =
+          Object.values(baseCost.pips).reduce((a, b) => a + b, 0) + baseCost.hybridPips.length;
+        genericCost = Math.max(genericCost, minimumTotalCost - pipCount);
+      }
       const totalCost: ParsedManaCost = {
         pips: baseCost.pips,
-        generic: Math.max(0, baseCost.generic + commanderTax - reduction),
+        hybridPips: baseCost.hybridPips,
+        phyrexianPips: baseCost.phyrexianPips,
+        generic: genericCost,
       };
 
       const strict = action.strict ?? true;
       const spentPool = spendMana(state.manaPool, totalCost);
       if (strict && spentPool === null) {
+        const suffix = taxLabels.length > 0 ? ` + ${taxLabels.join(" + ")}` : "";
         return err({
           kind: "InsufficientMana",
           card: removed.card.name,
-          required: `${removed.card.manaCost ?? totalCost.generic}${commanderTax > 0 ? ` + {${commanderTax}} tax` : ""}`,
+          required: `${removed.card.manaCost ?? totalCost.generic}${suffix}`,
           available: state.manaPool,
         });
       }
 
-      const isBlitz = action.alt === "blitz";
-      if (isBlitz) {
-        const hasOwnBlitz = /\bblitz\b/i.test(removed.card.text ?? "");
-        const hasBattlefieldBlitzGranter = state.battlefield.some((p) =>
-          /\bhave blitz\b|\bhas blitz\b/i.test(p.card.text ?? ""),
-        );
-        if (!hasOwnBlitz && !hasBattlefieldBlitzGranter) {
-          return err({
-            kind: "CastNotAllowed",
-            reason:
-              "Cannot cast with blitz: no blitz-granting permanent (e.g. Henzie) is on the battlefield and the card does not have blitz.",
-          });
-        }
-        if (!hasOwnBlitz && !/\bCreature\b/i.test(removed.card.typeLine)) {
-          return err({
-            kind: "CastNotAllowed",
-            reason: "Cannot cast with blitz: only creature spells can be blitzed.",
-          });
-        }
-      }
-
       const destination =
         action.to ?? (isSpellOnlyType(removed.card.typeLine) ? "graveyard" : "battlefield");
-      const next = addToZone(removed.next, destination, removed.card, {
+      const next = addCardToZone(removed.next, destination, removed.card, {
         tapped: action.tapped ?? false,
-        haste: isBlitz,
-        blitzed: isBlitz,
+        abilities: grantAbilities,
+        from,
+        replacementEffects,
       });
+
       const nextEndStepQueue =
-        isBlitz && destination === "battlefield"
-          ? [...next.endStepQueue, { key: removed.card.key, kind: "sacrifice_blitz" as const }]
+        destination === "battlefield" && enqueueTriggers.length > 0
+          ? [...next.endStepQueue, ...enqueueTriggers]
           : next.endStepQueue;
 
-      return ok({
+      const nextTurnUsage: Record<string, number> = { ...(next.turnUsage ?? {}) };
+      for (const key of usageIncrements) {
+        nextTurnUsage[key] = (nextTurnUsage[key] ?? 0) + 1;
+      }
+      const nextCommandCastsByKey: Record<string, number> = { ...(next.commandCastsByKey ?? {}) };
+      if (from === "commandZone") {
+        nextCommandCastsByKey[removed.card.key] =
+          (nextCommandCastsByKey[removed.card.key] ?? 0) + 1;
+      }
+
+      const updatedState: GoldfishState = {
         ...next,
         manaPool: spentPool ?? next.manaPool,
         commandCasts: from === "commandZone" ? next.commandCasts + 1 : next.commandCasts,
+        commandCastsByKey: nextCommandCastsByKey,
+        turnUsage: nextTurnUsage,
+        spellsCastThisTurn: (next.spellsCastThisTurn ?? 0) + 1,
         endStepQueue: nextEndStepQueue,
-        lastActionNote: `Cast ${removed.card.name}${isBlitz ? " (blitz)" : ""} from ${from} → ${destination}.`,
+      };
+
+      const entered =
+        destination === "battlefield"
+          ? updatedState.battlefield[updatedState.battlefield.length - 1]
+          : undefined;
+
+      const dispatched = dispatchGameEvents(
+        updatedState,
+        [
+          {
+            kind: "SpellCast",
+            card: removed.card,
+            from,
+            to: destination,
+            ...(action.alt ? { alt: action.alt } : {}),
+          },
+          { kind: "ZoneChanged", card: removed.card, from, to: destination },
+          ...(entered ? [{ kind: "PermanentEntered" as const, permanent: entered }] : []),
+        ],
+        triggerHandlers,
+      );
+
+      return ok({
+        ...dispatched.state,
+        lastActionNote: `Cast ${removed.card.name}${action.alt ? ` (${action.alt})` : ""} from ${from} → ${destination}.`,
       });
     }
 
@@ -651,23 +582,203 @@ export function stepGoldfishState(
       const perm = state.battlefield[idx];
       const tapped = action.kind === "tap";
       const battlefield = state.battlefield.map((p, i) => (i === idx ? { ...p, tapped } : p));
-      const added = tapped && !perm.tapped ? manaProducedOnTap(perm, state.turn) : EMPTY_MANA_POOL;
+      const added = tapped && !perm.tapped ? manaProducedOnTap(perm, state) : EMPTY_MANA_POOL;
       const manaPool = addMana(state.manaPool, added);
+      const nextState: GoldfishState = { ...state, battlefield, manaPool };
+      const dispatched =
+        tapped && !perm.tapped
+          ? dispatchGameEvents(
+              nextState,
+              [{ kind: "PermanentTapped", permanent: perm }],
+              triggerHandlers,
+            )
+          : { state: nextState, notes: [] };
       return ok({
-        ...state,
-        battlefield,
-        manaPool,
+        ...dispatched.state,
         lastActionNote: `${tapped ? "Tapped" : "Untapped"} ${perm.card.name}.`,
       });
     }
 
-    case "move": {
-      const removed = removeFromZone(state, action.from, action.key);
-      if (!removed) return err({ kind: "CardNotFound", key: action.key, zone: action.from });
-      const next = addToZone(removed.next, action.to, removed.card);
+    case "activate": {
+      const source = state.battlefield.find((p) => p.card.key === action.key);
+      if (!source) return err({ kind: "CardNotFound", key: action.key, zone: "battlefield" });
+      const ability = activatedAbilities.find((a) => a.canActivate(source, state));
+      if (!ability) {
+        return err({
+          kind: "CastNotAllowed",
+          reason: `No registered activated ability matched for ${source.card.name}.`,
+        });
+      }
+      const res = ability.activate({
+        state,
+        source,
+        sacrificeKey: action.sacrificeKey,
+        zoneReplacements,
+      });
+      if (!res.ok) return err({ kind: "CastNotAllowed", reason: res.reason });
+      const dispatched = dispatchGameEvents(res.state, res.events, triggerHandlers);
       return ok({
-        ...next,
-        lastActionNote: `Moved ${removed.card.name} from ${action.from} → ${action.to}.`,
+        ...dispatched.state,
+        lastActionNote: res.note,
+      });
+    }
+
+    case "attach": {
+      const att = state.battlefield.find((p) => p.card.key === action.key);
+      if (!att) return err({ kind: "CardNotFound", key: action.key, zone: "battlefield" });
+      const target = state.battlefield.find((p) => p.card.key === action.targetKey);
+      if (!target) return err({ kind: "CardNotFound", key: action.targetKey, zone: "battlefield" });
+      if (/\bEquipment\b/i.test(att.card.typeLine) && !/\bCreature\b/i.test(target.card.typeLine)) {
+        return err({
+          kind: "CastNotAllowed",
+          reason: `Equipment ${att.card.name} can only attach to a creature (CR 301.5).`,
+        });
+      }
+      const battlefield = state.battlefield.map((p) =>
+        p.card.key === action.key ? { ...p, attachedTo: action.targetKey } : p,
+      );
+      return ok({
+        ...state,
+        battlefield,
+        lastActionNote: `Attached ${att.card.name} to ${target.card.name}.`,
+      });
+    }
+
+    case "mill": {
+      const count = Math.max(1, action.count ?? 1);
+      const milled = state.library.slice(0, count);
+      const library = state.library.slice(milled.length);
+      const graveyard = [...state.graveyard, ...milled];
+      const events = milled.map((card) => ({
+        kind: "ZoneChanged" as const,
+        card,
+        from: "library" as const,
+        to: "graveyard" as const,
+      }));
+      const dispatched = dispatchGameEvents(
+        { ...state, library, graveyard },
+        events,
+        triggerHandlers,
+      );
+      return ok({
+        ...dispatched.state,
+        lastActionNote:
+          milled.length > 0
+            ? `Milled ${milled.map((c) => c.name).join(", ")}.`
+            : "Library is empty; milled 0 cards.",
+      });
+    }
+
+    case "attack": {
+      const keySet = new Set(action.keys);
+      const attackers: BattlefieldPermanent[] = [];
+      for (const key of keySet) {
+        const perm = state.battlefield.find((p) => p.card.key === key);
+        if (!perm) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: `Attacker ${key} not found on battlefield.`,
+          });
+        }
+        if (perm.tapped) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: `${perm.card.name} is tapped and cannot attack.`,
+          });
+        }
+        if (permanentHasKeyword(perm, "defender", state)) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: `${perm.card.name} has defender and cannot attack.`,
+          });
+        }
+        if (perm.enteredTurn === state.turn && !permanentHasKeyword(perm, "haste", state)) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: `${perm.card.name} has summoning sickness and cannot attack this turn.`,
+          });
+        }
+      }
+      const battlefield = state.battlefield.map((p) => {
+        if (!keySet.has(p.card.key)) return p;
+        const abilities = Array.from(new Set([...(p.abilities ?? []), "attacking"]));
+        const vigilant = permanentHasKeyword(p, "vigilance", state);
+        const updated: BattlefieldPermanent = {
+          ...p,
+          tapped: vigilant ? p.tapped : true,
+          abilities,
+        };
+        attackers.push(updated);
+        return updated;
+      });
+      const opponentCount = Math.max(1, action.opponentCount ?? 3);
+      const events = attackers.map((permanent) => ({
+        kind: "CreatureAttacked" as const,
+        permanent,
+        opponentCount,
+      }));
+      const dispatched = dispatchGameEvents(
+        { ...state, phase: "combat", battlefield },
+        events,
+        triggerHandlers,
+      );
+      return ok({
+        ...dispatched.state,
+        lastActionNote: `Attacked with ${attackers.map((a) => a.card.name).join(", ")}.`,
+      });
+    }
+
+    case "end_combat": {
+      const dispatched = dispatchGameEvents(
+        { ...state, phase: "main" },
+        [{ kind: "PhaseEnded", phase: "end_combat" }],
+        triggerHandlers,
+      );
+      return ok({
+        ...dispatched.state,
+        lastActionNote:
+          dispatched.notes.length > 0
+            ? `End of combat: ${dispatched.notes.join("; ")}.`
+            : "Ended combat.",
+      });
+    }
+
+    case "move": {
+      const removed = removeCardFromZone(state, action.from, action.key);
+      if (!removed) return err({ kind: "CardNotFound", key: action.key, zone: action.from });
+      let intent: ZoneChangeIntent = {
+        card: removed.card,
+        from: action.from,
+        to: action.to,
+        previousPermanent: removed.permanent,
+      };
+      for (const rep of zoneReplacements) {
+        if (rep.applies(intent, removed.next)) {
+          intent = rep.replace(intent, removed.next);
+        }
+      }
+      const next = addCardToZone(removed.next, intent.to, removed.card, {
+        from: action.from,
+        replacementEffects,
+      });
+      const toZone: GoldfishZone =
+        intent.to === "library_top" || intent.to === "library_bottom" ? "library" : intent.to;
+      const dispatched = dispatchGameEvents(
+        next,
+        [
+          {
+            kind: "ZoneChanged",
+            card: removed.card,
+            from: action.from,
+            to: toZone,
+            previousPermanent: removed.permanent,
+          },
+        ],
+        triggerHandlers,
+      );
+      return ok({
+        ...dispatched.state,
+        lastActionNote: `Moved ${removed.card.name} from ${action.from} → ${toZone}.`,
       });
     }
 

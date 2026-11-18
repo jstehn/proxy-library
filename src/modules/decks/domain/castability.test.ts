@@ -215,4 +215,64 @@ describe("simulateCastOnCurve", () => {
       ghaltaReduced.spells.find((s) => s.name === "Ghalta, Primal Hunger")?.castOnCurvePct ?? 0;
     expect(ghaltaReducedPct).toBeGreaterThan(ghaltaBasePct);
   });
+
+  it("models hybrid/Phyrexian pips, multi-mana rocks, MDFC lands, and colorless cost reducers", () => {
+    const deck: CastabilityLine[] = [
+      land("Swamp", ["B"], 34),
+      {
+        oracleId: "sol-ring",
+        name: "Sol Ring",
+        board: "main",
+        quantity: 2,
+        typeLine: "Artifact",
+        manaValue: 1,
+        manaCost: "{1}",
+        producedMana: ["C"],
+        text: "{T}: Add {C}{C}.",
+      },
+      {
+        oracleId: "mdfc",
+        name: "Bala Ged Recovery // Bala Ged Sanctuary",
+        board: "main",
+        quantity: 2,
+        typeLine: "Sorcery // Land",
+        manaValue: 3,
+        manaCost: "{2}{G}",
+        producedMana: ["G"],
+        text: "Return target card from your graveyard to your hand. // Bala Ged Sanctuary enters tapped.",
+      },
+      spell("Ashiok, Dream Render", "{1}{U/B}{U/B}", 3),
+      spell("Mutagenic Growth", "{G/P}", 1),
+      {
+        oracleId: "kozilek",
+        name: "Kozilek",
+        board: "main",
+        quantity: 1,
+        typeLine: "Legendary Creature — Eldrazi",
+        manaValue: 10,
+        manaCost: "{8}{C}{C}",
+      },
+      ...Array.from({ length: 59 }, (_, i) => spell(`Filler ${i}`, "{2}{B}", 3)),
+    ];
+
+    const base = simulateCastOnCurve(deck, { rng: seededRng("hybrid-1"), trials: 400 });
+    const ashiok = base.spells.find((s) => s.name === "Ashiok, Dream Render");
+    const mutagenic = base.spells.find((s) => s.name === "Mutagenic Growth");
+    expect(ashiok?.castOnCurvePct).toBeGreaterThan(0.7);
+    expect(mutagenic?.castOnCurvePct).toBeGreaterThan(0.85);
+
+    const withUgin = simulateCastOnCurve(deck, {
+      rng: seededRng("hybrid-1"),
+      trials: 400,
+      profile: {
+        ...EMPTY_DECK_PROFILE,
+        costReducers: [
+          { cardName: "Ugin, the Ineffable", scope: "colorless", genericReduction: 2 },
+        ],
+      },
+    });
+    const kozilekBase = base.spells.find((s) => s.name === "Kozilek")?.castOnCurvePct ?? 0;
+    const kozilekUgin = withUgin.spells.find((s) => s.name === "Kozilek")?.castOnCurvePct ?? 0;
+    expect(kozilekUgin).toBeGreaterThan(kozilekBase);
+  });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_EFFECT_EXTRACTORS, extractEffects, type EffectExtractor } from "./primitives";
 import { cardTags, TAGS, type Tag, type TagFacts } from "./tags";
 
 // Real Oracle text, quoted: the fixture catalog has too few staples (design doc 19, invariant 3).
@@ -328,5 +329,80 @@ describe("cardTags", () => {
   it("lists tags in TAGS order", () => {
     const tags = cardTags(card("Both", "Sorcery", "Destroy target creature. Draw a card."));
     expect(tags).toEqual(["draw", "removal"]);
+  });
+
+  it("extracts composable effect primitives without card-specific branches", () => {
+    expect(
+      extractEffects(
+        card(
+          "Massacre Wurm",
+          "Creature — Phyrexian Wurm",
+          "When this creature enters, creatures your opponents control get -2/-2 until end of turn.",
+        ),
+      ),
+    ).toContainEqual({ kind: "modify_pt", scope: "opponents", negative: true });
+
+    expect(
+      extractEffects(
+        card(
+          "Farewell",
+          "Sorcery",
+          "Choose one or more —\n• Exile all artifacts.\n• Exile all creatures.\n• Exile all enchantments.\n• Exile all graveyards.",
+        ),
+      ),
+    ).toContainEqual({
+      kind: "destroy_or_exile",
+      scope: "all",
+      subject: "artifact",
+      excludesYouControl: true,
+      fromGraveyard: false,
+    });
+  });
+
+  it("supports OCP extension via custom EffectExtractor without modifying TAG_RULES", () => {
+    const customRampExtractor: EffectExtractor = {
+      id: "custom_convoke_mana",
+      extract: (_card, text) =>
+        /\badd \{G\} for each creature\b/i.test(text)
+          ? [{ kind: "mana_production", colors: ["G"] }]
+          : [],
+    };
+    const weirdCard = card(
+      "Custom Mana Spell",
+      "Sorcery",
+      "Add {G} for each creature you control.",
+    );
+    expect(cardTags(weirdCard)).toEqual([]);
+    expect(cardTags(weirdCard, [...DEFAULT_EFFECT_EXTRACTORS, customRampExtractor])).toEqual([
+      "ramp",
+    ]);
+  });
+
+  it("tags sacrifice wipes (All Is Dust), land-aura ramp (Wild Growth/Utopia Sprawl), and mana rocks", () => {
+    expect(
+      cardTags(
+        card(
+          "All Is Dust",
+          "Kindred Sorcery — Eldrazi",
+          "Each player sacrifices all permanents they control that are one or more colors.",
+        ),
+      ),
+    ).toEqual(["wipe"]);
+
+    expect(
+      cardTags(
+        card(
+          "Wild Growth",
+          "Enchantment — Aura",
+          "Enchant land\nWhenever enchanted land is tapped for mana, its controller adds an additional {G}.",
+        ),
+      ),
+    ).toEqual(["ramp"]);
+
+    expect(
+      cardTags(
+        card("Worn Powerstone", "Artifact", "Worn Powerstone enters tapped.\n{T}: Add {C}{C}."),
+      ),
+    ).toEqual(["ramp"]);
   });
 });
