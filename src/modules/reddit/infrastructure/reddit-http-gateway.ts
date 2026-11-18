@@ -172,6 +172,18 @@ function buildSiteSearchQuery(query: string, subreddit: string): string {
   return `(${siteFilter}) ${query}`;
 }
 
+function buildBraveSiteQuery(query: string, subreddit: string): string {
+  if (subreddit === "all") {
+    return `site:reddit.com ${query}`;
+  }
+  const subs = subreddit.split("+").filter(Boolean);
+  if (subs.length === 1) {
+    return `site:reddit.com r/${subs[0]} ${query}`;
+  }
+  const subFilter = subs.map((s) => `r/${s}`).join(" OR ");
+  return `site:reddit.com (${subFilter}) ${query}`;
+}
+
 function extractSubredditFromUrl(url: string): string {
   const match = /\/r\/([A-Za-z0-9_]+)\//i.exec(url);
   return match?.[1] ?? "";
@@ -342,7 +354,7 @@ export function redditHttpGateway(
       if (!hasOAuth && options.braveSearchApiKey) {
         try {
           const braveParams = new URLSearchParams({
-            q: siteQuery,
+            q: buildBraveSiteQuery(query, subreddit),
             count: String(Math.min(20, Math.max(limit * 2, 10))),
           });
           if (timeframe !== "all") {
@@ -372,7 +384,10 @@ export function redditHttpGateway(
               url: r.url,
               snippet: r.description,
             }));
-            return ok(mapWebHitsToPosts(hits, limit));
+            const mapped = mapWebHitsToPosts(hits, limit);
+            if (mapped.length > 0 || !options.searxngUrl) {
+              return ok(mapped);
+            }
           }
         } catch (error) {
           if (!options.searxngUrl) {
