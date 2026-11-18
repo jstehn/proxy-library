@@ -91,6 +91,10 @@ export const TAG_RULES: readonly TagRule[] = [
       rule(String.raw`\bdamage to each (other )?(non\w+ )?creature\b(?! you control)`),
       // Toxic Deluge.
       rule(String.raw`\b(all|each) (other )?creatures? (get|gets) -(\d+|x)/-(\d+|x)`),
+      // Massacre Wurm: one-sided -X/-X.
+      rule(
+        String.raw`\bcreatures (your opponents control|an opponent controls) (get|gets) -(\d+|x)/-(\d+|x)`,
+      ),
       // Evacuation, Cyclonic Rift (overloaded).
       rule(
         String.raw`\breturn (all|each) (nonland )?(permanent|creature)s?\b(?! you control)[^.]* to (its|their) owners?'? hands?`,
@@ -617,6 +621,6 @@ export const THEME_LABELS: Readonly<Record<Theme, string>> = Object.fromEntries(
  * Bumped whenever TAG_RULES, THEME_RULES or BRACKET_TEXT_RULES (./brackets.ts) change: the
  * catalog sync then works out every printing's stored features again (design doc 20,
  * invariant 1). Version 2: bracket flags (design doc 31). Version 3: expanded themes (design
- * doc 38).
+ * doc 38). Version 4: one-sided -X/-X wipes like Massacre Wurm (design doc 61).
  */
-export const CARD_FEATURES_VERSION = 3;
+export const CARD_FEATURES_VERSION = 4;

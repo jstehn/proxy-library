@@ -1,4 +1,4 @@
-import { TAGS, type Tag } from "@/shared/card-search";
+import { cardTags, TAGS, type Tag } from "@/shared/card-search";
 import { assertNever } from "@/shared/kernel";
 import {
   bracketLine,
@@ -10,6 +10,7 @@ import {
   type BracketWarning,
 } from "./brackets";
 import type { EdhrecSignal } from "./suggest";
+import { isPlayed } from "./boards";
 import { BOARDS, type Board, type Format } from "./deck";
 import { deckProblems, shortCount, type CardRules, type DeckProblem } from "./rules";
 import {
@@ -59,6 +60,10 @@ export type RoleDelta = Readonly<{
   before: number;
   after: number;
   target: number | null;
+  /** The changed cards that add copies to this role, e.g. "Cultivate (+1)". */
+  added: readonly string[];
+  /** The changed cards that take copies away from it, e.g. "Farseek (-1)". */
+  removed: readonly string[];
 }>;
 
 export type PreviewSnapshot = Readonly<{
@@ -146,6 +151,43 @@ function snapshotOf(
   };
 }
 
+type CardsBehindRoles = Readonly<{
+  added: ReadonlyMap<Tag, string[]>;
+  removed: ReadonlyMap<Tag, string[]>;
+}>;
+
+/**
+ * Which changed cards move each role count, tagged the way `deckStats` tags them: only copies
+ * moving onto or off the played boards (commander, main) count.
+ */
+function cardsBehindRoleChanges(
+  changes: readonly AppliedChange[],
+  lines: readonly PreviewLine[],
+): CardsBehindRoles {
+  const added = new Map<Tag, string[]>();
+  const removed = new Map<Tag, string[]>();
+  const played = new Map<string, number>();
+  for (const change of changes) {
+    if (!isPlayed(change.board)) continue;
+    const delta = change.afterQuantity - change.beforeQuantity;
+    played.set(change.oracleId, (played.get(change.oracleId) ?? 0) + delta);
+  }
+  for (const [oracleId, delta] of played) {
+    if (delta === 0) continue;
+    const line = lines.find((candidate) => candidate.oracleId === oracleId);
+    if (line === undefined || line.text === undefined) continue;
+    const tags = cardTags({
+      typeLine: line.typeLine,
+      text: line.text,
+      producedMana: line.producedMana ?? [],
+    });
+    const target = delta > 0 ? added : removed;
+    const label = `${line.name} (${delta > 0 ? "+" : ""}${delta})`;
+    for (const tag of tags) target.set(tag, [...(target.get(tag) ?? []), label]);
+  }
+  return { added, removed };
+}
+
 function buildComparison(input: {
   format: Format;
   targetBracket: Bracket | null;
@@ -176,11 +218,14 @@ function buildComparison(input: {
   const remaining = after.problems.filter((problem) => beforeKeys.has(problemKey(problem)));
 
   const targets = roleTargets(input.format);
+  const behind = cardsBehindRoleChanges(input.changes, [...input.after, ...input.before]);
   const roles: RoleDelta[] = TAGS.map((tag) => ({
     tag,
     before: before.stats.tags[tag],
     after: after.stats.tags[tag],
     target: targets !== null && tag in targets ? targets[tag as TargetedTag] : null,
+    added: behind.added.get(tag) ?? [],
+    removed: behind.removed.get(tag) ?? [],
   }));
   const newlyMetRoles =
     targets === null

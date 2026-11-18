@@ -120,6 +120,13 @@ describe("previewChanges (design doc 40, section 3)", () => {
     expect(preview.before.stats.cardCount).toBe(100);
     expect(preview.after.stats.cardCount).toBe(100);
     expect(preview.newlyMetRoles).toEqual(["ramp"]);
+    // The role counts name the cards behind them; the maybeboard Rhystic Study moves nothing.
+    const ramp = preview.roles.find((role) => role.tag === "ramp");
+    expect(ramp?.added).toEqual(["Rampant Growth (+1)"]);
+    expect(ramp?.removed).toEqual([]);
+    const removal = preview.roles.find((role) => role.tag === "removal");
+    expect(removal?.removed).toEqual(["Lightning Bolt (-1)"]);
+    expect(preview.roles.find((role) => role.tag === "draw")?.added).toEqual([]);
     expect(preview.problems.resolved.map((problem) => problem.kind)).toContain(
       "OutsideColorIdentity",
     );

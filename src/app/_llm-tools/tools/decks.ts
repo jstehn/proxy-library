@@ -1677,13 +1677,17 @@ function formatPreviewResponse(
       shortTotal: preview.after.shortTotal,
     },
     priceDelta: money(preview.priceDeltaCents),
-    roles: preview.roles.map((role) => ({
-      role: role.tag,
-      label: TAG_LABELS[role.tag],
-      before: role.before,
-      after: role.after,
-      target: role.target,
-    })),
+    roles: preview.roles
+      .filter((role) => role.before !== role.after || role.target !== null)
+      .map((role) => ({
+        role: role.tag,
+        label: TAG_LABELS[role.tag],
+        before: role.before,
+        after: role.after,
+        target: role.target,
+        ...(role.added.length > 0 ? { added: role.added } : {}),
+        ...(role.removed.length > 0 ? { removed: role.removed } : {}),
+      })),
     newlyMetRoles: preview.newlyMetRoles,
     newlyMissedRoles: preview.newlyMissedRoles,
     problems: {
