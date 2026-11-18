@@ -30,6 +30,7 @@ import {
   httpSpellbookGateway,
   httpWpnGateway,
   huggingFaceTextEmbedder,
+  makeOutsideData,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
 import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
@@ -230,6 +231,7 @@ export function buildCore(config: Config) {
   const realCollection = makeRealCollection({ unitOfWork, clock });
   const wishlist = makeWishlist({ unitOfWork, clock });
   const social = makeSocial({ unitOfWork, clock });
+  const outsideData = makeOutsideData(clock);
 
   return {
     config,
@@ -254,6 +256,7 @@ export function buildCore(config: Config) {
     realCollection,
     wishlist,
     social,
+    outsideData,
     textEmbedder,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,

@@ -32,6 +32,7 @@ export {
   EMBEDDING_MODEL,
   EMBEDDING_TEXT_VERSION,
 } from "./domain/embedding-text";
+export { commanderSlug } from "./domain/edhrec";
 export type { SyncSummary } from "./application/sync";
 export {
   FINISHES,

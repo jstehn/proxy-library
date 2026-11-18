@@ -12,11 +12,13 @@ import {
   budgetList,
   budgetReplacements,
   cardsToGetFor,
-  deckCombosView,
+  checkOwnedCards,
   decksFor,
   decksUsing,
   deckSuggestions,
+  deckView,
   findCard,
+  isPlayed,
   semanticSearchForDeck,
   similarCards,
   type Suggestion,
@@ -29,6 +31,7 @@ import {
   deckNotFound,
   defineTool,
   done,
+  failed,
   heuristicProvenance,
   money,
   moneyOrNull,
@@ -525,48 +528,177 @@ export const semanticSearchForDeckTool = defineTool({
   },
 });
 
-export const findCombosForDeckTool = defineTool({
-  name: "find_combos_for_deck",
-  title: "Find combos and 1-card-away partners",
+export const getRulingsTool = defineTool({
+  name: "get_rulings",
+  title: "Get Scryfall rulings for cards",
   description: [
-    "Lists Commander Spellbook two-card combos already complete in the deck, plus cards you own or can buy that complete a two-card combo with something in the deck (respecting targetBracket).",
-    "Use it when: checking what combos a deck already runs or looking for combo finishers.",
+    "Fetches official Scryfall rulings (with dates) for one or more cards, cached server-side for 24 hours.",
+    "Use it when: checking rules interactions (e.g., alternative costs, replacement effects, triggered abilities) before recommending or cutting a card.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    cards: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(25)
+      .describe(
+        "Card names or ids to fetch Scryfall rulings for (pass a 1-element array for a single card).",
+      ),
+  }),
+  async run(context, input) {
+    const results = await Promise.all(
+      input.cards.map(async (query) => {
+        const found = await findCard(context.container.db, query);
+        try {
+          const fetched = await context.container.outsideData.fetchScryfallRulings(
+            found ? { name: found.name, scryfallId: found.scryfallId } : { name: query },
+          );
+          if (fetched === null) {
+            return { query, found: false, rulings: [] };
+          }
+          return {
+            query,
+            found: true,
+            name: fetched.name,
+            sourceUrl: fetched.sourceUrl,
+            fetchedAt: fetched.fetchedAt,
+            cached: fetched.cached,
+            rulings: fetched.rulings,
+          };
+        } catch (error) {
+          return {
+            query,
+            found: false,
+            error: error instanceof Error ? error.message : "Failed to fetch rulings.",
+            rulings: [],
+          };
+        }
+      }),
+    );
+    return done({ cards: results });
+  },
+});
+
+export const checkOwnedTool = defineTool({
+  name: "check_owned",
+  title: "Batch-check ownership, price, and deck usage",
+  description: [
+    'Checks up to 100 card names in one call: returns owned game copies, owned real copies, cheapest store price, and which of your decks use each card (or "not in catalog").',
+    "Use it when: verifying ownership and prices for a list of cards from outside research (EDHREC, Spellbook, guides).",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    names: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(100)
+      .describe("Up to 100 card names to check."),
+  }),
+  async run(context, input) {
+    const checked = await checkOwnedCards(
+      context.container.db,
+      context.actor.userId,
+      input.names,
+    );
+    return done({
+      cards: checked.map((entry) =>
+        entry.inCatalog
+          ? {
+              query: entry.query,
+              name: entry.name,
+              inCatalog: true,
+              ownedGame: entry.ownedGame,
+              ownedReal: entry.ownedReal,
+              ownedTotal: entry.ownedTotal,
+              cheapestPrice: moneyOrNull(entry.cheapestPriceCents),
+              decks: entry.decks,
+            }
+          : entry,
+      ),
+    });
+  },
+});
+
+export const findCombosForDeckTool = defineTool({
+  name: "find_combos",
+  title: "Find N-card combos via Commander Spellbook",
+  description: [
+    "Queries Commander Spellbook's find-my-combos API (including N-card and commander combos, cached 24 hours) for combos already complete in the deck and combos 1 card away (with missing piece price and ownership).",
+    "Use it when: checking what combos a deck runs for bracket disclosure, or finding combo lines and missing pieces.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
   input: z.object({
     deckId,
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(30)
-      .optional()
-      .describe("Maximum 1-card-away partners per pool (default 15, max 30)."),
-    includeText,
+    includeMaybe: z
+      .boolean()
+      .default(false)
+      .describe("Include cards on the maybeboard when checking for combos."),
   }),
   async run(context, input) {
-    const result = await deckCombosView(
-      context.container.db,
-      context.actor.userId,
-      input.deckId,
-      input.limit,
-    );
-    if (result === null) return deckNotFound(input.deckId);
-    const mapPartner = (entry: (typeof result.oneCardAway.owned)[number]) => ({
-      name: entry.card.name,
-      oracleId: entry.card.oracleId,
-      price: moneyOrNull(entry.card.priceCents),
-      partnersWith: entry.partnersWith,
-      ...(input.includeText ? { text: entry.card.text } : {}),
-    });
+    const view = await deckView(context.container.db, context.actor.userId, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+
+    const commanders = view.lines
+      .filter((l) => l.board === "commander")
+      .map((l) => l.name);
+    const mainCards = view.lines
+      .filter((l) => l.board !== "commander" && (isPlayed(l.board) || (input.includeMaybe && l.board === "maybe")))
+      .map((l) => l.name);
+
+    let spellbook;
+    try {
+      spellbook = await context.container.outsideData.fetchSpellbookCombos(mainCards, commanders);
+    } catch (error) {
+      return failed(
+        "SpellbookUnavailable",
+        `Could not reach Commander Spellbook: ${error instanceof Error ? error.message : "unknown error"}.`,
+      );
+    }
+
+    const missingNames = [...new Set(spellbook.oneCardAway.map((c) => c.missingCardName))];
+    const ownedChecks =
+      missingNames.length > 0
+        ? await checkOwnedCards(context.container.db, context.actor.userId, missingNames)
+        : [];
+    const checkByQuery = new Map(ownedChecks.map((c) => [c.query.toLowerCase(), c]));
+
     return done({
-      complete: result.complete,
-      oneCardAway: {
-        owned: result.oneCardAway.owned.map(mapPartner),
-        store: result.oneCardAway.store.map(mapPartner),
-        hiddenOverTarget: result.oneCardAway.hiddenOverTarget,
-      },
+      sourceUrl: spellbook.sourceUrl,
+      fetchedAt: spellbook.fetchedAt,
+      cached: spellbook.cached,
+      complete: spellbook.complete,
+      oneCardAway: spellbook.oneCardAway.map((combo) => {
+        const owned = checkByQuery.get(combo.missingCardName.toLowerCase());
+        return {
+          id: combo.id,
+          missingPiece:
+            owned && owned.inCatalog
+              ? {
+                  name: owned.name,
+                  inCatalog: true,
+                  owned: owned.ownedTotal > 0,
+                  ownedTotal: owned.ownedTotal,
+                  cheapestPrice: moneyOrNull(owned.cheapestPriceCents),
+                }
+              : {
+                  name: combo.missingCardName,
+                  inCatalog: false,
+                  owned: false,
+                  ownedTotal: 0,
+                  cheapestPrice: null,
+                },
+          uses: combo.uses,
+          produces: combo.produces,
+          steps: combo.steps,
+          prerequisites: combo.prerequisites,
+          bracketTag: combo.bracketTag,
+          manaNeeded: combo.manaNeeded,
+          identity: combo.identity,
+        };
+      }),
     });
   },
 });

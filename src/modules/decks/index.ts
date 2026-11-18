@@ -364,11 +364,13 @@ export {
   type ViewedDeck,
 } from "./queries/sharing";
 export {
+  checkOwnedCards,
   deckSignalCards,
   findCard,
   ownedSignalCards,
   SIGNAL_CARD_LIMIT,
   type CardReference,
+  type OwnedCardCheck,
 } from "./queries/card-facts";
 export {
   searchForDeck,

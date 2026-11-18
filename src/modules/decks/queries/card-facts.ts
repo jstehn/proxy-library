@@ -19,6 +19,7 @@ import { ownedCopies, STANDARD_FIRST } from "./owned";
 export type CardReference = Readonly<{
   oracleId: string;
   printingId: string;
+  scryfallId: string;
   name: string;
   typeLine: string;
   manaCost: string | null;
@@ -38,13 +39,15 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
     await db.execute<{
       oracle_id: string;
       printing_id: string;
+      scryfall_id: string;
       name: string;
       type_line: string;
       mana_cost: string | null;
       face_text: string;
       color_identity: string[];
     }>(sql`
-      select p.oracle_id, p.id as printing_id, p.name, p.type_line, p.mana_cost, p.color_identity,
+      select p.oracle_id, p.id as printing_id, p.scryfall_id, p.name, p.type_line, p.mana_cost,
+             p.color_identity,
              coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '')
                as face_text
         from printings p join card_sets s on s.code = p.set_code
@@ -59,6 +62,7 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
   return {
     oracleId: row.oracle_id,
     printingId: row.printing_id,
+    scryfallId: row.scryfall_id,
     name: row.name,
     typeLine: row.type_line,
     manaCost: row.mana_cost,
@@ -140,4 +144,141 @@ export async function ownedSignalCards(
      limit ${SIGNAL_CARD_LIMIT}
   `);
   return { cards: rows.rows.map(toSignalCard), notes: parsed.notes };
+}
+
+export type OwnedCardCheck =
+  | Readonly<{
+      query: string;
+      inCatalog: false;
+      status: "not in catalog";
+    }>
+  | Readonly<{
+      query: string;
+      inCatalog: true;
+      name: string;
+      oracleId: string;
+      ownedGame: number;
+      ownedReal: number;
+      ownedTotal: number;
+      cheapestPriceCents: number | null;
+      decks: readonly { id: number; name: string; quantity: number }[];
+    }>;
+
+/** Batch-checks ownership (game + real), cheapest store price, and deck usage for up to 100 names. */
+export async function checkOwnedCards(
+  db: DbExecutor,
+  userId: UserId,
+  names: readonly string[],
+): Promise<OwnedCardCheck[]> {
+  const cleaned = names.map((n) => n.trim()).filter((n) => n.length > 0);
+  if (cleaned.length === 0) return [];
+  const lowerUnique = [...new Set(cleaned.map((n) => n.toLowerCase()))];
+  const lowerArray = sql`array[${sql.join(
+    lowerUnique.map((n) => sql`${n}`),
+    sql`, `,
+  )}]::text[]`;
+
+  const resolvedRows = await db.execute<{
+    oracle_id: string;
+    name: string;
+    front_name: string;
+  }>(sql`
+    select distinct on (p.oracle_id) p.oracle_id, p.name,
+           lower(split_part(p.name, ' // ', 1)) as front_name
+      from printings p join card_sets s on s.code = p.set_code
+     where lower(p.name) = any(${lowerArray})
+        or lower(split_part(p.name, ' // ', 1)) = any(${lowerArray})
+     order by p.oracle_id, ${STANDARD_FIRST}
+  `);
+
+  const byLowerName = new Map<string, { oracleId: string; name: string }>();
+  for (const row of resolvedRows.rows) {
+    byLowerName.set(row.name.toLowerCase(), { oracleId: row.oracle_id, name: row.name });
+    if (!byLowerName.has(row.front_name)) {
+      byLowerName.set(row.front_name, { oracleId: row.oracle_id, name: row.name });
+    }
+  }
+
+  const oracleIds = [...new Set([...byLowerName.values()].map((v) => v.oracleId))];
+  if (oracleIds.length === 0) {
+    return names.map((query) => ({
+      query,
+      inCatalog: false,
+      status: "not in catalog",
+    }));
+  }
+
+  const oracleArray = sql`array[${sql.join(
+    oracleIds.map((id) => sql`${id}`),
+    sql`, `,
+  )}]::text[]`;
+
+  const [ownedRows, priceRows, deckRows] = await Promise.all([
+    db.execute<{ oracle_id: string; game: number; real: number }>(sql`
+      select p.oracle_id,
+             coalesce(sum(case when not c.is_real then c.quantity else 0 end), 0)::int as game,
+             coalesce(sum(case when c.is_real then c.quantity else 0 end), 0)::int as real
+        from ${ownedCopies(userId, sql`true`)} c
+        join printings p on p.id = c.printing_id
+       where p.oracle_id = any(${oracleArray})
+       group by p.oracle_id
+    `),
+    db.execute<{ oracle_id: string; cheapest_cents: number }>(sql`
+      select distinct on (p.oracle_id) p.oracle_id, latest.usd_cents as cheapest_cents
+        from printings p
+        join card_sets s on s.code = p.set_code and s.is_enabled
+        join lateral (
+          select ps.usd_cents from price_snapshots ps
+           where ps.printing_id = p.id
+           order by ps.day desc, ps.usd_cents asc
+           limit 1
+        ) latest on true
+       where p.oracle_id = any(${oracleArray})
+       order by p.oracle_id, latest.usd_cents asc
+    `),
+    db.execute<{ oracle_id: string; deck_id: number; name: string; quantity: number }>(sql`
+      select e.oracle_id, d.id as deck_id, d.name, sum(e.quantity)::int as quantity
+        from deck_entries e
+        join decks d on d.id = e.deck_id and d.owner_id = ${userId}
+       where e.oracle_id = any(${oracleArray}) and e.board <> 'maybe'
+       group by e.oracle_id, d.id, d.name
+       order by d.name
+    `),
+  ]);
+
+  const ownedMap = new Map<string, { game: number; real: number }>();
+  for (const row of ownedRows.rows) {
+    ownedMap.set(row.oracle_id, { game: row.game, real: row.real });
+  }
+
+  const priceMap = new Map<string, number>();
+  for (const row of priceRows.rows) {
+    priceMap.set(row.oracle_id, row.cheapest_cents);
+  }
+
+  const deckMap = new Map<string, { id: number; name: string; quantity: number }[]>();
+  for (const row of deckRows.rows) {
+    const list = deckMap.get(row.oracle_id) ?? [];
+    list.push({ id: Number(row.deck_id), name: row.name, quantity: row.quantity });
+    deckMap.set(row.oracle_id, list);
+  }
+
+  return names.map((query) => {
+    const match = byLowerName.get(query.trim().toLowerCase());
+    if (!match) {
+      return { query, inCatalog: false, status: "not in catalog" };
+    }
+    const owned = ownedMap.get(match.oracleId) ?? { game: 0, real: 0 };
+    return {
+      query,
+      inCatalog: true,
+      name: match.name,
+      oracleId: match.oracleId,
+      ownedGame: owned.game,
+      ownedReal: owned.real,
+      ownedTotal: owned.game + owned.real,
+      cheapestPriceCents: priceMap.get(match.oracleId) ?? null,
+      decks: deckMap.get(match.oracleId) ?? [],
+    };
+  });
 }
