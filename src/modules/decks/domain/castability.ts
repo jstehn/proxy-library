@@ -146,6 +146,7 @@ export function simulateCastOnCurve(
         {
           oracleText: line.text,
           typeLine: line.typeLine,
+          manaCost: line.manaCost,
           power: line.power,
           isCommander: line.board === "commander",
         },

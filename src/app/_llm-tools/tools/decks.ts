@@ -2659,6 +2659,7 @@ export const simulateOpeningHandsTool = defineTool({
         line.manaValue ?? 0,
         {
           typeLine: line.typeLine,
+          manaCost: line.manaCost,
           oracleText: line.text,
           isCommander: line.board === "commander",
         },

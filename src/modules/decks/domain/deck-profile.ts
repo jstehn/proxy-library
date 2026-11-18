@@ -177,6 +177,17 @@ function matchesReducer(
   return true;
 }
 
+function countColoredPips(manaCost: string | null | undefined): number {
+  if (!manaCost) return 0;
+  let pips = 0;
+  for (const match of manaCost.matchAll(/\{([^}]+)\}/g)) {
+    const sym = match[1]?.toUpperCase() ?? "";
+    if (!sym || /^\d+$/.test(sym) || sym === "X" || sym === "Y" || sym === "Z") continue;
+    pips += 1;
+  }
+  return pips;
+}
+
 /**
  * Computes effective mana value after applying deck-profile cost reducers.
  * For `perCommandCast` reducers (e.g. Henzie), `commandCasts` defaults to 1 if omitted
@@ -187,6 +198,7 @@ export function effectiveManaValue(
   card: {
     oracleText?: string;
     typeLine?: string;
+    manaCost?: string | null;
     power?: string | number | null;
     isCommander?: boolean;
     isBlitz?: boolean;
@@ -194,14 +206,15 @@ export function effectiveManaValue(
   profile: DeckProfile | null | undefined,
   commandCasts = 1,
 ): number {
-  if (!profile || profile.costReducers.length === 0) return Math.max(0, baseManaValue);
+  const minPips = countColoredPips(card.manaCost);
+  if (!profile || profile.costReducers.length === 0) return Math.max(minPips, baseManaValue);
   let reduction = 0;
   for (const reducer of profile.costReducers) {
     if (!matchesReducer(reducer, baseManaValue, card)) continue;
     const multiplier = reducer.perCommandCast ? Math.max(0, commandCasts) : 1;
     reduction += reducer.genericReduction * multiplier;
   }
-  return Math.max(0, baseManaValue - reduction);
+  return Math.max(minPips, baseManaValue - reduction);
 }
 
 export function isKeyCard(

@@ -161,6 +161,49 @@ describe("deck-profile domain", () => {
       3,
     );
     expect(effectiveManaValue(4, { typeLine: "Instant" }, artifactDeck)).toBe(4);
+
+    // Commander self-reduction (e.g. Ghalta {10}{G}{G}) reduces generic cost but respects {G}{G} floor
+    const ghalta: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        { cardName: "Ghalta, Primal Hunger", scope: "commander", genericReduction: 8 },
+      ],
+    };
+    expect(
+      effectiveManaValue(
+        12,
+        {
+          typeLine: "Legendary Creature — Elder Dinosaur",
+          manaCost: "{10}{G}{G}",
+          isCommander: true,
+        },
+        ghalta,
+      ),
+    ).toBe(4);
+    const ghaltaMax: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        { cardName: "Ghalta, Primal Hunger", scope: "commander", genericReduction: 15 },
+      ],
+    };
+    expect(
+      effectiveManaValue(
+        12,
+        {
+          typeLine: "Legendary Creature — Elder Dinosaur",
+          manaCost: "{10}{G}{G}",
+          isCommander: true,
+        },
+        ghaltaMax,
+      ),
+    ).toBe(2);
+    expect(
+      effectiveManaValue(
+        6,
+        { typeLine: "Creature — Dinosaur", manaCost: "{4}{G}{G}", isCommander: false },
+        ghalta,
+      ),
+    ).toBe(6);
   });
 });
 

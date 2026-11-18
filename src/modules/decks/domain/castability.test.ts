@@ -181,5 +181,38 @@ describe("simulateCastOnCurve", () => {
     const henzieSorcery = henzie.spells.find((s) => s.name === "Time Stretch")?.castOnCurvePct ?? 0;
     expect(henzieTyrant).toBeGreaterThan(baseTyrant);
     expect(henzieSorcery).toBe(baseSorcery);
+
+    // Commander self-reduction (e.g. Ghalta {10}{G}{G}) improves commander castability on curve
+    const ghaltaDeck: CastabilityLine[] = [
+      land("Forest", ["G"], 36),
+      {
+        oracleId: "ghalta",
+        name: "Ghalta, Primal Hunger",
+        board: "commander",
+        quantity: 1,
+        typeLine: "Legendary Creature — Elder Dinosaur",
+        manaValue: 12,
+        manaCost: "{10}{G}{G}",
+        power: "12",
+        text: "This spell costs {X} less to cast, where X is the total power of creatures you control.",
+      },
+      ...Array.from({ length: 63 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
+    ];
+    const ghaltaBase = simulateCastOnCurve(ghaltaDeck, { rng: seededRng("ghalta"), trials: 400 });
+    const ghaltaReduced = simulateCastOnCurve(ghaltaDeck, {
+      rng: seededRng("ghalta"),
+      trials: 400,
+      profile: {
+        ...EMPTY_DECK_PROFILE,
+        costReducers: [
+          { cardName: "Ghalta, Primal Hunger", scope: "commander", genericReduction: 8 },
+        ],
+      },
+    });
+    const ghaltaBasePct =
+      ghaltaBase.spells.find((s) => s.name === "Ghalta, Primal Hunger")?.castOnCurvePct ?? 0;
+    const ghaltaReducedPct =
+      ghaltaReduced.spells.find((s) => s.name === "Ghalta, Primal Hunger")?.castOnCurvePct ?? 0;
+    expect(ghaltaReducedPct).toBeGreaterThan(ghaltaBasePct);
   });
 });
