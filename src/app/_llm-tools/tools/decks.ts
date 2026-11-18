@@ -51,6 +51,7 @@ import {
   updateDeckProfile,
   effectiveManaValue,
   type DeckPlanProfile,
+  isAvoidCard,
   isKeyCard,
   listCardPackages,
   listDeckSnapshots,
@@ -1735,6 +1736,38 @@ function formatPreviewResponse(
   };
 }
 
+function previewGuardrailWarnings(
+  view: DeckView | null,
+  profile: DeckPlanProfile | null,
+  preview: DeckChangePreview,
+): string[] {
+  const warnings: string[] = [];
+  for (const change of preview.changes) {
+    if (!isPlayed(change.board)) continue;
+    const line = view?.lines.find(
+      (l) => l.name.toLowerCase() === change.name.toLowerCase() && l.board === change.board,
+    );
+    const pinned = line?.pinned === true;
+    if (change.afterQuantity < change.beforeQuantity && isKeyCard(change.name, profile, pinned)) {
+      const reason = profile?.keyCards.find(
+        (k) => k.cardName.toLowerCase() === change.name.toLowerCase(),
+      )?.reason;
+      warnings.push(
+        `Cutting ${pinned ? "pinned " : ""}keyCard: ${change.name} (${change.board} ${change.beforeQuantity} -> ${change.afterQuantity})${reason ? ` — ${reason}` : ""}`,
+      );
+    }
+    if (change.afterQuantity > change.beforeQuantity && isAvoidCard(change.name, profile)) {
+      const reason = profile?.avoid.find(
+        (a) => a.cardName.toLowerCase() === change.name.toLowerCase(),
+      )?.reason;
+      warnings.push(
+        `Adding avoid card: ${change.name}${reason ? ` — ${reason}` : ""}`,
+      );
+    }
+  }
+  return warnings;
+}
+
 const PREVIEW_TTL_MS = 30 * 60 * 1000;
 
 type StoredPreview = {
@@ -1987,6 +2020,12 @@ export const applyChangesTool = defineTool({
     );
     if (preview === null) return deckNotFound(input.deckId);
 
+    const [guardrailView, guardrailProfile] = await Promise.all([
+      existingView !== null ? Promise.resolve(existingView) : viewFor(context, input.deckId),
+      deckProfileFor(context, input.deckId),
+    ]);
+    const warnings = previewGuardrailWarnings(guardrailView, guardrailProfile, preview);
+
     if (!input.save) {
       const previewId = randomUUID();
       pendingPreviews.set(previewId, {
@@ -1999,6 +2038,7 @@ export const applyChangesTool = defineTool({
       });
       return done({
         ...formatPreviewResponse(preview, { saved: false, fingerprint: preview.fingerprint }),
+        ...(warnings.length > 0 ? { warnings } : {}),
         previewId,
       });
     }
@@ -2031,9 +2071,10 @@ export const applyChangesTool = defineTool({
       }
     }
 
-    return done(
-      formatPreviewResponse(preview, { saved: true, fingerprint: result.value.fingerprint }),
-    );
+    return done({
+      ...formatPreviewResponse(preview, { saved: true, fingerprint: result.value.fingerprint }),
+      ...(warnings.length > 0 ? { warnings } : {}),
+    });
   },
 });
 
@@ -3648,10 +3689,55 @@ export const setDeckProfileTool = defineTool({
       context.container.clock.now(),
     );
     if (!updated) return deckNotFound(input.deckId);
+
+    const warnings: string[] = [];
+    if (input.keyCards !== undefined || input.avoid !== undefined) {
+      const view = await viewFor(context, input.deckId);
+      const deckNames = new Set(
+        (view?.lines ?? []).flatMap((l) => [
+          l.name.toLowerCase(),
+          ...l.name.split(" // ").map((f) => f.toLowerCase()),
+        ]),
+      );
+      const playedNames = new Set(
+        (view?.lines ?? [])
+          .filter((l) => isPlayed(l.board))
+          .flatMap((l) => [l.name.toLowerCase(), ...l.name.split(" // ").map((f) => f.toLowerCase())]),
+      );
+      const namesToCheck = [
+        ...(input.keyCards ?? []).map((k) => k.cardName),
+        ...(input.avoid ?? []).map((a) => a.cardName),
+      ];
+      const resolved = new Map(
+        await Promise.all(
+          [...new Set(namesToCheck)].map(
+            async (name) => [name, await findCard(context.container.db, name)] as const,
+          ),
+        ),
+      );
+      for (const entry of input.keyCards ?? []) {
+        const found = resolved.get(entry.cardName);
+        if (!found) {
+          warnings.push(`Unknown card in keyCards: "${entry.cardName}" (not in catalog).`);
+        } else if (view && !deckNames.has(found.name.toLowerCase())) {
+          warnings.push(`keyCard "${found.name}" is not currently in this deck.`);
+        }
+      }
+      for (const entry of input.avoid ?? []) {
+        const found = resolved.get(entry.cardName);
+        if (!found) {
+          warnings.push(`Unknown card in avoid: "${entry.cardName}" (not in catalog).`);
+        } else if (view && playedNames.has(found.name.toLowerCase())) {
+          warnings.push(`avoid card "${found.name}" is currently in this deck.`);
+        }
+      }
+    }
+
     return done({
       deckId: updated.deckId,
       profile: updated.profile,
       resolvedTargets: resolveDeckProfileTargets(updated.profile),
+      ...(warnings.length > 0 ? { warnings } : {}),
     });
   },
 });
@@ -3691,10 +3777,42 @@ export const setPrimerTool = defineTool({
       context.container.clock.now(),
     );
     if (!updated) return deckNotFound(input.deckId);
+
+    const warnings: string[] = [];
+    const linkMatches = [...updated.primer.matchAll(/\[\[([^\]]+)\]\]/g)]
+      .map((m) => m[1]?.trim() ?? "")
+      .filter((name) => name.length > 0);
+    const uniqueLinks = [...new Set(linkMatches)];
+    if (uniqueLinks.length > 0) {
+      const view = await viewFor(context, input.deckId);
+      const deckNames = new Set(
+        (view?.lines ?? []).flatMap((l) => [
+          l.name.toLowerCase(),
+          ...l.name.split(" // ").map((f) => f.toLowerCase()),
+        ]),
+      );
+      const missingFromDeck = uniqueLinks.filter((name) => !deckNames.has(name.toLowerCase()));
+      if (missingFromDeck.length > 0) {
+        const resolved = await Promise.all(
+          missingFromDeck.map(
+            async (name) => [name, await findCard(context.container.db, name)] as const,
+          ),
+        );
+        for (const [name, found] of resolved) {
+          if (!found) {
+            warnings.push(`[[${name}]] in primer was not found in the card catalog.`);
+          } else if (!deckNames.has(found.name.toLowerCase())) {
+            warnings.push(`[[${found.name}]] in primer is not currently in this deck.`);
+          }
+        }
+      }
+    }
+
     return done({
       deckId: updated.deckId,
       primerSections: primerSections(updated.primer),
       characters: updated.primer.length,
+      ...(warnings.length > 0 ? { warnings } : {}),
     });
   },
 });
