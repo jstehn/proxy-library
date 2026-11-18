@@ -110,6 +110,80 @@ Several tools (`get_deck` at 98.6 KB, `find_combos` cutting off near 97 KB, `dec
    - `find_combos` / `find_combos_for_deck` additionally support explicit `limit`, `offset`, and `bracket` filters.
    - `deck_sources` returns only the newly added row on `add`.
 
+### 5a. Revision (Nov 18): a compact `get_deck` by default (awaiting approval)
+
+The `fields`/`boards` filters and the capper shipped (5051d9c), but the default response is still
+built for a program rather than a reader. Measured on deck 51 (85 main entries + 34 maybe):
+
+- Every line is an object with two UUIDs (`oracleId`, `printingId`), a `{cents, text}` price,
+  `owned`/`free`/`otherDecks`, `manaValue` *and* `manaCost`, and empty `tags: []`. That's roughly
+  350–600 bytes per card before oracle text.
+- The same cards appear up to four times: `lines`, `list`, `shortList`, `toComplete.cards` and
+  `toComplete.maybeboard`.
+- `tokens`, `openingHandOdds`, `formatRules`, `cardLegalIn`, `roleTargets`, `deckSources` are
+  sent on every call though few deck-building turns need them.
+- When the capper does paginate, it splits `lines` mid-board, so a reader gets half a deck plus
+  every secondary section again on each page.
+
+**What a deck-building LLM needs on the first read:** what the deck is for (profile summary,
+commander, bracket), every card once, grouped the way the player grouped them, with cost, type,
+role/tags and an "unowned" flag; the shape (lands, curve, roles, color pips vs sources); and what's
+wrong (problems). It also needs oracle text: judging synergy, cuts and replacements from names
+alone means guessing. Ids, prices and other-deck usage are needed only for specific tasks
+(buying, editing by id, sharing cards).
+
+**Oracle text is cheap; the structure around it was not.** Measured on deck 51's 86 commander +
+main cards in the local catalog: 12.2 KB of oracle text in total (non-land average 160 chars,
+longest 520; the 23 non-basic lands add only 1.8 KB). Replacing the card's own name with `~` and
+dropping parenthesized reminder text brings it to 10.8 KB. So text stays **on by default** for the
+commander and main boards. Sending it to get_cards instead would cost an extra round trip on every
+review and repeat each card's name, cost and type.
+
+**New default (`view: "compact"`, target ≤ 25 KB for a 100-card deck, about 10 KB of it lines and
+stats and 11 KB of text):**
+
+```jsonc
+{
+  "deck": { "id": 51, "name": "…", "format": "commander", "commander": ["Henzie \"Toolbox\" Torre"],
+            "cards": 100, "lands": 35, "averageManaValue": 3.8,
+            "bracket": { "target": 3, "estimate": "1–2", "gameChangers": 0 } },
+  "profileSummary": "…",            // when a profile exists
+  "fingerprint": "…",
+  "cards": {                         // grouped by heading (or type when grouping is by type)
+    "Ramp": ["1 Birds of Paradise · {G} · Creature — Bird 0/1 · ramp — Flying. {T}: Add one mana of any color.",
+             "1 Sol Ring · {1} · Artifact · ramp — {T}: Add {C}{C}."],
+    "Win Conditions & Drain": ["1 Avacyn, Angel of Horror · {4}{W}{W}… · SHORT"]
+  },
+  "maybe": ["Jund Panorama", "Mortuary", "…"],     // names only
+  "stats": { "curve": […], "types": {…}, "pips": {…}, "sources": {…}, "roles": {…} },
+  "problems": ["…"],
+  "short": { "copies": 4, "cost": "$47.38", "cards": ["Avacyn, Angel of Horror ($12.01)"] },
+  "more": "include: text | prices | ids | owners | tokens | odds | sources | legality; cards: [names]"
+}
+```
+
+Line strings: `qty name · cost · type line [P/T] · tags — oracle text`, then flags only when true
+(`SHORT`, `GC`, `note: …`). No `[]`, no null fields. In the text, the card's own name becomes `~`
+and reminder text is dropped; double-faced cards join faces with ` // `. Basic lands have no text.
+
+**Size safety:** if a deck still exceeds the cap (a 250-card deck, or an unusually wordy one), the
+response pages by *whole headings* with `cursor`, and the header, stats and problems come only on
+page one. It never splits a card or repeats the other sections.
+
+**Opt-ins:**
+
+- `text: false` drops oracle text (a quick list-shaped read, about 10 KB).
+- `boards: ["maybe"]` (or `includeMaybe: true`) returns maybeboard lines in the same format, text
+  included; by default the maybeboard is names only.
+- `cards: ["Avacyn, Angel of Horror", …]` returns full detail (full text with reminder text,
+  ids, price, owned, other decks, note) for just those cards.
+- `include: ["prices" | "ids" | "owners" | "tokens" | "odds" | "sources" | "legality"]` adds the
+  matching section. `view: "full"` keeps today's object lines for scripts and tests.
+- `boards` keeps working; `fields` is replaced by `include` (old values map onto it).
+
+**Out:** `list` is dropped from the default (the grouped `cards` are the readable list; `include:
+["list"]` returns the import/export text). `shortList` and `toComplete` merge into `short`.
+
 ## 6. Use cases & MCP tools
 
 | Tool / Use case | Actor / authz | Input | Output / Behavior |
