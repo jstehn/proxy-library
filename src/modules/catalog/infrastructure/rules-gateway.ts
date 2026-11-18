@@ -2,7 +2,7 @@ import type { Fetch } from "@/shared/http";
 import type { ComprehensiveRulesGateway } from "../application/ports";
 
 const WIZARDS_RULES_PAGE = "https://magic.wizards.com/en/rules";
-const TXT_LINK_RE = /https:\/\/media\.wizards\.com\/[^"'\s<>]*MagicCompRules[^"'\s<>]*\.txt/i;
+const TXT_LINK_RE = /https:\/\/media\.wizards\.com\/[^"'<>]*MagicCompRules[^"'<>]*\.txt/i;
 
 export function httpComprehensiveRulesGateway(fetchFn: Fetch): ComprehensiveRulesGateway {
   return {
@@ -16,7 +16,7 @@ export function httpComprehensiveRulesGateway(fetchFn: Fetch): ComprehensiveRule
       if (!match) {
         throw new Error("Could not locate MagicCompRules .txt link on Wizards rules page.");
       }
-      const sourceUrl = match[0].replace(/&amp;/g, "&");
+      const sourceUrl = encodeURI(match[0].replace(/&amp;/g, "&"));
       const txtRes = await fetchFn(sourceUrl);
       if (!txtRes.ok) {
         throw new Error(`Failed to download Comprehensive Rules (${txtRes.status}): ${sourceUrl}`);
