@@ -6,6 +6,7 @@ import {
   isAvoidCard,
   isKeyCard,
   patchPrimerSection,
+  primerSections,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
   type DeckProfile,
@@ -89,6 +90,14 @@ describe("deck-profile domain", () => {
     const appended = patchPrimerSection(updated, "Watch out for", "Rest in Peace.");
     expect(appended).toContain("## Watch out for\n\nRest in Peace.");
     expect(appended).toContain("## Mulligan\n\nKeep 2 lands + ramp.");
+    expect(primerSections(appended)).toEqual(["Plan", "Mulligan", "Watch out for"]);
+
+    // Empty content removes a section, and removing one that isn't there changes nothing.
+    const removed = patchPrimerSection(appended, "Mulligan", "  ");
+    expect(primerSections(removed)).toEqual(["Plan", "Watch out for"]);
+    expect(removed).not.toContain("Keep 2 lands");
+    expect(patchPrimerSection(removed, "Nope", "")).toBe(removed);
+    expect(patchPrimerSection(null, "Plan", "")).toBe("");
   });
 
   it("summarizes deck profile concisely", () => {

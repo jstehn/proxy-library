@@ -46,6 +46,7 @@ import {
   library,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
+  primerSections,
   updateDeckPrimer,
   updateDeckProfile,
   effectiveManaValue,
@@ -3519,8 +3520,9 @@ export const getDeckProfileTool = defineTool({
   name: "get_deck_profile",
   title: "Get deck profile & primer",
   description: [
-    "Returns the deck's structured profile (plan, landTarget, roleTargets, keyCards, avoid, costReducers, winCons, declaredCombos, mulligan, pilotNotes) and optionally the Markdown primer.",
-    "Use it when: starting any deck review so you know the deck's plan, pinned keyCards, avoid list, and cost reducers before suggesting changes.",
+    "Returns everything the deck's primer holds: the structured profile (plan, landTarget, roleTargets, keyCards, avoid, costReducers, winCons, declaredCombos, mulligan, pilotNotes), the Markdown primer's section names (or its full text with includePrimer), and each card's one-line role and pin.",
+    "Use it when: starting any deck review, so you know the plan, the cards never to cut (keyCards and pinned cards), the avoid list and cost reducers before suggesting changes.",
+    "Edit with: set_deck_profile (structured fields), set_primer (one ## section, or the whole primer), apply_changes (a card's role and pinned).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -3529,16 +3531,29 @@ export const getDeckProfileTool = defineTool({
     includePrimer: z.boolean().default(false).describe("Include full Markdown primer text."),
   }),
   async run(context, input) {
-    const stored = await getDeckProfile(context.container.db, context.actor.userId, input.deckId);
+    const [stored, view] = await Promise.all([
+      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
+      viewFor(context, input.deckId),
+    ]);
     if (!stored) return deckNotFound(input.deckId);
     const resolvedTargets = resolveDeckProfileTargets(stored.profile);
+    const lines = view?.lines ?? [];
+    const cardRoles = Object.fromEntries(
+      lines.flatMap((line) => (line.role ? [[line.name, line.role] as const] : [])),
+    );
+    const pinnedCards = [
+      ...new Set(lines.filter((line) => line.pinned === true).map((line) => line.name)),
+    ];
     return done({
       deckId: stored.deckId,
       deckName: stored.deckName,
       format: stored.format,
       profile: stored.profile,
       resolvedTargets,
-      ...(input.includePrimer ? { primer: stored.primer } : { hasPrimer: Boolean(stored.primer) }),
+      primerSections: primerSections(stored.primer),
+      ...(input.includePrimer ? { primer: stored.primer ?? "" } : {}),
+      ...(pinnedCards.length > 0 ? { pinnedCards } : {}),
+      ...(Object.keys(cardRoles).length > 0 ? { cardRoles } : {}),
     });
   },
 });
@@ -3652,8 +3667,15 @@ export const setPrimerTool = defineTool({
       .min(1)
       .max(80)
       .optional()
-      .describe("Optional ## heading name to patch in-place (omit to replace the entire primer)."),
-    content: z.string().max(20000).describe("Markdown content for the section (or full primer)."),
+      .describe(
+        "Optional ## heading name to patch in place, or to add at the end (omit to replace the entire primer).",
+      ),
+    content: z
+      .string()
+      .max(20000)
+      .describe(
+        'Markdown for the section (without its "## " heading) or for the full primer; "" removes the section (or clears the primer).',
+      ),
   }),
   async run(context, input) {
     const updated = await updateDeckPrimer(
@@ -3664,6 +3686,10 @@ export const setPrimerTool = defineTool({
       context.container.clock.now(),
     );
     if (!updated) return deckNotFound(input.deckId);
-    return done(updated);
+    return done({
+      deckId: updated.deckId,
+      primerSections: primerSections(updated.primer),
+      characters: updated.primer.length,
+    });
   },
 });

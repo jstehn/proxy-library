@@ -522,6 +522,7 @@ export {
   isAvoidCard,
   isKeyCard,
   patchPrimerSection,
+  primerSections,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
   type AvoidCard,

@@ -203,6 +203,51 @@ describe("the MCP server", () => {
     expect(detail.cards[0]).toMatchObject({ role: "Answers anything for {2}{W}", pinned: true });
   });
 
+  it("reads and edits the whole primer through the tools: profile, sections, roles and pins", async () => {
+    const client = await connect();
+    const { deckId } = await call(client, "create_deck", {
+      name: "Primer",
+      list: "Commander\n1 Beza, the Bounding Spring\nDeck\n1 Banishing Light\n10 Plains",
+    });
+    await call(client, "set_deck_profile", {
+      deckId,
+      plan: "Go wide with tokens.",
+      keyCards: [{ cardName: "Banishing Light", reason: "the only removal" }],
+      avoid: [{ cardName: "Carrot Cake", reason: "too slow" }],
+    });
+    await call(client, "set_primer", {
+      deckId,
+      section: "Plan",
+      content: "Make [[Beza, the Bounding Spring]] happy.",
+    });
+    const patched = await call(client, "set_primer", {
+      deckId,
+      section: "Mulligan",
+      content: "Keep 3 lands.",
+    });
+    expect(patched.primerSections).toEqual(["Plan", "Mulligan"]);
+    await saveChange(client, deckId, { card: "Plains", role: "Mana", pinned: true });
+
+    const read = await call(client, "get_deck_profile", { deckId });
+    expect(read.profile).toMatchObject({
+      plan: "Go wide with tokens.",
+      keyCards: [{ cardName: "Banishing Light", reason: "the only removal" }],
+      avoid: [{ cardName: "Carrot Cake", reason: "too slow" }],
+    });
+    expect(read.primerSections).toEqual(["Plan", "Mulligan"]);
+    expect(read.primer).toBeUndefined();
+    expect(read.pinnedCards).toEqual(["Plains"]);
+    expect(read.cardRoles).toEqual({ Plains: "Mana" });
+
+    await call(client, "set_primer", { deckId, section: "Mulligan", content: "" });
+    const full = await call(client, "get_deck_profile", { deckId, includePrimer: true });
+    expect(full.primerSections).toEqual(["Plan"]);
+    expect(full.primer).toBe("## Plan\n\nMake [[Beza, the Bounding Spring]] happy.");
+
+    const deck = await call(client, "get_deck", { deckId, text: false });
+    expect(deck.profileSummary).toContain("Go wide with tokens.");
+  });
+
   it("replaces a list only with a fresh fingerprint (rule 11)", async () => {
     const client = await connect();
     const { deckId } = await call(client, "create_deck", { name: "Test", format: "casual" });

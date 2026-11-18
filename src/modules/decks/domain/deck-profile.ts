@@ -211,7 +211,8 @@ export function patchPrimerSection(
 ): string {
   const heading = section.trim().replace(/^#+\s*/, "");
   const body = content.trim();
-  const block = `## ${heading}\n\n${body}`;
+  // Empty content removes the section (and leaves the primer as it was if there's none).
+  const block = body === "" ? "" : `## ${heading}\n\n${body}`;
   const current = (existingPrimer ?? "").trim();
   if (!current) return block;
 
@@ -234,7 +235,7 @@ export function patchPrimerSection(
   }
 
   if (startIdx === -1) {
-    return `${current}\n\n${block}`;
+    return block === "" ? current : `${current}\n\n${block}`;
   }
 
   const before = lines.slice(0, startIdx);
@@ -243,6 +244,11 @@ export function patchPrimerSection(
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/** The primer's "## Section" headings in order, so a tool can patch one by name. */
+export function primerSections(primer: string | null | undefined): string[] {
+  return [...(primer ?? "").matchAll(/^##\s+(.+)$/gm)].map((match) => (match[1] ?? "").trim());
 }
 
 /**
