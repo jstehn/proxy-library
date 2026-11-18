@@ -70,6 +70,8 @@ export type DeckEntry = Readonly<{
   heading: string | null;
   /** Why this card is in the deck (design doc 41), or null. */
   note: string | null;
+  /** Structured role/synergy tags on this line (e.g. ["Blitz", "Sac"]). */
+  tags?: readonly string[];
 }>;
 
 export const GROUPINGS = ["type", "custom"] as const;
@@ -132,19 +134,37 @@ export function checkQuantity(quantity: number): Result<number, QuantityInvalid>
   return ok(quantity);
 }
 
+/** Normalizes line tags: trims, drops empties, deduplicates case-insensitively, caps at 20. */
+export function normalizeTags(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const trimmed = raw.trim().slice(0, 40);
+    if (trimmed.length === 0) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 /**
  * The deck with one entry set to a quantity (0 removes it). Keeps the entry's pinned printing
  * unless a new one is given.
  */
 export function withEntry(
   deck: Deck,
-  change: Omit<DeckEntry, "printingId" | "finish" | "heading" | "note"> & {
+  change: Omit<DeckEntry, "printingId" | "finish" | "heading" | "note" | "tags"> & {
     printingId?: PrintingId | null;
     finish?: Finish | null;
     /** A heading, null to clear it, or left out to keep the line's (design doc 34). */
     heading?: string | null;
     /** A note, null to clear it, or left out to keep the line's (design doc 41). */
     note?: string | null;
+    /** Structured tags, or left out to keep the line's. */
+    tags?: readonly string[];
   },
 ): Deck {
   const same = (entry: DeckEntry) =>
@@ -152,6 +172,8 @@ export function withEntry(
   const existing = deck.entries.find(same);
   const others = deck.entries.filter((entry) => !same(entry));
   if (change.quantity === 0) return { ...deck, entries: others };
+  const resolvedTags =
+    change.tags !== undefined ? normalizeTags(change.tags) : (existing?.tags ?? []);
   const entry: DeckEntry = {
     oracleId: change.oracleId,
     board: change.board,
@@ -160,6 +182,7 @@ export function withEntry(
     finish: change.finish ?? existing?.finish ?? null,
     heading: change.heading !== undefined ? change.heading : (existing?.heading ?? null),
     note: change.note !== undefined ? change.note : (existing?.note ?? null),
+    ...(resolvedTags.length > 0 ? { tags: resolvedTags } : {}),
   };
   return { ...deck, entries: [...others, entry] };
 }

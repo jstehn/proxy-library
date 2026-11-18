@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 
 const EDHREC_FRAMING =
   "Popularity data: shows what people play, not what is good. Inclusion % is not win rate.";
 import {
+  addDeckSource,
   auditDeck,
   BOARDS,
   bracketLine,
@@ -42,6 +44,7 @@ import {
   library,
   listCardPackages,
   listDeckSnapshots,
+  listDeckSources,
   applyCardPackageToDeck,
   createCardPackage,
   manaBasePlan,
@@ -642,6 +645,41 @@ export const getDeck = defineTool({
       .describe(
         "Include the list of other decks using each card (free count is still kept). Set false to save space on big decks.",
       ),
+    boards: z
+      .array(z.enum(BOARDS))
+      .optional()
+      .describe('Optional board filter for lines (e.g. ["main", "maybe"]).'),
+    tag: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Optional tag filter for lines (e.g. "Blitz").'),
+    singleTagOnly: z
+      .boolean()
+      .default(false)
+      .describe("When true, return only non-land lines that have exactly one tag (cohesion check)."),
+    fields: z
+      .array(
+        z.enum([
+          "deck",
+          "fingerprint",
+          "lines",
+          "stats",
+          "formatRules",
+          "cardLegalIn",
+          "roleTargets",
+          "problems",
+          "bracket",
+          "openingHandOdds",
+          "tokens",
+          "list",
+          "shortList",
+          "toComplete",
+          "deckSources",
+        ]),
+      )
+      .optional()
+      .describe("Optional list of top-level fields to return (e.g. [\"fingerprint\", \"lines\"])."),
   }),
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
@@ -654,7 +692,7 @@ export const getDeck = defineTool({
       freeMulligan: view.deck.format === "commander",
     });
     const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
-    const [rawTokens, combos] = await Promise.all([
+    const [rawTokens, combos, deckSources] = await Promise.all([
       deckTokenLines(
         context.container.db,
         view.deck.id,
@@ -673,6 +711,7 @@ export const getDeck = defineTool({
               .map((line) => line.oracleId),
           )
         : Promise.resolve(undefined),
+      listDeckSources(context.container.db, context.actor.userId, input.deckId),
     ]);
     const checklist = rawTokens.map(toTokenChecklistItem);
     const missingCards = problems.flatMap((problem) => {
@@ -717,7 +756,21 @@ export const getDeck = defineTool({
         };
       });
 
-    return done({
+    const filteredLines = view.lines.filter((line) => {
+      if (input.boards && input.boards.length > 0 && !input.boards.includes(line.board)) {
+        return false;
+      }
+      if (input.tag !== undefined) {
+        const needle = input.tag.trim().toLowerCase();
+        if (!(line.tags ?? []).some((t) => t.toLowerCase() === needle)) return false;
+      }
+      if (input.singleTagOnly) {
+        if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
+      }
+      return true;
+    });
+
+    const fullPayload: Record<string, unknown> = {
       deck: {
         id: view.deck.id,
         name: view.deck.name,
@@ -727,7 +780,7 @@ export const getDeck = defineTool({
         headings: view.deck.headings,
       },
       fingerprint: print,
-      lines: view.lines.map((line) => ({
+      lines: filteredLines.map((line) => ({
         name: line.name,
         oracleId: line.oracleId,
         printingId: line.printingId,
@@ -735,6 +788,7 @@ export const getDeck = defineTool({
         quantity: line.quantity,
         ...(line.heading !== null ? { heading: line.heading } : {}),
         ...(line.note !== null ? { note: line.note } : {}),
+        tags: line.tags ?? [],
         owned: line.owned,
         ...(line.ownedReal > 0 ? { ownedReal: line.ownedReal } : {}),
         ...(line.otherDecks.length > 0
@@ -825,7 +879,16 @@ export const getDeck = defineTool({
         })),
         ...(maybeboardCards.length > 0 ? { maybeboard: maybeboardCards } : {}),
       },
-    });
+      deckSources: deckSources ?? [],
+    };
+    if (input.fields && input.fields.length > 0) {
+      const selected: Record<string, unknown> = {};
+      for (const field of input.fields) {
+        if (field in fullPayload) selected[field] = fullPayload[field];
+      }
+      return done(selected);
+    }
+    return done(fullPayload);
   },
 });
 
@@ -980,6 +1043,11 @@ export const setDeckEntry = defineTool({
       .describe(
         `Why this card is in the deck (up to ${MAX_NOTE_LENGTH} characters); "" clears it.`,
       ),
+    tags: z
+      .array(z.string().min(1).max(40))
+      .max(20)
+      .optional()
+      .describe('Optional structured role/synergy tags (e.g. ["Blitz", "Sac"]); [] clears them.'),
   }),
   async run(context, input) {
     const found = await findCard(context.container.db, input.card);
@@ -992,6 +1060,7 @@ export const setDeckEntry = defineTool({
       ...(input.note !== undefined && input.quantity > 0
         ? { note: input.note === "" ? null : input.note }
         : {}),
+      ...(input.tags !== undefined && input.quantity > 0 ? { tags: input.tags } : {}),
     });
     if (!result.ok) {
       switch (result.error.kind) {
@@ -1031,6 +1100,7 @@ export const setDeckEntry = defineTool({
       quantity: input.quantity,
       ...(input.heading !== undefined && input.quantity > 0 ? { heading: input.heading } : {}),
       ...(input.note !== undefined && input.quantity > 0 ? { note: input.note } : {}),
+      ...(input.tags !== undefined && input.quantity > 0 ? { tags: input.tags } : {}),
     });
   },
 });
@@ -1289,12 +1359,32 @@ function formatPreviewResponse(
   };
 }
 
+const PREVIEW_TTL_MS = 30 * 60 * 1000;
+
+type StoredPreview = {
+  userId: string;
+  deckId: number;
+  fingerprint: string;
+  changesToSave: Array<{
+    oracleId: string;
+    board: (typeof BOARDS)[number];
+    quantity?: number;
+    note?: string | null;
+    heading?: string | null;
+    tags?: readonly string[];
+  }>;
+  preview: DeckChangePreview;
+  expiresAtMs: number;
+};
+
+const pendingPreviews = new Map<string, StoredPreview>();
+
 export const applyChangesTool = defineTool({
   name: "apply_changes",
   title: "Preview or apply a batch of changes to a deck",
   description: [
-    "Pre-evaluates (and optionally saves) a batch of card count changes to a deck: returns before/after for card count, curve, average mana value, roles vs targets, colors, Commander bracket, problems added/resolved/remaining, newly short cards, price difference, and the deck's fingerprint. Each change sets the card's count on a board (0 removes it).",
-    "Use it when: testing swaps, cuts or additions before changing the player's deck, or applying multiple changes at once. Leave save false (the default) to preview first, show the player the differences, and save only what they agreed to by calling again with save true and the preview's fingerprint.",
+    "Pre-evaluates (and optionally saves) a batch of card changes to a deck: returns before/after for card count, curve, average mana value, roles vs targets, colors, Commander bracket, problems added/resolved/remaining, newly short cards, price difference, fingerprint, and a previewId. Each change can set quantity (0 removes; omit to update only note/heading/tags on an existing line), note, heading, and tags.",
+    "Use it when: testing swaps, cuts or additions before changing the player's deck, or applying multiple changes/notes/headings/tags at once. Leave save false (the default) to preview first, then save without resending changes by calling with { deckId, previewId, save: true } (or pass changes + fingerprint).",
     'Rules: all card names must match the catalog or nothing is previewed or saved. To move a card to the maybeboard, send two changes: 0 on "main" and its count on "maybe".',
   ].join("\n"),
   scope: "decks:write",
@@ -1310,7 +1400,10 @@ export const applyChangesTool = defineTool({
             .int()
             .min(0)
             .max(MAX_QUANTITY)
-            .describe("How many copies the deck should have on this board; 0 removes the card."),
+            .optional()
+            .describe(
+              "How many copies the deck should have on this board (0 removes); omit to keep existing quantity when updating note, heading, or tags.",
+            ),
           board,
           note: z
             .string()
@@ -1319,28 +1412,104 @@ export const applyChangesTool = defineTool({
             .describe(
               `Optional note explaining why this card is in the deck (up to ${MAX_NOTE_LENGTH} chars); "" clears it.`,
             ),
+          heading: z
+            .string()
+            .max(200)
+            .optional()
+            .describe('Optional custom heading (e.g. "Ramp"); "" clears it.'),
+          tags: z
+            .array(z.string().min(1).max(40))
+            .max(20)
+            .optional()
+            .describe('Optional structured tags (e.g. ["Blitz", "Sac"]); [] clears them.'),
         }),
       )
       .min(1)
       .max(100)
-      .describe("Count changes to preview or save (1 to 100 entries)."),
+      .optional()
+      .describe(
+        "Changes to preview or save (1 to 100 entries). Optional when saving with previewId.",
+      ),
     save: z
       .boolean()
       .default(false)
       .describe(
-        "False (the default) previews without saving; true saves all changes if fingerprint matches.",
+        "False (the default) previews without saving; true saves all changes if fingerprint/previewId matches.",
       ),
     fingerprint: z
       .string()
       .optional()
-      .describe("Required when save is true: the fingerprint from get_deck or a preview."),
+      .describe("Required when save is true without previewId: the fingerprint from get_deck or a preview."),
+    previewId: z
+      .string()
+      .optional()
+      .describe("Optional previewId from a prior save: false call to commit without resending changes."),
   }),
   async run(context, input) {
+    const nowMs = context.container.clock.now().getTime();
+    for (const [id, item] of pendingPreviews.entries()) {
+      if (item.expiresAtMs <= nowMs) pendingPreviews.delete(id);
+    }
+
+    if (input.save && input.previewId && (!input.changes || input.changes.length === 0)) {
+      const stored = pendingPreviews.get(input.previewId);
+      if (
+        !stored ||
+        stored.userId !== context.actor.userId ||
+        stored.deckId !== input.deckId ||
+        stored.expiresAtMs <= nowMs
+      ) {
+        return failed(
+          "PreviewExpired",
+          "That previewId is missing or expired. Preview the changes again.",
+        );
+      }
+      const fp = input.fingerprint ?? stored.fingerprint;
+      const result = await context.container.decks.applyChanges(context.actor, {
+        deckId: DeckId.of(input.deckId),
+        fingerprint: fp,
+        changes: stored.changesToSave,
+      });
+      if (!result.ok) {
+        switch (result.error.kind) {
+          case "DeckNotFound":
+            return deckNotFound(input.deckId);
+          case "DeckChanged":
+            return failed(
+              "DeckChanged",
+              "The deck changed since that preview. Preview again without saving.",
+            );
+          case "QuantityInvalid":
+            return failed("QuantityInvalid", `Use 0 to ${result.error.maximum} copies.`);
+          case "CardNotFound":
+            return cardNotFound("one of the changed cards");
+          case "NoteInvalid":
+            return failed(
+              "NoteInvalid",
+              `Line notes must be 1 to ${result.error.maximum} characters (or "" to clear).`,
+            );
+          case "HeadingInvalid":
+            return failed("HeadingInvalid", HEADING_RULE);
+        }
+      }
+      pendingPreviews.delete(input.previewId);
+      return done(
+        formatPreviewResponse(stored.preview, { saved: true, fingerprint: result.value.fingerprint }),
+      );
+    }
+
+    if (!input.changes || input.changes.length === 0) {
+      return failed(
+        "InputInvalid",
+        "Pass changes (or a previewId with save: true).",
+      );
+    }
+
     const saveFingerprint = input.fingerprint ?? "";
     if (input.save && saveFingerprint === "") {
       return failed(
         "InputInvalid",
-        "Pass the fingerprint from get_deck or a prior preview when save is true.",
+        "Pass the fingerprint from get_deck or a prior preview (or previewId) when save is true.",
       );
     }
     const uniqueNames = [...new Set(input.changes.map((entry) => entry.card))];
@@ -1361,7 +1530,7 @@ export const applyChangesTool = defineTool({
     }
 
     for (const entry of input.changes) {
-      if (entry.quantity > 0 && entry.note !== undefined && entry.note !== "") {
+      if ((entry.quantity ?? 1) > 0 && entry.note !== undefined && entry.note !== "") {
         const checked = checkNote(entry.note);
         if (!checked.ok) {
           return failed(
@@ -1372,19 +1541,42 @@ export const applyChangesTool = defineTool({
       }
     }
 
+    let existingView: DeckView | null = null;
+    if (input.changes.some((c) => c.quantity === undefined)) {
+      existingView = await viewFor(context, input.deckId);
+      if (existingView === null) return deckNotFound(input.deckId);
+    }
+
     const resolvedChanges: DeckChange[] = [];
-    const changesToSave: Array<DeckChange & { note?: string | null }> = [];
+    const changesToSave: StoredPreview["changesToSave"] = [];
     for (const entry of input.changes) {
       const oracleId = byName.get(entry.card);
       if (oracleId === undefined) continue;
-      resolvedChanges.push({ oracleId, board: entry.board, quantity: entry.quantity });
+      let resolvedQty = entry.quantity;
+      if (resolvedQty === undefined) {
+        const existingLine = existingView?.lines.find(
+          (l) => l.oracleId === oracleId && l.board === entry.board,
+        );
+        if (!existingLine) {
+          return failed(
+            "QuantityInvalid",
+            `${entry.card} is not on the ${entry.board} board; pass quantity to add it.`,
+          );
+        }
+        resolvedQty = existingLine.quantity;
+      }
+      resolvedChanges.push({ oracleId, board: entry.board, quantity: resolvedQty });
       changesToSave.push({
         oracleId,
         board: entry.board,
-        quantity: entry.quantity,
-        ...(entry.note !== undefined && entry.quantity > 0
+        quantity: resolvedQty,
+        ...(entry.note !== undefined && resolvedQty > 0
           ? { note: entry.note === "" ? null : entry.note }
           : {}),
+        ...(entry.heading !== undefined && resolvedQty > 0
+          ? { heading: entry.heading === "" ? null : entry.heading }
+          : {}),
+        ...(entry.tags !== undefined && resolvedQty > 0 ? { tags: entry.tags } : {}),
       });
     }
 
@@ -1397,9 +1589,19 @@ export const applyChangesTool = defineTool({
     if (preview === null) return deckNotFound(input.deckId);
 
     if (!input.save) {
-      return done(
-        formatPreviewResponse(preview, { saved: false, fingerprint: preview.fingerprint }),
-      );
+      const previewId = randomUUID();
+      pendingPreviews.set(previewId, {
+        userId: context.actor.userId,
+        deckId: input.deckId,
+        fingerprint: preview.fingerprint,
+        changesToSave,
+        preview,
+        expiresAtMs: nowMs + PREVIEW_TTL_MS,
+      });
+      return done({
+        ...formatPreviewResponse(preview, { saved: false, fingerprint: preview.fingerprint }),
+        previewId,
+      });
     }
 
     const result = await context.container.decks.applyChanges(context.actor, {
@@ -1425,6 +1627,8 @@ export const applyChangesTool = defineTool({
             "NoteInvalid",
             `Line notes must be 1 to ${result.error.maximum} characters (or "" to clear).`,
           );
+        case "HeadingInvalid":
+          return failed("HeadingInvalid", HEADING_RULE);
       }
     }
 
@@ -2418,5 +2622,50 @@ export const compareToEdhrecTool = defineTool({
       highInclusionNotInDeck,
       inDeckNotOnEdhrec,
     });
+  },
+});
+
+export const deckSourcesTool = defineTool({
+  name: "deck_sources",
+  title: "Save or list research sources for a deck",
+  description: [
+    "Saves an outside research source (URL, title, what it was used for) onto a deck and returns all saved sources, or lists them when url is omitted.",
+    "Use it when: recording EDHREC pages, guides, primers, or Spellbook/Scryfall links used for a deck so later sessions don't redo the research.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    url: z.string().url().optional().describe("Optional source URL to save."),
+    title: z.string().min(1).max(200).optional().describe("Title of the source."),
+    usedFor: z
+      .string()
+      .max(500)
+      .optional()
+      .describe("What this source was used for (e.g. 'blitz rulings, mana base targets')."),
+  }),
+  async run(context, input) {
+    if (input.url !== undefined) {
+      const sources = await addDeckSource(
+        context.container.db,
+        context.actor.userId,
+        input.deckId,
+        {
+          url: input.url,
+          title: input.title ?? input.url,
+          usedFor: input.usedFor ?? "",
+        },
+        context.container.clock.now(),
+      );
+      if (sources === null) return deckNotFound(input.deckId);
+      return done({ deckId: input.deckId, sources });
+    }
+    const sources = await listDeckSources(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+    );
+    if (sources === null) return deckNotFound(input.deckId);
+    return done({ deckId: input.deckId, sources });
   },
 });

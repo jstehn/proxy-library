@@ -37,6 +37,7 @@ const SnapshotEntrySchema = z.object({
   finish: FinishSchema.nullable(),
   heading: z.string().nullable(),
   note: z.string().nullable().default(null),
+  tags: z.array(z.string()).default([]),
 });
 
 export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
@@ -92,6 +93,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
         finish: entry.finish === null ? null : FinishSchema.parse(entry.finish),
         heading: entry.heading,
         note: entry.note,
+        tags: entry.tags,
       })),
     };
   }
@@ -140,9 +142,13 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
     // Replace the entries: simpler than working out what changed, and a deck is small.
     await db.delete(deckEntries).where(eq(deckEntries.deckId, deck.id));
     if (deck.entries.length > 0) {
-      await db
-        .insert(deckEntries)
-        .values(deck.entries.map((entry) => ({ ...entry, deckId: deck.id })));
+      await db.insert(deckEntries).values(
+        deck.entries.map((entry) => ({
+          ...entry,
+          tags: [...(entry.tags ?? [])],
+          deckId: deck.id,
+        })),
+      );
     }
   }
 
@@ -184,6 +190,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
           finish: entry.finish,
           heading: entry.heading,
           note: entry.note,
+          tags: [...(entry.tags ?? [])],
         })),
         createdAt: snapshot.createdAt,
       })
@@ -206,6 +213,7 @@ export function drizzleDeckRepository(db: DbExecutor): DeckRepository {
       finish: entry.finish,
       heading: entry.heading,
       note: entry.note,
+      tags: entry.tags,
     }));
     return {
       id: SnapshotId.of(row.id),

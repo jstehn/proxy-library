@@ -316,6 +316,13 @@
       "when": 1794614105843,
       "tag": "0044_minor_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794976299840,
+      "tag": "0045_absurd_bruce_banner",
+      "breakpoints": true
     }
   ]
 }

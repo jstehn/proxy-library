@@ -63,6 +63,7 @@ export {
   DeckOrigin,
   isCounted,
   isPlayed,
+  normalizeTags,
   FORMATS,
   GROUPINGS,
   MAX_LIST_LINES,
@@ -166,7 +167,10 @@ export {
 } from "./domain/brackets";
 export { combosForDeck } from "./queries/combos";
 export {
+  addDeckSource,
   decksUsing,
+  listDeckSources,
+  type DeckSource,
   deckView,
   decksFor,
   type DeckRef,

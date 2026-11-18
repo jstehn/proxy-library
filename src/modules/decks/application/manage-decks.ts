@@ -66,7 +66,12 @@ export type UpdateDeckError =
   DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound | NoteInvalid;
 export type ApplyChangesError =
-  DeckNotFound | DeckChanged | QuantityInvalid | CardNotFound | NoteInvalid;
+  | DeckNotFound
+  | DeckChanged
+  | QuantityInvalid
+  | CardNotFound
+  | NoteInvalid
+  | HeadingInvalid;
 export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
 export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
@@ -111,6 +116,7 @@ export type SetEntryInput = Readonly<{
   printingId?: PrintingId;
   finish?: Finish;
   note?: string | null;
+  tags?: readonly string[];
 }>;
 
 export type SetEntryNoteInput = Readonly<{
@@ -131,7 +137,14 @@ export type ApplyChangesInput = Readonly<{
   deckId: DeckId;
   fingerprint: string;
   changes: ReadonlyArray<
-    Readonly<{ oracleId: string; board: Board; quantity: number; note?: string | null }>
+    Readonly<{
+      oracleId: string;
+      board: Board;
+      quantity?: number;
+      note?: string | null;
+      heading?: string | null;
+      tags?: readonly string[];
+    }>
   >;
 }>;
 
@@ -260,6 +273,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
         printingId: input.printingId,
         finish: input.finish,
         ...(note.value !== undefined ? { note: note.value } : {}),
+        ...(input.tags !== undefined ? { tags: input.tags } : {}),
       });
       await decks.save(changed, clock.now());
       return ok();
@@ -304,19 +318,34 @@ export function makeManageDecks(dependencies: DecksDependencies) {
     const normalized: Array<{
       oracleId: string;
       board: Board;
-      quantity: number;
+      quantity?: number;
       note?: string | null;
+      heading?: string | null;
+      tags?: readonly string[];
     }> = [];
     for (const change of input.changes) {
-      const quantity = checkQuantity(change.quantity);
-      if (!quantity.ok) return quantity;
+      let qty: number | undefined;
+      if (change.quantity !== undefined) {
+        const quantity = checkQuantity(change.quantity);
+        if (!quantity.ok) return quantity;
+        qty = quantity.value;
+      }
       const note = checkedOptionalNote(change.note);
       if (!note.ok) return note;
+      let headingVal: string | null | undefined;
+      if (change.heading !== undefined) {
+        const checkedHeading =
+          change.heading === null ? ok(null) : checkHeading(change.heading);
+        if (!checkedHeading.ok) return checkedHeading;
+        headingVal = checkedHeading.value;
+      }
       normalized.push({
         oracleId: change.oracleId,
         board: change.board,
-        quantity: quantity.value,
+        ...(qty !== undefined ? { quantity: qty } : {}),
         ...(note.value !== undefined ? { note: note.value } : {}),
+        ...(headingVal !== undefined ? { heading: headingVal } : {}),
+        ...(change.tags !== undefined ? { tags: change.tags } : {}),
       });
     }
     return unitOfWork.run<ApplyChangesReport, ApplyChangesError>(async ({ decks, cards }) => {
@@ -324,16 +353,22 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       if (deck === null) return err({ kind: "DeckNotFound" });
       if (fingerprint(deck.entries) !== input.fingerprint) return err({ kind: "DeckChanged" });
 
-      const positiveIds = new Set(
-        normalized.filter((change) => change.quantity > 0).map((change) => change.oracleId),
-      );
-      for (const oracleId of positiveIds) {
-        if (!(await cards.exists(oracleId))) return err({ kind: "CardNotFound" });
-      }
-
       let updated = deck;
       for (const change of normalized) {
-        updated = withEntry(updated, change);
+        const existing = updated.entries.find(
+          (e) => e.oracleId === change.oracleId && e.board === change.board,
+        );
+        const resolvedQuantity = change.quantity ?? existing?.quantity;
+        if (resolvedQuantity === undefined) {
+          return err({ kind: "QuantityInvalid", maximum: MAX_QUANTITY });
+        }
+        if (resolvedQuantity > 0 && !(await cards.exists(change.oracleId))) {
+          return err({ kind: "CardNotFound" });
+        }
+        updated = withEntry(updated, {
+          ...change,
+          quantity: resolvedQuantity,
+        });
       }
       updated = tidyHeadings(updated);
       await decks.save(updated, clock.now());

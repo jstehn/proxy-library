@@ -109,6 +109,8 @@ export type DeckLine = Readonly<{
   heading: string | null;
   /** Why this card is in the deck (design doc 41), or null. */
   note: string | null;
+  /** Structured role/synergy tags on this line. */
+  tags?: readonly string[];
   name: string;
   typeLine: string;
   manaValue: number;
@@ -238,6 +240,7 @@ export async function deckView(
     pinned_finish: string | null;
     heading: string | null;
     note: string | null;
+    tags: string[] | null;
     printing_id: string;
     finish: string;
     name: string;
@@ -262,7 +265,7 @@ export async function deckView(
     other_decks: unknown;
   }>(sql`
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
-           e.heading, e.note, shown.id as printing_id,
+           e.heading, e.note, e.tags, shown.id as printing_id,
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
@@ -343,6 +346,7 @@ export async function deckView(
       pinnedFinish: row.pinned_finish === null ? null : FinishSchema.parse(row.pinned_finish),
       heading: row.heading,
       note: row.note,
+      tags: row.tags ?? [],
       name: row.name,
       typeLine: row.type_line,
       manaValue: Number(row.mana_value),
@@ -386,6 +390,7 @@ export async function deckView(
       finish: null,
       heading: row.heading,
       note: row.note,
+      tags: row.tags ?? [],
     })),
   };
   const commanderIds =
@@ -469,6 +474,72 @@ export async function decksUsing(
     ]);
   }
   return found;
+}
+
+export type DeckSource = Readonly<{
+  id: number;
+  url: string;
+  title: string;
+  usedFor: string;
+  addedAt: string;
+}>;
+
+/** Saved research sources for one of the player's decks, newest first. */
+export async function listDeckSources(
+  db: DbExecutor,
+  userId: UserId,
+  deckId: number,
+): Promise<DeckSource[] | null> {
+  const [owned] = (
+    await db.execute<{ id: number }>(
+      sql`select id from decks where id = ${deckId} and owner_id = ${userId}`,
+    )
+  ).rows;
+  if (owned === undefined) return null;
+
+  const rows = await db.execute<{
+    id: number;
+    url: string;
+    title: string;
+    used_for: string;
+    added_at: Date;
+  }>(sql`
+    select id, url, title, used_for, added_at
+      from deck_sources
+     where deck_id = ${deckId}
+     order by added_at desc, id desc
+  `);
+
+  return rows.rows.map((r) => ({
+    id: Number(r.id),
+    url: r.url,
+    title: r.title,
+    usedFor: r.used_for,
+    addedAt: new Date(r.added_at).toISOString(),
+  }));
+}
+
+/** Adds a research source to one of the player's decks and returns all saved sources. */
+export async function addDeckSource(
+  db: DbExecutor,
+  userId: UserId,
+  deckId: number,
+  source: { url: string; title: string; usedFor: string },
+  at: Date,
+): Promise<DeckSource[] | null> {
+  const [owned] = (
+    await db.execute<{ id: number }>(
+      sql`select id from decks where id = ${deckId} and owner_id = ${userId}`,
+    )
+  ).rows;
+  if (owned === undefined) return null;
+
+  await db.execute(sql`
+    insert into deck_sources (deck_id, url, title, used_for, added_at)
+    values (${deckId}, ${source.url}, ${source.title}, ${source.usedFor}, ${at})
+  `);
+
+  return listDeckSources(db, userId, deckId);
 }
 
 /** One precon deck list's commanders, as the deck rules see them (for `check-commanders`). */

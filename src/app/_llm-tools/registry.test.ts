@@ -39,6 +39,7 @@ describe("the tool registry", () => {
       ["snapshot_deck", "decks:write"],
       ["create_package", "decks:write"],
       ["apply_package", "decks:write"],
+      ["deck_sources", "decks:write"],
       ["add_wish", "wishlist:write"],
       ["update_wish", "wishlist:write"],
       ["remove_wish", "wishlist:write"],

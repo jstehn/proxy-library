@@ -84,6 +84,11 @@ export const deckEntries = pgTable(
     heading: text("heading"),
     // Why this card is in the deck (design doc 41); null: none.
     note: text("note"),
+    // Structured role/synergy tags on this line (e.g. ["Blitz", "Sac", "Draw"]).
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.oracleId, table.board] }),
@@ -128,6 +133,22 @@ export const deckComments = pgTable(
       sql`(${table.deletedAt} is not null and ${table.body} = '') or char_length(${table.body}) between 1 and 1000`,
     ),
   ],
+);
+
+/** Research sources saved with a deck so later sessions see what was already read. */
+export const deckSources = pgTable(
+  "deck_sources",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    deckId: bigint("deck_id", { mode: "number" })
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    usedFor: text("used_for").notNull(),
+    addedAt: timestamptz("added_at").notNull(),
+  },
+  (table) => [index("deck_sources_deck_idx").on(table.deckId)],
 );
 
 /**
