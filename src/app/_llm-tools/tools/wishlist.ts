@@ -12,7 +12,7 @@ import {
   type WishRequest,
 } from "@/modules/wishlist";
 import { Cents } from "@/shared/kernel";
-import { cardNotFound, defineTool, done, failed, money, moneyOrNull } from "../tool";
+import { defineTool, done, failed, money, moneyOrNull } from "../tool";
 
 // The wishlist (design doc 28, section 5.2; design doc 26). Saving a wish costs nothing; buying
 // stays in the web app (decision 2).
@@ -74,7 +74,7 @@ export const getWishlist = defineTool({
   title: "My wishlist",
   description: [
     "Your wishlist: each wish at today's best price, how it moved since you saved it, whether your balance covers it (or how many paydays until it does), and wishes at their target price.",
-    "Use it when: planning what to buy, or before add_wish (a wish for the same card is updated, not doubled).",
+    "Use it when: planning what to buy, or before add_wishes (a wish for the same card is updated, not doubled).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
@@ -107,76 +107,97 @@ export const getWishlist = defineTool({
 });
 
 export const addWish = defineTool({
-  name: "add_wish",
-  title: "Add a card to my wishlist",
+  name: "add_wishes",
+  title: "Add cards to my wishlist",
   description: [
-    "Saves a card the player wants but doesn't buy now. Wishing for the same card again updates that wish.",
-    'Use it when: recommending store cards the player can\'t or won\'t buy yet. "any" printing means the cheapest printing for sale; "exact" means one printing (give its printingId from get_card).',
-    "Rules: nothing is bought; the player buys from the Wishlist page.",
+    "Saves 1 to 50 cards the player wants but doesn't buy now. Wishing for the same card again updates that wish.",
+    'Use it when: saving store cards the player wants to buy later. "any" printing means the cheapest for sale; "exact" means one printing (give its printingId from get_cards).',
   ].join("\n"),
   scope: "wishlist:write",
   readOnly: false,
   input: z.object({
-    card: z.string().min(1).describe("The card's exact English name, or a printing id."),
-    printing: z
-      .enum(["any", "exact"])
-      .default("any")
-      .describe('"any": the cheapest printing for sale; "exact": the printing named by card.'),
-    finish: z
-      .enum(["nonfoil", "foil", "etched", "cheapest"])
-      .default("nonfoil")
-      .describe(
-        'The finish. "cheapest" (either finish) only with printing "any"; "etched" only with "exact".',
-      ),
-    quantity: quantity.default(1),
-    targetPriceCents,
-    note,
+    wishes: z
+      .array(
+        z.object({
+          card: z
+            .string()
+            .min(1)
+            .describe("The card's exact English name, or a printing id."),
+          printing: z
+            .enum(["any", "exact"])
+            .default("any")
+            .describe(
+              '"any": the cheapest printing for sale; "exact": the printing named by card.',
+            ),
+          finish: z
+            .enum(["nonfoil", "foil", "etched", "cheapest"])
+            .default("nonfoil")
+            .describe(
+              'The finish. "cheapest" only with "any"; "etched" only with "exact".',
+            ),
+          quantity: quantity.default(1),
+          targetPriceCents,
+          note,
+        }),
+      )
+      .min(1)
+      .max(50)
+      .describe("1 to 50 cards to add or update on the wishlist."),
   }),
   async run(context, input) {
-    const found = await findCard(context.container.db, input.card);
-    if (found === null) return cardNotFound(input.card);
-    let request: WishRequest;
-    if (input.printing === "any") {
-      if (input.finish === "etched") {
-        return failed(
-          "InvalidWish",
-          'For "any" printing, the finish is nonfoil, foil or cheapest.',
-        );
+    const added: { wishId: number; card: string; isNew: boolean }[] = [];
+    const errors: { card: string; kind: string; message: string }[] = [];
+    for (const item of input.wishes) {
+      const found = await findCard(context.container.db, item.card);
+      if (found === null) {
+        errors.push({ card: item.card, kind: "CardNotFound", message: "Not in catalog." });
+        continue;
       }
-      request = { kind: "anyPrinting", printingId: found.printingId, finish: input.finish };
-    } else {
-      if (input.finish === "cheapest") {
-        return failed(
-          "InvalidWish",
-          'For an "exact" printing, the finish is nonfoil, foil or etched.',
-        );
+      let request: WishRequest;
+      if (item.printing === "any") {
+        if (item.finish === "etched") {
+          errors.push({
+            card: item.card,
+            kind: "InvalidWish",
+            message: 'For "any" printing, finish must be nonfoil, foil, or cheapest.',
+          });
+          continue;
+        }
+        request = { kind: "anyPrinting", printingId: found.printingId, finish: item.finish };
+      } else {
+        if (item.finish === "cheapest") {
+          errors.push({
+            card: item.card,
+            kind: "InvalidWish",
+            message: 'For an "exact" printing, finish must be nonfoil, foil, or etched.',
+          });
+          continue;
+        }
+        request = { kind: "exactPrinting", printingId: found.printingId, finish: item.finish };
       }
-      request = { kind: "exactPrinting", printingId: found.printingId, finish: input.finish };
+      const result = await context.container.wishlist.addWish(context.actor, {
+        request,
+        details: {
+          quantity: item.quantity,
+          targetPrice: item.targetPriceCents === undefined ? null : Cents.of(item.targetPriceCents),
+          note: item.note,
+        },
+      });
+      if (!result.ok) {
+        const message =
+          result.error.kind === "FinishNotAvailable"
+            ? `Available finishes: ${result.error.finishes.join(", ")}.`
+            : result.error.kind === "WishlistFull"
+              ? `The wishlist holds at most ${result.error.max} wishes.`
+              : result.error.kind === "InvalidWish"
+                ? result.error.reason
+                : "Card not found.";
+        errors.push({ card: item.card, kind: result.error.kind, message });
+        continue;
+      }
+      added.push({ wishId: result.value.wish.id, card: found.name, isNew: result.value.isNew });
     }
-    const result = await context.container.wishlist.addWish(context.actor, {
-      request,
-      details: {
-        quantity: input.quantity,
-        targetPrice: input.targetPriceCents === undefined ? null : Cents.of(input.targetPriceCents),
-        note: input.note,
-      },
-    });
-    if (!result.ok) {
-      switch (result.error.kind) {
-        case "InvalidWish":
-          return failed("InvalidWish", result.error.reason);
-        case "CardNotFound":
-          return cardNotFound(input.card);
-        case "FinishNotAvailable":
-          return failed(
-            "FinishNotAvailable",
-            `That printing comes in: ${result.error.finishes.join(", ")}.`,
-          );
-        case "WishlistFull":
-          return failed("WishlistFull", `The wishlist holds at most ${result.error.max} wishes.`);
-      }
-    }
-    return done({ wishId: result.value.wish.id, card: found.name, isNew: result.value.isNew });
+    return done({ added, errors });
   },
 });
 
@@ -208,24 +229,23 @@ export const updateWish = defineTool({
 });
 
 export const removeWish = defineTool({
-  name: "remove_wish",
-  title: "Remove a wish",
+  name: "remove_wishes",
+  title: "Remove wishes",
   description:
-    "Takes a wish off the wishlist, by its id from get_wishlist. Buying a wished card in the web app removes the wish by itself.",
+    "Takes 1 to 50 wishes off the wishlist by their ids from get_wishlist. Buying a wished card in the web app removes its wish automatically.",
   scope: "wishlist:write",
   readOnly: false,
-  input: z.object({ wishId }),
+  input: z.object({
+    wishIds: z.array(wishId).min(1).max(50).describe("1 to 50 wish ids from get_wishlist."),
+  }),
   async run(context, input) {
-    const result = await context.container.wishlist.removeWish(
-      context.actor,
-      WishId.of(input.wishId),
-    );
-    if (!result.ok) {
-      return failed(
-        "WishNotFound",
-        `Wish ${input.wishId} isn't on your wishlist. Call get_wishlist.`,
-      );
+    const removed: number[] = [];
+    const notFound: number[] = [];
+    for (const id of input.wishIds) {
+      const result = await context.container.wishlist.removeWish(context.actor, WishId.of(id));
+      if (result.ok) removed.push(id);
+      else notFound.push(id);
     }
-    return done({ wishId: input.wishId, removed: true });
+    return done({ removed, notFound });
   },
 });

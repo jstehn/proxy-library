@@ -56,7 +56,7 @@ const PROMPTS: readonly Prompt[] = [
         "3. Call analyze_cards on the deck and list 3-8 synergies, each split into enablers and payoffs.",
         "4. Call search_for_deck with one query per synergy to check catalog availability and ownership. Rewrite queries that found nothing or were capped, and run again.",
         "5. Read the candidates' rules text and shortlist 10-15 options, citing an outside source or rules text for every card, owned cards first.",
-        "6. Ask me before changing the deck; then use set_deck_entry or apply_changes, and add_wish for cards to buy later.",
+        "6. Ask me before changing the deck; then use apply_changes, and add_wishes for cards to buy later.",
       ].join("\n"),
   },
   {
@@ -74,7 +74,7 @@ const PROMPTS: readonly Prompt[] = [
       [
         `Build a Commander deck led by ${args.commander}, from my cards first${args.budget ? `, spending at most ${args.budget} on store cards` : ""}.`,
         "Create it with create_deck (commander on the Commander board), gather outside evidence (EDHREC, primers, Spellbook) and cite it, then follow the find_synergies steps, fill the role targets get_deck shows (ramp, draw, removal, wipe), and finish the mana base with lands in the deck's colors.",
-        "Use search_cards / search_for_deck (or idea_budget_upgrades as a rough idea pool) for purchases and add_wish for what I can't afford yet. Cite an outside source or rules text for every card you suggest.",
+        "Use search_cards / search_for_deck for purchases and add_wishes for what I can't afford yet. Cite an outside source or rules text for every card you suggest.",
       ].join("\n"),
   },
   {

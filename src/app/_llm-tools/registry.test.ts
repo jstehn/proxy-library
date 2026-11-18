@@ -34,8 +34,8 @@ describe("the tool registry", () => {
       ["apply_changes", "decks:write"],
       ["replace_deck_list", "decks:write"],
       ["deck_sources", "decks:write"],
-      ["add_wish", "wishlist:write"],
-      ["remove_wish", "wishlist:write"],
+      ["add_wishes", "wishlist:write"],
+      ["remove_wishes", "wishlist:write"],
     ]);
     for (const tool of TOOLS.filter((each) => each.readOnly)) expect(tool.scope).toBe("read");
   });

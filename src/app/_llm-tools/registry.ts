@@ -71,8 +71,8 @@ export const TOOLS: readonly LlmTool[] = [
 export const INSTRUCTIONS = [
   "Proxy Library: self-hosted Magic: The Gathering collection with play money (cents: $1.23 = 123), a store of singles, decks, and a wishlist.",
   "No app tool output is a recommendation. Cite an outside source or the card's rules text for every add or cut you suggest.",
-  "Workflow: (1) Read the deck with get_deck and deck_facts. (2) Gather outside evidence (edhrec_commander, compare_to_edhrec, find_combos, get_rulings, lookup_rules, guides) and cite it. (3) Check catalog/ownership/prices with check_owned, search_for_deck, search_cards, get_card, and analyze_cards. (4) Preview changes with apply_changes (save: false) and commit with { deckId, previewId, save: true } (or replace_deck_list with fingerprint). Save research links with deck_sources.",
-  "Rules: decks may hold unowned cards (shown as short); prefer owned cards. Move agreed cuts to the \"maybe\" board instead of deleting. Only cards in this catalog exist here, not all of Scryfall. Keep Commander brackets (1-5) within target (-is:gc excludes Game Changers). Nothing here buys or sells; use add_wish for cards to buy later.",
+  "Workflow: (1) Read the deck with get_deck and deck_facts. (2) Gather outside evidence (edhrec_commander, compare_to_edhrec, find_combos, get_rulings, lookup_rules, guides) and cite it. (3) Check catalog/ownership/prices with check_owned, search_for_deck, search_cards, get_cards, and analyze_cards. (4) Preview changes with apply_changes (save: false) and commit with { deckId, previewId, save: true } (or replace_deck_list with fingerprint). Save research links with deck_sources.",
+  "Rules: decks may hold unowned cards (shown as short); prefer owned cards. Move agreed cuts to the \"maybe\" board instead of deleting. Only cards in this catalog exist here, not all of Scryfall. Keep Commander brackets (1-5) within target (-is:gc excludes Game Changers). Nothing here buys or sells; use add_wishes for cards to buy later.",
 ].join("\n");
 
 export function findTool(name: string): LlmTool | undefined {

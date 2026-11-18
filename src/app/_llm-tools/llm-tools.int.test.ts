@@ -219,11 +219,16 @@ describe("the MCP server", () => {
     expect(JSON.stringify(result.content)).toContain("list_decks");
   });
 
-  it("adds, changes and removes a wish", async () => {
+  it("adds, changes and removes wishes", async () => {
     const client = await connect();
-    const added = await call(client, "add_wish", { card: "Banishing Light", targetPriceCents: 50 });
-    expect(added.isNew).toBe(true);
-    await call(client, "update_wish", { wishId: added.wishId, quantity: 2, note: "for Beza" });
+    const addedRes = await call(client, "add_wishes", {
+      wishes: [{ card: "Banishing Light", targetPriceCents: 50 }],
+    });
+    expect(addedRes.added[0].isNew).toBe(true);
+    const wishId = addedRes.added[0].wishId;
+    await call(client, "add_wishes", {
+      wishes: [{ card: "Banishing Light", quantity: 2, note: "for Beza" }],
+    });
     const wishlist = await call(client, "get_wishlist");
     expect(wishlist.wishes).toHaveLength(1);
     expect(wishlist.wishes[0]).toMatchObject({
@@ -231,7 +236,7 @@ describe("the MCP server", () => {
       quantity: 2,
       note: "for Beza",
     });
-    await call(client, "remove_wish", { wishId: added.wishId });
+    await call(client, "remove_wishes", { wishIds: [wishId] });
     expect((await call(client, "get_wishlist")).wishes).toEqual([]);
   });
 
@@ -298,9 +303,9 @@ describe("the MCP server", () => {
     const account = await call(client, "get_account");
     expect(account).toMatchObject({ balance: { cents: 5000, text: "$50.00" }, decks: 0 });
     expect(account.collection.copies).toBe(2);
-    const card = await call(client, "get_card", { card: "banishing light" });
-    expect(card.name).toBe("Banishing Light");
-    expect(card.ownedOfThisPrinting).toEqual({ nonfoil: 2 });
+    const cardsRes = await call(client, "get_cards", { cards: ["banishing light"] });
+    expect(cardsRes.cards[0].name).toBe("Banishing Light");
+    expect(cardsRes.cards[0].ownedOfThisPrinting).toEqual({ nonfoil: 2 });
     expect((await call(client, "list_sets")).sets.length).toBeGreaterThan(0);
     expect((await call(client, "get_search_guide", { topic: "cookbook" })).guide).toContain(
       "Treasure",
@@ -561,7 +566,9 @@ describe("plain calls (the HTTP endpoint's core)", () => {
       kind: "problem",
       problem: { kind: "InvalidInput" },
     });
-    expect(await callTool(context(["read"]), "add_wish", { card: "Plains" })).toMatchObject({
+    expect(
+      await callTool(context(["read"]), "add_wishes", { wishes: [{ card: "Plains" }] }),
+    ).toMatchObject({
       kind: "problem",
       problem: { kind: "MissingScope", scope: "wishlist:write" },
     });
@@ -859,8 +866,8 @@ describe("ownership consistency and get_deck includeOtherDecks", () => {
     );
     expect(carrotWithOthers.otherDecks).toHaveLength(1);
 
-    const card = await call(client, "get_card", { card: "Carrot Cake" });
-    expect(card.owned).toMatchObject({ total: 1, game: 0, real: 1 });
+    const cardsRes = await call(client, "get_cards", { cards: ["Carrot Cake"] });
+    expect(cardsRes.cards[0].owned).toMatchObject({ total: 1, game: 0, real: 1 });
 
     const ownedSearch = await call(client, "search_cards", {
       search: "Carrot Cake",

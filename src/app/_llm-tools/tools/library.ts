@@ -91,74 +91,88 @@ export const getAccount = defineTool({
 });
 
 export const getCard = defineTool({
-  name: "get_card",
-  title: "Get a card",
+  name: "get_cards",
+  title: "Get cards",
   description: [
-    "One card in full: rules text of every face, type, mana cost, its printings for sale in the store with prices, how its price has moved, how many you own (across all printings, split into game and real copies — matching get_deck when usesRealCards is on), which of your decks use it, and your wishes for it.",
-    "Use it when: checking a card before recommending it, finding a printing id (for choose_printing or add_wish), or answering a question about one card.",
+    "Full details for 1 to 25 cards: rules text of every face, type, mana cost, store printings with prices, price trend, owned game & real copies, decks using each, and wishes.",
+    "Use it when: checking cards' full rules text, printings, or price history before recommending or adding wishes (add_wishes).",
   ].join("\n"),
   scope: "read",
   readOnly: true,
   input: z.object({
-    card: z.string().min(1).describe("The card's exact English name, or a printing or oracle id."),
+    cards: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(25)
+      .describe("1 to 25 card names, printing ids, or oracle ids."),
   }),
   async run(context, input) {
     const { db } = context.container;
     const userId = context.actor.userId;
-    const found = await findCard(db, input.card);
-    if (found === null) return cardNotFound(input.card);
-    const [detail, history, owned, gameCopies, realCopies, using, wishes, printings] =
-      await Promise.all([
-        printingDetail(db, found.printingId),
-        priceHistory(db, found.printingId),
-        ownedCopies(db, userId, found.printingId),
-        ownedByOracle(db, userId, found.oracleId),
-        realOwnedByOracle(db, userId, found.oracleId),
-        decksUsing(db, userId, [found.printingId]),
-        wishesForCard(db, userId, found.printingId),
-        searchPrintings(db, {
-          userId,
-          search: `!"${found.name.replace(/"/g, "")}"`,
-          sort: "price",
-          page: 1,
-        }),
-      ]);
-    const gameTotal = gameCopies.reduce((sum, copy) => sum + copy.quantity, 0);
-    const realTotal = realCopies.reduce((sum, copy) => sum + copy.quantity, 0);
-    const printingList = await printingsFor(context, printings.printingIds.slice(0, 20));
-    return done({
-      name: found.name,
-      oracleId: found.oracleId,
-      printingId: found.printingId,
-      typeLine: found.typeLine,
-      manaCost: found.manaCost,
-      colorIdentity: found.colorIdentity,
-      faces: detail?.card.faces ?? [],
-      set: detail === null ? null : { code: detail.setCode, name: detail.setName },
-      priceTrend: Object.entries(history).map(([finish, points]) => ({
-        finish,
-        first: points[0] === undefined ? null : { day: points[0].day, ...money(points[0].price) },
-        latest:
-          points.length === 0
-            ? null
-            : { day: points[points.length - 1].day, ...money(points[points.length - 1].price) },
-        low: points.length === 0 ? null : money(Math.min(...points.map((point) => point.price))),
-        high: points.length === 0 ? null : money(Math.max(...points.map((point) => point.price))),
-      })),
-      owned: {
-        total: gameTotal + realTotal,
-        game: gameTotal,
-        real: realTotal,
-        printings: [
-          ...gameCopies.map((copy) => ({ ...copy, source: "game" as const })),
-          ...realCopies.map((copy) => ({ ...copy, source: "real" as const })),
-        ],
-      },
-      ownedOfThisPrinting: owned,
-      decksUsing: using.get(found.printingId) ?? [],
-      wishes: wishes.map((wish) => ({ wishId: wish.id, quantity: wish.quantity })),
-      printingsForSale: printingList,
-    });
+    const results = await Promise.all(
+      input.cards.map(async (query) => {
+        const found = await findCard(db, query);
+        if (found === null) return { query, found: false };
+        const [detail, history, owned, gameCopies, realCopies, using, wishes, printings] =
+          await Promise.all([
+            printingDetail(db, found.printingId),
+            priceHistory(db, found.printingId),
+            ownedCopies(db, userId, found.printingId),
+            ownedByOracle(db, userId, found.oracleId),
+            realOwnedByOracle(db, userId, found.oracleId),
+            decksUsing(db, userId, [found.printingId]),
+            wishesForCard(db, userId, found.printingId),
+            searchPrintings(db, {
+              userId,
+              search: `!"${found.name.replace(/"/g, "")}"`,
+              sort: "price",
+              page: 1,
+            }),
+          ]);
+        const gameTotal = gameCopies.reduce((sum, copy) => sum + copy.quantity, 0);
+        const realTotal = realCopies.reduce((sum, copy) => sum + copy.quantity, 0);
+        const printingList = await printingsFor(context, printings.printingIds.slice(0, 20));
+        return {
+          query,
+          found: true,
+          name: found.name,
+          oracleId: found.oracleId,
+          printingId: found.printingId,
+          typeLine: found.typeLine,
+          manaCost: found.manaCost,
+          colorIdentity: found.colorIdentity,
+          faces: detail?.card.faces ?? [],
+          set: detail === null ? null : { code: detail.setCode, name: detail.setName },
+          priceTrend: Object.entries(history).map(([finish, points]) => ({
+            finish,
+            first:
+              points[0] === undefined ? null : { day: points[0].day, ...money(points[0].price) },
+            latest:
+              points.length === 0
+                ? null
+                : { day: points[points.length - 1].day, ...money(points[points.length - 1].price) },
+            low:
+              points.length === 0 ? null : money(Math.min(...points.map((point) => point.price))),
+            high:
+              points.length === 0 ? null : money(Math.max(...points.map((point) => point.price))),
+          })),
+          owned: {
+            total: gameTotal + realTotal,
+            game: gameTotal,
+            real: realTotal,
+            printings: [
+              ...gameCopies.map((copy) => ({ ...copy, source: "game" as const })),
+              ...realCopies.map((copy) => ({ ...copy, source: "real" as const })),
+            ],
+          },
+          ownedOfThisPrinting: owned,
+          decksUsing: using.get(found.printingId) ?? [],
+          wishes: wishes.map((wish) => ({ wishId: wish.id, quantity: wish.quantity })),
+          printingsForSale: printingList,
+        };
+      }),
+    );
+    return done({ cards: results });
   },
 });
 
