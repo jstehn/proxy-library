@@ -517,6 +517,7 @@ export {
   effectiveManaValue,
   FIXED_CARD_ROLE_TAGS,
   GENERIC_COMMANDER_DEFAULTS,
+  declaredComboFor,
   isAvoidCard,
   isKeyCard,
   patchPrimerSection,

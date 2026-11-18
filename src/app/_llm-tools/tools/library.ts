@@ -23,6 +23,7 @@ import {
   semanticSearchForDeck,
   similarCards,
   type Suggestion,
+  declaredComboFor,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
@@ -762,18 +763,24 @@ export const findCombosForDeckTool = defineTool({
     const matchesBracket = (tag: string | null | undefined) =>
       !bracketFilter || (tag ?? "").toUpperCase() === bracketFilter;
 
+    const declaredCombos = (await deckProfileFor(context, input.deckId))?.declaredCombos ?? [];
     const classifiedComplete = spellbook.complete
       .filter((c) => matchesBracket(c.bracketTag))
       .map((combo) => {
         const maybePieces = combo.uses.filter(
           (name) => !mainSet.has(name.toLowerCase()) && maybeSet.has(name.toLowerCase()),
         );
+        const declared = declaredComboFor(combo, declaredCombos);
         return {
           ...combo,
           status: maybePieces.length > 0 ? ("needsMaybe" as const) : ("complete" as const),
           ...(maybePieces.length > 0 ? { maybePieces } : {}),
+          ...(declared !== null ? { declared } : {}),
         };
       });
+    const foundDeclarations = new Set(
+      classifiedComplete.flatMap((combo) => ("declared" in combo ? [combo.declared] : [])),
+    );
 
     const filteredOneAway = spellbook.oneCardAway.filter((c) => matchesBracket(c.bracketTag));
     const pagedComplete = classifiedComplete.slice(input.offset, input.offset + input.limit);
@@ -792,6 +799,17 @@ export const findCombosForDeckTool = defineTool({
       cached: spellbook.cached,
       bracketLegend: SPELLBOOK_BRACKET_LEGEND,
       totalComplete: classifiedComplete.length,
+      ...(declaredCombos.length > 0
+        ? {
+            declaredCombos: declaredCombos.map((declared) => ({
+              declared,
+              foundBySpellbook: foundDeclarations.has(declared),
+            })),
+            undeclaredComplete: classifiedComplete.filter(
+              (combo) => combo.status === "complete" && !("declared" in combo),
+            ).length,
+          }
+        : {}),
       totalOneAway: filteredOneAway.length,
       offset: input.offset,
       limit: input.limit,

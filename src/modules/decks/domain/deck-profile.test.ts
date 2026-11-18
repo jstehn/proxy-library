@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_DECK_PROFILE,
   effectiveManaValue,
+  declaredComboFor,
   isAvoidCard,
   isKeyCard,
   patchPrimerSection,
@@ -99,5 +100,20 @@ describe("deck-profile domain", () => {
     });
     expect(summary).toContain("Blitz value");
     expect(summary).toContain("Avacyn, Angel of Hope");
+  });
+});
+
+describe("declaredComboFor", () => {
+  const combo = { id: "1234-5678", uses: ["Avacyn, Angel of Horror", "Viscera Seer"] };
+
+  it("matches a declaration naming every piece, or the Spellbook id", () => {
+    expect(declaredComboFor(combo, ["avacyn, angel of horror + viscera seer: loop", "Other"])).toBe(
+      "avacyn, angel of horror + viscera seer: loop",
+    );
+    expect(declaredComboFor(combo, ["Spellbook 1234-5678"])).toBe("Spellbook 1234-5678");
+  });
+
+  it("doesn't match a declaration missing a piece", () => {
+    expect(declaredComboFor(combo, ["Avacyn, Angel of Horror + Zulaport"])).toBeNull();
   });
 });

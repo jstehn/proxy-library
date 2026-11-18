@@ -244,3 +244,21 @@ export function patchPrimerSection(
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/**
+ * The deck profile's declared combo that names this combo, or null: one that mentions the
+ * Commander Spellbook id, or every piece by name (case-insensitive), e.g. "Avacyn + Viscera Seer
+ * + Zulaport Cutthroat: free sac loop".
+ */
+export function declaredComboFor(
+  combo: Readonly<{ id: string; uses: readonly string[] }>,
+  declaredCombos: readonly string[],
+): string | null {
+  const pieces = combo.uses.map((name) => name.toLowerCase());
+  for (const declared of declaredCombos) {
+    const text = declared.toLowerCase();
+    if (combo.id !== "" && text.includes(combo.id.toLowerCase())) return declared;
+    if (pieces.length > 0 && pieces.every((piece) => text.includes(piece))) return declared;
+  }
+  return null;
+}
