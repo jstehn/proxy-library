@@ -968,12 +968,32 @@ export async function budgetReplacements(
         })
       : [];
 
-    const filterCandidates = (list: SuggestionCard[]) =>
-      list.filter((c) => {
-        if (isAvoidCard(c.name, deckPlanProfile)) return false;
-        if (targetRoles.length > 0 && !c.roles.some((r) => targetRoles.includes(r))) return false;
-        return true;
-      });
+    const targetText = targetLine?.text ?? "";
+    const REANIMATE_RE =
+      /\b(?:return|put)\b[^.]*\bfrom (?:your |a |any )?graveyard\b[^.]*\bonto the battlefield\b/i;
+    const isReanimate = REANIMATE_RE.test(targetText);
+    const PRIMARY_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Planeswalker"];
+    const targetPrimaryTypes = PRIMARY_TYPES.filter((t) =>
+      new RegExp(`\\b${t}\\b`, "i").test(target.type_line),
+    );
+
+    const filterCandidates = (list: SuggestionCard[]) => {
+      const base = list.filter((c) => !isAvoidCard(c.name, deckPlanProfile));
+      if (targetRoles.length > 0) {
+        return base.filter((c) => c.roles.some((r) => targetRoles.includes(r)));
+      }
+      if (isReanimate) {
+        const reanimators = base.filter((c) => REANIMATE_RE.test(c.text));
+        if (reanimators.length > 0) return reanimators;
+      }
+      if (targetPrimaryTypes.length > 0) {
+        const sameType = base.filter((c) =>
+          targetPrimaryTypes.some((t) => new RegExp(`\\b${t}\\b`, "i").test(c.typeLine)),
+        );
+        if (sameType.length > 0) return sameType;
+      }
+      return base;
+    };
 
     const ownedCards = filterCandidates(withinTarget(rawOwnedCards, context).kept);
     const storeCards = filterCandidates(
