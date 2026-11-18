@@ -636,14 +636,22 @@ export const getDeck = defineTool({
     deckId,
     includeText: z
       .boolean()
-      .default(true)
-      .describe("Include each card's rules text. Set false to save space on big decks."),
+      .default(false)
+      .describe(
+        "Include each card's rules text. Defaults to false to keep responses under 40 KB; set true when you need oracle text (combine with boards/cursor).",
+      ),
     includeOtherDecks: z
       .boolean()
-      .default(true)
+      .default(false)
       .describe(
-        "Include the list of other decks using each card (free count is still kept). Set false to save space on big decks.",
+        "Include the list of other decks using each card (free count is still kept). Defaults to false to save space.",
       ),
+    cursor: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Optional pagination cursor returned as `next` when a response is capped at 40 KB."),
     boards: z
       .array(z.enum(BOARDS))
       .optional()

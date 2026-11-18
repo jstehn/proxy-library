@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { allows, type Scope } from "@/modules/accounts";
+import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
 import {
   applyChangesTool,
@@ -100,6 +101,14 @@ export async function callTool(
   if (!allows(context.scopes, tool.scope)) {
     return { kind: "problem", problem: { kind: "MissingScope", scope: tool.scope } };
   }
+  const rawObj =
+    typeof rawInput === "object" && rawInput !== null && !Array.isArray(rawInput)
+      ? (rawInput as Record<string, unknown>)
+      : {};
+  const cursor =
+    typeof rawObj.cursor === "number" && Number.isInteger(rawObj.cursor) && rawObj.cursor >= 0
+      ? rawObj.cursor
+      : 0;
   const parsed = tool.input.safeParse(rawInput ?? {});
   if (!parsed.success) {
     return {
@@ -112,7 +121,14 @@ export async function callTool(
       },
     };
   }
-  return { kind: "outcome", outcome: await tool.run(context, parsed.data) };
+  const outcome = await tool.run(context, parsed.data);
+  if (outcome.ok) {
+    return {
+      kind: "outcome",
+      outcome: { ok: true, value: capToolResponse(outcome.value, cursor) },
+    };
+  }
+  return { kind: "outcome", outcome };
 }
 
 /** A problem in words, for the model. */
