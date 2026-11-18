@@ -13,6 +13,7 @@ import type {
 } from "../domain/types";
 import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
 import type { EdhrecCommanderPage } from "../domain/edhrec";
+import type { ParsedRule } from "../domain/comprehensive-rules";
 import type { SpellbookTwoCardCombo } from "../domain/spellbook";
 
 // Ports: what the catalog needs from outside (design doc 04, section 6).
@@ -298,6 +299,23 @@ export interface EmbeddingRepository {
   upsertBatch(rows: readonly CardEmbeddingRow[]): Promise<void>;
 }
 
+/** Official Wizards Comprehensive Rules gateway (design doc 60, ADR 0007). */
+export interface ComprehensiveRulesGateway {
+  fetchLatestRulesText(): Promise<{ sourceUrl: string; text: string }>;
+}
+
+export type ComprehensiveRuleRow = ParsedRule &
+  Readonly<{
+    crVersion: string;
+    embedding: number[];
+    updatedAt: Date;
+  }>;
+
+export interface ComprehensiveRulesRepository {
+  currentVersion(): Promise<string | null>;
+  replaceAll(rows: readonly ComprehensiveRuleRow[], syncedAt: Date): Promise<void>;
+}
+
 export type CatalogServices = {
   catalog: CatalogRepository;
   syncRuns: SyncRunRepository;
@@ -305,6 +323,7 @@ export type CatalogServices = {
   edhrec?: EdhrecRepository;
   spellbook?: SpellbookRepository;
   embeddings?: EmbeddingRepository;
+  comprehensiveRules?: ComprehensiveRulesRepository;
 };
 
 /**
@@ -328,6 +347,7 @@ export type CatalogDependencies = {
   edhrec?: EdhrecGateway;
   spellbook?: SpellbookGateway;
   textEmbedder?: TextEmbedder;
+  comprehensiveRules?: ComprehensiveRulesGateway;
   clock: Clock;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;

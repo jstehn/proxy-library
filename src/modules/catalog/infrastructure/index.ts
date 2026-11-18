@@ -2,10 +2,12 @@
 export { drizzleArtworkRepository } from "./drizzle-artwork";
 export { drizzleEdhrecRepository } from "./drizzle-edhrec";
 export { drizzleEmbeddingRepository } from "./drizzle-embeddings";
+export { drizzleComprehensiveRulesRepository } from "./drizzle-rules";
 export { drizzleSpellbookRepository } from "./drizzle-spellbook";
 export { drizzleCatalogRepository, drizzleSyncRunRepository } from "./drizzle-repositories";
 export { huggingFaceTextEmbedder } from "./embedder";
 export { httpEdhrecGateway } from "./edhrec-gateway";
+export { httpComprehensiveRulesGateway } from "./rules-gateway";
 export { makeOutsideData } from "./outside-data";
 export { httpSpellbookGateway } from "./spellbook-gateway";
 // File-based gateways over the recorded fixtures: for tests, and for loading sample data offline.

@@ -490,3 +490,21 @@ export {
   type UpgradeRoadmapOptions,
   type UpgradeRoadmapResult,
 } from "./queries/upgrade-roadmap";
+export {
+  makeGoldfishSessions,
+  type GoldfishSessionError,
+  type GoldfishSessionResult,
+  type GoldfishSessions,
+  type GoldfishStepInput,
+} from "./application/goldfish-sessions";
+export {
+  buildGoldfishDeck,
+  peekLibrary,
+  type BattlefieldPermanent,
+  type GoldfishAction,
+  type GoldfishCard,
+  type GoldfishDeckLine,
+  type GoldfishError,
+  type GoldfishState,
+  type GoldfishZone,
+} from "./domain/goldfish-session";

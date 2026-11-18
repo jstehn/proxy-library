@@ -2,6 +2,7 @@ import { makeCatalogAdmin } from "./admin";
 import { makeEdhrecSync } from "./edhrec";
 import { makeEmbedCards } from "./embed";
 import type { CatalogDependencies } from "./ports";
+import { makeComprehensiveRulesSync } from "./rules";
 import { makeSync } from "./sync";
 
 /** Builds every catalog use case from one set of dependencies. */
@@ -11,6 +12,7 @@ export function makeCatalog(dependencies: CatalogDependencies) {
     ...makeCatalogAdmin(dependencies),
     ...makeEdhrecSync(dependencies),
     ...makeEmbedCards(dependencies),
+    ...makeComprehensiveRulesSync(dependencies),
   };
 }
 

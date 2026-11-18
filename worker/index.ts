@@ -78,6 +78,16 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
+   * `pnpm worker sync-rules [--force]`: fetch, parse, and embed Wizards' official
+   * Comprehensive Rules into `comprehensive_rules` (design doc 60).
+   */
+  async "sync-rules"(container) {
+    const force = process.argv.includes("--force");
+    const summary = await container.catalog.syncComprehensiveRules({ force });
+    console.log(JSON.stringify(summary));
+  },
+
+  /**
    * `pnpm worker check-packs [packs]`: open that many packs (default 1,000) of every booster
    * recipe in the catalog and report anything that breaks the recipe's rules (design doc 05).
    */
@@ -173,6 +183,20 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
         const result = await catalog.runNextQueuedSync();
         if (result !== null) {
           console.log(`sync run ${result.run.id} (${result.run.kind}): ${result.status}`);
+          try {
+            const cr = await catalog.syncComprehensiveRules();
+            if (!cr.skipped) {
+              console.log(`comprehensive rules ${cr.version}: ${cr.ruleCount} rules synced`);
+            }
+          } catch (error) {
+            console.error("comprehensive rules sync failed:", error);
+          }
+          try {
+            const pruned = await container.goldfishSessions.pruneExpired();
+            if (pruned > 0) console.log(`pruned ${pruned} expired goldfish session(s)`);
+          } catch (error) {
+            console.error("goldfish session prune failed:", error);
+          }
         }
         // New prices (or a first start): value sealed products for the resale floor (design
         // doc 27). Kind-priced products aren't for sale until this has run once.

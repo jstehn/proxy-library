@@ -323,6 +323,20 @@
       "when": 1794976299840,
       "tag": "0045_absurd_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794977735503,
+      "tag": "0046_goldfish_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794977977788,
+      "tag": "0047_comprehensive_rules",
+      "breakpoints": true
     }
   ]
 }

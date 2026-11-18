@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   enabledSets,
+  lookupRules,
   priceHistory,
   printingCards,
   printingDetail,
@@ -590,18 +591,10 @@ export const checkOwnedTool = defineTool({
   scope: "read",
   readOnly: true,
   input: z.object({
-    names: z
-      .array(z.string().min(1))
-      .min(1)
-      .max(100)
-      .describe("Up to 100 card names to check."),
+    names: z.array(z.string().min(1)).min(1).max(100).describe("Up to 100 card names to check."),
   }),
   async run(context, input) {
-    const checked = await checkOwnedCards(
-      context.container.db,
-      context.actor.userId,
-      input.names,
-    );
+    const checked = await checkOwnedCards(context.container.db, context.actor.userId, input.names);
     return done({
       cards: checked.map((entry) =>
         entry.inCatalog
@@ -641,11 +634,13 @@ export const findCombosForDeckTool = defineTool({
     const view = await deckView(context.container.db, context.actor.userId, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
 
-    const commanders = view.lines
-      .filter((l) => l.board === "commander")
-      .map((l) => l.name);
+    const commanders = view.lines.filter((l) => l.board === "commander").map((l) => l.name);
     const mainCards = view.lines
-      .filter((l) => l.board !== "commander" && (isPlayed(l.board) || (input.includeMaybe && l.board === "maybe")))
+      .filter(
+        (l) =>
+          l.board !== "commander" &&
+          (isPlayed(l.board) || (input.includeMaybe && l.board === "maybe")),
+      )
       .map((l) => l.name);
 
     let spellbook;
@@ -724,6 +719,46 @@ export const cardsToGet = defineTool({
       })),
       total: money(result.totalCents),
       list: result.listText,
+    });
+  },
+});
+
+export const lookupRulesTool = defineTool({
+  name: "lookup_rules",
+  title: "Look up Magic Comprehensive Rules",
+  description: [
+    "Searches the official Magic: The Gathering Comprehensive Rules by exact rule number (e.g. '702.19a', '103.5c') or hybrid keyword + semantic search (e.g. 'layers', 'commander tax', 'trample deathtouch').",
+    "Returns top-ranked verbatim CR excerpts, NOT an exhaustive rules engine: always follow cross-referenced rule numbers (e.g. 'see rule 613.1') and check card-specific rulings with get_rulings before giving a definitive ruling.",
+    "Use it when: verifying an exact rules interaction, timing, or keyword definition.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    query: z
+      .string()
+      .min(1)
+      .max(200)
+      .describe("Rule number (e.g. '702.19a') or rules question/keywords."),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .default(8)
+      .describe("Maximum number of matching rules to return (1 to 20)."),
+  }),
+  async run(context, input) {
+    const result = await lookupRules(context.container.db, context.container.textEmbedder, {
+      query: input.query,
+      limit: input.limit,
+    });
+    return done({
+      crVersion: result.crVersion,
+      note:
+        result.crVersion === null
+          ? "Comprehensive Rules have not been synced yet (run `pnpm worker sync-rules`). An empty result does not mean no rule exists."
+          : "Top-ranked verbatim CR excerpts (not exhaustive). Follow any cross-referenced rule numbers and check get_rulings for card-specific rulings.",
+      hits: result.hits,
     });
   },
 });

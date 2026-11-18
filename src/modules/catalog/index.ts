@@ -24,6 +24,9 @@ export type {
   SyncRunRepository,
   TextEmbedder,
   EmbeddingRepository,
+  ComprehensiveRulesGateway,
+  ComprehensiveRulesRepository,
+  ComprehensiveRuleRow,
   WpnGateway,
 } from "./application/ports";
 export {
@@ -82,3 +85,5 @@ export {
   setPhotos,
   type SetPhotosView,
 } from "./queries/artwork";
+export { lookupRules, type LookupRulesResult, type RuleSearchHit } from "./queries/rules";
+export type { ParsedRule, RuleKind } from "./domain/comprehensive-rules";

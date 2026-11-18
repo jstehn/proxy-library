@@ -70,6 +70,10 @@ import {
   type DeckCombo,
   type DeckProblem,
   type DeckView,
+  type GoldfishAction,
+  type GoldfishCard,
+  type GoldfishState,
+  type GoldfishStepInput,
   type SnapshotComparison,
 } from "@/modules/decks";
 import { canonicalTheme, TAGS, THEMES } from "@/shared/card-search";
@@ -295,10 +299,7 @@ export const planManaBaseTool = defineTool({
       alsoIn: land.card.alsoIn,
     });
     return done({
-      provenance: heuristicProvenance("mana-curve & pip-share heuristic", [
-        "card text",
-        "edhrec",
-      ]),
+      provenance: heuristicProvenance("mana-curve & pip-share heuristic", ["card text", "edhrec"]),
       outputKind: "skeleton",
       lands: plan.lands,
       landTarget: plan.landTarget.lands,
@@ -649,15 +650,13 @@ export const getDeck = defineTool({
       .array(z.enum(BOARDS))
       .optional()
       .describe('Optional board filter for lines (e.g. ["main", "maybe"]).'),
-    tag: z
-      .string()
-      .min(1)
-      .optional()
-      .describe('Optional tag filter for lines (e.g. "Blitz").'),
+    tag: z.string().min(1).optional().describe('Optional tag filter for lines (e.g. "Blitz").'),
     singleTagOnly: z
       .boolean()
       .default(false)
-      .describe("When true, return only non-land lines that have exactly one tag (cohesion check)."),
+      .describe(
+        "When true, return only non-land lines that have exactly one tag (cohesion check).",
+      ),
     fields: z
       .array(
         z.enum([
@@ -679,7 +678,7 @@ export const getDeck = defineTool({
         ]),
       )
       .optional()
-      .describe("Optional list of top-level fields to return (e.g. [\"fingerprint\", \"lines\"])."),
+      .describe('Optional list of top-level fields to return (e.g. ["fingerprint", "lines"]).'),
   }),
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
@@ -1439,11 +1438,15 @@ export const applyChangesTool = defineTool({
     fingerprint: z
       .string()
       .optional()
-      .describe("Required when save is true without previewId: the fingerprint from get_deck or a preview."),
+      .describe(
+        "Required when save is true without previewId: the fingerprint from get_deck or a preview.",
+      ),
     previewId: z
       .string()
       .optional()
-      .describe("Optional previewId from a prior save: false call to commit without resending changes."),
+      .describe(
+        "Optional previewId from a prior save: false call to commit without resending changes.",
+      ),
   }),
   async run(context, input) {
     const nowMs = context.container.clock.now().getTime();
@@ -1494,15 +1497,15 @@ export const applyChangesTool = defineTool({
       }
       pendingPreviews.delete(input.previewId);
       return done(
-        formatPreviewResponse(stored.preview, { saved: true, fingerprint: result.value.fingerprint }),
+        formatPreviewResponse(stored.preview, {
+          saved: true,
+          fingerprint: result.value.fingerprint,
+        }),
       );
     }
 
     if (!input.changes || input.changes.length === 0) {
-      return failed(
-        "InputInvalid",
-        "Pass changes (or a previewId with save: true).",
-      );
+      return failed("InputInvalid", "Pass changes (or a previewId with save: true).");
     }
 
     const saveFingerprint = input.fingerprint ?? "";
@@ -2453,7 +2456,11 @@ export const edhrecCommanderTool = defineTool({
   readOnly: true,
   input: z.object({
     commander: z.string().min(1).describe("The commander's English name."),
-    theme: z.string().min(1).optional().describe('Optional EDHREC theme slug or name (e.g. "reanimator").'),
+    theme: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Optional EDHREC theme slug or name (e.g. "reanimator").'),
     budget: z
       .enum(["budget", "expensive"])
       .optional()
@@ -2575,9 +2582,7 @@ export const compareToEdhrecTool = defineTool({
       const front = lower.split(" // ")[0] ?? lower;
       return !deckCardKeys.has(lower) && !deckCardKeys.has(front);
     });
-    const highInclusion = notInDeckCandidates
-      .filter((c) => c.inclusionPct >= 20)
-      .slice(0, 60);
+    const highInclusion = notInDeckCandidates.filter((c) => c.inclusionPct >= 20).slice(0, 60);
     const missingPool =
       highInclusion.length > 0
         ? highInclusion
@@ -2660,12 +2665,256 @@ export const deckSourcesTool = defineTool({
       if (sources === null) return deckNotFound(input.deckId);
       return done({ deckId: input.deckId, sources });
     }
-    const sources = await listDeckSources(
-      context.container.db,
-      context.actor.userId,
-      input.deckId,
-    );
+    const sources = await listDeckSources(context.container.db, context.actor.userId, input.deckId);
     if (sources === null) return deckNotFound(input.deckId);
     return done({ deckId: input.deckId, sources });
+  },
+});
+
+function compactCard(card: GoldfishCard) {
+  return {
+    key: card.key,
+    name: card.name,
+    ...(card.manaCost ? { manaCost: card.manaCost } : {}),
+    typeLine: card.typeLine,
+    isLand: card.isLand,
+  };
+}
+
+function compactGoldfishBoard(state: GoldfishState) {
+  return {
+    turn: state.turn,
+    mulligans: state.mulligans,
+    toBottom: state.toBottom,
+    landsPlayedThisTurn: state.landsPlayedThisTurn,
+    libraryCount: state.library.length,
+    lastActionNote: state.lastActionNote,
+    hand: state.hand.map(compactCard),
+    battlefield: state.battlefield.map((p) => ({
+      ...compactCard(p.card),
+      tapped: p.tapped,
+      enteredTurn: p.enteredTurn,
+    })),
+    commandZone: state.commandZone.map(compactCard),
+    graveyard: state.graveyard.map(compactCard),
+    exile: state.exile.map(compactCard),
+  };
+}
+
+export const goldfishStartTool = defineTool({
+  name: "goldfish_start",
+  title: "Start an interactive goldfish session",
+  description: [
+    "Shuffles a deck, deals a 7-card opening hand, puts commanders in the command zone, and returns a short-lived sessionId (24h TTL) for turn-by-turn playtesting via goldfish_step.",
+    "Manual tabletop simulator: does not enforce mana costs, tapped-land conditions, or automatic triggers, and a single run is one sample rather than statistical proof (use simulate_opening_hands for odds).",
+    "Use it when: testing actual turns 1–5 lines of play, mulligan decisions, and sequencing.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    onTheDraw: z.boolean().default(false).describe("True draws a card on turn 1 (going second)."),
+    freeMulligan: z
+      .boolean()
+      .optional()
+      .describe("Whether the first mulligan is free (defaults to true for Commander)."),
+    seed: z
+      .string()
+      .max(64)
+      .optional()
+      .describe("Optional deterministic RNG seed for reproducible hands."),
+  }),
+  async run(context, input) {
+    const view = await viewFor(context, input.deckId);
+    if (view === null) return deckNotFound(input.deckId);
+    const seed = input.seed ?? `gf-${view.deck.id}-${context.container.clock.now().getTime()}`;
+    const result = await context.container.goldfishSessions.start({
+      userId: context.actor.userId,
+      deckId: DeckId.of(view.deck.id),
+      format: view.deck.format,
+      lines: view.lines,
+      rng: seededRng(seed),
+      onTheDraw: input.onTheDraw,
+      freeMulligan: input.freeMulligan,
+    });
+    if (!result.ok) {
+      return failed("EmptyDeck", "This deck has no main-deck cards to goldfish.");
+    }
+    return done({
+      sessionId: result.value.sessionId,
+      deckId: view.deck.id,
+      deckName: view.deck.name,
+      expiresAt: result.value.expiresAt.toISOString(),
+      ...compactGoldfishBoard(result.value.state),
+    });
+  },
+});
+
+const goldfishZone = z.enum([
+  "library",
+  "hand",
+  "battlefield",
+  "graveyard",
+  "exile",
+  "commandZone",
+]);
+
+export const goldfishStepTool = defineTool({
+  name: "goldfish_step",
+  title: "Advance an interactive goldfish session",
+  description: [
+    "Performs one tabletop action on an active goldfish session (mulligan, bottom, next_turn, draw, play_land, cast, tap, untap, move, shuffle_library, or peek_library) and returns the updated compact board.",
+    "Use it when: stepping through mulligans and turns 1–5 after goldfish_start.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    sessionId: z.string().min(1).max(64).describe("The sessionId returned by goldfish_start."),
+    action: z
+      .enum([
+        "mulligan",
+        "bottom",
+        "next_turn",
+        "draw",
+        "play_land",
+        "cast",
+        "tap",
+        "untap",
+        "move",
+        "shuffle_library",
+        "peek_library",
+      ])
+      .describe("Tabletop action to perform on the goldfish session."),
+    key: z
+      .string()
+      .optional()
+      .describe("Card key (from hand/battlefield/etc.) for single-card actions."),
+    keys: z.array(z.string()).optional().describe("Card keys to put on bottom for 'bottom'."),
+    count: z
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .optional()
+      .describe("Card count for 'draw' or 'peek_library'."),
+    from: goldfishZone.optional().describe("Source zone for 'cast' or 'move'."),
+    to: z
+      .enum([
+        "hand",
+        "battlefield",
+        "graveyard",
+        "exile",
+        "commandZone",
+        "library_top",
+        "library_bottom",
+      ])
+      .optional()
+      .describe("Destination zone for 'cast' or 'move'."),
+    tapped: z.boolean().optional().describe("Enter tapped for 'play_land' or 'cast'."),
+    ignoreLandLimit: z
+      .boolean()
+      .optional()
+      .describe("Allow extra land drop on 'play_land' (e.g. Exploration)."),
+    seed: z
+      .string()
+      .max(64)
+      .optional()
+      .describe("Optional RNG seed for 'mulligan' or 'shuffle_library'."),
+  }),
+  async run(context, input) {
+    const rng = seededRng(
+      input.seed ?? `gf-step-${input.sessionId}-${context.container.clock.now().getTime()}`,
+    );
+    let stepInput: GoldfishStepInput;
+    switch (input.action) {
+      case "peek_library":
+        stepInput = { kind: "peek_library", count: input.count ?? 3 };
+        break;
+      case "mulligan":
+        stepInput = { kind: "action", action: { kind: "mulligan", rng } };
+        break;
+      case "shuffle_library":
+        stepInput = { kind: "action", action: { kind: "shuffle_library", rng } };
+        break;
+      case "bottom":
+        stepInput = { kind: "action", action: { kind: "bottom", keys: input.keys ?? [] } };
+        break;
+      case "next_turn":
+        stepInput = { kind: "action", action: { kind: "next_turn" } };
+        break;
+      case "draw":
+        stepInput = { kind: "action", action: { kind: "draw", count: input.count } };
+        break;
+      case "play_land":
+        if (!input.key) return failed("MissingKey", "Provide 'key' for play_land.");
+        stepInput = {
+          kind: "action",
+          action: {
+            kind: "play_land",
+            key: input.key,
+            tapped: input.tapped,
+            ignoreLandLimit: input.ignoreLandLimit,
+          },
+        };
+        break;
+      case "cast": {
+        if (!input.key) return failed("MissingKey", "Provide 'key' for cast.");
+        const castFrom =
+          input.from === "hand" ||
+          input.from === "commandZone" ||
+          input.from === "graveyard" ||
+          input.from === "exile"
+            ? input.from
+            : undefined;
+        const castTo =
+          input.to === "battlefield" || input.to === "graveyard" || input.to === "exile"
+            ? input.to
+            : undefined;
+        stepInput = {
+          kind: "action",
+          action: {
+            kind: "cast",
+            key: input.key,
+            from: castFrom,
+            to: castTo,
+            tapped: input.tapped,
+          },
+        };
+        break;
+      }
+      case "tap":
+      case "untap":
+        if (!input.key) return failed("MissingKey", `Provide 'key' for ${input.action}.`);
+        stepInput = { kind: "action", action: { kind: input.action, key: input.key } };
+        break;
+      case "move": {
+        if (!input.key || !input.from || !input.to) {
+          return failed("MissingMoveArgs", "Provide 'key', 'from', and 'to' for move.");
+        }
+        const action: GoldfishAction = {
+          kind: "move",
+          key: input.key,
+          from: input.from,
+          to: input.to,
+        };
+        stepInput = { kind: "action", action };
+        break;
+      }
+    }
+
+    const result = await context.container.goldfishSessions.step({
+      userId: context.actor.userId,
+      sessionId: input.sessionId,
+      step: stepInput,
+    });
+    if (!result.ok) {
+      return failed(result.error.kind, JSON.stringify(result.error));
+    }
+    return done({
+      sessionId: result.value.sessionId,
+      expiresAt: result.value.expiresAt.toISOString(),
+      ...compactGoldfishBoard(result.value.state),
+      ...(result.value.peeked ? { peeked: result.value.peeked.map(compactCard) } : {}),
+    });
   },
 });

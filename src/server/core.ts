@@ -1,7 +1,7 @@
 // The wiring shared by both composition roots (the Next.js app and the worker).
 // This is the ONLY place that creates real implementations (database, clock, ...) and
 // hands them to the functions that need them. Each phase adds its module's services here.
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -19,10 +19,12 @@ import {
   diskImageStore,
   drizzleArtworkRepository,
   drizzleCatalogRepository,
+  drizzleComprehensiveRulesRepository,
   drizzleEdhrecRepository,
   drizzleEmbeddingRepository,
   drizzleSpellbookRepository,
   drizzleSyncRunRepository,
+  httpComprehensiveRulesGateway,
   httpEdhrecGateway,
   httpImageFetcher,
   httpMtgjsonGateway,
@@ -33,12 +35,19 @@ import {
   makeOutsideData,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
+import {
+  makeDecks,
+  makeDeckSharing,
+  makeGoldfishSessions,
+  makeProxySheets,
+  makeTokenChoices,
+} from "@/modules/decks";
 import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
   drizzleDeckTokenRepository,
+  drizzleGoldfishSessionRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
 import { makeDrafts } from "@/modules/drafts";
@@ -120,6 +129,7 @@ export function buildCore(config: Config) {
       edhrec: drizzleEdhrecRepository(transaction),
       spellbook: drizzleSpellbookRepository(transaction),
       embeddings: drizzleEmbeddingRepository(transaction),
+      comprehensiveRules: drizzleComprehensiveRulesRepository(transaction),
       boosters: drizzleBoosterSource(transaction),
       collection: drizzleCollectionRepository(transaction),
       items: drizzleItemRepository(transaction),
@@ -133,6 +143,7 @@ export function buildCore(config: Config) {
       cards: drizzleCardLookup(transaction),
       deckTokens: drizzleDeckTokenRepository(transaction),
       deckSharing: drizzleDeckSharing(transaction),
+      goldfishSessions: drizzleGoldfishSessionRepository(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
@@ -191,6 +202,7 @@ export function buildCore(config: Config) {
     // EDHREC pages one a second (design doc 45, invariant 5).
     edhrec: httpEdhrecGateway(politeFetch(1)),
     spellbook: httpSpellbookGateway(politeFetch(1)),
+    comprehensiveRules: httpComprehensiveRulesGateway(politeFetch(1)),
     textEmbedder,
     clock,
     syncTime: config.syncTime,
@@ -201,6 +213,11 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
+  const goldfishSessions = makeGoldfishSessions({
+    unitOfWork,
+    clock,
+    newSessionId: randomUUID,
+  });
   const deckSharing = makeDeckSharing({
     unitOfWork,
     clock,
@@ -248,6 +265,7 @@ export function buildCore(config: Config) {
     store,
     decks,
     deckSharing,
+    goldfishSessions,
     chooseToken,
     proxySheet,
     trades,

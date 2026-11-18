@@ -18,6 +18,7 @@ import {
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
+import type { GoldfishState } from "../domain/goldfish-session";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -241,5 +242,26 @@ export const cardPackageEntries = pgTable(
   (table) => [
     primaryKey({ columns: [table.packageId, table.oracleId] }),
     check("card_package_entries_quantity_positive", sql`${table.quantity} between 1 and 99`),
+  ],
+);
+
+/** Ephemeral interactive goldfish sessions with 24h sliding TTL (design doc 60). */
+export const goldfishSessions = pgTable(
+  "goldfish_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId, { onDelete: "cascade" }),
+    deckId: bigint("deck_id", { mode: "number" })
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    state: jsonb("state").$type<GoldfishState>().notNull(),
+    updatedAt: timestamptz("updated_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (table) => [
+    index("goldfish_sessions_expires_idx").on(table.expiresAt),
+    index("goldfish_sessions_user_idx").on(table.userId, table.updatedAt),
   ],
 );
