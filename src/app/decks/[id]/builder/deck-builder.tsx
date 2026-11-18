@@ -39,6 +39,7 @@ import {
   addLandsAction,
   browseAction,
   cardDetailAction,
+  entryDetailsAction,
   headingAction,
   loadBuilderDeck,
   moveLineAction,
@@ -56,6 +57,8 @@ import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";
 import { HeadingField } from "./heading-field";
 import { NoteField } from "./note-field";
+import { PrimerPanel } from "./primer-panel";
+import { RoleField, type LineDetails } from "./role-field";
 import { SnapshotsPanel } from "./snapshots-panel";
 import { TokensPanel } from "./tokens-panel";
 import { commanderColorsOf, ownedWords, problemsOf, provisionalLine } from "./derive";
@@ -202,6 +205,7 @@ export function DeckBuilder(props: {
   const [showManaBase, setShowManaBase] = useState(false);
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [showTokens, setShowTokens] = useState(false);
+  const [showPrimer, setShowPrimer] = useState(false);
   /** Cards like the selected one, once asked for (null: not asked; "loading": on its way). */
   const [similar, setSimilar] = useState<{
     oracleId: string;
@@ -671,6 +675,40 @@ export function DeckBuilder(props: {
     );
   }
 
+  /** Saves a line's role or pin (design doc 61), showing it at once and reverting on failure. */
+  function setLineDetails(line: DeckLine, details: LineDetails) {
+    const request = ++latestChange.current;
+    setDeck((current) => ({
+      ...current,
+      lines: current.lines.map((each) => (each === line ? { ...each, ...details } : each)),
+    }));
+    startSaving(async () => {
+      const result = await entryDetailsAction({
+        deckId,
+        oracleId: line.oracleId,
+        board: line.board,
+        ...details,
+      });
+      if (request !== latestChange.current) return;
+      if (result.ok) {
+        setDeck(result.deck);
+        const what =
+          details.pinned !== undefined
+            ? details.pinned
+              ? "pinned"
+              : "unpinned"
+            : details.role === null
+              ? "role cleared"
+              : "role saved";
+        setMessage({ tone: "ok", text: `${line.name}: ${what}.` });
+      } else {
+        setMessage({ tone: "error", text: result.message });
+        const fresh = await loadBuilderDeck(deckId);
+        if (fresh !== null) setDeck(fresh);
+      }
+    });
+  }
+
   function setLineNote(line: DeckLine, note: string | null) {
     const request = ++latestChange.current;
     setDeck((current) => ({
@@ -828,6 +866,14 @@ export function DeckBuilder(props: {
                 busy={isSaving}
                 onSave={setLineNote}
               />
+              {line.board !== "maybe" && (
+                <div
+                  key={`role-${line.role ?? ""}`}
+                  className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900"
+                >
+                  <RoleField line={line} busy={isSaving} onSave={setLineDetails} />
+                </div>
+              )}
             </div>
           ));
         })()}
@@ -1189,7 +1235,25 @@ export function DeckBuilder(props: {
             >
               {showTokens ? "Hide tokens" : "Tokens"}
             </button>
+            <button
+              type="button"
+              aria-expanded={showPrimer}
+              onClick={() => setShowPrimer((value) => !value)}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {showPrimer ? "Hide plan & primer" : "Plan & primer"}
+            </button>
           </div>
+          {showPrimer && (
+            <PrimerPanel
+              deckId={deckId}
+              lines={deck.lines}
+              cards={deck.cards}
+              onSaved={(text) => setMessage({ tone: "ok", text })}
+              onError={(text) => setMessage({ tone: "error", text })}
+              onClose={() => setShowPrimer(false)}
+            />
+          )}
           {showDraft && (
             <DraftPanel
               deckId={deckId}

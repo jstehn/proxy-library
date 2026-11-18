@@ -153,13 +153,24 @@ export function DeckList(props: {
     const grouping: Grouping = option === "headings" ? "custom" : "type";
     if (grouping !== props.grouping) props.onGrouping?.(grouping);
   };
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const deckTags = [...new Set(props.lines.flatMap((line) => line.tags ?? []))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const activeTag = tagFilter !== null && deckTags.includes(tagFilter) ? tagFilter : null;
+  const shownLines =
+    activeTag === null
+      ? props.lines
+      : props.lines.filter(
+          (line) => line.board === "commander" || (line.tags ?? []).includes(activeTag),
+        );
   const commanders = props.lines.filter((line) => line.board === "commander");
   const groups =
     view === "roles"
-      ? groupsByRole(props.lines)
+      ? groupsByRole(shownLines)
       : props.grouping === "custom"
-        ? groupsByHeading(props.lines, props.headings)
-        : groupsOf(props.lines);
+        ? groupsByHeading(shownLines, props.headings)
+        : groupsOf(shownLines);
   // Someone else's deck shows its owner's grouping; only the owner can switch it.
   const options = (Object.keys(VIEWS) as View[]).filter(
     (option) =>
@@ -190,6 +201,22 @@ export function DeckList(props: {
           ))}
         </div>
       </div>
+
+      {deckTags.length > 0 && (
+        <div role="group" aria-label="Filter by tag" className="flex flex-wrap gap-1 text-xs">
+          {[null, ...deckTags].map((tag) => (
+            <button
+              key={tag ?? "all"}
+              type="button"
+              aria-pressed={activeTag === tag}
+              onClick={() => setTagFilter(tag)}
+              className={`min-h-7 rounded px-2 py-0.5 ${activeTag === tag ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+            >
+              {tag ?? "All tags"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {commanders.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -432,6 +459,7 @@ function ListLine(props: {
   const problems = props.problemsByName.get(line.name) ?? [];
   return (
     <li
+      title={line.role ? `Role: ${line.role}` : undefined}
       data-highlighted={props.highlighted || undefined}
       className={`group flex flex-col gap-0.5 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
     >
@@ -457,6 +485,14 @@ function ListLine(props: {
             className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
           >
             GC
+          </span>
+        )}
+        {line.pinned && (
+          <span
+            title="Pinned: never suggested as a cut or replacement"
+            className="shrink-0 rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          >
+            pinned
           </span>
         )}
         {problems.length > 0 && (
@@ -490,6 +526,11 @@ function ListLine(props: {
           />
         )}
       </div>
+      {line.role && (
+        <p className="pl-7 text-xs break-words text-zinc-600 italic dark:text-zinc-300">
+          {line.role}
+        </p>
+      )}
       {line.note !== null && (
         <p className="pl-7 text-xs break-words text-zinc-500 dark:text-zinc-400">{line.note}</p>
       )}

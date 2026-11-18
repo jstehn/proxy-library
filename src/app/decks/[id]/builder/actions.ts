@@ -33,6 +33,7 @@ import {
   MAX_HEADING_LENGTH,
   MAX_HEADINGS,
   MAX_NOTE_LENGTH,
+  MAX_ROLE_LENGTH,
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
   compareDeckSnapshot,
@@ -47,6 +48,10 @@ import {
   otherDecksHolding,
   type OtherDeckUse,
   takeCopies,
+  getDeckProfile,
+  updateDeckPrimer,
+  updateDeckProfile,
+  type DeckPlanProfile,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -739,4 +744,102 @@ export async function tokensAction(deckId: number): Promise<TokenLine[] | null> 
       board: line.board,
     })),
   );
+}
+
+const EntryDetailsInput = z.object({
+  deckId: DeckIdInput,
+  oracleId: z.string().min(1),
+  board: z.enum(BOARDS),
+  role: z.string().max(MAX_ROLE_LENGTH).nullable().optional(),
+  pinned: z.boolean().optional(),
+});
+
+/** Sets or clears a line's role and pin (design doc 61). */
+export async function entryDetailsAction(
+  input: z.input<typeof EntryDetailsInput>,
+): Promise<QuantityResult> {
+  const actor = await requireActor();
+  const parsed = EntryDetailsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
+  const result = await getContainer().decks.setEntryDetails(actor, {
+    deckId: DeckId.of(parsed.data.deckId),
+    oracleId: parsed.data.oracleId,
+    board: parsed.data.board,
+    ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}),
+    ...(parsed.data.pinned !== undefined ? { pinned: parsed.data.pinned } : {}),
+  });
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      DeckNotFound: "That deck isn't yours.",
+      EntryNotFound: "That card isn't on that board any more.",
+    };
+    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save that." };
+  }
+  revalidatePath(`/decks/${parsed.data.deckId}`);
+  const deck = await loadBuilderDeck(parsed.data.deckId);
+  if (deck === null) return { ok: false, message: "That deck isn't yours." };
+  return { ok: true, deck };
+}
+
+/** The deck's plan (structured profile) and primer, for the primer panel (design doc 61). */
+export type DeckPlan = Readonly<{ profile: DeckPlanProfile; primer: string }>;
+
+/** Loads the deck's plan and primer, or null if it isn't the player's. */
+export async function deckPlanAction(deckId: number): Promise<DeckPlan | null> {
+  const actor = await requireActor();
+  const stored = await getDeckProfile(getContainer().db, actor.userId, deckId);
+  if (stored === null) return null;
+  return { profile: stored.profile, primer: stored.primer ?? "" };
+}
+
+const NamedCardInput = z.object({
+  cardName: z.string().trim().min(1).max(141),
+  reason: z.string().trim().max(200),
+});
+
+const DeckPlanInput = z.object({
+  deckId: DeckIdInput,
+  plan: z.string().trim().max(600).nullable(),
+  winCons: z.array(z.string().trim().min(1).max(200)).max(20),
+  keyCards: z.array(NamedCardInput).max(40),
+  avoid: z.array(NamedCardInput).max(40),
+  declaredCombos: z.array(z.string().trim().min(1).max(300)).max(20),
+  mulligan: z.string().trim().max(1000).nullable(),
+  pilotNotes: z.string().trim().max(2000).nullable(),
+  primer: z.string().max(20_000),
+});
+
+export type DeckPlanResult = { ok: true; plan: DeckPlan } | { ok: false; message: string };
+
+/** Saves the deck's plan fields and its primer (design doc 61). */
+export async function saveDeckPlanAction(
+  input: z.input<typeof DeckPlanInput>,
+): Promise<DeckPlanResult> {
+  const actor = await requireActor();
+  const parsed = DeckPlanInput.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Something there is too long or empty; check the fields." };
+  }
+  const { db, clock } = getContainer();
+  const { deckId, primer, ...fields } = parsed.data;
+  const now = clock.now();
+  const updated = await updateDeckProfile(
+    db,
+    actor.userId,
+    deckId,
+    {
+      ...fields,
+      plan: fields.plan === "" ? null : fields.plan,
+      mulligan: fields.mulligan === "" ? null : fields.mulligan,
+      pilotNotes: fields.pilotNotes === "" ? null : fields.pilotNotes,
+    },
+    now,
+  );
+  if (updated === null) return { ok: false, message: "That deck isn't yours." };
+  const savedPrimer = await updateDeckPrimer(db, actor.userId, deckId, { content: primer }, now);
+  revalidatePath(`/decks/${deckId}`);
+  return {
+    ok: true,
+    plan: { profile: updated.profile, primer: savedPrimer?.primer ?? primer.trim() },
+  };
 }
