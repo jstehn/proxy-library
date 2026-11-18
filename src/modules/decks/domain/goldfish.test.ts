@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
 import { library, type DrawLine } from "./draws";
-import { simulateOpeningHands } from "./goldfish";
+import { canPayColors, simulateOpeningHands } from "./goldfish";
 
 function buildLibrary(landsCount: number, rampCount: number, fillerCount: number) {
   const lines: DrawLine[] = [];
@@ -88,5 +88,37 @@ describe("simulateOpeningHands", () => {
 
     expect(resRamp.mustCastByPct).toBeGreaterThan(50);
     expect(resRamp.mustCastByPct ?? 0).toBeGreaterThan(resNoRamp.mustCastByPct ?? 0);
+  });
+
+  it("needs the right colors, not just enough mana, for mustCastBy", () => {
+    const henzie = {
+      cardName: "Henzie",
+      manaValue: 3,
+      turn: 3,
+      inLibrary: false,
+      colorPips: { B: 1, R: 1, G: 1 },
+    };
+    const forestsOnly = simulateOpeningHands(buildLibrary(36, 0, 63), {
+      rng: seededRng("mcb-colors"),
+      trials: 200,
+      mustCastBy: henzie,
+    });
+    expect(forestsOnly.mustCastByPct).toBe(0);
+    const anyColorCount = simulateOpeningHands(buildLibrary(36, 0, 63), {
+      rng: seededRng("mcb-colors"),
+      trials: 200,
+      mustCastBy: { ...henzie, colorPips: undefined },
+    });
+    expect(anyColorCount.mustCastByPct ?? 0).toBeGreaterThan(50);
+  });
+});
+
+describe("canPayColors", () => {
+  it("assigns each pip its own source, moving a flexible source where it's needed", () => {
+    expect(canPayColors(["B", "G"], [["B", "G"], ["G"]])).toBe(true);
+    expect(canPayColors(["G", "B"], [["B", "G"], ["G"]])).toBe(true);
+    expect(canPayColors(["B", "R"], [["B"], ["B"]])).toBe(false);
+    expect(canPayColors(["B", "R", "G"], [["B", "R", "G"], ["B"]])).toBe(false);
+    expect(canPayColors([], [])).toBe(true);
   });
 });

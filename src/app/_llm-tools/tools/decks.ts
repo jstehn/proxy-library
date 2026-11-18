@@ -86,6 +86,9 @@ import {
   type GoldfishState,
   type GoldfishStepInput,
   type SnapshotComparison,
+  colorPips,
+  type GoldfishSessionError,
+  type MustCastByOption,
 } from "@/modules/decks";
 import { canonicalTheme, cardTags, TAGS, THEMES } from "@/shared/card-search";
 import { deckProfileFor } from "../avoid-cards";
@@ -2594,8 +2597,7 @@ export const simulateOpeningHandsTool = defineTool({
     const cards = library(view.lines);
     const freeMulligan = input.freeMulligan ?? view.deck.format === "commander";
 
-    let mustCastByOption:
-      { cardName: string; manaValue: number; turn: number; inLibrary: boolean } | undefined;
+    let mustCastByOption: MustCastByOption | undefined;
     if (input.mustCastBy) {
       const cmdLine = view.lines.find((l) => l.board === "commander");
       const targetName = input.mustCastBy.card ?? cmdLine?.name;
@@ -2622,6 +2624,7 @@ export const simulateOpeningHandsTool = defineTool({
         manaValue: effMv,
         turn: input.mustCastBy.turn,
         inLibrary: line.board !== "commander",
+        colorPips: colorPips(line.manaCost),
       };
     }
 
@@ -3275,6 +3278,38 @@ const goldfishZone = z.enum([
   "commandZone",
 ]);
 
+/** A goldfish step's refusal in words, for the model. */
+function goldfishErrorText(error: GoldfishSessionError): string {
+  switch (error.kind) {
+    case "SessionNotFound":
+      return "That goldfish session expired or never existed; start one with goldfish_start.";
+    case "MulliganNotAllowed":
+    case "CastNotAllowed":
+      return error.reason;
+    case "PendingBottom":
+      return `Put ${error.remaining} card(s) on the bottom first (action "bottom" with keys).`;
+    case "CardNotFound":
+      return `No card with key ${error.key}${error.zone ? ` in ${error.zone}` : ""}.`;
+    case "NotALand":
+      return `${error.name} (${error.key}) isn't a land.`;
+    case "LandLimitReached":
+      return `You already played ${error.landsPlayedThisTurn} land(s) this turn.`;
+    case "InvalidBottomSelection":
+      return `Choose exactly ${error.expected} card(s) to bottom; got ${error.received}.`;
+    case "InsufficientMana": {
+      const pool = (Object.entries(error.available) as [string, number][])
+        .filter(([, amount]) => amount > 0)
+        .map(([color, amount]) => `${amount}${color}`)
+        .join(" ");
+      return `Can't pay ${error.required} for ${error.card}; the pool has ${pool === "" ? "nothing" : pool}. Tap lands or mana sources first, or pass strict: false.`;
+    }
+    case "EmptyLibrary":
+      return "The library is empty.";
+    default:
+      return assertNever(error);
+  }
+}
+
 export const goldfishStepTool = defineTool({
   name: "goldfish_step",
   title: "Advance an interactive goldfish session",
@@ -3452,7 +3487,7 @@ export const goldfishStepTool = defineTool({
       step: stepInput,
     });
     if (!result.ok) {
-      return failed(result.error.kind, JSON.stringify(result.error));
+      return failed(result.error.kind, goldfishErrorText(result.error));
     }
     return done({
       sessionId: result.value.sessionId,

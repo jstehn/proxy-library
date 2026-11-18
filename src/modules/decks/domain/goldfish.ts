@@ -10,6 +10,8 @@ export type MustCastByOption = Readonly<{
   turn: number;
   /** True if the card must be drawn from the library; false if in the command zone. */
   inLibrary?: boolean;
+  /** Colored pips in its cost ({B}{R}{G} → B 1, R 1, G 1); left out counts only the total. */
+  colorPips?: Readonly<Partial<Record<"W" | "U" | "B" | "R" | "G", number>>>;
 }>;
 
 export type SimulateHandsOptions = Readonly<{
@@ -113,6 +115,47 @@ function bottomCards(
   return remaining;
 }
 
+const ANY_COLOR: readonly string[] = ["W", "U", "B", "R", "G"];
+
+/**
+ * Can these mana sources pay these colored pips, one source per pip? A small bipartite
+ * matching (augmenting paths): a commander has at most a handful of pips.
+ */
+export function canPayColors(
+  pips: readonly string[],
+  sources: readonly (readonly string[])[],
+): boolean {
+  if (pips.length > sources.length) return false;
+  const sourceForPip: number[] = pips.map(() => -1);
+  const pipForSource: number[] = sources.map(() => -1);
+  function assign(pip: number, seen: boolean[]): boolean {
+    for (let source = 0; source < sources.length; source++) {
+      if (seen[source] || !(sources[source] ?? []).includes(pips[pip] ?? "")) continue;
+      seen[source] = true;
+      const holder = pipForSource[source] ?? -1;
+      if (holder === -1 || assign(holder, seen)) {
+        pipForSource[source] = pip;
+        sourceForPip[pip] = source;
+        return true;
+      }
+    }
+    return false;
+  }
+  return pips.every((_, pip) =>
+    assign(
+      pip,
+      sources.map(() => false),
+    ),
+  );
+}
+
+/** The colors a card adds once in play: its own, or any color for land-fetching ramp. */
+function sourceColors(card: LibraryCard): readonly string[] {
+  return card.producedMana !== undefined && card.producedMana.length > 0
+    ? card.producedMana
+    : ANY_COLOR;
+}
+
 function canCastByTurn(
   finalHand: readonly LibraryCard[],
   restOfLibrary: readonly LibraryCard[],
@@ -121,30 +164,42 @@ function canCastByTurn(
 ): boolean {
   const handPool = [...finalHand];
   let drawIdx = 0;
-  let landsInPlay = 0;
-  let rampBonusMana = 0;
+  const sources: (readonly string[])[] = [];
   const targetLower = mustCast.cardName.trim().toLowerCase();
+  const pips = Object.entries(mustCast.colorPips ?? {}).flatMap(([color, count]) =>
+    Array.from({ length: count ?? 0 }, () => color),
+  );
+  const canPay = () => sources.length >= mustCast.manaValue && canPayColors(pips, sources);
 
   for (let turn = 1; turn <= mustCast.turn; turn++) {
     if ((turn > 1 || onTheDraw) && drawIdx < restOfLibrary.length) {
       handPool.push(restOfLibrary[drawIdx++]);
     }
-    const landIdx = handPool.findIndex((c) => c.isLand);
-    if (landIdx !== -1) {
-      handPool.splice(landIdx, 1);
-      landsInPlay += 1;
+    // Play the land that makes the most colors the target still needs.
+    let bestLand = -1;
+    let bestScore = -1;
+    handPool.forEach((card, index) => {
+      if (!card.isLand) return;
+      const colors = card.producedMana ?? [];
+      const score = pips.filter((pip) => colors.includes(pip)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestLand = index;
+      }
+    });
+    if (bestLand !== -1) {
+      const [land] = handPool.splice(bestLand, 1);
+      sources.push(land.producedMana ?? ["C"]);
     }
 
-    let available = landsInPlay + rampBonusMana;
     const hasTarget =
       mustCast.inLibrary === false ||
       handPool.some((c) => c.name.trim().toLowerCase() === targetLower);
-    if (hasTarget && available >= mustCast.manaValue) {
-      return true;
-    }
+    if (hasTarget && canPay()) return true;
 
-    // Greedily cast affordable ramp spells on earlier turns to accelerate mana.
+    // Greedily cast affordable ramp spells on earlier turns; their mana counts from next turn.
     if (turn < mustCast.turn) {
+      let available = sources.length;
       while (true) {
         const rampIdx = handPool.findIndex(
           (c) => !c.isLand && c.tags.includes("ramp") && (c.manaValue ?? 99) <= available,
@@ -152,7 +207,7 @@ function canCastByTurn(
         if (rampIdx === -1) break;
         const [rampCard] = handPool.splice(rampIdx, 1);
         available -= rampCard.manaValue ?? 0;
-        rampBonusMana += 1;
+        sources.push(sourceColors(rampCard));
       }
     }
   }

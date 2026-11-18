@@ -30,6 +30,8 @@ export type LibraryCard = Readonly<{
   isLand: boolean;
   manaValue?: number;
   tags: readonly Tag[];
+  /** Colors of mana it makes once in play ("C" for colorless); empty for most spells. */
+  producedMana?: readonly string[];
 }>;
 
 export const OPENING_HAND = 7;
@@ -56,6 +58,9 @@ export function library(lines: readonly DrawLine[]): LibraryCard[] {
         isLand: isLand(line.typeLine),
         ...(line.manaValue !== undefined ? { manaValue: line.manaValue } : {}),
         tags,
+        ...(line.producedMana !== undefined && line.producedMana.length > 0
+          ? { producedMana: line.producedMana }
+          : {}),
       }));
     });
 }
