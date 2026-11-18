@@ -1760,9 +1760,7 @@ function previewGuardrailWarnings(
       const reason = profile?.avoid.find(
         (a) => a.cardName.toLowerCase() === change.name.toLowerCase(),
       )?.reason;
-      warnings.push(
-        `Adding avoid card: ${change.name}${reason ? ` — ${reason}` : ""}`,
-      );
+      warnings.push(`Adding avoid card: ${change.name}${reason ? ` — ${reason}` : ""}`);
     }
   }
   return warnings;
@@ -3714,7 +3712,10 @@ export const setDeckProfileTool = defineTool({
       const playedNames = new Set(
         (view?.lines ?? [])
           .filter((l) => isPlayed(l.board))
-          .flatMap((l) => [l.name.toLowerCase(), ...l.name.split(" // ").map((f) => f.toLowerCase())]),
+          .flatMap((l) => [
+            l.name.toLowerCase(),
+            ...l.name.split(" // ").map((f) => f.toLowerCase()),
+          ]),
       );
       const namesToCheck = [
         ...(input.keyCards ?? []).map((k) => k.cardName),

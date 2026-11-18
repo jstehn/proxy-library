@@ -972,7 +972,14 @@ export async function budgetReplacements(
     const REANIMATE_RE =
       /\b(?:return|put)\b[^.]*\bfrom (?:your |a |any )?graveyard\b[^.]*\bonto the battlefield\b/i;
     const isReanimate = REANIMATE_RE.test(targetText);
-    const PRIMARY_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Planeswalker"];
+    const PRIMARY_TYPES = [
+      "Creature",
+      "Instant",
+      "Sorcery",
+      "Artifact",
+      "Enchantment",
+      "Planeswalker",
+    ];
     const targetPrimaryTypes = PRIMARY_TYPES.filter((t) =>
       new RegExp(`\\b${t}\\b`, "i").test(target.type_line),
     );

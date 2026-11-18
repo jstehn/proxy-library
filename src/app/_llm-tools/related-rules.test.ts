@@ -48,7 +48,9 @@ describe("related-rules", () => {
     const krosanGrip = matchRelatedRules("Split second (As long as this spell is on the stack...)");
     expect(krosanGrip.map((r) => r.rule)).toContain("CR 702.61a");
 
-    const altar = matchRelatedRules("Sacrifice a creature: Put a +1/+1 counter on target creature.");
+    const altar = matchRelatedRules(
+      "Sacrifice a creature: Put a +1/+1 counter on target creature.",
+    );
     expect(altar.map((r) => r.rule)).toContain("CR 605.1a");
   });
 });
