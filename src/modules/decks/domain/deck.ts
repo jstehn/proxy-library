@@ -134,8 +134,42 @@ export function checkQuantity(quantity: number): Result<number, QuantityInvalid>
   return ok(quantity);
 }
 
-/** Normalizes line tags: trims, drops empties, deduplicates case-insensitively, caps at 20. */
-export function normalizeTags(tags: readonly string[]): string[] {
+export const CORE_DECK_TAGS = [
+  "Ramp",
+  "Draw",
+  "Removal",
+  "Wipe",
+  "Protect",
+  "Finisher",
+  "Combo",
+  "Recur",
+  "Sac",
+  "Enabler",
+  "Payoff",
+] as const;
+
+export const MAX_DECK_TAGS = 25;
+
+/**
+ * Normalizes line tags: trims, drops empties, deduplicates case-insensitively, canonicalizes
+ * against `CORE_DECK_TAGS` and existing deck tags, and caps distinct tags per deck at `MAX_DECK_TAGS`.
+ */
+export function normalizeTags(
+  tags: readonly string[],
+  existingDeckTags: readonly string[] = [],
+): string[] {
+  const canonicalByLower = new Map<string, string>();
+  for (const core of CORE_DECK_TAGS) canonicalByLower.set(core.toLowerCase(), core);
+  const existingSet = new Set<string>();
+  for (const existing of existingDeckTags) {
+    const key = existing.trim().toLowerCase();
+    if (key.length === 0) continue;
+    existingSet.add(key);
+    if (!canonicalByLower.has(key)) canonicalByLower.set(key, existing.trim());
+  }
+
+  let newDistinctCount = 0;
+  const remainingNewBudget = Math.max(0, MAX_DECK_TAGS - existingSet.size);
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of tags) {
@@ -143,8 +177,12 @@ export function normalizeTags(tags: readonly string[]): string[] {
     if (trimmed.length === 0) continue;
     const key = trimmed.toLowerCase();
     if (seen.has(key)) continue;
+    if (!existingSet.has(key)) {
+      if (newDistinctCount >= remainingNewBudget) continue;
+      newDistinctCount++;
+    }
     seen.add(key);
-    out.push(trimmed);
+    out.push(canonicalByLower.get(key) ?? trimmed);
     if (out.length >= 20) break;
   }
   return out;
@@ -172,8 +210,11 @@ export function withEntry(
   const existing = deck.entries.find(same);
   const others = deck.entries.filter((entry) => !same(entry));
   if (change.quantity === 0) return { ...deck, entries: others };
+  const otherDeckTags = others.flatMap((e) => e.tags ?? []);
   const resolvedTags =
-    change.tags !== undefined ? normalizeTags(change.tags) : (existing?.tags ?? []);
+    change.tags !== undefined
+      ? normalizeTags(change.tags, otherDeckTags)
+      : (existing?.tags ?? []);
   const entry: DeckEntry = {
     oracleId: change.oracleId,
     board: change.board,

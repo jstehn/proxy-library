@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyDeckName, MAX_NAME_LENGTH } from "./deck";
+import { copyDeckName, MAX_DECK_TAGS, MAX_NAME_LENGTH, normalizeTags } from "./deck";
 
 describe("copyDeckName (design doc 48)", () => {
   it("appends ' (copy)' and trims long names to fit MAX_NAME_LENGTH", () => {
@@ -9,5 +9,18 @@ describe("copyDeckName (design doc 48)", () => {
     const copied = copyDeckName(longName);
     expect(copied.length).toBeLessThanOrEqual(MAX_NAME_LENGTH);
     expect(copied.endsWith(" (copy)")).toBe(true);
+  });
+});
+
+describe("normalizeTags", () => {
+  it("canonicalizes core tags, reuses existing deck tag casing, and enforces MAX_DECK_TAGS", () => {
+    expect(normalizeTags(["ramp", "  draw ", "Blitz", "blitz"], ["Blitz"])).toEqual([
+      "Ramp",
+      "Draw",
+      "Blitz",
+    ]);
+
+    const existing = Array.from({ length: MAX_DECK_TAGS - 1 }, (_, i) => `Tag${i}`);
+    expect(normalizeTags(["NewOne", "NewTwo"], existing)).toEqual(["NewOne"]);
   });
 });

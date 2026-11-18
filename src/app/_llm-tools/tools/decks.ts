@@ -21,6 +21,7 @@ import {
   checkNote,
   checkOwnedCards,
   compareDeckSnapshot,
+  CORE_DECK_TAGS,
   deckChangePreview,
   deckProblems,
   deckStats,
@@ -1046,7 +1047,9 @@ export const setDeckEntry = defineTool({
       .array(z.string().min(1).max(40))
       .max(20)
       .optional()
-      .describe('Optional structured role/synergy tags (e.g. ["Blitz", "Sac"]); [] clears them.'),
+      .describe(
+        `Optional structured tags (prefer core tags: ${CORE_DECK_TAGS.join(", ")}; custom tags like "Blitz" allowed up to 25 distinct tags/deck); [] clears them.`,
+      ),
   }),
   async run(context, input) {
     const found = await findCard(context.container.db, input.card);
@@ -1420,7 +1423,9 @@ export const applyChangesTool = defineTool({
             .array(z.string().min(1).max(40))
             .max(20)
             .optional()
-            .describe('Optional structured tags (e.g. ["Blitz", "Sac"]); [] clears them.'),
+            .describe(
+              `Optional structured tags (prefer core tags: ${CORE_DECK_TAGS.join(", ")}; custom tags like "Blitz" allowed up to 25 distinct tags/deck); [] clears them.`,
+            ),
         }),
       )
       .min(1)
