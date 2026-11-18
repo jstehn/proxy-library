@@ -39,10 +39,17 @@ import {
   fingerprint,
   formatRulesSummary,
   FORMATS,
+  getDeckProfile,
   GROUPINGS,
   isPlayed,
   legalFormatsForCards,
   library,
+  resolveDeckProfileTargets,
+  summarizeDeckProfile,
+  updateDeckPrimer,
+  updateDeckProfile,
+  effectiveManaValue,
+  type DeckPlanProfile,
   listCardPackages,
   listDeckSnapshots,
   listDeckSources,
@@ -681,6 +688,7 @@ export const getDeck = defineTool({
           "shortList",
           "toComplete",
           "deckSources",
+          "profileSummary",
         ]),
       )
       .optional()
@@ -697,7 +705,7 @@ export const getDeck = defineTool({
       freeMulligan: view.deck.format === "commander",
     });
     const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
-    const [rawTokens, combos, deckSources] = await Promise.all([
+    const [rawTokens, combos, deckSources, storedProfile] = await Promise.all([
       deckTokenLines(
         context.container.db,
         view.deck.id,
@@ -717,6 +725,7 @@ export const getDeck = defineTool({
           )
         : Promise.resolve(undefined),
       listDeckSources(context.container.db, context.actor.userId, input.deckId),
+      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
     ]);
     const checklist = rawTokens.map(toTokenChecklistItem);
     const missingCards = problems.flatMap((problem) => {
@@ -775,7 +784,9 @@ export const getDeck = defineTool({
       return true;
     });
 
+    const profileSummary = summarizeDeckProfile(storedProfile?.profile);
     const fullPayload: Record<string, unknown> = {
+      ...(profileSummary !== null ? { profileSummary } : {}),
       deck: {
         id: view.deck.id,
         name: view.deck.name,
@@ -2942,5 +2953,155 @@ export const goldfishStepTool = defineTool({
       ...compactGoldfishBoard(result.value.state),
       ...(result.value.peeked ? { peeked: result.value.peeked.map(compactCard) } : {}),
     });
+  },
+});
+
+const costReducerSchema = z.object({
+  cardName: z.string().min(1),
+  scope: z.enum(["blitz", "creature_power_gte_4", "commander", "all_spells"]),
+  genericReduction: z.number().int().min(0).max(20),
+  perCommandCast: z.boolean().optional(),
+});
+
+const keyCardPinSchema = z.object({
+  cardName: z.string().min(1),
+  reason: z.string().min(1).max(200),
+});
+
+const avoidCardSchema = z.object({
+  cardName: z.string().min(1),
+  reason: z.string().min(1).max(200),
+});
+
+export const getDeckProfileTool = defineTool({
+  name: "get_deck_profile",
+  title: "Get deck profile & primer",
+  description: [
+    "Returns the deck's structured profile (plan, landTarget, roleTargets, keyCards, avoid, costReducers, winCons, declaredCombos, mulligan, pilotNotes) and optionally the Markdown primer.",
+    "Use it when: starting any deck review so you know the deck's plan, pinned keyCards, avoid list, and cost reducers before suggesting changes.",
+  ].join("\n"),
+  scope: "read",
+  readOnly: true,
+  input: z.object({
+    deckId,
+    includePrimer: z.boolean().default(false).describe("Include full Markdown primer text."),
+  }),
+  async run(context, input) {
+    const stored = await getDeckProfile(context.container.db, context.actor.userId, input.deckId);
+    if (!stored) return deckNotFound(input.deckId);
+    const resolvedTargets = resolveDeckProfileTargets(stored.profile);
+    return done({
+      deckId: stored.deckId,
+      deckName: stored.deckName,
+      format: stored.format,
+      profile: stored.profile,
+      resolvedTargets,
+      ...(input.includePrimer ? { primer: stored.primer } : { hasPrimer: Boolean(stored.primer) }),
+    });
+  },
+});
+
+export const setDeckProfileTool = defineTool({
+  name: "set_deck_profile",
+  title: "Update deck profile",
+  description: [
+    "Patches structured fields on a deck's profile (plan, landTarget, roleTargets, keyCards, avoid, costReducers, winCons, declaredCombos, mulligan, pilotNotes).",
+    "Use it when: recording the deck's plan, pinning keyCards, ruling out avoid cards, or setting commander costReducers and custom land/role targets.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    plan: z.string().max(1000).optional().describe("One or two sentences describing the deck's plan."),
+    landTarget: z.number().int().min(0).max(99).optional().describe("Target land count for the deck."),
+    roleTargets: z
+      .object({
+        ramp: z.number().int().min(0).max(99).optional(),
+        draw: z.number().int().min(0).max(99).optional(),
+        removal: z.number().int().min(0).max(99).optional(),
+        wipe: z.number().int().min(0).max(99).optional(),
+      })
+      .optional()
+      .describe("Target counts for ramp, draw, removal, and wipe."),
+    keyCards: z
+      .array(keyCardPinSchema)
+      .max(50)
+      .optional()
+      .describe("Pinned key cards with a one-line reason (never suggested for cut or replacement)."),
+    avoid: z
+      .array(avoidCardSchema)
+      .max(100)
+      .optional()
+      .describe("Ruled-out cards with reasons; excluded by search and idea tools."),
+    costReducers: z
+      .array(costReducerSchema)
+      .max(20)
+      .optional()
+      .describe("Declarative cost reducers (e.g. Henzie blitz -1 per cast; Goreclaw -2 for power 4+)."),
+    winCons: z.array(z.string().min(1).max(300)).max(20).optional().describe("Win condition lines."),
+    declaredCombos: z
+      .array(z.string().min(1).max(300))
+      .max(30)
+      .optional()
+      .describe("Declared combos for bracket disclosure."),
+    mulligan: z.string().max(1000).optional().describe("Short mulligan heuristic."),
+    pilotNotes: z.string().max(2000).optional().describe("Short pilot notes."),
+  }),
+  async run(context, input) {
+    const patch: Partial<DeckPlanProfile> = {};
+    if (input.plan !== undefined) patch.plan = input.plan;
+    if (input.landTarget !== undefined) patch.landTarget = input.landTarget;
+    if (input.roleTargets !== undefined) patch.roleTargets = input.roleTargets;
+    if (input.keyCards !== undefined) patch.keyCards = input.keyCards;
+    if (input.avoid !== undefined) patch.avoid = input.avoid;
+    if (input.costReducers !== undefined) patch.costReducers = input.costReducers;
+    if (input.winCons !== undefined) patch.winCons = input.winCons;
+    if (input.declaredCombos !== undefined) patch.declaredCombos = input.declaredCombos;
+    if (input.mulligan !== undefined) patch.mulligan = input.mulligan;
+    if (input.pilotNotes !== undefined) patch.pilotNotes = input.pilotNotes;
+
+    const updated = await updateDeckProfile(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      patch,
+    );
+    if (!updated) return deckNotFound(input.deckId);
+    return done({
+      deckId: updated.deckId,
+      profile: updated.profile,
+      resolvedTargets: resolveDeckProfileTargets(updated.profile),
+    });
+  },
+});
+
+export const setPrimerTool = defineTool({
+  name: "set_primer",
+  title: "Update deck primer",
+  description: [
+    "Updates a deck's Markdown primer, either patching a single `## Section` heading or replacing the full primer when `section` is omitted. Supports `[[Card Name]]` links.",
+    "Use it when: writing or updating a section (e.g. Plan, How it wins, Key cards, Mulligan, Turns 1–3, Watch out for).",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    section: z
+      .string()
+      .min(1)
+      .max(80)
+      .optional()
+      .describe("Optional ## heading name to patch in-place (omit to replace the entire primer)."),
+    content: z.string().max(20000).describe("Markdown content for the section (or full primer)."),
+  }),
+  async run(context, input) {
+    const updated = await updateDeckPrimer(
+      context.container.db,
+      context.actor.userId,
+      input.deckId,
+      { section: input.section, content: input.content },
+    );
+    if (!updated) return deckNotFound(input.deckId);
+    return done(updated);
   },
 });

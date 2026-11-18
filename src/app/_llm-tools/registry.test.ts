@@ -29,6 +29,8 @@ describe("the tool registry", () => {
   it("writes only decks and the wishlist, with exactly these tools (rule 5)", () => {
     const writes = TOOLS.filter((tool) => !tool.readOnly).map((tool) => [tool.name, tool.scope]);
     expect(writes).toEqual([
+      ["set_deck_profile", "decks:write"],
+      ["set_primer", "decks:write"],
       ["create_deck", "decks:write"],
       ["update_deck", "decks:write"],
       ["apply_changes", "decks:write"],

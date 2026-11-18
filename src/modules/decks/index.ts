@@ -510,3 +510,29 @@ export {
   type GoldfishState,
   type GoldfishZone,
 } from "./domain/goldfish-session";
+export {
+  EMPTY_DECK_PROFILE,
+  effectiveManaValue,
+  FIXED_CARD_ROLE_TAGS,
+  GENERIC_COMMANDER_DEFAULTS,
+  isAvoidCard,
+  isKeyCard,
+  patchPrimerSection,
+  resolveDeckProfileTargets,
+  summarizeDeckProfile,
+  type AvoidCard,
+  type CostReducer,
+  type CostReducerScope,
+  type DeckProfile as DeckPlanProfile,
+  type EdhrecProfileFallback,
+  type FixedCardRoleTag,
+  type KeyCardPin,
+  type RoleTargetKey,
+} from "./domain/deck-profile";
+export {
+  getDeckProfile,
+  updateDeckEntryMetadata,
+  updateDeckPrimer,
+  updateDeckProfile,
+  type StoredDeckProfile,
+} from "./queries/deck-profile";
