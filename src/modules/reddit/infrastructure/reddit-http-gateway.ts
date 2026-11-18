@@ -489,6 +489,18 @@ export function redditHttpGateway(
       const cached = getCached(cacheKey);
       if (cached) return ok(cached);
 
+      if (!hasOAuth) {
+        try {
+          const archived = await fetchThreadFromArcticShift(postId, commentLimit);
+          if (archived) {
+            setCached(cacheKey, archived);
+            return ok(archived);
+          }
+        } catch {
+          // Fall back to direct Reddit JSON if Arctic Shift is unavailable or hasn't indexed a brand-new post.
+        }
+      }
+
       const params = new URLSearchParams({
         sort: commentSort,
         limit: String(commentLimit),
@@ -534,21 +546,6 @@ export function redditHttpGateway(
         setCached(cacheKey, thread);
         return ok(thread);
       } catch (error) {
-        if (
-          !hasOAuth &&
-          error instanceof HttpError &&
-          (error.status === 401 || error.status === 403)
-        ) {
-          try {
-            const fallback = await fetchThreadFromArcticShift(postId, commentLimit);
-            if (fallback) {
-              setCached(cacheKey, fallback);
-              return ok(fallback);
-            }
-          } catch {
-            // Fall through to the primary Reddit error if archive fallback also fails.
-          }
-        }
         return err(classifyRedditError(error, "Failed to fetch Reddit thread"));
       }
     },

@@ -49,70 +49,62 @@ describe("redditHttpGateway", () => {
     );
   });
 
-  it("parses thread + nested comments and caches by postId/sort/limit", async () => {
-    const fetchFn = vi.fn(async () =>
-      Response.json([
-        {
-          kind: "Listing",
-          data: {
-            children: [
-              {
-                kind: "t3",
+  it("fetches thread + nested comments from Arctic Shift first (avoiding reddit.com) and caches", async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      expect(url).toContain("arctic-shift.photon-reddit.com");
+      if (url.includes("/api/posts/ids")) {
+        return Response.json({
+          data: [
+            {
+              id: "1abc2de",
+              subreddit: "EDH",
+              title: "Henzie Primer",
+              author: "op",
+              score: 80,
+              num_comments: 2,
+              created_utc: 1_700_000_000,
+              selftext: "Main post",
+            },
+          ],
+        });
+      }
+      return Response.json({
+        data: [
+          {
+            kind: "t1",
+            data: {
+              id: "c1",
+              author: "a1",
+              score: 12,
+              body: "Top reply",
+              created_utc: 1_700_000_010,
+              replies: {
+                kind: "Listing",
                 data: {
-                  id: "1abc2de",
-                  subreddit: "EDH",
-                  title: "Henzie Primer",
-                  author: "op",
-                  score: 80,
-                  num_comments: 2,
-                  created_utc: 1_700_000_000,
-                  selftext: "Main post",
-                },
-              },
-            ],
-          },
-        },
-        {
-          kind: "Listing",
-          data: {
-            children: [
-              {
-                kind: "t1",
-                data: {
-                  id: "c1",
-                  author: "a1",
-                  score: 12,
-                  body: "Top reply",
-                  created_utc: 1_700_000_010,
-                  replies: {
-                    kind: "Listing",
-                    data: {
-                      children: [
-                        {
-                          kind: "t1",
-                          data: {
-                            id: "c2",
-                            author: "a2",
-                            score: 5,
-                            body: "Nested reply",
-                            created_utc: 1_700_000_020,
-                            replies: "",
-                          },
-                        },
-                      ],
+                  children: [
+                    {
+                      kind: "t1",
+                      data: {
+                        id: "c2",
+                        author: "a2",
+                        score: 5,
+                        body: "Nested reply",
+                        created_utc: 1_700_000_020,
+                        replies: "",
+                      },
                     },
-                  },
+                  ],
                 },
               },
-              {
-                kind: "t1",
-                data: { id: "c3", author: "[deleted]", score: 0, body: "[deleted]" },
-              },
-            ],
+            },
           },
-        },
-      ]),
-    );
+          {
+            kind: "t1",
+            data: { id: "c3", author: "[deleted]", score: 0, body: "[deleted]" },
+          },
+        ],
+      });
+    });
 
     const gateway = redditHttpGateway(testClock, { fetchFn, sleep: async () => {} });
     const first = await gateway.fetchThread({
@@ -128,7 +120,8 @@ describe("redditHttpGateway", () => {
 
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
-    expect(fetchFn).toHaveBeenCalledTimes(1);
+    // 2 calls for first fetch (post + comments); 0 additional calls on cached second fetch.
+    expect(fetchFn).toHaveBeenCalledTimes(2);
     if (!first.ok) return;
     expect(first.value.comments).toHaveLength(2);
     expect(first.value.comments[0]?.depth).toBe(0);
