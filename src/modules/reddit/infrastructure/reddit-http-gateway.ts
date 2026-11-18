@@ -59,6 +59,30 @@ const ArcticDataSchema = z.object({
   data: z.array(z.record(z.string(), z.unknown())).nullable(),
 });
 
+const BraveSearchSchema = z.object({
+  web: z
+    .object({
+      results: z.array(
+        z.object({
+          title: z.string().default(""),
+          url: z.string(),
+          description: z.string().optional(),
+        }),
+      ),
+    })
+    .optional(),
+});
+
+const SearxngSearchSchema = z.object({
+  results: z.array(
+    z.object({
+      title: z.string().default(""),
+      url: z.string(),
+      content: z.string().optional(),
+    }),
+  ),
+});
+
 type CacheEntry = {
   thread: RedditThread;
   expiresAtMs: number;
@@ -78,7 +102,7 @@ function classifyRedditError(error: unknown, fallbackMessage: string): RedditErr
       return {
         kind: "UpstreamError",
         message:
-          "Reddit blocked anonymous access (HTTP 403). Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in environment config for OAuth access.",
+          "Reddit blocked anonymous access (HTTP 403). Configure BRAVE_SEARCH_API_KEY or SEARXNG_URL for Reddit search.",
       };
     }
     if (error.status === 429) {
@@ -136,10 +160,54 @@ function flattenComments(
   }
 }
 
+function buildSiteSearchQuery(query: string, subreddit: string): string {
+  if (subreddit === "all") {
+    return `site:reddit.com/r/ ${query}`;
+  }
+  const subs = subreddit.split("+").filter(Boolean);
+  if (subs.length === 1) {
+    return `site:reddit.com/r/${subs[0]} ${query}`;
+  }
+  const siteFilter = subs.map((s) => `site:reddit.com/r/${s}`).join(" OR ");
+  return `(${siteFilter}) ${query}`;
+}
+
+function extractSubredditFromUrl(url: string): string {
+  const match = /\/r\/([A-Za-z0-9_]+)\//i.exec(url);
+  return match?.[1] ?? "";
+}
+
+function mapWebHitsToPosts(
+  items: ReadonlyArray<{ title: string; url: string; snippet?: string }>,
+  limit: number,
+): RedditSearchPost[] {
+  const seen = new Set<string>();
+  const posts: RedditSearchPost[] = [];
+  for (const item of items) {
+    if (posts.length >= limit) break;
+    const parsedId = parseRedditPostId(item.url);
+    if (!parsedId.ok || seen.has(parsedId.value)) continue;
+    seen.add(parsedId.value);
+    const subreddit = extractSubredditFromUrl(item.url);
+    posts.push({
+      postId: parsedId.value,
+      url: item.url,
+      subreddit,
+      title: item.title.replace(/\s*:\s*r\/\w+\s*$/i, "").trim(),
+      author: "unknown",
+      score: 0,
+      numComments: 0,
+      createdUtc: 0,
+      selftextSnippet: item.snippet ? snippetOf(item.snippet) : null,
+    });
+  }
+  return posts;
+}
+
 /**
  * Anti-corruption layer over Reddit's API (ADR 0007). Uses OAuth2 (`oauth.reddit.com`) when
- * `clientId` + `clientSecret` are configured, falling back to public `.json` endpoints (and
- * Arctic Shift for thread lookups by ID if Reddit returns 403).
+ * `clientId` + `clientSecret` are configured, Brave Search / SearXNG for `site:reddit.com`
+ * search when configured, and falls back to public `.json` + Arctic Shift for thread lookups.
  */
 export function redditHttpGateway(
   clock: Clock,
@@ -148,6 +216,8 @@ export function redditHttpGateway(
     sleep?: Sleep;
     clientId?: string;
     clientSecret?: string;
+    braveSearchApiKey?: string;
+    searxngUrl?: string;
   } = {},
 ): RedditGateway {
   const sleep = options.sleep ?? defaultSleep;
@@ -267,6 +337,79 @@ export function redditHttpGateway(
 
   return {
     async searchPosts({ query, subreddit, sortBy, timeframe, limit }) {
+      const siteQuery = buildSiteSearchQuery(query, subreddit);
+
+      if (!hasOAuth && options.braveSearchApiKey) {
+        try {
+          const braveParams = new URLSearchParams({
+            q: siteQuery,
+            count: String(Math.min(20, Math.max(limit * 2, 10))),
+          });
+          if (timeframe !== "all") {
+            const freshnessMap: Record<string, string> = {
+              day: "pd",
+              week: "pw",
+              month: "pm",
+              year: "py",
+            };
+            const f = freshnessMap[timeframe];
+            if (f) braveParams.set("freshness", f);
+          }
+          const raw = await fetchJson(
+            http,
+            `https://api.search.brave.com/res/v1/web/search?${braveParams.toString()}`,
+            {
+              headers: {
+                "X-Subscription-Token": options.braveSearchApiKey,
+                Accept: "application/json",
+              },
+            },
+          );
+          const parsed = BraveSearchSchema.safeParse(raw);
+          if (parsed.success) {
+            const hits = (parsed.data.web?.results ?? []).map((r) => ({
+              title: r.title,
+              url: r.url,
+              snippet: r.description,
+            }));
+            return ok(mapWebHitsToPosts(hits, limit));
+          }
+        } catch (error) {
+          if (!options.searxngUrl) {
+            return err(classifyRedditError(error, "Failed to search Reddit via Brave Search"));
+          }
+        }
+      }
+
+      if (!hasOAuth && options.searxngUrl) {
+        try {
+          const base = options.searxngUrl.replace(/\/+$/, "");
+          const searxParams = new URLSearchParams({
+            q: siteQuery,
+            format: "json",
+          });
+          if (timeframe !== "all") {
+            searxParams.set("time_range", timeframe);
+          }
+          const raw = await fetchJson(http, `${base}/search?${searxParams.toString()}`);
+          const parsed = SearxngSearchSchema.safeParse(raw);
+          if (!parsed.success) {
+            return err({
+              kind: "UpstreamError",
+              message: "Unexpected response shape from SearXNG.",
+            });
+          }
+          const hits = parsed.data.results.map((r) => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.content,
+          }));
+          return ok(mapWebHitsToPosts(hits, limit));
+        } catch (error) {
+          return err(classifyRedditError(error, "Failed to search Reddit via SearXNG"));
+        }
+      }
+
       const params = new URLSearchParams({
         q: query,
         sort: sortBy,

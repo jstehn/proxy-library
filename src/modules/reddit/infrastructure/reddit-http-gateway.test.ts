@@ -186,4 +186,80 @@ describe("redditHttpGateway", () => {
     expect(res.ok).toBe(true);
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
+
+  it("searches Reddit via Brave Search API when braveSearchApiKey is configured", async () => {
+    const fetchFn = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toContain("https://api.search.brave.com/res/v1/web/search");
+      expect(new Headers(init?.headers).get("X-Subscription-Token")).toBe("brave_key");
+      return Response.json({
+        web: {
+          results: [
+            {
+              title: "Henzie Blitz Guide : r/EDH",
+              url: "https://www.reddit.com/r/EDH/comments/1abc2de/henzie_blitz_guide/",
+              description: "Play lots of 4+ MV creatures.",
+            },
+            {
+              title: "Not a post",
+              url: "https://www.reddit.com/r/EDH/",
+              description: "Subreddit root",
+            },
+          ],
+        },
+      });
+    });
+
+    const gw = redditHttpGateway(testClock, {
+      fetchFn,
+      sleep: async () => {},
+      braveSearchApiKey: "brave_key",
+    });
+    const res = await gw.searchPosts({
+      query: "Henzie",
+      subreddit: "EDH",
+      sortBy: "relevance",
+      timeframe: "year",
+      limit: 5,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value).toHaveLength(1);
+    expect(res.value[0]?.postId).toBe("1abc2de");
+    expect(res.value[0]?.subreddit).toBe("EDH");
+    expect(res.value[0]?.title).toBe("Henzie Blitz Guide");
+  });
+
+  it("searches Reddit via SearXNG when searxngUrl is configured", async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      expect(url).toContain("http://searxng:8080/search");
+      expect(url).toContain("format=json");
+      return Response.json({
+        results: [
+          {
+            title: "Budget Henzie",
+            url: "https://www.reddit.com/r/BudgetBrews/comments/1xyz999/budget_henzie/",
+            content: "Under $50 list.",
+          },
+        ],
+      });
+    });
+
+    const gw = redditHttpGateway(testClock, {
+      fetchFn,
+      sleep: async () => {},
+      searxngUrl: "http://searxng:8080/",
+    });
+    const res = await gw.searchPosts({
+      query: "Henzie",
+      subreddit: "BudgetBrews",
+      sortBy: "relevance",
+      timeframe: "all",
+      limit: 5,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value).toHaveLength(1);
+    expect(res.value[0]?.postId).toBe("1xyz999");
+    expect(res.value[0]?.subreddit).toBe("BudgetBrews");
+  });
 });

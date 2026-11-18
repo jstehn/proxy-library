@@ -258,6 +258,8 @@ export function buildCore(config: Config) {
     gateway: redditHttpGateway(clock, {
       clientId: config.redditClientId,
       clientSecret: config.redditClientSecret,
+      braveSearchApiKey: config.braveSearchApiKey,
+      searxngUrl: config.searxngUrl,
     }),
   });
 

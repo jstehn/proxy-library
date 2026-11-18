@@ -17,6 +17,8 @@ x-app: &app
     TZ: ${TZ:-UTC}
     REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
     REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+    BRAVE_SEARCH_API_KEY: ${BRAVE_SEARCH_API_KEY:-}
+    SEARXNG_URL: ${SEARXNG_URL:-}
   labels:
     # The image is built and loaded by scripts/deploy.sh, not pulled from a registry, so
     # Watchtower must not try to update it.

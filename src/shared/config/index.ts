@@ -24,6 +24,8 @@ const EnvSchema = z.object({
     .default("04:00"),
   REDDIT_CLIENT_ID: z.string().optional(),
   REDDIT_CLIENT_SECRET: z.string().optional(),
+  BRAVE_SEARCH_API_KEY: z.string().optional(),
+  SEARXNG_URL: z.string().optional(),
 });
 
 export type Config = Readonly<{
@@ -42,6 +44,10 @@ export type Config = Readonly<{
   /** Optional Reddit OAuth app credentials for oauth.reddit.com. */
   redditClientId?: string;
   redditClientSecret?: string;
+  /** Optional Brave Search API key for Reddit web search. */
+  braveSearchApiKey?: string;
+  /** Optional self-hosted SearXNG base URL (e.g. http://searxng:8080) for Reddit web search. */
+  searxngUrl?: string;
 }>;
 
 /** Parse the environment once at startup and fail fast with a readable message. */
@@ -67,5 +73,9 @@ export function loadConfig(
     ...(parsed.data.REDDIT_CLIENT_SECRET
       ? { redditClientSecret: parsed.data.REDDIT_CLIENT_SECRET }
       : {}),
+    ...(parsed.data.BRAVE_SEARCH_API_KEY
+      ? { braveSearchApiKey: parsed.data.BRAVE_SEARCH_API_KEY }
+      : {}),
+    ...(parsed.data.SEARXNG_URL ? { searxngUrl: parsed.data.SEARXNG_URL } : {}),
   };
 }
