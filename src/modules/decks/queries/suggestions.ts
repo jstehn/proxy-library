@@ -1,10 +1,16 @@
-import { sql, type SQL } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
+import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import { isCounted, type Format } from "../domain/deck";
+import {
+  isAvoidCard,
+  isKeyCard,
+  type DeckProfile as DeckPlanProfile,
+} from "../domain/deck-profile";
+import { deckEntries, decks } from "../infrastructure/schema";
 import { copyLimitFor } from "../domain/rules";
 import type { RatingPart } from "../domain/rate";
 import {
@@ -812,6 +818,7 @@ export type BudgetReplacementPick = Readonly<{
   similarityPct: number;
   rating: number;
   savedCents: number;
+  matchedRoles: readonly Tag[];
 }>;
 
 export type ExpensiveCardReplacements = Readonly<{
@@ -849,6 +856,15 @@ export async function budgetReplacements(
 ): Promise<BudgetReplacementsResult | null> {
   const context = await suggestionContext(db, userId, deckId);
   if (context === null) return null;
+  const [profileRows, pinnedRows] = await Promise.all([
+    db.select({ profileJson: decks.profileJson }).from(decks).where(eq(decks.id, deckId)).limit(1),
+    db
+      .select({ oracleId: deckEntries.oracleId, pinned: deckEntries.pinned })
+      .from(deckEntries)
+      .where(eq(deckEntries.deckId, deckId)),
+  ]);
+  const deckPlanProfile: DeckPlanProfile | null = profileRows[0]?.profileJson ?? null;
+  const pinnedSet = new Set(pinnedRows.filter((r) => r.pinned).map((r) => r.oracleId));
   const minPriceCents = options.minPriceCents ?? 500;
   const maxPriceCents = options.maxPriceCents ?? 200;
   const limitPerCard = options.limitPerCard ?? 5;
@@ -890,11 +906,11 @@ export async function budgetReplacements(
   ).rows;
 
   const expensiveTargets = targetRows
-    .filter((row) =>
-      options.oracleId
-        ? row.oracle_id === options.oracleId
-        : row.price_cents !== null && Number(row.price_cents) >= minPriceCents,
-    )
+    .filter((row) => {
+      if (options.oracleId) return row.oracle_id === options.oracleId;
+      if (isKeyCard(row.name, deckPlanProfile, pinnedSet.has(row.oracle_id))) return false;
+      return row.price_cents !== null && Number(row.price_cents) >= minPriceCents;
+    })
     .sort((a, b) => Number(b.price_cents ?? 0) - Number(a.price_cents ?? 0))
     .slice(0, options.oracleId ? 1 : limitCards);
 
@@ -943,11 +959,29 @@ export async function budgetReplacements(
       `),
     ]);
 
-    const ownedCards = withinTarget(rawOwnedCards, context).kept;
-    const storeCards = withinTarget(
-      storeRows.rows.map((row) => toCard(row, "store", context)),
-      context,
-    ).kept;
+    const targetLine = context.lines.find((l) => l.oracleId === target.oracle_id);
+    const targetRoles: readonly Tag[] = targetLine
+      ? cardTags({
+          typeLine: targetLine.typeLine,
+          text: targetLine.text ?? "",
+          producedMana: targetLine.producedMana,
+        })
+      : [];
+
+    const filterCandidates = (list: SuggestionCard[]) =>
+      list.filter((c) => {
+        if (isAvoidCard(c.name, deckPlanProfile)) return false;
+        if (targetRoles.length > 0 && !c.roles.some((r) => targetRoles.includes(r))) return false;
+        return true;
+      });
+
+    const ownedCards = filterCandidates(withinTarget(rawOwnedCards, context).kept);
+    const storeCards = filterCandidates(
+      withinTarget(
+        storeRows.rows.map((row) => toCard(row, "store", context)),
+        context,
+      ).kept,
+    );
 
     const toReplacementPicks = (pool: SuggestionCard[]): BudgetReplacementPick[] => {
       const byId = new Map(pool.map((card) => [card.oracleId, card]));
@@ -963,12 +997,14 @@ export async function budgetReplacements(
       ).flatMap((pick) => {
         const card = byId.get(pick.card.oracleId);
         if (!card) return [];
+        const matchedRoles = targetRoles.filter((r) => card.roles.includes(r));
         return [
           {
             card,
             similarityPct: pick.similarityPct,
             rating: pick.rating.rating,
             savedCents: pick.savedCents,
+            matchedRoles,
           },
         ];
       });

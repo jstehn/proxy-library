@@ -54,6 +54,7 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
        where p.id = ${text} or p.oracle_id = ${text}
           or lower(p.name) = lower(${text})
           or lower(split_part(p.name, ' // ', 1)) = lower(${text})
+          or lower(split_part(p.name, ' // ', 2)) = lower(${text})
        order by (p.id = ${text}) desc, ${STANDARD_FIRST}
        limit 1
     `)

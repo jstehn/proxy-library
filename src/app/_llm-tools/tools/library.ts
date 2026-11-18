@@ -445,6 +445,7 @@ export const budgetReplacementsTool = defineTool({
           saved: money(pick.savedCents),
           similarityPct: pick.similarityPct,
           rating: pick.rating,
+          matchedRoles: pick.matchedRoles,
           ...(input.includeText ? { text: pick.card.text } : {}),
         })),
         store: entry.store.map((pick) => ({
@@ -454,6 +455,7 @@ export const budgetReplacementsTool = defineTool({
           saved: money(pick.savedCents),
           similarityPct: pick.similarityPct,
           rating: pick.rating,
+          matchedRoles: pick.matchedRoles,
           ...(input.includeText ? { text: pick.card.text } : {}),
         })),
       })),
@@ -628,11 +630,20 @@ export const checkOwnedTool = defineTool({
   },
 });
 
+const SPELLBOOK_BRACKET_LEGEND = {
+  E: "Exhibition (casual / low power)",
+  P: "Precon / Core",
+  O: "Optimized / Upgraded",
+  S: "Strong / High Power",
+  R: "Ruthless / Fringe cEDH",
+  C: "cEDH",
+} as const;
+
 export const findCombosForDeckTool = defineTool({
   name: "find_combos",
   title: "Find N-card combos via Commander Spellbook",
   description: [
-    "Queries Commander Spellbook's find-my-combos API (including N-card and commander combos, cached 24 hours) for combos already complete in the deck and combos 1 card away (with missing piece price and ownership).",
+    "Queries Commander Spellbook's find-my-combos API (including N-card and commander combos, cached 24 hours) for combos in the deck (distinguishing main-deck `complete` vs `needsMaybe`) and combos 1 card away (`oneAway`).",
     "Use it when: checking what combos a deck runs for bracket disclosure, or finding combo lines and missing pieces.",
   ].join("\n"),
   scope: "read",
@@ -643,12 +654,37 @@ export const findCombosForDeckTool = defineTool({
       .boolean()
       .default(false)
       .describe("Include cards on the maybeboard when checking for combos."),
+    bracket: z
+      .enum(["E", "P", "O", "S", "R", "C"])
+      .optional()
+      .describe("Optional Spellbook bracket letter filter (E, P, O, S, R, C)."),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(20)
+      .describe("Max combos to return per status list (default 20, max 100)."),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .default(0)
+      .describe("Pagination offset into the combo lists."),
   }),
   async run(context, input) {
     const view = await deckView(context.container.db, context.actor.userId, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
 
     const commanders = view.lines.filter((l) => l.board === "commander").map((l) => l.name);
+    const mainSet = new Set(
+      view.lines
+        .filter((l) => l.board === "commander" || isPlayed(l.board))
+        .map((l) => l.name.toLowerCase()),
+    );
+    const maybeSet = new Set(
+      view.lines.filter((l) => l.board === "maybe").map((l) => l.name.toLowerCase()),
+    );
     const mainCards = view.lines
       .filter(
         (l) =>
@@ -667,7 +703,28 @@ export const findCombosForDeckTool = defineTool({
       );
     }
 
-    const missingNames = [...new Set(spellbook.oneCardAway.map((c) => c.missingCardName))];
+    const bracketFilter = input.bracket?.toUpperCase();
+    const matchesBracket = (tag: string | null | undefined) =>
+      !bracketFilter || (tag ?? "").toUpperCase() === bracketFilter;
+
+    const classifiedComplete = spellbook.complete
+      .filter((c) => matchesBracket(c.bracketTag))
+      .map((combo) => {
+        const maybePieces = combo.uses.filter(
+          (name) => !mainSet.has(name.toLowerCase()) && maybeSet.has(name.toLowerCase()),
+        );
+        return {
+          ...combo,
+          status: maybePieces.length > 0 ? ("needsMaybe" as const) : ("complete" as const),
+          ...(maybePieces.length > 0 ? { maybePieces } : {}),
+        };
+      });
+
+    const filteredOneAway = spellbook.oneCardAway.filter((c) => matchesBracket(c.bracketTag));
+    const pagedComplete = classifiedComplete.slice(input.offset, input.offset + input.limit);
+    const pagedOneAway = filteredOneAway.slice(input.offset, input.offset + input.limit);
+
+    const missingNames = [...new Set(pagedOneAway.map((c) => c.missingCardName))];
     const ownedChecks =
       missingNames.length > 0
         ? await checkOwnedCards(context.container.db, context.actor.userId, missingNames)
@@ -678,11 +735,17 @@ export const findCombosForDeckTool = defineTool({
       sourceUrl: spellbook.sourceUrl,
       fetchedAt: spellbook.fetchedAt,
       cached: spellbook.cached,
-      complete: spellbook.complete,
-      oneCardAway: spellbook.oneCardAway.map((combo) => {
+      bracketLegend: SPELLBOOK_BRACKET_LEGEND,
+      totalComplete: classifiedComplete.length,
+      totalOneAway: filteredOneAway.length,
+      offset: input.offset,
+      limit: input.limit,
+      complete: pagedComplete,
+      oneCardAway: pagedOneAway.map((combo) => {
         const owned = checkByQuery.get(combo.missingCardName.toLowerCase());
         return {
           id: combo.id,
+          status: "oneAway" as const,
           missingPiece:
             owned && owned.inCatalog
               ? {
