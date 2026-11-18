@@ -18,6 +18,7 @@ import {
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
+import type { DeckProfile } from "../domain/deck-profile";
 import type { GoldfishState } from "../domain/goldfish-session";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
@@ -49,6 +50,10 @@ export const decks = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Structured deck profile (targets, keyCards, avoid, costReducers, winCons, plan, etc.).
+    profileJson: jsonb("profile_json").$type<DeckProfile | null>(),
+    // Free-form Markdown primer supporting [[Card Name]] links.
+    primer: text("primer"),
     createdAt: timestamptz("created_at").notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
   },
@@ -90,9 +95,17 @@ export const deckEntries = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // One-line job description shown on hover in the UI.
+    role: text("role"),
+    // Pinned cards are never suggested for cuts or replacements.
+    pinned: boolean("pinned").notNull().default(false),
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.oracleId, table.board] }),
+    check(
+      "deck_entries_role_length",
+      sql`${table.role} is null or char_length(${table.role}) between 1 and 160`,
+    ),
     check(
       "deck_entries_heading_length",
       sql`${table.heading} is null or char_length(${table.heading}) between 1 and 40`,

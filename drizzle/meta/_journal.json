@@ -337,6 +337,13 @@
       "when": 1794977977788,
       "tag": "0047_comprehensive_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794986553593,
+      "tag": "0048_striped_anita_blake",
+      "breakpoints": true
     }
   ]
 }
