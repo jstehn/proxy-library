@@ -108,6 +108,12 @@ export const getCard = defineTool({
       .min(1)
       .max(25)
       .describe("1 to 25 card names, printing ids, or oracle ids."),
+    cursor: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Pagination cursor returned as `next` when a previous call was capped."),
   }),
   async run(context, input) {
     const { db } = context.container;
@@ -793,12 +799,16 @@ export const findCombosForDeckTool = defineTool({
         : [];
     const checkByQuery = new Map(ownedChecks.map((c) => [c.query.toLowerCase(), c]));
 
+    const mainCompleteCount = classifiedComplete.filter((c) => c.status === "complete").length;
+    const needsMaybeCount = classifiedComplete.filter((c) => c.status === "needsMaybe").length;
+
     return done({
       sourceUrl: spellbook.sourceUrl,
       fetchedAt: spellbook.fetchedAt,
       cached: spellbook.cached,
       bracketLegend: SPELLBOOK_BRACKET_LEGEND,
-      totalComplete: classifiedComplete.length,
+      totalComplete: mainCompleteCount,
+      totalNeedsMaybe: needsMaybeCount,
       ...(declaredCombos.length > 0
         ? {
             declaredCombos: declaredCombos.map((declared) => ({

@@ -1183,7 +1183,12 @@ function includedSections(
             ...(line.ownedReal > 0 ? { real: line.ownedReal } : {}),
             free: line.free,
             ...(line.otherDecks.length > 0
-              ? { otherDecks: line.otherDecks.map((use) => `${use.name} (${use.quantity})`) }
+              ? {
+                  otherDecksCount: line.otherDecks.length,
+                  otherDecks: line.otherDecks
+                    .slice(0, 3)
+                    .map((use) => `${use.name} (${use.quantity})`),
+                }
               : {}),
           },
         ]),
