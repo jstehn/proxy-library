@@ -97,12 +97,18 @@ export const getDeckConsolidated = defineTool({
   name: "get_deck",
   title: "Get deck",
   description:
-    "Returns a compact deck view (header, profile summary, card lines, bracket, problems). Pass `include` for extra sections: 'facts' (role counts, curve, castability), 'signals' (recurring mechanics), 'mana_plan' (land skeleton), 'primer', or 'text' (card rules text).",
+    "Returns a compact deck view (header, profile summary, card lines, bracket, problems). Oracle text is off by default to save tokens, but you should set `includeText: true` (or `include: ['text']`) the first time you pull a deck. Pass `include` for 'facts', 'signals', 'mana_plan', 'primer', 'prices', etc.",
   scope: "read",
   readOnly: true,
   pagesItself: true,
   input: z.object({
     deckId: deckIdField,
+    includeText: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Include oracle rules text (off by default; set true the first time you pull a deck).",
+      ),
     include: z
       .array(
         z.enum([
@@ -142,6 +148,7 @@ export const getDeckConsolidated = defineTool({
   }),
   async run(context, input) {
     const inc = new Set(input.include ?? []);
+    const showText = input.includeText || inc.has("text");
     const deckInclude: (
       "prices" | "ids" | "owners" | "tokens" | "odds" | "sources" | "formatRules" | "legality"
     )[] = [];
@@ -161,8 +168,8 @@ export const getDeckConsolidated = defineTool({
       cards: input.cards,
       boards: input.boards,
       cursor: input.cursor,
-      text: inc.has("text"),
-      includeText: inc.has("text"),
+      text: showText,
+      includeText: showText,
       includeOtherDecks: inc.has("owners"),
       singleTagOnly: false,
     };
@@ -493,6 +500,10 @@ export const searchCardsConsolidated = defineTool({
       .boolean()
       .default(false)
       .describe("Include oracle rules text (default false to save tokens)."),
+    includePrice: z
+      .boolean()
+      .default(false)
+      .describe("Include store price in cents (default false unless requested)."),
     oneRowPerCard: z
       .boolean()
       .default(true)
@@ -542,6 +553,7 @@ export const searchCardsConsolidated = defineTool({
         includeText: input.includeText,
       });
       if (!res.ok) return res;
+      const showPrice = input.includePrice || input.maxPriceCents !== undefined;
       const raw = res.value as { cards?: Record<string, unknown>[]; [k: string]: unknown };
       const compactCards = (raw.cards ?? []).map((c) => ({
         name: c.name,
@@ -549,7 +561,9 @@ export const searchCardsConsolidated = defineTool({
         typeLine: c.typeLine,
         ...(input.includeText && c.text ? { text: c.text } : {}),
         owned: c.owned,
-        priceCents: priceCents((c.price as { cents?: number } | null)?.cents ?? null),
+        ...(showPrice
+          ? { priceCents: priceCents((c.price as { cents?: number } | null)?.cents ?? null) }
+          : {}),
         synergies: c.synergies,
         ...(c.isGameChanger ? { isGameChanger: true } : {}),
       }));
@@ -570,6 +584,7 @@ export const searchCardsConsolidated = defineTool({
       oneRowPerCard: input.oneRowPerCard,
     });
     if (!res.ok) return res;
+    const showPrice = input.includePrice || input.maxPriceCents !== undefined;
     const raw = res.value as { cards?: Record<string, unknown>[]; [k: string]: unknown };
     const compactCards = (raw.cards ?? []).slice(0, input.maxPerQuery * 2).map((c) => {
       const cheapest = (c.cheapest as { cents?: number } | null)?.cents;
@@ -580,7 +595,7 @@ export const searchCardsConsolidated = defineTool({
         ...(c.source ? { source: c.source } : {}),
         ...(c.quantity !== undefined ? { quantity: c.quantity } : {}),
         ...(input.includeText && c.text ? { text: c.text } : {}),
-        priceCents: priceCents(cheapest ?? price ?? null),
+        ...(showPrice ? { priceCents: priceCents(cheapest ?? price ?? null) } : {}),
       };
     });
     return done({ ...raw, cards: compactCards });
@@ -592,7 +607,7 @@ export const getCardsConsolidated = defineTool({
   name: "get_cards",
   title: "Get card details or batch-check ownership",
   description:
-    "Look up 1-100 cards. `detail='owned'` (fast batch check: owned counts, priceCents, decks), `detail='compact'` (default, up to 25 cards: adds manaCost, typeLine, rules text, wishes), or `detail='full'` (adds store printings & price trend).",
+    "Look up 1-100 cards. `detail='owned'` (fast batch check: owned counts, decks), `detail='compact'` (default, up to 25 cards: adds manaCost, typeLine, oracle rules text, wishes), or `detail='full'` (adds store printings & price trend). Prices are omitted unless `includePrice: true` or `detail='full'`.",
   scope: "read",
   readOnly: true,
   input: z.object({
@@ -601,6 +616,10 @@ export const getCardsConsolidated = defineTool({
       .enum(["owned", "compact", "full"])
       .default("compact")
       .describe("Response detail level: 'owned', 'compact' (default), or 'full'."),
+    includePrice: z
+      .boolean()
+      .default(false)
+      .describe("Include store price in cents (default false; always included in detail='full')."),
     cursor: z.number().int().min(0).optional().describe("Pagination cursor if capped."),
   }),
   async run(context, input) {
@@ -618,7 +637,7 @@ export const getCardsConsolidated = defineTool({
                 inCatalog: true,
                 ownedGame: e.ownedGame,
                 ownedReal: e.ownedReal,
-                priceCents: priceCents(e.cheapestPriceCents),
+                ...(input.includePrice ? { priceCents: priceCents(e.cheapestPriceCents) } : {}),
                 decks: e.decks,
               }
             : e,
@@ -657,7 +676,9 @@ export const getCardsConsolidated = defineTool({
         text,
         ownedGame: owned?.game ?? 0,
         ownedReal: owned?.real ?? 0,
-        cheapestPriceCents: allPrices.length > 0 ? Math.min(...allPrices) : null,
+        ...(input.includePrice
+          ? { cheapestPriceCents: allPrices.length > 0 ? Math.min(...allPrices) : null }
+          : {}),
         decksUsing: c.decksUsing,
         wishes: c.wishes,
       };

@@ -149,7 +149,7 @@ describe("the MCP server", () => {
     );
     const withText = await call(client, "get_deck", {
       deckId: created.deckId,
-      include: ["text"],
+      includeText: true,
     });
     const textLines: string[] = Object.values(withText.cards as Record<string, string[]>).flat();
     expect(textLines.find((line) => line.includes("Banishing Light"))).toMatch(/ — .*exile/i);
@@ -298,7 +298,7 @@ describe("the MCP server", () => {
       expect(await replace("standard")).toBe(standard);
 
       const search = `"${card.name}"`;
-      const once = await call(client, "search_cards", { search });
+      const once = await call(client, "search_cards", { search, includePrice: true });
       const rows = once.cards.filter((row: { name: string }) => row.name === card.name);
       expect(rows).toEqual([expect.objectContaining({ name: card.name, priceCents: 100 })]);
       const every = await call(client, "search_cards", { search, oneRowPerCard: false });

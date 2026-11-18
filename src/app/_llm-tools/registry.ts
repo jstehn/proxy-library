@@ -45,7 +45,7 @@ export const INSTRUCTIONS = [
   "Proxy Library: self-hosted MTG collection (prices in integer cents: $1.23 = 123), store, decks, and wishlist.",
   "No tool output is a recommendation; heuristic outputs (role tags, signals, mana_plan, replacements) are low-reliability and must be verified against card rules text or outside sources.",
   "Read get_deck before suggesting changes; never suggest cutting a keyCard or adding an avoid card.",
-  "Workflow: (1) get_deck (pass include: ['facts'] if needed). (2) Outside research: edhrec_lookup, youtube_research, find_combos, rules_lookup. (3) Catalog/ownership: search_cards (includeText=false by default) and get_cards. (4) Preview/save with edit_deck (save=false -> previewId -> save=true); save research links with update_deck.",
+  "Workflow: (1) get_deck (pass includeText: true the first time you pull a deck; pass include: ['facts'] if needed). (2) Outside research: edhrec_lookup, youtube_research, find_combos, rules_lookup. (3) Catalog/ownership: search_cards (includeText=false, includePrice=false by default) and get_cards. (4) Preview/save with edit_deck (save=false -> previewId -> save=true); save research links with update_deck.",
   'Rules: prefer owned cards; move agreed cuts to "maybe" instead of deleting. Only cards in this catalog exist here. Keep Commander brackets (1-5) within target. Use manage_wishlist to save cards to buy later.',
 ].join("\n");
 
