@@ -287,22 +287,107 @@ describe("goldfish-session", () => {
       if (!tapped.ok) return;
       expect(tapped.value.manaPool.G).toBe(1);
 
-      // Cast Sol Ring with alt: "blitz" and verify end_step sacrifices & draws
-      const blitzed = stepGoldfishState(tapped.value, {
+      // alt: "blitz" without a blitz-granting permanent on the battlefield is refused
+      const illegalBlitz = stepGoldfishState(tapped.value, {
         kind: "cast",
         key: sol.key,
         alt: "blitz",
       });
+      expect(illegalBlitz.ok).toBe(false);
+      if (!illegalBlitz.ok) expect(illegalBlitz.error.kind).toBe("CastNotAllowed");
+
+      // Normal cast spends {1}
+      const cast = stepGoldfishState(tapped.value, {
+        kind: "cast",
+        key: sol.key,
+      });
+      expect(cast.ok).toBe(true);
+      if (!cast.ok) return;
+      expect(cast.value.manaPool.G).toBe(0);
+    }
+
+    // With a blitz granter (Henzie) on the battlefield, creature blitz works and end_step sacrifices & draws
+    const henzieLines: GoldfishDeckLine[] = [
+      {
+        oracleId: "henzie",
+        name: 'Henzie "Toolbox" Torre',
+        printingId: "p-henzie",
+        board: "commander",
+        quantity: 1,
+        typeLine: "Legendary Creature — Devil Rogue",
+        manaCost: "{B}{R}{G}",
+        manaValue: 3,
+        text: "Each creature spell you cast with mana value 4 or greater has blitz.",
+      },
+      {
+        oracleId: "wurm",
+        name: "Massacre Wurm",
+        printingId: "p-wurm",
+        board: "main",
+        quantity: 10,
+        typeLine: "Creature — Phyrexian Wurm",
+        manaCost: "{3}{B}{B}{B}",
+        manaValue: 6,
+      },
+      {
+        oracleId: "swamp",
+        name: "Swamp",
+        printingId: "p-swamp",
+        board: "main",
+        quantity: 10,
+        typeLine: "Basic Land — Swamp",
+        manaValue: 0,
+        producedMana: ["B"],
+      },
+    ];
+    const hStart = startGoldfishState(buildGoldfishDeck(henzieLines), {
+      format: "commander",
+      rng: seededRng("11"),
+    });
+    expect(hStart.ok).toBe(true);
+    if (!hStart.ok) return;
+    const hKeep = stepGoldfishState(hStart.value, { kind: "keep" });
+    expect(hKeep.ok).toBe(true);
+    if (!hKeep.ok) return;
+    const hT1 = stepGoldfishState(hKeep.value, { kind: "next_turn" });
+    expect(hT1.ok).toBe(true);
+    if (!hT1.ok) return;
+    const wurm = hT1.value.hand.find((c) => c.name === "Massacre Wurm");
+    expect(wurm).toBeDefined();
+    if (wurm) {
+      // Cannot blitz while Henzie is still in commandZone
+      const noHenzie = stepGoldfishState(hT1.value, {
+        kind: "cast",
+        key: wurm.key,
+        alt: "blitz",
+        strict: false,
+      });
+      expect(noHenzie.ok).toBe(false);
+      if (!noHenzie.ok) expect(noHenzie.error.kind).toBe("CastNotAllowed");
+
+      // Cast Henzie to battlefield, then blitz Massacre Wurm
+      const henzieCast = stepGoldfishState(hT1.value, {
+        kind: "cast",
+        key: "c1",
+        from: "commandZone",
+        strict: false,
+      });
+      expect(henzieCast.ok).toBe(true);
+      if (!henzieCast.ok) return;
+      const blitzed = stepGoldfishState(henzieCast.value, {
+        kind: "cast",
+        key: wurm.key,
+        alt: "blitz",
+        strict: false,
+      });
       expect(blitzed.ok).toBe(true);
       if (!blitzed.ok) return;
-      expect(blitzed.value.manaPool.G).toBe(0);
       expect(blitzed.value.endStepQueue).toHaveLength(1);
-
       const handBeforeEnd = blitzed.value.hand.length;
       const ended = stepGoldfishState(blitzed.value, { kind: "end_step" });
       expect(ended.ok).toBe(true);
       if (!ended.ok) return;
-      expect(ended.value.graveyard.some((c) => c.key === sol.key)).toBe(true);
+      expect(ended.value.graveyard.some((c) => c.key === wurm.key)).toBe(true);
       expect(ended.value.hand.length).toBe(handBeforeEnd + 1);
       expect(ended.value.endStepQueue).toHaveLength(0);
     }

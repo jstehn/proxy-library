@@ -53,7 +53,7 @@ export type BattlefieldPermanent = Readonly<{
 
 export type EndStepTrigger = Readonly<{
   key: string;
-  kind: "sacrifice_blitz";
+  kind: "sacrifice_blitz" | "return_to_battlefield";
 }>;
 
 export type GoldfishState = Readonly<{
@@ -488,24 +488,44 @@ export function stepGoldfishState(
     case "end_step": {
       let next: GoldfishState = { ...state, manaPool: { ...EMPTY_MANA_POOL } };
       const sacrificed: string[] = [];
+      const returned: string[] = [];
       let drawn = 0;
       for (const trigger of state.endStepQueue) {
-        if (trigger.kind !== "sacrifice_blitz") continue;
-        const removed = removeFromZone(next, "battlefield", trigger.key);
-        if (!removed) continue;
-        next = addToZone(removed.next, "graveyard", removed.card);
-        sacrificed.push(removed.card.name);
-        if (next.library.length > 0) {
-          const [top, ...rest] = next.library;
-          next = { ...next, hand: [...next.hand, top], library: rest };
-          drawn += 1;
+        if (trigger.kind === "sacrifice_blitz") {
+          const removed = removeFromZone(next, "battlefield", trigger.key);
+          if (!removed) continue;
+          next = addToZone(removed.next, "graveyard", removed.card);
+          sacrificed.push(removed.card.name);
+          if (next.library.length > 0) {
+            const [top, ...rest] = next.library;
+            next = { ...next, hand: [...next.hand, top], library: rest };
+            drawn += 1;
+          }
+          const text = removed.card.text ?? "";
+          if (/\bundying\b|\bpersist\b/i.test(text)) {
+            const back = removeFromZone(next, "graveyard", trigger.key);
+            if (back) {
+              next = addToZone(back.next, "battlefield", back.card);
+              returned.push(back.card.name);
+            }
+          }
+        } else if (trigger.kind === "return_to_battlefield") {
+          const back = removeFromZone(next, "graveyard", trigger.key);
+          if (!back) continue;
+          next = addToZone(back.next, "battlefield", back.card);
+          returned.push(back.card.name);
         }
       }
       next = { ...next, endStepQueue: [] };
+      const parts: string[] = [];
+      if (sacrificed.length > 0) {
+        parts.push(`sacrificed ${sacrificed.join(", ")} (blitz) and drew ${drawn} card(s)`);
+      }
+      if (returned.length > 0) {
+        parts.push(`returned ${returned.join(", ")} to the battlefield`);
+      }
       const note =
-        sacrificed.length > 0
-          ? `End step: sacrificed ${sacrificed.join(", ")} (blitz) and drew ${drawn} card(s).`
-          : "End step: emptied mana pool.";
+        parts.length > 0 ? `End step: ${parts.join("; ")}.` : "End step: emptied mana pool.";
       return ok({ ...next, lastActionNote: note });
     }
 
@@ -582,9 +602,29 @@ export function stepGoldfishState(
         });
       }
 
+      const isBlitz = action.alt === "blitz";
+      if (isBlitz) {
+        const hasOwnBlitz = /\bblitz\b/i.test(removed.card.text ?? "");
+        const hasBattlefieldBlitzGranter = state.battlefield.some((p) =>
+          /\bhave blitz\b|\bhas blitz\b/i.test(p.card.text ?? ""),
+        );
+        if (!hasOwnBlitz && !hasBattlefieldBlitzGranter) {
+          return err({
+            kind: "CastNotAllowed",
+            reason:
+              "Cannot cast with blitz: no blitz-granting permanent (e.g. Henzie) is on the battlefield and the card does not have blitz.",
+          });
+        }
+        if (!hasOwnBlitz && !/\bCreature\b/i.test(removed.card.typeLine)) {
+          return err({
+            kind: "CastNotAllowed",
+            reason: "Cannot cast with blitz: only creature spells can be blitzed.",
+          });
+        }
+      }
+
       const destination =
         action.to ?? (isSpellOnlyType(removed.card.typeLine) ? "graveyard" : "battlefield");
-      const isBlitz = action.alt === "blitz";
       const next = addToZone(removed.next, destination, removed.card, {
         tapped: action.tapped ?? false,
         haste: isBlitz,
