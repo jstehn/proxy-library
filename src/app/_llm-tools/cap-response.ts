@@ -75,10 +75,7 @@ export function capToolResponse<T>(value: T, cursor = 0): T {
 function paginateArray<R>(
   items: unknown[],
   offset: number,
-  build: (
-    slice: unknown[],
-    meta: { next?: number; totalCount: number; truncatedByCap: true },
-  ) => R,
+  build: (slice: unknown[], meta: { next?: number; totalCount: number; truncatedByCap: true }) => R,
 ): R {
   const start = Math.min(offset, items.length);
   const remaining = items.slice(start);
@@ -132,7 +129,9 @@ function shrinkOversizedObject(
     .map((k) => ({ key: k, bytes: jsonBytes(copy[k]) }))
     .sort((a, b) => b.bytes - a.bytes);
 
-  const targetBytes = preserveKey ? Math.floor(MAX_TOOL_RESPONSE_BYTES * 0.5) : MAX_TOOL_RESPONSE_BYTES;
+  const targetBytes = preserveKey
+    ? Math.floor(MAX_TOOL_RESPONSE_BYTES * 0.5)
+    : MAX_TOOL_RESPONSE_BYTES;
   for (const { key } of candidates) {
     if (jsonBytes(copy) <= targetBytes) break;
     delete copy[key];

@@ -120,6 +120,10 @@ export type DeckLine = Readonly<{
   producedMana: string[];
   /** Rules text of every face, for role tags (design doc 19). */
   text: string;
+  /** Rules text face by face (front first), for showing double-faced cards as "front // back". */
+  faceTexts?: readonly string[];
+  /** The front face's printed stats: "6/5", "Loyalty 4" or "Defense 5"; null when it has none. */
+  printedStats?: string | null;
   /** On Wizards' Game Changer list (design doc 31). */
   isGameChanger: boolean;
   /** Latest market price of one copy in its finish, in cents, if known. */
@@ -256,6 +260,8 @@ export async function deckView(
     edhrec_rank: number | null;
     is_basic_land: boolean;
     face_text: string;
+    face_texts: string[] | null;
+    printed_stats: string | null;
     is_game_changer: boolean;
     has_power_toughness: boolean;
     color_identity: string[];
@@ -278,7 +284,8 @@ export async function deckView(
            shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
              where kp.oracle_id = e.oracle_id) as keywords,
-           newest.is_basic_land, newest.face_text, newest.has_power_toughness,
+           newest.is_basic_land, newest.face_text, newest.face_texts, newest.printed_stats,
+           newest.has_power_toughness,
            exists (select 1 from printings g
                     where g.oracle_id = e.oracle_id and g.is_game_changer) as is_game_changer,
            newest.color_identity, newest.legalities,
@@ -292,6 +299,15 @@ export async function deckView(
       join lateral (
         select p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
                coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
+               (select array_agg(coalesce(face.f->>'text', '') order by face.position)
+                  from jsonb_array_elements(p.faces) with ordinality as face(f, position)) as face_texts,
+               (select case when face.f->>'power' is not null and face.f->>'toughness' is not null
+                              then (face.f->>'power') || '/' || (face.f->>'toughness')
+                            when face.f->>'loyalty' is not null then 'Loyalty ' || (face.f->>'loyalty')
+                            when face.f->>'defense' is not null then 'Defense ' || (face.f->>'defense')
+                       end
+                  from jsonb_array_elements(p.faces) with ordinality as face(f, position)
+                 order by face.position limit 1) as printed_stats,
                exists (select 1 from jsonb_array_elements(p.faces) f
                         where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
                p.color_identity, p.legalities
@@ -353,6 +369,8 @@ export async function deckView(
       manaCost: row.mana_cost,
       producedMana: row.produced_mana ?? [],
       text: row.face_text,
+      faceTexts: row.face_texts ?? [],
+      printedStats: row.printed_stats,
       isGameChanger: row.is_game_changer,
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,

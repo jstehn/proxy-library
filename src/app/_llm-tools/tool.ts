@@ -32,6 +32,11 @@ export type LlmTool<Input extends ToolInputSchema = ToolInputSchema> = Readonly<
   scope: Scope;
   /** True for tools that change nothing (MCP's readOnlyHint). */
   readOnly: boolean;
+  /**
+   * True when the tool reads `cursor` and pages its own output (get_deck). The response cap then
+   * only guards the size and never re-slices the page by `cursor`.
+   */
+  pagesItself?: boolean;
   input: Input;
   run(context: ToolContext, input: z.output<Input>): Promise<ToolOutcome<unknown>>;
 }>;

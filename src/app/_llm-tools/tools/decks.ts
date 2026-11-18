@@ -86,6 +86,8 @@ import {
   type SnapshotComparison,
 } from "@/modules/decks";
 import { canonicalTheme, cardTags, TAGS, THEMES } from "@/shared/card-search";
+import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
+import { groupCompactLines, pageCompactGroups } from "../compact-deck";
 import { seededRng } from "@/shared/kernel";
 import {
   bracketWarningText,
@@ -630,286 +632,617 @@ export const listDecks = defineTool({
   },
 });
 
+/** Sections get_deck's compact view adds only when asked (design doc 61, section 5a). */
+const GET_DECK_INCLUDES = [
+  "prices",
+  "ids",
+  "owners",
+  "tokens",
+  "odds",
+  "sources",
+  "legality",
+  "list",
+  "formatRules",
+] as const;
+
+const GetDeckInput = z.object({
+  deckId,
+  view: z
+    .enum(["compact", "full"])
+    .default("compact")
+    .describe(
+      '"compact" (default): each card once as a readable line, grouped by the deck\'s headings. "full": the older object-per-line shape for scripts (uses includeText/includeOtherDecks/fields).',
+    ),
+  text: z
+    .boolean()
+    .default(true)
+    .describe(
+      "Compact view: append each card's oracle text (its own name as ~, reminder text dropped). false gives a shorter list without rules text.",
+    ),
+  cards: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(30)
+    .optional()
+    .describe(
+      "Return full detail for just these cards in the deck: complete oracle text, ids, price, ownership, other decks, note.",
+    ),
+  include: z
+    .array(z.enum(GET_DECK_INCLUDES))
+    .default([])
+    .describe(
+      'Compact view extras: "prices", "ids" (oracle/printing ids), "owners" (owned, free, other decks), "tokens", "odds" (opening-hand odds), "sources" (saved research links), "legality", "list" (import/export text), "formatRules".',
+    ),
+  cursor: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Compact view: the `next` value from the previous page, when a deck is too big for one.",
+    ),
+  includeText: z
+    .boolean()
+    .default(false)
+    .describe(
+      'view: "full" only. Include each card\'s rules text (off by default; the compact view has its own `text`).',
+    ),
+  includeOtherDecks: z
+    .boolean()
+    .default(false)
+    .describe(
+      'view: "full" only. Include the other decks using each card (the compact view uses include: ["owners"]).',
+    ),
+  boards: z
+    .array(z.enum(BOARDS))
+    .optional()
+    .describe('Optional board filter for lines (e.g. ["main", "maybe"]).'),
+  tag: z.string().min(1).optional().describe('Optional tag filter for lines (e.g. "Blitz").'),
+  singleTagOnly: z
+    .boolean()
+    .default(false)
+    .describe("When true, return only non-land lines that have exactly one tag (cohesion check)."),
+  fields: z
+    .array(
+      z.enum([
+        "deck",
+        "fingerprint",
+        "lines",
+        "stats",
+        "formatRules",
+        "cardLegalIn",
+        "roleTargets",
+        "problems",
+        "bracket",
+        "openingHandOdds",
+        "tokens",
+        "list",
+        "shortList",
+        "toComplete",
+        "deckSources",
+        "profileSummary",
+      ]),
+    )
+    .optional()
+    .describe('view: "full" only. Top-level fields to return (e.g. ["fingerprint", "lines"]).'),
+});
+
+type GetDeckInputValue = z.output<typeof GetDeckInput>;
+
 export const getDeck = defineTool({
   name: "get_deck",
   title: "Get a deck",
   description: [
-    "Returns a deck's cards (with oracle text, ownership, tags, headings, notes), stats, legality problems, Commander bracket, tokens, saved deckSources, and fingerprint.",
-    "Use it when: reading a deck before researching/editing, filtering lines by board/tag/singleTagOnly, or fetching specific fields (use fields/boards/includeText:false to save tokens).",
-    "Rules: unowned cards show as short; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.",
+    "Returns a deck as readable lines grouped by its headings: \"qty name · cost · type [P/T] · tags · SHORT n · GC · note — oracle text\" (the card's own name is ~ in its text), plus the commander, bracket, profile summary, stats (curve, types, pips vs sources, roles), problems, what's short, and the fingerprint. Maybeboard cards are listed by name only.",
+    'Use it when: reading a deck before researching or editing; it is usually one call. For full detail on a few cards pass cards: [names]; for maybeboard text pass boards: ["maybe"]; for prices, ids, other decks, tokens, odds or sources pass include. A big deck returns `next`: call again with cursor: next.',
+    "Rules: SHORT n means n copies aren't owned; maybeboard cards count in nothing. Update lines with apply_changes; manage sources with deck_sources.",
   ].join("\n"),
   scope: "read",
   readOnly: true,
-  input: z.object({
-    deckId,
-    includeText: z
-      .boolean()
-      .default(false)
-      .describe(
-        "Include each card's rules text. Defaults to false to keep responses under 40 KB; set true when you need oracle text (combine with boards/cursor).",
-      ),
-    includeOtherDecks: z
-      .boolean()
-      .default(false)
-      .describe(
-        "Include the list of other decks using each card (free count is still kept). Defaults to false to save space.",
-      ),
-    cursor: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe(
-        "Optional pagination cursor returned as `next` when a response is capped at 40 KB.",
-      ),
-    boards: z
-      .array(z.enum(BOARDS))
-      .optional()
-      .describe('Optional board filter for lines (e.g. ["main", "maybe"]).'),
-    tag: z.string().min(1).optional().describe('Optional tag filter for lines (e.g. "Blitz").'),
-    singleTagOnly: z
-      .boolean()
-      .default(false)
-      .describe(
-        "When true, return only non-land lines that have exactly one tag (cohesion check).",
-      ),
-    fields: z
-      .array(
-        z.enum([
-          "deck",
-          "fingerprint",
-          "lines",
-          "stats",
-          "formatRules",
-          "cardLegalIn",
-          "roleTargets",
-          "problems",
-          "bracket",
-          "openingHandOdds",
-          "tokens",
-          "list",
-          "shortList",
-          "toComplete",
-          "deckSources",
-          "profileSummary",
-        ]),
-      )
-      .optional()
-      .describe('Optional list of top-level fields to return (e.g. ["fingerprint", "lines"]).'),
-  }),
+  pagesItself: true,
+  input: GetDeckInput,
   async run(context, input) {
     const view = await viewFor(context, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
-    const problems = problemsOf(view);
-    const stats = deckStats(view.lines);
-    const { list, fingerprint: print } = listAndFingerprint(view);
-    const handOdds = openingHandOdds(library(view.lines), {
-      onTheDraw: false,
-      freeMulligan: view.deck.format === "commander",
-    });
-    const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
-    const [rawTokens, combos, deckSources, storedProfile] = await Promise.all([
-      deckTokenLines(
-        context.container.db,
-        view.deck.id,
-        view.lines.map((line) => ({
-          oracleId: line.oracleId,
-          printingId: line.printingId,
-          name: line.name,
-          board: line.board,
-        })),
-      ),
-      view.deck.format === "commander"
-        ? combosForDeck(
-            context.container.db,
-            view.lines
-              .filter((line) => line.board === "main" || line.board === "commander")
-              .map((line) => line.oracleId),
-          )
-        : Promise.resolve(undefined),
-      listDeckSources(context.container.db, context.actor.userId, input.deckId),
-      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
-    ]);
-    const checklist = rawTokens.map(toTokenChecklistItem);
-    const missingCards = problems.flatMap((problem) => {
-      if (problem.kind !== "Short") return [];
-      const missing = Math.max(0, problem.needed - problem.owned);
-      const line =
-        view.lines.find((l) => l.oracleId === problem.oracleId && l.board !== "maybe") ??
-        view.lines.find((l) => l.oracleId === problem.oracleId);
-      const priceCents = line?.priceCents ?? null;
-      const subtotalCents = priceCents === null ? null : missing * priceCents;
-      return [
-        {
-          name: problem.name,
-          oracleId: problem.oracleId,
-          needed: problem.needed,
-          owned: problem.owned,
-          missing,
-          price: moneyOrNull(priceCents),
-          subtotal: moneyOrNull(subtotalCents),
-          subtotalCents,
-        },
-      ];
-    });
-    const missingCopies = missingCards.reduce((sum, c) => sum + c.missing, 0);
-    const missingTotalCents = missingCards.reduce((sum, c) => sum + (c.subtotalCents ?? 0), 0);
-    const unpricedCount = missingCards.filter((c) => c.subtotalCents === null).length;
-    const maybeboardCards = view.lines
-      .filter((l) => l.board === "maybe")
-      .map((l) => {
-        const isBasic = /\bBasic\b.*\bLand\b/.test(l.typeLine);
-        const missing = isBasic ? 0 : Math.max(0, l.quantity - l.owned);
-        const subtotalCents = missing > 0 && l.priceCents !== null ? missing * l.priceCents : null;
-        return {
-          name: l.name,
-          oracleId: l.oracleId,
-          quantity: l.quantity,
-          owned: l.owned,
-          ...(l.ownedReal > 0 ? { ownedReal: l.ownedReal } : {}),
-          missing,
-          price: moneyOrNull(l.priceCents),
-          ...(subtotalCents !== null ? { subtotal: money(subtotalCents) } : {}),
-        };
-      });
-
-    const filteredLines = view.lines.filter((line) => {
-      if (input.boards && input.boards.length > 0 && !input.boards.includes(line.board)) {
-        return false;
-      }
-      if (input.tag !== undefined) {
-        const needle = input.tag.trim().toLowerCase();
-        if (!(line.tags ?? []).some((t) => t.toLowerCase() === needle)) return false;
-      }
-      if (input.singleTagOnly) {
-        if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
-      }
-      return true;
-    });
-
-    const profileSummary = summarizeDeckProfile(storedProfile?.profile);
-    const fullPayload: Record<string, unknown> = {
-      ...(profileSummary !== null ? { profileSummary } : {}),
-      deck: {
-        id: view.deck.id,
-        name: view.deck.name,
-        format: view.deck.format,
-        usesRealCards: view.deck.usesRealCards,
-        grouping: view.deck.grouping,
-        headings: view.deck.headings,
-      },
-      fingerprint: print,
-      lines: filteredLines.map((line) => ({
-        name: line.name,
-        oracleId: line.oracleId,
-        printingId: line.printingId,
-        board: line.board,
-        quantity: line.quantity,
-        ...(line.heading !== null ? { heading: line.heading } : {}),
-        ...(line.note !== null ? { note: line.note } : {}),
-        tags: line.tags ?? [],
-        owned: line.owned,
-        ...(line.ownedReal > 0 ? { ownedReal: line.ownedReal } : {}),
-        ...(line.otherDecks.length > 0
-          ? {
-              free: line.free,
-              ...(input.includeOtherDecks
-                ? {
-                    otherDecks: line.otherDecks.map((use) => ({
-                      deckId: use.deckId,
-                      name: use.name,
-                      quantity: use.quantity,
-                    })),
-                  }
-                : {}),
-            }
-          : {}),
-        manaCost: line.manaCost,
-        manaValue: line.manaValue,
-        typeLine: line.typeLine,
-        ...(line.isGameChanger ? { isGameChanger: true } : {}),
-        ...(input.includeText ? { text: line.text } : {}),
-        price: moneyOrNull(line.priceCents),
-      })),
-      stats: {
-        cardCount: stats.cardCount,
-        sideboardCount: stats.sideboardCount,
-        lands: stats.lands,
-        otherManaSources: stats.otherManaSources,
-        averageManaValue: Math.round(stats.averageManaValue * 100) / 100,
-        curve: stats.curve,
-        types: stats.types,
-        pips: stats.pips,
-        sources: stats.sources,
-        roles: stats.tags,
-        value: money(stats.priceCents),
-        costToComplete: money(missingTotalCents),
-      },
-      formatRules: formatRulesSummary(view.deck.format),
-      cardLegalIn:
-        view.deck.format !== "commander" && view.deck.format !== "limited"
-          ? legalFormatsForCards(view.deck, (oracleId) => view.rules[oracleId])
-          : null,
-      roleTargets: roleTargets(view.deck.format),
-      problems: problems.map(problemText),
-      bracket: bracketOf(view, combos),
-      openingHandOdds:
-        handOdds === null
-          ? null
-          : {
-              librarySize: handOdds.librarySize,
-              lands: handOdds.lands,
-              earlyRamp: handOdds.earlyRamp,
-              playableLandsInOpening7Percent: toPercent(handOdds.opening.playableLands),
-              playableAfterFirstMulliganPercent: toPercent(
-                handOdds.opening.playableAfterFirstMulligan,
-              ),
-              threeLandsByTurn3Percent: toPercent(handOdds.landDrops[2].chance),
-              fourLandsByTurn4Percent: toPercent(handOdds.landDrops[3].chance),
-              earlyRampByTurn3Percent: toPercent(handOdds.rampByTurn3.atLeastOneEarlyRamp),
-              twoLandsAndEarlyRampByTurn3Percent: toPercent(
-                handOdds.rampByTurn3.twoLandsAndEarlyRamp,
-              ),
-            },
-      tokens: {
-        summary: summarizeTokenChecklist(rawTokens),
-        items: checklist.map((item) => ({
-          name: item.name,
-          kind: item.kind,
-          description: item.description,
-          madeBy: item.madeBy,
-          sideboardOnly: item.sideboardOnly,
-        })),
-      },
-      list,
-      shortList: shortList(problems, view.lines),
-      toComplete: {
-        missingCopies,
-        total: money(missingTotalCents),
-        ...(unpricedCount > 0 ? { unpricedCount } : {}),
-        cards: missingCards.map((c) => ({
-          name: c.name,
-          oracleId: c.oracleId,
-          needed: c.needed,
-          owned: c.owned,
-          missing: c.missing,
-          price: c.price,
-          subtotal: c.subtotal,
-        })),
-        ...(maybeboardCards.length > 0 ? { maybeboard: maybeboardCards } : {}),
-      },
-      deckSources: deckSources ?? [],
-    };
-    if (input.fields && input.fields.length > 0) {
-      const selected: Record<string, unknown> = {};
-      for (const field of input.fields) {
-        if (field in fullPayload) selected[field] = fullPayload[field];
-      }
-      return done(selected);
-    }
-    return done(fullPayload);
+    if (input.cards !== undefined) return done(deckCardDetails(view, input.cards));
+    const fullPayload = await fullDeckPayload(
+      context,
+      input.view === "full" ? input : { ...input, fields: undefined },
+      view,
+    );
+    if (input.view === "full") return done(fullPayload);
+    return done(compactDeckPayload(view, input, fullPayload));
   },
 });
+
+/** get_deck's older shape: an object per line, every section (view: "full"). */
+async function fullDeckPayload(
+  context: ToolContext,
+  input: GetDeckInputValue,
+  view: DeckView,
+): Promise<Record<string, unknown>> {
+  const problems = problemsOf(view);
+  const stats = deckStats(view.lines);
+  const { list, fingerprint: print } = listAndFingerprint(view);
+  const handOdds = openingHandOdds(library(view.lines), {
+    onTheDraw: false,
+    freeMulligan: view.deck.format === "commander",
+  });
+  const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
+  const [rawTokens, combos, deckSources, storedProfile] = await Promise.all([
+    deckTokenLines(
+      context.container.db,
+      view.deck.id,
+      view.lines.map((line) => ({
+        oracleId: line.oracleId,
+        printingId: line.printingId,
+        name: line.name,
+        board: line.board,
+      })),
+    ),
+    view.deck.format === "commander"
+      ? combosForDeck(
+          context.container.db,
+          view.lines
+            .filter((line) => line.board === "main" || line.board === "commander")
+            .map((line) => line.oracleId),
+        )
+      : Promise.resolve(undefined),
+    listDeckSources(context.container.db, context.actor.userId, input.deckId),
+    getDeckProfile(context.container.db, context.actor.userId, input.deckId),
+  ]);
+  const checklist = rawTokens.map(toTokenChecklistItem);
+  const missingCards = problems.flatMap((problem) => {
+    if (problem.kind !== "Short") return [];
+    const missing = Math.max(0, problem.needed - problem.owned);
+    const line =
+      view.lines.find((l) => l.oracleId === problem.oracleId && l.board !== "maybe") ??
+      view.lines.find((l) => l.oracleId === problem.oracleId);
+    const priceCents = line?.priceCents ?? null;
+    const subtotalCents = priceCents === null ? null : missing * priceCents;
+    return [
+      {
+        name: problem.name,
+        oracleId: problem.oracleId,
+        needed: problem.needed,
+        owned: problem.owned,
+        missing,
+        price: moneyOrNull(priceCents),
+        subtotal: moneyOrNull(subtotalCents),
+        subtotalCents,
+      },
+    ];
+  });
+  const missingCopies = missingCards.reduce((sum, c) => sum + c.missing, 0);
+  const missingTotalCents = missingCards.reduce((sum, c) => sum + (c.subtotalCents ?? 0), 0);
+  const unpricedCount = missingCards.filter((c) => c.subtotalCents === null).length;
+  const maybeboardCards = view.lines
+    .filter((l) => l.board === "maybe")
+    .map((l) => {
+      const isBasic = /\bBasic\b.*\bLand\b/.test(l.typeLine);
+      const missing = isBasic ? 0 : Math.max(0, l.quantity - l.owned);
+      const subtotalCents = missing > 0 && l.priceCents !== null ? missing * l.priceCents : null;
+      return {
+        name: l.name,
+        oracleId: l.oracleId,
+        quantity: l.quantity,
+        owned: l.owned,
+        ...(l.ownedReal > 0 ? { ownedReal: l.ownedReal } : {}),
+        missing,
+        price: moneyOrNull(l.priceCents),
+        ...(subtotalCents !== null ? { subtotal: money(subtotalCents) } : {}),
+      };
+    });
+
+  const filteredLines = view.lines.filter((line) => {
+    if (input.boards && input.boards.length > 0 && !input.boards.includes(line.board)) {
+      return false;
+    }
+    if (input.tag !== undefined) {
+      const needle = input.tag.trim().toLowerCase();
+      if (!(line.tags ?? []).some((t) => t.toLowerCase() === needle)) return false;
+    }
+    if (input.singleTagOnly) {
+      if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
+    }
+    return true;
+  });
+
+  const profileSummary = summarizeDeckProfile(storedProfile?.profile);
+  const fullPayload: Record<string, unknown> = {
+    ...(profileSummary !== null ? { profileSummary } : {}),
+    deck: {
+      id: view.deck.id,
+      name: view.deck.name,
+      format: view.deck.format,
+      usesRealCards: view.deck.usesRealCards,
+      grouping: view.deck.grouping,
+      headings: view.deck.headings,
+    },
+    fingerprint: print,
+    lines: filteredLines.map((line) => ({
+      name: line.name,
+      oracleId: line.oracleId,
+      printingId: line.printingId,
+      board: line.board,
+      quantity: line.quantity,
+      ...(line.heading !== null ? { heading: line.heading } : {}),
+      ...(line.note !== null ? { note: line.note } : {}),
+      tags: line.tags ?? [],
+      owned: line.owned,
+      ...(line.ownedReal > 0 ? { ownedReal: line.ownedReal } : {}),
+      ...(line.otherDecks.length > 0
+        ? {
+            free: line.free,
+            ...(input.includeOtherDecks
+              ? {
+                  otherDecks: line.otherDecks.map((use) => ({
+                    deckId: use.deckId,
+                    name: use.name,
+                    quantity: use.quantity,
+                  })),
+                }
+              : {}),
+          }
+        : {}),
+      manaCost: line.manaCost,
+      manaValue: line.manaValue,
+      typeLine: line.typeLine,
+      ...(line.isGameChanger ? { isGameChanger: true } : {}),
+      ...(input.includeText ? { text: line.text } : {}),
+      price: moneyOrNull(line.priceCents),
+    })),
+    stats: {
+      cardCount: stats.cardCount,
+      sideboardCount: stats.sideboardCount,
+      lands: stats.lands,
+      otherManaSources: stats.otherManaSources,
+      averageManaValue: Math.round(stats.averageManaValue * 100) / 100,
+      curve: stats.curve,
+      types: stats.types,
+      pips: stats.pips,
+      sources: stats.sources,
+      roles: stats.tags,
+      value: money(stats.priceCents),
+      costToComplete: money(missingTotalCents),
+    },
+    formatRules: formatRulesSummary(view.deck.format),
+    cardLegalIn:
+      view.deck.format !== "commander" && view.deck.format !== "limited"
+        ? legalFormatsForCards(view.deck, (oracleId) => view.rules[oracleId])
+        : null,
+    roleTargets: roleTargets(view.deck.format),
+    problems: problems.map(problemText),
+    bracket: bracketOf(view, combos),
+    openingHandOdds:
+      handOdds === null
+        ? null
+        : {
+            librarySize: handOdds.librarySize,
+            lands: handOdds.lands,
+            earlyRamp: handOdds.earlyRamp,
+            playableLandsInOpening7Percent: toPercent(handOdds.opening.playableLands),
+            playableAfterFirstMulliganPercent: toPercent(
+              handOdds.opening.playableAfterFirstMulligan,
+            ),
+            threeLandsByTurn3Percent: toPercent(handOdds.landDrops[2].chance),
+            fourLandsByTurn4Percent: toPercent(handOdds.landDrops[3].chance),
+            earlyRampByTurn3Percent: toPercent(handOdds.rampByTurn3.atLeastOneEarlyRamp),
+            twoLandsAndEarlyRampByTurn3Percent: toPercent(
+              handOdds.rampByTurn3.twoLandsAndEarlyRamp,
+            ),
+          },
+    tokens: {
+      summary: summarizeTokenChecklist(rawTokens),
+      items: checklist.map((item) => ({
+        name: item.name,
+        kind: item.kind,
+        description: item.description,
+        madeBy: item.madeBy,
+        sideboardOnly: item.sideboardOnly,
+      })),
+    },
+    list,
+    shortList: shortList(problems, view.lines),
+    toComplete: {
+      missingCopies,
+      total: money(missingTotalCents),
+      ...(unpricedCount > 0 ? { unpricedCount } : {}),
+      cards: missingCards.map((c) => ({
+        name: c.name,
+        oracleId: c.oracleId,
+        needed: c.needed,
+        owned: c.owned,
+        missing: c.missing,
+        price: c.price,
+        subtotal: c.subtotal,
+      })),
+      ...(maybeboardCards.length > 0 ? { maybeboard: maybeboardCards } : {}),
+    },
+    deckSources: deckSources ?? [],
+  };
+  if (input.fields && input.fields.length > 0) {
+    const selected: Record<string, unknown> = {};
+    for (const field of input.fields) {
+      if (field in fullPayload) selected[field] = fullPayload[field];
+    }
+    return selected;
+  }
+  return fullPayload;
+}
+
+/** Room kept under the response cap for the `next` cursor and JSON framing. */
+const PAGE_MARGIN_BYTES = 800;
+
+function jsonByteLength(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value), "utf8");
+}
+
+/** Does this line pass get_deck's board, tag and single-tag filters? */
+function passesLineFilters(line: DeckLine, input: GetDeckInputValue): boolean {
+  if (input.tag !== undefined) {
+    const needle = input.tag.trim().toLowerCase();
+    if (!(line.tags ?? []).some((tag) => tag.toLowerCase() === needle)) return false;
+  }
+  if (input.singleTagOnly) {
+    if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
+  }
+  return true;
+}
+
+/**
+ * get_deck's compact view (design doc 61, section 5a): the deck header, stats and problems on the
+ * first page, then card lines grouped by heading, paged by whole groups under the response cap.
+ */
+function compactDeckPayload(
+  view: DeckView,
+  input: GetDeckInputValue,
+  fullPayload: Record<string, unknown>,
+): Record<string, unknown> {
+  const requestedBoards = input.boards && input.boards.length > 0 ? input.boards : null;
+  const shownBoards: readonly DeckLine["board"][] = requestedBoards ?? [
+    "commander",
+    "main",
+    "side",
+  ];
+  const shownLines = view.lines.filter(
+    (line) => shownBoards.includes(line.board) && passesLineFilters(line, input),
+  );
+  const groups = groupCompactLines(
+    shownLines.map((line) =>
+      line.board === "side" || line.board === "maybe"
+        ? { ...line, heading: line.board === "side" ? "Sideboard" : "Maybeboard" }
+        : line,
+    ),
+    {
+      byHeading: view.deck.grouping === "custom",
+      headings: [...view.deck.headings, "Sideboard", "Maybeboard"],
+      includeText: input.text,
+    },
+  );
+  const cursor = input.cursor ?? 0;
+  if (cursor > 0) {
+    const page = pageCompactGroups(
+      groups,
+      MAX_TOOL_RESPONSE_BYTES - PAGE_MARGIN_BYTES - 200,
+      cursor,
+    );
+    return {
+      deck: { id: view.deck.id, name: view.deck.name },
+      cards: page.cards,
+      ...(page.next !== undefined ? { next: page.next } : {}),
+    };
+  }
+
+  const stats = fullPayload.stats as Record<string, unknown>;
+  const bracket = fullPayload.bracket as ReturnType<typeof bracketOf>;
+  const problems = problemsOf(view);
+  const missingLines = shortLinesOf(view, problems);
+  const missingCopies = missingLines.reduce((sum, entry) => sum + entry.missing, 0);
+  const header: Record<string, unknown> = {
+    deck: {
+      id: view.deck.id,
+      name: view.deck.name,
+      format: view.deck.format,
+      ...(view.deck.format === "commander"
+        ? {
+            commander: view.lines
+              .filter((line) => line.board === "commander")
+              .map((line) => line.name),
+          }
+        : {}),
+      cards: stats.cardCount,
+      ...(stats.sideboardCount ? { sideboard: stats.sideboardCount } : {}),
+      lands: stats.lands,
+      averageManaValue: stats.averageManaValue,
+      ...(bracket !== null
+        ? {
+            bracket: {
+              target: bracket.target,
+              estimate: bracket.summary,
+              gameChangers: bracket.gameChangers,
+              ...(bracket.overTarget !== null ? { overTarget: bracket.overTarget } : {}),
+              ...(bracket.findings.length > 0
+                ? { findings: bracket.findings.map((finding) => finding.text) }
+                : {}),
+            },
+          }
+        : {}),
+    },
+    ...(fullPayload.profileSummary !== undefined
+      ? { profileSummary: fullPayload.profileSummary }
+      : {}),
+    fingerprint: fullPayload.fingerprint,
+  };
+  const maybeNames =
+    requestedBoards === null
+      ? view.lines.filter((line) => line.board === "maybe").map((line) => line.name)
+      : [];
+  const otherProblems = problems.filter((problem) => problem.kind !== "Short").map(problemText);
+  const footer: Record<string, unknown> = {
+    ...(maybeNames.length > 0 ? { maybe: maybeNames } : {}),
+    stats: {
+      curve: stats.curve,
+      types: stats.types,
+      pips: stats.pips,
+      sources: stats.sources,
+      otherManaSources: stats.otherManaSources,
+      roles: stats.roles,
+    },
+    ...(otherProblems.length > 0 ? { problems: otherProblems } : {}),
+    ...(missingLines.length > 0
+      ? {
+          short: {
+            copies: missingCopies,
+            cost: (stats.costToComplete as { text: string }).text,
+            cards: missingLines.map((entry) =>
+              entry.price === null
+                ? `${entry.name} (${entry.missing})`
+                : `${entry.name} (${entry.missing} × ${entry.price})`,
+            ),
+          },
+        }
+      : {}),
+    ...includedSections(view, input, fullPayload),
+    more: 'cards: [names] for full detail; boards: ["maybe"] for maybeboard text; include: prices | ids | owners | tokens | odds | sources | legality | list | formatRules.',
+  };
+  const budget =
+    MAX_TOOL_RESPONSE_BYTES - jsonByteLength(header) - jsonByteLength(footer) - PAGE_MARGIN_BYTES;
+  const page = pageCompactGroups(groups, Math.max(budget, 4_000), 0);
+  return {
+    ...header,
+    cards: page.cards,
+    ...(page.next !== undefined ? { next: page.next } : {}),
+    ...footer,
+  };
+}
+
+type ShortLine = Readonly<{ name: string; missing: number; price: string | null }>;
+
+/** The cards the deck uses more copies of than the player owns, with the price of one. */
+function shortLinesOf(view: DeckView, problems: readonly DeckProblem[]): ShortLine[] {
+  return problems.flatMap((problem) => {
+    if (problem.kind !== "Short") return [];
+    const line = view.lines.find(
+      (candidate) => candidate.oracleId === problem.oracleId && candidate.board !== "maybe",
+    );
+    const missing = Math.max(0, problem.needed - problem.owned);
+    if (missing === 0) return [];
+    const priceCents = line?.priceCents ?? null;
+    return [
+      { name: problem.name, missing, price: priceCents === null ? null : money(priceCents).text },
+    ];
+  });
+}
+
+/** The extra sections the compact view was asked for with `include`. */
+function includedSections(
+  view: DeckView,
+  input: GetDeckInputValue,
+  fullPayload: Record<string, unknown>,
+): Record<string, unknown> {
+  const wanted = new Set(input.include);
+  const played = view.lines;
+  const sections: Record<string, unknown> = {};
+  if (wanted.has("prices")) {
+    sections.prices = {
+      value: (fullPayload.stats as { value: { text: string } }).value.text,
+      cards: Object.fromEntries(
+        played.flatMap((line) =>
+          line.priceCents === null || line.isBasicLand
+            ? []
+            : [[line.name, money(line.priceCents).text] as const],
+        ),
+      ),
+    };
+  }
+  if (wanted.has("ids")) {
+    sections.ids = Object.fromEntries(
+      played.map((line) => [line.name, { oracleId: line.oracleId, printingId: line.printingId }]),
+    );
+  }
+  if (wanted.has("owners")) {
+    sections.owners = Object.fromEntries(
+      played
+        .filter((line) => !line.isBasicLand)
+        .map((line) => [
+          line.name,
+          {
+            owned: line.owned,
+            ...(line.ownedReal > 0 ? { real: line.ownedReal } : {}),
+            free: line.free,
+            ...(line.otherDecks.length > 0
+              ? { otherDecks: line.otherDecks.map((use) => `${use.name} (${use.quantity})`) }
+              : {}),
+          },
+        ]),
+    );
+  }
+  if (wanted.has("tokens")) sections.tokens = fullPayload.tokens;
+  if (wanted.has("odds")) sections.openingHandOdds = fullPayload.openingHandOdds;
+  if (wanted.has("sources")) sections.deckSources = fullPayload.deckSources;
+  if (wanted.has("legality")) sections.cardLegalIn = fullPayload.cardLegalIn;
+  if (wanted.has("list")) sections.list = fullPayload.list;
+  if (wanted.has("formatRules")) {
+    sections.formatRules = fullPayload.formatRules;
+    sections.roleTargets = fullPayload.roleTargets;
+  }
+  return sections;
+}
+
+/** Full detail for the named cards in the deck (get_deck's `cards` input). */
+function deckCardDetails(view: DeckView, names: readonly string[]): Record<string, unknown> {
+  const notInDeck: string[] = [];
+  const cards = names.flatMap((query) => {
+    const needle = query.trim().toLowerCase();
+    const matches = view.lines.filter((line) => {
+      const fullName = line.name.toLowerCase();
+      return (
+        fullName === needle ||
+        fullName.split(" // ").some((face) => face === needle) ||
+        line.oracleId === query
+      );
+    });
+    if (matches.length === 0) notInDeck.push(query);
+    return matches.map((line) => ({
+      name: line.name,
+      board: line.board,
+      quantity: line.quantity,
+      ...(line.heading !== null ? { heading: line.heading } : {}),
+      ...(line.note !== null ? { note: line.note } : {}),
+      ...((line.tags ?? []).length > 0 ? { tags: line.tags } : {}),
+      manaCost: line.manaCost,
+      typeLine: line.typeLine,
+      ...(line.printedStats ? { stats: line.printedStats } : {}),
+      text:
+        line.faceTexts !== undefined && line.faceTexts.length > 1
+          ? line.faceTexts.join("\n//\n")
+          : line.text,
+      ...(line.keywords.length > 0 ? { keywords: line.keywords } : {}),
+      ...(line.isGameChanger ? { isGameChanger: true } : {}),
+      oracleId: line.oracleId,
+      printingId: line.printingId,
+      owned: line.owned,
+      ...(line.ownedReal > 0 ? { ownedReal: line.ownedReal } : {}),
+      free: line.free,
+      ...(line.otherDecks.length > 0
+        ? {
+            otherDecks: line.otherDecks.map((use) => ({
+              deckId: use.deckId,
+              name: use.name,
+              quantity: use.quantity,
+            })),
+          }
+        : {}),
+      price: moneyOrNull(line.priceCents),
+    }));
+  });
+  return {
+    deck: { id: view.deck.id, name: view.deck.name },
+    cards,
+    ...(notInDeck.length > 0 ? { notInDeck } : {}),
+  };
+}
 
 export const createDeck = defineTool({
   name: "create_deck",

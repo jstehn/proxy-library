@@ -134,7 +134,10 @@ export async function callTool(
   if (outcome.ok) {
     return {
       kind: "outcome",
-      outcome: { ok: true, value: capToolResponse(outcome.value, cursor) },
+      outcome: {
+        ok: true,
+        value: capToolResponse(outcome.value, tool.pagesItself === true ? 0 : cursor),
+      },
     };
   }
   return { kind: "outcome", outcome };
