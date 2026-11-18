@@ -90,6 +90,8 @@ import {
 import { makeWallet } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
+import { makeYoutube } from "@/modules/youtube";
+import { youtubeiGateway } from "@/modules/youtube/infrastructure";
 import {
   drizzleEconomySettingsRepository,
   drizzlePlayerDirectory,
@@ -249,6 +251,7 @@ export function buildCore(config: Config) {
   const wishlist = makeWishlist({ unitOfWork, clock });
   const social = makeSocial({ unitOfWork, clock });
   const outsideData = makeOutsideData(clock);
+  const youtube = makeYoutube({ gateway: youtubeiGateway(clock) });
 
   return {
     config,
@@ -275,6 +278,7 @@ export function buildCore(config: Config) {
     wishlist,
     social,
     outsideData,
+    youtube,
     textEmbedder,
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
