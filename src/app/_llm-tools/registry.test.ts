@@ -32,6 +32,7 @@ describe("the tool registry", () => {
       ["set_deck_profile", "decks:write"],
       ["set_primer", "decks:write"],
       ["create_deck", "decks:write"],
+      ["delete_deck", "decks:write"],
       ["update_deck", "decks:write"],
       ["apply_changes", "decks:write"],
       ["replace_deck_list", "decks:write"],

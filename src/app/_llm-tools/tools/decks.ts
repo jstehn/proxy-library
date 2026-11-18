@@ -1402,6 +1402,29 @@ export const updateDeck = defineTool({
   },
 });
 
+export const deleteDeckTool = defineTool({
+  name: "delete_deck",
+  title: "Delete a deck",
+  description: [
+    "Permanently deletes a deck and all of its entries, sources, and snapshots. Requires confirm: true.",
+    "Use it when: cleaning up an old or duplicate test deck after the user asks to remove it.",
+  ].join("\n"),
+  scope: "decks:write",
+  readOnly: false,
+  input: z.object({
+    deckId,
+    confirm: z.boolean().default(false).describe("Must be true to permanently delete the deck."),
+  }),
+  async run(context, input) {
+    if (!input.confirm) {
+      return failed("ConfirmationRequired", "Pass confirm: true to permanently delete this deck.");
+    }
+    const result = await context.container.decks.deleteDeck(context.actor, DeckId.of(input.deckId));
+    if (!result.ok) return deckNotFound(input.deckId);
+    return done({ deckId: input.deckId, deleted: true });
+  },
+});
+
 export const setDeckEntry = defineTool({
   name: "set_deck_entry",
   title: "Set how many of a card a deck has",
