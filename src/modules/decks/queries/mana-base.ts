@@ -1,4 +1,4 @@
-import { sql, type SQL } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { seededRng, type UserId } from "@/shared/kernel";
@@ -9,7 +9,9 @@ import {
   type CastabilityLine,
   type CastabilitySummary,
 } from "../domain/castability";
+import type { DeckProfile as DeckPlanProfile } from "../domain/deck-profile";
 import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
+import { decks } from "../infrastructure/schema";
 import { deckStats, MANA_COLORS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { ownedCopies } from "./owned";
@@ -207,7 +209,21 @@ export async function manaBasePlan(
 ): Promise<ManaBasePlanWithCastability | null> {
   const context = await suggestionContext(db, userId, deckId);
   if (context === null) return null;
-  const pools = await landPoolsForDeck(db, userId, context);
+  const [pools, profileRows, nameRows] = await Promise.all([
+    landPoolsForDeck(db, userId, context),
+    db.select({ profileJson: decks.profileJson }).from(decks).where(eq(decks.id, deckId)).limit(1),
+    db.execute<{ oracle_id: string; name: string }>(sql`
+      select distinct on (p.oracle_id) p.oracle_id, p.name
+        from deck_entries e
+        join printings p on p.oracle_id = e.oracle_id
+       where e.deck_id = ${deckId}
+       order by p.oracle_id, p.id
+    `),
+  ]);
+  const deckPlanProfile: DeckPlanProfile | null = profileRows[0]?.profileJson ?? null;
+  const nameByOracle = new Map<string, string>(
+    nameRows.rows.map((r) => [r.oracle_id, r.name]),
+  );
   const profile = deckProfile(context.lines, context.format);
 
   const inDeck = new Map<string, number>();
@@ -225,11 +241,12 @@ export async function manaBasePlan(
     store: pools.store,
     deckRoles: profile.gaps.map((gap) => gap.tag),
     deckThemes: profile.themes,
+    landTargetOverride: deckPlanProfile?.landTarget ?? null,
   });
 
   const beforeLines: CastabilityLine[] = context.lines.map((line) => ({
     oracleId: line.oracleId,
-    name: line.oracleId,
+    name: nameByOracle.get(line.oracleId) ?? line.oracleId,
     board: line.board,
     quantity: line.quantity,
     typeLine: line.typeLine,
@@ -256,10 +273,12 @@ export async function manaBasePlan(
   const before = simulateCastOnCurve(beforeLines, {
     rng: seededRng(`mana-base-${deckId}`),
     trials: 400,
+    profile: deckPlanProfile,
   });
   const after = simulateCastOnCurve(afterLines, {
     rng: seededRng(`mana-base-${deckId}`),
     trials: 400,
+    profile: deckPlanProfile,
   });
 
   return {

@@ -244,6 +244,8 @@ export function landTargetReasonText(reason: LandTargetReason): string {
       return `+${reason.change}: a high curve (average ${reason.averageManaValue.toFixed(1)})`;
     case "manyManaSources":
       return `${reason.change}: ${reason.sources} other mana sources`;
+    case "profile":
+      return `${reason.lands} from deck profile`;
     default:
       return assertNever(reason);
   }
@@ -261,6 +263,8 @@ export function landReasonText(reason: LandReason): string {
         ...reason.roles.map((role) => TAG_LABELS[role].toLowerCase()),
         ...reason.themes.map((theme) => THEME_LABELS[theme].toLowerCase()),
       ].join(", ")}`;
+    case "drawback":
+      return reason.note;
     case "basic":
       return `a basic for ${COLOR_NAMES[reason.color]} sources`;
     default:

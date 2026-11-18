@@ -1,5 +1,6 @@
 import { randomInt, seededRng, type Rng } from "@/shared/kernel";
 import { isPlayed, type Board } from "./boards";
+import { effectiveManaValue, type DeckProfile } from "./deck-profile";
 import { tapped } from "./mana-base";
 import { colorPips, isLand, MANA_COLORS, type ManaColor } from "./stats";
 
@@ -13,6 +14,7 @@ export type CastabilityLine = Readonly<{
   manaCost?: string | null;
   producedMana?: readonly string[];
   text?: string;
+  power?: string | number | null;
 }>;
 
 export type CardCastability = Readonly<{
@@ -42,7 +44,10 @@ type SimLand = Readonly<{
   colors: readonly ManaColor[];
 }>;
 
-type SimCard = SimLand | Readonly<{ isLand: false }>;
+type SimCard =
+  | SimLand
+  | Readonly<{ isLand: false; isRamp: true; manaValue: number; colors: readonly ManaColor[] }>
+  | Readonly<{ isLand: false; isRamp: false }>;
 
 type SpellSpec = Readonly<{
   oracleId: string;
@@ -103,7 +108,7 @@ function missingPip(lands: readonly SimLand[], pips: readonly ManaColor[]): Mana
  */
 export function simulateCastOnCurve(
   lines: readonly CastabilityLine[],
-  options: Readonly<{ rng?: Rng; trials?: number }> = {},
+  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckProfile | null }> = {},
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
   const rng = options.rng ?? seededRng("cast-on-curve");
@@ -117,25 +122,43 @@ export function simulateCastOnCurve(
     const land = isLand(line.typeLine);
 
     if (line.board === "main") {
+      const produces = toColors(line.producedMana ?? []);
+      const isManaSource =
+        !land &&
+        line.manaValue <= 3 &&
+        (produces.length > 0 || /\{T\}[^.]*Add\s+\{/.test(line.text ?? ""));
       const card: SimCard = land
         ? {
             isLand: true,
             untappedOnPlay: tapped(line.text ?? "") !== "always",
-            colors: toColors(line.producedMana ?? []),
+            colors: produces,
           }
-        : { isLand: false };
+        : isManaSource
+          ? { isLand: false, isRamp: true, manaValue: line.manaValue, colors: produces }
+          : { isLand: false, isRamp: false };
       for (let i = 0; i < line.quantity; i++) library.push(card);
     }
 
     if (!land && !seenSpells.has(line.oracleId)) {
       seenSpells.add(line.oracleId);
-      const mv = Math.max(0, Math.round(line.manaValue));
+      const effMv = effectiveManaValue(
+        line.manaValue,
+        {
+          oracleText: line.text,
+          typeLine: line.typeLine,
+          power: line.power,
+          isCommander: line.board === "commander",
+        },
+        options.profile,
+        1,
+      );
+      const mv = Math.max(0, Math.round(effMv));
       spells.push({
         oracleId: line.oracleId,
         name: line.name,
-        manaValue: line.manaValue,
+        manaValue: effMv,
         manaCost: line.manaCost ?? null,
-        targetTurn: Math.max(1, Math.min(7, mv)),
+        targetTurn: Math.max(1, Math.min(8, mv)),
         pips: expandPips(line.manaCost ?? null),
       });
     }
@@ -145,7 +168,7 @@ export function simulateCastOnCurve(
     return { trials, averageCastOnCurvePct: 1, struggling: [], spells: [] };
   }
 
-  const maxSeen = Math.min(library.length, 13); // 7 opening + 6 draws = turn 7 on the play
+  const maxSeen = Math.min(library.length, 14); // 7 opening + 7 draws = turn 8 on the play
   const castCounts = new Int32Array(spells.length);
   const colorMissCounts: Record<ManaColor, Int32Array> = {
     W: new Int32Array(spells.length),
@@ -166,30 +189,40 @@ export function simulateCastOnCurve(
       deck[j] = tmp;
     }
 
-    // Precompute seen lands by turn 1..7
+    // Precompute seen lands and ramp sources by turn 1..8
     const landsByTurn: SimLand[][] = [];
+    const rampByTurn: Array<readonly SimLand[]> = [];
     const currentLands: SimLand[] = [];
-    for (let turn = 1; turn <= 7; turn++) {
+    const currentRamp: SimLand[] = [];
+    for (let turn = 1; turn <= 8; turn++) {
       const endIdx = Math.min(maxSeen, 6 + turn);
       const startIdx = turn === 1 ? 0 : Math.min(maxSeen, 6 + turn - 1);
       for (let k = startIdx; k < endIdx; k++) {
         const c = deck[k];
-        if (c.isLand) currentLands.push(c);
+        if (c.isLand) {
+          currentLands.push(c);
+        } else if (c.isRamp && turn < 8 && c.manaValue <= Math.min(turn, currentLands.length + currentRamp.length)) {
+          // Ramp cast on an earlier turn contributes +1 mana on subsequent turns
+          currentRamp.push({ isLand: true, untappedOnPlay: true, colors: c.colors });
+        }
       }
       landsByTurn.push([...currentLands]);
+      rampByTurn.push([...currentRamp]);
     }
 
     for (let sIdx = 0; sIdx < spells.length; sIdx++) {
       const spell = spells[sIdx];
       const turn = spell.targetTurn;
       const seenLands = landsByTurn[turn - 1];
+      const priorRamp = turn > 1 ? rampByTurn[turn - 2] : [];
       const hasUntapped = seenLands.some((l) => l.untappedOnPlay);
-      const effectiveMana =
+      const landMana =
         seenLands.length >= turn ? (hasUntapped ? turn : Math.max(0, turn - 1)) : seenLands.length;
+      const effectiveMana = landMana + priorRamp.length;
 
       if (effectiveMana < spell.manaValue) continue;
 
-      const missed = missingPip(seenLands, spell.pips);
+      const missed = missingPip([...seenLands, ...priorRamp], spell.pips);
       if (missed === null) {
         castCounts[sIdx] += 1;
       } else {

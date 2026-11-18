@@ -42,7 +42,8 @@ export type LandTargetReason =
   | Readonly<{ kind: "base"; lands: number }>
   | Readonly<{ kind: "lowCurve"; averageManaValue: number; change: number }>
   | Readonly<{ kind: "highCurve"; averageManaValue: number; change: number }>
-  | Readonly<{ kind: "manyManaSources"; sources: number; change: number }>;
+  | Readonly<{ kind: "manyManaSources"; sources: number; change: number }>
+  | Readonly<{ kind: "profile"; lands: number }>;
 
 export type LandTarget = Readonly<{ lands: number; reasons: readonly LandTargetReason[] }>;
 
@@ -60,6 +61,7 @@ export type LandReason =
   | Readonly<{ kind: "fixes"; colors: readonly ManaColor[] }>
   | Readonly<{ kind: "untapped" }>
   | Readonly<{ kind: "utility"; roles: readonly Tag[]; themes: readonly Theme[] }>
+  | Readonly<{ kind: "drawback"; note: string }>
   | Readonly<{ kind: "basic"; color: ManaColor | "C" }>;
 
 export type PlannedLand = Readonly<{
@@ -98,6 +100,8 @@ export type ManaBaseInput = Readonly<{
   /** Roles the deck is short on and themes it has: a land doing these is a utility land. */
   deckRoles: readonly Tag[];
   deckThemes: readonly Theme[];
+  /** Optional explicit land target override from DeckProfile. */
+  landTargetOverride?: number | null;
 }>;
 
 /** Below this many non-land cards the curve says too little to move the land count. */
@@ -113,7 +117,9 @@ export const LAND_WEIGHTS = {
   shortColor: 2,
   /** A deck color it makes that isn't short. */
   otherColor: 1,
+  makesDeckColor: 3,
   utility: 3,
+  helpsOpponent: -4,
   alwaysTapped: -2,
   sometimesTapped: -1,
 } as const;
@@ -148,7 +154,8 @@ export function landTarget(format: Format | string, stats: DeckStats): LandTarge
     }
   }
   const total = reasons.reduce(
-    (sum, reason) => sum + (reason.kind === "base" ? reason.lands : reason.change),
+    (sum, reason) =>
+      sum + (reason.kind === "base" || reason.kind === "profile" ? reason.lands : reason.change),
     0,
   );
   return { lands: Math.min(base + 3, Math.max(base - 4, total)), reasons };
@@ -210,7 +217,11 @@ type Scored = Readonly<{
 /** A mana base you could start from: targets, and lands to reach them (section 3.3). */
 export function planManaBase(input: ManaBaseInput): ManaBasePlan {
   const stats = deckStats(input.lines);
-  const target = landTarget(input.format, stats);
+  const baseTarget = landTarget(input.format, stats);
+  const target: LandTarget =
+    input.landTargetOverride != null
+      ? { lands: input.landTargetOverride, reasons: [{ kind: "profile", lands: input.landTargetOverride }] }
+      : baseTarget;
   const sources = sourceTargets(input.format, input.lines, target);
   const gaps: Gaps = new Map(
     sources.map((source) => [source.color, Math.max(0, source.target - source.have)]),
@@ -262,7 +273,16 @@ function scoreLand(
   }
   // A colorless deck's only color is colorless mana.
   if (deckColors.length === 0 && card.producedMana.includes("C")) score += LAND_WEIGHTS.otherColor;
+  // Prefer lands that produce at least one of the deck's colors over colorless utility lands.
+  if (deckColors.length > 0 && deckColors.some((c) => card.producedMana.includes(c))) {
+    score += LAND_WEIGHTS.makesDeckColor;
+  }
   if (fixes.length > 0) reasons.push({ kind: "fixes", colors: fixes });
+
+  if (/\b(?:target|an|each)\s+opponent\b[^.]*(?:creates?|draws?|gains?|puts?|adds?|searches?)/i.test(card.text)) {
+    score += LAND_WEIGHTS.helpsOpponent;
+    reasons.push({ kind: "drawback", note: "Helps opponents" });
+  }
 
   const roles = card.roles.filter((role) => input.deckRoles.includes(role));
   const themes = card.themes.filter((theme) => input.deckThemes.includes(theme));

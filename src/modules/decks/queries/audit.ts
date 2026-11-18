@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
@@ -10,6 +11,8 @@ import {
   type BracketRuleReason,
 } from "../domain/brackets";
 import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
+import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { decks } from "../infrastructure/schema";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
 import { simulateOpeningHands, type GoldfishReport } from "../domain/goldfish";
@@ -100,7 +103,15 @@ export async function auditDeck(
  */
 export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<DeckAuditReport> {
   const playedOracleIds = view.lines.filter((l) => isPlayed(l.board)).map((l) => l.oracleId);
-  const combos = await combosForDeck(db, playedOracleIds);
+  const [combos, profileRows] = await Promise.all([
+    combosForDeck(db, playedOracleIds),
+    db
+      .select({ profileJson: decks.profileJson })
+      .from(decks)
+      .where(eq(decks.id, view.deck.id))
+      .limit(1),
+  ]);
+  const deckProfile: DeckProfile | null = profileRows[0]?.profileJson ?? null;
 
   const ownedByOracle = new Map<string, number>();
   for (const line of view.lines) ownedByOracle.set(line.oracleId, line.owned);
@@ -112,7 +123,15 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
   );
 
   const stats = deckStats(view.lines);
-  const targets = roleTargets(view.deck.format);
+  const baseTargets = roleTargets(view.deck.format);
+  const resolved =
+    baseTargets === null
+      ? null
+      : resolveDeckProfileTargets(deckProfile, null, {
+          landTarget: suggestedLands(view.deck.format),
+          roleTargets: baseTargets,
+        });
+  const targets = resolved?.roleTargets ?? null;
   const roles: AuditRoleStatus[] =
     targets === null
       ? []
@@ -165,6 +184,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
   const castability = simulateCastOnCurve(view.lines, {
     rng: seededRng(`audit-mana-${view.deck.id}`),
     trials: 400,
+    profile: deckProfile,
   });
 
   const findings: AuditFinding[] = [];
@@ -182,7 +202,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       message: `Deck floor is Bracket ${warning.floor}, above target Bracket ${warning.target}.`,
     });
   }
-  const landTarget = suggestedLands(view.deck.format);
+  const landTarget = resolved?.landTarget ?? suggestedLands(view.deck.format);
   if (stats.lands < landTarget - 3) {
     findings.push({
       severity: "warning",
