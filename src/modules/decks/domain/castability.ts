@@ -141,13 +141,6 @@ export function simulateCastOnCurve(
 
     if (!land && !seenSpells.has(line.oracleId)) {
       seenSpells.add(line.oracleId);
-      const hasBlitzGranter =
-        options.profile?.costReducers.some((r) => r.scope === "blitz") ?? false;
-      const isBlitzCandidate =
-        hasBlitzGranter &&
-        line.board !== "commander" &&
-        /\bCreature\b/i.test(line.typeLine) &&
-        line.manaValue >= 4;
       const effMv = effectiveManaValue(
         line.manaValue,
         {
@@ -155,7 +148,6 @@ export function simulateCastOnCurve(
           typeLine: line.typeLine,
           power: line.power,
           isCommander: line.board === "commander",
-          isBlitz: isBlitzCandidate,
         },
         options.profile,
         1,

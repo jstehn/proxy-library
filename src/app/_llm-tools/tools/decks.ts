@@ -50,6 +50,7 @@ import {
   updateDeckPrimer,
   updateDeckProfile,
   effectiveManaValue,
+  COST_REDUCER_SCOPES,
   type DeckPlanProfile,
   isAvoidCard,
   isKeyCard,
@@ -3557,9 +3558,23 @@ export const goldfishStepTool = defineTool({
 
 const costReducerSchema = z.object({
   cardName: z.string().min(1),
-  scope: z.enum(["blitz", "creature_power_gte_4", "commander", "all_spells"]),
+  scope: z.enum(COST_REDUCER_SCOPES),
   genericReduction: z.number().int().min(0).max(20),
   perCommandCast: z.boolean().optional(),
+  minManaValue: z
+    .number()
+    .int()
+    .min(0)
+    .max(20)
+    .optional()
+    .describe("Optional minimum base mana value required (e.g. 4 for Henzie)."),
+  minPower: z
+    .number()
+    .int()
+    .min(0)
+    .max(20)
+    .optional()
+    .describe("Optional minimum creature power required (e.g. 4 for Goreclaw)."),
 });
 
 const keyCardPinSchema = z.object({
@@ -3663,7 +3678,7 @@ export const setDeckProfileTool = defineTool({
       .max(20)
       .optional()
       .describe(
-        "Declarative cost reducers (e.g. Henzie blitz -1 per cast; Goreclaw -2 for power 4+).",
+        'Declarative cost reducers (e.g. Henzie: scope "creatures", minManaValue 4, genericReduction 1, perCommandCast true; Goreclaw: scope "creatures", minPower 4, genericReduction 2; Electromancer: scope "instants_sorceries", genericReduction 1).',
       ),
     winCons: z
       .array(z.string().min(1).max(300))

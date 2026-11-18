@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
+import { EMPTY_DECK_PROFILE, type DeckProfile } from "./deck-profile";
 import { simulateCastOnCurve, type CastabilityLine } from "./castability";
 
 function spell(name: string, manaCost: string, manaValue: number, quantity = 1): CastabilityLine {
@@ -79,5 +80,106 @@ describe("simulateCastOnCurve", () => {
     const necroBefore = before.spells.find((s) => s.name === "Necropotence")?.castOnCurvePct ?? 0;
     const necroAfter = after.spells.find((s) => s.name === "Necropotence")?.castOnCurvePct ?? 0;
     expect(necroAfter).toBeGreaterThan(necroBefore);
+  });
+
+  it("applies general deck-profile costReducers for Goreclaw, Spellslinger, and Henzie", () => {
+    const deck: CastabilityLine[] = [
+      land("Forest", ["G"], 18),
+      land("Island", ["U"], 18),
+      {
+        oracleId: "big-beast",
+        name: "Carnage Tyrant",
+        board: "main",
+        quantity: 1,
+        typeLine: "Creature — Dinosaur",
+        manaValue: 6,
+        manaCost: "{4}{G}{G}",
+        power: "7",
+        text: "Trample",
+      },
+      {
+        oracleId: "small-utility",
+        name: "Mulldrifter",
+        board: "main",
+        quantity: 1,
+        typeLine: "Creature — Elemental",
+        manaValue: 6,
+        manaCost: "{5}{U}",
+        power: "2",
+        text: "Flying",
+      },
+      {
+        oracleId: "big-sorcery",
+        name: "Time Stretch",
+        board: "main",
+        quantity: 1,
+        typeLine: "Sorcery",
+        manaValue: 6,
+        manaCost: "{4}{U}{U}",
+        text: "Take two extra turns.",
+      },
+      ...Array.from({ length: 60 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
+    ];
+
+    const baseline = simulateCastOnCurve(deck, { rng: seededRng("cmd"), trials: 400 });
+    const goreclawProfile: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        { cardName: "Goreclaw", scope: "creatures", minPower: 4, genericReduction: 2 },
+      ],
+    };
+    const goreclaw = simulateCastOnCurve(deck, {
+      rng: seededRng("cmd"),
+      trials: 400,
+      profile: goreclawProfile,
+    });
+
+    const baseTyrant =
+      baseline.spells.find((s) => s.name === "Carnage Tyrant")?.castOnCurvePct ?? 0;
+    const goreTyrant =
+      goreclaw.spells.find((s) => s.name === "Carnage Tyrant")?.castOnCurvePct ?? 0;
+    const baseMull = baseline.spells.find((s) => s.name === "Mulldrifter")?.castOnCurvePct ?? 0;
+    const goreMull = goreclaw.spells.find((s) => s.name === "Mulldrifter")?.castOnCurvePct ?? 0;
+    expect(goreTyrant).toBeGreaterThan(baseTyrant);
+    expect(goreMull).toBe(baseMull);
+
+    const mizzixProfile: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [{ cardName: "Mizzix", scope: "instants_sorceries", genericReduction: 2 }],
+    };
+    const mizzix = simulateCastOnCurve(deck, {
+      rng: seededRng("cmd"),
+      trials: 400,
+      profile: mizzixProfile,
+    });
+    const baseSorcery = baseline.spells.find((s) => s.name === "Time Stretch")?.castOnCurvePct ?? 0;
+    const mizzixSorcery = mizzix.spells.find((s) => s.name === "Time Stretch")?.castOnCurvePct ?? 0;
+    const mizzixTyrant =
+      mizzix.spells.find((s) => s.name === "Carnage Tyrant")?.castOnCurvePct ?? 0;
+    expect(mizzixSorcery).toBeGreaterThan(baseSorcery);
+    expect(mizzixTyrant).toBe(baseTyrant);
+
+    const henzieProfile: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        {
+          cardName: "Henzie",
+          scope: "creatures",
+          minManaValue: 4,
+          genericReduction: 1,
+          perCommandCast: true,
+        },
+      ],
+    };
+    const henzie = simulateCastOnCurve(deck, {
+      rng: seededRng("cmd"),
+      trials: 400,
+      profile: henzieProfile,
+    });
+    const henzieTyrant =
+      henzie.spells.find((s) => s.name === "Carnage Tyrant")?.castOnCurvePct ?? 0;
+    const henzieSorcery = henzie.spells.find((s) => s.name === "Time Stretch")?.castOnCurvePct ?? 0;
+    expect(henzieTyrant).toBeGreaterThan(baseTyrant);
+    expect(henzieSorcery).toBe(baseSorcery);
   });
 });

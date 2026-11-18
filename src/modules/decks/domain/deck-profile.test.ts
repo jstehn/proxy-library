@@ -110,6 +110,58 @@ describe("deck-profile domain", () => {
     expect(summary).toContain("Blitz value");
     expect(summary).toContain("Avacyn, Angel of Hope");
   });
+
+  it("supports general declarative costReducers across different commanders", () => {
+    const henzie: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        {
+          cardName: 'Henzie "Toolbox" Torre',
+          scope: "creatures",
+          minManaValue: 4,
+          genericReduction: 1,
+          perCommandCast: true,
+        },
+      ],
+    };
+    expect(effectiveManaValue(6, { typeLine: "Creature — Wurm", power: "6" }, henzie, 1)).toBe(5);
+    expect(effectiveManaValue(6, { typeLine: "Creature — Wurm", power: "6" }, henzie, 2)).toBe(4);
+    expect(effectiveManaValue(3, { typeLine: "Creature — Elf", power: "2" }, henzie, 2)).toBe(3);
+    expect(effectiveManaValue(5, { typeLine: "Sorcery" }, henzie, 2)).toBe(5);
+
+    const goreclaw: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        {
+          cardName: "Goreclaw, Terror of Qal Sisma",
+          scope: "creatures",
+          minPower: 4,
+          genericReduction: 2,
+        },
+      ],
+    };
+    expect(effectiveManaValue(6, { typeLine: "Creature — Beast", power: "5" }, goreclaw)).toBe(4);
+    expect(effectiveManaValue(4, { typeLine: "Creature — Bear", power: "2" }, goreclaw)).toBe(4);
+
+    const spellslinger: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        { cardName: "Goblin Electromancer", scope: "instants_sorceries", genericReduction: 1 },
+      ],
+    };
+    expect(effectiveManaValue(4, { typeLine: "Instant" }, spellslinger)).toBe(3);
+    expect(effectiveManaValue(4, { typeLine: "Sorcery" }, spellslinger)).toBe(3);
+    expect(effectiveManaValue(4, { typeLine: "Artifact" }, spellslinger)).toBe(4);
+
+    const artifactDeck: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [{ cardName: "Etherium Sculptor", scope: "artifacts", genericReduction: 1 }],
+    };
+    expect(effectiveManaValue(4, { typeLine: "Artifact Creature — Construct" }, artifactDeck)).toBe(
+      3,
+    );
+    expect(effectiveManaValue(4, { typeLine: "Instant" }, artifactDeck)).toBe(4);
+  });
 });
 
 describe("declaredComboFor", () => {

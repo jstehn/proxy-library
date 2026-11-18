@@ -14,7 +14,19 @@ export type FixedCardRoleTag = (typeof FIXED_CARD_ROLE_TAGS)[number];
 
 export type RoleTargetKey = "ramp" | "draw" | "removal" | "wipe";
 
-export type CostReducerScope = "blitz" | "creature_power_gte_4" | "commander" | "all_spells";
+export const COST_REDUCER_SCOPES = [
+  "all_spells",
+  "creatures",
+  "noncreature",
+  "artifacts",
+  "enchantments",
+  "instants_sorceries",
+  "commander",
+  "creature_power_gte_4",
+  "blitz",
+] as const;
+
+export type CostReducerScope = (typeof COST_REDUCER_SCOPES)[number];
 
 export interface CostReducer {
   cardName: string;
@@ -22,6 +34,10 @@ export interface CostReducer {
   /** Generic mana reduction per cast (multiplied by commandCasts when perCommandCast is true). */
   genericReduction: number;
   perCommandCast?: boolean;
+  /** Optional minimum base mana value required for this reducer to apply (e.g. 4 for Henzie). */
+  minManaValue?: number;
+  /** Optional minimum creature power required for this reducer to apply (e.g. 4 for Goreclaw). */
+  minPower?: number;
 }
 
 export interface KeyCardPin {
@@ -117,6 +133,16 @@ function matchesReducerScope(
   switch (scope) {
     case "all_spells":
       return true;
+    case "creatures":
+      return card.typeLine ? /\bCreature\b/i.test(card.typeLine) : false;
+    case "noncreature":
+      return card.typeLine ? !/\bCreature\b/i.test(card.typeLine) : false;
+    case "artifacts":
+      return card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false;
+    case "enchantments":
+      return card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false;
+    case "instants_sorceries":
+      return card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false;
     case "commander":
       return card.isCommander === true;
     case "creature_power_gte_4": {
@@ -129,6 +155,26 @@ function matchesReducerScope(
         card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false)
       );
   }
+}
+
+function matchesReducer(
+  reducer: CostReducer,
+  baseManaValue: number,
+  card: {
+    oracleText?: string;
+    typeLine?: string;
+    power?: string | number | null;
+    isCommander?: boolean;
+    isBlitz?: boolean;
+  },
+): boolean {
+  if (!matchesReducerScope(reducer.scope, card)) return false;
+  if (reducer.minManaValue !== undefined && baseManaValue < reducer.minManaValue) return false;
+  if (reducer.minPower !== undefined) {
+    const p = parsePower(card.power);
+    if (p === null || p < reducer.minPower) return false;
+  }
+  return true;
 }
 
 /**
@@ -151,7 +197,7 @@ export function effectiveManaValue(
   if (!profile || profile.costReducers.length === 0) return Math.max(0, baseManaValue);
   let reduction = 0;
   for (const reducer of profile.costReducers) {
-    if (!matchesReducerScope(reducer.scope, card)) continue;
+    if (!matchesReducer(reducer, baseManaValue, card)) continue;
     const multiplier = reducer.perCommandCast ? Math.max(0, commandCasts) : 1;
     reduction += reducer.genericReduction * multiplier;
   }

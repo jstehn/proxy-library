@@ -520,6 +520,7 @@ export {
   GENERIC_COMMANDER_DEFAULTS,
   declaredComboFor,
   isAvoidCard,
+  COST_REDUCER_SCOPES,
   isKeyCard,
   patchPrimerSection,
   primerSections,
