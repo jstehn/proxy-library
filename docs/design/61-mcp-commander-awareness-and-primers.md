@@ -10,19 +10,20 @@
 Make Proxy Library's MCP simulators, heuristics, and counts commander-aware, cap and paginate large tool responses, and add a structured **Deck Profile & Primer** (stored per deck, editable in the UI and via MCP tools) alongside per-card metadata (`tags`, `role`, `pinned`).
 
 **Out of scope:**
+
 - Changing non-MCP deck export formats (Moxfield/Archidekt text export stays as-is).
 - Full multiplayer combat/stack rules engine in `goldfish_*` (goldfish remains a solo turn-by-turn line-of-play simulator).
 - Automatic verdict/scoring labels (consistent with Phase 60, `check_interaction` is a rulings + shared-CR lookup, not a verdict).
 
 ## 2. Ubiquitous language
 
-| Term | Meaning in this codebase |
-| ---- | ------------------------ |
-| **Deck Profile** | Structured per-deck metadata (`landTarget`, `roleTargets`, `keyCards`, `avoid`, `costReducers`, `winCons`, `combos`, `plan`, `mulligan`, `pilotNotes`) read by heuristics and MCP tools. |
-| **Primer** | Free-form Markdown attached to a deck, supporting `[[Card Name]]` hover links and section-level patching via `set_primer`. |
-| **Cost Reducer** | A declarative discount rule in a deck profile (e.g., Henzie: `blitz` −1 generic per command-zone cast; Goreclaw: −2 generic for power ≥ 4). |
-| **Goldfish v2** | Stateful solo simulator with mana pool tracking, `keep` / `end_step` actions, `strict` mana enforcement, command-zone cast counting + commander tax, `alt: "blitz"`, and short card keys (`h1`, `b3`). |
-| **Response Cap** | ~40 KB UTF-8 JSON ceiling enforced by MCP tool serialization, returning a `next` cursor instead of truncating mid-payload. |
+| Term             | Meaning in this codebase                                                                                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Deck Profile** | Structured per-deck metadata (`landTarget`, `roleTargets`, `keyCards`, `avoid`, `costReducers`, `winCons`, `combos`, `plan`, `mulligan`, `pilotNotes`) read by heuristics and MCP tools.               |
+| **Primer**       | Free-form Markdown attached to a deck, supporting `[[Card Name]]` hover links and section-level patching via `set_primer`.                                                                             |
+| **Cost Reducer** | A declarative discount rule in a deck profile (e.g., Henzie: `blitz` −1 generic per command-zone cast; Goreclaw: −2 generic for power ≥ 4).                                                            |
+| **Goldfish v2**  | Stateful solo simulator with mana pool tracking, `keep` / `end_step` actions, `strict` mana enforcement, command-zone cast counting + commander tax, `alt: "blitz"`, and short card keys (`h1`, `b3`). |
+| **Response Cap** | ~40 KB UTF-8 JSON ceiling enforced by MCP tool serialization, returning a `next` cursor instead of truncating mid-payload.                                                                             |
 
 ## 3. Domain model
 
@@ -61,7 +62,7 @@ export interface DeckProfile {
 }
 
 export interface CardEntryMetadata {
-  tags: string[];      // fixed role tags + custom tags
+  tags: string[]; // fixed role tags + custom tags
   role: string | null; // one-line job description
   pinned: boolean;
 }
@@ -82,6 +83,7 @@ export interface GoldfishStateV2 {
 ### Fallback chain for heuristics
 
 Whenever `deck_facts`, `mana_base_skeleton`, `simulate_opening_hands`, `idea_budget_replacements`, or castability checks need a target (`landTarget`, `roleTargets`, `costReducers`):
+
 1. Explicit value in `DeckProfile` (if non-null).
 2. EDHREC commander average (if available for the deck's commander).
 3. Generic format default.
@@ -110,13 +112,13 @@ Several tools (`get_deck` at 98.6 KB, `find_combos` cutting off near 97 KB, `dec
    - `find_combos` / `find_combos_for_deck` additionally support explicit `limit`, `offset`, and `bracket` filters.
    - `deck_sources` returns only the newly added row on `add`.
 
-### 5a. Revision (Nov 18): a compact `get_deck` by default (awaiting approval)
+### 5a. Revision (Nov 18): a compact `get_deck` by default (approved, built in 5d73ed6)
 
 The `fields`/`boards` filters and the capper shipped (5051d9c), but the default response is still
 built for a program rather than a reader. Measured on deck 51 (85 main entries + 34 maybe):
 
 - Every line is an object with two UUIDs (`oracleId`, `printingId`), a `{cents, text}` price,
-  `owned`/`free`/`otherDecks`, `manaValue` *and* `manaCost`, and empty `tags: []`. That's roughly
+  `owned`/`free`/`otherDecks`, `manaValue` _and_ `manaCost`, and empty `tags: []`. That's roughly
   350–600 bytes per card before oracle text.
 - The same cards appear up to four times: `lines`, `list`, `shortList`, `toComplete.cards` and
   `toComplete.maybeboard`.
@@ -164,10 +166,10 @@ stats and 11 KB of text):**
 
 Line strings: `qty name · cost · type line [P/T] · tags — oracle text`, then flags only when true
 (`SHORT`, `GC`, `note: …`). No `[]`, no null fields. In the text, the card's own name becomes `~`
-and reminder text is dropped; double-faced cards join faces with ` // `. Basic lands have no text.
+and reminder text is dropped; double-faced cards join faces with `//`. Basic lands have no text.
 
 **Size safety:** if a deck still exceeds the cap (a 250-card deck, or an unusually wordy one), the
-response pages by *whole headings* with `cursor`, and the header, stats and problems come only on
+response pages by _whole headings_ with `cursor`, and the header, stats and problems come only on
 page one. It never splits a card or repeats the other sections.
 
 **Opt-ins:**
@@ -186,22 +188,23 @@ page one. It never splits a card or repeats the other sections.
 
 ## 6. Use cases & MCP tools
 
-| Tool / Use case | Actor / authz | Input | Output / Behavior |
-| --------------- | ------------- | ----- | ----------------- |
-| `get_deck_profile` | Deck viewer | `{ deckId }` | Compact structured `DeckProfile` (a few KB) + fallback summary. |
-| `set_deck_profile` | Deck owner | `{ deckId, patch }` | Updates structured `DeckProfile` fields. |
-| `set_primer` | Deck owner | `{ deckId, section, content }` | Patches a single Markdown `## Section` (or full primer when `section` omitted). |
-| `get_deck` | Deck viewer | `{ deckId, fields?, boards?, includeText? }` | Adds 1-paragraph profile summary at top; filters by `fields`/`boards`. |
-| `goldfish_start` / `goldfish_step` | Deck viewer | `keep`, `end_step`, `tap`, `cast { key, alt?, strict? }` | Mana pool, commander tax, blitz, short keys (`h1`, `b3`). |
-| `simulate_opening_hands` | Deck viewer | `{ deckId, mustCastBy?: { card, turn } }` | Returns % of hands able to cast `card` (default: commander) by `turn`, counting dorks/rocks/reducers. |
-| `find_combos_for_deck` | Deck viewer | `{ deckId, bracket?, limit?, offset? }` | `complete` / `needsMaybe` / `oneAway`, bracket legend (E/P/O/S/R/C), pagination. |
-| `get_cards` | Public | `{ names[] }` | Resolves back-face names (e.g. `"Temple of Cultivation"` → Ojer Kaslem). |
-| `get_rulings` | Public | `{ cardName }` | Adds `relatedRules` matched from oracle-text patterns (`513`, `118.9`, `400.7`, etc.). |
-| `check_interaction` | Public | `{ cards[] }` | Returns each card's rulings + shared CR sections across their texts (lookup only). |
+| Tool / Use case                    | Actor / authz | Input                                                    | Output / Behavior                                                                                     |
+| ---------------------------------- | ------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `get_deck_profile`                 | Deck viewer   | `{ deckId }`                                             | Compact structured `DeckProfile` (a few KB) + fallback summary.                                       |
+| `set_deck_profile`                 | Deck owner    | `{ deckId, patch }`                                      | Updates structured `DeckProfile` fields.                                                              |
+| `set_primer`                       | Deck owner    | `{ deckId, section, content }`                           | Patches a single Markdown `## Section` (or full primer when `section` omitted).                       |
+| `get_deck`                         | Deck viewer   | `{ deckId, fields?, boards?, includeText? }`             | Adds 1-paragraph profile summary at top; filters by `fields`/`boards`.                                |
+| `goldfish_start` / `goldfish_step` | Deck viewer   | `keep`, `end_step`, `tap`, `cast { key, alt?, strict? }` | Mana pool, commander tax, blitz, short keys (`h1`, `b3`).                                             |
+| `simulate_opening_hands`           | Deck viewer   | `{ deckId, mustCastBy?: { card, turn } }`                | Returns % of hands able to cast `card` (default: commander) by `turn`, counting dorks/rocks/reducers. |
+| `find_combos_for_deck`             | Deck viewer   | `{ deckId, bracket?, limit?, offset? }`                  | `complete` / `needsMaybe` / `oneAway`, bracket legend (E/P/O/S/R/C), pagination.                      |
+| `get_cards`                        | Public        | `{ names[] }`                                            | Resolves back-face names (e.g. `"Temple of Cultivation"` → Ojer Kaslem).                              |
+| `get_rulings`                      | Public        | `{ cardName }`                                           | Adds `relatedRules` matched from oracle-text patterns (`513`, `118.9`, `400.7`, etc.).                |
+| `check_interaction`                | Public        | `{ cards[] }`                                            | Returns each card's rulings + shared CR sections across their texts (lookup only).                    |
 
 ## 6. Persistence
 
 Extend `src/modules/decks/infrastructure/schema.ts`:
+
 - On `decks`:
   - `profileJson` (`jsonb`, nullable) storing `DeckProfile`
   - `primer` (`text`, nullable) storing Markdown primer text

@@ -250,7 +250,7 @@ describe("goldfish-session", () => {
     // Cannot cast on turn 0 before keeping
     const preKeep = stepGoldfishState(start.value, {
       kind: "cast",
-      key: start.value.hand[0]!.key,
+      key: start.value.hand[0]?.key ?? "",
     });
     expect(preKeep.ok).toBe(false);
     if (!preKeep.ok) expect(preKeep.error.kind).toBe("CastNotAllowed");
@@ -263,7 +263,7 @@ describe("goldfish-session", () => {
     // Still turn 0 -> cannot cast yet
     const turn0Cast = stepGoldfishState(kept.value, {
       kind: "cast",
-      key: kept.value.hand[0]!.key,
+      key: kept.value.hand[0]?.key ?? "",
     });
     expect(turn0Cast.ok).toBe(false);
 

@@ -106,7 +106,13 @@ function parsePower(power: string | number | null | undefined): number | null {
 
 function matchesReducerScope(
   scope: CostReducerScope,
-  card: { oracleText?: string; typeLine?: string; power?: string | number | null; isCommander?: boolean; isBlitz?: boolean },
+  card: {
+    oracleText?: string;
+    typeLine?: string;
+    power?: string | number | null;
+    isCommander?: boolean;
+    isBlitz?: boolean;
+  },
 ): boolean {
   switch (scope) {
     case "all_spells":
@@ -119,7 +125,9 @@ function matchesReducerScope(
       return isCreature && p !== null && p >= 4;
     }
     case "blitz":
-      return card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false);
+      return (
+        card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false)
+      );
   }
 }
 
@@ -130,7 +138,13 @@ function matchesReducerScope(
  */
 export function effectiveManaValue(
   baseManaValue: number,
-  card: { oracleText?: string; typeLine?: string; power?: string | number | null; isCommander?: boolean; isBlitz?: boolean },
+  card: {
+    oracleText?: string;
+    typeLine?: string;
+    power?: string | number | null;
+    isCommander?: boolean;
+    isBlitz?: boolean;
+  },
   profile: DeckProfile | null | undefined,
   commandCasts = 1,
 ): number {
@@ -176,7 +190,10 @@ export function summarizeDeckProfile(profile: DeckProfile | null | undefined): s
   if (profile.costReducers.length > 0) {
     parts.push(
       `Cost reducers: ${profile.costReducers
-        .map((r) => `${r.cardName} (-${r.genericReduction} ${r.scope}${r.perCommandCast ? "/cast" : ""})`)
+        .map(
+          (r) =>
+            `${r.cardName} (-${r.genericReduction} ${r.scope}${r.perCommandCast ? "/cast" : ""})`,
+        )
         .join(", ")}.`,
     );
   }
@@ -222,5 +239,8 @@ export function patchPrimerSection(
 
   const before = lines.slice(0, startIdx);
   const after = lines.slice(endIdx);
-  return [...before, block, ...after].join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return [...before, block, ...after]
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

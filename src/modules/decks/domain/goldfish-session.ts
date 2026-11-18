@@ -8,12 +8,7 @@ import { isLand } from "./stats";
 // Pure and deterministic via injected Rng (ADR 0008).
 
 export type GoldfishZone =
-  | "library"
-  | "hand"
-  | "battlefield"
-  | "graveyard"
-  | "exile"
-  | "commandZone";
+  "library" | "hand" | "battlefield" | "graveyard" | "exile" | "commandZone";
 
 export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
 export type ManaPool = Record<ManaColor, number>;
@@ -290,7 +285,14 @@ function parseManaCost(manaCost: string | null | undefined, fallbackMv = 0): Par
     const sym = raw.slice(1, -1).toUpperCase();
     if (/^\d+$/.test(sym)) {
       generic += Number(sym);
-    } else if (sym === "W" || sym === "U" || sym === "B" || sym === "R" || sym === "G" || sym === "C") {
+    } else if (
+      sym === "W" ||
+      sym === "U" ||
+      sym === "B" ||
+      sym === "R" ||
+      sym === "G" ||
+      sym === "C"
+    ) {
       pips[sym] += 1;
     } else if (sym === "X") {
       // X=0 for base cost check
@@ -344,7 +346,14 @@ function manaProducedOnTap(permanent: BattlefieldPermanent, currentTurn: number)
   }
   if (permanent.card.producedMana && permanent.card.producedMana.length > 0) {
     const first = permanent.card.producedMana[0].toUpperCase();
-    if (first === "W" || first === "U" || first === "B" || first === "R" || first === "G" || first === "C") {
+    if (
+      first === "W" ||
+      first === "U" ||
+      first === "B" ||
+      first === "R" ||
+      first === "G" ||
+      first === "C"
+    ) {
       added[first] += 1;
       return added;
     }
@@ -379,7 +388,10 @@ export function stepGoldfishState(
   switch (action.kind) {
     case "mulligan": {
       if (state.turn > 0 || state.kept) {
-        return err({ kind: "MulliganNotAllowed", reason: "Cannot mulligan after keeping or starting turn 1." });
+        return err({
+          kind: "MulliganNotAllowed",
+          reason: "Cannot mulligan after keeping or starting turn 1.",
+        });
       }
       if (state.toBottom > 0) {
         return err({

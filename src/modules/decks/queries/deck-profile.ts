@@ -1,10 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import {
-  EMPTY_DECK_PROFILE,
-  patchPrimerSection,
-  type DeckProfile,
-} from "../domain/deck-profile";
+import { EMPTY_DECK_PROFILE, patchPrimerSection, type DeckProfile } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
 
 export interface StoredDeckProfile {
@@ -54,6 +50,7 @@ export async function updateDeckProfile(
   ownerId: string,
   deckId: number,
   patch: Partial<DeckProfile>,
+  now: Date,
 ): Promise<StoredDeckProfile | null> {
   const [row] = await db
     .select({
@@ -76,10 +73,7 @@ export async function updateDeckProfile(
     ...patch,
   };
 
-  await db
-    .update(decks)
-    .set({ profileJson: merged, updatedAt: new Date() })
-    .where(eq(decks.id, deckId));
+  await db.update(decks).set({ profileJson: merged, updatedAt: now }).where(eq(decks.id, deckId));
 
   return {
     deckId: row.id,
@@ -95,6 +89,7 @@ export async function updateDeckPrimer(
   ownerId: string,
   deckId: number,
   input: { section?: string; content: string },
+  now: Date,
 ): Promise<{ deckId: number; primer: string } | null> {
   const [row] = await db
     .select({ id: decks.id, primer: decks.primer })
@@ -108,10 +103,7 @@ export async function updateDeckPrimer(
     ? patchPrimerSection(row.primer, input.section, input.content)
     : input.content.trim();
 
-  await db
-    .update(decks)
-    .set({ primer: nextPrimer, updatedAt: new Date() })
-    .where(eq(decks.id, deckId));
+  await db.update(decks).set({ primer: nextPrimer, updatedAt: now }).where(eq(decks.id, deckId));
 
   return { deckId: row.id, primer: nextPrimer };
 }
@@ -147,6 +139,9 @@ export async function updateDeckEntryMetadata(
         eq(deckEntries.board, board),
       ),
     );
-  await db.update(decks).set({ updatedAt: sql`now()` }).where(eq(decks.id, deckId));
+  await db
+    .update(decks)
+    .set({ updatedAt: sql`now()` })
+    .where(eq(decks.id, deckId));
   return true;
 }

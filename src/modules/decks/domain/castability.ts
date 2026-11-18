@@ -201,7 +201,11 @@ export function simulateCastOnCurve(
         const c = deck[k];
         if (c.isLand) {
           currentLands.push(c);
-        } else if (c.isRamp && turn < 8 && c.manaValue <= Math.min(turn, currentLands.length + currentRamp.length)) {
+        } else if (
+          c.isRamp &&
+          turn < 8 &&
+          c.manaValue <= Math.min(turn, currentLands.length + currentRamp.length)
+        ) {
           // Ramp cast on an earlier turn contributes +1 mana on subsequent turns
           currentRamp.push({ isLand: true, untappedOnPlay: true, colors: c.colors });
         }

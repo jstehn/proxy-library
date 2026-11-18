@@ -66,12 +66,7 @@ export type UpdateDeckError =
   DeckNotFound | NameInvalid | TargetBracketInvalid | TargetBracketNotCommander;
 export type SetEntryError = DeckNotFound | QuantityInvalid | CardNotFound | NoteInvalid;
 export type ApplyChangesError =
-  | DeckNotFound
-  | DeckChanged
-  | QuantityInvalid
-  | CardNotFound
-  | NoteInvalid
-  | HeadingInvalid;
+  DeckNotFound | DeckChanged | QuantityInvalid | CardNotFound | NoteInvalid | HeadingInvalid;
 export type MoveEntryError = DeckNotFound | EntryNotFound | CommanderMove;
 export type MoveEntryInput = EntryMove & Readonly<{ deckId: DeckId }>;
 export type ReplaceListError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
@@ -334,8 +329,7 @@ export function makeManageDecks(dependencies: DecksDependencies) {
       if (!note.ok) return note;
       let headingVal: string | null | undefined;
       if (change.heading !== undefined) {
-        const checkedHeading =
-          change.heading === null ? ok(null) : checkHeading(change.heading);
+        const checkedHeading = change.heading === null ? ok(null) : checkHeading(change.heading);
         if (!checkedHeading.ok) return checkedHeading;
         headingVal = checkedHeading.value;
       }

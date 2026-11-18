@@ -212,9 +212,7 @@ export function withEntry(
   if (change.quantity === 0) return { ...deck, entries: others };
   const otherDeckTags = others.flatMap((e) => e.tags ?? []);
   const resolvedTags =
-    change.tags !== undefined
-      ? normalizeTags(change.tags, otherDeckTags)
-      : (existing?.tags ?? []);
+    change.tags !== undefined ? normalizeTags(change.tags, otherDeckTags) : (existing?.tags ?? []);
   const entry: DeckEntry = {
     oracleId: change.oracleId,
     board: change.board,

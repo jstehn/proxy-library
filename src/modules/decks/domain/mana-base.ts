@@ -220,7 +220,10 @@ export function planManaBase(input: ManaBaseInput): ManaBasePlan {
   const baseTarget = landTarget(input.format, stats);
   const target: LandTarget =
     input.landTargetOverride != null
-      ? { lands: input.landTargetOverride, reasons: [{ kind: "profile", lands: input.landTargetOverride }] }
+      ? {
+          lands: input.landTargetOverride,
+          reasons: [{ kind: "profile", lands: input.landTargetOverride }],
+        }
       : baseTarget;
   const sources = sourceTargets(input.format, input.lines, target);
   const gaps: Gaps = new Map(
@@ -279,7 +282,11 @@ function scoreLand(
   }
   if (fixes.length > 0) reasons.push({ kind: "fixes", colors: fixes });
 
-  if (/\b(?:target|an|each)\s+opponent\b[^.]*(?:creates?|draws?|gains?|puts?|adds?|searches?)/i.test(card.text)) {
+  if (
+    /\b(?:target|an|each)\s+opponent\b[^.]*(?:creates?|draws?|gains?|puts?|adds?|searches?)/i.test(
+      card.text,
+    )
+  ) {
     score += LAND_WEIGHTS.helpsOpponent;
     reasons.push({ kind: "drawback", note: "Helps opponents" });
   }

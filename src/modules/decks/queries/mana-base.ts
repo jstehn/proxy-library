@@ -221,9 +221,7 @@ export async function manaBasePlan(
     `),
   ]);
   const deckPlanProfile: DeckPlanProfile | null = profileRows[0]?.profileJson ?? null;
-  const nameByOracle = new Map<string, string>(
-    nameRows.rows.map((r) => [r.oracle_id, r.name]),
-  );
+  const nameByOracle = new Map<string, string>(nameRows.rows.map((r) => [r.oracle_id, r.name]));
   const profile = deckProfile(context.lines, context.format);
 
   const inDeck = new Map<string, number>();

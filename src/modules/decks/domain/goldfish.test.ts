@@ -87,6 +87,6 @@ describe("simulateOpeningHands", () => {
     });
 
     expect(resRamp.mustCastByPct).toBeGreaterThan(50);
-    expect(resRamp.mustCastByPct!).toBeGreaterThan(resNoRamp.mustCastByPct!);
+    expect(resRamp.mustCastByPct ?? 0).toBeGreaterThan(resNoRamp.mustCastByPct ?? 0);
   });
 });

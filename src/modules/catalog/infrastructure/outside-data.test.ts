@@ -143,7 +143,10 @@ describe("makeOutsideData", () => {
           almostIncluded: [
             {
               id: "202",
-              uses: [{ card: { name: "Mikaeus, the Unhallowed" } }, { card: { name: "Triskelion" } }],
+              uses: [
+                { card: { name: "Mikaeus, the Unhallowed" } },
+                { card: { name: "Triskelion" } },
+              ],
               produces: [{ feature: { name: "Infinite damage" } }],
               description: "Ping with Triskelion.",
               easyPrerequisites: "",

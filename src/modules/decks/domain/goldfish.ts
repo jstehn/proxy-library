@@ -248,7 +248,10 @@ export function simulateOpeningHands(
     const drawnByT3 = restOfLibrary.slice(0, drawsByTurn3);
     const totalLandsByT3 = lands + drawnByT3.filter((c) => c.isLand).length;
     if (totalLandsByT3 >= 3) turn3LandCount += 1;
-    if (options.mustCastBy && canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, onTheDraw)) {
+    if (
+      options.mustCastBy &&
+      canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, onTheDraw)
+    ) {
       mustCastCount += 1;
     }
 

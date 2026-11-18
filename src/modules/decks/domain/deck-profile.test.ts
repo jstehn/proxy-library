@@ -35,7 +35,7 @@ describe("deck-profile domain", () => {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         {
-          cardName: "Henzie \"Toolbox\" Torre",
+          cardName: 'Henzie "Toolbox" Torre',
           scope: "blitz",
           genericReduction: 1,
           perCommandCast: true,

@@ -3560,6 +3560,7 @@ export const setDeckProfileTool = defineTool({
       context.actor.userId,
       input.deckId,
       patch,
+      context.container.clock.now(),
     );
     if (!updated) return deckNotFound(input.deckId);
     return done({
@@ -3595,6 +3596,7 @@ export const setPrimerTool = defineTool({
       context.actor.userId,
       input.deckId,
       { section: input.section, content: input.content },
+      context.container.clock.now(),
     );
     if (!updated) return deckNotFound(input.deckId);
     return done(updated);
