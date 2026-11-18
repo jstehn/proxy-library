@@ -202,6 +202,14 @@ const EXAMPLES: ReadonlyArray<readonly [Example, readonly Tag[]]> = [
   [card("Evacuation", "Instant", "Return all creatures to their owners' hands."), ["wipe"]],
   [
     card(
+      "Ezuri's Predation",
+      "Sorcery",
+      "For each creature your opponents control, create a 4/4 green Beast creature token. Each of those tokens fights a different one of those creatures.",
+    ),
+    ["wipe"],
+  ],
+  [
+    card(
       "Massacre Wurm",
       "Creature — Phyrexian Wurm",
       "When this creature enters, creatures your opponents control get -2/-2 until end of turn.",

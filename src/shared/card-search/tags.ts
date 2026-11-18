@@ -99,6 +99,10 @@ export const TAG_RULES: readonly TagRule[] = [
       rule(
         String.raw`\breturn (all|each) (nonland )?(permanent|creature)s?\b(?! you control)[^.]* to (its|their) owners?'? hands?`,
       ),
+      // Ezuri's Predation: token-per-opponent-creature fight wipe.
+      rule(
+        String.raw`\bfor each creature (your opponents control|an opponent controls)\b[^.]*?\bcreate\b[\s\S]*?\bfights?\b`,
+      ),
     ],
   },
   {

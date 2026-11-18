@@ -761,13 +761,25 @@ export const getDeck = defineTool({
     const view = await viewFor(context, input.deckId);
     if (view === null) return deckNotFound(input.deckId);
     if (input.cards !== undefined) return done(deckCardDetails(view, input.cards));
-    const fullPayload = await fullDeckPayload(
-      context,
-      input.view === "full" ? input : { ...input, fields: undefined },
-      view,
-    );
+    const [fullPayload, profile] = await Promise.all([
+      fullDeckPayload(
+        context,
+        input.view === "full" ? input : { ...input, fields: undefined },
+        view,
+      ),
+      deckProfileFor(context, input.deckId),
+    ]);
+    if (profile) {
+      const baseTargets = roleTargets(view.deck.format);
+      if (baseTargets !== null) {
+        fullPayload.roleTargets =
+          resolveDeckProfileTargets(profile, null, {
+            landTarget: 37,
+            roleTargets: baseTargets,
+          })?.roleTargets ?? baseTargets;
+      }
+    }
     if (input.view === "full") return done(fullPayload);
-    const profile = await deckProfileFor(context, input.deckId);
     return done(compactDeckPayload(view, input, fullPayload, profile));
   },
 });
@@ -1701,6 +1713,13 @@ export const arrangeHeadings = defineTool({
 
 const roundTwo = (value: number) => Math.round(value * 100) / 100;
 
+function summarizeRemainingProblems(problems: readonly DeckProblem[]): string[] {
+  const nonShort = problems.filter((p) => p.kind !== "Short").map(problemText);
+  const shortCount = problems.length - nonShort.length;
+  if (shortCount <= 5) return problems.map(problemText);
+  return [...nonShort, `${shortCount} short card(s) (see shortTotal / deck_facts)`];
+}
+
 function formatPreviewResponse(
   preview: DeckChangePreview,
   saved: Readonly<{ saved: boolean; fingerprint: string }>,
@@ -1756,7 +1775,7 @@ function formatPreviewResponse(
     problems: {
       added: preview.problems.added.map(problemText),
       resolved: preview.problems.resolved.map(problemText),
-      remaining: preview.problems.remaining.map(problemText),
+      remaining: summarizeRemainingProblems(preview.problems.remaining),
     },
     newlyShort: preview.newlyShort.map((short) => ({
       card: short.name,
