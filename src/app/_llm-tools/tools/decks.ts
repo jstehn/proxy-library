@@ -50,6 +50,7 @@ import {
   updateDeckPrimer,
   updateDeckProfile,
   effectiveManaValue,
+  commanderOnlyProfile,
   COST_REDUCER_SCOPES,
   type DeckPlanProfile,
   isAvoidCard,
@@ -706,7 +707,13 @@ const GetDeckInput = z.object({
     .array(z.enum(BOARDS))
     .optional()
     .describe('Optional board filter for lines (e.g. ["main", "maybe"]).'),
-  tag: z.string().min(1).optional().describe('Optional tag filter for lines (e.g. "Blitz").'),
+  tag: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Optional user-assigned tag filter for lines (e.g. "Blitz"); does not match auto-detected role tags.',
+    ),
   singleTagOnly: z
     .boolean()
     .default(false)
@@ -1277,6 +1284,13 @@ export const createDeck = defineTool({
   input: z.object({
     name: z.string().min(1).max(60).describe("The deck's name, up to 60 characters."),
     format: z.enum(FORMATS).default("commander").describe("The deck's format."),
+    targetBracket: z
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .optional()
+      .describe("Optional Commander bracket target (1–5)."),
     list: z
       .string()
       .default("")
@@ -1300,6 +1314,12 @@ export const createDeck = defineTool({
             "TooManyDecks",
             `You already have ${created.error.maximum} decks; that's the most.`,
           );
+    }
+    if (input.targetBracket !== undefined) {
+      await decks.updateDeck(context.actor, {
+        deckId: created.value,
+        targetBracket: input.targetBracket as 1 | 2 | 3 | 4 | 5,
+      });
     }
     if (input.list.trim() === "") return done({ deckId: created.value, added: 0 });
     const imported = await decks.importList(context.actor, {
@@ -2631,7 +2651,7 @@ export const simulateOpeningHandsTool = defineTool({
       })
       .optional()
       .describe(
-        "Measure % of games where a card (commander by default) is castable by turn N, counting dorks, rocks, and profile cost reducers.",
+        "Measure % of games where a card (commander by default) is castable by turn N, counting dorks, rocks, and commander-sourced cost reducers.",
       ),
   }),
   async run(context, input) {
@@ -2655,6 +2675,7 @@ export const simulateOpeningHandsTool = defineTool({
       if (!line) {
         return failed("CardNotFound", `Card "${targetName}" is not in the deck.`);
       }
+      const commanderNames = view.lines.filter((l) => l.board === "commander").map((l) => l.name);
       const effMv = effectiveManaValue(
         line.manaValue ?? 0,
         {
@@ -2663,7 +2684,7 @@ export const simulateOpeningHandsTool = defineTool({
           oracleText: line.text,
           isCommander: line.board === "commander",
         },
-        storedProfile?.profile,
+        commanderOnlyProfile(storedProfile?.profile, commanderNames),
         0,
       );
       mustCastByOption = {
@@ -2939,7 +2960,10 @@ export const mulliganDrillTool = defineTool({
       .describe("How many mulligans have already been taken (0–4)."),
   }),
   async run(context, input) {
-    const view = await deckView(context.container.db, context.actor.userId, input.deckId);
+    const [view, storedProfile] = await Promise.all([
+      deckView(context.container.db, context.actor.userId, input.deckId),
+      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
+    ]);
     if (view === null) return deckNotFound(input.deckId);
     const cards = library(view.lines);
     const rng = seededRng(context.container.seeds.newSeed());
@@ -3075,7 +3099,10 @@ export const compareToEdhrecTool = defineTool({
     theme: z.string().min(1).optional().describe('Optional EDHREC theme (e.g. "reanimator").'),
   }),
   async run(context, input) {
-    const view = await deckView(context.container.db, context.actor.userId, input.deckId);
+    const [view, storedProfile] = await Promise.all([
+      deckView(context.container.db, context.actor.userId, input.deckId),
+      getDeckProfile(context.container.db, context.actor.userId, input.deckId),
+    ]);
     if (view === null) return deckNotFound(input.deckId);
 
     const commanders = view.lines.filter((l) => l.board === "commander");
@@ -3142,10 +3169,16 @@ export const compareToEdhrecTool = defineTool({
       }
     }
 
+    const leftOutAvoid: string[] = [];
     const notInDeckCandidates = data.cards.filter((card) => {
       const lower = card.name.toLowerCase();
       const front = lower.split(" // ")[0] ?? lower;
-      return !deckCardKeys.has(lower) && !deckCardKeys.has(front);
+      if (deckCardKeys.has(lower) || deckCardKeys.has(front)) return false;
+      if (isAvoidCard(card.name, storedProfile?.profile)) {
+        leftOutAvoid.push(card.name);
+        return false;
+      }
+      return true;
     });
     const highInclusion = notInDeckCandidates.filter((c) => c.inclusionPct >= 20).slice(0, 60);
     const missingPool =
@@ -3197,6 +3230,7 @@ export const compareToEdhrecTool = defineTool({
       inDeckWithEdhrec,
       highInclusionNotInDeck,
       inDeckNotOnEdhrec,
+      ...(leftOutAvoid.length > 0 ? { leftOutAvoid: [...new Set(leftOutAvoid)].sort() } : {}),
     });
   },
 });

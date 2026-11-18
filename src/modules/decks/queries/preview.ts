@@ -1,9 +1,10 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
+import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
 import { fingerprint } from "../domain/list-format";
 import {
@@ -13,6 +14,8 @@ import {
   type PreviewLine,
 } from "../domain/preview";
 import type { CardRules } from "../domain/rules";
+import { roleTargets, suggestedLands } from "../domain/stats";
+import { decks } from "../infrastructure/schema";
 import { deckView, type DeckLine, type DeckView } from "./decks";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
@@ -188,12 +191,30 @@ async function previewFromView(
   const missingIds = changes
     .map((change) => change.oracleId)
     .filter((oracleId) => !inDeck.has(oracleId));
-  const extra = await loadCardsForPreview(db, userId, view.deck.usesRealCards, missingIds);
+  const [extra, profileRows] = await Promise.all([
+    loadCardsForPreview(db, userId, view.deck.usesRealCards, missingIds),
+    db
+      .select({ profileJson: decks.profileJson })
+      .from(decks)
+      .where(eq(decks.id, Number(view.deck.id)))
+      .limit(1),
+  ]);
+  const deckProfile = (profileRows[0]?.profileJson as DeckProfile | null | undefined) ?? null;
+  const baseTargets = roleTargets(view.deck.format);
+  const resolvedTargets =
+    baseTargets === null
+      ? null
+      : (resolveDeckProfileTargets(deckProfile, null, {
+          landTarget: suggestedLands(view.deck.format),
+          roleTargets: baseTargets,
+        })?.roleTargets ?? baseTargets);
+
   const preview = previewChanges({
     format: view.deck.format,
     targetBracket: view.deck.targetBracket,
     before,
     changes,
+    roleTargets: resolvedTargets,
     facts: (oracleId) => {
       const found = extra.get(oracleId);
       if (found === undefined) throw new Error(`unknown card ${oracleId}`);

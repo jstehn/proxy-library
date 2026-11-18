@@ -194,6 +194,7 @@ function buildComparison(input: {
   before: readonly PreviewLine[];
   after: readonly PreviewLine[];
   changes: readonly AppliedChange[];
+  roleTargets?: Readonly<Record<TargetedTag, number>> | null;
 }): ChangePreview {
   const rulesByCard = new Map<string, CardRules>();
   const ownedByCard = new Map<string, number>();
@@ -217,7 +218,7 @@ function buildComparison(input: {
   const resolved = before.problems.filter((problem) => !afterKeys.has(problemKey(problem)));
   const remaining = after.problems.filter((problem) => beforeKeys.has(problemKey(problem)));
 
-  const targets = roleTargets(input.format);
+  const targets = input.roleTargets === undefined ? roleTargets(input.format) : input.roleTargets;
   const behind = cardsBehindRoleChanges(input.changes, [...input.after, ...input.before]);
   const roles: RoleDelta[] = TAGS.map((tag) => ({
     tag,
@@ -282,6 +283,7 @@ export function compareDeckStates(input: {
   targetBracket: Bracket | null;
   before: readonly PreviewLine[];
   after: readonly PreviewLine[];
+  roleTargets?: Readonly<Record<TargetedTag, number>> | null;
 }): ChangePreview {
   const key = (oracleId: string, board: Board) => `${board}:${oracleId}`;
   const beforeMap = new Map<string, PreviewLine>();
@@ -323,6 +325,7 @@ export function compareDeckStates(input: {
     before: input.before,
     after: input.after,
     changes,
+    roleTargets: input.roleTargets,
   });
 }
 
@@ -337,6 +340,7 @@ export function previewChanges(input: {
   before: readonly PreviewLine[];
   changes: readonly DeckChange[];
   facts: (oracleId: string) => PreviewLine;
+  roleTargets?: Readonly<Record<TargetedTag, number>> | null;
 }): ChangePreview {
   const known = new Map<string, PreviewLine>();
   for (const line of input.before) {
@@ -395,5 +399,6 @@ export function previewChanges(input: {
     before: input.before,
     after: working,
     changes,
+    roleTargets: input.roleTargets,
   });
 }

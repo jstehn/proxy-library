@@ -158,7 +158,12 @@ function computeColorBalance(
 ): number {
   const totalPips = MANA_COLORS.reduce((sum, c) => sum + (pips[c] ?? 0), 0);
   if (totalPips === 0) return 100;
-  const totalSources = MANA_COLORS.reduce((sum, c) => sum + (sources[c] ?? 0), 0);
+  // Count sources only across colors with pip demand so "any color" rocks/dorks don't dilute a
+  // mono-color or 2-color deck's source share via unused W/U/B/R/G slots.
+  const totalSources = MANA_COLORS.reduce(
+    (sum, c) => ((pips[c] ?? 0) > 0 ? sum + (sources[c] ?? 0) : sum),
+    0,
+  );
   if (totalSources === 0) return 0;
 
   let penalty = 0;

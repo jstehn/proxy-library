@@ -228,4 +228,32 @@ describe("optimizeDeck", () => {
     expect(resBudget.after.metrics.addedPriceCents).toBeLessThanOrEqual(500);
     expect(resBudget.swaps.some((s) => s.add.oracleId === "add-draw-2")).toBe(false);
   });
+
+  it("does not penalize mono-color colorBalance for any-color mana sources", () => {
+    const monoGreen: OptimizerCard[] = [
+      ...Array.from({ length: 34 }, (_, i) =>
+        makeCard({
+          oracleId: `forest-${i}`,
+          name: "Forest",
+          typeLine: "Basic Land — Forest",
+          manaValue: 0,
+          manaCost: "",
+          producedMana: ["G"],
+        }),
+      ),
+      ...Array.from({ length: 5 }, (_, i) =>
+        makeCard({
+          oracleId: `dork-${i}`,
+          name: `Any Color Dork ${i}`,
+          typeLine: "Creature — Bird",
+          manaValue: 1,
+          manaCost: "{G}",
+          producedMana: ["W", "U", "B", "R", "G"],
+          roles: ["ramp"],
+        }),
+      ),
+    ];
+    const score = scoreDeck(monoGreen, { format: "commander", targetBracket: 3 });
+    expect(score.colorBalance).toBe(100);
+  });
 });

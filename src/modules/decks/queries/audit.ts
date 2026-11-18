@@ -143,7 +143,12 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
 
   const underservedColors: string[] = [];
   const totalPips = MANA_COLORS.reduce((s, c) => s + stats.pips[c], 0);
-  const totalSources = MANA_COLORS.reduce((s, c) => s + stats.sources[c], 0);
+  // Sum sources only for colors the deck actually casts so "any color" dorks/altars don't dilute
+  // a mono-color deck's source share via unused colors.
+  const totalSources = MANA_COLORS.reduce(
+    (s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s),
+    0,
+  );
   if (totalPips > 0 && totalSources > 0) {
     for (const color of MANA_COLORS) {
       if (stats.pips[color] === 0) continue;
@@ -264,7 +269,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     score,
     legality: {
       problemCount: problems.length,
-      problems: problems.map((p) => p.kind),
+      problems: summarizeProblemKinds(problems.map((p) => p.kind)),
     },
     bracket:
       estimate === null
@@ -284,7 +289,10 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       averageManaValue: Math.round(stats.averageManaValue * 100) / 100,
       underservedColors,
       averageCastOnCurvePct: Math.round(castability.averageCastOnCurvePct * 100),
-      strugglingSpells: castability.struggling.slice(0, 5),
+      strugglingSpells: castability.struggling.slice(0, 5).map((s) => ({
+        ...s,
+        castOnCurvePct: Math.round(s.castOnCurvePct * 100),
+      })),
     },
     ownership: {
       ownedCards,
@@ -294,4 +302,10 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     goldfish,
     findings,
   };
+}
+
+function summarizeProblemKinds(kinds: readonly string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const kind of kinds) counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  return [...counts.entries()].map(([kind, count]) => (count > 1 ? `${kind} (x${count})` : kind));
 }

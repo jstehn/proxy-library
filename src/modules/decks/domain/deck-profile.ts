@@ -299,7 +299,7 @@ export function patchPrimerSection(
 
   const before = lines.slice(0, startIdx);
   const after = lines.slice(endIdx);
-  return [...before, block, ...after]
+  return [...before, block, ...(block !== "" && after.length > 0 ? [""] : []), ...after]
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -326,4 +326,27 @@ export function declaredComboFor(
     if (pieces.length > 0 && pieces.every((piece) => text.includes(piece))) return declared;
   }
   return null;
+}
+
+/**
+ * Filters a deck profile's `costReducers` to only reducers whose `cardName` matches one of the
+ * deck's commanders (e.g. for opening-hand `mustCastBy` checks where 1-ofs in the 99 are not
+ * guaranteed to be on the battlefield).
+ */
+export function commanderOnlyProfile(
+  profile: DeckProfile | null | undefined,
+  commanderNames: readonly string[],
+): DeckProfile | undefined {
+  if (!profile) return undefined;
+  const reducers = profile.costReducers ?? [];
+  if (reducers.length === 0) return profile;
+  const cmdLower = commanderNames.map((n) => n.trim().toLowerCase()).filter(Boolean);
+  const filtered = reducers.filter((r) => {
+    const src = r.cardName.trim().toLowerCase();
+    return (
+      src !== "" &&
+      cmdLower.some((c) => c === src || c.startsWith(`${src},`) || c.startsWith(`${src} `))
+    );
+  });
+  return { ...profile, costReducers: filtered };
 }

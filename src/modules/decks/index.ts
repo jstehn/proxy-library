@@ -514,6 +514,7 @@ export {
   type GoldfishZone,
 } from "./domain/goldfish-session";
 export {
+  commanderOnlyProfile,
   EMPTY_DECK_PROFILE,
   effectiveManaValue,
   FIXED_CARD_ROLE_TAGS,

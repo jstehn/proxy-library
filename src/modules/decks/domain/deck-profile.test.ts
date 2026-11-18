@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  commanderOnlyProfile,
   EMPTY_DECK_PROFILE,
   effectiveManaValue,
   declaredComboFor,
@@ -219,5 +220,40 @@ describe("declaredComboFor", () => {
 
   it("doesn't match a declaration missing a piece", () => {
     expect(declaredComboFor(combo, ["Avacyn, Angel of Horror + Zulaport"])).toBeNull();
+  });
+});
+
+describe("patchPrimerSection newline preservation", () => {
+  it("preserves a blank line before the following ## heading", () => {
+    const initial = "## Mulligan\n\nKeep 2 lands.\n\n## How It Wins\n\nSwing wide.";
+    const updated = patchPrimerSection(
+      initial,
+      "Mulligan",
+      "Keep 3 lands and trigger him on Turn 3.",
+    );
+    expect(updated).toBe(
+      "## Mulligan\n\nKeep 3 lands and trigger him on Turn 3.\n\n## How It Wins\n\nSwing wide.",
+    );
+  });
+});
+
+describe("commanderOnlyProfile", () => {
+  it("keeps commander-sourced costReducers and drops 99-card reducers like Emerald Medallion", () => {
+    const profile: DeckProfile = {
+      ...EMPTY_DECK_PROFILE,
+      costReducers: [
+        { cardName: "Emerald Medallion", scope: "all_spells", genericReduction: 1 },
+        { cardName: "Henzie", scope: "blitz", genericReduction: 1 },
+        { cardName: "Shroofus Sproutsire", scope: "commander", genericReduction: 1 },
+      ],
+    };
+    const filtered = commanderOnlyProfile(profile, ['Henzie "Toolbox" Torre']);
+    expect(filtered?.costReducers).toEqual([
+      { cardName: "Henzie", scope: "blitz", genericReduction: 1 },
+    ]);
+    const shroofusFiltered = commanderOnlyProfile(profile, ["Shroofus Sproutsire"]);
+    expect(shroofusFiltered?.costReducers).toEqual([
+      { cardName: "Shroofus Sproutsire", scope: "commander", genericReduction: 1 },
+    ]);
   });
 });
