@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { latestPrice, latestPriceRows } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -106,9 +107,7 @@ export async function draftForDeck(
        group by p.oracle_id
     )
     select ${spellColumns(context.format)}, owned.owned,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = p.id and s.finish = owned.finish
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice("p.id", "owned.finish")} as price_cents,
            (select array_agg(distinct d.name order by d.name) from deck_entries e
               join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${deckId}
@@ -153,9 +152,7 @@ export async function draftForDeck(
               join lateral (
                 select p.id as printing_id, latest.usd_cents
                   from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-                  join lateral (select distinct on (ps.finish) ps.usd_cents
-                                  from price_snapshots ps where ps.printing_id = p.id
-                                 order by ps.finish, ps.day desc) latest on true
+                  join lateral ${latestPriceRows("p.id")} latest on true
                  where p.oracle_id = kept.oracle_id
                  order by latest.usd_cents, p.id
                  limit 1

@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, latestPricesByFinish } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import {
   COLLECTION_SECTIONS,
@@ -73,9 +74,7 @@ export async function realCollectionPage(
     select c.printing_id, p.oracle_id, c.finish, c.quantity, c.added_at, p.name, p.set_code,
            p.collector_number, p.mana_value, s.release_date,
            ${sectionOrder} as section_order, ${sectionLabel} as section,
-           (select ps.usd_cents from price_snapshots ps
-             where ps.printing_id = c.printing_id and ps.finish = c.finish
-             order by ps.day desc limit 1) as price
+           ${latestPrice("c.printing_id", "c.finish")} as price
       from real_cards c
       join printings p on p.id = c.printing_id
       join card_sets s on s.code = p.set_code
@@ -166,9 +165,7 @@ export async function realExportRows(db: DbExecutor, userId: UserId): Promise<Re
     updated_at: Date;
   }>(sql`
     select p.name, p.set_code, p.collector_number, c.finish, p.rarity, c.quantity, c.added_at, c.updated_at,
-           (select ps.usd_cents from price_snapshots ps
-             where ps.printing_id = c.printing_id and ps.finish = c.finish
-             order by ps.day desc limit 1) as price
+           ${latestPrice("c.printing_id", "c.finish")} as price
       from real_cards c join printings p on p.id = c.printing_id
      where c.user_id = ${userId}
      order by p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last,
@@ -297,9 +294,7 @@ export async function printingChoices(
   }>(sql`
     select p.oracle_id, p.id, p.name, p.set_code, s.name as set_name, p.collector_number,
            p.variant_label, p.finishes,
-           (select jsonb_object_agg(latest.finish, latest.usd_cents) from (
-              select distinct on (ps.finish) ps.finish, ps.usd_cents from price_snapshots ps
-               where ps.printing_id = p.id order by ps.finish, ps.day desc) latest) as prices
+           ${latestPricesByFinish("p.id")} as prices
       from printings p join card_sets s on s.code = p.set_code
      where p.oracle_id = any(${sql.param([...new Set(oracleIds)])}::text[])
      order by s.release_date desc, p.set_code,

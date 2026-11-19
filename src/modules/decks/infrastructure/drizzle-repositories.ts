@@ -1,7 +1,7 @@
 import { and, count, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrices } from "@/shared/db";
 import { type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import type {
   CardLookup,
@@ -281,9 +281,8 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
     // and unpriced printings by the standard ranking), or just the standard ranking.
     const unnamedOrder =
       options.unnamedPrinting === "cheapest"
-        ? sql`(select min(snapshot.usd_cents) from price_snapshots snapshot
-                where snapshot.printing_id = p.id
-                  and snapshot.day = (select max(day) from price_snapshots)) asc nulls last,
+        ? sql`(select min(snapshot.usd_cents) from ${newestDayPrices()} snapshot
+                where snapshot.printing_id = p.id) asc nulls last,
               ${STANDARD_FIRST}`
         : STANDARD_FIRST;
     // One small query per line: a pasted deck is at most about a hundred lines.

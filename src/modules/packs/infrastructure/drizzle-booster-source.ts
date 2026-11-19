@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type BoosterConfig, PrintingId, SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, latestPricesByFinish } from "@/shared/db";
 import { Cents, ColorSchema, type Finish, FinishSchema, RaritySchema } from "@/shared/kernel";
 import type { BoosterKey, BoosterSource } from "../application/ports";
 import type { PrintingFacts } from "../domain/pack";
@@ -97,11 +97,7 @@ export function drizzleBoosterSource(db: DbExecutor): BoosterSource {
       select p.id, p.name, p.collector_number, p.rarity, p.colors, p.finishes,
              p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
              -- For each finish, the newest snapshot's price.
-             (select jsonb_object_agg(latest.finish, latest.usd_cents)
-                from (select distinct on (s.finish) s.finish, s.usd_cents
-                        from price_snapshots s
-                       where s.printing_id = p.id
-                       order by s.finish, s.day desc) latest) as prices
+             ${latestPricesByFinish("p.id")} as prices
         from printings p
        where p.id = any(${sql.param([...printingIds])}::text[]) -- one array parameter, not a list
     `);

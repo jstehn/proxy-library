@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { latestPriceRows } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import type { DeckCombo } from "../domain/brackets";
 import { isCounted } from "../domain/deck";
@@ -67,9 +68,7 @@ export async function deckCombosView(
       with cheapest as (
         select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
           from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-          join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                          from price_snapshots ps where ps.printing_id = p.id
-                         order by ps.finish, ps.day desc) latest on true
+          join lateral ${latestPriceRows("p.id")} latest on true
          where p.oracle_id = any(${textArray(partnerIds)})
            and ${fitsDeck(context)}
            and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c

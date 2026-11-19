@@ -1,4 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
+import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 
 // Which copies count as a player's in a deck (design doc 16, rule 2): every game copy, plus their
@@ -40,9 +41,7 @@ const IS_UNIVERSES_BEYOND = sql`case when 'universesbeyond' = any(p.promo_types)
  * 5. then the copy you hold most of, the newest set, and the printing id (always the same order).
  */
 export const MOST_SPECIAL_FIRST = sql`
-  (select s.usd_cents from price_snapshots s
-    where s.printing_id = c.printing_id and s.finish = c.finish
-    order by s.day desc limit 1) desc nulls last,
+  ${latestPrice("c.printing_id", "c.finish")} desc nulls last,
   ${IS_UNIVERSES_BEYOND},
   case c.finish when 'etched' then 0 when 'foil' then 1 else 2 end,
   case when p.border_color = 'borderless' then 0

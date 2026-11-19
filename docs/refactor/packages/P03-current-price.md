@@ -40,4 +40,31 @@ grep -rlE "(from|join) price_snapshots" src --include='*.ts' | grep -v '\.test\.
 
 ## Handoff
 
-(empty)
+Done on `refactor/P03-current-price`; `pnpm check` and `pnpm test:int` (265 tests, 9 new) pass.
+
+- **Where the fragments live (differs from the brief).** They are in `src/shared/db/prices.ts`
+  (exported from `@/shared/db`), not `catalog/queries/prices.ts`: queries and `card-search` may not
+  import a module (ADR 0009), so a catalog file could not be used by 24 of the 25 callers. The
+  table stays the catalog's; only the fragments sit in `db`. No view or migration: the fragments
+  are as fast as the old copies, which they reproduce word for word.
+- Fragments: `latestPrice(printing, finish)`, `cheapestPrice(printing)`,
+  `latestPriceRows(printing)` (one row per finish, used as `join lateral`),
+  `latestPricesByFinish(printing)` (jsonb), `newestDayPrice(printing)`, `nonfoilFirstPrice(printing)`,
+  `latestSnapshot(printing, finish)` (price and day, for the store's quote), `newestPriceDay()` and
+  `newestDayPrices()`. Arguments are column text (`"p.id"`) or `sql`; only code literals, never
+  user input.
+- 39 subqueries in 25 files were replaced (the brief said 45 in 29; the grep command now lists no
+  file outside `catalog` and `shared/db`).
+- **Copies that differed, kept as their own fragments:** `card-facts.ts` and one in
+  `suggestions.ts` take the newest day's cheapest price in any finish (`newestDayPrice`); the draft
+  catalog prefers nonfoil (`nonfoilFirstPrice`); the store's featured art and the deck repository's
+  "cheapest printing first" order use only the newest day (`newestDayPrices`). I did not merge
+  these with "latest per finish": they answer different questions. Whether they should is a
+  product decision.
+- Lint: a `no-restricted-syntax` rule forbids `price_snapshots` in template strings outside
+  `src/modules/catalog/` and `shared/db/prices.ts`. `card-search/sql.ts` may now import `db`
+  (a narrow boundary rule) so its `usd` filter can use `cheapestPrice`.
+- New `tests/integration/prices.int.test.ts` checks each fragment against a known history.
+- Reference tool outputs unchanged (apart from `draw_sample`'s random sample).
+- Source lines: 90,968 before, 90,973 after (+75 for `prices.ts`, so the net is flat). Clone
+  baseline 58 to 57.

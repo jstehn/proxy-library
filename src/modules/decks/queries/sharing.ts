@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
+import { latestPriceRows } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import { FORMATS, type Format } from "../domain/deck";
 import {
@@ -235,9 +236,7 @@ export async function cardsToGetFor(db: DbExecutor, userId: UserId): Promise<Car
              (select p.name from printings p where p.oracle_id = ids.oracle_id limit 1) as name,
              (select min(latest.usd_cents)
                 from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-                join lateral (select distinct on (ps.finish) ps.usd_cents
-                                from price_snapshots ps where ps.printing_id = p.id
-                               order by ps.finish, ps.day desc) latest on true
+                join lateral ${latestPriceRows("p.id")} latest on true
                where p.oracle_id = ids.oracle_id) as price_cents
         from unnest(${oracleArray}) as ids(oracle_id)
     `),

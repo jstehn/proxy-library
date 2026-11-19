@@ -1,4 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
+import { cheapestPrice } from "@/shared/db";
 import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
 import {
   manaSymbols,
@@ -197,9 +198,7 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
       );
     case "usd":
       // The cheapest current market price among the printing's finishes, in dollars.
-      return sql`(select min(latest.usd_cents) from (
-                    select distinct on (s.finish) s.usd_cents from price_snapshots s
-                     where s.printing_id = p.id order by s.finish, s.day desc) latest)
+      return sql`${cheapestPrice("p.id")}
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Math.round(Number(value) * 100)}`;
     case "year":
       return sql`left((select release_date from card_sets where code = p.set_code), 4)::int

@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import {
   COLLECTION_SECTIONS,
@@ -87,9 +88,7 @@ export async function collectionPage(
   const owned = sql`
     select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
            s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = c.printing_id and s.finish = c.finish
-             order by s.day desc limit 1) as price,
+           ${latestPrice("c.printing_id", "c.finish")} as price,
            (select max(a.created_at) from acquisitions a
              where a.user_id = c.user_id and a.printing_id = c.printing_id
                and a.finish = c.finish) as last_acquired_at
@@ -207,9 +206,7 @@ export async function exportRows(db: DbExecutor, userId: UserId): Promise<Export
     last_acquired: Date;
   }>(sql`
     select p.name, p.set_code, p.collector_number, c.finish, p.rarity, c.quantity,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = c.printing_id and s.finish = c.finish
-             order by s.day desc limit 1) as price,
+           ${latestPrice("c.printing_id", "c.finish")} as price,
            (select min(a.created_at) from acquisitions a
              where a.user_id = c.user_id and a.printing_id = c.printing_id and a.finish = c.finish) as first_acquired,
            (select max(a.created_at) from acquisitions a
