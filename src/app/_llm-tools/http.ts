@@ -1,6 +1,7 @@
 import "server-only";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { resourceMetadataUrl } from "@/app/_oauth/http";
+import { allows } from "@/modules/accounts";
 import { getContainer } from "@/server/container";
 import { makeMcpServer } from "./mcp";
 import { callTool, problemMessage } from "./registry";
@@ -13,7 +14,14 @@ import type { ToolContext } from "./tool";
 async function toolContextFor(request: Request): Promise<ToolContext | null> {
   const container = getContainer();
   const found = await container.accounts.actorFromToken(request.headers.get("authorization"));
-  return found === null ? null : { actor: found.actor, scopes: found.scopes, container };
+  return found === null
+    ? null
+    : {
+        actor: found.actor,
+        scopes: found.scopes,
+        allows: (scope) => allows(found.scopes, scope),
+        container,
+      };
 }
 
 function unauthorized(): Response {

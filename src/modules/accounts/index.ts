@@ -1,6 +1,7 @@
 // The accounts module's public API: the only file other modules and the app may import.
 export { makeAccounts } from "./application/make-accounts";
 export type { Accounts } from "./application/make-accounts";
+export { makeGetAccountOverview, type AccountOverview } from "./application/get-account-overview";
 export type {
   CreateAccessTokenError,
   CreateAccessTokenInput,
