@@ -15,7 +15,7 @@ of old and new tool output.
       search because it calls the embedding service. Add a remote test that runs a concept search
       for a deck and checks the answer has `concept`, `owned`, `store`, `hiddenOverTarget`, and
       leaves out an avoid-listed card.
-- [ ] **Tools that call outside services were never exercised by the reference outputs:**
+- [x] **Run live 2026-11-19 (in-process, real network): `edhrec_lookup` (commander and deck), `find_combos`, `rules_lookup` rulings, `youtube_research` all answered. `reddit_research` returns its own "Reddit blocked anonymous access" error until `BRAVE_SEARCH_API_KEY` or `SEARXNG_URL` is set.** Original item: **Tools that call outside services were never exercised by the reference outputs:**
       `edhrec_lookup`, `find_combos` (Commander Spellbook), `rules_lookup` rulings,
       `youtube_research`, `reddit_research`. Check each still answers after P09 moves them.
 - [ ] **Embedding-based `find_replacements` (budget path) and `similarCards` neighbours.** They
@@ -24,7 +24,7 @@ of old and new tool output.
 
 ## Needs a browser (`pnpm test:e2e`, Playwright)
 
-- [ ] **The Playwright suite has not been run since P05.** Run it once now and after each wave:
+- [x] **Playwright suite (run 2026-11-19 after P09: 26 of 26 pass).** Seven stale test locators were fixed first (see commit); no app code changed. Original item: **The Playwright suite has not been run since P05.** Run it once now and after each wave:
       the deck builder (P06 changed how it loads), the deck page and shared view, wishlist pages.
 - [ ] **Look at it, dark mode and at phone width** (memory: user tests dark and mobile): the
       builder grid and the suggestions panel after P07b changed which printing an owned card shows.
