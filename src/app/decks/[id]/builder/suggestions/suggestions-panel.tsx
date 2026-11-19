@@ -12,8 +12,9 @@ import { THEME_LABELS } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { plural } from "@/modules/decks/client";
-import { reasonText, TAG_LABELS } from "../../labels";
-import { budgetAction, suggestionsAction } from "./reads/actions";
+import { reasonText, TAG_LABELS } from "@/app/decks/labels";
+import { valueOr } from "../answer";
+import { budgetAction, suggestionsAction } from "./actions";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects
@@ -39,7 +40,7 @@ export function SuggestionsPanel(props: {
       setLoading(true);
       void suggestionsAction(deckId).then((result) => {
         if (request !== latest.current) return; // the deck changed again meanwhile
-        setSuggestions(result);
+        setSuggestions(valueOr(result, null));
         setLoading(false);
       });
     }, WAIT_MILLISECONDS);
@@ -219,7 +220,7 @@ function BudgetForm(props: {
     }
     setError(null);
     setBusy(true);
-    const list = await budgetAction({ deckId: props.deckId, budgetCents: budget });
+    const list = valueOr(await budgetAction({ deckId: props.deckId, budgetCents: budget }), null);
     setBusy(false);
     if (list === null) setError("Couldn't make a list for this deck.");
     else setResult({ list, deckKey: props.deckKey });

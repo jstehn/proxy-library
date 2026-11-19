@@ -1,6 +1,4 @@
 # Source files allowed to be over 500 lines (docs/refactor/README.md). Format: path  # reason
-src/app/decks/[id]/builder/deck-builder.tsx  # pre-refactor, owned by P19
-src/app/decks/[id]/builder/deck-list.tsx  # pre-refactor, owned by P19
 src/app/drafts/[id]/page.tsx  # pre-refactor, owned by P20
 src/modules/catalog/infrastructure/drizzle-repositories.ts  # pre-refactor, owned by P20
 src/modules/decks/domain/draft-deck.ts  # pre-refactor, owned by P16

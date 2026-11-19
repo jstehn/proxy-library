@@ -69,3 +69,23 @@ of old and new tool output.
       and a friend's wishlist, singles, sets, store, a player's pages, every admin page, and the
       OAuth consent flow with a real connector.
       **Partly done 2026-11-19 (milestone 1 review, e2e database, admin):** all of these pages load without errors (same crawl); admin players and a trade checked by eye in dark at phone width; admin pages still require an admin (each checked against the old code). **Still open:** the header counts with live data, password change after a reset, and OAuth with a real connector.
+
+## Left by P19 (builder UI split, by eye and in the browser)
+
+- [ ] **Run the e2e builder flows (P19).** `pnpm test:e2e tests/e2e/<the builder specs>` (or the
+      whole suite): nothing in the builder was driven in a browser in the package.
+- [ ] **Look at the builder in dark mode and at phone width (P19)**, with real data: the collection
+      grid (filters, sort, card size S/M/L, "Show cards that don't fit", scrolling loads more),
+      selecting a card from the grid and from the deck list (sheet sticks to the bottom on a wide
+      screen, floats over the tab on a phone), arrow keys in the grid, Enter on the selected card,
+      "+" and "-" for the quantity, "/" to search, "H" test hand, "S" suggestions, Escape.
+- [ ] **Each panel opens, loads and closes (P19):** suggestions, possible cuts, mana base, draft
+      deck, test hand, snapshots, tokens, plan & primer, the bracket panel and the stats panel
+      (highlighting a role or a bracket reason marks cards in the list, one at a time).
+- [ ] **Changes still show at once and undo on failure (P19):** add and remove a card, move to the
+      maybeboard and back, set a heading, rename, reorder and clear headings, switch By type or By
+      heading, note, role and pin, choose a printing, take a card from another deck, swap a cut for
+      a suggestion, add lands from the mana base and the draft, change the target bracket.
+- [ ] **A refused change undoes the guess (P19):** open the deck in two tabs, remove a card in one,
+      then in the other set its note or role: the message shows and the deck goes back to the
+      server's. (The deck now comes back inside the refusal instead of through `loadBuilderDeck`.)

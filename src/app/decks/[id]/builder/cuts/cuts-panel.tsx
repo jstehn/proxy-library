@@ -21,8 +21,10 @@ import {
   type SwapCutMeta,
 } from "@/modules/decks/client";
 import { cardTags, cardThemes } from "@/shared/card-search";
-import { cutReasonText, swapReasonText } from "../../labels";
-import { optimizeDeckAction, suggestionsAction } from "./reads/actions";
+import { cutReasonText, swapReasonText } from "@/app/decks/labels";
+import { suggestionsAction } from "../suggestions/actions";
+import { valueOr } from "../answer";
+import { optimizeDeckAction } from "./actions";
 
 // Possible cuts (design doc 32, section 9) and one-step swaps (design doc 47): the main-deck
 // cards that score lowest on simple checks, with the reasons for each and a button to move it to
@@ -57,7 +59,7 @@ export function CutsPanel(props: {
       setLoadingSwaps(true);
       void suggestionsAction(deckId).then((result) => {
         if (request !== latest.current) return;
-        setSuggestions(result);
+        setSuggestions(valueOr(result, null));
         setLoadingSwaps(false);
       });
     }, 300);
@@ -272,8 +274,8 @@ export function CutsPanel(props: {
               disabled={props.busy || optimizing}
               onClick={() => {
                 setOptimizing(true);
-                void optimizeDeckAction(deckId, "owned").then((res) => {
-                  setOptimized(res);
+                void optimizeDeckAction({ deckId, pool: "owned" }).then((res) => {
+                  setOptimized(valueOr(res, null));
                   setOptimizing(false);
                 });
               }}

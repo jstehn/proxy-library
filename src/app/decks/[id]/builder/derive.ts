@@ -1,6 +1,6 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
 import { problemsOfLines, type CardRules } from "@/modules/decks/client";
-import { problemText } from "../../labels";
+import { problemText } from "@/app/decks/labels";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // What the builder works out from the deck in hand (design doc 19, section 5.3): its problems,

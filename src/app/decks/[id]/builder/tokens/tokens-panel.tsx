@@ -9,7 +9,8 @@ import {
   type TokenKind,
   type TokenLine,
 } from "@/modules/decks/client";
-import { tokensAction } from "./reads/actions";
+import { valueOr } from "../answer";
+import { tokensAction } from "./actions";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.
@@ -56,7 +57,7 @@ export function TokensPanel(props: Props) {
       void tokensAction(deckId).then((result) => {
         if (request !== latest.current) return;
         hasLoadedOnce.current = true;
-        setLiveTokens(result);
+        setLiveTokens(valueOr(result, null));
         setLoading(false);
       });
     }, delay);

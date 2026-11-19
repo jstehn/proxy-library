@@ -13,12 +13,12 @@ import type {
 } from "@/modules/decks";
 import { bracketLine, estimateBracket } from "@/modules/decks/client";
 import type { Tag } from "@/shared/card-search";
-import { BracketPanel } from "./builder/bracket-panel";
-import { DeckList } from "./builder/deck-list";
+import { BracketPanel } from "./builder/bracket/bracket-panel";
+import { DeckList } from "./builder/list/deck-list";
 import { problemsOf } from "./builder/derive";
-import { StatsPanel } from "./builder/stats-panel";
-import { TestHandPanel } from "./builder/test-hand";
-import { TokensPanel } from "./builder/tokens-panel";
+import { StatsPanel } from "./builder/stats/stats-panel";
+import { TestHandPanel } from "./builder/test-hand/test-hand-panel";
+import { TokensPanel } from "./builder/tokens/tokens-panel";
 
 // Someone else's shared deck, read-only (design doc 21): its list (with how many of each card
 // you own), its statistics and problems as its owner has them, test hands, and the list as text

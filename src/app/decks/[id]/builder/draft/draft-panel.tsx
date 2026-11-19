@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import type { DeckDraft, DraftedSpell, Format } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
-import { draftReasonText, landReasonText, TAG_LABELS } from "../../labels";
-import { draftDeckAction } from "./reads/actions";
-import type { LandsToAdd } from "./mana-base-panel";
+import { draftReasonText, landReasonText, TAG_LABELS } from "@/app/decks/labels";
+import { valueOr } from "../answer";
+import { draftDeckAction } from "./actions";
+import type { LandsToAdd } from "../mana-base/mana-base-panel";
 
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards
 // first, then optional store cards for remaining gaps, plus a mana base from planManaBase.
@@ -32,7 +33,7 @@ export function DraftPanel(props: {
       setLoading(true);
       void draftDeckAction({ deckId, includeStore }).then((result) => {
         if (request !== latest.current) return;
-        setDraft(result);
+        setDraft(valueOr(result, null));
         setLoading(false);
       });
     }, WAIT_MILLISECONDS);
