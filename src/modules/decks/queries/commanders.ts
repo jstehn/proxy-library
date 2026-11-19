@@ -17,7 +17,7 @@ import {
 import { canBeCommander } from "../domain/rules";
 import { TARGETED_TAGS } from "../domain/stats";
 import { cheapestOfCards, ownedPerCard } from "./candidate-pool";
-import { tribePattern } from "./suggestions";
+import { tribePattern } from "./suggestion-sql";
 
 // Commanders I can build (design docs 36 and 39): SQL gathers your pool, your lands and the
 // cards that could lead a deck; the pure rankCommanders filters and orders them.

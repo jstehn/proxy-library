@@ -6,7 +6,8 @@ import type { Deck } from "../domain/deck";
 import { optimizeDeck, type OptimizerCard, type OptimizeResult } from "../domain/optimize";
 import type { DeckLine } from "../domain/deck-view";
 import { deckView } from "./decks";
-import { deckSuggestions, type Suggestion } from "./suggestions";
+import { deckSuggestions } from "./suggestions";
+import { type Suggestion } from "./suggestion-types";
 
 export type OptimizeDeckPool = "owned" | "store" | "both";
 

@@ -15,7 +15,8 @@ import { TARGETED_TAGS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { landPoolsForDeck } from "./mana-base";
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
-import { fitsDeck, suggestionContext, tribePattern } from "./suggestions";
+import { fitsDeck, tribePattern } from "./suggestion-sql";
+import { suggestionContext } from "./suggestions";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
 // (design docs 37 & 44): SQL gathers your legal non-land cards, store non-land candidates, and the
