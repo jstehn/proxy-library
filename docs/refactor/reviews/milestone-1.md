@@ -72,3 +72,40 @@ caller moves.
 - **For finding 5:** in the README's "Ending a session", a deferral must edit the receiving
   package's file (Steps and Done when) in the same commit. "Package X does that" in a handoff is not
   enough.
+
+## Wave 2½ result (second review, 2026-11-19, `refactor/main` at `6a20cff`)
+
+**Verdict: merged into `main`.** The structural goal is met; the line savings are still ahead.
+
+- **Checks.** `pnpm check` is green, with 281 of 281 integration tests. Playwright passed 26 of 26
+  on the second run. On the first run the live two-player draft timed out at its last pick, and the
+  8 tests after it didn't run (the file runs in order). That's flaky, not broken: it is logged in
+  tududi beside the unit test that failed once (task 267).
+- **By eye, on the e2e database:**
+  - 98 pages answered with no error text and no server errors.
+  - Every builder panel opened.
+  - Snapshots, adding a card and the plan worked and were kept after a reload.
+  - Admin pages still require an admin.
+  - The deck, a draft, admin players and a trade were looked at in dark mode at phone width.
+  - What's still open is listed in [deferred-checks.md](../deferred-checks.md) (real data, a live
+    draft, OAuth).
+- **Met:**
+  - `getContainer()` in `src/app` went from 191 to 4, all in 2 allowed files.
+  - The lint ratchet is on and covers pages, routes and layouts.
+  - `capabilities.ts` is 182 lines, with 18 per-module `wiring.ts` files.
+  - `builder/actions.ts` is 295 lines and `decks/actions.ts` is 197.
+  - Module `index.ts` files lost hundreds of unused exports.
+- **Not met: lines.** Source went from 92,251 to 92,379, and code lines from 79,367 to 79,270. The
+  UI now reads through bundles of one-line forwards (`deckReads`, `storeReads` and so on, built with
+  `withDb`), and 17 whole services are passed through. In practice that's the old query surface
+  under a new name. The guard no longer lets an adapter touch the database, but it doesn't yet push
+  the code toward one capability per question. The handoffs say this honestly, and
+  [removal-list.md](../removal-list.md) records each piece of scaffolding with its owner.
+- **Finding 6, repeated.** The removal list hands work to P11 and P15–P21, but none of those package
+  files was edited, which breaks the new deferral rule. **Fixed here:** step 5 of the README's
+  "Starting a session" now says to read the removal list's rows for your package, which counts as
+  part of the package's Done when.
+- **What this means for waves 3–5.** The bundles are the duplication map. When a package merges two
+  queries, it replaces the forwards with a capability that takes the actor and returns a `Result`,
+  and deletes the forward. The line savings in the playbook only appear there. Measure every package
+  against its "Lines to remove" and say in the handoff when it misses.

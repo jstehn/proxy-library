@@ -15,6 +15,9 @@ clean context, read three or four short files, and work without reading the whol
    [dedup-playbook.md](dedup-playbook.md) once, then only your group's section. It says where the
    copies are, what the single version looks like, the edge cases to test and the mistakes to
    avoid.
+5. **[removal-list.md](removal-list.md): every row that names your package.** Those rows are part of
+   your package's Done when even if the package file doesn't list them. Delete each row in the
+   commit that removes the thing.
 
 Read doc 65 only when your package points to one of its sections. To save tokens, filter long
 output (`grep`, `tail`, `head`), and don't read files the package doesn't name unless a step needs

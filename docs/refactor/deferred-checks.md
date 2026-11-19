@@ -57,12 +57,15 @@ of old and new tool output.
       card from another deck, save, compare, restore and delete a snapshot, edit the plan and primer,
       run the optimizer, a draft and the mana base. They go through the same wrapper the e2e suite
       covers, but no test drives them.
+      **Partly done 2026-11-19 (milestone 1 review, e2e database, admin):** every panel opened with no error (suggestions, cuts, mana base, draft, test hand, snapshots, tokens, plan); snapshot save, compare and delete; add a card and remove it (kept after reload); plan saved and kept after reload. **Still open:** swap a cut for a suggestion, take a card from another deck, restore a snapshot, the optimizer, all with real data.
 - [ ] **Pages moved in P09c, by eye** (dark theme, desktop and phone): drafts list and a draft in
       progress (lobby, picking, finished), inventory and opened packs (with the animation), a
       card's page, the Game and Real collection tabs, a shared deck and its public link and
       scorecard, the proxy print page and a PDF download, the commander finder.
+      **Partly done 2026-11-19 (milestone 1 review, e2e database, admin):** every page reachable from the home page (80) plus admin, the PDF, OAuth consent and players' pages answered 200 with no error text and no server error; drafts (finished) checked by eye in dark at phone width. **Still open:** a draft in progress, the opened-pack animation and the public `/d/` link, by eye with real data.
 - [ ] **Pages moved in P09d, by eye** (dark theme, desktop and phone): the site header's counts
       (trades waiting, wishes on target, a draft you're in, friend requests), account (profile,
       tokens, password change after a reset), wallet, trades (new, open, history), friends, wishlist
       and a friend's wishlist, singles, sets, store, a player's pages, every admin page, and the
       OAuth consent flow with a real connector.
+      **Partly done 2026-11-19 (milestone 1 review, e2e database, admin):** all of these pages load without errors (same crawl); admin players and a trade checked by eye in dark at phone width; admin pages still require an admin (each checked against the old code). **Still open:** the header counts with live data, password change after a reset, and OAuth with a real connector.
