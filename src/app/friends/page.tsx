@@ -1,7 +1,4 @@
 import Link from "next/link";
-import { listFriendRequests, listFriends, searchPlayers } from "@/modules/social";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { LocalTime } from "@/ui/local-time";
 import {
   acceptFriendRequestAction,
@@ -10,17 +7,18 @@ import {
   sendFriendRequestAction,
   unfriendAction,
 } from "./actions";
+import { readPage } from "@/server/page-instance";
 
 export default async function FriendsPage(props: PageProps<"/friends">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
+
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q : "";
 
   const [friends, requests, players] = await Promise.all([
-    listFriends(db, actor.userId),
-    listFriendRequests(db, actor.userId),
-    searchPlayers(db, actor.userId, query),
+    capabilities.socialReads.friends(actor.userId),
+    capabilities.socialReads.friendRequests(actor.userId),
+    capabilities.socialReads.searchPlayers(actor.userId, query),
   ]);
 
   return (

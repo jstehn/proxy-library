@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MAX_LIVE_TOKENS } from "@/modules/accounts";
 import { problemWords } from "@/app/_oauth/http";
-import { getContainer } from "@/server/container";
 import { signInPathFor } from "@/server/next-path";
-import { getCurrentActor, requireActor } from "@/server/session";
 import { Alert } from "@/ui/form";
 import { decideAction } from "./actions";
 import { PARAMETER_NAMES, queryOf, readParameters } from "./parameters";
+import { readPage } from "@/server/page-instance";
 
 // The OAuth approval page (design doc 30): an app such as claude.ai's connector asks to act as
 // you; you choose what it may do. Approving makes an access token for it (design doc 28).
@@ -22,12 +21,13 @@ const SCOPE_CHOICES = [
 export default async function AuthorizePage(props: PageProps<"/oauth/authorize">) {
   const query = await props.searchParams;
   const parameters = readParameters((name) => query[name]);
-  if ((await getCurrentActor()) === null) {
+  const visitor = await readPage({ allowVisitors: true });
+  if (visitor.actor === null) {
     redirect(signInPathFor(`/oauth/authorize?${queryOf(parameters)}`));
   }
-  await requireActor(); // and change a reset password first
+  const { capabilities } = await readPage(); // and change a reset password first
 
-  const checked = await getContainer().accounts.checkAuthorizationRequest(parameters);
+  const checked = await capabilities.accounts.checkAuthorizationRequest(parameters);
   if (!checked.ok && checked.error.kind === "AuthorizationRefused") {
     // A known app and address with a bad request: tell the app (RFC 6749, section 4.1.2.1).
     const url = new URL(checked.error.redirectUri);

@@ -15,11 +15,15 @@ others, and the transports (`mcp.ts`, `openapi.ts`, `http.ts`) were tied to that
 1. **Capabilities live in modules.** A capability is a typed function in a module's
    `application/` folder, built by a factory from its dependencies (`makeListDecks(...)`), taking
    the actor and an input and returning a `Result` (expected failures are `{ kind }` unions;
-   defects throw). Capabilities are wired once, in `src/server/capabilities.ts`, and reach the app
-   as `core.capabilities`. A reader that belongs to another module is passed in as a port.
-2. **Four adapter kinds** call capabilities and nothing else: a server action
-   (`src/app/**/actions.ts`), an LLM tool binding (`src/app/_llm-tools/bindings/`), an API route,
-   and a worker command. Each may **parse its input, call capabilities, and present the output**.
+   defects throw). Each module wires its own in `src/modules/<module>/wiring.ts`
+   (`wireDeckCapabilities(dependencies)`), which may use its own `queries/`, `application/` and
+   `infrastructure/` files. `src/server/capabilities.ts` joins the results and adds the few that
+   read across modules, and they reach the app as `core.capabilities`. Only `src/server/**` and
+   `worker/**` may import a `wiring.ts` (lint). A reader that belongs to another module is passed
+   in as a port, or imported through that module's `index.ts`.
+2. **Five adapter kinds** call capabilities and nothing else: a server action
+   (`src/app/**/actions.ts`), a page (`page.tsx`, `layout.tsx`), an LLM tool binding
+   (`src/app/_llm-tools/bindings/`), an API route, and a worker command. Each may **parse its input, call capabilities, and present the output**.
    Each may **not** hold business logic, call another adapter, or import a module's `domain/`,
    `queries/`, `application/` or `infrastructure/` files, `@/shared/db` or `card-search/sql`. They
    import a module only through its `index.ts` or `client.ts`. Lint enforces this
@@ -33,15 +37,20 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
    `BINDINGS` first and falls back to the old tools for names not yet ported (until P09).
 5. **One helper for actions**: `action(schema, handler)` (`src/server/action-instance.ts`) checks
    the session, parses the input with the capability's schema, and gives the handler
-   `{ actor, capabilities }`. P06–P09 move the actions onto it.
+   `{ actor, capabilities }`. Pages and routes use its twin, `readPage()`
+   (`src/server/page-instance.ts`; `readPage({ allowVisitors: true })` allows a visitor, with
+   `actor: null`). P09b–P09d move the callers onto them (P06–P09 built the capabilities and moved
+   only the tool bindings). A lint rule bans `getContainer` in `src/app`, except a short list of files that
+   must keep it, each with a reason (`CONTAINER_ALLOWED`). `readCapabilities()` gives routes that
+   sign in some other way (a bearer token) the capabilities without resolving a player.
 
 ## How to add a capability and a binding
 
 1. In the module, write `application/<verb-noun>.ts`: `makeVerbNoun(dependencies)` returns an
    `async function (actor, input): Promise<Result<Value, Failure>>`. Test it with fakes.
    Export the factory and its types from the module's `index.ts`.
-2. In `src/server/capabilities.ts`, add `verbNoun: makeVerbNoun({ ... })`, passing readers from
-   other modules as ports.
+2. In the module's `wiring.ts`, add `verbNoun: makeVerbNoun({ ... })`. (A capability that reads
+   across modules goes in `src/server/capabilities.ts`, with the other module's reader passed in.)
 3. For an LLM tool, add `src/app/_llm-tools/bindings/<verb-noun>.ts` with `defineBinding`, and
    add it to `bindings/index.ts`. Delete the old tool of the same name from `tools/`.
 4. For a server action, write `action(Schema, async ({ actor, capabilities }, input) => ...)`.
@@ -60,3 +69,10 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
 - **Keep tools as controllers over queries.** Simple, but it is how the duplication happened.
 - **Have capabilities import other modules' queries.** Breaks the module boundaries (ADR 0009).
 - **A generic command bus.** More machinery than a typed function per capability.
+
+## Change log
+
+- 2026-11-19: wiring per module (`wiring.ts`), pages as the fifth adapter (`readPage()`), the
+  `getContainer` ratchet, and the callers move in P09b–P09d (milestone 1 review).
+- 2026-11-19: P09b to P09d moved every page, route and action onto `readPage()`, `action()` and
+  `readCapabilities()`; the list of files not yet moved is gone.

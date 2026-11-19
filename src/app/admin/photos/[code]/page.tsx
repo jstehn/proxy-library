@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { setPhotos } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { KeyArt } from "@/ui/product-image";
 import { choosePhotoAction, setPageSlugAction } from "../actions";
+import { readPage } from "@/server/page-instance";
 
 // One set's WPN page and products (design doc 13): what matched, and the admin's corrections.
 
@@ -21,9 +19,9 @@ const fieldClass =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
 
 export default async function SetPhotosPage(props: PageProps<"/admin/photos/[code]">) {
-  await requireAdminActor();
+  const { capabilities } = await readPage({ admin: true });
   const { code } = await props.params;
-  const view = await setPhotos(getContainer().db, code);
+  const view = await capabilities.catalogReads.setPhotos(code);
   if (view === null) notFound();
   const searchParams = await props.searchParams;
   const message = typeof searchParams.message === "string" ? searchParams.message : null;

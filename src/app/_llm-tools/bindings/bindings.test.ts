@@ -24,7 +24,7 @@ function contextWith(capabilities: object): ToolContext {
     actor,
     scopes: ["read"],
     allows: () => true,
-    container: { capabilities } as unknown as ToolContext["container"],
+    capabilities: capabilities as unknown as ToolContext["capabilities"],
   };
 }
 

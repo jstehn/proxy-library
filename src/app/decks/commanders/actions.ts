@@ -1,9 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { commanderDetails } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { planText, reasonText, TAG_LABELS } from "../labels";
 
 // Find a commander (design doc 36, section 9): one commander's cards on request, and starting a
@@ -29,8 +27,8 @@ export async function commanderCardsAction(
   oracleId: string,
   withReal: boolean,
 ): Promise<CommanderCardsView | null> {
-  const actor = await requireActor();
-  const details = await commanderDetails(getContainer().db, actor.userId, oracleId, withReal);
+  const { actor, capabilities } = await readPage();
+  const details = await capabilities.deckReads.commanderDetails(actor.userId, oracleId, withReal);
   if (details === null) return null;
   return {
     plan: planText(details.coverage.plan),
@@ -62,8 +60,8 @@ function deckName(commander: string): string {
 
 /** Start a Commander deck led by this card, and open it in the builder. */
 export async function startDeckAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
-  const { decks } = getContainer();
+  const { actor, capabilities } = await readPage();
+  const decks = capabilities.deckEdits;
   const name = String(formData.get("name") ?? "");
   const withReal = formData.get("real") === "1";
   const created = await decks.createDeck(actor, { name: deckName(name), format: "commander" });

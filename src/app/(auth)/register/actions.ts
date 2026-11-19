@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { describeRegisterPlayerError } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
+import { readPage } from "@/server/page-instance";
 
 export type RegisterState = {
   error: string | null;
@@ -35,7 +35,8 @@ export async function registerAction(
   }
   const { username, displayName, password, inviteCode } = form.data;
 
-  const { accounts } = getContainer();
+  const { capabilities } = await readPage({ allowVisitors: true });
+  const { accounts } = capabilities;
   const registered = await accounts.registerPlayer({ username, displayName, password, inviteCode });
   if (!registered.ok) {
     return {

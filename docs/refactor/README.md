@@ -15,6 +15,9 @@ clean context, read three or four short files, and work without reading the whol
    [dedup-playbook.md](dedup-playbook.md) once, then only your group's section. It says where the
    copies are, what the single version looks like, the edge cases to test and the mistakes to
    avoid.
+5. **[removal-list.md](removal-list.md): every row that names your package.** Those rows are part of
+   your package's Done when even if the package file doesn't list them. Delete each row in the
+   commit that removes the thing.
 
 Read doc 65 only when your package points to one of its sections. To save tokens, filter long
 output (`grep`, `tail`, `head`), and don't read files the package doesn't name unless a step needs
@@ -169,9 +172,16 @@ Before stopping, even partway through:
    and anything surprising. Keep it short; it's what the next session reads first.
 5. Add a **"Superseded in part"** line to every design doc whose code you replaced (playbook,
    Part A step 15). Commit it with the package.
-6. If something couldn't be verified in the session (it needs the network, a browser or a
+6. **A deferral edits the receiving package.** If you leave work for another package, add it to
+   that package's file (its Steps and Done when) in the same commit. A handoff line saying "P19
+   does that" isn't enough: nobody reads it there (milestone 1 review, finding 5).
+7. If something couldn't be verified in the session (it needs the network, a browser or a
    person's eye), add it to [deferred-checks.md](deferred-checks.md) instead of leaving it in a
    comment.
 
 New ideas that aren't part of a package go to the **Backlog** in STATUS (and to tududi's inbox
 when it's connected), not into the current work.
+
+## Leaving something behind
+
+If your package leaves scaffolding, a duplicate or dead code, add a row to [removal-list.md](removal-list.md) in the same commit, naming the package that removes it, and mention it in your handoff.

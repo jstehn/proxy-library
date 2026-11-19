@@ -9,12 +9,31 @@ const INDEX_LIMIT = 150;
 const ROOTS = ["src", "worker", "scripts", "tests"];
 const ALLOWLIST_PATH = "docs/refactor/oversize-allowlist.txt";
 
-export type SourceFile = { path: string; lines: number; isTest: boolean };
+export type SourceFile = { path: string; lines: number; codeLines: number; isTest: boolean };
 
 const IGNORED_FOLDERS = new Set(["node_modules", ".next", ".dev", "fixtures"]);
 
 function isTestFile(path: string): boolean {
   return /\.(test|spec)\.tsx?$/.test(path) || path.startsWith("tests/");
+}
+
+/** Lines that are neither blank nor only a comment: the part of a file that is code. */
+export function countCodeLines(text: string): number {
+  let inBlockComment = false;
+  let count = 0;
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (inBlockComment) {
+      if (trimmed.includes("*/")) inBlockComment = false;
+    } else if (trimmed === "" || trimmed.startsWith("//")) {
+      continue;
+    } else if (trimmed.startsWith("/*")) {
+      inBlockComment = !trimmed.includes("*/");
+    } else {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 /** Every `.ts` / `.tsx` file under the roots, with its line count. */
@@ -28,7 +47,7 @@ function readFiles(projectRoot: string): SourceFile[] {
       } else if (/\.tsx?$/.test(entry.name)) {
         const text = readFileSync(join(projectRoot, path), "utf8");
         const lines = text === "" ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
-        files.push({ path, lines, isTest: isTestFile(path) });
+        files.push({ path, lines, codeLines: countCodeLines(text), isTest: isTestFile(path) });
       }
     }
   }
@@ -98,7 +117,9 @@ function main(): void {
   const offenders = findOffenders(files, allowed);
   const stale = [...allowed].filter((path) => !over.some((file) => file.path === path));
 
+  const codeLines = source.reduce((total, file) => total + file.codeLines, 0);
   console.log(`Source lines: ${sum(source)} in ${source.length} files`);
+  console.log(`Code lines:   ${codeLines} (source lines without blanks or comment-only lines)`);
   console.log(`Test lines:   ${sum(tests)} in ${tests.length} files`);
   console.log(
     `Source files over ${LINE_LIMIT} lines: ${over.length} (${over.length - offenders.length} allowed)`,

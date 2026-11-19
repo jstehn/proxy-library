@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { enabledSets } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { readPage } from "@/server/page-instance";
 
 export default async function SetsPage() {
-  await requireActor();
-  const sets = await enabledSets(getContainer().db);
+  const { capabilities } = await readPage();
+  const sets = await capabilities.catalogReads.enabledSets();
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">

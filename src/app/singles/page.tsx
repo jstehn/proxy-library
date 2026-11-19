@@ -8,12 +8,10 @@ import {
   searchText,
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
-import { enabledSets, FINISHES, printingCards, searchPrintings } from "@/modules/catalog";
-import { wishedPrintings } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { FINISHES } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
+import { readPage } from "@/server/page-instance";
 
 // The singles store (design doc 07): any printing in an enabled set, at market price.
 
@@ -25,14 +23,14 @@ const SORTS = [
 const FINISH_LABELS = { nonfoil: "", foil: "Foil ", etched: "Etched " };
 
 export default async function SinglesPage(props: PageProps<"/singles">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
+
   const searchParams = await props.searchParams;
   const values = filterValues(searchParams);
   const page = pageNumber(searchParams);
 
   const [result, sets] = await Promise.all([
-    searchPrintings(db, {
+    capabilities.catalogReads.searchPrintings({
       userId: actor.userId,
       search: searchText(values),
       setCode: values.set,
@@ -44,11 +42,11 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
       ),
       page,
     }),
-    enabledSets(db),
+    capabilities.catalogReads.enabledSets(),
   ]);
   const [cards, wished] = await Promise.all([
-    printingCards(db, result.printingIds),
-    wishedPrintings(db, actor.userId, result.printingIds),
+    capabilities.printingDetails(result.printingIds),
+    capabilities.wishlistReads.wished(actor.userId, result.printingIds),
   ]);
 
   return (

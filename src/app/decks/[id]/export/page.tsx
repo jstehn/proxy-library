@@ -1,17 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deckView, EXPORTERS, exportWithHeadings, type ExportLine } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { EXPORTERS, exportWithHeadings, type ExportLine } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 
 // The deck as text (design doc 09): "4 Lightning Bolt (M11) 149", which Moxfield, Archidekt and
 // Arena all read, or names only; and with the deck's own headings (design doc 34).
 
 export default async function ExportPage(props: PageProps<"/decks/[id]/export">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const deckId = Number((await props.params).id);
   const view = Number.isSafeInteger(deckId)
-    ? await deckView(getContainer().db, actor.userId, deckId)
+    ? await capabilities.deckReads.deckView(actor.userId, deckId)
     : null;
   if (view === null) notFound();
 

@@ -1,19 +1,13 @@
-import {
-  INVITE_DEFAULT_DAYS,
-  INVITE_MAX_DAYS,
-  INVITE_MIN_DAYS,
-  listInvites,
-} from "@/modules/accounts";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
+import { INVITE_DEFAULT_DAYS, INVITE_MAX_DAYS, INVITE_MIN_DAYS } from "@/modules/accounts";
 import { SubmitButton } from "@/ui/form";
 import { revokeInviteAction } from "./actions";
 import { CreateInviteForm } from "./create-invite-form";
+import { readPage } from "@/server/page-instance";
 
 export default async function AdminInvitesPage() {
-  await requireAdminActor();
-  const { db, clock } = getContainer();
-  const invites = await listInvites(db, clock.now());
+  const { capabilities } = await readPage({ admin: true });
+
+  const invites = await capabilities.accountReads.listInvites(capabilities.now());
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">

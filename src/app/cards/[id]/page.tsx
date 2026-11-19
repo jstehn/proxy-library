@@ -1,19 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FINISHES, priceHistory, printingDetail } from "@/modules/catalog";
-import { ownedCopies } from "@/modules/collection";
-import { decksUsing } from "@/modules/decks";
-import { printingsOfSameCard, realCopiesOf } from "@/modules/real-collection";
-import {
-  currentBuylistRate,
-  MAX_QUANTITY,
-  payoutPerCopy,
-  singleHistory,
-  type SingleHistoryRow,
-} from "@/modules/store";
-import { wishesForCard } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { FINISHES } from "@/modules/catalog";
+import { MAX_QUANTITY, payoutPerCopy, type SingleHistoryRow } from "@/modules/store";
+import { readPage } from "@/server/page-instance";
 import { Cents, type Finish } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
@@ -39,22 +28,21 @@ const FINISH_COLORS: Record<Finish, string> = {
 };
 
 export default async function CardPage(props: PageProps<"/cards/[id]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await props.params;
-  const { db } = getContainer();
-  const detail = await printingDetail(db, id);
+  const detail = await capabilities.catalogReads.printingDetail(id);
   if (detail === null) notFound();
 
   const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings, wishes] =
     await Promise.all([
-      priceHistory(db, id),
-      ownedCopies(db, actor.userId, id),
-      singleHistory(db, actor.userId, id),
-      currentBuylistRate(db),
-      decksUsing(db, actor.userId, [id]),
-      realCopiesOf(db, actor.userId, id),
-      printingsOfSameCard(db, id),
-      wishesForCard(db, actor.userId, id),
+      capabilities.catalogReads.priceHistory(id),
+      capabilities.collectionReads.ownedCopies(actor.userId, id),
+      capabilities.storeReads.singleHistory(actor.userId, id),
+      capabilities.storeReads.buylistRate(),
+      capabilities.deckReads.decksUsing(actor.userId, [id]),
+      capabilities.realCollectionReads.copiesOf(actor.userId, id),
+      capabilities.realCollectionReads.printingsOfSameCard(id),
+      capabilities.wishlistReads.forCard(actor.userId, id),
     ]);
   const searchParams = await props.searchParams;
   const realError = typeof searchParams.realError === "string" ? searchParams.realError : null;

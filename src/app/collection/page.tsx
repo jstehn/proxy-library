@@ -8,11 +8,8 @@ import {
   searchText,
 } from "@/app/_components/card-filters";
 import { CardTile } from "@/app/_components/card-tile";
-import { enabledSets, printingCards } from "@/modules/catalog";
-import { collectionPage } from "@/modules/collection";
-import { decksUsing, type DeckRef } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type DeckRef } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { FINISH_NAMES, SECTION_VALUES, SECTIONS, sectionsOf, SORT_VALUES, SORTS } from "./shared";
@@ -25,8 +22,7 @@ function deckNote(decks: readonly DeckRef[] | undefined): string | undefined {
 }
 
 export default async function CollectionPage(props: PageProps<"/collection">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const values = filterValues(searchParams);
   const page = pageNumber(searchParams);
@@ -34,7 +30,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
   const isFiltered = ["q", "name", "set", "rarity", "color", "finish"].some((key) => key in values);
 
   const [result, sets] = await Promise.all([
-    collectionPage(db, actor.userId, {
+    capabilities.collectionReads.page(actor.userId, {
       search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
@@ -44,12 +40,12 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
       sort: oneOf(values.sort, SORT_VALUES),
       page,
     }),
-    enabledSets(db),
+    capabilities.catalogReads.enabledSets(),
   ]);
   const printingIds = result.rows.map((row) => row.printingId);
   const [cards, inDecks] = await Promise.all([
-    printingCards(db, printingIds),
-    decksUsing(db, actor.userId, printingIds),
+    capabilities.printingDetails(printingIds),
+    capabilities.deckReads.decksUsing(actor.userId, printingIds),
   ]);
 
   return (

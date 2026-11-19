@@ -1,17 +1,16 @@
-import { currentEconomySettings, MAX_ALLOWANCE_PERIOD_DAYS, nextPayday } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
+import { MAX_ALLOWANCE_PERIOD_DAYS, nextPayday } from "@/modules/wallet";
 import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { EconomyForm } from "./economy-form";
+import { readPage } from "@/server/page-instance";
 
 export default async function AdminEconomyPage() {
-  await requireAdminActor();
-  const { db, clock } = getContainer();
-  const settings = await currentEconomySettings(db);
+  const { capabilities } = await readPage({ admin: true });
+
+  const settings = await capabilities.walletReads.economySettings();
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-    clock.now(),
+    capabilities.now(),
   );
 
   return (

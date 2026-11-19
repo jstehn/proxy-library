@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  deckComments,
-  deckForViewer,
-  EXPORTERS,
-  FORMATS,
-  listAndFingerprint,
-} from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { EXPORTERS, FORMATS, listAndFingerprint } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { WishForShortForm } from "../../wishlist/wish-forms";
@@ -21,7 +14,7 @@ import {
   updateDeckAction,
 } from "../actions";
 import { FORMAT_LABELS } from "../labels";
-import { loadBuilderDeck } from "./builder/actions";
+import { builderDeckFor } from "./builder/builder-deck";
 import { DeckBuilder } from "./builder/deck-builder";
 import { DeckComments } from "./comments";
 import { EditAsText } from "./edit-as-text";
@@ -32,19 +25,18 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await props.params;
   const deckId = Number(id);
   if (!Number.isSafeInteger(deckId) || deckId <= 0) notFound();
-  const { db, seeds, capabilities } = getContainer();
   const searchParams = await props.searchParams;
 
   // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
-  const viewed = await deckForViewer(db, actor.userId, deckId);
+  const viewed = await capabilities.deckReads.deckForViewer(actor.userId, deckId);
   if (viewed === null) notFound();
   const { view } = viewed;
   const { deck } = view;
-  const comments = await deckComments(db, deckId);
+  const comments = await capabilities.deckReads.comments(deckId);
   const commentSection = (
     <DeckComments
       deckId={deck.id}
@@ -95,7 +87,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           cards={Object.fromEntries(printings ?? [])}
           format={deck.format}
           targetBracket={deck.targetBracket}
-          seed={seeds.newSeed()}
+          seed={capabilities.seeds.newSeed()}
           ownerName={viewed.ownerName}
           yourCopies={viewed.yourCopies}
           listText={EXPORTERS.names(view.lines)}
@@ -109,7 +101,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     );
   }
 
-  const builderDeck = await loadBuilderDeck(deckId);
+  const builderDeck = await builderDeckFor(capabilities, actor.userId, deckId);
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
@@ -272,7 +264,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         format={deck.format}
         initialDeck={builderDeck}
         targetBracket={deck.targetBracket}
-        seed={seeds.newSeed()}
+        seed={capabilities.seeds.newSeed()}
       />
     </main>
   );

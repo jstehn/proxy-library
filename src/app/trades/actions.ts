@@ -9,10 +9,9 @@ import {
   type Shortfall,
   type TradeItem,
 } from "@/modules/trades";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { assertNever, Cents, UserId } from "@/shared/kernel";
 import { draftHref, readDraft, type Draft } from "./draft";
+import { readPage } from "@/server/page-instance";
 
 function describeShortfall(shortfall: Shortfall): string {
   const who = shortfall.side === "proposer" ? "The proposer" : "The recipient";
@@ -69,7 +68,7 @@ function itemsOf(draft: Draft): TradeItem[] | null {
 
 /** Sends the draft as a proposal, or as a counter-offer when it replaces a trade. */
 export async function proposeTradeAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draft = readDraft(
     Object.fromEntries([...formData.entries()].map(([key, value]) => [key, String(value)])),
   );
@@ -80,7 +79,7 @@ export async function proposeTradeAction(formData: FormData): Promise<void> {
   if (items === null) back("Enter money like 2.50.");
   const message = String(formData.get("message") ?? "");
 
-  const { trades } = getContainer();
+  const { trades } = capabilities;
   const result =
     draft.replaces === null
       ? await trades.proposeTrade(actor, {
@@ -113,10 +112,10 @@ function acceptMessage(error: AcceptTradeError): string {
 
 /** Accept, decline or cancel. */
 export async function decideTradeAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const tradeId = TradeId.of(Number(formData.get("tradeId")));
   const decision = String(formData.get("decision"));
-  const { trades } = getContainer();
+  const { trades } = capabilities;
   const result =
     decision === "accept"
       ? await trades.acceptTrade(actor, tradeId)

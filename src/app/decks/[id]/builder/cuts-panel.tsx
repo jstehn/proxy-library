@@ -22,7 +22,7 @@ import {
 } from "@/modules/decks/client";
 import { cardTags, cardThemes } from "@/shared/card-search";
 import { cutReasonText, swapReasonText } from "../../labels";
-import { optimizeDeckAction, suggestionsAction } from "./actions";
+import { optimizeDeckAction, suggestionsAction } from "./reads/actions";
 
 // Possible cuts (design doc 32, section 9) and one-step swaps (design doc 47): the main-deck
 // cards that score lowest on simple checks, with the reasons for each and a button to move it to

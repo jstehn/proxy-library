@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { ProxyForm } from "./proxy-form";
-import { proxyDeck } from "./proxy-lines";
 
 // Proxy PDFs (design doc 14, section 3): choose the options, then download the PDF. It prints at
 // exactly the real card size from any PDF viewer (choose "actual size", not "fit to page").
 
 export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
-  const actor = await requireActor();
-  const deck = await proxyDeck(actor.userId, Number((await props.params).id));
+  const { actor, capabilities } = await readPage();
+  const deck = await capabilities.proxyDeck(actor.userId, Number((await props.params).id));
   if (deck === null) notFound();
 
   return (

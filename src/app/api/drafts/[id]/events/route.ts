@@ -1,6 +1,6 @@
-import { DraftId, draftVersion } from "@/modules/drafts";
-import { getContainer, getDraftSubscriptions } from "@/server/container";
-import { getCurrentActor } from "@/server/session";
+import { DraftId } from "@/modules/drafts";
+import { getDraftSubscriptions } from "@/server/container";
+import { readPage } from "@/server/page-instance";
 
 // Live updates for one draft, as Server-Sent Events (ADR 0018). The stream says only "the
 // draft is now at version N"; the page then reloads its own data. While a seated player's
@@ -9,14 +9,14 @@ import { getCurrentActor } from "@/server/session";
 const HEARTBEAT_MILLISECONDS = 15_000;
 
 export async function GET(request: Request, context: RouteContext<"/api/drafts/[id]/events">) {
-  const actor = await getCurrentActor();
+  const { actor, capabilities } = await readPage({ allowVisitors: true });
   if (actor === null) return new Response("Sign in first", { status: 401 });
   const raw = Number((await context.params).id);
   if (!Number.isSafeInteger(raw) || raw <= 0) return new Response("Not found", { status: 404 });
   const draftId = DraftId.of(raw);
 
-  const { db, drafts } = getContainer();
-  const version = await draftVersion(db, draftId);
+  const { drafts } = capabilities;
+  const version = await capabilities.draftReads.version(draftId);
   if (version === null) return new Response("Not found", { status: 404 });
 
   const encoder = new TextEncoder();

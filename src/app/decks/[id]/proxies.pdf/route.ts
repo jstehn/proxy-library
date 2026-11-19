@@ -1,7 +1,6 @@
 import type { ProxyStreamEvent } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
-import { previewSheet, proxyDeck, proxyOptionsFrom } from "../print/proxy-lines";
+import { readPage } from "@/server/page-instance";
+import { previewSheet, proxyOptionsFrom } from "../print/proxy-lines";
 
 /**
  * The deck's proxies as a PDF, with the options in the address (design doc 14, section 3), its
@@ -11,9 +10,9 @@ import { previewSheet, proxyDeck, proxyOptionsFrom } from "../print/proxy-lines"
  * can show a progress bar.
  */
 export async function GET(request: Request, context: RouteContext<"/decks/[id]/proxies.pdf">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await context.params;
-  const deck = await proxyDeck(actor.userId, Number(id));
+  const deck = await capabilities.proxyDeck(actor.userId, Number(id));
   if (deck === null) return new Response("Not found", { status: 404 });
 
   const parameters = new URL(request.url).searchParams;
@@ -25,7 +24,7 @@ export async function GET(request: Request, context: RouteContext<"/decks/[id]/p
   const options = preview ? { ...chosen, tokenCopies: 1 as const } : chosen;
   // A file name without characters that upset browsers or file systems.
   const fileName = `${deck.view.deck.name.replace(/[^\w -]+/g, "").trim() || "deck"} proxies.pdf`;
-  const { proxySheet } = getContainer();
+  const { proxySheet } = capabilities;
 
   if (parameters.get("progress") === "1") {
     const encoder = new TextEncoder();

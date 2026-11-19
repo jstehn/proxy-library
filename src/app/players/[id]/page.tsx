@@ -9,13 +9,9 @@ import {
   sendFriendRequestAction,
   unfriendAction,
 } from "@/app/friends/actions";
-import { printingCards } from "@/modules/catalog";
-import { sharedRealCollections } from "@/modules/real-collection";
-import { getPlayerProfile } from "@/modules/social";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet } from "@/ui/mana";
+import { readPage } from "@/server/page-instance";
 
 const COLOR_LABELS: Record<string, string> = {
   W: "White",
@@ -26,13 +22,12 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default async function PlayerProfilePage(props: PageProps<"/players/[id]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await props.params;
-  const { db } = getContainer();
 
   const [profile, sharedReal] = await Promise.all([
-    getPlayerProfile(db, actor.userId, id),
-    sharedRealCollections(db),
+    capabilities.socialReads.playerProfile(actor.userId, id),
+    capabilities.realCollectionReads.shared(),
   ]);
 
   if (profile === null) notFound();
@@ -40,10 +35,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
   const isSharingReal = sharedReal.some((p) => p.userId === profile.userId);
   const showcasePrintings =
     profile.showcaseCards.length > 0
-      ? await printingCards(
-          db,
-          profile.showcaseCards.map((c) => c.printingId),
-        )
+      ? await capabilities.printingDetails(profile.showcaseCards.map((c) => c.printingId))
       : new Map();
 
   return (

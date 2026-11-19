@@ -1,10 +1,5 @@
 import Link from "next/link";
-import { activeDraftOf } from "@/modules/drafts";
-import { incomingRequestCount } from "@/modules/social";
-import { tradesWaitingForYou } from "@/modules/trades";
-import { wishesAtTarget } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { getCurrentActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { MobileBottomNav } from "./_components/mobile-bottom-nav";
 import { NavLink } from "./_components/nav-link";
@@ -27,17 +22,13 @@ const MAIN_LINKS = [
 
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
 export async function SiteHeader() {
-  const actor = await getCurrentActor();
-  // Showing the balance also pays any allowance that has come due (design doc 03, section 5).
-  const balance = actor === null ? null : await getContainer().wallet.refreshWallet(actor.userId);
-  const waitingTrades =
-    actor === null ? 0 : await tradesWaitingForYou(getContainer().db, actor.userId);
-  // Wishes at or under their target price (design doc 26, section 9).
-  const wishesOnTarget = actor === null ? 0 : await wishesAtTarget(getContainer().db, actor.userId);
-  // A lobby or draft you're seated at: the link goes straight back to it (design doc 17).
-  const draft = actor === null ? null : await activeDraftOf(getContainer().db, actor.userId);
-  const friendRequests =
-    actor === null ? 0 : await incomingRequestCount(getContainer().db, actor.userId);
+  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  const summary = actor === null ? null : await capabilities.headerSummary(actor.userId);
+  const balance = summary?.balance ?? null;
+  const waitingTrades = summary?.waitingTrades ?? 0;
+  const wishesOnTarget = summary?.wishesOnTarget ?? 0;
+  const draft = summary?.draft ?? null;
+  const friendRequests = summary?.friendRequests ?? 0;
 
   // The same links in two layouts: inline on larger screens, in the "Menu" on phones.
   const links =

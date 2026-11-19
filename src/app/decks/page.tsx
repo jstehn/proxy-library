@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { decksFor, FORMATS } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { FORMATS } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { createDeckAction } from "./actions";
@@ -11,9 +10,9 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
-  const allDecks = await decksFor(getContainer().db, actor.userId);
+  const allDecks = await capabilities.deckReads.decksFor(actor.userId);
   // ?show=drafts lists only the decks finished drafts made (design doc 17).
   const onlyDrafts = searchParams.show === "drafts";
   const decks = onlyDrafts ? allDecks.filter((deck) => deck.origin !== null) : allDecks;

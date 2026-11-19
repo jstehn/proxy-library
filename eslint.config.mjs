@@ -29,6 +29,19 @@ const elements = [
   { type: "test-setup", pattern: "tests" },
 ];
 
+// Paths like `[id]` and `(auth)` are glob syntax, so they are escaped to match literally.
+const escapeGlob = (path) => path.replace(/[[\]()]/g, "\\$&");
+
+// The rule on `getContainer` in src/app (ADR 0026): adapters get what they need from `action()` or
+// `readPage()`.
+// These keep `getContainer`, each for a reason.
+const CONTAINER_ALLOWED = [
+  // the OAuth endpoints read the app's origin synchronously (resourceMetadataUrl is called from plain functions), so they can't await readPage()
+  "src/app/_oauth/http.ts",
+  // the health check has no player and reads no capability: it asks the container whether it is up
+  "src/app/api/health/route.ts",
+];
+
 // --- Selector helpers ------------------------------------------------------------------
 const el = (type) => ({ element: { type } });
 const layer = (name, { sameModule = false, file } = {}) => ({
@@ -43,6 +56,8 @@ const layer = (name, { sameModule = false, file } = {}) => ({
 const from = (selector, ...to) => ({ from: selector, allow: { to } });
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
 // A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
+// A module's wiring.ts builds its capabilities (ADR 0026); only the composition roots import it.
+const wiringFile = { element: { type: "module", fileInternalPath: "wiring.ts" } };
 const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
 // The card search language's pure half, and its SQL half (ADR 0017).
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
@@ -171,6 +186,13 @@ const policies = [
     layer("queries", { sameModule: true }),
   ),
 
+  // wiring.ts (ADR 0026): builds the module's capabilities from its own layers and the readers it
+  // takes from other modules' public APIs. It is the one place a module's queries meet its use cases.
+  {
+    from: wiringFile,
+    allow: { to: [el("kernel"), el("db"), publicApi] },
+  },
+
   // Design doc 16, rule 1: real cards never touch the game. Of the modules, only decks may use
   // the real collection (its public API, or its tables through schema.ts).
   {
@@ -193,6 +215,7 @@ const policies = [
     el("http"),
     el("config"),
     publicApi,
+    wiringFile,
     layer("infrastructure", { file: "index.ts" }),
   ),
   from(
@@ -204,6 +227,7 @@ const policies = [
     el("db"),
     el("config"),
     publicApi,
+    wiringFile,
     layer("infrastructure", { file: "index.ts" }),
   ),
 
@@ -370,10 +394,29 @@ export default defineConfig([
     rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
   },
 
+  // The ratchet (ADR 0026): no `getContainer` in src/app, except the files listed above.
+  {
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: [...TESTS, ...CONTAINER_ALLOWED.map(escapeGlob)],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='getContainer']",
+          message: "Call capabilities through action() or readPage() (ADR 0026).",
+        },
+      ],
+    },
+  },
+
   // Adapters stay thin (ADR 0026): tool bindings and server actions parse input, call capabilities
   // and present the answer. Logic and data access live in the modules.
   {
-    files: ["src/app/_llm-tools/bindings/**/*.ts", "src/app/**/actions.ts"],
+    files: [
+      "src/app/_llm-tools/bindings/**/*.ts",
+      "src/app/**/actions.ts",
+      "src/app/**/{page.tsx,route.ts,layout.tsx}",
+    ],
     ignores: TESTS,
     rules: {
       "no-restricted-imports": [

@@ -1,18 +1,9 @@
 import Link from "next/link";
 import { CardTile } from "@/app/_components/card-tile";
-import {
-  packKey,
-  packPhotos,
-  printingCards,
-  variantFor,
-  type PrintingCard,
-} from "@/modules/catalog";
-import { openingView, type OpenedCard, type OpeningView } from "@/modules/inventory";
-import { findSet } from "@/modules/catalog";
-import { packThemes } from "@/modules/packs";
-import { storePage } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
+import { type OpenedCard, type OpeningView } from "@/modules/inventory";
+import type { Capabilities } from "@/server/capabilities";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import type { OpenerPack } from "@/ui/opening/machine";
@@ -32,8 +23,7 @@ function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
 }
 
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const raw = searchParams.items;
   const animate = searchParams.animate === "1";
@@ -43,15 +33,14 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     .filter((id) => Number.isSafeInteger(id) && id > 0)
     .slice(0, MAX_SHOWN);
 
-  const openings = (await Promise.all(ids.map((id) => openingView(db, actor.userId, id)))).filter(
-    (opening): opening is OpeningView => opening !== null,
-  );
-  const cards = await printingCards(
-    db,
+  const openings = (
+    await Promise.all(ids.map((id) => capabilities.inventoryReads.openingView(actor.userId, id)))
+  ).filter((opening): opening is OpeningView => opening !== null);
+  const cards = await capabilities.printingDetails(
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
-  const themes = await packThemes(db, packs);
+  const themes = await capabilities.packReads.themes(packs);
   const total = Cents.sum(
     openings.flatMap((opening) =>
       opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),
@@ -126,7 +115,9 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(packs, cards, themes)}>{results}</PackOpener>
+        <PackOpener packs={await openerPacks(capabilities, packs, cards, themes)}>
+          {results}
+        </PackOpener>
       ) : (
         results
       )}
@@ -139,23 +130,25 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
  * card from inside it, so the front of the pack gives nothing away.
  */
 async function openerPacks(
+  capabilities: Capabilities,
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
   themes: ReadonlyMap<number, string>,
 ): Promise<OpenerPack[]> {
-  const { db } = getContainer();
   const setCodes = [...new Set(packs.flatMap((pack) => (pack.setCode ? [pack.setCode] : [])))];
   const sets = new Map(
     await Promise.all(
       setCodes.map(async (code) => {
-        const [set, page] = await Promise.all([findSet(db, code), storePage(db, code)]);
+        const [set, page] = await Promise.all([
+          capabilities.catalogReads.findSet(code),
+          capabilities.storeReads.page(code),
+        ]);
         return [code, { set, featured: page?.set.featured ?? null }] as const;
       }),
     ),
   );
 
-  const photos = await packPhotos(
-    db,
+  const photos = await capabilities.catalogReads.packPhotos(
     packs.flatMap((pack) =>
       pack.setCode && pack.boosterType
         ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]

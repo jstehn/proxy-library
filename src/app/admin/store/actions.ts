@@ -3,9 +3,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { SealedProductId } from "@/modules/catalog";
 import { PRICING_MODES } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 /** "" clears the price; anything else must read as dollars. Undefined means "couldn't read it". */
 function parsePrice(raw: FormDataEntryValue | null): Cents | null | undefined {
@@ -25,11 +24,11 @@ function done(back: string, error?: string): never {
 }
 
 export async function setKindPriceAction(formData: FormData): Promise<void> {
-  const actor = await requireAdminActor();
+  const { actor, capabilities } = await readPage({ admin: true });
   const back = String(formData.get("back") ?? "/admin/store");
   const price = parsePrice(formData.get("price"));
   if (price === undefined) done(back, "Enter a price like 5.49, or leave it empty.");
-  const result = await getContainer().store.setKindPrice(actor, {
+  const result = await capabilities.store.setKindPrice(actor, {
     kind: String(formData.get("kind")),
     price,
   });
@@ -42,11 +41,11 @@ export async function setKindPriceAction(formData: FormData): Promise<void> {
 }
 
 export async function setProductPriceAction(formData: FormData): Promise<void> {
-  const actor = await requireAdminActor();
+  const { actor, capabilities } = await readPage({ admin: true });
   const back = String(formData.get("back") ?? "/admin/store");
   const price = parsePrice(formData.get("price"));
   if (price === undefined) done(back, "Enter a price like 5.49, or leave it empty.");
-  const result = await getContainer().store.setProductPrice(actor, {
+  const result = await capabilities.store.setProductPrice(actor, {
     productId: SealedProductId.of(String(formData.get("productId"))),
     price,
   });
@@ -68,17 +67,17 @@ function parsePercent(raw: FormDataEntryValue | null): number | undefined {
 
 /** Chooses MSRP or value-based pricing for sealed product (design doc 33). */
 export async function setPricingModeAction(formData: FormData): Promise<void> {
-  const actor = await requireAdminActor();
+  const { actor, capabilities } = await readPage({ admin: true });
   const mode = PRICING_MODES.find((one) => one === formData.get("mode"));
   if (mode === undefined) done("/admin/store", "Choose MSRP or value-based pricing.");
-  const result = await getContainer().store.setPricingMode(actor, mode);
+  const result = await capabilities.store.setPricingMode(actor, mode);
   done("/admin/store", result.ok ? undefined : "Only admins can change pricing.");
 }
 
 export async function setBuylistRateAction(formData: FormData): Promise<void> {
-  const actor = await requireAdminActor();
+  const { actor, capabilities } = await readPage({ admin: true });
   const rate = parsePercent(formData.get("rate"));
   if (rate === undefined) done("/admin/store", "Enter a percentage like 50.");
-  const result = await getContainer().store.setBuylistRate(actor, rate);
+  const result = await capabilities.store.setBuylistRate(actor, rate);
   done("/admin/store", result.ok ? undefined : "The rate must be between 0% and 100%.");
 }

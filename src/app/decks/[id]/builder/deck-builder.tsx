@@ -37,21 +37,18 @@ import { COLORS, Cents, type ManaColor } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
   addLandsAction,
-  browseAction,
-  cardDetailAction,
   entryDetailsAction,
   headingAction,
   loadBuilderDeck,
   moveLineAction,
   noteAction,
-  otherDecksAction,
   setQuantityAction,
   setTargetBracketAction,
-  similarAction,
   swapCardsAction,
   takeFromDeckAction,
-  type BuilderDeck,
 } from "./actions";
+import { browseAction, cardDetailAction, otherDecksAction, similarAction } from "./reads/actions";
+import { type BuilderDeck } from "./action-helpers";
 import { BracketPanel } from "./bracket-panel";
 import { bracketWarningText } from "../../labels";
 import { DeckList } from "./deck-list";

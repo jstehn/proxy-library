@@ -3,8 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import type { BuySingleError, SellSingleError } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { Cents, FinishSchema, assertNever } from "@/shared/kernel";
 
 export type TradeState = { message: string | null; tone: "error" | "success" };
@@ -32,12 +31,12 @@ export async function buySingleAction(
   _previous: TradeState,
   formData: FormData,
 ): Promise<TradeState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = readForm(formData);
   if (!form.success) return { message: "Choose how many.", tone: "error" };
   const { printingId, finish, quantity } = form.data;
 
-  const result = await getContainer().store.buySingle(actor, {
+  const result = await capabilities.store.buySingle(actor, {
     printingId: PrintingId.of(printingId),
     finish,
     quantity,
@@ -51,12 +50,12 @@ export async function sellSingleAction(
   _previous: TradeState,
   formData: FormData,
 ): Promise<TradeState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = readForm(formData);
   if (!form.success) return { message: "Choose how many.", tone: "error" };
   const { printingId, finish, quantity } = form.data;
 
-  const result = await getContainer().store.sellSingle(actor, {
+  const result = await capabilities.store.sellSingle(actor, {
     printingId: PrintingId.of(printingId),
     finish,
     quantity,

@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { tradeView, type TradeItemView } from "@/modules/trades";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type TradeItemView } from "@/modules/trades";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { decideTradeAction } from "../actions";
 import { draftHref, type DraftCard } from "../draft";
 import { itemText, sideValue, STATUS_LABELS } from "../summary";
+import { readPage } from "@/server/page-instance";
 
 function Side(props: { title: string; items: readonly TradeItemView[] }) {
   return (
@@ -50,10 +49,10 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
 const button = "rounded-md px-3 py-1.5 text-sm font-medium";
 
 export default async function TradePage(props: PageProps<"/trades/[id]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const tradeId = Number((await props.params).id);
   const trade = Number.isSafeInteger(tradeId)
-    ? await tradeView(getContainer().db, actor.userId, tradeId)
+    ? await capabilities.tradeReads.view(actor.userId, tradeId)
     : null;
   if (trade === null) notFound();
   const error = (await props.searchParams).error;

@@ -2,15 +2,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
-import {
-  MAX_LIST_LINES,
-  quoteShoppingList,
-  type BuyListError,
-  type ListQuote,
-} from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { MAX_LIST_LINES, type BuyListError, type ListQuote } from "@/modules/store";
 import { Cents, FinishSchema } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 // Buying a list of singles (design doc 15, section 3). The quote is read only; buying runs the
 // store's all-or-nothing purchase, which prices everything again.
@@ -26,11 +20,11 @@ const QuoteInput = z.object({
 export async function quoteListAction(
   input: z.input<typeof QuoteInput>,
 ): Promise<ListQuote | null> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parsed = QuoteInput.safeParse(input);
   if (!parsed.success) return null;
   const { text, preference, onlyMissing, chosen } = parsed.data;
-  return quoteShoppingList(getContainer().db, actor.userId, text, {
+  return capabilities.storeReads.quoteShoppingList(actor.userId, text, {
     preference,
     onlyMissing,
     chosen: Object.fromEntries(Object.entries(chosen).map(([line, id]) => [Number(line), id])),
@@ -55,12 +49,12 @@ export type BuyListResult =
 
 /** Buys every line, or nothing. */
 export async function buyListAction(input: z.input<typeof BuyInput>): Promise<BuyListResult> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parsed = BuyInput.safeParse(input);
   if (!parsed.success) {
     return { ok: false, message: "That list wasn't understood.", pricesChanged: false };
   }
-  const result = await getContainer().store.buyList(actor, {
+  const result = await capabilities.store.buyList(actor, {
     lines: parsed.data.lines.map((line) => ({
       ...line,
       printingId: PrintingId.of(line.printingId),

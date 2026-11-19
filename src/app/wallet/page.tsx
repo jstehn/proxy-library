@@ -1,25 +1,24 @@
-import { currentEconomySettings, nextPayday, walletHistory, walletSummary } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { nextPayday } from "@/modules/wallet";
 import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { AddFundsForm } from "./add-funds-form";
 import { ledgerKindLabel } from "./labels";
+import { readPage } from "@/server/page-instance";
 
 export default async function WalletPage() {
-  const actor = await requireActor();
-  const { wallet, db, clock } = getContainer();
+  const { actor, capabilities } = await readPage();
+  const { wallet } = capabilities;
 
   // Pay anything that's due first, so the page shows an up-to-date balance.
   await wallet.refreshWallet(actor.userId);
   const [summary, history, settings] = await Promise.all([
-    walletSummary(db, actor.userId),
-    walletHistory(db, actor.userId),
-    currentEconomySettings(db),
+    capabilities.walletReads.summary(actor.userId),
+    capabilities.walletReads.history(actor.userId),
+    capabilities.walletReads.economySettings(),
   ]);
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-    clock.now(),
+    capabilities.now(),
   );
 
   return (

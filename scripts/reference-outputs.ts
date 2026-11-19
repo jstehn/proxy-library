@@ -33,7 +33,7 @@ const context: ToolContext = {
   actor: jack,
   scopes: ["read", "decks:write", "wishlist:write"],
   allows: () => true,
-  container: core,
+  capabilities: core.capabilities,
 };
 
 /** Ids, fingerprints and timestamps vary between runs: replace them with placeholders. */

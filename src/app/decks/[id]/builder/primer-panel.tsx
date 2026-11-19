@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { DeckLine } from "@/modules/decks";
 import { NamePreview } from "@/app/_components/card-preview";
-import { deckPlanAction, saveDeckPlanAction, type DeckPlanWithPrimer } from "./actions";
+import { deckPlanAction, saveDeckPlanAction, type DeckPlanWithPrimer } from "./plan/actions";
 import {
   formatNamedLines,
   nonEmptyLines,

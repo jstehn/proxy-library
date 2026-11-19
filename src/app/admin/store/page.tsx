@@ -1,13 +1,3 @@
-import { enabledSets } from "@/modules/catalog";
-import {
-  currentBuylistRate,
-  currentPricingMode,
-  kindPrices,
-  msrpsBelowResale,
-  productPrices,
-} from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import {
@@ -16,6 +6,7 @@ import {
   setPricingModeAction,
   setProductPriceAction,
 } from "./actions";
+import { readPage } from "@/server/page-instance";
 
 // MSRPs (ADR 0014): one price per product kind, and optional per-product overrides.
 
@@ -49,19 +40,19 @@ function PriceForm(props: {
 }
 
 export default async function AdminStorePage(props: PageProps<"/admin/store">) {
-  await requireAdminActor();
-  const { db } = getContainer();
+  const { capabilities } = await readPage({ admin: true });
+
   const searchParams = await props.searchParams;
   const setCode = typeof searchParams.set === "string" ? searchParams.set.toUpperCase() : null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
   const back = setCode === null ? "/admin/store" : `/admin/store?set=${setCode}`;
   const [rateBps, pricingMode, belowResale, kinds, sets, products] = await Promise.all([
-    currentBuylistRate(db),
-    currentPricingMode(db),
-    msrpsBelowResale(db),
-    kindPrices(db),
-    enabledSets(db),
-    setCode === null ? Promise.resolve([]) : productPrices(db, setCode),
+    capabilities.storeReads.buylistRate(),
+    capabilities.storeReads.pricingMode(),
+    capabilities.storeReads.msrpsBelowResale(),
+    capabilities.storeReads.kindPrices(),
+    capabilities.catalogReads.enabledSets(),
+    setCode === null ? Promise.resolve([]) : capabilities.storeReads.productPrices(setCode),
   ]);
 
   return (

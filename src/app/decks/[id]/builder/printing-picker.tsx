@@ -2,7 +2,9 @@
 import { useState, useTransition } from "react";
 import type { Board, DeckLine, PrintingFinish, PrintingOption } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
-import { choosePrintingAction, printingsAction, type BuilderDeck } from "./actions";
+import { choosePrintingAction } from "./actions";
+import { printingsAction } from "./reads/actions";
+import { type BuilderDeck } from "./action-helpers";
 
 // Choose which printing and finish a deck line uses (design doc 24, section 9).
 

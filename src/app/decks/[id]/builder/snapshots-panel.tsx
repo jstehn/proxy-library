@@ -13,8 +13,8 @@ import {
   listSnapshotsAction,
   restoreSnapshotAction,
   saveSnapshotAction,
-  type BuilderDeck,
-} from "./actions";
+} from "./snapshots/actions";
+import { type BuilderDeck } from "./action-helpers";
 
 const BOARD_NAMES: Readonly<Record<Board, string>> = {
   main: "Main",

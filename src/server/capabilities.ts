@@ -1,5 +1,15 @@
-import { makeGetAccountOverview } from "@/modules/accounts";
-import { collectionPage } from "@/modules/collection";
+import { wireActivityCapabilities } from "@/modules/activity/wiring";
+import { wireSocialCapabilities } from "@/modules/social/wiring";
+import { wireTradeCapabilities } from "@/modules/trades/wiring";
+import { wireWalletCapabilities } from "@/modules/wallet/wiring";
+import { wireCollectionCapabilities } from "@/modules/collection/wiring";
+import { wireDraftCapabilities } from "@/modules/drafts/wiring";
+import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
+import { wirePackCapabilities } from "@/modules/packs/wiring";
+import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
+import { wireStoreCapabilities } from "@/modules/store/wiring";
+import { wireAccountCapabilities } from "@/modules/accounts/wiring";
+import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
   makeCardLookup,
   makeSearchCatalog,
@@ -11,67 +21,45 @@ import {
   printingDetail,
   storePrintingsOfCard,
 } from "@/modules/catalog";
-import { ownedByOracle, ownedCopies as ownedOfPrinting } from "@/modules/collection";
+import {
+  collectionPage,
+  ownedByOracle,
+  ownedCopies as ownedOfPrinting,
+} from "@/modules/collection";
 import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
 import {
-  auditDeckView,
-  checkOwnedCards,
-  combosForDeck,
   decksUsing,
   findCard,
-  deckSignalCards,
-  deckTokenLines,
-  deckView,
-  decksFor,
-  getDeckProfile,
-  budgetReplacements,
-  listDeckSources,
-  makeDeckFacts,
-  makeDeckSearch,
-  makeSearchSignals,
-  ownedSignalCards,
-  searchForDeck,
-  semanticSearchForDeck,
-  makeFindReplacements,
-  makeDeckManaPlan,
-  makeDeckOverview,
-  makeDeckSignals,
-  manaBasePlan,
-  similarCards,
-  makeListDecks,
-  makeDeckPreviews,
-  makeEdhrecResearch,
-  makeDeckCombos,
-  makeDrawSample,
-  makeDeckPlanEdits,
-  makeStartDeck,
-  updateDeckPrimer,
-  updateDeckProfile,
-  addDeckSource,
-  deckChangePreview,
-  DeckId,
+  type DeckSharing,
+  type makeProxySheets,
+  type makeTokenChoices,
   type Decks,
   type PreviewRepository,
 } from "@/modules/decks";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import {
-  makeAddWishes,
-  makeRemoveWishes,
-  makeWishlistView,
-  WishId,
-  wishesForCard,
-  wishlistAnswers,
-  type Wishlist,
-} from "@/modules/wishlist";
+import { wireDeckCapabilities } from "@/modules/decks/wiring";
+import { wishesAtTarget, wishesForCard, type Wishlist } from "@/modules/wishlist";
+import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
+import type { makeAccounts } from "@/modules/accounts";
+import type { makeCatalog } from "@/modules/catalog";
+import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
+import type { makePacks } from "@/modules/packs";
+import type { makeResetPlayer } from "@/modules/reset";
+import { incomingRequestCount, type makeSocial } from "@/modules/social";
+import { tradesWaitingForYou, type makeTrades } from "@/modules/trades";
+import type { makeWallet } from "@/modules/wallet";
+import type { makeWishlist } from "@/modules/wishlist";
+import type { makeInventory } from "@/modules/inventory";
+import type { makeRealCollection } from "@/modules/real-collection";
+import type { makeStore } from "@/modules/store";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
 import type { makeYoutube } from "@/modules/youtube";
 import type { DbExecutor } from "@/shared/db";
-import { ok, type Cents, type Clock, type UserId } from "@/shared/kernel";
+import type { Cents, Clock, UserId } from "@/shared/kernel";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
-// bindings, routes, worker commands) call. Each is built here from its module's factory, with the
-// readers it needs from other modules passed in as ports. A new capability gets one line below.
+// bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
+// file joins them and adds the few that read across modules.
 
 type CapabilityDependencies = Readonly<{
   db: DbExecutor;
@@ -82,110 +70,91 @@ type CapabilityDependencies = Readonly<{
   outsideData: OutsideDataService;
   youtube: ReturnType<typeof makeYoutube>;
   reddit: ReturnType<typeof makeReddit>;
-  decks: Pick<
-    Decks,
-    "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
-  >;
+  decks: Decks;
   previews: PreviewRepository;
+  /** The services that change things: the capabilities pass them through for the adapters. */
+  services: Readonly<{
+    deckSharing: DeckSharing;
+    chooseToken: ReturnType<typeof makeTokenChoices>;
+    proxySheet: ReturnType<typeof makeProxySheets>;
+    seeds: Readonly<{ newSeed(): string }>;
+    drafts: ReturnType<typeof makeDrafts>;
+    realCollection: ReturnType<typeof makeRealCollection>;
+    store: ReturnType<typeof makeStore>;
+    inventory: ReturnType<typeof makeInventory>;
+    accounts: ReturnType<typeof makeAccounts>;
+    wallet: ReturnType<typeof makeWallet>;
+    social: ReturnType<typeof makeSocial>;
+    trades: ReturnType<typeof makeTrades>;
+    wishlist: ReturnType<typeof makeWishlist>;
+    catalog: ReturnType<typeof makeCatalog>;
+    packs: ReturnType<typeof makePacks>;
+    resetPlayer: ReturnType<typeof makeResetPlayer>;
+    appUrl: string;
+  }>;
   newPreviewId: () => string;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const {
-    db,
-    clock,
-    wallet,
-    wishlist,
-    textEmbedder,
-    decks,
-    previews,
-    newPreviewId,
-    outsideData,
-    youtube,
-    reddit,
-  } = dependencies;
+  const { db, clock, wallet, wishlist, textEmbedder, outsideData } = dependencies;
 
   return {
-    listDecks: makeListDecks({
-      decksFor: (userId) => decksFor(db, userId),
-    }),
-    deckOverview: makeDeckOverview({
-      deckView: (userId, deckId) => deckView(db, userId, deckId),
-      combosFor: (oracleIds) => combosForDeck(db, oracleIds),
-      printingCards: (printingIds) => printingCards(db, printingIds),
-      tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
-      sources: (userId, deckId) => listDeckSources(db, userId, deckId),
-      profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
-    }),
-    deckPreviews: makeDeckPreviews({
-      previews,
+    ...wireDeckCapabilities({
+      db,
       clock,
-      newPreviewId,
-      findCards: async (names) => {
-        const found = await Promise.all(
-          names.map(async (name) => [name, await findCard(db, name)] as const),
-        );
-        return new Map(
-          found.flatMap(([name, card]) => (card === null ? [] : [[name, card.oracleId]])),
-        );
+      textEmbedder,
+      outsideData: {
+        fetchEdhrecCommander: (commander, options) =>
+          outsideData.fetchEdhrecCommander(commander, options),
+        fetchSpellbookCombos: (mainCards, commanders) =>
+          outsideData.fetchSpellbookCombos(mainCards, commanders),
       },
-      deckView: (userId, deckId) => deckView(db, userId, deckId),
-      changePreview: (userId, deckId, changes) => deckChangePreview(db, userId, deckId, changes),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-      applyChanges: (actor, input) =>
-        decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
+      decks: dependencies.decks,
+      previews: dependencies.previews,
+      newPreviewId: dependencies.newPreviewId,
     }),
-    youtube,
-    reddit,
+    ...wireCatalogCapabilities({ db }),
+    ...wireCollectionCapabilities({ db }),
+    ...wireActivityCapabilities({ db }),
+    ...wireSocialCapabilities({ db }),
+    ...wireTradeCapabilities({ db }),
+    ...wireWalletCapabilities({ db }),
+    ...wireRealCollectionCapabilities({ db }),
+    ...wireDraftCapabilities({ db }),
+    ...wireInventoryCapabilities({ db }),
+    ...wireStoreCapabilities({ db }),
+    ...wirePackCapabilities({ db }),
+    ...wireWishlistCapabilities({
+      db,
+      clock,
+      wallet,
+      wishlist,
+      findCard: (nameOrId) => findCard(db, nameOrId),
+    }),
+    ...wireAccountCapabilities({ db, clock, wallet }),
+    ...dependencies.services,
+    // The numbers in the site header, in one round trip. Showing the balance also pays any
+    // allowance that has come due (design doc 03, section 5).
+    headerSummary: async (userId: UserId) => {
+      const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
+        dependencies.services.wallet.refreshWallet(userId),
+        tradesWaitingForYou(db, userId),
+        wishesAtTarget(db, userId),
+        activeDraftOf(db, userId),
+        incomingRequestCount(db, userId),
+      ]);
+      return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
+    },
+    now: () => clock.now(),
+    youtube: dependencies.youtube,
+    reddit: dependencies.reddit,
+    // These read across modules (the game's collection, the real one, the store, the decks and
+    // the wishlist), so they are joined here rather than in one module's wiring.
     rulesLookup: makeRulesLookup({
       findCard: (query) => findCard(db, query),
       fetchRulings: (target) => outsideData.fetchScryfallRulings(target),
       searchRules: (query, limit) => lookupRules(db, textEmbedder, { query, limit }),
     }),
-    edhrec: makeEdhrecResearch({
-      fetchCommander: (commander, options) => outsideData.fetchEdhrecCommander(commander, options),
-      deckView: (userId, deckId) => deckView(db, userId, deckId),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-      ownedChecks: (userId, names) => checkOwnedCards(db, userId, names),
-    }),
-    deckCombos: makeDeckCombos({
-      fetchCombos: (mainCards, commanders) =>
-        outsideData.fetchSpellbookCombos(mainCards, commanders),
-      deckView: (userId, deckId) => deckView(db, userId, deckId),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-      ownedChecks: (userId, names) => checkOwnedCards(db, userId, names),
-    }),
-    drawSample: makeDrawSample({
-      deckView: (userId, deckId) => deckView(db, userId, deckId),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-      clock,
-    }),
-    startDeck: makeStartDeck(decks),
-    deckPlanEdits: makeDeckPlanEdits({
-      clock,
-      updateProfile: (userId, deckId, patch, now) =>
-        updateDeckProfile(db, userId, deckId, patch, now),
-      updatePrimer: (userId, deckId, input, now) =>
-        updateDeckPrimer(db, userId, deckId, input, now),
-      addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
-    }),
-    // The deck-changing commands, as the decks module's use cases (each checks its own rules).
-    deckEdits: {
-      createDeck: decks.createDeck,
-      updateDeck: decks.updateDeck,
-      deleteDeck: decks.deleteDeck,
-      importList: decks.importList,
-      replaceList: decks.replaceList,
-    },
-    deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
-    deckSignals: makeDeckSignals({
-      signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
-    }),
-    deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
     lookUpCards: makeCardLookup({
       find: (query) => findCard(db, query),
       detail: (printingId) => printingDetail(db, printingId),
@@ -198,41 +167,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       wishes: (userId, printingId) => wishesForCard(db, userId, printingId),
       storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
     }),
-    checkOwnedCards: async (request: { userId: UserId; names: readonly string[] }) =>
-      ok(await checkOwnedCards(db, request.userId, request.names)),
-    wishlistView: makeWishlistView({
-      answers: (userId) => wishlistAnswers(db, userId),
-      outlook: async (userId) => {
-        const [balance, settings] = await Promise.all([
-          wallet.refreshWallet(userId),
-          currentEconomySettings(db),
-        ]);
-        return {
-          balance,
-          allowance: settings.allowance,
-          allowancePeriodDays: settings.allowancePeriodDays,
-          nextPayday: nextPayday(
-            { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-            clock.now(),
-          ),
-        };
-      },
-    }),
-    addWishes: makeAddWishes({
-      findCard: (nameOrId) => findCard(db, nameOrId),
-      addWish: (actor, input) => wishlist.addWish(actor, input),
-    }),
-    removeWishes: makeRemoveWishes(
-      { removeWish: (actor, wishId) => wishlist.removeWish(actor, wishId) },
-      (value) => WishId.of(value),
-    ),
-    replacements: makeFindReplacements({
-      findCard: (nameOrId) => findCard(db, nameOrId),
-      similar: (userId, deckId, oracleId) => similarCards(db, userId, deckId, oracleId),
-      budget: (userId, deckId, options) => budgetReplacements(db, userId, deckId, options),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-    }),
     searchCatalog: makeSearchCatalog({
       collection: (userId, page, search) =>
         collectionPage(db, userId, { search, sections: "none", sort: "name", page }),
@@ -241,48 +175,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       store: (userId, search, page, oneRowPerCard) =>
         searchPrintings(db, { userId, search, sort: "name", page, oneRowPerCard }),
       printings: (ids) => printingCards(db, ids),
-    }),
-    deckSearch: makeDeckSearch({
-      searchForDeck: (userId, request) =>
-        searchForDeck(db, userId, {
-          deckId: request.deckId,
-          queries: request.queries,
-          where: request.where,
-          perQuery: request.perQuery,
-          maxPriceCents: request.maxPriceCents,
-        }),
-      semantic: (userId, deckId, request) =>
-        semanticSearchForDeck(db, textEmbedder, userId, deckId, request),
-      profile: async (userId, deckId) =>
-        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
-    }),
-    searchSignals: makeSearchSignals({
-      ownedCards: (userId, search) => ownedSignalCards(db, userId, search),
-    }),
-    getAccountOverview: makeGetAccountOverview({
-      refreshBalance: (userId) => wallet.refreshWallet(userId),
-      allowance: async () => {
-        const settings = await currentEconomySettings(db);
-        if (settings.allowance <= 0) return null;
-        return {
-          amountCents: settings.allowance,
-          everyDays: settings.allowancePeriodDays,
-          next: nextPayday(
-            { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-            clock.now(),
-          ),
-        };
-      },
-      collectionTotals: async (userId) => {
-        const page = await collectionPage(db, userId, { sections: "none", sort: "name", page: 1 });
-        return {
-          differentCards: page.totals.different,
-          copies: page.totals.copies,
-          valueCents: page.totals.valueCents,
-        };
-      },
-      deckCount: async (userId) => (await decksFor(db, userId)).length,
-      wishCount: async (userId) => (await wishlistAnswers(db, userId)).wishes.length,
     }),
   };
 }
