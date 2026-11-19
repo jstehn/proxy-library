@@ -11,7 +11,7 @@ import {
 } from "@/modules/drafts";
 import { readPage } from "@/server/page-instance";
 import type { Capabilities } from "@/server/capabilities";
-import { Cents, type UserId } from "@/shared/kernel";
+import { Cents, curveSlotLabel, type UserId } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "../../_components/card-tile";
@@ -42,6 +42,7 @@ import {
   type ChoiceContext,
   type LoreSources,
 } from "./pick-grid";
+
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
 
 // One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
@@ -552,9 +553,7 @@ function Picks(props: {
 const basicCount = (you: NonNullable<DraftView["you"]>) =>
   you.basicsReceived.reduce((sum, basic) => sum + basic.quantity, 0);
 
-const CURVE_LABELS = ["1", "2", "3", "4", "5", "6+"];
-
-/** A small bar chart of how many spells cost 1, 2, … 6 or more. */
+/** A small bar chart of how many spells cost 0, 1, … 7 or more. */
 function Curve(props: { counts: readonly number[] }) {
   const most = Math.max(1, ...props.counts);
   return (
@@ -567,7 +566,7 @@ function Curve(props: { counts: readonly number[] }) {
             className="w-4 rounded-sm bg-zinc-400 dark:bg-zinc-500"
             style={{ height: `${Math.max(2, (count / most) * 28)}px` }}
           />
-          <span>{CURVE_LABELS[index]}</span>
+          <span>{curveSlotLabel(index)}</span>
         </span>
       ))}
     </figure>

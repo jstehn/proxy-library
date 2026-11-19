@@ -83,7 +83,7 @@ export function CutsPanel(props: {
       keywords: profile.keywords,
       signals: profile.signals ?? deckSignalProfile([]),
       averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
-      curveCounts: profile.curveCounts ?? new Map(),
+      curveCounts: profile.curveCounts ?? [],
     };
     const cutMeta = new Map<string, SwapCutMeta>();
     const existingOracleIds = new Set<string>();

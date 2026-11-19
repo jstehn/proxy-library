@@ -41,7 +41,7 @@ describe("poolColumns and curveOf", () => {
       "{G}",
       "{4}{G}",
     ]);
-    expect(curveOf(pool, (each) => each)).toEqual([2, 0, 0, 0, 1, 1]);
+    expect(curveOf(pool, (each) => each)).toEqual([0, 2, 0, 0, 0, 1, 0, 1]);
   });
 });
 

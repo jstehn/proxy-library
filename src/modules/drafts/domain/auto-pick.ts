@@ -1,5 +1,6 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { COLORS, type Cents, type Rarity, cardTypes } from "@/shared/kernel";
+import { COLORS, type Cents, type Rarity, cardTypes, curveSlot } from "@/shared/kernel";
+
 import type { DraftCard, DraftPack } from "./draft";
 
 // Choosing a card the way a sensible drafter would (design doc 17, section 5): take the strongest
@@ -104,10 +105,8 @@ export function colorFit(facts: DraftCardFacts, top: readonly Color[], settled: 
   return 1 - 0.7 * settled;
 }
 
-/** About how many spells of each mana value a 23-spell limited deck wants (6 = six or more). */
-const IDEAL_CURVE: Readonly<Record<number, number>> = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
-
-const curveBucket = (manaValue: number) => Math.min(6, Math.max(1, Math.round(manaValue)));
+/** About how many spells of each slot of the mana curve (0 to 7+) a 23-spell limited deck wants. */
+const IDEAL_CURVE: readonly number[] = [1, 1, 6, 5, 4, 3, 1, 1];
 
 /** Small nudges for what the pool is missing: creatures, a gap in the curve, fixing. */
 function needsBonus(
@@ -122,9 +121,9 @@ function needsBonus(
     return fixesUs ? 0.3 * settled : 0;
   }
   if (isCreature(facts) && pool.filter(isCreature).length < 15) bonus += 0.2 * settled;
-  const bucket = curveBucket(facts.manaValue);
-  const sameCost = pool.filter((each) => !isLand(each) && curveBucket(each.manaValue) === bucket);
-  if (sameCost.length >= IDEAL_CURVE[bucket] + 2) bonus -= 0.2 * settled;
+  const slot = curveSlot(facts.manaValue);
+  const sameCost = pool.filter((each) => !isLand(each) && curveSlot(each.manaValue) === slot);
+  if (sameCost.length >= IDEAL_CURVE[slot] + 2) bonus -= 0.2 * settled;
   return bonus;
 }
 

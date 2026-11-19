@@ -1,4 +1,5 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
+import { manaCurve } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -9,6 +10,7 @@ import {
   type RatingProfile,
 } from "./rate";
 import { formatRules } from "./format-rules";
+
 import { deckSignalProfile, type DeckSignalProfile } from "./signals";
 import {
   deckStats,
@@ -67,7 +69,7 @@ export type DeckFingerprint = Readonly<{
   keywords: readonly string[];
   signals?: DeckSignalProfile;
   averageManaValue?: number;
-  curveCounts?: ReadonlyMap<number, number>;
+  curveCounts?: readonly number[];
 }>;
 
 /** Why a card is suggested; the builder puts these into words. */
@@ -222,11 +224,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
         quantity: line.quantity,
       })),
   );
-  const curveCounts = new Map<number, number>();
-  for (const line of spells) {
-    const bucket = Math.min(6, Math.max(0, Math.floor(line.manaValue)));
-    curveCounts.set(bucket, (curveCounts.get(bucket) ?? 0) + line.quantity);
-  }
+  const curveCounts = manaCurve(spells);
 
   const keywords = [...new Set(commanders.flatMap((line) => line.keywords ?? []))];
   return {
@@ -330,7 +328,7 @@ export function toRatingProfile(profile: DeckFingerprint): RatingProfile {
     keywords: profile.keywords,
     signals: profile.signals ?? deckSignalProfile([]),
     averageManaValue: profile.averageManaValue ?? 0,
-    curveCounts: profile.curveCounts ?? new Map(),
+    curveCounts: profile.curveCounts ?? [],
   };
 }
 

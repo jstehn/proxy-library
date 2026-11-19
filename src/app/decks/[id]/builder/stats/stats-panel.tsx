@@ -1,6 +1,6 @@
 "use client";
 import type { DeckLine } from "@/modules/decks";
-import { COLORS } from "@/shared/kernel";
+import { COLORS, curveSlotLabel } from "@/shared/kernel";
 import {
   deckStats,
   EARLY_RAMP_MAX_MV,
@@ -115,7 +115,7 @@ export function StatsPanel(props: {
         <div className="text-muted flex gap-1 text-[10px]">
           {stats.curve.map((_, manaValue) => (
             <span key={manaValue} className="flex-1 text-center">
-              {manaValue === 7 ? "7+" : manaValue}
+              {curveSlotLabel(manaValue)}
             </span>
           ))}
         </div>

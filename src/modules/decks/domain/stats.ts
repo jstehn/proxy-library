@@ -1,5 +1,13 @@
 import { cardTags, TAGS, type Tag } from "@/shared/card-search";
-import { COLORS, type ManaColor, type ManaSymbol, isLand, isCreature } from "@/shared/kernel";
+import {
+  COLORS,
+  CURVE_SLOTS,
+  curveSlot,
+  type ManaColor,
+  type ManaSymbol,
+  isLand,
+  isCreature,
+} from "@/shared/kernel";
 import { isCounted, isPlayed, type Board } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
@@ -83,8 +91,8 @@ export function colorPips(manaCost: string | null | undefined): Record<ManaColor
 
 /** Stats for what you play with: the main deck and commander, not the sideboard. */
 export function deckStats(lines: readonly StatsLine[]): DeckStats {
-  const curve = Array.from({ length: 8 }, () => 0);
-  const creatureCurve = Array.from({ length: 8 }, () => 0);
+  const curve = CURVE_SLOTS.map(() => 0);
+  const creatureCurve = CURVE_SLOTS.map(() => 0);
   const types: Record<string, number> = {};
   const pips: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0 };
   const sources: Record<ManaSource, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
@@ -123,7 +131,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
       continue;
     }
     if (produced.length > 0) otherManaSources += line.quantity;
-    const bucket = Math.min(7, Math.floor(line.manaValue));
+    const bucket = curveSlot(line.manaValue);
     curve[bucket] += line.quantity;
     if (isCreature(line.typeLine)) creatureCurve[bucket] += line.quantity;
     spells += line.quantity;
