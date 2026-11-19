@@ -1,5 +1,7 @@
 # P18. Split `decks` by responsibility
 
+> **Decision 4 answered (2026-11-19):** one `decks/` module with four responsibility subfolders (not four modules).
+
 - **Branch:** `refactor/P18-split-decks` · **Depends on:** P10–P17, **decision 4** · **Parallel with:** none (moves files everywhere)
 - **Audit:** doc 65 F1 · **Starts wave 5**
 
