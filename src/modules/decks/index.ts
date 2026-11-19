@@ -65,6 +65,18 @@ export {
   type Format,
   type Grouping,
 } from "./domain/deck";
+export {
+  makeDeckOverview,
+  type DeckOverview,
+  type DeckOverviewReaders,
+  type OverviewParts,
+} from "./application/deck-overview";
+export {
+  bracketReport,
+  listAndFingerprint,
+  problemsOfLines,
+  type BracketReport,
+} from "./domain/deck-reads";
 export { describeDeckError, type DeckError } from "./application/describe-error";
 export { MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
@@ -143,18 +155,21 @@ export {
   addDeckSource,
   decksUsing,
   listDeckSources,
-  type DeckSource,
   deckView,
   decksFor,
   type DeckRef,
   preconCommanders,
   type PreconCommanders,
-  type DeckLine,
   type DeckSummary,
-  type DeckView,
   otherDecksHolding,
-  type OtherDeckUse,
 } from "./queries/decks";
+export type {
+  DeckLine,
+  DeckSource,
+  DeckView,
+  OtherDeckUse,
+  StoredDeckProfile,
+} from "./domain/deck-view";
 export { takeCopies, type BoardCount } from "./domain/free-copies";
 export { type CutContext, type CutLine, type CutReason, type RankedCut } from "./domain/cuts";
 export {
@@ -440,9 +455,4 @@ export {
   type KeyCardPin,
   type RoleTargetKey,
 } from "./domain/deck-profile";
-export {
-  getDeckProfile,
-  updateDeckPrimer,
-  updateDeckProfile,
-  type StoredDeckProfile,
-} from "./queries/deck-profile";
+export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";

@@ -15,7 +15,8 @@ import {
 import type { CardRules } from "../domain/rules";
 import { roleTargets, suggestedLands } from "../domain/stats";
 import { decks } from "../infrastructure/schema";
-import { deckView, type DeckLine, type DeckView } from "./decks";
+import type { DeckLine, DeckView } from "../domain/deck-view";
+import { deckView } from "./decks";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the

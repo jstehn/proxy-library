@@ -11,7 +11,8 @@ import {
   VISIBILITIES,
   type Visibility,
 } from "../domain/sharing";
-import { deckView, type DeckView } from "./decks";
+import type { DeckView } from "../domain/deck-view";
+import { deckView } from "./decks";
 
 // Read models for shared decks, comments and cards to get (design doc 21, section 9).
 

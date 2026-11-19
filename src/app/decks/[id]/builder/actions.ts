@@ -9,7 +9,6 @@ import {
   browseCollection,
   budgetList,
   cardPrintings,
-  combosForDeck,
   type PrintingOption,
   type DeckCombo,
   deckSuggestions,
@@ -44,7 +43,6 @@ import {
   type OtherDeckUse,
   takeCopies,
   getDeckProfile,
-  isPlayed,
   updateDeckPrimer,
   updateDeckProfile,
   type DeckPlan,
@@ -102,25 +100,17 @@ export type BuilderDeck = Readonly<{
 /** Loads the deck for the builder. */
 export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | null> {
   const actor = await requireActor();
-  const { db } = getContainer();
-  const view = await deckView(db, actor.userId, deckId);
-  if (view === null) return null;
-  const [cards, combos] = await Promise.all([
-    printingCards(
-      db,
-      view.lines.map((line) => line.printingId),
-    ),
-    view.deck.format === "commander"
-      ? combosForDeck(
-          db,
-          view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
-        )
-      : Promise.resolve(undefined),
-  ]);
+  const result = await getContainer().capabilities.deckOverview({
+    userId: actor.userId,
+    deckId,
+    parts: { printings: true },
+  });
+  if (!result.ok) return null;
+  const { view, printings, combos } = result.value;
   return {
     lines: view.lines,
     rules: { ...view.rules },
-    cards: Object.fromEntries(cards),
+    cards: Object.fromEntries(printings ?? []),
     grouping: view.deck.grouping,
     headings: [...view.deck.headings],
     combos,

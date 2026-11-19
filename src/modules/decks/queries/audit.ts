@@ -26,7 +26,8 @@ import {
   type TargetedTag,
 } from "../domain/stats";
 import { combosForDeck } from "./combos";
-import { deckView, type DeckView } from "./decks";
+import type { DeckView } from "../domain/deck-view";
+import { deckView } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
 
 export type AuditFinding = Readonly<{

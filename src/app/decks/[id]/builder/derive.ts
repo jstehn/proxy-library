@@ -1,5 +1,5 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
-import { deckProblems, type CardRules } from "@/modules/decks/client";
+import { problemsOfLines, type CardRules } from "@/modules/decks/client";
 import { problemText } from "../../labels";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
@@ -15,25 +15,7 @@ export function problemsOf(
   lines: readonly DeckLine[],
   rules: Readonly<Record<string, CardRules>>,
 ): ProblemInWords[] {
-  // A line whose rules haven't arrived can't be checked yet; the server's answer brings them.
-  const checkable = lines.filter((line) => rules[line.oracleId] !== undefined);
-  const owned = new Map(checkable.map((line) => [line.oracleId, line.owned]));
-  const problems = deckProblems(
-    {
-      format,
-      entries: checkable.map((line) => ({
-        oracleId: line.oracleId,
-        board: line.board,
-        quantity: line.quantity,
-        printingId: null,
-        finish: null,
-        heading: null,
-        note: null,
-      })),
-    },
-    (oracleId) => rules[oracleId],
-    (oracleId) => owned.get(oracleId) ?? 0,
-  );
+  const problems = problemsOfLines(format, lines, rules);
   return problems.map((problem) => ({
     text: problemText(problem),
     name: "name" in problem ? problem.name : null,

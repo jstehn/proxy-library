@@ -1,6 +1,16 @@
 import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
-import { decksFor, makeListDecks } from "@/modules/decks";
+import { printingCards } from "@/modules/catalog";
+import {
+  combosForDeck,
+  deckTokenLines,
+  deckView,
+  decksFor,
+  getDeckProfile,
+  listDeckSources,
+  makeDeckOverview,
+  makeListDecks,
+} from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishlistAnswers } from "@/modules/wishlist";
 import type { DbExecutor } from "@/shared/db";
@@ -22,6 +32,14 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
   return {
     listDecks: makeListDecks({
       decksFor: (userId) => decksFor(db, userId),
+    }),
+    deckOverview: makeDeckOverview({
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      combosFor: (oracleIds) => combosForDeck(db, oracleIds),
+      printingCards: (printingIds) => printingCards(db, printingIds),
+      tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
+      sources: (userId, deckId) => listDeckSources(db, userId, deckId),
+      profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
     }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),

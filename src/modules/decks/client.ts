@@ -13,6 +13,7 @@ export {
   type ManaSource,
   type StatsLine,
 } from "./domain/stats";
+export { problemsOfLines } from "./domain/deck-reads";
 export { deckProfile } from "./domain/suggest";
 export { deckSignalProfile } from "./domain/signals";
 export {
