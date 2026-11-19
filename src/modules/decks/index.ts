@@ -19,27 +19,31 @@ export type {
   ApplyChangesError,
   ApplyChangesInput,
   ApplyChangesReport,
-  ChoosePrintingError,
-  ChoosePrintingInput,
-  CreateDeckError,
-  DeleteSnapshotError,
-  ImportReport,
-  OrderHeadingsError,
-  RenameHeadingError,
-  RenameHeadingInput,
-  ReplaceListError,
-  ReplaceListInput,
-  ReplaceReport,
-  RestoreSnapshotError,
-  SaveSnapshotError,
   SetEntryError,
-  SetEntryHeadingError,
-  SetEntryHeadingInput,
   SetEntryInput,
   SetEntryNoteError,
   SetEntryNoteInput,
-  UpdateDeckError,
-} from "./application/manage-decks";
+} from "./application/deck-entries";
+export type { ChoosePrintingError, ChoosePrintingInput } from "./application/deck-printings";
+export type { CreateDeckError, UpdateDeckError } from "./application/deck-lifecycle";
+export type {
+  DeleteSnapshotError,
+  RestoreSnapshotError,
+  SaveSnapshotError,
+} from "./application/deck-snapshots";
+export type {
+  ImportReport,
+  ReplaceListError,
+  ReplaceListInput,
+  ReplaceReport,
+} from "./application/deck-lists";
+export type {
+  OrderHeadingsError,
+  RenameHeadingError,
+  RenameHeadingInput,
+  SetEntryHeadingError,
+  SetEntryHeadingInput,
+} from "./application/deck-headings";
 export type {
   CardLookup,
   DeckRepository,
