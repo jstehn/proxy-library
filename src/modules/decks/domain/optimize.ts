@@ -124,7 +124,7 @@ function toRatingProfile(cards: readonly OptimizerCard[], format: Format): Ratin
     keywords: profile.keywords,
     signals: profile.signals ?? deckSignalProfile(cards.map((c) => ({ ...c, text: c.text ?? "" }))),
     averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
-    curveCounts: profile.curveCounts ?? new Map(),
+    curveCounts: profile.curveCounts ?? [],
   };
 }
 

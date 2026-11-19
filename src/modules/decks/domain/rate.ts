@@ -1,5 +1,5 @@
 import type { Tag, Theme } from "@/shared/card-search";
-import { Cents } from "@/shared/kernel";
+import { Cents, curveSlot, curveSlotLabel } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
@@ -58,7 +58,7 @@ export type RatingProfile = Readonly<{
   signals: DeckSignalProfile;
   averageManaValue: number;
   /** Non-land card counts per clamped mana-value bucket (0..6). */
-  curveCounts: ReadonlyMap<number, number>;
+  curveCounts: readonly number[];
 }>;
 
 export type RatingCandidate = Readonly<{
@@ -192,10 +192,6 @@ export function qualityPrior(
   return Math.max(0, Math.min(1, fallback / 1.6));
 }
 
-function curveBucket(manaValue: number): number {
-  return Math.min(6, Math.max(0, Math.floor(manaValue)));
-}
-
 const LIFT_EPS = 0.005;
 
 /**
@@ -315,7 +311,7 @@ function computeRatingFeatures(
   const quality = qualityPrior(card);
 
   const isHighCurve = profile.averageManaValue > formatRules(profile.format).curveGuide;
-  const bucketCount = profile.curveCounts.get(curveBucket(card.manaValue)) ?? 0;
+  const bucketCount = profile.curveCounts[curveSlot(card.manaValue)] ?? 0;
   const saturated = bucketCount >= formatRules(profile.format).roleSlotSaturation;
   const topHeavy = isHighCurve && card.manaValue >= 5 ? 1 : 0;
   const saturatedSlot = saturated ? 1 : 0;
@@ -476,7 +472,7 @@ export function rateCard(
       label:
         features.topHeavy > 0
           ? `heavy (${card.manaValue} MV in ${profile.averageManaValue.toFixed(1)} avg deck)`
-          : `crowded ${curveBucket(card.manaValue)}-MV slot`,
+          : `crowded ${curveSlotLabel(curveSlot(card.manaValue))}-MV slot`,
     });
   }
 
@@ -512,7 +508,7 @@ export function emptyRatingProfile(format: Format): RatingProfile {
     keywords: [],
     signals: deckSignalProfile([]),
     averageManaValue: 0,
-    curveCounts: new Map(),
+    curveCounts: [],
   };
 }
 

@@ -311,3 +311,19 @@ describe("Commander Spellbook combo partner scoring", () => {
     expect(casual).toBeNull();
   });
 });
+
+describe("deckProfile curve", () => {
+  it("counts spells in the one mana curve's slots, 0 to 7+, without lands", () => {
+    const profile = deckProfile(
+      [
+        line({ manaValue: 1, quantity: 2 }),
+        line({ manaValue: 6 }),
+        line({ manaValue: 7 }),
+        line({ manaValue: 12, quantity: 2 }),
+        line({ manaValue: 0, typeLine: "Land" }),
+      ],
+      "commander",
+    );
+    expect(profile.curveCounts).toEqual([0, 2, 0, 0, 0, 0, 1, 3]);
+  });
+});

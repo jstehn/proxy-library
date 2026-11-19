@@ -498,3 +498,27 @@ describe("draftDeck properties", () => {
     expect(draft.totalAfterDraft).toBe(60);
   });
 });
+
+describe("draftDeck curve smoothing uses the one mana curve (0 to 7+)", () => {
+  it("fills the curve slot by slot and names the slot in each reason", () => {
+    const draft = runDraft({
+      candidates: [
+        ...manyCandidates(40, { manaValue: 2 }, "Two"),
+        ...manyCandidates(40, { manaValue: 6 }, "Six"),
+        ...manyCandidates(40, { manaValue: 9 }, "Nine"),
+      ],
+    });
+    const curvePicks = draft.spells.filter((spell) => spell.section === "curve");
+    expect(curvePicks.length).toBeGreaterThan(0);
+    for (const spell of curvePicks) {
+      expect(spell.reasons).toEqual([{ kind: "curve", slot: Math.min(7, spell.manaValue) }]);
+    }
+    // The 6-drops and the 9-drops (slot 7+) fill separate slots with their own shares (5% / 2%).
+    const slotCount = (slot: number) =>
+      curvePicks
+        .filter((spell) => Math.min(7, spell.manaValue) === slot)
+        .reduce((sum, spell) => sum + spell.quantity, 0);
+    expect(slotCount(2)).toBeGreaterThan(slotCount(6));
+    expect(slotCount(6)).toBeGreaterThan(slotCount(7));
+  });
+});

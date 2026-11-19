@@ -14,6 +14,7 @@ import {
   type RatingCandidate,
   type RatingProfile,
 } from "./rate";
+import { formatRules } from "./format-rules";
 import { deckSignalProfile } from "./signals";
 
 const emptyProfile: RatingProfile = {
@@ -24,7 +25,7 @@ const emptyProfile: RatingProfile = {
   keywords: [],
   signals: deckSignalProfile([]),
   averageManaValue: 3.1,
-  curveCounts: new Map(),
+  curveCounts: [],
 };
 
 const baseCard: RatingCandidate = {
@@ -237,5 +238,25 @@ describe("edhrecLogLift & staple protection", () => {
     const edhrecParts = staple.parts.filter((p) => p.kind === "edhrec");
     expect(edhrecParts.some((p) => p.contribution > 0 && p.label.includes("inclusion"))).toBe(true);
     expect(edhrecParts.every((p) => p.contribution >= 0)).toBe(true);
+  });
+});
+
+describe("the crowded-slot penalty reads the one mana curve (0 to 7+)", () => {
+  const crowdedAt = (slot: number) => {
+    const counts = [0, 0, 0, 0, 0, 0, 0, 0];
+    counts[slot] = formatRules("commander").roleSlotSaturation;
+    return { ...emptyProfile, curveCounts: counts };
+  };
+  const crowdedLabel = (manaValue: number, profile: RatingProfile) =>
+    rateCard({ ...baseCard, manaValue }, profile).parts.find((part) => part.kind === "curvePenalty")
+      ?.label;
+
+  it("penalizes a six-drop when the six slot is full, but not a seven-drop", () => {
+    expect(crowdedLabel(6, crowdedAt(6))).toBe("crowded 6-MV slot");
+    expect(crowdedLabel(7, crowdedAt(6))).toBeUndefined();
+  });
+
+  it("calls the last slot 7+ and puts every bigger card in it", () => {
+    expect(crowdedLabel(9, crowdedAt(7))).toBe("crowded 7+-MV slot");
   });
 });

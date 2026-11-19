@@ -1,4 +1,5 @@
 import { cardTags, type Tag, type Theme } from "@/shared/card-search";
+import { curveSlot, manaCurve } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
@@ -23,9 +24,7 @@ import {
 
 export type DraftSection = "role" | "plan" | "curve";
 
-export type CurveBucket = "1-2" | "3" | "4" | "5+";
-
-export type DraftReason = Reason | Readonly<{ kind: "curve"; bucket: CurveBucket }>;
+export type DraftReason = Reason | Readonly<{ kind: "curve"; slot: number }>;
 
 export type DraftCandidate = CandidateCard &
   Readonly<{
@@ -110,22 +109,13 @@ type DraftEntry = Readonly<{
   line: ProfileLine;
 }>;
 
-/** Ideal proportions of non-land spells across mana value buckets when smoothing the curve. */
-const CURVE_BUCKET_SHARES: Readonly<Record<CurveBucket, number>> = {
-  "1-2": 0.35,
-  "3": 0.28,
-  "4": 0.2,
-  "5+": 0.17,
-};
+/**
+ * Ideal proportions of non-land spells in each slot of the mana curve (0 to 7+) when smoothing it.
+ * They add up to 1.
+ */
+const CURVE_SLOT_SHARES: readonly number[] = [0.02, 0.13, 0.2, 0.28, 0.2, 0.1, 0.05, 0.02];
 
 const STORE_PRICE_FLOOR_CENTS = 25;
-
-function curveBucket(manaValue: number): CurveBucket {
-  if (manaValue <= 2) return "1-2";
-  if (manaValue === 3) return "3";
-  if (manaValue === 4) return "4";
-  return "5+";
-}
 
 const ANY_NUMBER_NAMED = /a deck can have any number of cards named/i;
 
@@ -239,41 +229,41 @@ function compareStoreFit(
 }
 
 /**
- * Pick the next card to smooth the mana curve: favors buckets furthest below CURVE_BUCKET_SHARES.
+ * Pick the next card to smooth the mana curve: favors slots furthest below CURVE_SLOT_SHARES.
  */
 function pickCurveCandidate(
   pool: readonly DraftCandidate[],
   hasRoom: (candidate: DraftCandidate) => boolean,
-  bucketCounts: Readonly<Record<CurveBucket, number>>,
+  slotCounts: readonly number[],
   totalSpells: number,
   preferCheaperPrice: boolean,
-): { candidate: DraftCandidate; bucket: CurveBucket; score: number } | null {
-  let best: { candidate: DraftCandidate; bucket: CurveBucket; score: number } | null = null;
+): { candidate: DraftCandidate; slot: number; score: number } | null {
+  let best: { candidate: DraftCandidate; slot: number; score: number } | null = null;
   const denominator = Math.max(1, totalSpells);
 
   for (const candidate of pool) {
     if (!hasRoom(candidate)) continue;
-    const bucket = curveBucket(candidate.manaValue);
-    const currentShare = bucketCounts[bucket] / denominator;
-    const deficit = CURVE_BUCKET_SHARES[bucket] - currentShare;
+    const slot = curveSlot(candidate.manaValue);
+    const currentShare = slotCounts[slot] / denominator;
+    const deficit = CURVE_SLOT_SHARES[slot] - currentShare;
     const cardStrength = strength(candidate);
     const score = deficit * 2 + cardStrength;
 
     if (best === null) {
-      best = { candidate, bucket, score };
+      best = { candidate, slot, score };
       continue;
     }
 
-    const bucketDeficitDiff =
-      CURVE_BUCKET_SHARES[bucket] -
-      bucketCounts[bucket] / denominator -
-      (CURVE_BUCKET_SHARES[best.bucket] - bucketCounts[best.bucket] / denominator);
+    const slotDeficitDiff =
+      CURVE_SLOT_SHARES[slot] -
+      slotCounts[slot] / denominator -
+      (CURVE_SLOT_SHARES[best.slot] - slotCounts[best.slot] / denominator);
 
-    if (preferCheaperPrice && Math.abs(bucketDeficitDiff) < 0.05) {
+    if (preferCheaperPrice && Math.abs(slotDeficitDiff) < 0.05) {
       const priceDiff =
         effectiveStorePrice(candidate.priceCents) - effectiveStorePrice(best.candidate.priceCents);
       if (priceDiff !== 0) {
-        if (priceDiff < 0) best = { candidate, bucket, score };
+        if (priceDiff < 0) best = { candidate, slot, score };
         continue;
       }
     }
@@ -287,7 +277,7 @@ function pickCurveCandidate(
               (candidate.name === best.candidate.name &&
                 candidate.oracleId.localeCompare(best.candidate.oracleId) < 0)))))
     ) {
-      best = { candidate, bucket, score };
+      best = { candidate, slot, score };
     }
   }
 
@@ -412,19 +402,8 @@ export function draftDeck(input: DraftInput): DeckDraft {
   let draftedCopiesCount = 0;
   const addedByOracle = new Map<string, number>();
   const roleCounts: Record<TargetedTag, number> = { ...existingRoles };
-  const bucketCounts: Record<CurveBucket, number> = {
-    "1-2": 0,
-    "3": 0,
-    "4": 0,
-    "5+": 0,
-  };
-  let totalSpellsCount = 0;
-
-  for (const line of playedLines) {
-    if (isLand(line.typeLine)) continue;
-    bucketCounts[curveBucket(line.manaValue)] += line.quantity;
-    totalSpellsCount += line.quantity;
-  }
+  const slotCounts = manaCurve(playedLines);
+  let totalSpellsCount = slotCounts.reduce((sum, count) => sum + count, 0);
 
   const headroomFor = (candidate: DraftCandidate) =>
     remainingCopyRoom(candidate, addedByOracle.get(candidate.oracleId) ?? 0);
@@ -464,7 +443,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
     drafted.push({ spell, candidate, line });
     addedByOracle.set(candidate.oracleId, (addedByOracle.get(candidate.oracleId) ?? 0) + qty);
     draftedCopiesCount += qty;
-    bucketCounts[curveBucket(candidate.manaValue)] += qty;
+    slotCounts[curveSlot(candidate.manaValue)] += qty;
     totalSpellsCount += qty;
     for (const tag of TARGETED_TAGS) {
       if (candidate.roles.includes(tag)) {
@@ -592,13 +571,13 @@ export function draftDeck(input: DraftInput): DeckDraft {
 
   // Step D: Owned curve-smoothing playable spells.
   while (draftedCopiesCount < maxNewSpells) {
-    const pick = pickCurveCandidate(ownedPool, hasHeadroom, bucketCounts, totalSpellsCount, false);
+    const pick = pickCurveCandidate(ownedPool, hasHeadroom, slotCounts, totalSpellsCount, false);
     if (pick === null) break;
     recordPick(
       pick.candidate,
       "curve",
       pick.score,
-      [{ kind: "curve", bucket: pick.bucket }],
+      [{ kind: "curve", slot: pick.slot }],
       headroomFor(pick.candidate),
     );
   }
@@ -629,13 +608,13 @@ export function draftDeck(input: DraftInput): DeckDraft {
     }
 
     while (draftedCopiesCount < maxNewSpells) {
-      const pick = pickCurveCandidate(storePool, hasHeadroom, bucketCounts, totalSpellsCount, true);
+      const pick = pickCurveCandidate(storePool, hasHeadroom, slotCounts, totalSpellsCount, true);
       if (pick === null) break;
       recordPick(
         pick.candidate,
         "curve",
         pick.score,
-        [{ kind: "curve", bucket: pick.bucket }],
+        [{ kind: "curve", slot: pick.slot }],
         headroomFor(pick.candidate),
       );
     }

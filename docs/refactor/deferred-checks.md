@@ -100,3 +100,13 @@ of old and new tool output.
 - [ ] **Look at the builder's stats panel and test hand in a Commander deck and a Limited deck
       (P10):** cards "n / 100" and "n / 40", the sideboard line only in 60-card formats, the role
       guide text, a free first mulligan only in Commander, no "Draft deck" button in Limited.
+
+## Left by P16 (one mana curve)
+
+- [ ] **Look at the draft page's pool curve (P16):** the little bar chart under "Your pool" now has
+      eight bars, labelled 0 to 7+ (it had six, 1 to 6+). Check it in dark mode and at phone width.
+- [ ] **Open a "Draft a deck" result and read the curve reasons (P16):** each curve pick says "3 mana
+      curve slot", and the last says "7+ mana curve slot" (the old text was "1-2", "3", "4", "5+").
+- [ ] **Play a short draft against the bots (P16):** the drafter now counts curve slots 0 to 7+ by
+      rounding down, so its picks can differ a little from before. Nothing here is a bug; check they
+      still look sensible.

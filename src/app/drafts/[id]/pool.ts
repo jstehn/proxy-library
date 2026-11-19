@@ -1,7 +1,7 @@
 // Sorting your picks while you draft: by color, with a mana curve, the way players lay out their
 // cards on the table. Pure, from what the card faces print.
 
-import { isLand } from "@/shared/kernel";
+import { CURVE_SLOTS, curveSlot, isLand } from "@/shared/kernel";
 
 export type FaceFacts = Readonly<{ manaCost: string | null; typeLine: string }>;
 
@@ -71,17 +71,17 @@ export function poolColumns<Card>(
   })).filter((group) => group.cards.length > 0);
 }
 
-/** How many non-land cards cost 0–1, 2, 3, 4, 5 and 6 or more. */
+/** How many non-land cards sit in each slot of the mana curve, 0 to 7+. */
 export function curveOf<Card>(
   cards: readonly Card[],
   faceOf: (card: Card) => FaceFacts | undefined,
 ): number[] {
-  const counts = [0, 0, 0, 0, 0, 0];
+  const counts = CURVE_SLOTS.map(() => 0);
   for (const card of cards) {
     const face = faceOf(card);
     if (face === undefined || isLand(face.typeLine)) continue;
     const value = manaValueOf(face.manaCost);
-    counts[Math.min(5, Math.max(0, value - 1))] += 1;
+    counts[curveSlot(value)] += 1;
   }
   return counts;
 }

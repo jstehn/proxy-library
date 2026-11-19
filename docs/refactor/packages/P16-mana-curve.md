@@ -29,4 +29,31 @@ use it), `app/decks/[id]/builder/stats/stats-panel.tsx` (moved by P19).
 
 ## Handoff
 
-(empty)
+**Done.** One curve (decision 2): `curveSlot`, `curveSlotLabel`, `manaCurve`, `CURVE_SLOTS` in
+`src/shared/kernel/mana-curve.ts` (not `decks/domain/`: the drafts domain may not import the decks
+module, and both need it; ESLint refused `drafts/domain` importing `decks/client`). All four
+`curveBucket` functions are gone (`grep -rn curveBucket src | grep -v test` finds nothing).
+
+**Intended differences** (decision 2):
+
+- Rating (`rate.ts`): curve slots 0 to 7+ instead of 0 to 6. A 7-drop is no longer "crowded" because
+  the 6-drops are: with 20 six-drops in a Commander deck, a 7-drop lost the saturation penalty;
+  the label for a card of 7 or more reads "crowded 7+-MV slot". `curveCounts` is now a number
+  array (8 slots), not a Map.
+- Drafter (`auto-pick.ts`): rounds down (2.5 is a 2-drop, was 3); 0-drops are slot 0 (were slot
+  1); 6 and 7+ are separate slots. `IDEAL_CURVE` is now `[1, 1, 6, 5, 4, 3, 1, 1]` (the old 6+ target
+  of 2 is split 1 and 1).
+- Draft a deck (`draft-deck.ts`): the four buckets became eight slots with shares
+  `[.02, .13, .20, .28, .20, .10, .05, .02]`; the old "1-2" (.35) and "5+" (.17) totals are kept.
+  The reason on a curve pick is `{ kind: "curve", slot }` (was `bucket: "1-2" | ...`), worded
+  "3 mana curve slot" / "7+ mana curve slot".
+- Drafts page pool chart: eight bars, 0 to 7+ (was six, 1 to 6+).
+- Deck profile (`suggest.ts`): `curveCounts` has slot 7 (was capped at 6).
+
+**Product choice to confirm:** the eight draft-a-deck shares are mine (the user decided the
+buckets, not the numbers).
+
+**Not done / notes:** no screenshots (see deferred-checks). Sizes: source lines 92,917 to 92,945
+(+28, including 42 new lines of curve code and tests count separately: test lines 36,476 to
+36,618); the −50 to −100 estimate did not materialize because the old copies were small and the
+eight-slot tables are longer than the four-bucket one.
