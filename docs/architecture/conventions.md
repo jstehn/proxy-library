@@ -108,6 +108,11 @@ over the clever one.
 - Keep functions short and at one level of abstraction. If it needs a comment to separate its
   "sections", extract them.
 - No boolean flag parameters. Use an options object with named fields, or two functions.
+- **Formats are a table, not a comparison.** How formats differ lives only in
+  `decks/domain/format-rules.ts` (`FORMAT_RULES`, `satisfies Record<Format, FormatRuleSet>`). Ask
+  `formatRules(format).hasCommandZone` (browser code: from `@/modules/decks/client`), never
+  `format === "commander"`; lint forbids the comparison. A new question is a new field, which will not
+  compile until every format answers it.
 
 ## Data and I/O
 

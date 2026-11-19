@@ -1,10 +1,8 @@
 // The decks module's browser-safe public API (ADR 0016): pure domain code for client components.
 // Server code imports index.ts instead.
 export {
-  roleTargets,
   TARGETED_TAGS,
   type TargetedTag,
-  deckSize,
   deckStats,
   isLand,
   mainType,
@@ -13,6 +11,12 @@ export {
   type ManaSource,
   type StatsLine,
 } from "./domain/stats";
+export {
+  formatRules,
+  type DeckSize,
+  type FormatRuleSet,
+  type RoleTargets,
+} from "./domain/format-rules";
 export { problemsOfLines } from "./domain/deck-reads";
 export { deckProfile } from "./domain/suggest";
 export { deckSignalProfile } from "./domain/signals";
@@ -91,11 +95,9 @@ export { BOARDS, isCounted, type Board } from "./domain/boards";
 export {
   copyLimitFor,
   deckProblems,
-  formatRulesSummary,
   type CardRules,
   type DeckProblem,
   type DeckToCheck,
-  type FormatRulesSummary,
 } from "./domain/rules";
 export {
   EARLY_RAMP_MAX_MV,

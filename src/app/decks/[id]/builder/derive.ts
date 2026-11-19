@@ -1,5 +1,5 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
-import { problemsOfLines, type CardRules } from "@/modules/decks/client";
+import { formatRules, problemsOfLines, type CardRules } from "@/modules/decks/client";
 import { problemText } from "@/app/decks/labels";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
@@ -34,7 +34,7 @@ export function commanderColorsOf(
   rules: Readonly<Record<string, CardRules>>,
 ): ManaColor[] | null {
   const commanders = lines.filter((line) => line.board === "commander");
-  if (format !== "commander" || commanders.length === 0) return null;
+  if (!formatRules(format).usesColorIdentity || commanders.length === 0) return null;
   const colors = new Set(commanders.flatMap((line) => rules[line.oracleId]?.colorIdentity ?? []));
   return COLORS.filter((color) => colors.has(color));
 }

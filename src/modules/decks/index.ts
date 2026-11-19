@@ -70,14 +70,14 @@ export {
 } from "./domain/list-format";
 export {
   deckProblems,
-  formatRulesSummary,
   invalidCommanders,
   legalFormatsForCards,
   pairProblem,
   type CardRules,
   type DeckProblem,
 } from "./domain/rules";
-export { colorPips, deckStats, roleTargets } from "./domain/stats";
+export { colorPips, deckStats } from "./domain/stats";
+export { formatRules, type FormatRuleSet } from "./domain/format-rules";
 export {
   bracketLine,
   bracketWarning,

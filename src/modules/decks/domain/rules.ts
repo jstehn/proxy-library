@@ -1,7 +1,8 @@
 import { isCreature } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 import { isCounted, isPlayed } from "./boards";
-import type { Deck, DeckEntry, Format } from "./deck";
+import { FORMATS, type Deck, type DeckEntry, type Format } from "./deck";
+import { formatRules } from "./format-rules";
 
 // What's wrong with a deck (design doc 09, rules 1–5). Pure: the caller supplies what the rules
 // need to know about each card, and how many copies the player owns. Problems are reported, never
@@ -37,26 +38,6 @@ export type DeckProblem =
   | Readonly<{ kind: "CommanderInvalid"; name: string }>
   | Readonly<{ kind: "CommandersCantPair"; names: readonly [string, string] }>
   | Readonly<{ kind: "OutsideColorIdentity"; name: string }>;
-
-/** Each format's shape, in one table (the Strategy idea, as data). */
-type FormatRules =
-  | Readonly<{ kind: "casual" }>
-  | Readonly<{ kind: "constructed"; minimum: number; sideboard: number; copies: number }>
-  | Readonly<{ kind: "commander"; size: number }>
-  | Readonly<{ kind: "limited"; minimum: number }>;
-
-const FORMAT_RULES: Record<Format, FormatRules> = {
-  casual: { kind: "casual" },
-  standard: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  pioneer: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  modern: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  legacy: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  vintage: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  pauper: { kind: "constructed", minimum: 60, sideboard: 15, copies: 4 },
-  commander: { kind: "commander", size: 100 },
-  // Draft and sealed: 40 cards, as many copies as you opened, any card (design doc 17).
-  limited: { kind: "limited", minimum: 40 },
-};
 
 /** Cards with no copy limit: basic lands, and "A deck can have any number of cards named …". */
 function isUnlimited(card: Pick<CardRules, "isBasicLand" | "text">): boolean {
@@ -286,77 +267,31 @@ function countedCardProblems(
 ): DeckProblem[] {
   const copies = copiesByCard(deck.entries);
   const problems = ownershipProblems(copies, rules, owned);
-  const format = FORMAT_RULES[deck.format];
+  const format = formatRules(deck.format);
 
-  switch (format.kind) {
-    case "casual":
-      return problems;
-    case "constructed": {
-      const main = count(deck.entries.filter((entry) => isPlayed(entry.board)));
-      const side = count(deck.entries.filter((entry) => entry.board === "side"));
-      if (main < format.minimum)
-        problems.push({ kind: "TooFewCards", minimum: format.minimum, count: main });
-      if (side > format.sideboard) {
-        problems.push({ kind: "SideboardTooBig", maximum: format.sideboard, count: side });
-      }
-      problems.push(...copyLimitProblems(copies, rules, format.copies));
-      problems.push(...legalityProblems(deck.format, copies, rules));
-      return problems;
+  if (format.hasCommandZone) {
+    problems.push(...commanderProblems(deck, rules, format.deckSize.cards));
+  } else if (format.reportsShortDeck) {
+    const main = count(
+      deck.entries.filter(
+        (entry) =>
+          isPlayed(entry.board) &&
+          // Conspiracies start the game in the command zone, not the deck (CR 905.4).
+          !(format.conspiraciesLeaveDeck && /\bConspiracy\b/.test(rules(entry.oracleId).typeLine)),
+      ),
+    );
+    const minimum = format.deckSize.cards;
+    if (main < minimum) problems.push({ kind: "TooFewCards", minimum, count: main });
+    const side = count(deck.entries.filter((entry) => entry.board === "side"));
+    if (format.sideboardSize !== null && side > format.sideboardSize) {
+      problems.push({ kind: "SideboardTooBig", maximum: format.sideboardSize, count: side });
     }
-    case "limited": {
-      // Conspiracies start the game in the command zone, not the deck (CR 905.4).
-      const main = count(
-        deck.entries.filter(
-          (entry) =>
-            isPlayed(entry.board) && !/\bConspiracy\b/.test(rules(entry.oracleId).typeLine),
-        ),
-      );
-      if (main < format.minimum)
-        problems.push({ kind: "TooFewCards", minimum: format.minimum, count: main });
-      return problems;
-    }
-    case "commander":
-      problems.push(...commanderProblems(deck, rules, format.size));
-      problems.push(...copyLimitProblems(copies, rules, 1));
-      problems.push(...legalityProblems(deck.format, copies, rules));
-      return problems;
   }
-}
-
-const CONSTRUCTED_60_FORMATS = [
-  "standard",
-  "pioneer",
-  "modern",
-  "legacy",
-  "vintage",
-  "pauper",
-] as const satisfies readonly Format[];
-
-export type FormatRulesSummary = Readonly<{
-  minMainCards: number;
-  exactSize: boolean;
-  maxCopies: number | null;
-  maxSideboard: number | null;
-}>;
-
-/** Size, copy-limit, and sideboard constraints for a format (null when unconstrained). */
-export function formatRulesSummary(format: string): FormatRulesSummary {
-  const rules = format in FORMAT_RULES ? FORMAT_RULES[format as Format] : FORMAT_RULES.casual;
-  switch (rules.kind) {
-    case "casual":
-      return { minMainCards: 60, exactSize: false, maxCopies: null, maxSideboard: null };
-    case "constructed":
-      return {
-        minMainCards: rules.minimum,
-        exactSize: false,
-        maxCopies: rules.copies,
-        maxSideboard: rules.sideboard,
-      };
-    case "commander":
-      return { minMainCards: rules.size, exactSize: true, maxCopies: 1, maxSideboard: null };
-    case "limited":
-      return { minMainCards: rules.minimum, exactSize: false, maxCopies: null, maxSideboard: null };
+  if (format.copyLimit !== null) {
+    problems.push(...copyLimitProblems(copies, rules, format.copyLimit));
   }
+  if (format.legalityChecked) problems.push(...legalityProblems(deck.format, copies, rules));
+  return problems;
 }
 
 /**
@@ -368,24 +303,28 @@ export function copyLimitFor(
   card?: Pick<CardRules, "isBasicLand" | "text" | "legalities">,
 ): number | null {
   if (card !== undefined && isUnlimited(card)) return null;
-  const maxCopies = formatRulesSummary(format).maxCopies;
+  const maxCopies = formatRules(format).copyLimit;
   if (maxCopies === null) return null;
   if (card !== undefined && card.legalities[format] === "restricted") return 1;
   return maxCopies;
 }
 
 /**
- * All 60-card constructed formats (`CONSTRUCTED_60_FORMATS`) in which the deck's current counted
+ * All 60-card constructed formats (those that check legality and have no command zone) in which the deck's current counted
  * cards pass card legality and copy-limit rules (irrespective of unfinished main-deck size).
  */
 export function legalFormatsForCards(deck: DeckToCheck, rules: RulesLookup): Format[] {
   const counted = deck.entries.filter((entry) => isCounted(entry.board));
   const copies = copiesByCard(counted);
-  return CONSTRUCTED_60_FORMATS.filter(
-    (format) =>
+  return FORMATS.filter((format) => {
+    const constructed = formatRules(format);
+    return (
+      constructed.legalityChecked &&
+      !constructed.hasCommandZone &&
       legalityProblems(format, copies, rules).length === 0 &&
-      copyLimitProblems(copies, rules, 4).length === 0,
-  );
+      copyLimitProblems(copies, rules, constructed.plannedCopyLimit).length === 0
+    );
+  });
 }
 
 /** How many cards short a deck is, in total (for the "short 3" badge). */

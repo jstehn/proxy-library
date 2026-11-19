@@ -27,10 +27,9 @@ Added in P09d:
 
 ## Duplicates to fold
 
-| What                                                                                 | Where                               | Remove in  |
-| ------------------------------------------------------------------------------------ | ----------------------------------- | ---------- |
-| `startDeckAction` repeats `startDeck`'s create-and-import (adds `usesRealCards`)     | `app/decks/commanders/actions.ts`   | P11 or P19 |
-| `ListPreviewSummary` mapping (presentation of a capability's answer, about 70 lines) | `app/decks/edit-as-text/actions.ts` | P10 or P19 |
+| What                                                                             | Where                             | Remove in  |
+| -------------------------------------------------------------------------------- | --------------------------------- | ---------- |
+| `startDeckAction` repeats `startDeck`'s create-and-import (adds `usesRealCards`) | `app/decks/commanders/actions.ts` | P11 or P19 |
 
 ## Dead-code candidates (used only by tests; confirm with the user whether the feature is dead)
 

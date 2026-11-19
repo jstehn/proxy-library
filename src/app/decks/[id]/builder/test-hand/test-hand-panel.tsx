@@ -7,6 +7,7 @@ import {
   EARLY_RAMP_MAX_MV,
   library,
   nextHand,
+  formatRules,
   openingHandOdds,
   startHand,
   type LibraryCard,
@@ -30,10 +31,11 @@ export function TestHandPanel(props: {
   // Each shuffle gets its own seed: the page's seed and a running count.
   const shuffles = useRef(0);
   const nextRng = () => seededRng(`${props.seed}:${shuffles.current++}`);
-  const [freeMulligan, setFreeMulligan] = useState(props.format === "commander");
+  const freeFirstMulligan = formatRules(props.format).freeFirstMulligan;
+  const [freeMulligan, setFreeMulligan] = useState(freeFirstMulligan);
   const [onTheDraw, setOnTheDraw] = useState(false);
   const [hand, setHand] = useState<TestHand>(() =>
-    startHand(cards, seededRng(`${props.seed}:start`), props.format === "commander"),
+    startHand(cards, seededRng(`${props.seed}:start`), freeFirstMulligan),
   );
 
   /** A fresh hand from the deck as it is now (cards may have changed since the last one). */

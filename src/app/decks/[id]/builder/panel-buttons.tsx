@@ -1,6 +1,7 @@
 "use client";
 import type { Dispatch } from "react";
 import type { Format } from "@/modules/decks";
+import { formatRules } from "@/modules/decks/client";
 import type { BuilderAction, PanelName } from "./builder-state";
 
 // The row of buttons that open and close the builder's panels (design doc 14, section 2.4).
@@ -41,7 +42,7 @@ export function PanelButtons(props: {
   const draftButton: PanelButton = { panel: "draft", label: draftLabel, hideLabel: "Hide draft" };
   const buttons = [
     ...BUTTONS_BEFORE_DRAFT,
-    ...(props.format !== "limited" ? [draftButton] : []),
+    ...(formatRules(props.format).canDraftDeck ? [draftButton] : []),
     ...BUTTONS_AFTER_DRAFT,
   ];
 

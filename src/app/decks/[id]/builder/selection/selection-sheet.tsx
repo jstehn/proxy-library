@@ -1,7 +1,7 @@
 "use client";
 import type { Dispatch } from "react";
 import type { Format, SuggestionCard } from "@/modules/decks";
-import { copyLimitFor } from "@/modules/decks/client";
+import { copyLimitFor, formatRules } from "@/modules/decks/client";
 import {
   copiesOnBoards,
   type BuilderAction,
@@ -56,7 +56,7 @@ export function SelectionSheet(props: {
         onAdd={changes.add}
         copyLimit={selectedCopyLimit}
         deckId={props.deckId}
-        isCommanderDeck={props.format === "commander"}
+        isCommanderDeck={formatRules(props.format).usesColorIdentity}
         onClose={() => dispatch({ type: "selectionCleared" })}
         similar={props.similar?.oracleId === selection.oracleId ? props.similar.list : null}
         onShowSimilar={() => props.selecting.showSimilar(selection.oracleId)}

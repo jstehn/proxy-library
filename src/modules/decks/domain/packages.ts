@@ -1,4 +1,5 @@
 import type { Format } from "./deck";
+import { formatRules } from "./format-rules";
 
 export type PackageEntrySpec = Readonly<{
   oracleId: string;
@@ -38,13 +39,13 @@ export type PackageInsertPlan = Readonly<{
 }>;
 
 function maxCopiesFor(format: Format, isBasicLand: boolean): number {
-  if (isBasicLand || format === "limited") return 99;
-  if (format === "commander") return 1;
-  return 4;
+  const rules = formatRules(format);
+  if (isBasicLand || rules.buildsFromOwnedPool) return 99;
+  return rules.plannedCopyLimit;
 }
 
 function isLegalInFormat(legalities: Readonly<Record<string, string>>, format: Format): boolean {
-  if (format === "casual" || format === "limited") return true;
+  if (!formatRules(format).legalityChecked) return true;
   const status = legalities[format];
   return status === "legal" || status === "restricted";
 }
@@ -78,7 +79,7 @@ export function planPackageInsert(
     }
 
     if (
-      format === "commander" &&
+      formatRules(format).usesColorIdentity &&
       identitySet !== null &&
       entry.colorIdentity.some((c) => !identitySet.has(c))
     ) {

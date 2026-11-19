@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { latestPriceRows, textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
+import { formatRules } from "../domain/format-rules";
 import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
 
 // The two halves of "cards you could add" (audit S2, decision of 2026-11-19): what you own, one
@@ -79,4 +80,11 @@ export function cheapestOfCards(
                          and ${filter} and ${notOwned(userId, withReal)}) wanted
                 join lateral ${cheapestForSale(sql`wanted.oracle_id`)} best on true
                where ${cheaper})`;
+}
+
+/** A printing `p` that is legal in the format (formats that don't check legality accept any card). */
+export function legalInFormat(format: string): SQL {
+  return formatRules(format).legalityChecked
+    ? sql`coalesce(p.legalities->>${format}, 'legal') in ('legal', 'restricted')`
+    : sql`true`;
 }

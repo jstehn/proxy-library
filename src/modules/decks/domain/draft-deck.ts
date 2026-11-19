@@ -2,7 +2,8 @@ import { cardTags, type Tag, type Theme } from "@/shared/card-search";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
-import { deckSize, deckStats, isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { FORMAT_RULES, formatRules } from "./format-rules";
+import { deckStats, isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import {
   deckProfile,
   scoreForDeck,
@@ -109,13 +110,6 @@ type DraftEntry = Readonly<{
   line: ProfileLine;
 }>;
 
-const DEFAULT_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
-  ramp: 10,
-  draw: 10,
-  removal: 8,
-  wipe: 3,
-};
-
 /** Ideal proportions of non-land spells across mana value buckets when smoothing the curve. */
 const CURVE_BUCKET_SHARES: Readonly<Record<CurveBucket, number>> = {
   "1-2": 0.35,
@@ -137,9 +131,9 @@ const ANY_NUMBER_NAMED = /a deck can have any number of cards named/i;
 
 function candidateCopyLimit(candidate: DraftCandidate, format: Format): number {
   if (ANY_NUMBER_NAMED.test(candidate.text)) return 99;
-  if (format === "commander" || candidate.isRestricted) return 1;
-  if (format === "limited") return 99;
-  return 4;
+  const rules = formatRules(format);
+  if (rules.plannedCopyLimit === 1 || candidate.isRestricted) return 1;
+  return rules.buildsFromOwnedPool ? 99 : rules.plannedCopyLimit;
 }
 
 function toProfileLine(candidate: DraftCandidate, quantity = 1): ProfileLine {
@@ -307,13 +301,13 @@ function pickCurveCandidate(
  */
 export function draftDeck(input: DraftInput): DeckDraft {
   const includeStore = input.options?.includeStore ?? "fill-gaps";
-  const targetTotal = deckSize(input.format).cards;
+  const targetTotal = formatRules(input.format).deckSize.cards;
   const playedLines = input.lines.filter((line) => isPlayed(line.board));
   const initialStats = deckStats(playedLines);
   const existingCount = initialStats.cardCount;
   const existingLands = initialStats.lands;
 
-  const baseTargets = roleTargets(input.format) ?? DEFAULT_ROLE_TARGETS;
+  const baseTargets = formatRules(input.format).roleTargets ?? FORMAT_RULES.commander.roleTargets;
   const targets: Record<TargetedTag, number> = {
     ramp: Math.max(0, input.options?.roleTargets?.ramp ?? baseTargets.ramp),
     draw: Math.max(0, input.options?.roleTargets?.draw ?? baseTargets.draw),
@@ -648,7 +642,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
   }
 
   // Reconcile spell count with planManaBase so commanders + spells + lands = targetTotal.
-  const landCap = input.format === "commander" ? 1 : 4;
+  const landCap = formatRules(input.format).plannedCopyLimit;
   const availableOwnedNonBasics = input.ownedLands
     .filter((land) => !land.isBasicLand)
     .reduce((sum, land) => {

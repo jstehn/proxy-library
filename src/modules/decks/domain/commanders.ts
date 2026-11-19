@@ -9,7 +9,8 @@ import {
   type DeckFingerprint,
   type Scored,
 } from "./suggest";
-import { isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { FORMAT_RULES } from "./format-rules";
+import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
@@ -145,7 +146,7 @@ function commanderProfile(candidate: CommanderCandidate): DeckFingerprint {
 /** The profile without role gaps: "on-plan" is about themes, tribes and keywords only. */
 const planOnly = (profile: DeckFingerprint): DeckFingerprint => ({ ...profile, gaps: [] });
 
-const TARGETS = roleTargets("commander") ?? { ramp: 10, draw: 10, removal: 8, wipe: 3 };
+const TARGETS = FORMAT_RULES.commander.roleTargets;
 
 /**
  * A pool card with what every candidate checks worked out once: its identity mask, creature

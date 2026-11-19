@@ -1,6 +1,6 @@
 import { cardTags } from "@/shared/card-search";
 import { err, ok, shuffled, type Result, type Rng, isCreature } from "@/shared/kernel";
-import { getFormatRules, type FormatRuleSet } from "./format-rules";
+import { formatRules, type FormatRuleSet } from "./format-rules";
 import type {
   BattlefieldPermanent,
   EndStepTrigger,
@@ -168,7 +168,7 @@ export function startGoldfishState(
   const shuffledLibrary = shuffled(options.rng, deck.library);
   const hand = shuffledLibrary.slice(0, OPENING_HAND);
   const library = shuffledLibrary.slice(OPENING_HAND);
-  const rules = getFormatRules(options.format);
+  const rules = formatRules(options.format);
   const freeMulligan = options.freeMulligan ?? rules.freeFirstMulligan;
   return ok({
     format: options.format,
@@ -231,7 +231,7 @@ export function stepGoldfishState(
   const zoneReplacements = options.zoneReplacements ?? [];
   const triggerHandlers = options.triggerHandlers ?? DEFAULT_TRIGGER_HANDLERS;
   const activatedAbilities = options.activatedAbilities ?? DEFAULT_ACTIVATED_ABILITIES;
-  const formatRules = options.formatRules ?? getFormatRules(state.format);
+  const rules = options.formatRules ?? formatRules(state.format);
 
   switch (action.kind) {
     case "mulligan": {
@@ -449,7 +449,7 @@ export function stepGoldfishState(
         from,
         alt: action.alt,
         explicitReductionGeneric: action.costReductionGeneric,
-        formatRules,
+        formatRules: rules,
       };
 
       // CR 601.2f strict cost order: base/alt -> increase (tax) -> reduction -> minimum (e.g. Trinisphere)

@@ -15,7 +15,8 @@ import { library } from "../domain/draws";
 import { simulateOpeningHands } from "../domain/goldfish";
 import { scoreDeck } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
-import { deckStats, roleTargets, suggestedLands, TARGETED_TAGS } from "../domain/stats";
+import { formatRules } from "../domain/format-rules";
+import { deckStats, TARGETED_TAGS } from "../domain/stats";
 import type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "../domain/audit-report";
 import { combosForDeck } from "./combos";
 import type { DeckView } from "../domain/deck-view";
@@ -62,12 +63,12 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
   );
 
   const stats = deckStats(view.lines);
-  const baseTargets = roleTargets(view.deck.format);
+  const baseTargets = formatRules(view.deck.format).roleTargets;
   const resolved =
     baseTargets === null
       ? null
       : resolveDeckProfileTargets(deckProfile, null, {
-          landTarget: suggestedLands(view.deck.format),
+          landTarget: formatRules(view.deck.format).suggestedLands,
           roleTargets: baseTargets,
         });
   const targets = resolved?.roleTargets ?? null;
@@ -119,7 +120,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
   const goldfish = simulateOpeningHands(library(view.lines), {
     rng: seededRng(`audit-${view.deck.id}`),
     trials: 500,
-    freeMulligan: view.deck.format === "commander",
+    freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
   });
 
   const castability = simulateCastOnCurve(view.lines, {
@@ -143,7 +144,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       message: `Deck floor is Bracket ${warning.floor}, above target Bracket ${warning.target}.`,
     });
   }
-  const landTarget = resolved?.landTarget ?? suggestedLands(view.deck.format);
+  const landTarget = resolved?.landTarget ?? formatRules(view.deck.format).suggestedLands;
   if (stats.lands < landTarget - 3) {
     findings.push({
       severity: "warning",

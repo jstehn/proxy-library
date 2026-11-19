@@ -1,6 +1,7 @@
 // Saved point-in-time copies of a deck (design doc 41). Every use case works only on the actor's own decks (rule 7): someone else's deck is
 // reported as not found.
 
+import { formatRules } from "../domain/format-rules";
 import type { Actor } from "@/modules/accounts";
 import { type Result, err, ok } from "@/shared/kernel";
 import { type DeckId } from "../domain/deck";
@@ -90,7 +91,7 @@ export function makeDeckSnapshots(dependencies: DecksDependencies) {
       const restored = tidyHeadings({
         ...deck,
         format: snapshot.format,
-        targetBracket: snapshot.format === "commander" ? snapshot.targetBracket : null,
+        targetBracket: formatRules(snapshot.format).bracketsApply ? snapshot.targetBracket : null,
         grouping: snapshot.grouping,
         headings: [...snapshot.headings],
         entries: restoredEntries,

@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { EMPTY_LIST } from "../domain/suggestion-types";
 import {
   fitsDeck,
@@ -61,22 +62,20 @@ export async function suggestionContext(
   `);
   const keywords = new Map(keywordRows.rows.map((row) => [row.oracle_id, row.keywords]));
 
+  const rules = formatRules(view.deck.format);
   const commanders = view.lines.filter((line) => line.board === "commander");
   const identityOf = (oracleIds: string[]) => [
     ...new Set(oracleIds.flatMap((oracleId) => view.rules[oracleId]?.colorIdentity ?? [])),
   ];
   // Commander: the commanders' identity. Otherwise the deck's own colors, if it has any
   // (design doc 20, decision 3).
-  const identity =
-    view.deck.format === "commander"
-      ? commanders.length > 0
-        ? identityOf(commanders.map((line) => line.oracleId))
-        : null
-      : identityOf(view.lines.map((line) => line.oracleId));
+  const identity = rules.usesColorIdentity
+    ? commanders.length > 0
+      ? identityOf(commanders.map((line) => line.oracleId))
+      : null
+    : identityOf(view.lines.map((line) => line.oracleId));
   const colorLimit =
-    identity === null || (view.deck.format !== "commander" && identity.length === 0)
-      ? null
-      : identity;
+    identity === null || (!rules.usesColorIdentity && identity.length === 0) ? null : identity;
 
   const countedQuantities = new Map<string, number>();
   for (const line of view.lines) {
@@ -91,8 +90,7 @@ export async function suggestionContext(
   const atLimit: string[] = [];
   for (const [oracleId, qty] of countedQuantities) {
     const rule = view.rules[oracleId];
-    const limit =
-      copyLimitFor(view.deck.format, rule) ?? (view.deck.format === "commander" ? 1 : 4);
+    const limit = copyLimitFor(view.deck.format, rule) ?? rules.plannedCopyLimit;
     if (qty >= limit) atLimit.push(oracleId);
   }
 
@@ -104,8 +102,7 @@ export async function suggestionContext(
     inDeck: atLimit,
     countedQuantities,
     lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
-    commanderOracleIds:
-      view.deck.format === "commander" ? commanders.map((line) => line.oracleId) : [],
+    commanderOracleIds: rules.hasCommandZone ? commanders.map((line) => line.oracleId) : [],
     targetBracket: view.deck.targetBracket,
     bracketLines: view.lines.map(bracketLine),
   };
@@ -191,14 +188,13 @@ export async function deckSuggestions(
   if (context === null) return null;
   const profile = deckProfile(context.lines, context.format);
   const want = wantedFor(profile);
-  const comboPartners =
-    context.format === "commander"
-      ? await comboPartnersForDeck(
-          db,
-          context.lines.filter((line) => isCounted(line.board)).map((line) => line.oracleId),
-          context.targetBracket,
-        )
-      : new Map<string, readonly string[]>();
+  const comboPartners = formatRules(context.format).bracketsApply
+    ? await comboPartnersForDeck(
+        db,
+        context.lines.filter((line) => isCounted(line.board)).map((line) => line.oracleId),
+        context.targetBracket,
+      )
+    : new Map<string, readonly string[]>();
   const comboPartnerIds = Array.from(comboPartners.keys());
   if (
     nothingWanted(want) &&

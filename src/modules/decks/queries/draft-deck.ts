@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
@@ -89,8 +90,9 @@ export async function draftForDeck(
 ): Promise<DeckDraft | null> {
   const context = await suggestionContext(db, userId, deckId);
   if (context === null) return null;
-  if (context.format === "limited") return null;
-  if (context.format === "commander" && !context.lines.some((line) => line.board === "commander")) {
+  const rules = formatRules(context.format);
+  if (!rules.canDraftDeck) return null;
+  if (rules.hasCommandZone && !context.lines.some((line) => line.board === "commander")) {
     return null;
   }
 

@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -7,7 +8,7 @@ import { ColorSchema, FinishSchema, type ManaColor, type UserId } from "@/shared
 import { FORMATS } from "../domain/deck";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
-import { ownedPerCard } from "./candidate-pool";
+import { legalInFormat, ownedPerCard } from "./candidate-pool";
 import { STANDARD_FIRST } from "./owned";
 
 // Browsing cards while building a deck (design doc 14, section 2.1): one entry per card, with
@@ -79,7 +80,7 @@ export async function deckBrowseContext(
   if (row === undefined) return null;
   const format = z.enum(FORMATS).parse(row.format);
   const commanderColors =
-    format === "commander" && row.commanders > 0
+    formatRules(format).usesColorIdentity && row.commanders > 0
       ? (row.colors ?? []).map((color) => ColorSchema.parse(color))
       : null;
   return { format, commanderColors, usesRealCards: row.uses_real_cards };
@@ -137,10 +138,7 @@ export async function browseCollection(
           [...context.commanderColors, "_"].map((color) => sql`${color}`),
           sql`, `,
         )}]::text[]`;
-  const legal =
-    context.format === "casual"
-      ? sql`true`
-      : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
+  const legal = legalInFormat(context.format);
   const offset = (Math.max(1, input.page) - 1) * BROWSE_PAGE_SIZE;
   // The cards you own for this deck: real ones too when it uses them (design doc 16, rule 2).
   // What a printing "p" must satisfy to be in the grid.

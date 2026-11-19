@@ -2,7 +2,8 @@ import { bracketFlags, cardTags, cardThemes, type BracketFlag } from "@/shared/c
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
-import { deckStats, isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { formatRules } from "./format-rules";
+import { deckStats, isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import {
   deckFit,
   deckProfile,
@@ -119,11 +120,6 @@ function cutWeightsForBracket(targetBracket: Bracket | null): CutWeights {
   return CUT_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
 }
 
-/** Average non-land mana value above which a curve counts as high (a rough guide per format). */
-function curveGuide(format: Format): number {
-  return format === "commander" ? 3.3 : 3.0;
-}
-
 /**
  * The deck's cut candidates, weakest first: main-deck cards that aren't lands (invariant 4).
  * Equal scores sort by name, then oracle id (invariant 5).
@@ -134,12 +130,12 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
   // Roles are judged below, against the targets; the fit is only themes, tribes and keywords.
   const fitProfile = { ...profile, gaps: [] };
   const stats = deckStats(lines);
-  const targets = roleTargets(context.format);
+  const targets = formatRules(context.format).roleTargets;
   const overFlags =
     context.targetBracket === null
       ? []
       : flagsOverTarget(lines.map(bracketLine), context.targetBracket);
-  const isHigh = stats.averageManaValue > curveGuide(context.format);
+  const isHigh = stats.averageManaValue > formatRules(context.format).curveGuide;
 
   const candidates = lines.filter((line) => line.board === "main" && !isLand(line.typeLine));
   return candidates

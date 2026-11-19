@@ -89,3 +89,14 @@ of old and new tool output.
 - [ ] **A refused change undoes the guess (P19):** open the deck in two tabs, remove a card in one,
       then in the other set its note or role: the message shows and the deck goes back to the
       server's. (The deck now comes back inside the refusal instead of through `loadBuilderDeck`.)
+
+## Left by P10 (formats as a strategy table)
+
+- [ ] **Run `pnpm test:int` and the e2e builder flows (P10).** Not run in the package (shared
+      database). `legalInFormat` (`queries/candidate-pool.ts`) now builds the legality condition for
+      the builder's collection grid, suggestions, search for a deck and the mana base: check each
+      still filters out cards that are not legal in a Modern deck, and shows everything in a Casual
+      and a Limited one.
+- [ ] **Look at the builder's stats panel and test hand in a Commander deck and a Limited deck
+      (P10):** cards "n / 100" and "n / 40", the sideboard line only in 60-card formats, the role
+      guide text, a free first mulligan only in Commander, no "Draft deck" button in Limited.

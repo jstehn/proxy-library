@@ -12,11 +12,10 @@ import {
 import type { EdhrecSignal } from "./suggest";
 import { isPlayed } from "./boards";
 import { BOARDS, type Board, type Format } from "./deck";
+import { formatRules } from "./format-rules";
 import { deckProblems, shortCount, type CardRules, type DeckProblem } from "./rules";
 import {
-  deckSize,
   deckStats,
-  roleTargets,
   TARGETED_TAGS,
   type DeckStats,
   type StatsLine,
@@ -218,7 +217,8 @@ function buildComparison(input: {
   const resolved = before.problems.filter((problem) => !afterKeys.has(problemKey(problem)));
   const remaining = after.problems.filter((problem) => beforeKeys.has(problemKey(problem)));
 
-  const targets = input.roleTargets === undefined ? roleTargets(input.format) : input.roleTargets;
+  const targets =
+    input.roleTargets === undefined ? formatRules(input.format).roleTargets : input.roleTargets;
   const behind = cardsBehindRoleChanges(input.changes, [...input.after, ...input.before]);
   const roles: RoleDelta[] = TAGS.map((tag) => ({
     tag,
@@ -255,7 +255,7 @@ function buildComparison(input: {
 
   return {
     format: input.format,
-    targetSize: deckSize(input.format),
+    targetSize: formatRules(input.format).deckSize,
     targetBracket: input.targetBracket,
     before,
     after,

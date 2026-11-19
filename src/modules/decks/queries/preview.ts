@@ -13,7 +13,7 @@ import {
   type PreviewLine,
 } from "../domain/preview";
 import type { CardRules } from "../domain/rules";
-import { roleTargets, suggestedLands } from "../domain/stats";
+import { formatRules } from "../domain/format-rules";
 import { decks } from "../infrastructure/schema";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import { deckView } from "./decks";
@@ -194,12 +194,12 @@ async function previewFromView(
       .limit(1),
   ]);
   const deckProfile = (profileRows[0]?.profileJson as DeckPlan | null | undefined) ?? null;
-  const baseTargets = roleTargets(view.deck.format);
+  const baseTargets = formatRules(view.deck.format).roleTargets;
   const resolvedTargets =
     baseTargets === null
       ? null
       : (resolveDeckProfileTargets(deckProfile, null, {
-          landTarget: suggestedLands(view.deck.format),
+          landTarget: formatRules(view.deck.format).suggestedLands,
           roleTargets: baseTargets,
         })?.roleTargets ?? baseTargets);
 

@@ -5,6 +5,7 @@ import {
   type DeckProblem,
   type DeckView,
 } from "@/modules/decks";
+import { formatRules } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
 import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
 import { groupCompactLines, pageCompactGroups } from "./compact-deck";
@@ -78,7 +79,7 @@ export function compactDeckPayload(
       id: view.deck.id,
       name: view.deck.name,
       format: view.deck.format,
-      ...(view.deck.format === "commander"
+      ...(formatRules(view.deck.format).hasCommandZone
         ? {
             commander: view.lines
               .filter((line) => line.board === "commander")
