@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { cardsToGetFor } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { WishForShortForm } from "../../wishlist/wish-forms";
 
@@ -9,8 +7,8 @@ import { WishForShortForm } from "../../wishlist/wish-forms";
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
 
 export default async function CardsToGetPage() {
-  const actor = await requireActor();
-  const toGet = await cardsToGetFor(getContainer().db, actor.userId);
+  const { actor, capabilities } = await readPage();
+  const toGet = await capabilities.deckReads.cardsToGet(actor.userId);
   const copies = toGet.cards.reduce((sum, card) => sum + card.missing, 0);
   const unpriced = toGet.cards.filter((card) => card.priceCents === null).length;
   return (

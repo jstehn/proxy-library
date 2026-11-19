@@ -5,7 +5,7 @@ import {
   replaceListAction,
   type EditAsTextPreviewState,
   type EditAsTextState,
-} from "../actions";
+} from "../edit-as-text/actions";
 
 // Edit as text (design doc 23): the deck's whole list in a text box; saving replaces the deck.
 

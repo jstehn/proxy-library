@@ -19,8 +19,7 @@ import {
   type RemoveBotError,
   type StartDraftError,
 } from "@/modules/drafts";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { COLORS, Cents, assertNever } from "@/shared/kernel";
 
 // Controllers for the draft pages (design doc 17): read the form, call the use case, and show
@@ -117,11 +116,11 @@ function refreshDraftPages(draftId: number) {
 }
 
 export async function createDraftAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const [setCode, boosterType] = String(formData.get("booster") ?? "").split("/");
   const timer = String(formData.get("secondsPerPick") ?? "");
   if (!setCode || !boosterType) redirect("/drafts?error=Choose+a+set+to+draft.");
-  const result = await getContainer().drafts.createDraft(actor, {
+  const result = await capabilities.drafts.createDraft(actor, {
     setCode: SetCode.of(setCode),
     boosterType,
     maxSeats: Number(formData.get("maxSeats")),
@@ -133,27 +132,27 @@ export async function createDraftAction(formData: FormData): Promise<void> {
 }
 
 export async function joinDraftAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.joinDraft(actor, draftId);
+  const result = await capabilities.drafts.joinDraft(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
   redirect(`/drafts/${draftId}`);
 }
 
 export async function leaveDraftAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.leaveDraft(actor, draftId);
+  const result = await capabilities.drafts.leaveDraft(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
   redirect("/drafts");
 }
 
 export async function startDraftAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.startDraft(actor, draftId);
+  const result = await capabilities.drafts.startDraft(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
 }
@@ -171,8 +170,8 @@ export async function pickAction(input: {
   slot: number | "random";
   choices: PickChoices;
 }): Promise<PickActionResult> {
-  const actor = await requireActor();
-  const result = await getContainer().drafts.makePick(actor, {
+  const { actor, capabilities } = await readPage();
+  const result = await capabilities.drafts.makePick(actor, {
     draftId: DraftId.of(input.draftId),
     packNumber: input.packNumber,
     slot: input.slot,
@@ -188,8 +187,8 @@ export async function decideAction(input: {
   draftId: number;
   choices: PickChoices;
 }): Promise<PickActionResult> {
-  const actor = await requireActor();
-  const result = await getContainer().drafts.decideCard(actor, {
+  const { actor, capabilities } = await readPage();
+  const result = await capabilities.drafts.decideCard(actor, {
     draftId: DraftId.of(input.draftId),
     choices: input.choices,
   });
@@ -199,11 +198,11 @@ export async function decideAction(input: {
 
 /** A color the player owes (Paliano, the High City; Regicide). */
 export async function chooseColorAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
   const color = COLORS.find((each) => each === formData.get("color"));
   if (color === undefined) redirect(`/drafts/${draftId}`);
-  const result = await getContainer().drafts.chooseColor(actor, { draftId, color });
+  const result = await capabilities.drafts.chooseColor(actor, { draftId, color });
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
 }
@@ -216,11 +215,11 @@ function cardFrom(value: FormDataEntryValue | null): CardRef | null {
 
 /** Whispergear Sneak: look at a pack. */
 export async function sneakAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
   const card = cardFrom(formData.get("card"));
   if (card === null) redirect(`/drafts/${draftId}`);
-  const result = await getContainer().drafts.peekWithSneak(actor, {
+  const result = await capabilities.drafts.peekWithSneak(actor, {
     draftId,
     card,
     packNumber: Number(formData.get("packNumber")),
@@ -231,11 +230,11 @@ export async function sneakAction(formData: FormData): Promise<void> {
 
 /** Illusionary Informant: see the next card a player drafts. */
 export async function informantAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
   const card = cardFrom(formData.get("card"));
   if (card === null) redirect(`/drafts/${draftId}`);
-  const result = await getContainer().drafts.watchWithInformant(actor, {
+  const result = await capabilities.drafts.watchWithInformant(actor, {
     draftId,
     card,
     targetSeat: Number(formData.get("targetSeat")),
@@ -246,7 +245,7 @@ export async function informantAction(formData: FormData): Promise<void> {
 
 /** A Deal Broker step: reveal, offer (a card or nothing) or accept (an offer or none). */
 export async function dealAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
   const step = String(formData.get("step"));
   const answer: DealAnswer =
@@ -262,24 +261,24 @@ export async function dealAction(formData: FormData): Promise<void> {
           step: step === "offer" ? "offer" : "reveal",
           card: cardFrom(formData.get("card")),
         };
-  const result = await getContainer().drafts.answerDeal(actor, answer);
+  const result = await capabilities.drafts.answerDeal(actor, answer);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
 }
 
 /** The host ends the deals (timer off, someone has gone). */
 export async function endDealsAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.endDeals(actor, draftId);
+  const result = await capabilities.drafts.endDeals(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
 }
 
 export async function pickForAwayAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.pickForAway(actor, {
+  const result = await capabilities.drafts.pickForAway(actor, {
     draftId,
     seatNumber: Number(formData.get("seatNumber")),
   });
@@ -288,9 +287,9 @@ export async function pickForAwayAction(formData: FormData): Promise<void> {
 }
 
 export async function makeDraftDeckAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.makeDraftDeck(actor, draftId);
+  const result = await capabilities.drafts.makeDraftDeck(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   revalidatePath("/decks");
   redirect(`/decks/${result.value}`);
@@ -298,17 +297,17 @@ export async function makeDraftDeckAction(formData: FormData): Promise<void> {
 
 /** An admin hosting a lobby adds a bot, paying its entry fee (a testing tool). */
 export async function addBotAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.addBot(actor, draftId);
+  const result = await capabilities.drafts.addBot(actor, draftId);
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
   refreshDraftPages(draftId);
 }
 
 export async function removeBotAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = draftIdFrom(formData);
-  const result = await getContainer().drafts.removeBot(actor, {
+  const result = await capabilities.drafts.removeBot(actor, {
     draftId,
     botNumber: Number(formData.get("botNumber")),
   });

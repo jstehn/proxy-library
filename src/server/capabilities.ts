@@ -1,3 +1,9 @@
+import { wireCollectionCapabilities } from "@/modules/collection/wiring";
+import { wireDraftCapabilities } from "@/modules/drafts/wiring";
+import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
+import { wirePackCapabilities } from "@/modules/packs/wiring";
+import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
+import { wireStoreCapabilities } from "@/modules/store/wiring";
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
@@ -17,10 +23,22 @@ import {
   ownedCopies as ownedOfPrinting,
 } from "@/modules/collection";
 import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
-import { decksUsing, findCard, type Decks, type PreviewRepository } from "@/modules/decks";
+import {
+  decksUsing,
+  findCard,
+  type DeckSharing,
+  type makeProxySheets,
+  type makeTokenChoices,
+  type Decks,
+  type PreviewRepository,
+} from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
 import { wishesForCard, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
+import type { makeDrafts } from "@/modules/drafts";
+import type { makeInventory } from "@/modules/inventory";
+import type { makeRealCollection } from "@/modules/real-collection";
+import type { makeStore } from "@/modules/store";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
 import type { makeYoutube } from "@/modules/youtube";
@@ -42,6 +60,17 @@ type CapabilityDependencies = Readonly<{
   reddit: ReturnType<typeof makeReddit>;
   decks: Decks;
   previews: PreviewRepository;
+  /** The services that change things: the capabilities pass them through for the adapters. */
+  services: Readonly<{
+    deckSharing: DeckSharing;
+    chooseToken: ReturnType<typeof makeTokenChoices>;
+    proxySheet: ReturnType<typeof makeProxySheets>;
+    seeds: Readonly<{ newSeed(): string }>;
+    drafts: ReturnType<typeof makeDrafts>;
+    realCollection: ReturnType<typeof makeRealCollection>;
+    store: ReturnType<typeof makeStore>;
+    inventory: ReturnType<typeof makeInventory>;
+  }>;
   newPreviewId: () => string;
 }>;
 
@@ -64,6 +93,12 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       newPreviewId: dependencies.newPreviewId,
     }),
     ...wireCatalogCapabilities({ db }),
+    ...wireCollectionCapabilities({ db }),
+    ...wireRealCollectionCapabilities({ db }),
+    ...wireDraftCapabilities({ db }),
+    ...wireInventoryCapabilities({ db }),
+    ...wireStoreCapabilities({ db }),
+    ...wirePackCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
       clock,
@@ -72,6 +107,8 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       findCard: (nameOrId) => findCard(db, nameOrId),
     }),
     ...wireAccountCapabilities({ db, clock, wallet }),
+    ...dependencies.services,
+    now: () => clock.now(),
     youtube: dependencies.youtube,
     reddit: dependencies.reddit,
     // These read across modules (the game's collection, the real one, the store, the decks and

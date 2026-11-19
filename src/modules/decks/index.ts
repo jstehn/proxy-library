@@ -1,8 +1,9 @@
 // The decks module's public API: the only file other modules and the app may import.
 export { deleteAllDecks } from "./application/delete-all-decks";
+export type { ProxyDeck } from "./application/proxy-deck";
 export { makeDecks, type Decks } from "./application/make-decks";
 
-export { makeDeckSharing } from "./application/sharing";
+export { makeDeckSharing, type DeckSharing } from "./application/sharing";
 export { CommentId, MAX_COMMENT_LENGTH, VISIBILITIES } from "./domain/sharing";
 export {
   createDeckInTransaction,
@@ -141,7 +142,6 @@ export type { Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
 
-export { publicDeckScorecard } from "./queries/scorecard";
 export { type DeckDraft, type DraftedSpell, type DraftReason } from "./domain/draft-deck";
 export { commanderDetails, commandersICanBuild } from "./queries/commanders";
 export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "./domain/commanders";

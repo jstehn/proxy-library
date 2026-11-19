@@ -1,9 +1,7 @@
 "use server";
 import { z } from "zod";
-import { DeckId, tokenArtOptions, type TokenArt, type TokenLine } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
-import { proxyDeck } from "./proxy-lines";
+import { DeckId, type TokenArt, type TokenLine } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 
 // The print page's token section (design doc 25): every art of a token, and saving your choice.
 
@@ -15,10 +13,10 @@ const TokenArtsInput = z.object({ tokenOracleId: z.string().min(1) });
 export async function tokenArtsAction(
   input: z.input<typeof TokenArtsInput>,
 ): Promise<TokenArt[] | null> {
-  await requireActor();
+  const { capabilities } = await readPage();
   const parsed = TokenArtsInput.safeParse(input);
   if (!parsed.success) return null;
-  return tokenArtOptions(getContainer().db, parsed.data.tokenOracleId);
+  return capabilities.deckReads.tokenArtOptions(parsed.data.tokenOracleId);
 }
 
 const ChooseTokenInput = z.object({
@@ -36,11 +34,11 @@ export type ChooseTokenResult =
 export async function chooseTokenAction(
   input: z.input<typeof ChooseTokenInput>,
 ): Promise<ChooseTokenResult> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parsed = ChooseTokenInput.safeParse(input);
   if (!parsed.success) return { ok: false, message: "That change wasn't understood." };
   const { deckId, tokenOracleId, tokenId, included } = parsed.data;
-  const result = await getContainer().chooseToken(actor, {
+  const result = await capabilities.chooseToken(actor, {
     deckId: DeckId.of(deckId),
     tokenOracleId,
     tokenId,
@@ -54,7 +52,7 @@ export async function chooseTokenAction(
     };
     return { ok: false, message: messages[result.error.kind] };
   }
-  const deck = await proxyDeck(actor.userId, deckId);
+  const deck = await capabilities.proxyDeck(actor.userId, deckId);
   return deck === null
     ? { ok: false, message: "That deck isn't yours." }
     : { ok: true, tokens: deck.tokens };

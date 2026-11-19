@@ -57,3 +57,7 @@ of old and new tool output.
       card from another deck, save, compare, restore and delete a snapshot, edit the plan and primer,
       run the optimizer, a draft and the mana base. They go through the same wrapper the e2e suite
       covers, but no test drives them.
+- [ ] **Pages moved in P09c, by eye** (dark theme, desktop and phone): drafts list and a draft in
+      progress (lobby, picking, finished), inventory and opened packs (with the animation), a
+      card's page, the Game and Real collection tabs, a shared deck and its public link and
+      scorecard, the proxy print page and a PDF download, the commander finder.

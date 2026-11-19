@@ -1,21 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { printingCards, type PrintingCard } from "@/modules/catalog";
+import { type PrintingCard } from "@/modules/catalog";
 import {
-  boosterOptions,
   DraftId,
-  draftView,
   type DraftSeen,
   type DraftView,
   type SeatView,
   type SeenCard,
   type YouSeen,
 } from "@/modules/drafts";
-import { unopenedItems } from "@/modules/inventory";
-import { packMsrps } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
-import { Cents } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
+import type { Capabilities } from "@/server/capabilities";
+import { Cents, type UserId } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "../../_components/card-tile";
@@ -84,19 +80,18 @@ function printingIdsIn(seen: DraftSeen): string[] {
 }
 
 export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const draftId = Number((await props.params).id);
   if (!Number.isSafeInteger(draftId) || draftId <= 0) notFound();
-  const { db, clock, drafts } = getContainer();
-  const now = clock.now();
+  const now = capabilities.now();
   const [view, seen] = await Promise.all([
-    draftView(db, draftId, actor.userId, now),
-    drafts.view(actor, DraftId.of(draftId)),
+    capabilities.draftReads.view(draftId, actor.userId, now),
+    capabilities.drafts.view(actor, DraftId.of(draftId)),
   ]);
   if (view === null || seen === null) notFound();
   const error = (await props.searchParams).error;
 
-  const printings = await printingCards(db, printingIdsIn(seen));
+  const printings = await capabilities.printingDetails(printingIdsIn(seen));
   const names: Names = {
     seat: (seatNumber) =>
       seatNumber === null
@@ -134,7 +129,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
           seen={seen}
           names={names}
           serverNow={now.toISOString()}
-          lore={await loreSources(seen, actor.userId)}
+          lore={await loreSources(capabilities, seen, actor.userId)}
         />
       )}
       {view.status === "dealing" && seen.deal !== null && (
@@ -167,22 +162,19 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
  * their unopened packs, and every booster with a store price (any set, decision 2).
  */
 async function loreSources(
+  capabilities: Capabilities,
   seen: DraftSeen,
-  userId: Parameters<typeof unopenedItems>[1],
+  userId: UserId,
 ): Promise<LoreSources | null> {
   const you = seen.you;
   if (you === null) return null;
-  const { db } = getContainer();
   const candidates = [...(you.pack?.cards ?? []), ...(you.awaiting === null ? [] : [you.awaiting])];
-  const cards = await printingCards(
-    db,
-    candidates.map((card) => card.printingId),
-  );
+  const cards = await capabilities.printingDetails(candidates.map((card) => card.printingId));
   if (![...cards.values()].some((card) => card.name === "Lore Seeker")) return null;
   const [items, options, prices] = await Promise.all([
-    unopenedItems(db, userId),
-    boosterOptions(db),
-    packMsrps(db),
+    capabilities.inventoryReads.unopenedItems(userId),
+    capabilities.draftReads.boosterOptions(),
+    capabilities.storeReads.packMsrps(),
   ]);
   return {
     inventory: items

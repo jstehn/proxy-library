@@ -8,3 +8,4 @@ export { cents, timestamptz } from "./columns";
 export * from "./prices";
 export { textArray } from "./text-array";
 export * from "./offers";
+export { withDb, type WithoutDb } from "./with-db";

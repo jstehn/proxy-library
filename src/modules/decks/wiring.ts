@@ -1,5 +1,5 @@
 import { printingCards } from "@/modules/catalog";
-import type { DbExecutor } from "@/shared/db";
+import { withDb, type DbExecutor } from "@/shared/db";
 import { ok, type Clock, type UserId } from "@/shared/kernel";
 import { makeSwapCards, makeTakeFromDeck } from "./application/deck-builder-moves";
 import { makeDeckCombos } from "./application/deck-combos";
@@ -8,6 +8,7 @@ import { makeDeckFacts } from "./application/deck-facts";
 import { makeDeckManaPlan } from "./application/deck-mana-plan";
 import { makeDeckOverview } from "./application/deck-overview";
 import { makeDeckPlanEdits } from "./application/deck-plan-edits";
+import { makeProxyDeck } from "./application/proxy-deck";
 import { makeDeckPreviews } from "./application/deck-previews";
 import { makeDeckSearch } from "./application/deck-search";
 import { makeDeckSignals, makeSearchSignals } from "./application/deck-signals";
@@ -24,6 +25,7 @@ import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
 import {
+  decksUsing,
   addDeckSource,
   deckView,
   decksFor,
@@ -36,11 +38,21 @@ import { draftForDeck } from "./queries/draft-deck";
 import { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
 import { cardPrintings } from "./queries/printings";
 import { compareDeckSnapshot, listDeckSnapshots } from "./queries/snapshots";
-import { deckChangePreview } from "./queries/preview";
+import { commanderDetails, commandersICanBuild } from "./queries/commanders";
+import { deckChangePreview, deckListPreview } from "./queries/preview";
 import { searchForDeck } from "./queries/search-for-deck";
 import { semanticSearchForDeck } from "./queries/semantic-search";
 import { budgetList, deckSuggestions, similarCards } from "./queries/suggestions";
-import { deckTokenLines } from "./queries/tokens";
+import { publicDeckScorecard } from "./queries/scorecard";
+import {
+  cardsToGetFor,
+  deckComments,
+  deckForViewer,
+  publicDeckByToken,
+  sharedDecks,
+} from "./queries/sharing";
+import { deckTokenLines, tokenArtOptions } from "./queries/tokens";
+import type { TokenMaker } from "./domain/token-proxies";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
 // composition root (src/server/capabilities.ts) calls this once and spreads the result.
@@ -123,6 +135,11 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
     }),
     // The deck-changing commands, as the decks module's use cases (each checks its own rules).
     deckEdits: decks,
+    proxyDeck: makeProxyDeck({
+      deckView: readDeck,
+      printingCards: (printingIds) => printingCards(db, printingIds),
+      tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
+    }),
     swapCards: makeSwapCards({
       deckView: readDeck,
       applyChanges: (actor, input) =>
@@ -135,6 +152,21 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
     }),
     // The builder's reads: each answers one question, as the query already does.
     deckReads: {
+      deckView: readDeck,
+      decksUsing: withDb(db, decksUsing),
+      deckForViewer: withDb(db, deckForViewer),
+      comments: withDb(db, deckComments),
+      decksFor: withDb(db, decksFor),
+      sharedDecks: withDb(db, sharedDecks),
+      cardsToGet: withDb(db, cardsToGetFor),
+      commanderDetails: withDb(db, commanderDetails),
+      commandersICanBuild: withDb(db, commandersICanBuild),
+      publicDeck: withDb(db, publicDeckByToken),
+      publicScorecard: withDb(db, publicDeckScorecard),
+      tokenArtOptions: withDb(db, tokenArtOptions),
+      listPreview: withDb(db, deckListPreview),
+      tokenLines: (deckId: number, makers: readonly TokenMaker[]) =>
+        deckTokenLines(db, deckId, makers),
       browse: (userId: UserId, input: BrowseInput) => browseCollection(db, userId, input),
       printingsOf: (userId: UserId, deckId: number, oracleId: string) =>
         cardPrintings(db, userId, deckId, oracleId),

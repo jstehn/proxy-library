@@ -1,10 +1,10 @@
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import type { DbExecutor } from "@/shared/db";
+import { withDb, type DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
 import { makeAddWishes, makeRemoveWishes, makeWishlistView } from "./application/wishlist-tools";
 import type { Wishlist } from "./application/make-wishlist";
 import { WishId } from "./domain/wish";
-import { wishlistAnswers } from "./queries/wishlist";
+import { wishesForCard, wishlistAnswers } from "./queries/wishlist";
 
 // The wishlist's capabilities (ADR 0026). `findCard` comes from the decks module's card lookup,
 // which the composition root passes in.
@@ -20,6 +20,7 @@ type WishlistWiringDependencies = Readonly<{
 export function wireWishlistCapabilities(dependencies: WishlistWiringDependencies) {
   const { db, clock, wallet, wishlist, findCard } = dependencies;
   return {
+    wishlistReads: { forCard: withDb(db, wishesForCard) },
     wishlistView: makeWishlistView({
       answers: (userId) => wishlistAnswers(db, userId),
       outlook: async (userId) => {
