@@ -226,18 +226,22 @@ export {
 } from "./queries/printings";
 export {
   budgetList,
-  budgetReplacements,
   deckSuggestions,
   similarCards,
   type BudgetList,
+  type DeckSuggestions,
+} from "./queries/suggestions";
+export {
+  budgetReplacements,
   type BudgetReplacementPick,
   type BudgetReplacementsResult,
-  type DeckSuggestions,
   type ExpensiveCardReplacements,
+} from "./queries/budget-replacements";
+export {
   type Suggestion,
   type SuggestionCard,
   type SuggestionList,
-} from "./queries/suggestions";
+} from "./queries/suggestion-types";
 export { embedSimForCards } from "./queries/embeddings";
 export {
   semanticSearchForDeck,

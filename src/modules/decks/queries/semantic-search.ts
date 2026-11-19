@@ -9,12 +9,11 @@ import {
   candidateColumns,
   fitsDeck,
   ownedCandidatesForIds,
-  suggestionContext,
   toCard,
-  withinTarget,
   type CandidateRow,
-  type SuggestionCard,
-} from "./suggestions";
+} from "./suggestion-sql";
+import { suggestionContext, withinTarget } from "./suggestions";
+import { type SuggestionCard } from "./suggestion-types";
 
 export type SemanticSearchPick = Readonly<{
   card: SuggestionCard;
