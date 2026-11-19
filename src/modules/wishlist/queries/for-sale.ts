@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows, textArray } from "@/shared/db";
+import { storeOfferRows, textArray } from "@/shared/db";
 import { Cents, FinishSchema, type UserId } from "@/shared/kernel";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack } from "../domain/wish";
@@ -11,27 +11,8 @@ import type { OwnedStack } from "../domain/wish";
 /** Every printing of these cards that the store sells (enabled sets, priced), in every finish. */
 export async function offersOf(db: DbExecutor, oracleIds: readonly string[]): Promise<Offer[]> {
   if (oracleIds.length === 0) return [];
-  const result = await db.execute<{
-    printing_id: string;
-    oracle_id: string;
-    name: string;
-    set_code: string;
-    set_name: string;
-    collector_number: string;
-    variant_label: string;
-    release_date: string;
-    finish: string;
-    usd_cents: number;
-  }>(sql`
-    select p.id as printing_id, p.oracle_id, p.name, p.set_code, s.name as set_name,
-           p.collector_number, p.variant_label, s.release_date, latest.finish, latest.usd_cents
-      from printings p
-      join card_sets s on s.code = p.set_code and s.is_enabled
-      -- The newest price of each finish: what buying it would cost (as the store's quote).
-      join lateral ${latestPriceRows("p.id")} latest on true
-     where p.oracle_id = any(${textArray(oracleIds)})
-  `);
-  return result.rows.map((row) => ({
+  const rows = await storeOfferRows(db, sql`p.oracle_id = any(${textArray(oracleIds)})`);
+  return rows.map((row) => ({
     oracleId: row.oracle_id,
     printingId: row.printing_id,
     finish: FinishSchema.parse(row.finish),
