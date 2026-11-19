@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, latestPrice } from "@/shared/db";
 import { ColorSchema, type UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
@@ -102,11 +102,11 @@ export async function loadCardsForPreview(
            shown.rarity, shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
              where kp.oracle_id = w.oracle_id) as keywords,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = shown.id
-               and s.finish = coalesce(owned_finish.finish,
-                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice(
+             "shown.id",
+             `coalesce(owned_finish.finish,
+                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)`,
+           )} as price_cents,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
            exists (select 1 from printings g
                     where g.oracle_id = w.oracle_id and g.is_game_changer) as is_game_changer,

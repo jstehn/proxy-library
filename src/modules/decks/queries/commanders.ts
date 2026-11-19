@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, cheapestPrice } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type ManaColor, type UserId } from "@/shared/kernel";
 import {
@@ -95,11 +95,6 @@ const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_c
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
   p.color_identity, p.keywords, p.rarity, p.role_tags, p.is_game_changer, p.edhrec_rank`;
 
-/** SQL: the latest price of printing `p`, in its cheapest finish. */
-const LATEST_PRICE = sql`(select min(latest.usd_cents) from (
-    select distinct on (ps.finish) ps.usd_cents from price_snapshots ps
-     where ps.printing_id = p.id order by ps.finish, ps.day desc) latest)`;
-
 const colorsOf = (values: readonly string[]): ManaColor[] =>
   values.filter((value): value is ManaColor => (COLORS as readonly string[]).includes(value));
 
@@ -165,11 +160,8 @@ function ownedByOracle(userId: UserId, withReal: boolean): SQL {
 function cheapestForSale(userId: UserId, withReal: boolean, filter: SQL): SQL {
   return sql`(select distinct on (p.oracle_id) p.id, latest.usd_cents as price_cents
                 from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-                join lateral (
-                  select min(newest.usd_cents) as usd_cents from (
-                    select distinct on (ps.finish) ps.usd_cents from price_snapshots ps
-                     where ps.printing_id = p.id order by ps.finish, ps.day desc) newest
-                ) latest on latest.usd_cents is not null
+                join lateral (select ${cheapestPrice("p.id")} as usd_cents) latest
+                  on latest.usd_cents is not null
                where ${filter}
                  and p.oracle_id not in (select owned.oracle_id from ${ownedByOracle(userId, withReal)} owned)
                order by p.oracle_id, latest.usd_cents, p.id)`;
@@ -189,7 +181,7 @@ async function ownedPool(
   withReal: boolean,
 ): Promise<{ pool: PoolCard[]; lands: WithIdentity[] }> {
   const rows = await db.execute<PoolRow & { is_land: boolean; is_basic: boolean }>(sql`
-    select ${POOL_COLUMNS}, ${LATEST_PRICE} as price_cents,
+    select ${POOL_COLUMNS}, ${cheapestPrice("p.id")} as price_cents,
            split_part(p.type_line, ' // ', 1) ~ '\\mLand\\M' as is_land,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic
       from ${ownedByOracle(userId, withReal)} owned join printings p on p.id = owned.printing_id
@@ -308,12 +300,12 @@ export async function commanderDetails(
 ): Promise<CommanderDetails | null> {
   const rows = await db.execute<CandidateRow>(sql`
     select ${CANDIDATE_COLUMNS}, coalesce(owned.owned, 0) as owned,
-           case when owned.owned is null then ${LATEST_PRICE} end as price_cents,
+           case when owned.owned is null then ${cheapestPrice("p.id")} end as price_cents,
            ${leadsDecks(userId, sql`p.oracle_id`)} as leads
       from printings p
       left join ${ownedByOracle(userId, withReal)} owned on owned.oracle_id = p.oracle_id
      where p.oracle_id = ${oracleId} and ${COMMANDER_LEGAL}
-     order by owned.owned is null, ${LATEST_PRICE} nulls last, p.id
+     order by owned.owned is null, ${cheapestPrice("p.id")} nulls last, p.id
      limit 1
   `);
   const row = rows.rows[0];

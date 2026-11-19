@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import {
   parseSearch,
@@ -228,12 +228,7 @@ export async function checkOwnedCards(
       select distinct on (p.oracle_id) p.oracle_id, latest.usd_cents as cheapest_cents
         from printings p
         join card_sets s on s.code = p.set_code and s.is_enabled
-        join lateral (
-          select ps.usd_cents from price_snapshots ps
-           where ps.printing_id = p.id
-           order by ps.day desc, ps.usd_cents asc
-           limit 1
-        ) latest on true
+        join lateral (select ${newestDayPrice("p.id")} as usd_cents) latest on true
        where p.oracle_id = any(${oracleArray})
        order by p.oracle_id, latest.usd_cents asc
     `),

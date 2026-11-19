@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { type Color, PrintingId, type SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
 import { packMsrp } from "@/modules/store";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, nonfoilFirstPrice } from "@/shared/db";
 import { Cents, ColorSchema, FinishSchema, RaritySchema, type UserId } from "@/shared/kernel";
 import type { DraftCatalog } from "../application/ports";
 import type { DraftCardFacts } from "../domain/auto-pick";
@@ -71,11 +71,7 @@ export function drizzleDraftCatalog(db: DbExecutor): DraftCatalog {
       select p.id, p.name, p.rarity, p.colors, p.mana_cost, p.mana_value, p.type_line,
              p.produced_mana,
              -- The newest price, nonfoil first: auto-pick uses it only as a hint.
-             (select s.usd_cents
-                from price_snapshots s
-               where s.printing_id = p.id
-               order by (s.finish = 'nonfoil') desc, s.day desc
-               limit 1) as price
+             ${nonfoilFirstPrice("p.id")} as price
         from printings p
        where p.id = any(${sql.param([...printingIds])}::text[])
     `);

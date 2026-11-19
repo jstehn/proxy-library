@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
+import { latestPriceRows } from "@/shared/db";
 import { FinishSchema, type UserId } from "@/shared/kernel";
 import {
   nameKey,
@@ -57,9 +58,7 @@ export async function quoteShoppingList(
         from printings p
         join card_sets s on s.code = p.set_code and s.is_enabled
         -- The newest price of each finish: what buying it would cost (as the store's quote).
-        join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                        from price_snapshots ps where ps.printing_id = p.id
-                       order by ps.finish, ps.day desc) latest on true
+        join lateral ${latestPriceRows("p.id")} latest on true
        where ${nameIn(wanted)}
     `),
     db.execute<{ name: string; oracle_id: string }>(sql`

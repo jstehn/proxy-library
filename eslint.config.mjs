@@ -78,6 +78,13 @@ const MONEY_TEXT = [
     message: "Format money with Cents.format (or Cents.toPlainDollars) from @/shared/kernel.",
   },
 ];
+const PRICE_TABLE = [
+  {
+    selector: "TemplateElement[value.raw=/price_snapshots/]",
+    message:
+      "Read prices through the fragments in @/shared/db (latestPrice, cheapestPrice, ...): only the catalog module and shared/db/prices.ts name the price_snapshots table.",
+  },
+];
 
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
@@ -91,6 +98,8 @@ const policies = [
   from(el("db"), el("kernel"), el("db")),
   from(el("http"), el("kernel"), el("http")),
   from(el("card-search"), el("kernel"), el("card-search")),
+  // sql.ts is card-search's SQL half; it reads prices through the db module's fragments (P03).
+  { from: cardSearchSql, allow: { to: el("db") } },
 
   // module layers: the dependency rule points inward (overview.md)
   from(layer("domain"), el("kernel"), layer("domain", { sameModule: true }), cardSearch),
@@ -301,25 +310,35 @@ export default defineConfig([
     files: SOURCE,
     ignores: [...TESTS, "src/shared/runtime/**", "src/shared/kernel/testing/**"],
     rules: {
-      "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS, ...MONEY_TEXT],
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+      ],
     },
   },
   // The basic words and money text are defined in exactly one place each (refactor P02): the
-  // catalog and the kernel's schemas.ts / money.ts may spell them out. They still follow ADR 0008.
+  // catalog and the kernel's schemas.ts / money.ts may spell them out (and shared/db/prices.ts the price table). They still follow ADR 0008.
   {
-    files: ["src/modules/catalog/**/*.ts", "src/shared/kernel/schemas.ts"],
+    files: [
+      "src/modules/catalog/**/*.ts",
+      "src/shared/kernel/schemas.ts",
+      "src/shared/db/prices.ts",
+    ],
     ignores: TESTS,
     rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT] },
   },
   {
     files: ["src/shared/kernel/money.ts"],
     ignores: TESTS,
-    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS] },
+    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS, ...PRICE_TABLE] },
   },
   {
     files: ["src/shared/runtime/**", "src/shared/kernel/testing/**"],
     ignores: TESTS,
-    rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT] },
+    rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
   },
 
   // Configuration is read in exactly one place.

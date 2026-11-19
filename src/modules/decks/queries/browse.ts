@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import {
   ColorSchema,
   type Finish,
@@ -299,9 +300,7 @@ export async function browseCollection(
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
            p.produced_mana, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = p.id and s.finish = shown.finish
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
       from candidates card join printings p on p.id = card.printing_id
       -- The finish a new deck line shows, as the deck view picks it when nothing is pinned: your

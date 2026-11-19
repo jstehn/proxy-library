@@ -1,5 +1,6 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { latestPriceRows } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -158,9 +159,7 @@ export async function landPoolsForDeck(
         join lateral (
           select p.id as printing_id, latest.usd_cents
             from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral (select distinct on (ps.finish) ps.usd_cents
-                            from price_snapshots ps where ps.printing_id = p.id
-                           order by ps.finish, ps.day desc) latest on true
+            join lateral ${latestPriceRows("p.id")} latest on true
            where p.oracle_id = matching.oracle_id
            order by latest.usd_cents, p.id
            limit 1

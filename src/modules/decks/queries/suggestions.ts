@@ -1,6 +1,7 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrice } from "@/shared/db";
+import { latestPrice, latestPriceRows } from "@/shared/db";
 import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
@@ -322,9 +323,7 @@ async function ownedCandidates(
       ${edhrecCte(context.commanderOracleIds)}
     )
     select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = p.id and s.finish = owned.finish
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice("p.id", "owned.finish")} as price_cents,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
              where d.owner_id = ${userId} and d.id <> ${context.deckId}
                and e.oracle_id = owned.oracle_id and e.board <> 'maybe')::int as other_decks,
@@ -392,9 +391,7 @@ async function storeCandidates(
         join lateral (
           select p.id as printing_id, latest.finish, latest.usd_cents
             from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                            from price_snapshots ps where ps.printing_id = p.id
-                           order by ps.finish, ps.day desc) latest on true
+            join lateral ${latestPriceRows("p.id")} latest on true
            where p.oracle_id = kept.oracle_id
            order by latest.usd_cents, p.id
            limit 1
@@ -619,11 +616,7 @@ export async function ownedCandidatesForIds(
            null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
       from owned
       join printings p on p.id = owned.printing_id
-      left join lateral (
-        select s.usd_cents from price_snapshots s
-         where s.printing_id = p.id and s.finish = owned.finish
-         order by s.day desc limit 1
-      ) ps on true
+      left join lateral (select ${latestPrice("p.id", "owned.finish")} as usd_cents) ps on true
      where ${fitsDeck(context)}
        ${priceFilter}
   `);
@@ -674,9 +667,7 @@ export async function similarCards(
         with cheapest as (
           select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
             from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                            from price_snapshots ps where ps.printing_id = p.id
-                           order by ps.finish, ps.day desc) latest on true
+            join lateral ${latestPriceRows("p.id")} latest on true
            where p.oracle_id = any(${textArray(neighborIds)})
              and ${fitsDeck(withoutTarget)}
              and not exists (select 1 from ${ownedCopies(userId, sql`${withoutTarget.usesRealCards}`)} c
@@ -887,12 +878,7 @@ export async function budgetReplacements(
       select distinct on (p.oracle_id) p.oracle_id, p.name, p.type_line, latest.usd_cents as price_cents
         from printings p
         join card_sets s on s.code = p.set_code and s.is_enabled
-        left join lateral (
-          select ps.usd_cents from price_snapshots ps
-           where ps.printing_id = p.id
-           order by ps.day desc, ps.usd_cents asc
-           limit 1
-        ) latest on true
+        left join lateral (select ${newestDayPrice("p.id")} as usd_cents) latest on true
        where p.oracle_id = any(${textArray(targetIds)})
        order by p.oracle_id, latest.usd_cents asc nulls last, p.id
     `)
@@ -934,9 +920,7 @@ export async function budgetReplacements(
         with cheapest as (
           select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
             from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                            from price_snapshots ps where ps.printing_id = p.id
-                           order by ps.finish, ps.day desc) latest on true
+            join lateral ${latestPriceRows("p.id")} latest on true
            where p.oracle_id = any(${textArray(neighborIds)})
              and ${fitsDeck(context)}
              and latest.usd_cents <= ${effectiveMaxPrice}

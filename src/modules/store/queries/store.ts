@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrices } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
 import type { PricingMode } from "../domain/pricing";
 
@@ -119,8 +119,7 @@ async function featuredArt(db: DbExecutor, setCodes: readonly string[]) {
   }>(sql`
     select distinct on (p.set_code) p.set_code, p.id as printing_id, p.artist
       from printings p
-      join price_snapshots s on s.printing_id = p.id
-                            and s.day = (select max(day) from price_snapshots)
+      join ${newestDayPrices()} s on s.printing_id = p.id
      where p.set_code = any(${sql.param([...setCodes])}::text[])
        and p.image_uris is not null
        and p.rarity in ('rare', 'mythic')

@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, latestPrice } from "@/shared/db";
 import { ColorSchema, type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import {
   BOARDS,
@@ -278,11 +278,11 @@ export async function deckView(
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = shown.id
-               and s.finish = coalesce(e.finish, owned_finish.finish,
-                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice(
+             "shown.id",
+             `coalesce(e.finish, owned_finish.finish,
+                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)`,
+           )} as price_cents,
            shown.set_code, shown.collector_number, shown.rarity,
            shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
