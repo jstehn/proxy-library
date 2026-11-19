@@ -19,27 +19,31 @@ export type {
   ApplyChangesError,
   ApplyChangesInput,
   ApplyChangesReport,
-  ChoosePrintingError,
-  ChoosePrintingInput,
-  CreateDeckError,
-  DeleteSnapshotError,
-  ImportReport,
-  OrderHeadingsError,
-  RenameHeadingError,
-  RenameHeadingInput,
-  ReplaceListError,
-  ReplaceListInput,
-  ReplaceReport,
-  RestoreSnapshotError,
-  SaveSnapshotError,
   SetEntryError,
-  SetEntryHeadingError,
-  SetEntryHeadingInput,
   SetEntryInput,
   SetEntryNoteError,
   SetEntryNoteInput,
-  UpdateDeckError,
-} from "./application/manage-decks";
+} from "./application/deck-entries";
+export type { ChoosePrintingError, ChoosePrintingInput } from "./application/deck-printings";
+export type { CreateDeckError, UpdateDeckError } from "./application/deck-lifecycle";
+export type {
+  DeleteSnapshotError,
+  RestoreSnapshotError,
+  SaveSnapshotError,
+} from "./application/deck-snapshots";
+export type {
+  ImportReport,
+  ReplaceListError,
+  ReplaceListInput,
+  ReplaceReport,
+} from "./application/deck-lists";
+export type {
+  OrderHeadingsError,
+  RenameHeadingError,
+  RenameHeadingInput,
+  SetEntryHeadingError,
+  SetEntryHeadingInput,
+} from "./application/deck-headings";
 export type {
   CardLookup,
   DeckRepository,
@@ -470,3 +474,26 @@ export {
   type RoleTargetKey,
 } from "./domain/deck-profile";
 export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
+export {
+  makeDeckPreviews,
+  PREVIEW_TTL_MS,
+  type ApplyPreviewError,
+  type ChangeNoteInvalid,
+  type ChangeRequest,
+  type CardsNotFound,
+  type LineNotOnBoard,
+  type PreviewChangesError,
+  type PreviewExpired,
+  type PreviewWarning,
+  type PreviewedChanges,
+  type SaveChangesError,
+  type SavedChanges,
+  type StoredPreviewResult,
+} from "./application/deck-previews";
+export type { ChangeToSave, PreviewRecord, PreviewRepository } from "./application/ports";
+export {
+  makeDeckPlanEdits,
+  type DeckPlanWriters,
+  type SavedSource,
+} from "./application/deck-plan-edits";
+export { makeStartDeck, type StartDeckInput, type StartedDeck } from "./application/deck-start";

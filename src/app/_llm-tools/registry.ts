@@ -3,14 +3,7 @@ import type { Scope } from "@/modules/accounts";
 import { BINDINGS } from "./bindings";
 import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
-import {
-  drawSampleTool,
-  edhrecLookupTool,
-  editDeckConsolidated,
-  rulesLookupTool,
-  updateDeckConsolidated,
-} from "./tools/consolidated";
-import { createDeck } from "./tools/decks";
+import { drawSampleTool, edhrecLookupTool, rulesLookupTool } from "./tools/consolidated";
 import { findCombosForDeckTool } from "./tools/library";
 import { redditResearchTool } from "./tools/reddit";
 import { youtubeResearchTool } from "./tools/youtube";
@@ -20,9 +13,6 @@ import { youtubeResearchTool } from "./tools/youtube";
 
 /** Tools not yet ported to bindings (P06–P09 move them; P09 deletes this list). */
 const LEGACY_TOOLS: readonly LlmTool[] = [
-  createDeck,
-  updateDeckConsolidated,
-  editDeckConsolidated,
   edhrecLookupTool,
   findCombosForDeckTool,
   drawSampleTool,

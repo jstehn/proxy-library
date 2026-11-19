@@ -29,6 +29,11 @@ of old and new tool output.
 - [ ] **Look at it, dark mode and at phone width** (memory: user tests dark and mobile): the
       builder grid and the suggestions panel after P07b changed which printing an owned card shows.
 
+- [ ] **Edit as text, the plan and primer panel, and new deck (P08).** In the browser: save a
+      deck's plan with key and avoid cards, edit a deck as text, make a new deck.
+- [ ] **Stored previews survive a restart (P08).** Preview an `edit_deck` change, restart the app
+      (`pnpm dev:all`), then save it with the `previewId` from an MCP client.
+
 ## Needs a person to judge
 
 - [ ] **Which printing an owned card shows (P07b).** Suggestions, draft, mana base and commanders

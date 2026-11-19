@@ -2,14 +2,14 @@ import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import { type DbExecutor, latestPrice } from "@/shared/db";
 import { ColorSchema, type UserId } from "@/shared/kernel";
-import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
+import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "../domain/deck";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
 import { fingerprint } from "../domain/list-format";
 import {
   previewChanges,
-  type ChangePreview,
   type DeckChange,
+  type DeckChangePreview,
   type PreviewLine,
 } from "../domain/preview";
 import type { CardRules } from "../domain/rules";
@@ -22,11 +22,7 @@ import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the
 // `owned.ts` SQL orderings so stats, legalities and prices agree with the deck builder.
 
-export type DeckChangePreview = ChangePreview &
-  Readonly<{
-    deck: Readonly<{ id: number; name: string; format: Format }>;
-    fingerprint: string;
-  }>;
+export type { DeckChangePreview };
 
 export type ListPreviewError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 

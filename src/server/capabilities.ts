@@ -37,6 +37,16 @@ import {
   manaBasePlan,
   similarCards,
   makeListDecks,
+  makeDeckPreviews,
+  makeDeckPlanEdits,
+  makeStartDeck,
+  updateDeckPrimer,
+  updateDeckProfile,
+  addDeckSource,
+  deckChangePreview,
+  DeckId,
+  type Decks,
+  type PreviewRepository,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import {
@@ -61,10 +71,16 @@ type CapabilityDependencies = Readonly<{
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
+  decks: Pick<
+    Decks,
+    "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
+  >;
+  previews: PreviewRepository;
+  newPreviewId: () => string;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet, wishlist, textEmbedder } = dependencies;
+  const { db, clock, wallet, wishlist, textEmbedder, decks, previews, newPreviewId } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -78,6 +94,42 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       sources: (userId, deckId) => listDeckSources(db, userId, deckId),
       profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
     }),
+    deckPreviews: makeDeckPreviews({
+      previews,
+      clock,
+      newPreviewId,
+      findCards: async (names) => {
+        const found = await Promise.all(
+          names.map(async (name) => [name, await findCard(db, name)] as const),
+        );
+        return new Map(
+          found.flatMap(([name, card]) => (card === null ? [] : [[name, card.oracleId]])),
+        );
+      },
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      changePreview: (userId, deckId, changes) => deckChangePreview(db, userId, deckId, changes),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+      applyChanges: (actor, input) =>
+        decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
+    }),
+    startDeck: makeStartDeck(decks),
+    deckPlanEdits: makeDeckPlanEdits({
+      clock,
+      updateProfile: (userId, deckId, patch, now) =>
+        updateDeckProfile(db, userId, deckId, patch, now),
+      updatePrimer: (userId, deckId, input, now) =>
+        updateDeckPrimer(db, userId, deckId, input, now),
+      addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
+    }),
+    // The deck-changing commands, as the decks module's use cases (each checks its own rules).
+    deckEdits: {
+      createDeck: decks.createDeck,
+      updateDeck: decks.updateDeck,
+      deleteDeck: decks.deleteDeck,
+      importList: decks.importList,
+      replaceList: decks.replaceList,
+    },
     deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
     deckSignals: makeDeckSignals({
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),

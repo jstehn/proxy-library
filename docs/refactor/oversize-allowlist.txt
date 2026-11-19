@@ -7,7 +7,6 @@ src/app/_llm-tools/tools/consolidated.ts  # pre-refactor, owned by P09
 src/app/_llm-tools/tools/decks.ts  # pre-refactor, owned by P06
 src/app/_llm-tools/tools/library.ts  # pre-refactor, owned by P09
 src/modules/catalog/infrastructure/drizzle-repositories.ts  # pre-refactor, owned by P20
-src/modules/decks/application/manage-decks.ts  # pre-refactor, owned by P08
 src/modules/decks/domain/draft-deck.ts  # pre-refactor, owned by P16
 src/modules/decks/domain/goldfish-session.ts  # pre-refactor, owned by P15
 src/modules/decks/domain/optimize.ts  # pre-refactor, owned by P20

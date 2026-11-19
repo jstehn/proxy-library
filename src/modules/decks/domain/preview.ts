@@ -402,3 +402,10 @@ export function previewChanges(input: {
     roleTargets: input.roleTargets,
   });
 }
+
+/** A dry run of changes to one deck, with the deck's fingerprint when it was made. */
+export type DeckChangePreview = ChangePreview &
+  Readonly<{
+    deck: Readonly<{ id: number; name: string; format: Format }>;
+    fingerprint: string;
+  }>;

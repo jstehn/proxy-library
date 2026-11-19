@@ -40,8 +40,6 @@ import {
   otherDecksHolding,
   type OtherDeckUse,
   takeCopies,
-  updateDeckPrimer,
-  updateDeckProfile,
   type DeckPlan,
   describeDeckError,
 } from "@/modules/decks";
@@ -734,26 +732,25 @@ export async function saveDeckPlanAction(
   if (!parsed.success) {
     return { ok: false, message: "Something there is too long or empty; check the fields." };
   }
-  const { db, clock } = getContainer();
+  const { deckPlanEdits } = getContainer().capabilities;
   const { deckId, primer, ...fields } = parsed.data;
-  const now = clock.now();
-  const updated = await updateDeckProfile(
-    db,
-    actor.userId,
+  const updated = await deckPlanEdits.setProfile(actor, {
     deckId,
-    {
+    patch: {
       ...fields,
       plan: fields.plan === "" ? null : fields.plan,
       mulligan: fields.mulligan === "" ? null : fields.mulligan,
       pilotNotes: fields.pilotNotes === "" ? null : fields.pilotNotes,
     },
-    now,
-  );
-  if (updated === null) return { ok: false, message: "That deck isn't yours." };
-  const savedPrimer = await updateDeckPrimer(db, actor.userId, deckId, { content: primer }, now);
+  });
+  if (!updated.ok) return { ok: false, message: "That deck isn't yours." };
+  const savedPrimer = await deckPlanEdits.setPrimer(actor, { deckId, content: primer });
   revalidatePath(`/decks/${deckId}`);
   return {
     ok: true,
-    plan: { profile: updated.profile, primer: savedPrimer?.primer ?? primer.trim() },
+    plan: {
+      profile: updated.value.profile,
+      primer: savedPrimer.ok ? savedPrimer.value.primer : primer.trim(),
+    },
   };
 }

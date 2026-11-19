@@ -48,6 +48,7 @@ import {
   drizzleDeckRepository,
   drizzleDeckSharing,
   drizzleDeckTokenRepository,
+  drizzleChangePreviewRepository,
   drizzleGoldfishSessionRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
@@ -292,7 +293,16 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
-    capabilities: buildCapabilities({ db, clock, wallet, wishlist, textEmbedder }),
+    capabilities: buildCapabilities({
+      db,
+      clock,
+      wallet,
+      wishlist,
+      textEmbedder,
+      decks,
+      previews: drizzleChangePreviewRepository(db),
+      newPreviewId: randomUUID,
+    }),
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };
