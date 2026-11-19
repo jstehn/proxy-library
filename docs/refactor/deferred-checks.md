@@ -53,3 +53,7 @@ of old and new tool output.
 - [ ] The comparisons of old and new tools (P06 to P07d) were throwaway scripts, deleted with the
       old tools. The reference outputs in `reference/tools/` are the lasting record; they cover one
       input per tool. Consider adding a few more fixtures before P09 deletes the last old tools.
+- [ ] **Builder panels after P09b** (by eye, with real data): swap a cut for a suggestion, take a
+      card from another deck, save, compare, restore and delete a snapshot, edit the plan and primer,
+      run the optimizer, a draft and the mana base. They go through the same wrapper the e2e suite
+      covers, but no test drives them.

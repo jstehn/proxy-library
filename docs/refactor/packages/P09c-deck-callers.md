@@ -46,6 +46,8 @@ readPage()`. Keep the output the page renders the same. Map failures with the mo
 
 ## Done when
 
+- (From P09b) `app/decks/[id]/page.tsx` reads through `readPage()` and `capabilities.deckOverview`;
+  `loadBuilderDeck` in `builder/actions.ts` is deleted.
 - Nothing under `src/app/{decks,drafts,collection,d,cards,inventory}` calls `getContainer` or
   imports a query (except files in `CONTAINER_ALLOWED`, each with a reason).
 - `decks/actions.ts` ≤ 200 lines. `drafts/actions.ts` and `collection/real/actions.ts` are shorter

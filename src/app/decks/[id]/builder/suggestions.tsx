@@ -13,7 +13,7 @@ import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "../../labels";
-import { budgetAction, suggestionsAction } from "./actions";
+import { budgetAction, suggestionsAction } from "./reads/actions";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects

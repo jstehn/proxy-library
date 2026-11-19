@@ -90,4 +90,58 @@ userId, deckId)`, and the same for `profile` (repeated 6 times today).
 
 ## Handoff
 
-(empty)
+**Done:**
+
+- **Wiring per module.** `wiring.ts` in `decks`, `wishlist`, `accounts` and `catalog`
+  (`wireDeckCapabilities`, `wireWishlistCapabilities`, `wireAccountCapabilities`,
+  `wireCatalogCapabilities`). `src/server/capabilities.ts` went from 290 to 108 lines: it joins the
+  four and keeps `rulesLookup`, `lookUpCards` and `searchCatalog`, which read across modules (the
+  real collection may only be used by decks, so they can't live in one module's wiring). Shared
+  readers are written once in the decks wiring (`readDeck`, `readPlan`, `ownedChecks`: `profile` was
+  repeated 6 times). Lint: a `wiring.ts` may use its own layers, `@/shared/db`, the kernel and other
+  modules' `index.ts`; only `src/server/**` and `worker/**` may import one.
+- **`readPage()`**: `src/server/page.ts` is the factory (`makeReadPage`, tested with fakes) and
+  `page-instance.ts` the real one, like `action.ts` and `action-instance.ts`.
+  `readPage({ allowVisitors: true })` gives `actor: null` to a visitor.
+- **ADR 0026 amended** (points 1, 2, 4, 5, "how to add" step 2, and a change-log line).
+- **The ratchet.** `NOT_YET_ON_CAPABILITIES` (85 files at the start, 84 now) and `CONTAINER_ALLOWED`
+  (`_oauth/http.ts`, `api/health/route.ts`, each with its reason) in `eslint.config.mjs`. "Adapters
+  stay thin" now also covers `page.tsx`, `route.ts` and `layout.tsx`. `getContainer()` in `src/app`:
+  191 to 161.
+- **Builder actions through `action()`.** Every builder action is `builderAction(schema, ifInvalid,
+handler)`, a small wrapper over `action()` that keeps the old answer for an invalid input (the
+  browser still gets `QuantityResult`, `null`, `[]` and so on). No `getContainer`, `db` or query
+  import. New capabilities: `swapCards`, `takeFromDeck` (`decks/application/deck-builder-moves.ts`,
+  fake-reader tests), `printingDetails` (catalog), `deckEdits` is now the whole `Decks` service, and
+  `deckReads` holds the builder's one-question reads (browse, printings, other decks, suggestions,
+  optimize, draft, similar, budget, snapshots) as one-line forwards to the queries.
+- **`decks/index.ts`**: 440 exported names to 215, 512 lines to 225 (`grep -c '^export'`: 96 to 77).
+  Removed every name nothing outside the module used; `wiring.ts` imports from the layers. The
+  allowlist entry for it is gone.
+- **Checked:** `pnpm check` green, 281 of 281 integration tests, Playwright 26 of 26.
+
+**Where `builder/actions.ts` went:** 756 lines to 295, plus `action-helpers.ts` (85),
+`reads/actions.ts` (175), `snapshots/actions.ts` (133) and `plan/actions.ts` (82). The split was
+needed to meet ≤ 350 without squeezing; the folders hold actions by job. Components import from the
+new paths (import lines only). All four are covered by the "Adapters stay thin" rule (they're named
+`actions.ts`).
+
+**Size (honest):** source 92,270 lines (92,272 before), code lines 79,262 (79,367 before), so no net
+shrink: the capabilities and tests for the builder moves were added, and the thin actions were
+about as long as the old ones once each handler call is spelled out. The package's real result is
+structural: `getContainer()` −30, `capabilities.ts` −182, `decks/index.ts` −287, and no builder file
+touches the database. The saving the playbook hoped for comes when P09c and P09d delete the
+second copies in the pages and other actions.
+
+**Not verified:** the builder's swap, take-from-deck, snapshots, plan/primer, optimizer and draft
+panels weren't exercised by the e2e suite or by eye in this package (they run through the same
+`builderAction`, and the e2e suite proves the pattern for the others). They are in
+`deferred-checks.md`.
+
+**For the next packages:**
+
+- P09c: `app/decks/[id]/page.tsx` still calls `loadBuilderDeck` (now `readPage()` inside) and
+  `getContainer()`; move it to `readPage()` and `capabilities.deckOverview`, then `loadBuilderDeck`
+  can go.
+- P19: the builder still gets the old result shapes (`QuantityResult`, `null`). Change them to a
+  `Result` when the components are rewritten, and then delete `builderAction`'s `ifInvalid`.
