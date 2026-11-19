@@ -20,4 +20,3 @@ src/shared/card-search/parse.ts  # pre-refactor, owned by P13
 src/shared/card-search/signals.ts  # pre-refactor, owned by P13
 src/shared/card-search/sql.ts  # pre-refactor, owned by P03
 src/shared/card-search/tags.ts  # pre-refactor, owned by P13
-src/modules/decks/index.ts  # public API barrel grew with the new capabilities; P18 splits the decks module

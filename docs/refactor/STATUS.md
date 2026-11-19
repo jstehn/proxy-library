@@ -29,7 +29,7 @@ its own worktree.
 | P08   | [Deck edits and previews](packages/P08-edits-previews.md)                                | P05                     | P06, P07                    | done                       |
 | P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                        | P06, P07a–d, P07b2, P08 | none                        | done                       |
 |       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                         |                             |                            |
-| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | free                       |
+| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | done                       |
 | P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                    | P09d                        | free                       |
 | P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | free                       |
 |       | **Wave 3: rules as data** (audit R4, R5)                                                 |                         |                             |                            |
