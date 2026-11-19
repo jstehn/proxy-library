@@ -37,6 +37,11 @@ import {
   manaBasePlan,
   similarCards,
   makeListDecks,
+  makeDeckPreviews,
+  deckChangePreview,
+  DeckId,
+  type Decks,
+  type PreviewRepository,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import {
@@ -61,10 +66,13 @@ type CapabilityDependencies = Readonly<{
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
+  decks: Pick<Decks, "applyChanges">;
+  previews: PreviewRepository;
+  newPreviewId: () => string;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet, wishlist, textEmbedder } = dependencies;
+  const { db, clock, wallet, wishlist, textEmbedder, decks, previews, newPreviewId } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -77,6 +85,25 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
       sources: (userId, deckId) => listDeckSources(db, userId, deckId),
       profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
+    }),
+    deckPreviews: makeDeckPreviews({
+      previews,
+      clock,
+      newPreviewId,
+      findCards: async (names) => {
+        const found = await Promise.all(
+          names.map(async (name) => [name, await findCard(db, name)] as const),
+        );
+        return new Map(
+          found.flatMap(([name, card]) => (card === null ? [] : [[name, card.oracleId]])),
+        );
+      },
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      changePreview: (userId, deckId, changes) => deckChangePreview(db, userId, deckId, changes),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+      applyChanges: (actor, input) =>
+        decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
     }),
     deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
     deckSignals: makeDeckSignals({

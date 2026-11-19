@@ -474,3 +474,20 @@ export {
   type RoleTargetKey,
 } from "./domain/deck-profile";
 export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
+export {
+  makeDeckPreviews,
+  PREVIEW_TTL_MS,
+  type ApplyPreviewError,
+  type ChangeNoteInvalid,
+  type ChangeRequest,
+  type CardsNotFound,
+  type LineNotOnBoard,
+  type PreviewChangesError,
+  type PreviewExpired,
+  type PreviewWarning,
+  type PreviewedChanges,
+  type SaveChangesError,
+  type SavedChanges,
+  type StoredPreviewResult,
+} from "./application/deck-previews";
+export type { ChangeToSave, PreviewRecord, PreviewRepository } from "./application/ports";
