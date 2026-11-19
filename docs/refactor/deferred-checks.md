@@ -100,3 +100,17 @@ of old and new tool output.
 - [ ] **Look at the builder's stats panel and test hand in a Commander deck and a Limited deck
       (P10):** cards "n / 100" and "n / 40", the sideboard line only in 60-card formats, the role
       guide text, a free first mulligan only in Commander, no "Draft deck" button in Limited.
+
+## Left by P17 (one way to show a collection)
+
+- [ ] **Run the integration tests for the shared collection SQL (P17).** `pnpm test:int
+tests/integration/singles.int.test.ts tests/integration/real-collection.int.test.ts
+tests/integration/card-search.int.test.ts`, plus whatever covers the card page's "owned" boxes and
+      the exports (`grep -l "exportRows\|ownedByOracle\|copiesOf" tests/integration`). Not run in the package
+      (shared database).
+- [ ] **Look at `/collection`, `/collection/real` and `/players/<id>/real` in dark mode and at phone
+      width (P17):** the grid, sections, the "In: deck" line (game tab only), filters, sort "Newest
+      first", pagination, and the export links.
+- [ ] **Download all three formats from `/api/export/collection` and `/api/export/real` (P17):**
+      file names (`collection*.csv/.txt`, `real-collection*.csv/.txt`), and the first and last acquired
+      dates (game: first and last arrival; real: when added, when changed).

@@ -1,25 +1,19 @@
 import Link from "next/link";
-import {
-  CardFilters,
-  filterValues,
-  oneOf,
-  pageNumber,
-  Pagination,
-  searchText,
-} from "@/app/_components/card-filters";
+import { CardFilters, Pagination } from "@/app/_components/card-filters";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet } from "@/ui/mana";
-import { SECTION_VALUES, SECTIONS, SORT_VALUES, SORTS } from "../shared";
+import { SECTIONS, SORTS } from "@/ui/collection/options";
+import { CollectionCardGrid, ExportLinks } from "../card-grid";
+import { readCollectionQuery } from "../collection-query";
 import { CollectionTabs } from "../tabs";
 import {
   clearRealCollectionAction,
   removeRealProductAction,
   setRealSharingAction,
 } from "./actions";
-import { RealCardGrid } from "./card-grid";
 
 // The Real tab (design doc 16, section 7): the cards you own physically, with the Game tab's
 // search, filters, sections and totals. Nothing here touches money or the game (rule 1).
@@ -30,23 +24,11 @@ const button =
 export default async function RealCollectionPage(props: PageProps<"/collection/real">) {
   const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
-  const values = filterValues(searchParams);
-  const page = pageNumber(searchParams);
-  const finish = oneOf(values.finish, ["", "nonfoil", "foil", "etched"] as const);
-  const isFiltered = ["q", "name", "set", "rarity", "color", "finish"].some((key) => key in values);
+  const { values, page, filter, isFiltered } = readCollectionQuery(searchParams);
   const message = typeof searchParams.message === "string" ? searchParams.message : null;
 
   const [result, sets, products, isShared, shared] = await Promise.all([
-    capabilities.realCollectionReads.page(actor.userId, {
-      search: searchText(values),
-      setCode: values.set,
-      rarity: values.rarity,
-      color: values.color,
-      finish: finish === "" ? undefined : finish,
-      sections: oneOf(values.sections, SECTION_VALUES),
-      sort: oneOf(values.sort, SORT_VALUES),
-      page,
-    }),
+    capabilities.realCollectionReads.page(actor.userId, filter),
     capabilities.realCollectionReads.sets(actor.userId),
     capabilities.realCollectionReads.productsOf(actor.userId),
     capabilities.realCollectionReads.isShared(actor.userId),
@@ -76,18 +58,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
           <Link href="/collection/real/import" className="font-medium underline">
             Import cards
           </Link>{" "}
-          (a list, or a Moxfield or ManaBox file) · Export:{" "}
-          <a href="/api/export/real?format=moxfield" className="underline">
-            Moxfield CSV
-          </a>{" "}
-          ·{" "}
-          <a href="/api/export/real?format=text" className="underline">
-            text list
-          </a>{" "}
-          ·{" "}
-          <a href="/api/export/real?format=full" className="underline">
-            full CSV
-          </a>
+          (a list, or a Moxfield or ManaBox file) · Export: <ExportLinks path="/api/export/real" />
         </p>
       </header>
       {message !== null && <Alert tone="success">{message}</Alert>}
@@ -119,7 +90,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
           )}
         </p>
       ) : (
-        <RealCardGrid rows={result.rows} cards={cards} />
+        <CollectionCardGrid rows={result.rows} cards={cards} />
       )}
       <Pagination
         action="/collection/real"

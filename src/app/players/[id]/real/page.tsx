@@ -1,15 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  CardFilters,
-  filterValues,
-  oneOf,
-  pageNumber,
-  Pagination,
-  searchText,
-} from "@/app/_components/card-filters";
-import { RealCardGrid } from "@/app/collection/real/card-grid";
-import { SECTION_VALUES, SECTIONS, SORT_VALUES, SORTS } from "@/app/collection/shared";
+import { CardFilters, Pagination } from "@/app/_components/card-filters";
+import { CollectionCardGrid } from "@/app/collection/card-grid";
+import { readCollectionQuery } from "@/app/collection/collection-query";
+import { SECTIONS, SORTS } from "@/ui/collection/options";
 import { Cents, UserId } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";
@@ -29,20 +23,9 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
   const name = owner?.displayName ?? actor.displayName;
 
   const searchParams = await props.searchParams;
-  const values = filterValues(searchParams);
-  const page = pageNumber(searchParams);
-  const finish = oneOf(values.finish, ["", "nonfoil", "foil", "etched"] as const);
+  const { values, page, filter } = readCollectionQuery(searchParams);
   const [result, sets, products] = await Promise.all([
-    capabilities.realCollectionReads.page(ownerId, {
-      search: searchText(values),
-      setCode: values.set,
-      rarity: values.rarity,
-      color: values.color,
-      finish: finish === "" ? undefined : finish,
-      sections: oneOf(values.sections, SECTION_VALUES),
-      sort: oneOf(values.sort, SORT_VALUES),
-      page,
-    }),
+    capabilities.realCollectionReads.page(ownerId, filter),
     capabilities.realCollectionReads.sets(ownerId),
     capabilities.realCollectionReads.productsOf(ownerId),
   ]);
@@ -84,7 +67,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
       {result.rows.length === 0 ? (
         <p className="text-muted text-sm">No real cards here.</p>
       ) : (
-        <RealCardGrid rows={result.rows} cards={cards} />
+        <CollectionCardGrid rows={result.rows} cards={cards} />
       )}
       <Pagination action={path} values={values} page={page} pageCount={result.pageCount} />
     </main>
