@@ -169,6 +169,9 @@ Before stopping, even partway through:
    and anything surprising. Keep it short; it's what the next session reads first.
 5. Add a **"Superseded in part"** line to every design doc whose code you replaced (playbook,
    Part A step 15). Commit it with the package.
+6. If something couldn't be verified in the session (it needs the network, a browser or a
+   person's eye), add it to [deferred-checks.md](deferred-checks.md) instead of leaving it in a
+   comment.
 
 New ideas that aren't part of a package go to the **Backlog** in STATUS (and to tududi's inbox
 when it's connected), not into the current work.
