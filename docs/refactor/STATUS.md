@@ -17,7 +17,7 @@ its own worktree.
 |     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                      |
 | P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | done                 |
 | P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | done                 |
-| P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | blocked (decision 1) |
+| P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | free                 |
 |     | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                     |                     |                             |                      |
 | P05 | [Capability and binding framework](packages/P05-framework.md)                      | P03, P04            | none                        | free                 |
 | P06 | [Deck read capabilities](packages/P06-deck-reads.md)                               | P05                 | P07, P08                    | free                 |
@@ -74,7 +74,8 @@ state".
 
 1. (tududi task 260) **Double-faced cards (P04):** does a spell with a land on its back count as a land for the
    deck's land count, the drafter and test hands? Today the builder says no and the drafter says
-   yes.
+   yes. **Answered (2026-11-19): yes.** A double-faced card with a land face counts as a land
+   everywhere: the deck's land count, the drafter and test hands.
 2. (tududi task 261) **The mana curve (P16):** should everything share one curve (the builder's 0–7+), or should
    the drafter and "draft a deck" keep their own named versions?
 3. (tududi task 262) **Card features storage (P11):** precompute at sync (needs a backfill) or compute when a deck
