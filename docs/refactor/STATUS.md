@@ -81,11 +81,11 @@ state".
 Before each milestone, run the checks in [deferred-checks.md](deferred-checks.md) (network, browser
 and by-eye checks the packages couldn't do).
 
-| Milestone | After  | Requires                                                                    | Status                                 |
-| --------- | ------ | --------------------------------------------------------------------------- | -------------------------------------- |
-| 1         | Wave 2 | full suite green; every LLM tool and builder feature working again          | reached 2026-11-19, merged into `main` |
-| 2         | Wave 4 | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED` | not reached                            |
-| 3         | Wave 5 | full suite green; no file over 500 lines without a reason; docs updated     | not reached                            |
+| Milestone | After       | Requires                                                                                                | Status                                                                                                  |
+| --------- | ----------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1         | Wave 2 + 2½ | full suite green; every LLM tool and builder feature working again; UI callers on capabilities (P09b–d) | **not complete**: wave 2 merged into `main` 2026-11-19; wave 2½ open ([review](reviews/milestone-1.md)) |
+| 2         | Wave 4      | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`                             | not reached                                                                                             |
+| 3         | Wave 5      | full suite green; no file over 500 lines without a reason; docs updated                                 | not reached                                                                                             |
 
 ## Decisions needed (ask the user; record the answer here and on the tududi task)
 
