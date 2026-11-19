@@ -10,6 +10,16 @@ import {
 } from "@/shared/http";
 import type { Clock } from "@/shared/kernel";
 import { commanderSlug } from "../domain/edhrec";
+import type {
+  ScryfallRuling,
+  ScryfallRulingsResult,
+  EdhrecCardItem,
+  EdhrecThemeTag,
+  EdhrecCommanderData,
+  SpellbookCombo,
+  SpellbookOneCardAwayCombo,
+  SpellbookCombosResult,
+} from "../domain/outside-data";
 
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -73,20 +83,6 @@ const ScryfallNamedCardSchema = z.object({
   name: z.string(),
   rulings_uri: z.string().url(),
 });
-
-export type ScryfallRuling = Readonly<{
-  publishedAt: string;
-  source: string;
-  comment: string;
-}>;
-
-export type ScryfallRulingsResult = Readonly<{
-  name: string;
-  sourceUrl: string;
-  fetchedAt: string;
-  cached: boolean;
-  rulings: readonly ScryfallRuling[];
-}>;
 
 async function fetchScryfallRulings(
   target: { name: string; scryfallId?: string },
@@ -182,31 +178,6 @@ const EdhrecPageSchema = z.object({
     }),
   }),
 });
-
-export type EdhrecCardItem = Readonly<{
-  name: string;
-  inclusionPct: number;
-  synergy: number;
-  category: string;
-}>;
-
-export type EdhrecThemeTag = Readonly<{
-  name: string;
-  slug: string;
-  count: number;
-}>;
-
-export type EdhrecCommanderData = Readonly<{
-  commander: string;
-  slug: string;
-  sourceUrl: string;
-  fetchedAt: string;
-  cached: boolean;
-  deckCount: number;
-  themes: readonly EdhrecThemeTag[];
-  cards: readonly EdhrecCardItem[];
-  averageDecklist: readonly string[] | null;
-}>;
 
 type CachedEdhrecPayload = Omit<EdhrecCommanderData, "fetchedAt" | "cached">;
 
@@ -342,30 +313,6 @@ const SpellbookFindMyCombosResponseSchema = z.object({
     almostIncluded: z.array(SpellbookComboVariantSchema).optional().default([]),
   }),
 });
-
-export type SpellbookCombo = Readonly<{
-  id: string;
-  uses: readonly string[];
-  produces: readonly string[];
-  steps: string;
-  prerequisites: string;
-  bracketTag: string | null;
-  manaNeeded: string | null;
-  identity: string;
-}>;
-
-export type SpellbookOneCardAwayCombo = SpellbookCombo &
-  Readonly<{
-    missingCardName: string;
-  }>;
-
-export type SpellbookCombosResult = Readonly<{
-  sourceUrl: string;
-  fetchedAt: string;
-  cached: boolean;
-  complete: readonly SpellbookCombo[];
-  oneCardAway: readonly SpellbookOneCardAwayCombo[];
-}>;
 
 type CachedSpellbookPayload = {
   complete: SpellbookCombo[];

@@ -92,19 +92,21 @@ differs between runs; the four tools that call outside services record only thei
 
 ## LLM tools (`src/app/_llm-tools/registry.ts`, served at `/api/mcp` and `/api/tools/<name>`)
 
-- [ ] `get_account`: balance, scopes, counts
-- [ ] `list_decks`: your decks
-- [ ] `get_deck`: a deck compactly or in full (signals, prices, primer, bracket)
-- [ ] `create_deck`: new deck, optionally from a list
-- [ ] `update_deck`: profile, plan, key cards, avoid cards, primer, target bracket
-- [ ] `edit_deck`: preview and save card changes or a whole list (fingerprint-checked)
-- [ ] `search_cards`: card search with synergy queries and deck context
-- [ ] `get_cards`: card details by name
-- [ ] `edhrec_lookup`: EDHREC recommendations (network)
-- [ ] `find_combos`: Commander Spellbook combos (network)
-- [ ] `find_replacements`: similar and budget replacements
-- [ ] `draw_sample`: sample hands and castability simulation
-- [ ] `rules_lookup`: rulings and Comprehensive Rules
-- [ ] `youtube_research`: deck-tech videos (network)
-- [ ] `reddit_research`: Reddit threads (network)
-- [ ] `manage_wishlist`: list, add, remove wishes
+_Ticked after P09: [x] matches the reference output or the old tool; [~] is a network tool checked only with fakes (see deferred-checks.md)._
+
+- [x] `get_account`: balance, scopes, counts
+- [x] `list_decks`: your decks
+- [x] `get_deck`: a deck compactly or in full (signals, prices, primer, bracket)
+- [x] `create_deck`: new deck, optionally from a list
+- [x] `update_deck`: profile, plan, key cards, avoid cards, primer, target bracket
+- [x] `edit_deck`: preview and save card changes or a whole list (fingerprint-checked)
+- [x] `search_cards`: card search with synergy queries and deck context
+- [x] `get_cards`: card details by name
+- [~] `edhrec_lookup`: EDHREC recommendations (network)
+- [~] `find_combos`: Commander Spellbook combos (network)
+- [x] `find_replacements`: similar and budget replacements
+- [x] `draw_sample`: sample hands and castability simulation
+- [x] `rules_lookup`: rulings and Comprehensive Rules
+- [~] `youtube_research`: deck-tech videos (network)
+- [~] `reddit_research`: Reddit threads (network)
+- [x] `manage_wishlist`: list, add, remove wishes

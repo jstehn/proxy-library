@@ -58,3 +58,10 @@ export type { Actor, Player } from "./domain/player";
 export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
 export { listAccessTokens } from "./queries/access-tokens";
 export type { InviteListItem, PlayerListItem } from "./queries/admin";
+export {
+  describeChangeOwnPasswordError,
+  describeSignInError,
+  describeRegisterPlayerError,
+  describePlayerActionError,
+  type PlayerActionError,
+} from "./application/describe-error";

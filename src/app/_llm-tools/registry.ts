@@ -3,29 +3,12 @@ import type { Scope } from "@/modules/accounts";
 import { BINDINGS } from "./bindings";
 import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
-import { drawSampleTool, edhrecLookupTool, rulesLookupTool } from "./tools/consolidated";
-import { findCombosForDeckTool } from "./tools/library";
-import { redditResearchTool } from "./tools/reddit";
-import { youtubeResearchTool } from "./tools/youtube";
 
 // The tool registry (design doc 28, section 3.2): consolidated, token-efficient tools served
 // identically by /api/mcp and /api/tools/<name>.
 
-/** Tools not yet ported to bindings (P06–P09 move them; P09 deletes this list). */
-const LEGACY_TOOLS: readonly LlmTool[] = [
-  edhrecLookupTool,
-  findCombosForDeckTool,
-  drawSampleTool,
-  rulesLookupTool,
-  youtubeResearchTool,
-  redditResearchTool,
-];
-
-/** Bindings first; an old tool is served only when no binding has its name. */
-export const TOOLS: readonly LlmTool[] = [
-  ...BINDINGS,
-  ...LEGACY_TOOLS.filter((tool) => !BINDINGS.some((binding) => binding.name === tool.name)),
-];
+/** Every tool, served identically by /api/mcp and /api/tools/<name>. */
+export const TOOLS: readonly LlmTool[] = BINDINGS;
 
 /** House rules, for MCP's server instructions and OpenAPI's description (rule 10 repeats them). */
 export const INSTRUCTIONS = [

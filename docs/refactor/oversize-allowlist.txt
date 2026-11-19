@@ -3,9 +3,6 @@ src/app/decks/[id]/builder/actions.ts  # pre-refactor, owned by P19
 src/app/decks/[id]/builder/deck-builder.tsx  # pre-refactor, owned by P19
 src/app/decks/[id]/builder/deck-list.tsx  # pre-refactor, owned by P19
 src/app/drafts/[id]/page.tsx  # pre-refactor, owned by P20
-src/app/_llm-tools/tools/consolidated.ts  # pre-refactor, owned by P09
-src/app/_llm-tools/tools/decks.ts  # pre-refactor, owned by P06
-src/app/_llm-tools/tools/library.ts  # pre-refactor, owned by P09
 src/modules/catalog/infrastructure/drizzle-repositories.ts  # pre-refactor, owned by P20
 src/modules/decks/domain/draft-deck.ts  # pre-refactor, owned by P16
 src/modules/decks/domain/goldfish-session.ts  # pre-refactor, owned by P15
@@ -24,3 +21,4 @@ src/shared/card-search/parse.ts  # pre-refactor, owned by P13
 src/shared/card-search/signals.ts  # pre-refactor, owned by P13
 src/shared/card-search/sql.ts  # pre-refactor, owned by P03
 src/shared/card-search/tags.ts  # pre-refactor, owned by P13
+src/modules/decks/index.ts  # public API barrel grew with the new capabilities; P18 splits the decks module

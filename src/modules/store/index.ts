@@ -64,3 +64,4 @@ export {
   type StoreSearchResult,
   type StoreSet,
 } from "./queries/store";
+export { describeBuySealedError } from "./application/describe-error";

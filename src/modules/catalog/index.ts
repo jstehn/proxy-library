@@ -87,3 +87,28 @@ export {
 } from "./queries/artwork";
 export { lookupRules, type LookupRulesResult, type RuleSearchHit } from "./queries/rules";
 export type { ParsedRule, RuleKind } from "./domain/comprehensive-rules";
+export {
+  findRuleInteractions,
+  findSharedRules,
+  matchRelatedRules,
+  type RelatedRuleMatch,
+  type RuleInteractionMatch,
+} from "./domain/related-rules";
+export type {
+  ScryfallRuling,
+  ScryfallRulingsResult,
+  EdhrecCardItem,
+  EdhrecThemeTag,
+  EdhrecCommanderData,
+  SpellbookCombo,
+  SpellbookOneCardAwayCombo,
+  SpellbookCombosResult,
+} from "./domain/outside-data";
+export {
+  makeRulesLookup,
+  type CardInteractions,
+  type CardRulings,
+  type RulesCard,
+  type RulesCardNotFound,
+} from "./application/rules-lookup";
+export { describePhotoError } from "./application/describe-error";

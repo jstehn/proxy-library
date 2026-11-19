@@ -7,7 +7,7 @@ import {
 } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
 import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
-import { groupCompactLines, pageCompactGroups } from "../compact-deck";
+import { groupCompactLines, pageCompactGroups } from "./compact-deck";
 import { money } from "../tool";
 
 import { bracketView, type PresentInput } from "./get-deck-input";

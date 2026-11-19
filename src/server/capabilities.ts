@@ -3,6 +3,8 @@ import { collectionPage } from "@/modules/collection";
 import {
   makeCardLookup,
   makeSearchCatalog,
+  makeRulesLookup,
+  lookupRules,
   searchPrintings,
   priceHistory,
   printingCards,
@@ -38,6 +40,9 @@ import {
   similarCards,
   makeListDecks,
   makeDeckPreviews,
+  makeEdhrecResearch,
+  makeDeckCombos,
+  makeDrawSample,
   makeDeckPlanEdits,
   makeStartDeck,
   updateDeckPrimer,
@@ -58,6 +63,9 @@ import {
   wishlistAnswers,
   type Wishlist,
 } from "@/modules/wishlist";
+import type { OutsideDataService } from "@/modules/catalog/infrastructure";
+import type { makeReddit } from "@/modules/reddit";
+import type { makeYoutube } from "@/modules/youtube";
 import type { DbExecutor } from "@/shared/db";
 import { ok, type Cents, type Clock, type UserId } from "@/shared/kernel";
 
@@ -71,6 +79,9 @@ type CapabilityDependencies = Readonly<{
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
+  outsideData: OutsideDataService;
+  youtube: ReturnType<typeof makeYoutube>;
+  reddit: ReturnType<typeof makeReddit>;
   decks: Pick<
     Decks,
     "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
@@ -80,7 +91,19 @@ type CapabilityDependencies = Readonly<{
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet, wishlist, textEmbedder, decks, previews, newPreviewId } = dependencies;
+  const {
+    db,
+    clock,
+    wallet,
+    wishlist,
+    textEmbedder,
+    decks,
+    previews,
+    newPreviewId,
+    outsideData,
+    youtube,
+    reddit,
+  } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -112,6 +135,34 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
         (await getDeckProfile(db, userId, deckId))?.profile ?? null,
       applyChanges: (actor, input) =>
         decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
+    }),
+    youtube,
+    reddit,
+    rulesLookup: makeRulesLookup({
+      findCard: (query) => findCard(db, query),
+      fetchRulings: (target) => outsideData.fetchScryfallRulings(target),
+      searchRules: (query, limit) => lookupRules(db, textEmbedder, { query, limit }),
+    }),
+    edhrec: makeEdhrecResearch({
+      fetchCommander: (commander, options) => outsideData.fetchEdhrecCommander(commander, options),
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+      ownedChecks: (userId, names) => checkOwnedCards(db, userId, names),
+    }),
+    deckCombos: makeDeckCombos({
+      fetchCombos: (mainCards, commanders) =>
+        outsideData.fetchSpellbookCombos(mainCards, commanders),
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+      ownedChecks: (userId, names) => checkOwnedCards(db, userId, names),
+    }),
+    drawSample: makeDrawSample({
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+      clock,
     }),
     startDeck: makeStartDeck(decks),
     deckPlanEdits: makeDeckPlanEdits({
