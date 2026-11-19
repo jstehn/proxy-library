@@ -119,9 +119,10 @@ describe("mainType", () => {
 });
 
 describe("isLand and colorPips", () => {
-  it("treats a card's front face as what it is", () => {
+  it("counts a card with a land on either face as a land (decision 1)", () => {
     expect(isLand("Artifact Land")).toBe(true);
-    expect(isLand("Instant // Land")).toBe(false);
+    expect(isLand("Instant // Land")).toBe(true);
+    expect(isLand("Instant // Instant")).toBe(false);
     expect(isLand("Land // Creature — Elf")).toBe(true);
   });
 

@@ -80,11 +80,6 @@ const PERMANENT_TYPE = String.raw`(creature|artifact|enchantment|planeswalker|pe
 const LAND_WORDS = String.raw`(land|forest|plains|island|swamp|mountain|basic)`;
 const rule = (source: string) => new RegExp(source, "i");
 
-/** Whether the front face is a land ("Instant // Land" is an instant). */
-export function isFrontFaceLand(typeLine: string): boolean {
-  return /\bLand\b/.test(typeLine.split(" // ")[0]);
-}
-
 /** Rules text without reminder text: "(… draw a card …)" in a keyword's reminder doesn't count. */
 export function withoutReminders(text: string): string {
   return text.replace(/\([^)]*\)/g, "");

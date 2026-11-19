@@ -1,3 +1,4 @@
+import { isCreature } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 import { isCounted, isPlayed } from "./boards";
 import type { Deck, DeckEntry, Format } from "./deck";
@@ -75,7 +76,7 @@ export function canBeCommander(
 ): boolean {
   const isLegendary = /\bLegendary\b/.test(card.typeLine);
   return (
-    (isLegendary && /\bCreature\b/.test(card.typeLine)) ||
+    (isLegendary && isCreature(card.typeLine)) ||
     (isLegendary && /\b(Vehicle|Spacecraft)\b/.test(card.typeLine) && card.hasPowerToughness) ||
     /can be your commander/i.test(card.text)
   );
@@ -129,7 +130,7 @@ function isTheDoctor(card: PairCard): boolean {
   const [types, subtypes = ""] = front.split("—").map((part) => part.trim());
   return (
     /\bLegendary\b/.test(types) &&
-    /\bCreature\b/.test(types) &&
+    isCreature(types) &&
     subtypes.split(/\s+/).join(" ") === "Time Lord Doctor"
   );
 }

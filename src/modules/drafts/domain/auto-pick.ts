@@ -1,5 +1,5 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { COLORS, type Cents, type Rarity } from "@/shared/kernel";
+import { COLORS, type Cents, type Rarity, cardTypes } from "@/shared/kernel";
 import type { DraftCard, DraftPack } from "./draft";
 
 // Choosing a card the way a sensible drafter would (design doc 17, section 5): take the strongest
@@ -48,10 +48,9 @@ const RARITY_STRENGTH: Readonly<Record<Rarity, number>> = {
   bonus: 2,
 };
 
-export const isLand = (facts: DraftCardFacts) => /\bLand\b/.test(facts.typeLine);
-export const isBasicLand = (facts: DraftCardFacts) =>
-  /\bBasic\b/.test(facts.typeLine) && isLand(facts);
-export const isCreature = (facts: DraftCardFacts) => /\bCreature\b/.test(facts.typeLine);
+export const isLand = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isLand;
+export const isBasicLand = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isBasic;
+export const isCreature = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isCreature;
 
 /** How good a card is on its own, about 0–4. Basic lands are worth nothing: they're free. */
 export function cardStrength(facts: DraftCardFacts): number {

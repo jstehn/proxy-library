@@ -85,7 +85,7 @@ import {
   moneyOrNull,
   type ToolContext,
 } from "../tool";
-import { assertNever } from "@/shared/kernel";
+import { assertNever, isBasicLand, isLand } from "@/shared/kernel";
 
 // Reading and editing decks (design doc 28, section 5.2). Edits go through the decks module's
 // use cases with the token's Actor, so they follow the same rules as the deck builder.
@@ -458,7 +458,7 @@ async function fullDeckPayload(
   const maybeboardCards = view.lines
     .filter((l) => l.board === "maybe")
     .map((l) => {
-      const isBasic = /\bBasic\b.*\bLand\b/.test(l.typeLine);
+      const isBasic = isBasicLand(l.typeLine);
       const missing = isBasic ? 0 : Math.max(0, l.quantity - l.owned);
       const subtotalCents = missing > 0 && l.priceCents !== null ? missing * l.priceCents : null;
       return {
@@ -482,7 +482,7 @@ async function fullDeckPayload(
       if (!(line.tags ?? []).some((t) => t.toLowerCase() === needle)) return false;
     }
     if (input.singleTagOnly) {
-      if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
+      if (isLand(line.typeLine) || (line.tags ?? []).length !== 1) return false;
     }
     return true;
   });
@@ -624,7 +624,7 @@ function passesLineFilters(line: DeckLine, input: GetDeckInputValue): boolean {
     if (!(line.tags ?? []).some((tag) => tag.toLowerCase() === needle)) return false;
   }
   if (input.singleTagOnly) {
-    if (/\bLand\b/.test(line.typeLine) || (line.tags ?? []).length !== 1) return false;
+    if (isLand(line.typeLine) || (line.tags ?? []).length !== 1) return false;
   }
   return true;
 }

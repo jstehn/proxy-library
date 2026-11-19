@@ -1,6 +1,8 @@
 // Shared mana cost parsing, pool arithmetic, and tap-mana production extraction.
 // Used across goldfish-session, castability, and deck-profile so mana rules live in one place.
 
+import { isLand } from "@/shared/kernel";
+
 export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
 export type ManaPool = Record<ManaColor, number>;
 
@@ -156,9 +158,7 @@ export function extractTapManaProduction(
 ): ManaPool {
   const added: ManaPool = { ...EMPTY_MANA_POOL };
   const text = card.text ?? "";
-  const landCount = battlefield
-    ? battlefield.filter((p) => /\bLand\b/i.test(p.card.typeLine)).length
-    : 0;
+  const landCount = battlefield ? battlefield.filter((p) => isLand(p.card.typeLine)).length : 0;
 
   // Conditional: Temple of the False God ("Activate only if you control five or more lands")
   if (/activate only if you control five or more lands/i.test(text)) {

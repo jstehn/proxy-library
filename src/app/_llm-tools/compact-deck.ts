@@ -3,6 +3,7 @@
 // need. Pages by whole groups so a page never splits a heading unless one heading alone is too
 // big. Pure: no database, no clock.
 
+import { isLand, isCreature } from "@/shared/kernel";
 import type { Board } from "@/modules/decks/client";
 
 /** The facts about one deck line that the compact view shows. */
@@ -37,8 +38,6 @@ export type CompactGroup = Readonly<{ title: string; lines: readonly string[] }>
 
 /** The order card-type groups appear in when a line has no heading. */
 const TYPE_GROUPS = [
-  { title: "Lands", pattern: /\bLand\b/ },
-  { title: "Creatures", pattern: /\bCreature\b/ },
   { title: "Planeswalkers", pattern: /\bPlaneswalker\b/ },
   { title: "Battles", pattern: /\bBattle\b/ },
   { title: "Instants", pattern: /\bInstant\b/ },
@@ -61,7 +60,9 @@ const DISPLAY_ORDER = [
 
 /** The card-type group a line falls in when it has no heading ("Artifact Creature" → Creatures). */
 export function typeGroupOf(typeLine: string): string {
+  if (isLand(typeLine)) return "Lands"; // a land on either face (STATUS decision 1)
   const frontFace = typeLine.split("//")[0] ?? typeLine;
+  if (isCreature(frontFace)) return "Creatures";
   const match = TYPE_GROUPS.find((group) => group.pattern.test(frontFace));
   return match?.title ?? "Other";
 }
