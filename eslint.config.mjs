@@ -43,6 +43,8 @@ const layer = (name, { sameModule = false, file } = {}) => ({
 const from = (selector, ...to) => ({ from: selector, allow: { to } });
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
 // A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
+// A module's wiring.ts builds its capabilities (ADR 0026); only the composition roots import it.
+const wiringFile = { element: { type: "module", fileInternalPath: "wiring.ts" } };
 const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
 // The card search language's pure half, and its SQL half (ADR 0017).
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
@@ -171,6 +173,13 @@ const policies = [
     layer("queries", { sameModule: true }),
   ),
 
+  // wiring.ts (ADR 0026): builds the module's capabilities from its own layers and the readers it
+  // takes from other modules' public APIs. It is the one place a module's queries meet its use cases.
+  {
+    from: wiringFile,
+    allow: { to: [el("kernel"), el("db"), publicApi] },
+  },
+
   // Design doc 16, rule 1: real cards never touch the game. Of the modules, only decks may use
   // the real collection (its public API, or its tables through schema.ts).
   {
@@ -193,6 +202,7 @@ const policies = [
     el("http"),
     el("config"),
     publicApi,
+    wiringFile,
     layer("infrastructure", { file: "index.ts" }),
   ),
   from(
@@ -204,6 +214,7 @@ const policies = [
     el("db"),
     el("config"),
     publicApi,
+    wiringFile,
     layer("infrastructure", { file: "index.ts" }),
   ),
 
