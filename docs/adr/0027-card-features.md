@@ -1,6 +1,6 @@
 # 0027. One versioned `CardFeatures` model, built by recognizers and stored per oracle card
 
-- **Status:** Proposed (design doc 66; awaiting approval)
+- **Status:** Accepted (user, 2026-11-19; design doc 66, section 12)
 - **Date:** 2026-11-19
 - **Extends:** 0019
 
