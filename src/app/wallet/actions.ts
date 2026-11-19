@@ -2,9 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeAddOwnFundsError } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type AddFundsState = { message: string | null; tone: "error" | "success" };
 
@@ -14,7 +13,7 @@ export async function addFundsAction(
   _previousState: AddFundsState,
   formData: FormData,
 ): Promise<AddFundsState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = AddFundsForm.safeParse({
     amount: formData.get("amount"),
     note: formData.get("note") ?? undefined,
@@ -24,7 +23,7 @@ export async function addFundsAction(
   const amount = Cents.fromUsd(form.data.amount);
   if (amount === null) return { message: "Enter an amount like 12.50.", tone: "error" };
 
-  const result = await getContainer().wallet.addOwnFunds(actor, { amount, note: form.data.note });
+  const result = await capabilities.wallet.addOwnFunds(actor, { amount, note: form.data.note });
   if (!result.ok) return { message: describeAddOwnFundsError(result.error), tone: "error" };
 
   revalidatePath("/", "layout"); // the balance in the header changes too

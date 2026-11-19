@@ -1,4 +1,4 @@
-import { getContainer } from "@/server/container";
+import { readPage } from "@/server/page-instance";
 
 const SIZES = ["small", "large"] as const;
 
@@ -15,7 +15,8 @@ export async function GET(
   const validSize = SIZES.find((candidate) => candidate === size);
   if (validSize === undefined) return new Response("Not found", { status: 404 });
 
-  const image = await getContainer().catalog.artworkFor({ imageId, size: validSize });
+  const { capabilities } = await readPage({ allowVisitors: true });
+  const image = await capabilities.catalog.artworkFor({ imageId, size: validSize });
   if (!image.ok) return new Response("Not found", { status: 404 });
 
   return new Response(new Uint8Array(image.value), {

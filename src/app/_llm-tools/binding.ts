@@ -56,7 +56,7 @@ export function defineBinding<Input extends ToolInputSchema, Value, Failure>(
     pagesItself: binding.pagesItself,
     input: binding.input,
     async run(context, input) {
-      const result = await binding.call(context.container.capabilities, context.actor, input);
+      const result = await binding.call(context.capabilities, context.actor, input);
       if (result.ok)
         return {
           ok: true,

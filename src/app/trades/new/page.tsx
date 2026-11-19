@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { printingCards, type PrintingCard } from "@/modules/catalog";
-import { collectionPage, type CollectionRow } from "@/modules/collection";
-import { tradingPartners } from "@/modules/trades";
-import { sharedWishlistFor } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type PrintingCard } from "@/modules/catalog";
+import { type CollectionRow } from "@/modules/collection";
 import { Cents, UserId } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { draftHref, readDraft, type Draft, type DraftCard } from "../draft";
 import { DraftButton, DraftSync, DraftTextForm, ProposeForm } from "./draft-controls";
+import { readPage } from "@/server/page-instance";
 
 // The trade builder (design doc 10, section 9). The draft lives in the URL, so the back button
 // undoes a change and a draft can be bookmarked. The buttons and forms (draft-controls.tsx) read
@@ -99,11 +96,11 @@ function Chosen(props: {
 }
 
 export default async function NewTradePage(props: PageProps<"/trades/new">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
+
   const searchParams = await props.searchParams;
   const draft = readDraft(searchParams);
-  const partners = await tradingPartners(db, actor.userId);
+  const partners = await capabilities.tradeReads.partners(actor.userId);
   const partner = partners.find((candidate) => candidate.userId === draft.withUserId) ?? null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
 
@@ -134,7 +131,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
   }
 
   const search = (userId: string, name: string) =>
-    collectionPage(db, UserId.of(userId), {
+    capabilities.collectionReads.page(UserId.of(userId), {
       search: name || undefined,
       sections: "none",
       sort: "name",
@@ -143,9 +140,9 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
   const [mine, theirs, partnerWishlist] = await Promise.all([
     search(actor.userId, draft.mine),
     search(partner.userId, draft.theirs),
-    sharedWishlistFor(db, actor.userId, UserId.of(partner.userId)),
+    capabilities.wishlistReads.sharedFor(actor.userId, UserId.of(partner.userId)),
   ]);
-  const cards = await printingCards(db, [
+  const cards = await capabilities.printingDetails([
     ...mine.rows.map((row) => row.printingId),
     ...theirs.rows.map((row) => row.printingId),
     ...draft.give.map((card) => card.printingId),

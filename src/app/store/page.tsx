@@ -1,27 +1,22 @@
 import Link from "next/link";
 import { CardWithPreview } from "@/app/_components/card-preview";
-import { printingCards } from "@/modules/catalog";
-import { storeSearch } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { ProductArt, shapeForCategory } from "@/ui/product-art";
 import { KeyArt, ProductImage } from "@/ui/product-image";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { BuyForm } from "./[code]/buy-form";
 import { categoryLabel, productLabel } from "./labels";
+import { readPage } from "@/server/page-instance";
 
 export default async function StorePage(props: PageProps<"/store">) {
-  await requireActor();
+  const { capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q : "";
   const category = typeof searchParams.category === "string" ? searchParams.category : "";
   const isSearching = query.trim() !== "" || category.trim() !== "";
 
-  const db = getContainer().db;
-  const result = await storeSearch(db, { query, category });
-  const commanders = await printingCards(
-    db,
+  const result = await capabilities.storeReads.search({ query, category });
+  const commanders = await capabilities.printingDetails(
     result.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])),
   );
 

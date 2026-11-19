@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { describeSignInError } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
+import { readPage } from "@/server/page-instance";
 import { safeNextPath } from "@/server/next-path";
 
 export type SignInState = { error: string | null; username: string };
@@ -21,7 +21,8 @@ export async function signInAction(
   });
   if (!form.success) return { error: "Please fill in both fields.", username: "" };
 
-  const result = await getContainer().accounts.signIn(form.data, await headers());
+  const { capabilities } = await readPage({ allowVisitors: true });
+  const result = await capabilities.accounts.signIn(form.data, await headers());
   if (!result.ok) return { error: describeSignInError(result.error), username: form.data.username };
 
   if (result.value.mustChangePassword) redirect("/account/password");

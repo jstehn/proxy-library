@@ -5,10 +5,9 @@ import { redirect } from "next/navigation";
 import { PrintingId } from "@/modules/catalog";
 import { DeckId, FORMATS, type Format } from "@/modules/decks";
 import { VISIBILITIES, type SectionVisibility } from "@/modules/social";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { COLORS } from "@/shared/kernel";
 import type { ManaColor } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type ProfileFormState = { error: string | null };
 
@@ -16,7 +15,7 @@ export async function saveProfileAction(
   _prev: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const bio = String(formData.get("bio") ?? "");
 
   const rawColors = formData.getAll("favoriteColors").map(String);
@@ -59,7 +58,7 @@ export async function saveProfileAction(
     ? (rawWishlistVis as SectionVisibility)
     : "friends";
 
-  const result = await getContainer().social.updateProfile(actor.userId, {
+  const result = await capabilities.social.updateProfile(actor.userId, {
     bio,
     favoriteColors,
     favoriteFormats,

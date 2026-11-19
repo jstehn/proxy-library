@@ -1,13 +1,15 @@
-import { listSetsForAdmin, recentSyncRuns, type SyncRunRow } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
+import { type SyncRunRow } from "@/modules/catalog";
 import { LocalTime } from "@/ui/local-time";
 import { EnableStandardButton, RefreshWhileSyncing, SetsTable, SyncButtons } from "./controls";
+import { readPage } from "@/server/page-instance";
 
 export default async function AdminCatalogPage() {
-  await requireAdminActor();
-  const { db } = getContainer();
-  const [runs, sets] = await Promise.all([recentSyncRuns(db), listSetsForAdmin(db)]);
+  const { capabilities } = await readPage({ admin: true });
+
+  const [runs, sets] = await Promise.all([
+    capabilities.catalogReads.recentSyncRuns(),
+    capabilities.catalogReads.listSetsForAdmin(),
+  ]);
   const isSyncing = runs.some((run) => run.status === "queued" || run.status === "running");
 
   return (

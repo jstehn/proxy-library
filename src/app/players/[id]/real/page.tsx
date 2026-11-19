@@ -10,26 +10,20 @@ import {
 } from "@/app/_components/card-filters";
 import { RealCardGrid } from "@/app/collection/real/card-grid";
 import { SECTION_VALUES, SECTIONS, SORT_VALUES, SORTS } from "@/app/collection/shared";
-import { printingCards } from "@/modules/catalog";
-import {
-  realCollectionPage,
-  realCollectionSets,
-  realProductsOf,
-  sharedRealCollections,
-} from "@/modules/real-collection";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { Cents, UserId } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
+import { readPage } from "@/server/page-instance";
 
 // Another player's real collection, read only (design doc 16, rule 5): only while they share it.
 // Not shared looks the same as no such player, so the page doesn't tell who has a collection.
 
 export default async function PlayerRealCollectionPage(props: PageProps<"/players/[id]/real">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await props.params;
-  const { db } = getContainer();
-  const owner = (await sharedRealCollections(db)).find((player) => player.userId === id);
+
+  const owner = (await capabilities.realCollectionReads.shared()).find(
+    (player) => player.userId === id,
+  );
   if (owner === undefined && id !== actor.userId) notFound();
   const ownerId = UserId.of(id);
   const name = owner?.displayName ?? actor.displayName;
@@ -39,7 +33,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
   const page = pageNumber(searchParams);
   const finish = oneOf(values.finish, ["", "nonfoil", "foil", "etched"] as const);
   const [result, sets, products] = await Promise.all([
-    realCollectionPage(db, ownerId, {
+    capabilities.realCollectionReads.page(ownerId, {
       search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
@@ -49,13 +43,10 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
       sort: oneOf(values.sort, SORT_VALUES),
       page,
     }),
-    realCollectionSets(db, ownerId),
-    realProductsOf(db, ownerId),
+    capabilities.realCollectionReads.sets(ownerId),
+    capabilities.realCollectionReads.productsOf(ownerId),
   ]);
-  const cards = await printingCards(
-    db,
-    result.rows.map((row) => row.printingId),
-  );
+  const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
   const path = `/players/${id}/real`;
 
   return (

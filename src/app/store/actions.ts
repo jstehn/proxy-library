@@ -3,8 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SealedProductId } from "@/modules/catalog";
 import { describeBuySealedError } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 
 export type BuyState = { message: string | null; tone: "error" | "success" };
 
@@ -17,14 +16,14 @@ export async function buySealedAction(
   _previousState: BuyState,
   formData: FormData,
 ): Promise<BuyState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = BuyForm.safeParse({
     productId: formData.get("productId"),
     quantity: formData.get("quantity"),
   });
   if (!form.success) return { message: "Choose how many to buy.", tone: "error" };
 
-  const result = await getContainer().store.buySealed(actor, {
+  const result = await capabilities.store.buySealed(actor, {
     productId: SealedProductId.of(form.data.productId),
     quantity: form.data.quantity,
   });

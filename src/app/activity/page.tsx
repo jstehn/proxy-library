@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { activityFeed } from "@/modules/activity";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { ActivityList } from "../_components/activity-list";
+import { readPage } from "@/server/page-instance";
 
 export default async function ActivityPage(props: PageProps<"/activity">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const scope = searchParams.scope === "friends" ? "friends" : "all";
-  const items = await activityFeed(getContainer().db, 50, {
+  const items = await capabilities.activityReads.feed(50, {
     actorId: actor.userId,
     scope,
   });

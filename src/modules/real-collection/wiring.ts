@@ -6,11 +6,15 @@ import {
   realCollectionPage,
   realCollectionSets,
   realCopiesOf,
+  realProductCounts,
+  realExportRows,
   realProductsOf,
   sharedRealCollections,
 } from "./queries/real-collection";
 
-// The real collection's capabilities (ADR 0026): what the Real tab and a card's page read.
+// The real-collection module's capabilities (ADR 0026): what its pages read, each a query with the database
+// filled in. They forward to the query functions until those merge into real capabilities
+// (docs/refactor/removal-list.md).
 
 export function wireRealCollectionCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
   const { db } = dependencies;
@@ -24,6 +28,8 @@ export function wireRealCollectionCapabilities(dependencies: Readonly<{ db: DbEx
       printingChoices: withDb(db, printingChoices),
       printingsOfSameCard: withDb(db, printingsOfSameCard),
       copiesOf: withDb(db, realCopiesOf),
+      exportRows: withDb(db, realExportRows),
+      productCounts: withDb(db, realProductCounts),
     },
   };
 }

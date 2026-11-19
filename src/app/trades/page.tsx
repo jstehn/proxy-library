@@ -1,11 +1,8 @@
 import Link from "next/link";
-import { sharedRealCollections } from "@/modules/real-collection";
-import { tradesFor, type TradeView } from "@/modules/trades";
-import { sharedWishlists } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type TradeView } from "@/modules/trades";
 import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
+import { readPage } from "@/server/page-instance";
 
 function TradeLine(props: {
   trade: TradeView;
@@ -48,12 +45,12 @@ function TradeLine(props: {
 }
 
 export default async function TradesPage() {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
+
   const [trades, shared, sharedWishes] = await Promise.all([
-    tradesFor(db, actor.userId),
-    sharedRealCollections(db),
-    sharedWishlists(db),
+    capabilities.tradeReads.tradesFor(actor.userId),
+    capabilities.realCollectionReads.shared(),
+    capabilities.wishlistReads.shared(),
   ]);
   // Players who share their real collection or wishlist get a link next to their name.
   const sharingReal = new Set(shared.map((player) => player.userId));

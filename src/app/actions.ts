@@ -1,9 +1,10 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getContainer } from "@/server/container";
+import { readPage } from "@/server/page-instance";
 
 export async function signOutAction(): Promise<void> {
-  await getContainer().accounts.signOut(await headers());
+  const { capabilities } = await readPage({ allowVisitors: true });
+  await capabilities.accounts.signOut(await headers());
   redirect("/sign-in");
 }

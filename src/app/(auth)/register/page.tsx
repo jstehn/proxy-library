@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { hasAnyPlayers, PASSWORD_MIN_LENGTH } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
-import { getCurrentActor } from "@/server/session";
+import { PASSWORD_MIN_LENGTH } from "@/modules/accounts";
+import { readPage } from "@/server/page-instance";
 import { RegisterForm } from "./register-form";
 
 export default async function RegisterPage(props: PageProps<"/register">) {
-  if ((await getCurrentActor()) !== null) redirect("/");
+  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  if (actor !== null) redirect("/");
 
   const searchParams = await props.searchParams;
   const invite = typeof searchParams.invite === "string" ? searchParams.invite : "";
-  const isFirstPlayer = !(await hasAnyPlayers(getContainer().db));
+  const isFirstPlayer = !(await capabilities.accountReads.hasAnyPlayers());
 
   return (
     <>

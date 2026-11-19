@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { cardsToGetFor, deckProblems, deckView } from "@/modules/decks";
+import { deckProblems } from "@/modules/decks";
 import {
   WishId,
   type CardNeed,
@@ -13,8 +13,6 @@ import {
   type WishDetails,
   type WishRequest,
 } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import {
   Cents,
   FinishOrCheapestSchema,
@@ -23,6 +21,8 @@ import {
   type UserId,
   assertNever,
 } from "@/shared/kernel";
+import type { Capabilities } from "@/server/capabilities";
+import { readPage } from "@/server/page-instance";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
 // Wishlist page both use these.
@@ -70,7 +70,7 @@ function refresh(printingId?: string) {
 }
 
 export async function addWishAction(_previous: WishState, formData: FormData): Promise<WishState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const request = RequestForm.safeParse({
     kind: formData.get("kind"),
     printingId: formData.get("printingId"),
@@ -80,7 +80,7 @@ export async function addWishAction(_previous: WishState, formData: FormData): P
   const details = readDetails(formData);
   if (!details.ok) return { message: details.error, tone: "error" };
 
-  const result = await getContainer().wishlist.addWish(actor, {
+  const result = await capabilities.wishlist.addWish(actor, {
     request: request.data satisfies WishRequest,
     details: details.value,
   });
@@ -98,13 +98,13 @@ export async function updateWishAction(
   _previous: WishState,
   formData: FormData,
 ): Promise<WishState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const wishId = WishIdForm.safeParse(formData.get("wishId"));
   if (!wishId.success) return { message: "That wish is gone.", tone: "error" };
   const details = readDetails(formData);
   if (!details.ok) return { message: details.error, tone: "error" };
 
-  const result = await getContainer().wishlist.updateWish(
+  const result = await capabilities.wishlist.updateWish(
     actor,
     WishId.of(wishId.data),
     details.value,
@@ -116,17 +116,17 @@ export async function updateWishAction(
 
 /** A plain form action: the row disappears, so there's no message to show. */
 export async function removeWishAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const wishId = WishIdForm.safeParse(formData.get("wishId"));
   if (!wishId.success) return;
-  await getContainer().wishlist.removeWish(actor, WishId.of(wishId.data));
+  await capabilities.wishlist.removeWish(actor, WishId.of(wishId.data));
   refresh();
 }
 
 /** "Let other players see my wishlist" (design doc 50, off by default). */
 export async function setWishlistSharingAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
-  await getContainer().wishlist.setSharing(actor, formData.get("shared") === "on");
+  const { actor, capabilities } = await readPage();
+  await capabilities.wishlist.setSharing(actor, formData.get("shared") === "on");
   revalidatePath("/wishlist");
   revalidatePath("/trades");
   redirect("/wishlist");
@@ -142,7 +142,7 @@ const BuyForm = z.object({
 });
 
 export async function buyWishAction(_previous: WishState, formData: FormData): Promise<WishState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = BuyForm.safeParse({
     wishId: formData.get("wishId"),
     printingId: formData.get("printingId"),
@@ -154,7 +154,7 @@ export async function buyWishAction(_previous: WishState, formData: FormData): P
   if (!form.success) return { message: "Choose a printing and how many.", tone: "error" };
   const { wishId, expectedUnitPrice, name, ...line } = form.data;
 
-  const result = await getContainer().wishlist.buyWish(actor, {
+  const result = await capabilities.wishlist.buyWish(actor, {
     ...line,
     wishId: WishId.of(wishId),
     expectedUnitPrice: Cents.of(expectedUnitPrice),
@@ -181,29 +181,31 @@ export async function wishForShortCardsAction(
   _previous: WishState,
   formData: FormData,
 ): Promise<WishState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const rawDeckId = formData.get("deckId");
   let needs: CardNeed[];
   if (rawDeckId === null) {
-    needs = await allDecksNeed(actor.userId);
+    needs = await allDecksNeed(capabilities, actor.userId);
   } else {
     const deckId = DeckIdForm.safeParse(rawDeckId);
-    const forDeck = deckId.success ? await deckNeeds(actor.userId, deckId.data) : null;
+    const forDeck = deckId.success
+      ? await deckNeeds(capabilities, actor.userId, deckId.data)
+      : null;
     if (forDeck === null) return { message: "That deck is gone.", tone: "error" };
     needs = forDeck;
   }
   if (needs.length === 0)
     return { message: "Nothing to wish for: you own it all.", tone: "success" };
 
-  const result = await getContainer().wishlist.wishForCards(actor, needs);
+  const result = await capabilities.wishlist.wishForCards(actor, needs);
   if (!result.ok) return { message: "A card isn't in the catalog any more.", tone: "error" };
   refresh();
   return { message: wishedMessage(result.value), tone: "success" };
 }
 
 /** Each card your decks are short of, at the copies the hungriest deck uses (design doc 21). */
-async function allDecksNeed(userId: UserId): Promise<CardNeed[]> {
-  const toGet = await cardsToGetFor(getContainer().db, userId);
+async function allDecksNeed(capabilities: Capabilities, userId: UserId): Promise<CardNeed[]> {
+  const toGet = await capabilities.deckReads.cardsToGet(userId);
   return toGet.cards.map((card) => ({ oracleId: card.oracleId, quantity: card.needed }));
 }
 
@@ -211,8 +213,12 @@ async function allDecksNeed(userId: UserId): Promise<CardNeed[]> {
  * The cards one deck is short of, as game copies: a wish counts only those, so the real copies
  * a deck may use (design doc 16) come off what it needs. Null when it isn't your deck.
  */
-async function deckNeeds(userId: UserId, deckId: number): Promise<CardNeed[] | null> {
-  const view = await deckView(getContainer().db, userId, deckId);
+async function deckNeeds(
+  capabilities: Capabilities,
+  userId: UserId,
+  deckId: number,
+): Promise<CardNeed[] | null> {
+  const view = await capabilities.deckReads.deckView(userId, deckId);
   if (view === null) return null;
   const lineOf = (oracleId: string) => view.lines.find((line) => line.oracleId === oracleId);
   const problems = deckProblems(

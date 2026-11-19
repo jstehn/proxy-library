@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { listAccessTokens } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { LocalTime } from "@/ui/local-time";
 import { revokeTokenAction } from "./actions";
 import { ConnectSnippets } from "./connect-snippets";
 import { CreateTokenForm } from "./create-token-form";
+import { readPage } from "@/server/page-instance";
 
 // Access tokens for LLM clients (design doc 28, section 9): make one, see it once, revoke it.
 
@@ -16,11 +14,11 @@ const SCOPE_WORDS: Readonly<Record<string, string>> = {
 };
 
 export default async function TokensPage() {
-  const actor = await requireActor();
-  const { db, config } = getContainer();
-  const tokens = await listAccessTokens(db, actor.userId);
-  const mcpUrl = new URL("/api/mcp", config.appUrl).toString();
-  const openApiUrl = new URL("/api/tools/openapi.json", config.appUrl).toString();
+  const { actor, capabilities } = await readPage();
+
+  const tokens = await capabilities.accountReads.listAccessTokens(actor.userId);
+  const mcpUrl = new URL("/api/mcp", capabilities.appUrl).toString();
+  const openApiUrl = new URL("/api/tools/openapi.json", capabilities.appUrl).toString();
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-12">
