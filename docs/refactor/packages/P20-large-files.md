@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P20-large-files` · **Depends on:** P18 · **Parallel with:** P21
 - **Audit:** the 500-line benchmark (README, "File size")
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S10](../dedup-playbook.md#s10) (small clones no package owns) · **Lines to remove:** about −100 to −200
 
 ## Goal
 

@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P06-deck-reads` · **Depends on:** P05 · **Parallel with:** P07, P08
 - **Audit:** doc 65 F2, F6, D8, D9
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (`get_deck` row) and [S2](../dedup-playbook.md#s2) (deck reads) · **Lines to remove:** about −800 to −1,200
 
 ## Goal
 

@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P12-mana-casting` · **Depends on:** P11 · **Parallel with:** P10, P13, P14
 - **Audit:** doc 65 F4, D12
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S3](../dedup-playbook.md#s3) (mana and casting consumers) · **Lines to remove:** about −400 to −700
 
 ## Goal
 

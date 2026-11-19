@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P15-opening-hands` · **Depends on:** P12, P14 · **Parallel with:** P16, P17
 - **Audit:** doc 65 D3
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S4](../dedup-playbook.md#s4) · **Lines to remove:** about −500 to −800
 
 ## Goal
 

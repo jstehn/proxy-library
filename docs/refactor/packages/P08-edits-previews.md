@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P08-edits-previews` · **Depends on:** P05 · **Parallel with:** P06, P07
 - **Audit:** doc 65 F2 (previews), D9
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (`edit_deck`, `update_deck`, `create_deck` rows) · **Lines to remove:** about −700 to −1,000
 
 ## Goal
 
