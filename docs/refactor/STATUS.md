@@ -7,47 +7,64 @@
 ## Packages
 
 Waves run in order. Inside a wave, packages marked parallel can run at the same time, each in
-its own worktree.
+its own worktree. The order was revised by the [plan review](reviews/plan-review/README.md)
+(2026-11-19, approved by the owner). Every new package lists what it **deletes**. Once P23 adds
+`sizes-baseline.txt`, a package that doesn't lower it needs the owner's approval.
 
-| Id    | Package                                                                                  | Depends on              | Parallel with               | Status                                                        |
-| ----- | ---------------------------------------------------------------------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------------- |
-|       | **Wave 0: set up**                                                                       |                         |                             |                                                               |
-| P00   | [Set up the refactor](packages/P00-setup.md)                                             | none                    | none                        | done                                                          |
-| P01   | [Delete dead code](packages/P01-dead-code.md)                                            | P00                     | none                        | done                                                          |
-|       | **Wave 1: the basics** (audit R2)                                                        |                         |                             |                                                               |
-| P02   | [One set of basic types; money](packages/P02-basic-types.md)                             | P01                     | none                        | done                                                          |
-| P03   | [One current-price query](packages/P03-current-price.md)                                 | P02                     | P04                         | done                                                          |
-| P04   | [One card-type helper](packages/P04-card-types.md)                                       | P02, decision 1         | P03                         | done                                                          |
-|       | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                           |                         |                             |                                                               |
-| P05   | [Capability and binding framework](packages/P05-framework.md)                            | P03, P04                | none                        | done                                                          |
-| P06   | [Deck read capabilities](packages/P06-deck-reads.md)                                     | P05                     | P07, P08                    | done                                                          |
-| P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)               | P05                     | P06, P08                    | done                                                          |
-| P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                                  | P07a                    | P08                         | done                                                          |
-| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                               | P07b                    | P08                         | done                                                          |
-| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)                    | P07a                    | P08                         | done                                                          |
-| P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                               | P07b, P07c              | P08                         | done                                                          |
-| P08   | [Deck edits and previews](packages/P08-edits-previews.md)                                | P05                     | P06, P07                    | done                                                          |
-| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                        | P06, P07a–d, P07b2, P08 | none                        | done                                                          |
-|       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                         |                             |                                                               |
-| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | done                                                          |
-| P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                    | P09d                        | done                                                          |
-| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | done                                                          |
-|       | **Wave 3: rules as data** (audit R4, R5)                                                 |                         |                             |                                                               |
-| P10   | [Formats as a strategy table](packages/P10-formats.md)                                   | P09c                    | P11–P14                     | in progress (agent)                                           |
-| P11   | [Card features: model and storage](packages/P11-card-features.md)                        | P09c, decision 3        | P10                         | design accepted; build waits for the plan review (2026-11-19) |
-| P12   | [Mana and casting from features](packages/P12-mana-casting.md)                           | P11                     | P10, P13, P14               | free                                                          |
-| P13   | [Tags, themes and signals](packages/P13-tags-signals.md)                                 | P11                     | P10, P12, P14               | free                                                          |
-| P14   | [Lands and draft cards from features](packages/P14-lands-drafts.md)                      | P11                     | P10, P12, P13               | free                                                          |
-|       | **Wave 4: merge parallel implementations** (audit R6) · milestone 2                      |                         |                             |                                                               |
-| P15   | [One opening-hand engine](packages/P15-opening-hands.md)                                 | P12, P14                | P16, P17                    | free                                                          |
-| P16   | [One mana curve](packages/P16-mana-curve.md)                                             | P10, decision 2         | P15, P17                    | done                                                          |
-| P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                    | P15, P16                    | done                                                          |
-|       | **Wave 5: structure** (audit R7–R9) · milestone 3 (final)                                |                         |                             |                                                               |
-| P18   | [Split `decks` by responsibility](packages/P18-split-decks.md)                           | P10–P17, decision 4     | none                        | free (decision 4 answered)                                    |
-| P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                    | any of waves 3–4 except P16 | done                                                          |
-| P20   | [Responsibility check for other modules; large files](packages/P20-large-files.md)       | P18                     | P21                         | free                                                          |
-| P21   | [Naming sweep and docs](packages/P21-naming-docs.md)                                     | P18                     | P20                         | free                                                          |
-| P22   | [Review and consolidate the design docs](packages/P22-design-docs.md)                    | P18                     | P20, P21                    | free                                                          |
+| Id    | Package                                                                                  | Depends on                    | Parallel with      | Status                                               |
+| ----- | ---------------------------------------------------------------------------------------- | ----------------------------- | ------------------ | ---------------------------------------------------- |
+|       | **Wave 0: set up**                                                                       |                               |                    |                                                      |
+| P00   | [Set up the refactor](packages/P00-setup.md)                                             | none                          | none               | done                                                 |
+| P01   | [Delete dead code](packages/P01-dead-code.md)                                            | P00                           | none               | done                                                 |
+|       | **Wave 1: the basics** (audit R2)                                                        |                               |                    |                                                      |
+| P02   | [One set of basic types; money](packages/P02-basic-types.md)                             | P01                           | none               | done                                                 |
+| P03   | [One current-price query](packages/P03-current-price.md)                                 | P02                           | P04                | done                                                 |
+| P04   | [One card-type helper](packages/P04-card-types.md)                                       | P02, decision 1               | P03                | done                                                 |
+|       | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                           |                               |                    |                                                      |
+| P05   | [Capability and binding framework](packages/P05-framework.md)                            | P03, P04                      | none               | done                                                 |
+| P06   | [Deck read capabilities](packages/P06-deck-reads.md)                                     | P05                           | P07, P08           | done                                                 |
+| P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)               | P05                           | P06, P08           | done                                                 |
+| P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                                  | P07a                          | P08                | done                                                 |
+| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                               | P07b                          | P08                | done                                                 |
+| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)                    | P07a                          | P08                | done                                                 |
+| P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                               | P07b, P07c                    | P08                | done                                                 |
+| P08   | [Deck edits and previews](packages/P08-edits-previews.md)                                | P05                           | P06, P07           | done                                                 |
+| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                        | P06, P07a–d, P07b2, P08       | none               | done                                                 |
+|       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                               |                    |                                                      |
+| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                           | none               | done                                                 |
+| P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                          | P09d               | done                                                 |
+| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                          | P09c, wave 3       | done                                                 |
+|       | **Done from the old waves 3 and 4**                                                      |                               |                    |                                                      |
+| P10   | [Formats as a strategy table](packages/P10-formats.md)                                   | P09c                          | none               | done                                                 |
+| P16   | [One mana curve](packages/P16-mana-curve.md)                                             | P10, decision 2               | none               | done                                                 |
+| P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                          | none               | done                                                 |
+| P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                          | none               | done                                                 |
+|       | **Wave 3a: clear the ground** (plan review) · before any card-features code              |                               |                    |                                                      |
+| P23   | [Guards and test fixes](packages/P23-guards-and-test-fixes.md)                           | none                          | none               | free (first)                                         |
+| P24   | [Delete dead code and the interactive goldfish](packages/P24-dead-code.md)               | P23                           | P26                | free                                                 |
+| P25   | [The read layer, secure by construction](packages/P25-read-layer.md)                     | P23, P24                      | P26                | free (design doc 67 needs the owner's approval)      |
+| P26   | [Shared card and row types](packages/P26-shared-types.md)                                | P23                           | P24, P25           | free                                                 |
+|       | **Wave 3b: card features, by ability**                                                   |                               |                    |                                                      |
+| P11   | [Card features: model and store](packages/P11-card-features.md)                          | P25, P26, decision 3          | none               | free (doc 66 accepted; re-scoped, see package)       |
+| P12   | [Mana and casting, by ability](packages/P12-mana-casting.md)                             | P11                           | P13, P14           | free                                                 |
+| P13   | [Tags, themes and signals, by ability](packages/P13-tags-signals.md)                     | P11                           | P12, P14           | free                                                 |
+| P14   | [Lands, tokens and draft cards, by ability](packages/P14-lands-drafts.md)                | P11                           | P12, P13           | free                                                 |
+|       | **Wave 4: one engine per job** · milestone 2                                             |                               |                    |                                                      |
+| P15   | [One opening-hand and one mana-payment engine](packages/P15-opening-hands.md)            | P12, P13, P14                 | P27                | free                                                 |
+| P27   | [One scorer; no scores or ranks in tools](packages/P27-one-scorer.md)                    | P13, P14, P24, P26            | P15                | free (the owner looks at the before/after lists)     |
+| P28   | ["Can I cast X by turn Y?": simulator and effect registry](packages/P28-cast-by-turn.md) | P15, P24                      | P27                | free                                                 |
+|       | **Wave 5: structure** · milestone 3                                                      |                               |                    |                                                      |
+| P29   | [Untangle the import cycles](packages/P29-untangle-cycles.md)                            | P15, P27, P28                 | none               | free                                                 |
+| P18   | [Split `decks` into subfolders](packages/P18-split-decks.md)                             | P29, decision 4               | none               | free (decision 4 answered; ADR 0028 needs the owner) |
+| P30   | [Merge the collections; split `catalog`](packages/P30-collections-and-catalog.md)        | P18, P29                      | none               | free (folder names need the owner)                   |
+|       | **Wave 6: what a professional sees** · final milestone                                   |                               |                    |                                                      |
+| P31   | [UI building blocks and colour tokens](packages/P31-ui-building-blocks.md)               | P25, P30                      | P34                | free                                                 |
+| P32   | [Page states and thin pages](packages/P32-page-states-thin-pages.md)                     | P31                           | P20, P34           | free                                                 |
+| P33   | [Accessibility pass](packages/P33-accessibility.md)                                      | P31, P32                      | P20, P34           | free                                                 |
+| P20   | [Near-clones, large files, split e2e spec, thin worker](packages/P20-large-files.md)     | P18, P30, P31                 | P22, P32–P34       | free                                                 |
+| P21   | [Naming sweep, README fact check, trimmed `CLAUDE.md`](packages/P21-naming-docs.md)      | P18, P20, P30, P33            | P22, P34           | free                                                 |
+| P22   | [Design docs into `docs/modules/`; citation check](packages/P22-design-docs.md)          | P18, P30                      | P20, P21, P31–P34  | free                                                 |
+| P34   | [Repo polish: CI, licence, contributing, README](packages/P34-repo-polish.md)            | P23 (its CLAUDE.md step: P21) | P20, P22, P32, P33 | free (several answers needed from the owner)         |
 
 ```mermaid
 flowchart LR
@@ -56,11 +73,23 @@ flowchart LR
   P07a --> P07b & P07c --> P09
   P09 --> P09b --> P09c & P09d
   P09b --> P19
-  P09c --> P10 & P11 & P17
-  P11 --> P12 & P13 & P14
-  P12 & P14 --> P15
+  P09c --> P10 & P17
   P10 --> P16
-  P10 & P13 & P15 & P16 & P17 --> P18 --> P20 & P21 & P22
+  P09d --> P23
+  P23 --> P24 & P26
+  P24 --> P25
+  P24 & P25 & P26 --> P11
+  P11 --> P12 & P13 & P14
+  P12 & P13 & P14 --> P15
+  P13 & P14 & P24 & P26 --> P27
+  P15 & P24 --> P28
+  P15 & P27 & P28 --> P29 --> P18 --> P30
+  P25 & P30 --> P31 --> P32 --> P33
+  P18 & P30 & P31 --> P20
+  P20 & P30 & P33 --> P21
+  P18 & P30 --> P22
+  P23 --> P34
+  P21 -.-> P34
 ```
 
 ## Size tracking
@@ -68,25 +97,26 @@ flowchart LR
 P00's `pnpm sizes` prints these. Add a row when each wave merges. Targets are from doc 65, "The end
 state".
 
-| After         | Source lines                         | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
-| ------------- | ------------------------------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
-| Baseline      | 93,361                               | 32,194     | 28          | 43             | 83         | 191                              |
-| P00 script    | 93,490 \*                            | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
-| After P04     | 91,358                               | 34,255     | 27          | 43             | 57         | 191                              |
-| After wave 2  | 92,251                               | 35,885     | 23          | 48             | 36         | 191                              |
-| After wave 2½ | 92,379 (79,270 code)                 | 36,098     | 21          | 49             | 36         | 4 (2 files, allowed)             |
-| **Target**    | **≤ 73,000 code lines** (decision 6) | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
+| After         | Source lines                                                                                                            | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
+| Baseline      | 93,361                                                                                                                  | 32,194     | 28          | 43             | 83         | 191                              |
+| P00 script    | 93,490 \*                                                                                                               | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
+| After P04     | 91,358                                                                                                                  | 34,255     | 27          | 43             | 57         | 191                              |
+| After wave 2  | 92,251                                                                                                                  | 35,885     | 23          | 48             | 36         | 191                              |
+| After wave 2½ | 92,379 (79,270 code)                                                                                                    | 36,098     | 21          | 49             | 36         | 4 (2 files, allowed)             |
+| **Target**    | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
 
 Before each milestone, run the checks in [deferred-checks.md](deferred-checks.md) (network, browser
 and by-eye checks the packages couldn't do).
 
-| Milestone | After       | Requires                                                                                                | Status                                                                                                                      |
-| --------- | ----------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 1         | Wave 2 + 2½ | full suite green; every LLM tool and builder feature working again; UI callers on capabilities (P09b–d) | wave 2 merged into `main` 2026-11-19; wave 2½ reviewed and merged into `main` 2026-11-19 ([review](reviews/milestone-1.md)) |
-| 2         | Wave 4      | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`                             | not reached                                                                                                                 |
-| 3         | Wave 5      | full suite green; no file over 500 lines without a reason; docs updated                                 | not reached                                                                                                                 |
+| Milestone | After              | Requires                                                                                                                                                                                       | Status                                                                                                                      |
+| --------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1         | Wave 2 + 2½        | full suite green; every LLM tool and builder feature working again; UI callers on capabilities (P09b–d)                                                                                        | wave 2 merged into `main` 2026-11-19; wave 2½ reviewed and merged into `main` 2026-11-19 ([review](reviews/milestone-1.md)) |
+| 2         | Waves 3a, 3b and 4 | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`; `pnpm check` green with the sizes ratchet and `knip --production`; one engine per job (P15, P27, P28)             | not reached                                                                                                                 |
+| 3         | Wave 5 (structure) | full suite green; no import cycles between modules or `decks` areas; no folder over 12 files; docs for the new layout (`overview.md`)                                                          | not reached                                                                                                                 |
+| 4 (final) | Wave 6             | full suite green; no file over 500 lines without a reason; UI blocks, page states and accessibility done; README, licence and CI in place; `docs/refactor/` ready to archive (P21 step 9, P34) | not reached                                                                                                                 |
 
 **Remove later:** [removal-list.md](removal-list.md) lists the scaffolding and dead-code candidates left behind, with who removes each. Add to it whenever you leave something.
 
@@ -151,14 +181,15 @@ and by-eye checks the packages couldn't do).
 
 ## Decisions made
 
-| #   | Decision                                                                                                        | Date       |
-| --- | --------------------------------------------------------------------------------------------------------------- | ---------- |
-| —   | Work on branches; `refactor/main` may break; features are rebuilt; tests are rewritten for the new design       | 2026-11-18 |
-| —   | 500 lines per file is the benchmark: over it needs a reason on the allowlist                                    | 2026-11-18 |
-| —   | Lessons are deferred to the backlog; packages don't write lessons                                               | 2026-11-18 |
-| —   | No feature is removed on purpose; only redundant code (duplicates, dead code, two implementations of one job)   | 2026-11-18 |
-| —   | Layout is by responsibility: one responsibility per module, layer folders inside (ADR 0001); no feature folders | 2026-11-18 |
-| —   | Wave 2½ (P09b–d) moves every UI caller onto capabilities before wave 3 (milestone 1 review, option A)           | 2026-11-19 |
+| #   | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Date       |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| —   | Work on branches; `refactor/main` may break; features are rebuilt; tests are rewritten for the new design                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 2026-11-18 |
+| —   | 500 lines per file is the benchmark: over it needs a reason on the allowlist                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 2026-11-18 |
+| —   | Lessons are deferred to the backlog; packages don't write lessons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 2026-11-18 |
+| —   | No feature is removed on purpose; only redundant code (duplicates, dead code, two implementations of one job)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | 2026-11-18 |
+| —   | Layout is by responsibility: one responsibility per module, layer folders inside (ADR 0001); no feature folders                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 2026-11-18 |
+| —   | Wave 2½ (P09b–d) moves every UI caller onto capabilities before wave 3 (milestone 1 review, option A)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 2026-11-19 |
+| —   | **Plan revision** (five-agent plan review, approved by the owner): new packages P23–P34 and a new wave order (3a, 3b, 4, 5, 6); the target is ≤ 75,000 code lines (stretch ≤ 72,000) with test support counted apart; process rules: code-line ratchet, a deletion list before approval, delete in the same commit, stronger checks, the PM checks each deletion list against the diff ([README](README.md)). Owner answers folded in: delete all dead and test-only code and the interactive goldfish (supersedes "no feature is removed on purpose" for these); the read layer is secure by construction; one scorer, and no scores or ranks in the MCP tools; the type-line helper stays a plain function; advice splits into scoring and building; the weights were fitted from data; collections merge; licence 0BSD; lessons move to their own repo. See [the plan review](reviews/plan-review/README.md) and [owner-answers.md](reviews/plan-review/owner-answers.md) | 2026-11-19 |
 
 ## Broken right now (on `refactor/main`)
 

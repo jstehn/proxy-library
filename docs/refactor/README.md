@@ -19,6 +19,9 @@ clean context, read three or four short files, and work without reading the whol
    your package's Done when even if the package file doesn't list them. Delete each row in the
    commit that removes the thing.
 
+6. **Your package's "Deletes" section.** It lists the files, functions and exports the package
+   will delete, with paths and line counts. It is your checklist (see "Process rules" below).
+
 Read doc 65 only when your package points to one of its sections. To save tokens, filter long
 output (`grep`, `tail`, `head`), and don't read files the package doesn't name unless a step needs
 them.
@@ -58,6 +61,31 @@ the user's personal one.
 - Packages marked **Parallel with** can run at the same time in separate worktrees. Others must
   wait, because they touch the same files.
 - If a package needs a decision listed under **Decisions needed** in STATUS, stop and ask the user.
+- **The deletion list comes before approval.** A package file must have a **Deletes** section
+  (paths, functions, exports and approximate lines, checked with `ls` and `grep`) and a **Lines**
+  target before anyone starts it. A range like "−300 to −800" with no list isn't accepted. If you
+  find the list is wrong, change the package file first and say so in the handoff.
+- **Run `pnpm hooks:install` once per checkout** (P23). The hook runs the fast checks before each
+  commit.
+
+## Process rules (from the plan review, 2026-11-19; they apply from P23 on)
+
+1. **The code-line ratchet.** `pnpm check` fails if production code lines rise above
+   `docs/refactor/sizes-baseline.txt`. The baseline only goes down (`pnpm sizes --update`). A
+   package that must grow states why in its handoff, and the owner approves it first. Today P11 is
+   the one approved exception.
+2. **A deletion list before approval.** See "Picking a package".
+3. **Delete in the same commit.** A commit that adds a new path (a capability, a recognizer, a
+   building block, a read) removes the old path in the same commit. There is no "new beside old".
+   A package that works in slices (P12–P14) merges a slice only if its net lines are ≤ 0.
+4. **Stronger checks.** `pnpm clones --near` reports near-clones (names and literals flattened,
+   8-line windows). `knip --production` is part of the merge gate (from P24). A regex-count
+   ratchet guards oracle-text regexes (from P11).
+5. **Test support is counted apart.** `pnpm sizes` reports `src/**/testing/` and `fixtures/` on
+   their own line, not in the code-line count.
+6. **The project manager checks each deletion list against the diff** before merging: every
+   path in the package's Deletes section is gone (or marked "kept, because …" in the handoff), and
+   nothing big was added that the list didn't mention.
 
 ## Branches
 
@@ -90,7 +118,7 @@ the rules below keep them cheap.
 - **One branch per package**, cut from the current `refactor/main`. Parallel sessions each use
   their own git worktree (`git worktree add ../tcg-Pnn refactor/Pnn-…`), so they never share a
   checkout.
-- **Step branches** are for a package too big for one session (P03, P05–P09, P11, P18): one per
+- **Step branches** are for a package too big for one session (P03, P05–P09, P11, P12–P14 (one per ability slice), P18): one per
   step in its **Steps** list, merged into the package branch when the step's tests pass. The
   package branch merges into `refactor/main` only when the whole package is done.
   (`refactor/Pnn.k-…` and not `refactor/Pnn-…/k`, because git can't hold both a branch and a
@@ -121,6 +149,10 @@ the rules below keep them cheap.
 | Unit tests **for the code this package wrote or moved**                  | New architecture, new tests                                                                                                         |
 | `pnpm test:int`, only if the package changed SQL, repositories or wiring | Unit tests can't see SQL mistakes; other packages skip it to keep runs fast (see the table below)                                   |
 | The size and clone reports (P00) show no **new** offenders               | See "File size" below                                                                                                               |
+| `pnpm sizes` is at or under `sizes-baseline.txt` (from P23)              | The code-line ratchet: the baseline only goes down                                                                                  |
+| `knip --production` exits 0 (from P24)                                   | Code production can't reach is deleted, not kept                                                                                    |
+| The regex baseline didn't rise (from P11)                                | Oracle-text regexes only move into recognizers                                                                                      |
+| Every path in the package's **Deletes** section is gone                  | The PM checks the list against `git diff --stat` before merging                                                                     |
 | Every other failing test is listed in STATUS                             | Breaking is fine; _unknown_ breakage isn't. Each entry names the package that will fix it, or says "delete: tests old architecture" |
 
 **Tests.** Old tests for code that's being replaced are deleted along with that code, not ported
@@ -166,8 +198,13 @@ Before stopping, even partway through:
 
 1. Commit to your package branch (or merge it, if the gate passes and the user agrees).
 2. Update **STATUS.md**: the package's status, anything you broke, and any new decision needed.
-3. Record the package's **source lines before and after** (`pnpm sizes`) in its handoff. Less code
-   is a goal: a package that grows the total needs a sentence saying why.
+3. Record the package's **production code lines before and after** (`pnpm sizes`), the test
+   support and test lines apart, and run `pnpm sizes --update` to lower the baseline. List in the
+   handoff every file you deleted, against the package's **Deletes** section: anything on the list
+   you didn't delete gets a reason. A package that grows the total needs the owner's approval, and a
+   sentence saying why.
+   **Delete in the same commit that adds the replacement**: don't hand a "remove later" row to
+   another package for something your own commit replaced.
 4. Fill in the **Handoff** section at the bottom of your package file: what's done, what's left,
    and anything surprising. Keep it short; it's what the next session reads first.
 5. Add a **"Superseded in part"** line to every design doc whose code you replaced (playbook,
