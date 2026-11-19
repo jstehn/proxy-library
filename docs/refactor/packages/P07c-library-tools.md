@@ -37,27 +37,42 @@ reference outputs.
 
 ## Handoff
 
-**Done so far (2 of 4 tools):**
+**Done (3 of 4 tools):**
 
-- `get_cards` is a binding (`bindings/get-cards.ts`, `present/get-cards.ts`) over two capabilities:
-  `lookUpCards` (`catalog/application/card-lookup.ts`, readers for the card, price trend, copies,
-  decks, wishes, store printings; `catalog/queries/store-printings.ts` is the one
-  "store printings of a card" read) and `checkOwnedCards` (a thin forward in
-  `capabilities.ts`: it has no logic to test; it becomes a real capability when P18 moves the
-  query). The old `get_cards`, its internal `getCard` and `printingsFor` are deleted.
-- `manage_wishlist` is a binding (`bindings/manage-wishlist.ts`, `present/wishlist.ts`) over
-  `wishlistView`, `addWishes` and `removeWishes` (`wishlist/application/wishlist-tools.ts`, fake
-  readers in `wishlist-tools.test.ts`). The old tool file `tools/wishlist.ts` and the dead
-  `getAccountCompact` are deleted.
-- **Checked:** for both, the new binding and the old tool gave identical JSON over every input
-  tried (get_cards: compact, price, full, owned, owned with price, a missing card; manage_wishlist:
-  list, empty add, empty remove, add with a missing card and two invalid finishes, then list and
-  remove). Reference outputs unchanged. `pnpm check` and the 278 integration tests pass.
+- `get_cards`: binding over `lookUpCards` (`catalog/application/card-lookup.ts`, fake-reader tests)
+  and `checkOwnedCards` (a thin forward in `capabilities.ts`: no logic to test; the query behind
+  it moves in P18). New `catalog/queries/store-printings.ts` is the one "store printings of a
+  card" read. Old tool and its internal `getCard` deleted.
+- `manage_wishlist`: binding over `wishlistView`, `addWishes`, `removeWishes`
+  (`wishlist/application/wishlist-tools.ts`, fake-reader tests). Old `tools/wishlist.ts` and the
+  dead `getAccountCompact` deleted.
+- `find_replacements`: binding over `replacements.similarTo` and `replacements.cheaperAlternatives`
+  (`decks/application/find-replacements.ts`, fake-reader tests). Old tool, `similar_cards`,
+  `idea_budget_replacements` and the dead `getAccount` in `tools/library.ts` deleted.
+- To let `application/` name the types, `BrowseCard` and the suggestion types
+  (`SuggestionCard`, `Suggestion`, `SuggestionList`, `SuggestionContext`, the budget replacement
+  types) moved to `decks/domain/` (`browse-card.ts`, `suggestion-types.ts`), and
+  `withoutAvoidCards` moved to `decks/domain/deck-profile.ts` (its test moved with it).
+- **Checked:** for each tool the new binding and the old tool gave identical JSON over every
+  input tried (get_cards 5, manage_wishlist 7, find_replacements 8 including a deck with an avoid
+  card). Reference outputs unchanged. `pnpm check` and the 278 integration tests pass.
 
-**Notes:** `registry.test.ts` now sorts the write tools (bindings are served first, so the
-order changed). The comparison scripts were temporary and are deleted.
+**Deviations:**
 
-**Not done:** `find_replacements` (with the builder's similar and budget actions) and
-`search_cards` (with `browseAction`, `cardDetailAction`). `search_cards` calls
-`analyzeCards`, `semanticSearchForDeck`, `searchForDeck` and `searchCards`; `find_replacements`
-calls `similarCards` and `budgetReplacements` (both in `queries/` until P18 moves them).
+- `find_replacements` with a `card` but no `deckId` used to crash with a database error (it passed
+  an undefined deck id to the query). It now answers `InvalidInput`: "give `deckId` with `card`".
+  The description still says deckId is optional for the card form; a follow-up could make the
+  query work without a deck.
+- `find_replacements` accepts `where`, `limit` and (for the card form) `maxPriceCents` but, as
+  before, ignores them. Kept as is so the public schema doesn't change; worth fixing or removing
+  in P09.
+- `registry.test.ts` sorts the write tools (bindings are served first, so the order changed).
+
+**Not done: `search_cards`** (and the builder's `browseAction`, `cardDetailAction`, `similarAction`,
+`budgetAction`). `search_cards` is four searches behind one tool (syntax search of the catalog and
+collections, the synergy search for a deck, semantic search, and signals), each with its own
+output shaping, built on `searchPrintings`, `collectionPage`, `realCollectionPage`,
+`searchForDeck`, `semanticSearchForDeck` and `analyzeCards`. It should be its own package
+(P07d), done after P18 moves the search queries, or sooner if wanted. The builder actions
+`similarAction` and `budgetAction` can call `replacements.similarTo` / `cheaperAlternatives`
+now; `browseAction` waits with the search work.
