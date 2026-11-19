@@ -1,15 +1,13 @@
 import Link from "next/link";
-import { sharedDecks } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { LocalTime } from "@/ui/local-time";
 import { FORMAT_LABELS } from "../labels";
 
 // Decks → Shared (design doc 21): every deck the playgroup has shared, newest change first.
 
 export default async function SharedDecksPage() {
-  await requireActor();
-  const decks = await sharedDecks(getContainer().db);
+  const { capabilities } = await readPage();
+  const decks = await capabilities.deckReads.sharedDecks();
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-col gap-1">

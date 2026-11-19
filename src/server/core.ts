@@ -301,6 +301,7 @@ export function buildCore(config: Config) {
       textEmbedder,
       decks,
       previews: drizzleChangePreviewRepository(db),
+      services: { deckSharing, chooseToken, proxySheet, seeds },
       newPreviewId: randomUUID,
       outsideData,
       youtube,

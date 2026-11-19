@@ -1,13 +1,11 @@
 import Link from "next/link";
 import {
   COMMANDER_SORTS,
-  commandersICanBuild,
   SPELL_SLOTS,
   type CommanderCoverage,
   type CommanderSort,
 } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { canonicalTheme, THEME_LABELS, THEMES, type Theme } from "@/shared/card-search";
 import { COLORS, Cents, type ManaColor } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
@@ -61,7 +59,7 @@ const fieldClass =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
 
 export default async function FindCommanderPage(props: PageProps<"/decks/commanders">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const colors = chosenColors(searchParams.colors);
   const theme = chosenTheme(searchParams.theme);
@@ -70,7 +68,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
   const includeStore = searchParams.store === "1";
   const withReal = searchParams.real === "1";
   const shown = Math.max(PAGE, Number(searchParams.show) || PAGE);
-  const ranked = await commandersICanBuild(getContainer().db, actor.userId, {
+  const ranked = await capabilities.deckReads.commandersICanBuild(actor.userId, {
     colors,
     theme,
     tribe: tribe || undefined,

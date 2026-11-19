@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { printingCards } from "@/modules/catalog";
-import { deckTokenLines, EXPORTERS, publicDeckByToken } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { getCurrentActor } from "@/server/session";
+import { EXPORTERS } from "@/modules/decks";
+import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { copyPublicDeckAction } from "../../decks/actions";
@@ -12,7 +10,8 @@ import { FORMAT_LABELS } from "../../decks/labels";
 
 export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<Metadata> {
   const { token } = await props.params;
-  const found = await publicDeckByToken(getContainer().db, token);
+  const { capabilities } = await readPage({ allowVisitors: true });
+  const found = await capabilities.deckReads.publicDeck(token);
   if (found === null) return { title: "Deck not found — Proxy Library" };
   return {
     title: `${found.view.deck.name} — Proxy Library`,
@@ -23,19 +22,15 @@ export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<
 export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
   const { token } = await props.params;
   const searchParams = await props.searchParams;
-  const { db, seeds } = getContainer();
-  const [found, actor] = await Promise.all([publicDeckByToken(db, token), getCurrentActor()]);
+  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  const found = await capabilities.deckReads.publicDeck(token);
   if (found === null) notFound();
 
   const { view, ownerName } = found;
   const { deck } = view;
   const [cards, tokens] = await Promise.all([
-    printingCards(
-      db,
-      view.lines.map((line) => line.printingId),
-    ),
-    deckTokenLines(
-      db,
+    capabilities.printingDetails(view.lines.map((line) => line.printingId)),
+    capabilities.deckReads.tokenLines(
       deck.id,
       view.lines.map((line) => ({
         oracleId: line.oracleId,
@@ -75,7 +70,7 @@ export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
         cards={Object.fromEntries(cards)}
         format={deck.format}
         targetBracket={deck.targetBracket}
-        seed={seeds.newSeed()}
+        seed={capabilities.seeds.newSeed()}
         ownerName={ownerName}
         listText={EXPORTERS.names(view.lines)}
         grouping={deck.grouping}

@@ -1,21 +1,14 @@
 import "server-only";
 import { z } from "zod";
-import { printingCards } from "@/modules/catalog";
 import {
   cardsToPrint,
   DEFAULT_PROXY_OPTIONS,
-  deckTokenLines,
-  deckView,
   GAPS_IN_MILLIMETERS,
   TOKEN_COPIES,
-  type DeckView,
-  type ProxyLine,
+  type ProxyDeck,
   type ProxyOptions,
   type ProxySheetInput,
-  type TokenLine,
 } from "@/modules/decks";
-import type { UserId } from "@/shared/kernel";
-import { getContainer } from "@/server/container";
 
 // Shared by the proxy options page and the PDF download: the deck as proxy lines, and the
 // options read from the address (anything missing or unknown falls back to the default).
@@ -47,69 +40,6 @@ const OptionsSchema = z.object({
 /** The options in a query string such as `?paper=a4&bleed=fillGap`. */
 export function proxyOptionsFrom(parameters: URLSearchParams): ProxyOptions {
   return OptionsSchema.parse(Object.fromEntries(parameters));
-}
-
-/** A deck's proxy sheet: the deck, its lines and the tokens its cards make (design doc 25). */
-export type ProxyDeck = Readonly<{ view: DeckView; lines: ProxyLine[]; tokens: TokenLine[] }>;
-
-/** The player's deck as the proxy sheet needs it, or null if it isn't theirs. */
-export async function proxyDeck(userId: UserId, deckId: number): Promise<ProxyDeck | null> {
-  const { db } = getContainer();
-  const view = Number.isSafeInteger(deckId) ? await deckView(db, userId, deckId) : null;
-  if (view === null) return null;
-  const cards = await printingCards(
-    db,
-    view.lines.map((line) => line.printingId),
-  );
-  const lines = view.lines.map((line): ProxyLine => {
-    const card = cards.get(line.printingId);
-    return {
-      oracleId: line.oracleId,
-      printingId: line.printingId,
-      name: line.name,
-      quantity: line.quantity,
-      // Counted only when the deck uses real cards (design doc 16).
-      ownedReal: line.ownedReal,
-      board: line.board,
-      isBasicLand: line.isBasicLand,
-      hasBack: card?.hasBackImage ?? false,
-      isFoil: line.finish !== "nonfoil", // foil and etched both print on foil paper
-      // What a playtest proxy prints (design doc 22). A printing missing from the catalog
-      // still gets a card with its name, rather than stopping the sheet.
-      printed: {
-        faces: card?.faces ?? [
-          {
-            name: line.name,
-            manaCost: null,
-            typeLine: "",
-            text: "",
-            power: null,
-            toughness: null,
-            loyalty: null,
-            defense: null,
-          },
-        ],
-        doubleFaced: card?.hasBackImage ?? false,
-        colors: card?.colors ?? [],
-        producedMana: card?.producedMana ?? [],
-        setCode: card?.setCode ?? "",
-        collectorNumber: card?.collectorNumber ?? "",
-        artist: card?.artist ?? null,
-        isToken: false,
-      },
-    };
-  });
-  const tokens = await deckTokenLines(
-    db,
-    view.deck.id,
-    view.lines.map((line) => ({
-      oracleId: line.oracleId,
-      printingId: line.printingId,
-      name: line.name,
-      board: line.board,
-    })),
-  );
-  return { view, lines, tokens };
 }
 
 /**

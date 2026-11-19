@@ -17,7 +17,15 @@ import {
   ownedCopies as ownedOfPrinting,
 } from "@/modules/collection";
 import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
-import { decksUsing, findCard, type Decks, type PreviewRepository } from "@/modules/decks";
+import {
+  decksUsing,
+  findCard,
+  type DeckSharing,
+  type makeProxySheets,
+  type makeTokenChoices,
+  type Decks,
+  type PreviewRepository,
+} from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
 import { wishesForCard, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
@@ -42,6 +50,13 @@ type CapabilityDependencies = Readonly<{
   reddit: ReturnType<typeof makeReddit>;
   decks: Decks;
   previews: PreviewRepository;
+  /** The services that change things: the capabilities pass them through for the adapters. */
+  services: Readonly<{
+    deckSharing: DeckSharing;
+    chooseToken: ReturnType<typeof makeTokenChoices>;
+    proxySheet: ReturnType<typeof makeProxySheets>;
+    seeds: Readonly<{ newSeed(): string }>;
+  }>;
   newPreviewId: () => string;
 }>;
 
@@ -72,6 +87,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       findCard: (nameOrId) => findCard(db, nameOrId),
     }),
     ...wireAccountCapabilities({ db, clock, wallet }),
+    ...dependencies.services,
     youtube: dependencies.youtube,
     reddit: dependencies.reddit,
     // These read across modules (the game's collection, the real one, the store, the decks and
