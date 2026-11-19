@@ -1,4 +1,4 @@
-import { EMPTY_LIST } from "./suggestion-types";
+import { EMPTY_LIST } from "../domain/suggestion-types";
 import {
   fitsDeck,
   CandidateRow,
@@ -39,7 +39,7 @@ import type {
   SuggestionContext,
   SuggestionList,
   Wanted,
-} from "./suggestion-types";
+} from "../domain/suggestion-types";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each

@@ -20,12 +20,15 @@ import {
   deckView,
   decksFor,
   getDeckProfile,
+  budgetReplacements,
   listDeckSources,
   makeDeckFacts,
+  makeFindReplacements,
   makeDeckManaPlan,
   makeDeckOverview,
   makeDeckSignals,
   manaBasePlan,
+  similarCards,
   makeListDecks,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
@@ -112,6 +115,13 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       { removeWish: (actor, wishId) => wishlist.removeWish(actor, wishId) },
       (value) => WishId.of(value),
     ),
+    replacements: makeFindReplacements({
+      findCard: (nameOrId) => findCard(db, nameOrId),
+      similar: (userId, deckId, oracleId) => similarCards(db, userId, deckId, oracleId),
+      budget: (userId, deckId, options) => budgetReplacements(db, userId, deckId, options),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+    }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

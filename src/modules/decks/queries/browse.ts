@@ -1,16 +1,10 @@
+import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import {
-  ColorSchema,
-  type Finish,
-  FinishSchema,
-  type ManaColor,
-  type UserId,
-} from "@/shared/kernel";
+import { ColorSchema, FinishSchema, type ManaColor, type UserId } from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
-import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 import { ownedPerCard } from "./candidate-pool";
@@ -44,43 +38,6 @@ export type BrowseInput = Readonly<{
   onlyLegal: boolean;
   sort: BrowseSort;
   page: number; // from 1
-}>;
-
-export type BrowseCard = Readonly<{
-  oracleId: string;
-  printingId: string;
-  name: string;
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  /**
-   * Copies counted as owned in this deck: game copies, plus real ones when it uses them. Zero for
-   * a card you don't own (only when browsing every card).
-   */
-  owned: number;
-  /** How many of `owned` are real copies (design doc 16). */
-  ownedReal: number;
-  inThisDeck: number;
-  /** How many of your other decks use this card (ownership is shared between decks). */
-  otherDecks: number;
-  /** Copies owned that none of your other decks uses (task 42). */
-  free: number;
-  /** Why it doesn't fit this deck, or null if it does. */
-  misfit: "color" | "legality" | null;
-  /**
-   * What the deck rules need, so the builder can check a card the moment it's added (design doc
-   * 19, section 5.3). Legalities hold only the deck's format.
-   */
-  rules: CardRules;
-  /** The rest of a provisional deck line, shown until the server answers. */
-  producedMana: string[];
-  text: string;
-  /** On Wizards' Game Changer list (design doc 31). */
-  isGameChanger: boolean;
-  setCode: string;
-  collectorNumber: string;
-  finish: Finish;
-  priceCents: number | null;
 }>;
 
 export type BrowsePage = Readonly<{

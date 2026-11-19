@@ -8,10 +8,11 @@ import {
   SEARCH_FOR_DECK_LIMITS,
   SEARCH_POOLS,
   searchForDeck,
+  withoutAvoidCards,
 } from "@/modules/decks";
 import { cardSignals } from "@/shared/card-search";
 import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../tool";
-import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
+import { deckProfileFor } from "../avoid-cards";
 
 // The search tools (design doc 28, sections 3.3, 3.6 and 3.7): the synergy search for a deck,
 // a plain search, the deck analysis that suggests what to search for, and the search guide.

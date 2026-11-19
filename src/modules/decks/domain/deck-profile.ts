@@ -329,3 +329,25 @@ export function commanderOnlyProfile(
   });
   return { ...profile, costReducers: filtered };
 }
+
+export type AvoidSplit<Item> = Readonly<{
+  kept: Item[];
+  /** Names of the avoid cards that were left out, once each. */
+  avoided: string[];
+}>;
+
+/** The items whose card isn't on the profile's avoid list, and the names of those that were. */
+export function withoutAvoidCards<Item>(
+  items: readonly Item[],
+  nameOf: (item: Item) => string,
+  profile: DeckPlan | null | undefined,
+): AvoidSplit<Item> {
+  const kept: Item[] = [];
+  const avoided = new Set<string>();
+  for (const item of items) {
+    const name = nameOf(item);
+    if (isAvoidCard(name, profile)) avoided.add(name);
+    else kept.push(item);
+  }
+  return { kept, avoided: [...avoided] };
+}

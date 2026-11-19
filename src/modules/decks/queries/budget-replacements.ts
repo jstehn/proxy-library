@@ -17,32 +17,12 @@ import { deckProfile, toRatingProfile } from "../domain/suggest";
 import { rankBudgetReplacements } from "../domain/replacements";
 import { isLand } from "../domain/stats";
 import { cheapestOfCards } from "./candidate-pool";
-import type { SuggestionCard } from "./suggestion-types";
-
-export type BudgetReplacementPick = Readonly<{
-  card: SuggestionCard;
-  similarityPct: number;
-  rating: number;
-  savedCents: number;
-  matchedRoles: readonly Tag[];
-}>;
-
-export type ExpensiveCardReplacements = Readonly<{
-  target: Readonly<{
-    oracleId: string;
-    name: string;
-    priceCents: number;
-    typeLine: string;
-  }>;
-  owned: BudgetReplacementPick[];
-  store: BudgetReplacementPick[];
-}>;
-
-export type BudgetReplacementsResult = Readonly<{
-  cards: ExpensiveCardReplacements[];
-  minPriceCents: number;
-  maxPriceCents: number;
-}>;
+import type {
+  BudgetReplacementPick,
+  BudgetReplacementsResult,
+  ExpensiveCardReplacements,
+  SuggestionCard,
+} from "../domain/suggestion-types";
 
 /**
  * Finds cheaper legal replacements for expensive cards in a deck using `card_embeddings`

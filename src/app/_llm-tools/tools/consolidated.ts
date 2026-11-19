@@ -24,12 +24,10 @@ import {
   updateDeck,
 } from "./decks";
 import {
-  budgetReplacementsTool,
   checkInteractionTool,
   getRulingsTool,
   lookupRulesTool,
   semanticSearchForDeckTool,
-  similarCardsTool,
 } from "./library";
 import { compactMoneyFields, stripProvenance } from "../present/money";
 import { analyzeCards, searchCards, searchForDeckTool } from "./search";
@@ -464,54 +462,6 @@ export const edhrecLookupTool = defineTool({
       limit: input.limit,
     });
     return res.ok ? done(compactMoneyFields(res.value)) : res;
-  },
-});
-
-/** 8. find_replacements (merges similar_cards + idea_budget_replacements) */
-export const findReplacementsTool = defineTool({
-  name: "find_replacements",
-  title: "Find similar or budget replacement cards",
-  description:
-    "Find similar cards for a given `card` (optionally scoped to `deckId` and `maxPriceCents`), or find budget replacements for expensive cards in `deckId`.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    card: z.string().min(1).optional().describe("Card name to find alternatives for."),
-    deckId: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe("Optional deck id for color/format/bracket filtering."),
-    where: z.enum(["owned", "store", "both"]).default("both").describe("Candidate pool."),
-    maxPriceCents: z.number().int().min(0).optional().describe("Max price in cents."),
-    limit: z.number().int().min(1).max(20).default(10).describe("Max candidates (default 10)."),
-    includeText: z.boolean().default(false).describe("Include oracle rules text (default false)."),
-  }),
-  async run(context, input) {
-    if (input.card) {
-      const res = await similarCardsTool.run(context, {
-        card: input.card,
-        deckId: input.deckId,
-        where: input.where,
-        maxPriceCents: input.maxPriceCents,
-        limit: input.limit,
-        includeText: input.includeText,
-      });
-      return res.ok ? done(compactMoneyFields(stripProvenance(res.value))) : res;
-    }
-    if (input.deckId !== undefined) {
-      const res = await budgetReplacementsTool.run(context, {
-        deckId: input.deckId,
-        where: input.where,
-        maxPriceCents: input.maxPriceCents,
-        perCard: 3,
-        maxExpensiveCards: Math.min(8, input.limit),
-        includeText: input.includeText,
-      });
-      return res.ok ? done(compactMoneyFields(stripProvenance(res.value))) : res;
-    }
-    return failed("InvalidInput", "Provide `card` or `deckId`.");
   },
 });
 

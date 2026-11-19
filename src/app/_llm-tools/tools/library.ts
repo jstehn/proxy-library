@@ -1,240 +1,26 @@
 import { z } from "zod";
 import { lookupRules } from "@/modules/catalog";
-import { collectionPage } from "@/modules/collection";
 import {
-  budgetReplacements,
   checkOwnedCards,
-  decksFor,
   deckView,
   findCard,
   isPlayed,
   semanticSearchForDeck,
-  similarCards,
-  type Suggestion,
   declaredComboFor,
+  withoutAvoidCards,
 } from "@/modules/decks";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
-import { reasonText } from "@/app/decks/labels";
-import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
+import { deckProfileFor } from "../avoid-cards";
 import { findRuleInteractions, findSharedRules, matchRelatedRules } from "../related-rules";
-import {
-  cardNotFound,
-  deckNotFound,
-  defineTool,
-  done,
-  failed,
-  heuristicProvenance,
-  money,
-  moneyOrNull,
-} from "../tool";
+import { deckNotFound, defineTool, done, failed, moneyOrNull } from "../tool";
 
 // Your account, cards and the app's own recommendations (design doc 28, section 5.2).
 
 const deckId = z.number().int().positive().describe("The deck's id, from list_decks.");
 
-export const getAccount = defineTool({
-  name: "get_account",
-  title: "My account",
-  description: [
-    "Who you are and what you have: your balance (play money for the store), allowance if any, and how many cards, decks and wishes you have.",
-    "Use it when: starting a conversation, or before suggesting purchases (to stay within the balance).",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({}),
-  async run(context) {
-    const { db, clock, wallet } = context.container;
-    const userId = context.actor.userId;
-    const [balance, settings, collection, decks, wishes] = await Promise.all([
-      // Brings the wallet up to date (a due allowance is paid), as every page that shows money does.
-      wallet.refreshWallet(userId),
-      currentEconomySettings(db),
-      collectionPage(db, userId, { sections: "none", sort: "name", page: 1 }),
-      decksFor(db, userId),
-      wishlistAnswers(db, userId),
-    ]);
-    const allowancesOn = settings.allowance > 0;
-    return done({
-      player: { username: context.actor.username, displayName: context.actor.displayName },
-      scopes: context.scopes,
-      balance: money(balance),
-      allowance: allowancesOn
-        ? {
-            amount: money(settings.allowance),
-            everyDays: settings.allowancePeriodDays,
-            next: nextPayday(
-              { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-              clock.now(),
-            ).toISOString(),
-          }
-        : null,
-      collection: {
-        differentCards: collection.totals.different,
-        copies: collection.totals.copies,
-        value: money(collection.totals.valueCents),
-      },
-      decks: decks.length,
-      wishes: wishes.wishes.length,
-    });
-  },
-});
-
-function suggestionView(suggestion: Suggestion, includeText: boolean) {
-  const card = suggestion.card;
-  return {
-    name: card.name,
-    oracleId: card.oracleId,
-    printingId: card.printingId,
-    manaCost: card.manaCost,
-    typeLine: card.typeLine,
-    ...(includeText ? { text: card.text } : {}),
-    ...(card.isGameChanger ? { isGameChanger: true } : {}),
-    owned: card.owned,
-    price: moneyOrNull(card.priceCents),
-    rating: suggestion.rating,
-    ratingParts: suggestion.ratingParts.map((part) => ({
-      kind: part.kind,
-      label: part.label,
-      contribution: Math.round(part.contribution * 100) / 100,
-    })),
-    why: suggestion.reasons.map(reasonText),
-  };
-}
-
 const includeText = z
   .boolean()
   .default(false)
   .describe("Include each card's rules text (off by default to save space).");
-
-export const similarCardsTool = defineTool({
-  name: "similar_cards",
-  title: "Cards like this one",
-  description: [
-    "Cards that do what one card does (same roles, themes, keywords, types), for a deck: within its colors and format, yours first.",
-    "Use it when: replacing a card, or finding more copies of an effect.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    card: z.string().min(1).describe("The card to match: its exact name or id."),
-    includeText,
-  }),
-  async run(context, input) {
-    const found = await findCard(context.container.db, input.card);
-    if (found === null) return cardNotFound(input.card);
-    const result = await similarCards(
-      context.container.db,
-      context.actor.userId,
-      input.deckId,
-      found.oracleId,
-    );
-    if (result === null) return deckNotFound(input.deckId);
-    const profile = await deckProfileFor(context, input.deckId);
-    const owned = withoutAvoidCards(result.owned, (each) => each.card.name, profile);
-    const store = withoutAvoidCards(result.store, (each) => each.card.name, profile);
-    const avoided = [...new Set([...owned.avoided, ...store.avoided])];
-    return done({
-      like: found.name,
-      owned: owned.kept.map((each) => suggestionView(each, input.includeText)),
-      store: store.kept.map((each) => suggestionView(each, input.includeText)),
-      hiddenOverTarget: result.hiddenOverTarget,
-      ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
-    });
-  },
-});
-
-export const budgetReplacementsTool = defineTool({
-  name: "idea_budget_replacements",
-  title: "Cheaper similar-text ideas for expensive cards",
-  description: [
-    "Finds cheaper legal cards with similar rules text (via card embeddings) and regex deck fit for expensive cards in a deck. Raw ideas to verify against card text and outside sources, not recommendations.",
-    "Use it when: the player wants budget alternatives for a specific expensive card or the priciest cards in their deck.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    card: z
-      .string()
-      .min(1)
-      .optional()
-      .describe(
-        "Optional card name or id to replace; omit to scan the deck's priciest non-land cards.",
-      ),
-    minPriceCents: z
-      .number()
-      .int()
-      .min(1)
-      .optional()
-      .describe(
-        "Minimum card price in cents to consider expensive when scanning (default 500 = $5).",
-      ),
-    maxPriceCents: z
-      .number()
-      .int()
-      .min(1)
-      .optional()
-      .describe("Maximum replacement price in cents (default 200 = $2)."),
-    includeText,
-  }),
-  async run(context, input) {
-    let oracleId: string | undefined;
-    if (input.card !== undefined) {
-      const found = await findCard(context.container.db, input.card);
-      if (found === null) return cardNotFound(input.card);
-      oracleId = found.oracleId;
-    }
-    const result = await budgetReplacements(
-      context.container.db,
-      context.actor.userId,
-      input.deckId,
-      {
-        oracleId,
-        minPriceCents: input.minPriceCents,
-        maxPriceCents: input.maxPriceCents,
-      },
-    );
-    if (result === null) return deckNotFound(input.deckId);
-    return done({
-      provenance: heuristicProvenance("embedding similarity + regex heuristic", [
-        "card text",
-        "edhrec",
-      ]),
-      minPrice: money(result.minPriceCents),
-      maxPrice: money(result.maxPriceCents),
-      cards: result.cards.map((entry) => ({
-        target: {
-          name: entry.target.name,
-          oracleId: entry.target.oracleId,
-          typeLine: entry.target.typeLine,
-          price: money(entry.target.priceCents),
-        },
-        owned: entry.owned.map((pick) => ({
-          name: pick.card.name,
-          oracleId: pick.card.oracleId,
-          price: moneyOrNull(pick.card.priceCents),
-          saved: money(pick.savedCents),
-          similarityPct: pick.similarityPct,
-          rating: pick.rating,
-          matchedRoles: pick.matchedRoles,
-          ...(input.includeText ? { text: pick.card.text } : {}),
-        })),
-        store: entry.store.map((pick) => ({
-          name: pick.card.name,
-          oracleId: pick.card.oracleId,
-          price: moneyOrNull(pick.card.priceCents),
-          saved: money(pick.savedCents),
-          similarityPct: pick.similarityPct,
-          rating: pick.rating,
-          matchedRoles: pick.matchedRoles,
-          ...(input.includeText ? { text: pick.card.text } : {}),
-        })),
-      })),
-    });
-  },
-});
 
 export const semanticSearchForDeckTool = defineTool({
   name: "semantic_search_for_deck",
