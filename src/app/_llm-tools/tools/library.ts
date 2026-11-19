@@ -1,18 +1,10 @@
 import { z } from "zod";
-import {
-  lookupRules,
-  priceHistory,
-  printingCards,
-  printingDetail,
-  searchPrintings,
-} from "@/modules/catalog";
-import { collectionPage, ownedByOracle, ownedCopies } from "@/modules/collection";
-import { realOwnedByOracle } from "@/modules/real-collection";
+import { lookupRules } from "@/modules/catalog";
+import { collectionPage } from "@/modules/collection";
 import {
   budgetReplacements,
   checkOwnedCards,
   decksFor,
-  decksUsing,
   deckView,
   findCard,
   isPlayed,
@@ -22,7 +14,7 @@ import {
   declaredComboFor,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
+import { wishlistAnswers } from "@/modules/wishlist";
 import { reasonText } from "@/app/decks/labels";
 import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
 import { findRuleInteractions, findSharedRules, matchRelatedRules } from "../related-rules";
@@ -35,7 +27,6 @@ import {
   heuristicProvenance,
   money,
   moneyOrNull,
-  type ToolContext,
 } from "../tool";
 
 // Your account, cards and the app's own recommendations (design doc 28, section 5.2).
@@ -88,117 +79,6 @@ export const getAccount = defineTool({
     });
   },
 });
-
-export const getCard = defineTool({
-  name: "get_cards",
-  title: "Get cards",
-  description: [
-    "Full details for 1 to 25 cards: rules text of every face, type, mana cost, store printings with prices, price trend, owned game & real copies, decks using each, and wishes.",
-    "Use it when: checking cards' full rules text, printings, or price history before recommending or adding wishes (add_wishes).",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    cards: z
-      .array(z.string().min(1))
-      .min(1)
-      .max(25)
-      .describe("1 to 25 card names, printing ids, or oracle ids."),
-    cursor: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Pagination cursor returned as `next` when a previous call was capped."),
-  }),
-  async run(context, input) {
-    const { db } = context.container;
-    const userId = context.actor.userId;
-    const results = await Promise.all(
-      input.cards.map(async (query) => {
-        const found = await findCard(db, query);
-        if (found === null) return { query, found: false };
-        const [detail, history, owned, gameCopies, realCopies, using, wishes, printings] =
-          await Promise.all([
-            printingDetail(db, found.printingId),
-            priceHistory(db, found.printingId),
-            ownedCopies(db, userId, found.printingId),
-            ownedByOracle(db, userId, found.oracleId),
-            realOwnedByOracle(db, userId, found.oracleId),
-            decksUsing(db, userId, [found.printingId]),
-            wishesForCard(db, userId, found.printingId),
-            searchPrintings(db, {
-              userId,
-              search: `!"${found.name.replace(/"/g, "")}"`,
-              sort: "price",
-              page: 1,
-            }),
-          ]);
-        const gameTotal = gameCopies.reduce((sum, copy) => sum + copy.quantity, 0);
-        const realTotal = realCopies.reduce((sum, copy) => sum + copy.quantity, 0);
-        const printingList = await printingsFor(context, printings.printingIds.slice(0, 20));
-        return {
-          query,
-          found: true,
-          name: found.name,
-          oracleId: found.oracleId,
-          printingId: found.printingId,
-          typeLine: found.typeLine,
-          manaCost: found.manaCost,
-          colorIdentity: found.colorIdentity,
-          faces: detail?.card.faces ?? [],
-          set: detail === null ? null : { code: detail.setCode, name: detail.setName },
-          priceTrend: Object.entries(history).map(([finish, points]) => ({
-            finish,
-            first:
-              points[0] === undefined ? null : { day: points[0].day, ...money(points[0].price) },
-            latest:
-              points.length === 0
-                ? null
-                : { day: points[points.length - 1].day, ...money(points[points.length - 1].price) },
-            low:
-              points.length === 0 ? null : money(Math.min(...points.map((point) => point.price))),
-            high:
-              points.length === 0 ? null : money(Math.max(...points.map((point) => point.price))),
-          })),
-          owned: {
-            total: gameTotal + realTotal,
-            game: gameTotal,
-            real: realTotal,
-            printings: [
-              ...gameCopies.map((copy) => ({ ...copy, source: "game" as const })),
-              ...realCopies.map((copy) => ({ ...copy, source: "real" as const })),
-            ],
-          },
-          ownedOfThisPrinting: owned,
-          decksUsing: using.get(found.printingId) ?? [],
-          wishes: wishes.map((wish) => ({ wishId: wish.id, quantity: wish.quantity })),
-          printingsForSale: printingList,
-        };
-      }),
-    );
-    return done({ cards: results });
-  },
-});
-
-async function printingsFor(context: ToolContext, ids: readonly string[]) {
-  const cards = await printingCards(context.container.db, ids);
-  return ids.flatMap((id) => {
-    const card = cards.get(id);
-    if (card === undefined) return [];
-    return [
-      {
-        printingId: id,
-        set: card.setCode,
-        number: card.collectorNumber,
-        variant: card.variantLabel,
-        prices: Object.fromEntries(
-          Object.entries(card.prices).map(([finish, cents]) => [finish, money(cents)]),
-        ),
-      },
-    ];
-  });
-}
 
 function suggestionView(suggestion: Suggestion, includeText: boolean) {
   const card = suggestion.card;

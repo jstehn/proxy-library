@@ -1,9 +1,20 @@
 import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
-import { printingCards } from "@/modules/catalog";
+import {
+  makeCardLookup,
+  priceHistory,
+  printingCards,
+  printingDetail,
+  storePrintingsOfCard,
+} from "@/modules/catalog";
+import { ownedByOracle, ownedCopies as ownedOfPrinting } from "@/modules/collection";
+import { realOwnedByOracle } from "@/modules/real-collection";
 import {
   auditDeckView,
+  checkOwnedCards,
   combosForDeck,
+  decksUsing,
+  findCard,
   deckSignalCards,
   deckTokenLines,
   deckView,
@@ -18,9 +29,9 @@ import {
   makeListDecks,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
+import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
+import { ok, type Cents, type Clock, type UserId } from "@/shared/kernel";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each is built here from its module's factory, with the
@@ -52,6 +63,20 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
     }),
     deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
+    lookUpCards: makeCardLookup({
+      find: (query) => findCard(db, query),
+      detail: (printingId) => printingDetail(db, printingId),
+      history: (printingId) => priceHistory(db, printingId),
+      ownedOfPrinting: (userId, printingId) => ownedOfPrinting(db, userId, printingId),
+      gameCopies: (userId, oracleId) => ownedByOracle(db, userId, oracleId),
+      realCopies: (userId, oracleId) => realOwnedByOracle(db, userId, oracleId),
+      decksUsing: async (userId, printingId) =>
+        (await decksUsing(db, userId, [printingId])).get(printingId) ?? [],
+      wishes: (userId, printingId) => wishesForCard(db, userId, printingId),
+      storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
+    }),
+    checkOwnedCards: async (request: { userId: UserId; names: readonly string[] }) =>
+      ok(await checkOwnedCards(db, request.userId, request.names)),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

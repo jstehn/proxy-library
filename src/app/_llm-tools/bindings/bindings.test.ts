@@ -113,6 +113,7 @@ describe("the bindings list", () => {
   it("has unique names and a flat input each", () => {
     expect(BINDINGS.map((binding) => binding.name)).toEqual([
       "get_account",
+      "get_cards",
       "get_deck",
       "list_decks",
     ]);
