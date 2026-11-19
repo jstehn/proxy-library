@@ -70,6 +70,9 @@ state".
 
 ## Milestones (`refactor/main` → `main`, user approves)
 
+Before each milestone, run the checks in [deferred-checks.md](deferred-checks.md) (network, browser
+and by-eye checks the packages couldn't do).
+
 | Milestone | After  | Requires                                                                | Status      |
 | --------- | ------ | ----------------------------------------------------------------------- | ----------- |
 | 1         | Wave 2 | full suite green; every LLM tool and builder feature working again      | not reached |

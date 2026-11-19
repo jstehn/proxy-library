@@ -8,7 +8,6 @@ import {
   edhrecLookupTool,
   editDeckConsolidated,
   rulesLookupTool,
-  searchCardsConsolidated,
   updateDeckConsolidated,
 } from "./tools/consolidated";
 import { createDeck } from "./tools/decks";
@@ -24,7 +23,6 @@ const LEGACY_TOOLS: readonly LlmTool[] = [
   createDeck,
   updateDeckConsolidated,
   editDeckConsolidated,
-  searchCardsConsolidated,
   edhrecLookupTool,
   findCombosForDeckTool,
   drawSampleTool,
