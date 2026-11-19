@@ -13,7 +13,8 @@ import { FORMATS } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
-import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
+import { ownedPerCard } from "./candidate-pool";
+import { STANDARD_FIRST } from "./owned";
 
 // Browsing cards while building a deck (design doc 14, section 2.1): one entry per card, with
 // what the deck needs to know. The grid searches either the cards you own or every card for sale
@@ -185,7 +186,6 @@ export async function browseCollection(
       : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
   const offset = (Math.max(1, input.page) - 1) * BROWSE_PAGE_SIZE;
   // The cards you own for this deck: real ones too when it uses them (design doc 16, rule 2).
-  const owned = ownedCopies(userId, sql`${context.usesRealCards}`);
   // What a printing "p" must satisfy to be in the grid.
   const matches = sql`${searchCondition(parsed.node, {
     userId,
@@ -267,15 +267,12 @@ export async function browseCollection(
     total: number;
   }>(sql`
     with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-             -- Your most special copy is the one shown and added (design doc 23, section 14).
-             (array_agg(c.printing_id order by ${MOST_SPECIAL_FIRST}))[1] as printing_id,
+      -- Your most special copy is the one shown and added (design doc 23, section 14).
+      select o.*,
              (select max(a.created_at) from acquisitions a
                join printings ap on ap.id = a.printing_id
-              where a.user_id = ${userId} and ap.oracle_id = p.oracle_id) as newest
-        from ${owned} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
+              where a.user_id = ${userId} and ap.oracle_id = o.oracle_id) as newest
+        from ${ownedPerCard(userId, context.usesRealCards)} o
     ),
     ${input.source === "mine" ? mineCandidates : allCandidates}
     select card.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
@@ -307,9 +304,7 @@ export async function browseCollection(
       -- most special copy's, or nonfoil for a card you don't own (design doc 29, rule 4).
       cross join lateral (
         select coalesce(
-                 (select c.finish from ${owned} c
-                   where c.printing_id = p.id
-                   order by ${MOST_SPECIAL_FIRST} limit 1),
+                 (select o.finish from owned o where o.printing_id = p.id),
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown

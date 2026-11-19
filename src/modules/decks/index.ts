@@ -154,6 +154,7 @@ export {
   type BracketWarning,
   type DeckCombo,
 } from "./domain/brackets";
+export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./queries/candidate-pool";
 export { combosForDeck } from "./queries/combos";
 export {
   addDeckSource,

@@ -127,16 +127,23 @@ export async function landPoolsForDeck(
   const themes = [...new Set([...profile.themes, ...extraThemes])];
   const colorsWanted = Math.min(2, Math.max(1, deckColors.length));
   const store = await db.execute<LandRow>(sql`
-    with matching as (
-      select distinct on (p.oracle_id) p.oracle_id
+    with fits as (
+      select p.oracle_id,
+             (select count(*) from unnest(p.produced_mana) as made
+               where made = any(${textArray(deckColors)})) >= ${colorsWanted} as colors_fit,
+             coalesce(p.role_tags && ${textArray(deckRoles)}, false) as role_fit,
+             coalesce(p.theme_tags && ${textArray(themes)}, false) as theme_fit
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${playable}
-         and ((select count(*) from unnest(p.produced_mana) as made
-                where made = any(${textArray(deckColors)})) >= ${colorsWanted}
-              or p.role_tags && ${textArray(deckRoles)}
-              or p.theme_tags && ${textArray(themes)})
-         and ${notOwned(userId, context.usesRealCards)}
-       order by p.oracle_id
+       where ${playable} and ${notOwned(userId, context.usesRealCards)}
+    ),
+    -- The best-fitting lands first (colours, then role, then theme), not an arbitrary few.
+    matching as (
+      select oracle_id
+        from (select oracle_id, bool_or(colors_fit) as colors_fit, bool_or(role_fit) as role_fit,
+                     bool_or(theme_fit) as theme_fit
+                from fits group by oracle_id) fit
+       where colors_fit or role_fit or theme_fit
+       order by colors_fit desc, role_fit desc, theme_fit desc, oracle_id
        limit ${STORE_LIMIT}
     ),
     cheapest as (
