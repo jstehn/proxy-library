@@ -87,6 +87,8 @@ and by-eye checks the packages couldn't do).
 | 2         | Wave 4      | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`                             | not reached                                                                                             |
 | 3         | Wave 5      | full suite green; no file over 500 lines without a reason; docs updated                                 | not reached                                                                                             |
 
+**Remove later:** [removal-list.md](removal-list.md) lists the scaffolding and dead-code candidates left behind, with who removes each. Add to it whenever you leave something.
+
 ## Decisions needed (ask the user; record the answer here and on the tududi task)
 
 1. (tududi task 260) **Double-faced cards (P04):** does a spell with a land on its back count as a land for the

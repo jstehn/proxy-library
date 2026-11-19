@@ -1,0 +1,39 @@
+# Remove later
+
+Temporary scaffolding and dead-code candidates found during the refactor. Each row names who
+removes it and when. **Add a row the moment you leave something behind** (in the same commit), and
+delete the row in the commit that removes the thing. A package is not done while a row names it and
+is still open. Mirrored in tududi (task "Removal register").
+
+## Scaffolding (built to get from A to B; delete when B is reached)
+
+| What                                                                                                                                                                                | Where                                                    | Why it exists                                                                              | Remove in                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `NOT_YET_ON_CAPABILITIES` (60 files after P09c)                                                                                                                                     | `eslint.config.mjs`                                      | the ratchet: files still calling `getContainer()`                                          | P09d, P19 (empty)                                       |
+| `CONTAINER_ALLOWED`: re-check each reason                                                                                                                                           | `eslint.config.mjs`                                      | `_oauth/http.ts`, `api/health/route.ts`                                                    | P21 (final review)                                      |
+| `builderAction`'s `ifInvalid` and the old result shapes (`QuantityResult`, `null`, `[]`)                                                                                            | `app/decks/[id]/builder/action-helpers.ts` and its users | kept so the browser got the same answers in P09b                                           | P19                                                     |
+| The server action `loadBuilderDeck` beside `builderDeckFor`                                                                                                                         | `builder/actions.ts`, `builder/builder-deck.ts`          | the builder component still refreshes through the action                                   | P19                                                     |
+| One-line forward bundles: `deckReads`, `collectionReads`, `realCollectionReads`, `draftReads`, `inventoryReads`, `storeReads`, `catalogReads`, `packReads`, `wishlistReads`         | each module's `wiring.ts`                                | UI callers needed a path that isn't `db`; they forward to the old query functions          | each as its queries merge: P11, P15–P18, then P20 sweep |
+| Service pass-through in `capabilities` (`deckEdits` = all of `Decks`, `deckSharing`, `drafts`, `realCollection`, `store`, `inventory`, `chooseToken`, `proxySheet`, `seeds`, `now`) | `src/server/capabilities.ts`, `core.ts` (`services`)     | the UI calls whole services; narrower capabilities come when a package rewrites the caller | P18, P19, P20                                           |
+| `readPage()` inside FormData actions                                                                                                                                                | `app/**/actions.ts` (decks, drafts, collection, …)       | `action(schema)` takes parsed input, FormData actions don't fit                            | P20 (a `formAction` helper, or schemas)                 |
+| `rulesLookup`, `lookUpCards`, `searchCatalog` joined in `capabilities.ts`                                                                                                           | `src/server/capabilities.ts`                             | they read across modules; no one module's wiring may hold them                             | P18 (decks split) decides                               |
+| `printingDetails` beside `lookUpCards`'s `detail`                                                                                                                                   | `catalog/wiring.ts`, `capabilities.ts`                   | two readers of printing details                                                            | P20                                                     |
+
+## Duplicates to fold
+
+| What                                                                                 | Where                               | Remove in  |
+| ------------------------------------------------------------------------------------ | ----------------------------------- | ---------- |
+| `startDeckAction` repeats `startDeck`'s create-and-import (adds `usesRealCards`)     | `app/decks/commanders/actions.ts`   | P11 or P19 |
+| `ListPreviewSummary` mapping (presentation of a capability's answer, about 70 lines) | `app/decks/edit-as-text/actions.ts` | P10 or P19 |
+
+## Dead-code candidates (used only by tests; confirm with the user whether the feature is dead)
+
+`decks/domain`: `planPackageInsert` (card packages: also see P20's check), `dealMulliganDrill`,
+`evaluateMulliganDecision`, `chanceByTurn`, `exportWithTags`, `primerSections`, `preparedForTest`.
+`store/domain`: `msrpFor`. `social/domain`: `viewerRelation`, `defaultProfile`.
+**Owner: P20.** The user decides first (no feature cuts; decision 4 of the audit).
+
+## Tools already removed on purpose
+
+The 27 unregistered LLM tools, per decision 4 (STATUS). The card-package tools have no equivalent in
+the builder either; P20 checks whether the feature is dead.

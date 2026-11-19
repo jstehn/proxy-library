@@ -178,3 +178,7 @@ Before stopping, even partway through:
 
 New ideas that aren't part of a package go to the **Backlog** in STATUS (and to tududi's inbox
 when it's connected), not into the current work.
+
+## Leaving something behind
+
+If your package leaves scaffolding, a duplicate or dead code, add a row to [removal-list.md](removal-list.md) in the same commit, naming the package that removes it, and mention it in your handoff.
