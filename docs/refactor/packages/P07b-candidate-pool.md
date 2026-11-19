@@ -122,4 +122,35 @@ All five proposals accepted, with these changes:
 
 ## Handoff
 
-(empty; inventory above is the first step)
+**Done (SQL pool, step 1 of 2):**
+
+- `decks/queries/candidate-pool.ts` is the only file with "owned, one row per card" and "cheapest
+  printing for sale" SQL: `ownedPerCard` (both the most-special and the most-copies printing and
+  finish; most special is the default callers join on), `notOwned`, `cheapestForSale`,
+  `cheapestOfCards`. Exported from the decks index for integration tests.
+- Used by `suggestions` (owned, store, similar-cards, budget, ids), `draft-deck`, `mana-base`,
+  `search-for-deck`, `semantic-search`, `deck-combos`, `commanders` and `browse`. Their copies of
+  the owned CTE, the not-owned test and the cheapest lateral are deleted.
+- Decisions applied: both printings surfaced, most special default (owned cards in suggestions,
+  draft, mana base and commanders now show/price the most special copy; `browse` and
+  `search-for-deck` already did); mana-base store lands ranked by colour, role, theme fit
+  (was `order by oracle_id limit 200`); one cheapest rule with the finish kept; sharing across
+  decks never excludes a card.
+- Mana base still gives owned lands no price (it uses `null` to tell owned from store lands in
+  its output); the pool offers the price, the caller ignores it.
+- Lint rule (`CANDIDATE_SQL`) forbids `order by latest.usd_cents` and `array_agg(c.printing_id`
+  in template strings outside `candidate-pool.ts`.
+- 13 integration tests for the pool (`tests/integration/candidate-pool.int.test.ts`): copies
+  across printings and finishes, special vs most-held, real cards, per-player, any printing
+  owned, set not for sale, ties, unpriced, price cap.
+- Clone runs 48 to 37. Source lines 91,511 to 91,458. `pnpm check` and the 278 integration
+  tests pass.
+
+**Not done (step 2): the suggestion service.** `queries/suggestions.ts` is 978 lines (target
+under 500). It still mixes SQL readers (`ownedCandidates`, `storeCandidates`, `candidateColumns`,
+`fitsDeck`, ~350 lines) with orchestration and scoring (`deckSuggestions`, `similarCards`,
+`budgetList`, `budgetReplacements`, ~450 lines). Plan: the readers stay in `queries/` behind a
+`CandidatePool` port in `application/`; the four orchestrating functions move to
+`application/suggest-cards.ts` with fake-pool unit tests; the builder's suggestion, similar and
+budget actions call it through `action()`. Then remove `suggestions.ts` from the oversize
+allowlist.
