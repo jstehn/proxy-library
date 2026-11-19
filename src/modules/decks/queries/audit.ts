@@ -11,7 +11,7 @@ import {
   type BracketRuleReason,
 } from "../domain/brackets";
 import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
-import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
@@ -110,7 +110,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       .where(eq(decks.id, view.deck.id))
       .limit(1),
   ]);
-  const deckProfile: DeckProfile | null = profileRows[0]?.profileJson ?? null;
+  const deckProfile: DeckPlan | null = profileRows[0]?.profileJson ?? null;
 
   const ownedByOracle = new Map<string, number>();
   for (const line of view.lines) ownedByOracle.set(line.oracleId, line.owned);

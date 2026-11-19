@@ -51,7 +51,7 @@ import {
   getDeckProfile,
   updateDeckPrimer,
   updateDeckProfile,
-  type DeckPlanProfile,
+  type DeckPlan,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -779,10 +779,10 @@ export async function entryDetailsAction(
 }
 
 /** The deck's plan (structured profile) and primer, for the primer panel (design doc 61). */
-export type DeckPlan = Readonly<{ profile: DeckPlanProfile; primer: string }>;
+export type DeckPlanWithPrimer = Readonly<{ profile: DeckPlan; primer: string }>;
 
 /** Loads the deck's plan and primer, or null if it isn't the player's. */
-export async function deckPlanAction(deckId: number): Promise<DeckPlan | null> {
+export async function deckPlanAction(deckId: number): Promise<DeckPlanWithPrimer | null> {
   const actor = await requireActor();
   const stored = await getDeckProfile(getContainer().db, actor.userId, deckId);
   if (stored === null) return null;
@@ -806,7 +806,8 @@ const DeckPlanInput = z.object({
   primer: z.string().max(20_000),
 });
 
-export type DeckPlanResult = { ok: true; plan: DeckPlan } | { ok: false; message: string };
+export type DeckPlanResult =
+  { ok: true; plan: DeckPlanWithPrimer } | { ok: false; message: string };
 
 /** Saves the deck's plan fields and its primer (design doc 61). */
 export async function saveDeckPlanAction(

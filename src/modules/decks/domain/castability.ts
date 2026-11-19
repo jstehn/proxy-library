@@ -7,7 +7,7 @@ import {
   seededRng,
 } from "@/shared/kernel";
 import { isPlayed, type Board } from "./boards";
-import { effectiveManaValue, type DeckProfile } from "./deck-profile";
+import { effectiveManaValue, type DeckPlan } from "./deck-profile";
 import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
 import { isLand } from "./stats";
@@ -145,7 +145,7 @@ function missingPip(
  */
 export function simulateCastOnCurve(
   lines: readonly CastabilityLine[],
-  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckProfile | null }> = {},
+  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckPlan | null }> = {},
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
   const rng = options.rng ?? seededRng("cast-on-curve");

@@ -12,7 +12,7 @@ import {
   type CommanderCandidate,
   type PoolCard,
 } from "./commanders";
-import { deckFit, type DeckProfile } from "./suggest";
+import { deckFit, type DeckFingerprint } from "./suggest";
 import { type ManaColor } from "@/shared/kernel";
 
 const commander = (
@@ -347,7 +347,7 @@ describe("sharesPlan", () => {
     });
     fc.assert(
       fc.property(plans, cards, (planRow, cardRow) => {
-        const plan: DeckProfile = { ...planRow, gaps: [] };
+        const plan: DeckFingerprint = { ...planRow, gaps: [] };
         const entry = card("Card", cardRow);
         expect(sharesPlan(preparedForTest(entry), plan)).toBe(deckFit(entry, plan).points > 0);
       }),

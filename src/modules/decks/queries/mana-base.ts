@@ -9,10 +9,7 @@ import {
   type CastabilityLine,
   type CastabilitySummary,
 } from "../domain/castability";
-import {
-  resolveDeckProfileTargets,
-  type DeckProfile as DeckPlanProfile,
-} from "../domain/deck-profile";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
 import { decks } from "../infrastructure/schema";
 import { deckStats } from "../domain/stats";
@@ -222,7 +219,7 @@ export async function manaBasePlan(
        order by p.oracle_id, p.id
     `),
   ]);
-  const deckPlanProfile: DeckPlanProfile | null = profileRows[0]?.profileJson ?? null;
+  const deckPlanProfile: DeckPlan | null = profileRows[0]?.profileJson ?? null;
   const nameByOracle = new Map<string, string>(nameRows.rows.map((r) => [r.oracle_id, r.name]));
   const profile = deckProfile(context.lines, context.format);
 

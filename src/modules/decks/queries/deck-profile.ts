@@ -1,13 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { EMPTY_DECK_PROFILE, patchPrimerSection, type DeckProfile } from "../domain/deck-profile";
+import { EMPTY_DECK_PROFILE, patchPrimerSection, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
 
 export interface StoredDeckProfile {
   deckId: number;
   deckName: string;
   format: string;
-  profile: DeckProfile;
+  profile: DeckPlan;
   primer: string | null;
 }
 
@@ -49,7 +49,7 @@ export async function updateDeckProfile(
   db: DbExecutor,
   ownerId: string,
   deckId: number,
-  patch: Partial<DeckProfile>,
+  patch: Partial<DeckPlan>,
   now: Date,
 ): Promise<StoredDeckProfile | null> {
   const [row] = await db
@@ -67,7 +67,7 @@ export async function updateDeckProfile(
 
   if (!row) return null;
 
-  const merged: DeckProfile = {
+  const merged: DeckPlan = {
     ...EMPTY_DECK_PROFILE,
     ...(row.profileJson ?? {}),
     ...patch,

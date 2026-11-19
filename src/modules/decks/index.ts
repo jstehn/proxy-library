@@ -232,7 +232,7 @@ export {
   type BudgetReplacementOptions,
   type ReplacementCandidate,
 } from "./domain/replacements";
-export type { DeckProfile, Reason } from "./domain/suggest";
+export type { DeckFingerprint, Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
 export {
@@ -432,7 +432,7 @@ export {
   type AvoidCard,
   type CostReducer,
   type CostReducerScope,
-  type DeckProfile as DeckPlanProfile,
+  type DeckPlan,
   type EdhrecProfileFallback,
   type FixedCardRoleTag,
   type KeyCardPin,

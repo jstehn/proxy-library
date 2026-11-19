@@ -3,7 +3,7 @@ import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import { ColorSchema, type UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
-import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
 import { fingerprint } from "../domain/list-format";
 import {
@@ -196,7 +196,7 @@ async function previewFromView(
       .where(eq(decks.id, Number(view.deck.id)))
       .limit(1),
   ]);
-  const deckProfile = (profileRows[0]?.profileJson as DeckProfile | null | undefined) ?? null;
+  const deckProfile = (profileRows[0]?.profileJson as DeckPlan | null | undefined) ?? null;
   const baseTargets = roleTargets(view.deck.format);
   const resolvedTargets =
     baseTargets === null

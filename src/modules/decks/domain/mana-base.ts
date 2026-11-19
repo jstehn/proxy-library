@@ -95,7 +95,7 @@ export type ManaBaseInput = Readonly<{
   /** Roles the deck is short on and themes it has: a land doing these is a utility land. */
   deckRoles: readonly Tag[];
   deckThemes: readonly Theme[];
-  /** Optional explicit land target override from DeckProfile. */
+  /** Optional explicit land target override from DeckPlan. */
   landTargetOverride?: number | null;
 }>;
 

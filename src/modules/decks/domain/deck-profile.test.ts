@@ -10,12 +10,12 @@ import {
   primerSections,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
-  type DeckProfile,
+  type DeckPlan,
 } from "./deck-profile";
 
 describe("deck-profile domain", () => {
   it("resolves targets using profile -> edhrec -> generic fallback chain", () => {
-    const profile: DeckProfile = {
+    const profile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       landTarget: 35,
       roleTargets: { ramp: 15 },
@@ -34,7 +34,7 @@ describe("deck-profile domain", () => {
   });
 
   it("applies cost reducers including per-command-cast scaling", () => {
-    const profile: DeckProfile = {
+    const profile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         {
@@ -61,7 +61,7 @@ describe("deck-profile domain", () => {
   });
 
   it("checks keyCards, pinned entries, and avoid cards case-insensitively", () => {
-    const profile: DeckProfile = {
+    const profile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       keyCards: [{ cardName: "Avacyn, Angel of Hope", reason: "Centerpiece" }],
       avoid: [{ cardName: "Mortuary", reason: "Breaks reanimation" }],
@@ -113,7 +113,7 @@ describe("deck-profile domain", () => {
   });
 
   it("supports general declarative costReducers across different commanders", () => {
-    const henzie: DeckProfile = {
+    const henzie: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         {
@@ -130,7 +130,7 @@ describe("deck-profile domain", () => {
     expect(effectiveManaValue(3, { typeLine: "Creature — Elf", power: "2" }, henzie, 2)).toBe(3);
     expect(effectiveManaValue(5, { typeLine: "Sorcery" }, henzie, 2)).toBe(5);
 
-    const goreclaw: DeckProfile = {
+    const goreclaw: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         {
@@ -144,7 +144,7 @@ describe("deck-profile domain", () => {
     expect(effectiveManaValue(6, { typeLine: "Creature — Beast", power: "5" }, goreclaw)).toBe(4);
     expect(effectiveManaValue(4, { typeLine: "Creature — Bear", power: "2" }, goreclaw)).toBe(4);
 
-    const spellslinger: DeckProfile = {
+    const spellslinger: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         { cardName: "Goblin Electromancer", scope: "instants_sorceries", genericReduction: 1 },
@@ -154,7 +154,7 @@ describe("deck-profile domain", () => {
     expect(effectiveManaValue(4, { typeLine: "Sorcery" }, spellslinger)).toBe(3);
     expect(effectiveManaValue(4, { typeLine: "Artifact" }, spellslinger)).toBe(4);
 
-    const artifactDeck: DeckProfile = {
+    const artifactDeck: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [{ cardName: "Etherium Sculptor", scope: "artifacts", genericReduction: 1 }],
     };
@@ -164,7 +164,7 @@ describe("deck-profile domain", () => {
     expect(effectiveManaValue(4, { typeLine: "Instant" }, artifactDeck)).toBe(4);
 
     // Commander self-reduction (e.g. Ghalta {10}{G}{G}) reduces generic cost but respects {G}{G} floor
-    const ghalta: DeckProfile = {
+    const ghalta: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         { cardName: "Ghalta, Primal Hunger", scope: "commander", genericReduction: 8 },
@@ -181,7 +181,7 @@ describe("deck-profile domain", () => {
         ghalta,
       ),
     ).toBe(4);
-    const ghaltaMax: DeckProfile = {
+    const ghaltaMax: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         { cardName: "Ghalta, Primal Hunger", scope: "commander", genericReduction: 15 },
@@ -239,7 +239,7 @@ describe("patchPrimerSection newline preservation", () => {
 
 describe("commanderOnlyProfile", () => {
   it("keeps commander-sourced costReducers and drops 99-card reducers like Emerald Medallion", () => {
-    const profile: DeckProfile = {
+    const profile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         { cardName: "Emerald Medallion", scope: "all_spells", genericReduction: 1 },

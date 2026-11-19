@@ -146,6 +146,6 @@ export {
 export {
   EMPTY_DECK_PROFILE,
   type AvoidCard,
-  type DeckProfile as DeckPlanProfile,
+  type DeckPlan,
   type KeyCardPin,
 } from "./domain/deck-profile";

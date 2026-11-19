@@ -10,7 +10,7 @@ import {
   scoreForRole,
   scoreLike,
   type CandidateCard,
-  type DeckProfile,
+  type DeckFingerprint,
   type ProfileLine,
   type Scored,
 } from "./suggest";
@@ -38,7 +38,7 @@ const line = (overrides: Partial<ProfileLine>): ProfileLine => ({
   ...overrides,
 });
 
-const EMPTY: DeckProfile = { themes: [], tribes: [], gaps: [], keywords: [] };
+const EMPTY: DeckFingerprint = { themes: [], tribes: [], gaps: [], keywords: [] };
 
 describe("creature types and plurals", () => {
   it("reads the front face's creature types only", () => {
@@ -124,7 +124,7 @@ describe("deckProfile", () => {
 });
 
 describe("scoring", () => {
-  const profile: DeckProfile = {
+  const profile: DeckFingerprint = {
     themes: ["counters"],
     tribes: ["Elf"],
     gaps: [{ tag: "removal", count: 2, target: 8 }],
@@ -177,7 +177,7 @@ describe("scoring", () => {
     ]);
     expect(scoreForRole(candidate("Bear", { roles: [] }), "removal", EMPTY)).toBeNull();
     // Other roles the deck lacks don't lift a card in this role's list.
-    const short: DeckProfile = {
+    const short: DeckFingerprint = {
       ...EMPTY,
       gaps: [
         { tag: "draw", count: 0, target: 10 },

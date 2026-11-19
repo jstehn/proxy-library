@@ -5,11 +5,7 @@ import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-sear
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import { isCounted, type Format } from "../domain/deck";
-import {
-  isAvoidCard,
-  isKeyCard,
-  type DeckProfile as DeckPlanProfile,
-} from "../domain/deck-profile";
+import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
 import { copyLimitFor } from "../domain/rules";
 import type { RatingPart } from "../domain/rate";
@@ -23,7 +19,7 @@ import {
   scoreLike,
   toRatingProfile,
   type CandidateCard,
-  type DeckProfile,
+  type DeckFingerprint,
   type EdhrecSignal,
   type ProfileLine,
   type Scored,
@@ -495,7 +491,7 @@ function best(
     });
 }
 
-function wantedFor(profile: DeckProfile): Wanted {
+function wantedFor(profile: DeckFingerprint): Wanted {
   return {
     roles: profile.gaps.map((gap) => gap.tag),
     themes: profile.themes,
@@ -508,7 +504,7 @@ const nothingWanted = (want: Wanted) =>
   want.roles.length + want.themes.length + want.tribes.length + want.keywords.length === 0;
 
 export type DeckSuggestions = Readonly<{
-  profile: DeckProfile;
+  profile: DeckFingerprint;
   forDeck: SuggestionList;
   /** One list per role the deck is short of, in the order of the profile's gaps. */
   forRoles: ReadonlyArray<Readonly<{ tag: Tag; count: number; target: number } & SuggestionList>>;
@@ -860,7 +856,7 @@ export async function budgetReplacements(
       .from(deckEntries)
       .where(eq(deckEntries.deckId, deckId)),
   ]);
-  const deckPlanProfile: DeckPlanProfile | null = profileRows[0]?.profileJson ?? null;
+  const deckPlanProfile: DeckPlan | null = profileRows[0]?.profileJson ?? null;
   const pinnedSet = new Set(pinnedRows.filter((r) => r.pinned).map((r) => r.oracleId));
   const minPriceCents = options.minPriceCents ?? 500;
   const maxPriceCents = options.maxPriceCents ?? 200;

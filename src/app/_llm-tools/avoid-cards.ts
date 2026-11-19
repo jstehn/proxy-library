@@ -1,7 +1,7 @@
 // Leaves a deck profile's "avoid" cards out of the tools that suggest cards to add (design doc 61,
 // invariant 4), and says which ones it left out so the model knows why they're missing.
 
-import { getDeckProfile, isAvoidCard, type DeckPlanProfile } from "@/modules/decks";
+import { getDeckProfile, isAvoidCard, type DeckPlan } from "@/modules/decks";
 import type { ToolContext } from "./tool";
 
 export type AvoidSplit<Item> = Readonly<{
@@ -14,7 +14,7 @@ export type AvoidSplit<Item> = Readonly<{
 export function withoutAvoidCards<Item>(
   items: readonly Item[],
   nameOf: (item: Item) => string,
-  profile: DeckPlanProfile | null | undefined,
+  profile: DeckPlan | null | undefined,
 ): AvoidSplit<Item> {
   const kept: Item[] = [];
   const avoided = new Set<string>();
@@ -30,7 +30,7 @@ export function withoutAvoidCards<Item>(
 export async function deckProfileFor(
   context: ToolContext,
   deckId: number,
-): Promise<DeckPlanProfile | null> {
+): Promise<DeckPlan | null> {
   const stored = await getDeckProfile(context.container.db, context.actor.userId, deckId);
   return stored?.profile ?? null;
 }

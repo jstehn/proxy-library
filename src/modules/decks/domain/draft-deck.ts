@@ -10,7 +10,7 @@ import {
   strength,
   WEIGHTS,
   type CandidateCard,
-  type DeckProfile,
+  type DeckFingerprint,
   type ProfileLine,
   type Reason,
   type RoleGap,
@@ -479,7 +479,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
     }
   };
 
-  const currentProfile = (): DeckProfile => {
+  const currentProfile = (): DeckFingerprint => {
     const currentLines = [...playedLines, ...drafted.map((entry) => entry.line)];
     const computed = deckProfile(currentLines, input.format);
     return {
@@ -579,7 +579,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
 
   // Step C: Owned on-plan spells (themes, tribes, commander keywords).
   if (draftedCopiesCount < maxNewSpells) {
-    const planProfile: DeckProfile = { ...currentProfile(), gaps: [] };
+    const planProfile: DeckFingerprint = { ...currentProfile(), gaps: [] };
     const planMatches = ownedPool
       .filter(hasHeadroom)
       .flatMap((candidate) => {
@@ -611,7 +611,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
 
   // Step E: Store on-plan and curve fallback when ownedPool is exhausted and store is allowed.
   if (includeStore !== "none" && draftedCopiesCount < maxNewSpells) {
-    const planProfile: DeckProfile = { ...currentProfile(), gaps: [] };
+    const planProfile: DeckFingerprint = { ...currentProfile(), gaps: [] };
     const storePlanMatches = storePool
       .filter(hasHeadroom)
       .flatMap((candidate) => {
