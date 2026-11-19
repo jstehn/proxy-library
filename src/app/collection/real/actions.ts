@@ -16,11 +16,10 @@ import {
 } from "@/modules/real-collection";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
+import { FinishSchema } from "@/shared/kernel";
 
 // Server actions for the real collection (design doc 16, sections 7 and 15). The use cases check
 // everything again; these only read the form and say what happened in words.
-
-const Finish = z.enum(["nonfoil", "foil", "etched"]);
 
 function refresh() {
   revalidatePath("/collection/real");
@@ -47,7 +46,7 @@ export async function clearRealCollectionAction(): Promise<void> {
 export async function setRealCopiesAction(formData: FormData): Promise<void> {
   const actor = await requireActor();
   const printingId = String(formData.get("printingId") ?? "");
-  const finish = Finish.parse(formData.get("finish"));
+  const finish = FinishSchema.parse(formData.get("finish"));
   const quantity = z.coerce
     .number()
     .int()
@@ -71,12 +70,12 @@ export async function changeRealPrintingAction(formData: FormData): Promise<void
   const actor = await requireActor();
   const from = {
     printingId: PrintingId.of(String(formData.get("printingId") ?? "")),
-    finish: Finish.parse(formData.get("finish")),
+    finish: FinishSchema.parse(formData.get("finish")),
   };
   const [toPrinting, toFinish] = String(formData.get("to") ?? "").split("/");
   const result = await getContainer().realCollection.changeRealPrinting(actor, from, {
     printingId: PrintingId.of(toPrinting ?? ""),
-    finish: Finish.catch("nonfoil").parse(toFinish),
+    finish: FinishSchema.catch("nonfoil").parse(toFinish),
   });
   refresh();
   if (!result.ok) redirect(`/cards/${from.printingId}?realError=${result.error.kind}`);
@@ -219,7 +218,7 @@ const ApplyInput = z.object({
     .array(
       z.object({
         printingId: z.string().min(1).max(64),
-        finish: Finish,
+        finish: FinishSchema,
         quantity: z.number().int().min(1).max(MAX_REAL_QUANTITY),
         board: z.enum(["commander", "main", "side"]),
       }),

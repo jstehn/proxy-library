@@ -6,7 +6,8 @@ import type {
   GoldfishState,
   GoldfishZone,
 } from "./goldfish-types";
-import { addMana, EMPTY_MANA_POOL, type ManaColor, type ManaPool } from "./mana";
+import { addMana, EMPTY_MANA_POOL, type ManaPool } from "./mana";
+import { type ManaSymbol } from "@/shared/kernel";
 
 // Open-Closed Modifier & Trigger Pipelines for Play Simulation.
 // New casting mechanics (alt costs, taxes, cost reducers) and triggered abilities
@@ -649,7 +650,7 @@ const sacrificeForManaAbility: ActivatedAbility = {
     if (addMatch) {
       const syms = addMatch[1].match(/\{([WUBRGC])\}/gi) ?? [];
       for (const s of syms) {
-        added[s.slice(1, -1).toUpperCase() as ManaColor] += 1;
+        added[s.slice(1, -1).toUpperCase() as ManaSymbol] += 1;
       }
     } else {
       added.C += 1;

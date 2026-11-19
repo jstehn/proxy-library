@@ -1,4 +1,4 @@
-import type { Finish } from "@/modules/catalog";
+import type { Finish } from "@/shared/kernel";
 
 // Every expected failure in the real-collection module (design doc 16, sections 6 and 15).
 

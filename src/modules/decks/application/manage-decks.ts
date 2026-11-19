@@ -1,6 +1,6 @@
 import type { Actor } from "@/modules/accounts";
-import type { Finish, PrintingId } from "@/modules/catalog";
-import { err, ok, type Result } from "@/shared/kernel";
+import type { PrintingId } from "@/modules/catalog";
+import { type Finish, type Result, err, ok } from "@/shared/kernel";
 import {
   checkName,
   checkTargetBracket,

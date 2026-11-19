@@ -7,11 +7,9 @@ export {
   deckSize,
   deckStats,
   isLand,
-  MANA_COLORS,
   mainType,
   TYPE_ORDER,
   type DeckStats,
-  type ManaColor,
   type ManaSource,
   type StatsLine,
 } from "./domain/stats";
@@ -148,6 +146,6 @@ export {
 export {
   EMPTY_DECK_PROFILE,
   type AvoidCard,
-  type DeckProfile as DeckPlanProfile,
+  type DeckPlan,
   type KeyCardPin,
 } from "./domain/deck-profile";

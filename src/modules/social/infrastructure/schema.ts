@@ -1,20 +1,10 @@
 // Tables owned by the social module (design doc 48, section 8).
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  check,
-  index,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { bigint, check, index, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { decks } from "../../decks/infrastructure/schema";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 export const playerProfiles = pgTable(
   "player_profiles",

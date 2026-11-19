@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
-import { EMPTY_DECK_PROFILE, type DeckProfile } from "./deck-profile";
+import { EMPTY_DECK_PROFILE, type DeckPlan } from "./deck-profile";
 import { simulateCastOnCurve, type CastabilityLine } from "./castability";
 
 function spell(name: string, manaCost: string, manaValue: number, quantity = 1): CastabilityLine {
@@ -122,7 +122,7 @@ describe("simulateCastOnCurve", () => {
     ];
 
     const baseline = simulateCastOnCurve(deck, { rng: seededRng("cmd"), trials: 400 });
-    const goreclawProfile: DeckProfile = {
+    const goreclawProfile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         { cardName: "Goreclaw", scope: "creatures", minPower: 4, genericReduction: 2 },
@@ -143,7 +143,7 @@ describe("simulateCastOnCurve", () => {
     expect(goreTyrant).toBeGreaterThan(baseTyrant);
     expect(goreMull).toBe(baseMull);
 
-    const mizzixProfile: DeckProfile = {
+    const mizzixProfile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [{ cardName: "Mizzix", scope: "instants_sorceries", genericReduction: 2 }],
     };
@@ -159,7 +159,7 @@ describe("simulateCastOnCurve", () => {
     expect(mizzixSorcery).toBeGreaterThan(baseSorcery);
     expect(mizzixTyrant).toBe(baseTyrant);
 
-    const henzieProfile: DeckProfile = {
+    const henzieProfile: DeckPlan = {
       ...EMPTY_DECK_PROFILE,
       costReducers: [
         {

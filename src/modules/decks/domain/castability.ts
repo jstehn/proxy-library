@@ -1,15 +1,16 @@
-import { randomInt, seededRng, type Rng } from "@/shared/kernel";
-import { isPlayed, type Board } from "./boards";
-import { effectiveManaValue, type DeckProfile } from "./deck-profile";
 import {
-  extractTapManaProduction,
-  hasTapManaAbility,
-  parseManaCost,
-  totalMana,
-  type ManaColor as PoolManaColor,
-} from "./mana";
+  COLORS,
+  type ManaColor,
+  type ManaSymbol as PoolManaColor,
+  type Rng,
+  randomInt,
+  seededRng,
+} from "@/shared/kernel";
+import { isPlayed, type Board } from "./boards";
+import { effectiveManaValue, type DeckPlan } from "./deck-profile";
+import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
-import { isLand, MANA_COLORS, type ManaColor } from "./stats";
+import { isLand } from "./stats";
 
 export type CastabilityLine = Readonly<{
   oracleId: string;
@@ -144,7 +145,7 @@ function missingPip(
  */
 export function simulateCastOnCurve(
   lines: readonly CastabilityLine[],
-  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckProfile | null }> = {},
+  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckPlan | null }> = {},
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
   const rng = options.rng ?? seededRng("cast-on-curve");
@@ -313,7 +314,7 @@ export function simulateCastOnCurve(
       const castOnCurvePct = Math.round((castCounts[sIdx] / trials) * 1000) / 1000;
       let bottleneckColor: ManaColor | null = null;
       let maxMiss = 0;
-      for (const color of MANA_COLORS) {
+      for (const color of COLORS) {
         const misses = colorMissCounts[color][sIdx];
         if (misses > maxMiss) {
           maxMiss = misses;

@@ -1,22 +1,11 @@
 // Tables owned by the wallet module. drizzle-kit reads this file to generate migrations.
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  bigserial,
-  check,
-  index,
-  integer,
-  pgTable,
-  smallint,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { bigserial, check, index, integer, pgTable, smallint, text } from "drizzle-orm/pg-core";
 // A relative import (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
+import { timestamptz, cents } from "@/shared/db";
 
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 // Money columns: bigint in Postgres, a plain number of cents in TypeScript.
-const cents = (name: string) => bigint(name, { mode: "number" });
 
 export const walletAccounts = pgTable("wallet_accounts", {
   userId: text("user_id")

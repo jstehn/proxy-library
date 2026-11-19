@@ -10,6 +10,7 @@ import {
   EXPORTERS,
   fingerprint,
   FORMATS,
+  isPlayed,
   type DeckTextLine,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
@@ -81,9 +82,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       deck.format === "commander"
         ? combosForDeck(
             db,
-            view.lines
-              .filter((line) => line.board === "main" || line.board === "commander")
-              .map((line) => line.oracleId),
+            view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
           )
         : Promise.resolve(undefined),
     ]);

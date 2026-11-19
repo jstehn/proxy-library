@@ -1,8 +1,7 @@
 // Tables owned by the accounts module. drizzle-kit reads this file to generate migrations.
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { boolean, index, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { timestamptz } from "@/shared/db";
 
 // --- Better Auth's tables (ADR 0012) --------------------------------------------------------
 // Written only by Better Auth. The property names (emailVerified, userId, ...) must match

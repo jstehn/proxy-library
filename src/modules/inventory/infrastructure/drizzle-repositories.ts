@@ -2,10 +2,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   PrintingId,
-  SealedProductId,
-  SetCode,
   type SealedContent,
   type SealedProduct,
+  SealedProductId,
+  SetCode,
 } from "@/modules/catalog";
 import {
   boosterConfigs,
@@ -14,7 +14,7 @@ import {
   sealedProducts,
 } from "@/modules/catalog/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
-import { assertNever, UserId } from "@/shared/kernel";
+import { FinishSchema, UserId, assertNever } from "@/shared/kernel";
 import type {
   DeckContents,
   ItemRepository,
@@ -134,8 +134,6 @@ export function drizzleItemRepository(db: DbExecutor): ItemRepository {
 }
 
 // Stored catalog JSON, checked again on the way in ("parse, don't validate").
-
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 /** A product's contents: a tree, so the schema refers to itself (z.lazy delays the lookup). */
 const SealedContentSchema: z.ZodType<SealedContent> = z.lazy(() =>

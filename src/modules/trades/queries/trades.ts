@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 
 // Read models for the trade screens (design doc 10, section 9).
 
@@ -35,7 +35,7 @@ export type TradeItemView = Readonly<{
   from: "proposer" | "recipient";
   kind: "card" | "money";
   printingId: string | null;
-  finish: "nonfoil" | "foil" | "etched" | null;
+  finish: Finish | null;
   quantity: number | null;
   amountCents: number | null;
   name: string | null;

@@ -1,5 +1,6 @@
-import type { BoosterConfig, BoosterSheet, PrintingId, Rarity } from "@/modules/catalog";
+import type { BoosterConfig, BoosterSheet, PrintingId } from "@/modules/catalog";
 import { finishFor, type FactsLookup, type PackCard, type PrintingFacts } from "./pack";
+import type { Rarity } from "@/shared/kernel";
 
 // What a recipe promises, and what a pile of opened packs actually delivered (design doc 05,
 // section 3). The Pack lab shows the two side by side; the statistical tests compare them.

@@ -7,14 +7,12 @@ import {
   foilCopy,
   searchCondition,
 } from "@/shared/card-search/sql";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import { realCards, realCollectionSettings, realProducts } from "../infrastructure/schema";
 import { authUsers } from "../../accounts/infrastructure/schema";
 import { sealedProducts } from "../../catalog/infrastructure/schema";
 
 // Read models for the real collection's screens (design doc 16, section 7; ADR 0006).
-
-type Finish = "nonfoil" | "foil" | "etched";
 
 /** Every printing someone owns for real: priced every night although its set isn't sold. */
 export async function realPrintingIds(db: DbExecutor): Promise<string[]> {

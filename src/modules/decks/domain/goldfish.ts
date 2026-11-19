@@ -1,4 +1,4 @@
-import { shuffled, type Rng } from "@/shared/kernel";
+import { COLORS, type Rng, shuffled } from "@/shared/kernel";
 import { EARLY_RAMP_MAX_MV, OPENING_HAND, type LibraryCard } from "./draws";
 
 // Monte Carlo London-mulligan opening hand simulator (design doc 56):
@@ -115,8 +115,6 @@ function bottomCards(
   return remaining;
 }
 
-const ANY_COLOR: readonly string[] = ["W", "U", "B", "R", "G"];
-
 /**
  * Can these mana sources pay these colored pips, one source per pip? A small bipartite
  * matching (augmenting paths): a commander has at most a handful of pips.
@@ -153,7 +151,7 @@ export function canPayColors(
 function sourceColors(card: LibraryCard): readonly string[] {
   return card.producedMana !== undefined && card.producedMana.length > 0
     ? card.producedMana
-    : ANY_COLOR;
+    : COLORS;
 }
 
 function canCastByTurn(

@@ -11,7 +11,7 @@ import {
   type WishLine,
   type WishRequest,
 } from "@/modules/wishlist";
-import { Cents } from "@/shared/kernel";
+import { Cents, FinishOrCheapestSchema } from "@/shared/kernel";
 import { defineTool, done, failed, type ToolContext } from "../tool";
 
 // The wishlist (design doc 28, section 5.2; design doc 26). Saving a wish costs nothing; buying
@@ -97,10 +97,9 @@ export const manageWishlist = defineTool({
         z.object({
           card: z.string().min(1).describe("Card name or printing id."),
           printing: z.enum(["any", "exact"]).default("any").describe("'any' or 'exact' printing."),
-          finish: z
-            .enum(["nonfoil", "foil", "etched", "cheapest"])
-            .default("nonfoil")
-            .describe("Finish ('cheapest' only with 'any'; 'etched' only with 'exact')."),
+          finish: FinishOrCheapestSchema.default("nonfoil").describe(
+            "Finish ('cheapest' only with 'any'; 'etched' only with 'exact').",
+          ),
           quantity: quantity.default(1),
           targetPriceCents,
           note,
@@ -152,10 +151,9 @@ const addWish = defineTool({
             .describe(
               '"any": the cheapest printing for sale; "exact": the printing named by card.',
             ),
-          finish: z
-            .enum(["nonfoil", "foil", "etched", "cheapest"])
-            .default("nonfoil")
-            .describe('The finish. "cheapest" only with "any"; "etched" only with "exact".'),
+          finish: FinishOrCheapestSchema.default("nonfoil").describe(
+            'The finish. "cheapest" only with "any"; "etched" only with "exact".',
+          ),
           quantity: quantity.default(1),
           targetPriceCents,
           note,

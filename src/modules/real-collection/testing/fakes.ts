@@ -1,11 +1,5 @@
-import {
-  PrintingId,
-  SealedProductId,
-  SetCode,
-  type Finish,
-  type SealedProduct,
-} from "@/modules/catalog";
-import type { UserId } from "@/shared/kernel";
+import { PrintingId, SealedProductId, SetCode, type SealedProduct } from "@/modules/catalog";
+import { type Finish, type UserId } from "@/shared/kernel";
 import type {
   CollectionVersion,
   PrintingFacts,

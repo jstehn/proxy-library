@@ -1,18 +1,13 @@
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
-import { PrintingId, type Color, type SetCode } from "@/modules/catalog";
+import { type Color, PrintingId, type SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
 import { packMsrp } from "@/modules/store";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, type UserId } from "@/shared/kernel";
+import { Cents, ColorSchema, FinishSchema, RaritySchema, type UserId } from "@/shared/kernel";
 import type { DraftCatalog } from "../application/ports";
 import type { DraftCardFacts } from "../domain/auto-pick";
 import type { OwnedBasic } from "../domain/basics";
 import { DRAFTABLE_BOOSTER_TYPES } from "../domain/style";
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
-const RaritySchema = z.enum(["common", "uncommon", "rare", "mythic", "special", "bonus"]);
 
 const BASIC_COLORS: Readonly<Record<string, Color>> = {
   Plains: "W",

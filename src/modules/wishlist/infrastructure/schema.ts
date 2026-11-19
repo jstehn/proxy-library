@@ -1,7 +1,6 @@
 // Tables owned by the wishlist module (design doc 26, section 8).
 import { sql } from "drizzle-orm";
 import {
-  bigint,
   bigserial,
   boolean,
   check,
@@ -15,8 +14,7 @@ import {
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings } from "../../catalog/infrastructure/schema";
-
-const cents = (name: string) => bigint(name, { mode: "number" });
+import { cents } from "@/shared/db";
 
 /**
  * One card a player wants. `printing_id` is null for "any printing" (whose finish is a

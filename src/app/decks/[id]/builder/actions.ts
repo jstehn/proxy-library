@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PrintingId, printingCards, type PrintingCard } from "@/modules/catalog";
+import { type PrintingCard, PrintingId, printingCards } from "@/modules/catalog";
 import {
   BOARDS,
   BROWSE_SORTS,
@@ -49,18 +49,18 @@ import {
   type OtherDeckUse,
   takeCopies,
   getDeckProfile,
+  isPlayed,
   updateDeckPrimer,
   updateDeckProfile,
-  type DeckPlanProfile,
+  type DeckPlan,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
+import { ColorSchema, FinishSchema } from "@/shared/kernel";
 
 // The deck builder's server side (design doc 14). The browser holds the deck in memory for
 // instant statistics and problems (design doc 19); every change goes through the decks module,
 // and the fresh deck comes back.
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
 const BrowseInput = z.object({
   deckId: z.number().int().positive(),
@@ -117,9 +117,7 @@ export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | nul
     view.deck.format === "commander"
       ? combosForDeck(
           db,
-          view.lines
-            .filter((line) => line.board === "main" || line.board === "commander")
-            .map((line) => line.oracleId),
+          view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
         )
       : Promise.resolve(undefined),
   ]);
@@ -322,9 +320,7 @@ const ChoosePrintingInput = z.object({
   oracleId: z.string().min(1),
   board: z.enum(BOARDS),
   /** null: follow my copies again. */
-  pinned: z
-    .object({ printingId: z.string().uuid(), finish: z.enum(["nonfoil", "foil", "etched"]) })
-    .nullable(),
+  pinned: z.object({ printingId: z.string().uuid(), finish: FinishSchema }).nullable(),
 });
 
 /** Pins a deck line to a printing and finish, or unpins it; returns the fresh deck. */
@@ -782,10 +778,10 @@ export async function entryDetailsAction(
 }
 
 /** The deck's plan (structured profile) and primer, for the primer panel (design doc 61). */
-export type DeckPlan = Readonly<{ profile: DeckPlanProfile; primer: string }>;
+export type DeckPlanWithPrimer = Readonly<{ profile: DeckPlan; primer: string }>;
 
 /** Loads the deck's plan and primer, or null if it isn't the player's. */
-export async function deckPlanAction(deckId: number): Promise<DeckPlan | null> {
+export async function deckPlanAction(deckId: number): Promise<DeckPlanWithPrimer | null> {
   const actor = await requireActor();
   const stored = await getDeckProfile(getContainer().db, actor.userId, deckId);
   if (stored === null) return null;
@@ -809,7 +805,8 @@ const DeckPlanInput = z.object({
   primer: z.string().max(20_000),
 });
 
-export type DeckPlanResult = { ok: true; plan: DeckPlan } | { ok: false; message: string };
+export type DeckPlanResult =
+  { ok: true; plan: DeckPlanWithPrimer } | { ok: false; message: string };
 
 /** Saves the deck's plan fields and its primer (design doc 61). */
 export async function saveDeckPlanAction(

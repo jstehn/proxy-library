@@ -38,7 +38,7 @@ import {
   updateDeckPrimer,
   updateDeckProfile,
   COST_REDUCER_SCOPES,
-  type DeckPlanProfile,
+  type DeckPlan,
   isAvoidCard,
   isKeyCard,
   listDeckSources,
@@ -424,9 +424,7 @@ async function fullDeckPayload(
     view.deck.format === "commander"
       ? combosForDeck(
           context.container.db,
-          view.lines
-            .filter((line) => line.board === "main" || line.board === "commander")
-            .map((line) => line.oracleId),
+          view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
         )
       : Promise.resolve(undefined),
     listDeckSources(context.container.db, context.actor.userId, input.deckId),
@@ -639,7 +637,7 @@ function compactDeckPayload(
   view: DeckView,
   input: GetDeckInputValue,
   fullPayload: Record<string, unknown>,
-  profile: DeckPlanProfile | null,
+  profile: DeckPlan | null,
 ): Record<string, unknown> {
   const requestedBoards = input.boards && input.boards.length > 0 ? input.boards : null;
   const shownBoards: readonly DeckLine["board"][] = requestedBoards ?? [
@@ -1190,7 +1188,7 @@ function formatPreviewResponse(
 
 function previewGuardrailWarnings(
   view: DeckView | null,
-  profile: DeckPlanProfile | null,
+  profile: DeckPlan | null,
   preview: DeckChangePreview,
 ): string[] {
   const warnings: string[] = [];
@@ -1995,7 +1993,7 @@ export const setDeckProfileTool = defineTool({
     pilotNotes: z.string().max(2000).optional().describe("Short pilot notes."),
   }),
   async run(context, input) {
-    const patch: Partial<DeckPlanProfile> = {};
+    const patch: Partial<DeckPlan> = {};
     if (input.plan !== undefined) patch.plan = input.plan;
     if (input.landTarget !== undefined) patch.landTarget = input.landTarget;
     if (input.roleTargets !== undefined) patch.roleTargets = input.roleTargets;

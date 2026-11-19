@@ -1,20 +1,10 @@
 // Tables owned by the collection module (design doc 06, section 8).
 import { sql } from "drizzle-orm";
-import {
-  bigserial,
-  check,
-  index,
-  integer,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { bigserial, check, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings } from "../../catalog/infrastructure/schema";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 /** How many copies of each printing and finish a player owns. Rows at zero are deleted. */
 export const collectionCards = pgTable(

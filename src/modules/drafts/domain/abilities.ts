@@ -102,8 +102,6 @@ export type Note =
   /** Archdemon of Paliano: cards drafted at random while it was face up. */
   | Readonly<{ kind: "randomDrafted"; count: number }>;
 
-export const COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
-
 /** A Spire Phantasm guess is right when the names match, ignoring case and spaces at the ends. */
 export function guessedRight(note: Extract<Note, { kind: "guess" }>): boolean {
   if (note.guess === null || note.actual === null) return false;

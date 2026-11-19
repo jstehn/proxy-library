@@ -51,4 +51,27 @@ grep -rnE 'toFixed\(2\)' src | grep -E '/ ?100' | grep -v shared/kernel
 
 ## Handoff
 
-(empty)
+Done on `refactor/P02-basic-types`; `pnpm check` and `pnpm test:int` (256 tests) pass.
+
+- **Where the words live (differs from the brief).** `FINISHES`, `RARITIES`, `COLORS`,
+  `MANA_SYMBOLS` and their types (`Finish`, `Rarity`, `ManaColor`, `ManaSymbol`) are in
+  `src/shared/kernel` (`card-words.ts`, `colors.ts`), and the Zod schemas (`FinishSchema`,
+  `ColorSchema`, `RaritySchema`, `ManaSymbolSchema`, `FinishOrCheapestSchema`) in
+  `kernel/schemas.ts`. They can't live in `catalog/domain/types.ts` as planned: query and `ui` code
+  may not import a module (ADR 0009), and a domain may not import zod. `kernel/schemas.ts` is the
+  one kernel file allowed to use zod (eslint override). `catalog/domain/types.ts` re-exports the
+  arrays and types, and `catalog/client.ts` exists (browser-safe, re-exports them).
+- `decks/domain/mana.ts`'s six-valued `ManaColor` is now `ManaSymbol`. The five `MANA_COLORS` /
+  `COLOR_ORDER` / `ALL_COLORS` arrays and the local `Color` types are gone.
+- `DeckProfile` is now `DeckPlan` (`domain/deck-profile.ts`) and `DeckFingerprint`
+  (`domain/suggest.ts`); the builder's old `DeckPlan` view type became `DeckPlanWithPrimer`.
+- `timestamptz` and `cents` column helpers are in `src/shared/db/columns.ts`.
+- Money: the hand-written dollar formatters use `Cents.format` (the CSV export uses
+  `Cents.toPlainDollars`, no `$`). `list-buyer.tsx`'s `money` already called `Cents.format`, so I
+  left it. I did not add `formatOrDash`: nothing needed it.
+- Lint: `no-restricted-syntax` rules ban `z.enum` of finishes/colors/rarities outside catalog and
+  `kernel/schemas.ts`, and `/ 100).toFixed(2)` outside `kernel/money.ts` (and the catalog).
+- Wishlist: `z.enum(["nonfoil","foil","cheapest"])` became `FinishOrCheapestSchema.exclude(["etched"])`.
+- The clone baseline did **not** go down (58 before and after). The clones P02 targeted were small
+  runs, not whole 6-line blocks.
+- Source lines: 91,061 before, 90,968 after.

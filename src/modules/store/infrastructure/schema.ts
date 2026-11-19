@@ -1,7 +1,6 @@
 // Tables owned by the store module (design doc 06, section 8; ADR 0013).
 import { sql } from "drizzle-orm";
 import {
-  bigint,
   bigserial,
   boolean,
   check,
@@ -11,14 +10,11 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings, sealedProducts } from "../../catalog/infrastructure/schema";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
-const cents = (name: string) => bigint(name, { mode: "number" });
+import { timestamptz, cents } from "@/shared/db";
 
 /** The MSRP for every product of one kind, e.g. "booster_box/play" (ADR 0014). */
 export const msrpPrices = pgTable(

@@ -7,7 +7,7 @@ import {
   foilCopy,
   searchCondition,
 } from "@/shared/card-search/sql";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import type { ExportRow } from "../domain/export";
 import { collectionCards } from "../infrastructure/schema";
 
@@ -15,7 +15,7 @@ import { collectionCards } from "../infrastructure/schema";
 
 export type OwnedCard = Readonly<{
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
   /** When the newest copy arrived, as an ISO string. */
   lastAcquiredAt: string;
@@ -32,7 +32,7 @@ export type CollectionFilter = Readonly<{
    * combination's code such as "GU" (exactly those colors).
    */
   color?: string;
-  finish?: "nonfoil" | "foil" | "etched";
+  finish?: Finish;
   /** How the page is divided into sections (feedback 2026-09-27: colors matter most). */
   sections: "none" | "color" | "type" | "rarity" | "set";
   /** The order within each section. */
@@ -44,7 +44,7 @@ const COLLECTION_PAGE_SIZE = 60;
 
 export type CollectionRow = Readonly<{
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
   /** Latest market price of one copy in this finish, or null if there's none. */
   price: number | null;
@@ -149,7 +149,7 @@ export async function ownedCopies(
   db: DbExecutor,
   userId: UserId,
   printingId: string,
-): Promise<Partial<Record<"nonfoil" | "foil" | "etched", number>>> {
+): Promise<Partial<Record<Finish, number>>> {
   const rows = await db
     .select({ finish: collectionCards.finish, quantity: collectionCards.quantity })
     .from(collectionCards)
@@ -161,7 +161,7 @@ export type OwnedPrintingCopy = Readonly<{
   printingId: string;
   setCode: string;
   collectorNumber: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
 }>;
 
@@ -175,7 +175,7 @@ export async function ownedByOracle(
     printing_id: string;
     set_code: string;
     collector_number: string;
-    finish: "nonfoil" | "foil" | "etched";
+    finish: Finish;
     quantity: number;
   }>(sql`
     select c.printing_id, p.set_code, p.collector_number, c.finish, c.quantity

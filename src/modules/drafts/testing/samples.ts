@@ -1,5 +1,5 @@
-import { PrintingId, SetCode, type Color, type Rarity } from "@/modules/catalog";
-import { Cents, UserId } from "@/shared/kernel";
+import { PrintingId, SetCode, type Color } from "@/modules/catalog";
+import { Cents, type Rarity, UserId } from "@/shared/kernel";
 import type { DraftCardFacts } from "../domain/auto-pick";
 import {
   DraftId,

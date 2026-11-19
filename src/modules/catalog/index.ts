@@ -32,8 +32,10 @@ export type {
 export { EMBEDDING_DIMS, EMBEDDING_MODEL, EMBEDDING_TEXT_VERSION } from "./domain/embedding-text";
 export type { SyncSummary } from "./application/sync";
 export {
+  COLORS,
   FINISHES,
   PrintingId,
+  RARITIES,
   SealedProductId,
   SetCode,
   type BoosterConfig,

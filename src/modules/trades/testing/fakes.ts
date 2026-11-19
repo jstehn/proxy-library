@@ -1,5 +1,5 @@
 import { PrintingId } from "@/modules/catalog";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import type { Holdings, NewTrade, TradePlayers, TradeRepository } from "../application/ports";
 import { TradeId, type Trade } from "../domain/trade";
 
@@ -43,7 +43,7 @@ export function inMemoryTradePlayers(active: readonly string[]): TradePlayers {
 
 /** Holdings read from a collection fake's quantities. */
 export function holdingsFrom(
-  quantity: (userId: UserId, printingId: string, finish: "nonfoil" | "foil" | "etched") => number,
+  quantity: (userId: UserId, printingId: string, finish: Finish) => number,
 ): Holdings {
   return {
     async copies(userId, printingId, finish) {

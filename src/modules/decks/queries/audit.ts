@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { seededRng, type UserId } from "@/shared/kernel";
+import { Cents, COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import {
   bracketLine,
@@ -11,7 +11,7 @@ import {
   type BracketRuleReason,
 } from "../domain/brackets";
 import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
-import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
 import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
@@ -20,7 +20,6 @@ import { scoreDeck, type DeckScore } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
 import {
   deckStats,
-  MANA_COLORS,
   roleTargets,
   suggestedLands,
   TARGETED_TAGS,
@@ -111,7 +110,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       .where(eq(decks.id, view.deck.id))
       .limit(1),
   ]);
-  const deckProfile: DeckProfile | null = profileRows[0]?.profileJson ?? null;
+  const deckProfile: DeckPlan | null = profileRows[0]?.profileJson ?? null;
 
   const ownedByOracle = new Map<string, number>();
   for (const line of view.lines) ownedByOracle.set(line.oracleId, line.owned);
@@ -142,15 +141,12 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
         });
 
   const underservedColors: string[] = [];
-  const totalPips = MANA_COLORS.reduce((s, c) => s + stats.pips[c], 0);
+  const totalPips = COLORS.reduce((s, c) => s + stats.pips[c], 0);
   // Sum sources only for colors the deck actually casts so "any color" dorks/altars don't dilute
   // a mono-color deck's source share via unused colors.
-  const totalSources = MANA_COLORS.reduce(
-    (s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s),
-    0,
-  );
+  const totalSources = COLORS.reduce((s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s), 0);
   if (totalPips > 0 && totalSources > 0) {
-    for (const color of MANA_COLORS) {
+    for (const color of COLORS) {
       if (stats.pips[color] === 0) continue;
       const pipShare = stats.pips[color] / totalPips;
       const sourceShare = stats.sources[color] / totalSources;
@@ -253,7 +249,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     findings.push({
       severity: "info",
       area: "ownership",
-      message: `Missing ${missingCards} played card(s) (est. $${(estimatedMissingCents / 100).toFixed(2)}).`,
+      message: `Missing ${missingCards} played card(s) (est. ${Cents.format(Cents.of(estimatedMissingCents))}).`,
     });
   }
 

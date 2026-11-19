@@ -1,14 +1,11 @@
 import { sql, type SQL } from "drizzle-orm";
-import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, type UserId } from "@/shared/kernel";
+import { Cents, FinishSchema, type UserId } from "@/shared/kernel";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack } from "../domain/wish";
 
 // What's for sale and what a player owns of some cards (design doc 26, section 9). Read by the
 // Wishlist page and by the use cases (through the WishCatalog adapter), so both see the same.
-
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 /** `array['a', 'b']::text[]` with every value as a parameter. */
 export function textArray(values: readonly string[]): SQL {

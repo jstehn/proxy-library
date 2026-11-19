@@ -1,5 +1,5 @@
-import type { Finish } from "@/modules/catalog";
 import type { ListLine } from "@/shared/card-search";
+import type { Finish } from "@/shared/kernel";
 
 // Buying a list of singles (design doc 15, section 3): which printing each line buys, how many,
 // and why a line can't be bought. Pure: the catalog's answers come in, a quote comes out.

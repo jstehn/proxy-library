@@ -1,17 +1,10 @@
-import { randomInt, type Rng } from "@/shared/kernel";
+import { COLORS, type Rng, randomInt } from "@/shared/kernel";
 import { type Tag, type Theme } from "@/shared/card-search";
 import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { rateCard, type RatingEdhrecSignal, type RatingProfile } from "./rate";
 import { cardSignalIO, deckSignalProfile, synergyMatches } from "./signals";
-import {
-  deckStats,
-  isLand,
-  MANA_COLORS,
-  roleTargets,
-  type StatsLine,
-  type TargetedTag,
-} from "./stats";
+import { deckStats, isLand, roleTargets, type StatsLine, type TargetedTag } from "./stats";
 import { deckProfile } from "./suggest";
 
 // Whole-deck objective and Simulated Annealing optimizer (design doc 55):
@@ -156,18 +149,18 @@ function computeColorBalance(
   pips: Readonly<Record<string, number>>,
   sources: Readonly<Record<string, number>>,
 ): number {
-  const totalPips = MANA_COLORS.reduce((sum, c) => sum + (pips[c] ?? 0), 0);
+  const totalPips = COLORS.reduce((sum, c) => sum + (pips[c] ?? 0), 0);
   if (totalPips === 0) return 100;
   // Count sources only across colors with pip demand so "any color" rocks/dorks don't dilute a
   // mono-color or 2-color deck's source share via unused W/U/B/R/G slots.
-  const totalSources = MANA_COLORS.reduce(
+  const totalSources = COLORS.reduce(
     (sum, c) => ((pips[c] ?? 0) > 0 ? sum + (sources[c] ?? 0) : sum),
     0,
   );
   if (totalSources === 0) return 0;
 
   let penalty = 0;
-  for (const color of MANA_COLORS) {
+  for (const color of COLORS) {
     const pipShare = (pips[color] ?? 0) / totalPips;
     if (pipShare === 0) continue;
     const sourceShare = (sources[color] ?? 0) / totalSources;

@@ -12,16 +12,14 @@ import {
   primaryKey,
   smallint,
   text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
-import type { DeckProfile } from "../domain/deck-profile";
+import type { DeckPlan } from "../domain/deck-profile";
 import type { GoldfishState } from "../domain/goldfish-session";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 export const decks = pgTable(
   "decks",
@@ -51,7 +49,7 @@ export const decks = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     // Structured deck profile (targets, keyCards, avoid, costReducers, winCons, plan, etc.).
-    profileJson: jsonb("profile_json").$type<DeckProfile | null>(),
+    profileJson: jsonb("profile_json").$type<DeckPlan | null>(),
     // Free-form Markdown primer supporting [[Card Name]] links.
     primer: text("primer"),
     createdAt: timestamptz("created_at").notNull(),

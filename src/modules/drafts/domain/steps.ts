@@ -1,7 +1,6 @@
-import { err, ok, randomInt, shuffled, type Result, type Rng } from "@/shared/kernel";
+import { COLORS, err, ok, randomInt, shuffled, type Result, type Rng } from "@/shared/kernel";
 import {
   abilityOf,
-  COLORS,
   creatureTypes,
   isCreatureLine,
   sameCard,

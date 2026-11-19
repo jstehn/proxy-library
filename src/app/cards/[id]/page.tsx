@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FINISHES, priceHistory, printingDetail, type Finish } from "@/modules/catalog";
+import { FINISHES, priceHistory, printingDetail } from "@/modules/catalog";
 import { ownedCopies } from "@/modules/collection";
 import { decksUsing } from "@/modules/decks";
 import { printingsOfSameCard, realCopiesOf } from "@/modules/real-collection";
@@ -14,7 +14,7 @@ import {
 import { wishesForCard } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { Cents } from "@/shared/kernel";
+import { Cents, type Finish } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { PriceChart, type ChartMarker } from "@/ui/price-chart";

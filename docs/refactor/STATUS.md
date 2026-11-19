@@ -15,7 +15,7 @@ its own worktree.
 | P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | done                 |
 | P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | done                 |
 |     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                      |
-| P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | free                 |
+| P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | done                 |
 | P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | free                 |
 | P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | blocked (decision 1) |
 |     | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                     |                     |                             |                      |

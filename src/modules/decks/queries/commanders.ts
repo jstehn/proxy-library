@@ -1,7 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import type { UserId } from "@/shared/kernel";
+import { COLORS, type ManaColor, type UserId } from "@/shared/kernel";
 import {
   coverageDetails,
   missingCost,
@@ -15,7 +15,7 @@ import {
   type WithIdentity,
 } from "../domain/commanders";
 import { canBeCommander } from "../domain/rules";
-import { MANA_COLORS, TARGETED_TAGS, type ManaColor } from "../domain/stats";
+import { TARGETED_TAGS } from "../domain/stats";
 import { ownedCopies } from "./owned";
 import { textArray, tribePattern } from "./suggestions";
 
@@ -101,7 +101,7 @@ const LATEST_PRICE = sql`(select min(latest.usd_cents) from (
      where ps.printing_id = p.id order by ps.finish, ps.day desc) latest)`;
 
 const colorsOf = (values: readonly string[]): ManaColor[] =>
-  values.filter((value): value is ManaColor => (MANA_COLORS as readonly string[]).includes(value));
+  values.filter((value): value is ManaColor => (COLORS as readonly string[]).includes(value));
 
 function toPoolCard(row: PoolRow, pool: "owned" | "store"): PoolCard {
   return {

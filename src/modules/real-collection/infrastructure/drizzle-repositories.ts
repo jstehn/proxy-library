@@ -1,8 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { PrintingId, SealedProductId, type Finish } from "@/modules/catalog";
+import { PrintingId, SealedProductId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
-import { UserId } from "@/shared/kernel";
+import { type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import type { PrintingMatcher, RealCollectionRepository } from "../application/ports";
 import type { RealCopy } from "../domain/copies";
 import { normalizedName, type PrintingCandidate } from "../domain/match";
@@ -145,7 +145,7 @@ export function drizzleRealCollectionRepository(db: DbExecutor): RealCollectionR
   };
 }
 
-const FinishesSchema = z.array(z.enum(["nonfoil", "foil", "etched"]));
+const FinishesSchema = z.array(FinishSchema);
 
 /** Matches import lines against the catalog's printings (design doc 16, section 8). */
 export function sqlPrintingMatcher(db: DbExecutor): PrintingMatcher {

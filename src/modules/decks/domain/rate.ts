@@ -1,4 +1,5 @@
 import type { Tag, Theme } from "@/shared/card-search";
+import { Cents } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import {
@@ -491,7 +492,7 @@ export function rateCard(
     parts.push({
       kind: "pricePenalty",
       contribution: weights.pricePenalty,
-      label: `over $${(options.maxCardPriceCents / 100).toFixed(2)} cap`,
+      label: `over ${Cents.format(Cents.of(options.maxCardPriceCents))} cap`,
     });
   }
 

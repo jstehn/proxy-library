@@ -1,11 +1,6 @@
-import {
-  colorsOfCost,
-  costSymbols,
-  MANA_COLORS,
-  splitSymbols,
-  type ManaColor,
-} from "./mana-symbols";
+import { colorsOfCost, costSymbols, splitSymbols } from "./mana-symbols";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // Playtest proxies (design doc 22, section 3): a card drawn from its text instead of its scan.
 // Everything here is pure: given the card, its box on the page and a way to measure text, it
@@ -63,10 +58,10 @@ export type StripeColor = ManaColor | "C";
 export function stripeColors(card: PrintedCard, side: CardSide): ManaColor[] {
   const faces = facesOnSide(card, side);
   const fromCosts = new Set(faces.flatMap((face) => colorsOfCost(face.manaCost)));
-  if (fromCosts.size > 0) return MANA_COLORS.filter((color) => fromCosts.has(color));
+  if (fromCosts.size > 0) return COLORS.filter((color) => fromCosts.has(color));
   const isLand = faces.some((face) => /\bLand\b/.test(face.typeLine));
   const fallback = isLand && card.colors.length === 0 ? card.producedMana : card.colors;
-  return MANA_COLORS.filter((color) => fallback.includes(color));
+  return COLORS.filter((color) => fallback.includes(color));
 }
 
 /**

@@ -1,7 +1,13 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import {
+  ColorSchema,
+  type Finish,
+  FinishSchema,
+  type ManaColor,
+  type UserId,
+} from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
 import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
@@ -12,10 +18,7 @@ import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 // what the deck needs to know. The grid searches either the cards you own or every card for sale
 // (design doc 29). Your cards are shown as your most special copy, others as their standard art.
 
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 /** A color of Magic: "W", "U", "B", "R" or "G". */
-type Color = z.infer<typeof ColorSchema>;
 
 const BROWSE_PAGE_SIZE = 60;
 export const BROWSE_SORTS = ["name", "manaValue", "color", "type", "newest"] as const;
@@ -32,7 +35,7 @@ export type BrowseInput = Readonly<{
    * Show only cards whose color identity is within these colors; null shows every color. A
    * Commander deck starts with its commander's colors (design doc 14, decision 2).
    */
-  colors: readonly Color[] | null;
+  colors: readonly ManaColor[] | null;
   /** Whether colorless cards are shown (only matters when `colors` is set). */
   includeColorless: boolean;
   /** Whether cards that aren't legal in the deck's format are left out (the default view). */
@@ -74,7 +77,7 @@ export type BrowseCard = Readonly<{
   isGameChanger: boolean;
   setCode: string;
   collectorNumber: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   priceCents: number | null;
 }>;
 
@@ -93,7 +96,7 @@ export async function deckBrowseContext(
   deckId: number,
 ): Promise<{
   format: (typeof FORMATS)[number];
-  commanderColors: Color[] | null;
+  commanderColors: ManaColor[] | null;
   usesRealCards: boolean;
 } | null> {
   const [row] = (

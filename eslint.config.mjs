@@ -48,6 +48,37 @@ const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } }
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
 const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql.ts" } };
 
+// --- no-restricted-syntax selectors ----------------------------------------------------
+const NONDETERMINISM = [
+  {
+    selector: "MemberExpression[object.name='Math'][property.name='random']",
+    message: "Inject an Rng instead of Math.random (ADR 0008).",
+  },
+  {
+    selector: "MemberExpression[object.name='Date'][property.name='now']",
+    message: "Inject a Clock instead of Date.now (ADR 0008).",
+  },
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "Inject a Clock instead of new Date() (ADR 0008).",
+  },
+];
+const BASIC_WORDS = [
+  {
+    selector:
+      "CallExpression[callee.object.name='z'][callee.property.name='enum'] ArrayExpression > Literal[value=/^(nonfoil|foil|etched|W|common|mythic)$/]",
+    message:
+      "Don't spell out finishes, colors or rarities: import FinishSchema, ColorSchema or RaritySchema from @/shared/kernel.",
+  },
+];
+const MONEY_TEXT = [
+  {
+    selector:
+      "CallExpression[callee.property.name='toFixed'][callee.object.type='BinaryExpression'][callee.object.operator='/'][callee.object.right.value=100]",
+    message: "Format money with Cents.format (or Cents.toPlainDollars) from @/shared/kernel.",
+  },
+];
+
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
   // npm packages and Node built-ins: allowed here, restricted per layer by no-restricted-imports.
@@ -237,7 +268,9 @@ export default defineConfig([
       "src/shared/card-search/parse.ts",
       "src/shared/card-search/list.ts",
     ],
-    ignores: TESTS,
+    // kernel/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
+    // words (finish, color, rarity), shared by every module's parsing code (refactor P02).
+    ignores: [...TESTS, "src/shared/kernel/schemas.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -268,22 +301,25 @@ export default defineConfig([
     files: SOURCE,
     ignores: [...TESTS, "src/shared/runtime/**", "src/shared/kernel/testing/**"],
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "MemberExpression[object.name='Math'][property.name='random']",
-          message: "Inject an Rng instead of Math.random (ADR 0008).",
-        },
-        {
-          selector: "MemberExpression[object.name='Date'][property.name='now']",
-          message: "Inject a Clock instead of Date.now (ADR 0008).",
-        },
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message: "Inject a Clock instead of new Date() (ADR 0008).",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS, ...MONEY_TEXT],
     },
+  },
+  // The basic words and money text are defined in exactly one place each (refactor P02): the
+  // catalog and the kernel's schemas.ts / money.ts may spell them out. They still follow ADR 0008.
+  {
+    files: ["src/modules/catalog/**/*.ts", "src/shared/kernel/schemas.ts"],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT] },
+  },
+  {
+    files: ["src/shared/kernel/money.ts"],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS] },
+  },
+  {
+    files: ["src/shared/runtime/**", "src/shared/kernel/testing/**"],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT] },
   },
 
   // Configuration is read in exactly one place.

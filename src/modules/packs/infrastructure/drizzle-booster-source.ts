@@ -1,9 +1,9 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { PrintingId, SetCode, type BoosterConfig, type Finish } from "@/modules/catalog";
+import { type BoosterConfig, PrintingId, SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
-import { Cents } from "@/shared/kernel";
+import { Cents, ColorSchema, type Finish, FinishSchema, RaritySchema } from "@/shared/kernel";
 import type { BoosterKey, BoosterSource } from "../application/ports";
 import type { PrintingFacts } from "../domain/pack";
 
@@ -33,10 +33,6 @@ const VariantsSchema = z
   .min(1);
 
 const SheetsSchema = z.record(z.string(), SheetSchema);
-
-const RaritySchema = z.enum(["common", "uncommon", "rare", "mythic", "special", "bonus"]);
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 type FactsRow = {
   id: string;

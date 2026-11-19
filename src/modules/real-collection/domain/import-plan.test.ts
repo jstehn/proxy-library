@@ -1,9 +1,9 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Finish } from "@/modules/catalog";
 import { samplePrintingId } from "../testing/fakes";
 import { copyKey, MAX_REAL_QUANTITY, sumCopies, type RealCopy } from "./copies";
 import { applyPlan, isEmptyPlan, planImport, planRemoval } from "./import-plan";
+import type { Finish } from "@/shared/kernel";
 
 const copy = (printingId: string, quantity: number, finish: Finish = "nonfoil"): RealCopy => ({
   printingId: samplePrintingId(printingId),

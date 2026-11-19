@@ -10,7 +10,7 @@ import {
 } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { Cents } from "@/shared/kernel";
+import { Cents, FinishSchema } from "@/shared/kernel";
 
 // Buying a list of singles (design doc 15, section 3). The quote is read only; buying runs the
 // store's all-or-nothing purchase, which prices everything again.
@@ -42,7 +42,7 @@ const BuyInput = z.object({
     .array(
       z.object({
         printingId: z.string().min(1).max(64),
-        finish: z.enum(["nonfoil", "foil", "etched"]),
+        finish: FinishSchema,
         quantity: z.number().int(),
       }),
     )
