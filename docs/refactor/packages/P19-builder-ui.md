@@ -1,6 +1,6 @@
 # P19. Break up the deck builder UI
 
-- **Branch:** `refactor/P19-builder-ui` · **Depends on:** P09 · **Parallel with:** waves 3–4,
+- **Branch:** `refactor/P19-builder-ui` · **Depends on:** P09b · **Parallel with:** waves 3–4,
   except P16 (both touch `stats-panel.tsx`)
 - **Audit:** doc 65 F8
 - **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S9](../dedup-playbook.md#s9) · **Lines to remove:** about −300 to −800 (low confidence)
@@ -17,6 +17,10 @@ hooks and actions.
 
 ## Steps
 
+P09b already moved `actions.ts` onto `action()` and capabilities (≤ 350 lines). P19 doesn't change
+what the actions do. When step 3 gives each panel its own `actions.ts`, move the existing
+`action(...)` definitions there as they are.
+
 1. Map the 35 hooks: which state is shared between panels, and which belongs to one panel.
 2. Shared state goes into `builder-state.ts`: a `useReducer` with named actions and a pure
    reducer, unit-tested. Panel-only state moves into the panel.
@@ -26,7 +30,7 @@ hooks and actions.
 
 ## Done when
 
-- No file in `builder/` is over 500 lines. The reducer has unit tests. The e2e builder flow passes.
+- No file in `builder/` is over 500 lines, and none calls `getContainer` (the lint ratchet from P09b). The reducer has unit tests. The e2e builder flow passes.
 
 ## Handoff
 
