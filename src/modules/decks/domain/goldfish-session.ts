@@ -1,5 +1,5 @@
 import { cardTags } from "@/shared/card-search";
-import { err, ok, shuffled, type Result, type Rng } from "@/shared/kernel";
+import { err, ok, shuffled, type Result, type Rng, isCreature } from "@/shared/kernel";
 import { getFormatRules, type FormatRuleSet } from "./format-rules";
 import type {
   BattlefieldPermanent,
@@ -210,9 +210,9 @@ function isSpellOnlyType(typeLine: string): boolean {
 }
 
 function manaProducedOnTap(permanent: BattlefieldPermanent, state: GoldfishState): ManaPool {
-  const isCreature = /\bCreature\b/i.test(permanent.card.typeLine);
+  const creature = isCreature(permanent.card.typeLine);
   const hasHaste = permanentHasKeyword(permanent, "haste", state);
-  if (isCreature && permanent.enteredTurn === state.turn && !hasHaste) {
+  if (creature && permanent.enteredTurn === state.turn && !hasHaste) {
     return { ...EMPTY_MANA_POOL };
   }
   return extractTapManaProduction(permanent.card, state.battlefield);
@@ -628,7 +628,7 @@ export function stepGoldfishState(
       if (!att) return err({ kind: "CardNotFound", key: action.key, zone: "battlefield" });
       const target = state.battlefield.find((p) => p.card.key === action.targetKey);
       if (!target) return err({ kind: "CardNotFound", key: action.targetKey, zone: "battlefield" });
-      if (/\bEquipment\b/i.test(att.card.typeLine) && !/\bCreature\b/i.test(target.card.typeLine)) {
+      if (/\bEquipment\b/i.test(att.card.typeLine) && !isCreature(target.card.typeLine)) {
         return err({
           kind: "CastNotAllowed",
           reason: `Equipment ${att.card.name} can only attach to a creature (CR 301.5).`,

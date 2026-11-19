@@ -15,6 +15,8 @@ export {
 } from "./schemas";
 export { COLORS, COLOR_COMBINATIONS, MANA_SYMBOLS, colorCombination } from "./colors";
 export type { ColorCombination, ManaColor, ManaSymbol } from "./colors";
+export { cardTypes, isBasicLand, isCreature, isLand } from "./card-types";
+export type { CardTypes } from "./card-types";
 export { Cents } from "./money";
 export { ok, err } from "./result";
 export type { Ok, Err, Result } from "./result";

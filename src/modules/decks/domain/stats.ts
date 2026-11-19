@@ -1,5 +1,5 @@
 import { cardTags, TAGS, type Tag } from "@/shared/card-search";
-import { COLORS, type ManaColor, type ManaSymbol } from "@/shared/kernel";
+import { COLORS, type ManaColor, type ManaSymbol, isLand, isCreature } from "@/shared/kernel";
 import { isCounted, isPlayed, type Board } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
@@ -47,7 +47,7 @@ export type DeckStats = Readonly<{
   cardCount: number;
   /** Cards in the sideboard (excluded from played stats, included in price and copy limits). */
   sideboardCount: number;
-  /** Lands (a card whose front face is a land, artifact lands included). */
+  /** Lands (a card with a land on either face, artifact lands included). */
   lands: number;
   /** Non-land cards that make mana (rocks, dorks, rituals). */
   otherManaSources: number;
@@ -66,10 +66,8 @@ export function mainType(typeLine: string): string {
   return TYPE_ORDER.find((type) => new RegExp(`\\b${type}\\b`).test(typeLine)) ?? "Other";
 }
 
-/** Whether a card is a land: its front face's type line says so ("Instant // Land" doesn't). */
-export function isLand(typeLine: string): boolean {
-  return /\bLand\b/.test(typeLine.split(" // ")[0]);
-}
+// A card with a land on either face is a land (STATUS decision 1); the rule is in the kernel.
+export { isLand };
 
 /**
  * The colored symbols in a mana cost, per color. A hybrid symbol ({W/U}) counts toward both of
@@ -127,7 +125,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     if (produced.length > 0) otherManaSources += line.quantity;
     const bucket = Math.min(7, Math.floor(line.manaValue));
     curve[bucket] += line.quantity;
-    if (/\bCreature\b/.test(line.typeLine)) creatureCurve[bucket] += line.quantity;
+    if (isCreature(line.typeLine)) creatureCurve[bucket] += line.quantity;
     spells += line.quantity;
     totalManaValue += line.manaValue * line.quantity;
     const linePips = colorPips(line.manaCost);

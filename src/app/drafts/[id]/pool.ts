@@ -1,6 +1,8 @@
 // Sorting your picks while you draft: by color, with a mana curve, the way players lay out their
 // cards on the table. Pure, from what the card faces print.
 
+import { isLand } from "@/shared/kernel";
+
 export type FaceFacts = Readonly<{ manaCost: string | null; typeLine: string }>;
 
 export type PoolColumn = "W" | "U" | "B" | "R" | "G" | "multicolor" | "colorless" | "land";
@@ -33,7 +35,7 @@ const symbolsOf = (manaCost: string | null) =>
 /** Which column a card goes in: lands, then by the colors its mana cost shows. */
 export function columnOf(face: FaceFacts | undefined): PoolColumn {
   if (face === undefined) return "colorless";
-  if (/\bLand\b/.test(face.typeLine)) return "land";
+  if (isLand(face.typeLine)) return "land";
   const colors = new Set(
     symbolsOf(face.manaCost).flatMap((symbol) =>
       symbol.split("/").filter((part) => "WUBRG".includes(part)),
@@ -77,7 +79,7 @@ export function curveOf<Card>(
   const counts = [0, 0, 0, 0, 0, 0];
   for (const card of cards) {
     const face = faceOf(card);
-    if (face === undefined || /\bLand\b/.test(face.typeLine)) continue;
+    if (face === undefined || isLand(face.typeLine)) continue;
     const value = manaValueOf(face.manaCost);
     counts[Math.min(5, Math.max(0, value - 1))] += 1;
   }

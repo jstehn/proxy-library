@@ -70,6 +70,12 @@ const BASIC_WORDS = [
     message:
       "Don't spell out finishes, colors or rarities: import FinishSchema, ColorSchema or RaritySchema from @/shared/kernel.",
   },
+  {
+    // The dots stand for the backslashes of /\bLand\b/.
+    selector: "Literal[regex.pattern=/^.b(Land|Creature|Basic).b$/]",
+    message:
+      "Ask the type line with cardTypes, isLand, isCreature or isBasicLand from @/shared/kernel, not a regex.",
+  },
 ];
 const MONEY_TEXT = [
   {

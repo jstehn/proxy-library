@@ -5,12 +5,12 @@ import {
   type Rng,
   randomInt,
   seededRng,
+  cardTypes,
 } from "@/shared/kernel";
 import { isPlayed, type Board } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
 import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
-import { isLand } from "./stats";
 
 export type CastabilityLine = Readonly<{
   oracleId: string;
@@ -85,11 +85,6 @@ function toPoolColors(producedMana: readonly string[]): PoolManaColor[] {
   return out;
 }
 
-function hasBackFaceLand(typeLine: string): boolean {
-  const faces = typeLine.split(" // ");
-  return faces.length > 1 && /\bLand\b/i.test(faces[1] ?? "");
-}
-
 function buildPipOptions(manaCost: string | null): ReadonlyArray<readonly PoolManaColor[]> {
   const parsed = parseManaCost(manaCost, 0);
   const options: PoolManaColor[][] = [];
@@ -156,8 +151,11 @@ export function simulateCastOnCurve(
 
   for (const line of lines) {
     if (!isPlayed(line.board) || line.quantity <= 0) continue;
-    const land = isLand(line.typeLine);
-    const mdfcLand = !land && hasBackFaceLand(line.typeLine);
+    // A land on the back face is a spell until it is played turned over, and it enters tapped
+    // ("always"), so the simulator needs the front face apart from "has a land face".
+    const types = cardTypes(line.typeLine);
+    const land = types.isLandOnFront;
+    const mdfcLand = types.isLand && !land;
 
     if (line.board === "main") {
       const produces = toPoolColors(line.producedMana ?? []);

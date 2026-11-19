@@ -1,3 +1,4 @@
+import { isCreature } from "@/shared/kernel";
 import { countMinimumPips } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [
@@ -138,17 +139,17 @@ function parsePower(power: string | number | null | undefined): number | null {
 
 export const DEFAULT_SCOPE_PREDICATES: Readonly<Record<CostReducerScope, ScopePredicate>> = {
   all_spells: () => true,
-  creatures: (card) => (card.typeLine ? /\bCreature\b/i.test(card.typeLine) : false),
-  noncreature: (card) => (card.typeLine ? !/\bCreature\b/i.test(card.typeLine) : false),
+  creatures: (card) => (card.typeLine ? isCreature(card.typeLine) : false),
+  noncreature: (card) => (card.typeLine ? !isCreature(card.typeLine) : false),
   artifacts: (card) => (card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false),
   enchantments: (card) => (card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false),
   instants_sorceries: (card) =>
     card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false,
   commander: (card) => card.isCommander === true,
   creature_power_gte_4: (card) => {
-    const isCreature = card.typeLine ? /\bCreature\b/i.test(card.typeLine) : true;
+    const creature = card.typeLine ? isCreature(card.typeLine) : true;
     const p = parsePower(card.power);
-    return isCreature && p !== null && p >= 4;
+    return creature && p !== null && p >= 4;
   },
   blitz: (card) =>
     card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false),

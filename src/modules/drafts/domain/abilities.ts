@@ -1,3 +1,4 @@
+import { isCreature } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 
 // Cards that do something during the draft (design doc 18, section 3), as data: the pick engine
@@ -112,9 +113,9 @@ export function guessedRight(note: Extract<Note, { kind: "guess" }>): boolean {
 export function creatureTypes(typeLine: string): string[] {
   const [front] = typeLine.split(" // ");
   const [types, subtypes] = front.split(" — ");
-  if (subtypes === undefined || !/\bCreature\b/.test(types)) return [];
+  if (subtypes === undefined || !isCreature(types)) return [];
   return subtypes.split(/\s+/).filter((word) => word.length > 0);
 }
 
-export const isCreatureLine = (typeLine: string) => /\bCreature\b/.test(typeLine);
+export { isCreature as isCreatureLine } from "@/shared/kernel";
 export const isConspiracyLine = (typeLine: string) => /\bConspiracy\b/.test(typeLine);

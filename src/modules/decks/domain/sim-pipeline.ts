@@ -7,7 +7,7 @@ import type {
   GoldfishZone,
 } from "./goldfish-types";
 import { addMana, EMPTY_MANA_POOL, type ManaPool } from "./mana";
-import { type ManaSymbol } from "@/shared/kernel";
+import { type ManaSymbol, isCreature } from "@/shared/kernel";
 
 // Open-Closed Modifier & Trigger Pipelines for Play Simulation.
 // New casting mechanics (alt costs, taxes, cost reducers) and triggered abilities
@@ -181,7 +181,7 @@ export function permanentHasKeyword(
   ) {
     return true;
   }
-  if (/\bCreature\b/i.test(perm.card.typeLine)) {
+  if (isCreature(perm.card.typeLine)) {
     const grantPattern = new RegExp(`\\bcreatures you control have[^.\\n]*\\b${keyword}\\b`, "i");
     if (state.battlefield.some((other) => grantPattern.test(other.card.text ?? ""))) {
       return true;
@@ -387,7 +387,7 @@ const blitzCastModifier: CastModifier = {
           "Cannot cast with blitz: no blitz-granting permanent is on the battlefield and the card does not have blitz.",
       };
     }
-    if (!hasOwnBlitz && !/\bCreature\b/i.test(ctx.card.typeLine)) {
+    if (!hasOwnBlitz && !isCreature(ctx.card.typeLine)) {
       return {
         allowed: false,
         reason: "Cannot cast with blitz: only creature spells can be blitzed.",
@@ -622,7 +622,7 @@ const sacrificeForManaAbility: ActivatedAbility = {
       return { ok: false, reason: `Choose a creature to sacrifice for ${ctx.source.card.name}.` };
     }
     const target = ctx.state.battlefield.find((p) => p.card.key === ctx.sacrificeKey);
-    if (!target || !/\bCreature\b/i.test(target.card.typeLine)) {
+    if (!target || !isCreature(target.card.typeLine)) {
       return { ok: false, reason: `${ctx.sacrificeKey} is not a creature on the battlefield.` };
     }
     const removed = removeCardFromZone(ctx.state, "battlefield", ctx.sacrificeKey);
