@@ -497,3 +497,16 @@ export {
   type SavedSource,
 } from "./application/deck-plan-edits";
 export { makeStartDeck, type StartDeckInput, type StartedDeck } from "./application/deck-start";
+export {
+  makeEdhrecResearch,
+  type CommanderMissing,
+  type EdhrecDeckComparison,
+  type EdhrecNotFound,
+  type EdhrecUnavailable,
+} from "./application/deck-edhrec";
+export {
+  makeDeckCombos,
+  type DeckCombos,
+  type SpellbookUnavailable,
+} from "./application/deck-combos";
+export { makeDrawSample, type DeckTooSmall, type DrawSample } from "./application/draw-sample";

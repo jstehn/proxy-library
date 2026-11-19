@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { REDDIT_SORT_MODES, REDDIT_TIMEFRAMES } from "@/modules/reddit";
-import { defineTool, done, failed } from "../tool";
+import { err, type Result } from "@/shared/kernel";
+import { defineBinding } from "../binding";
 
-export const redditResearchTool = defineTool({
+type Failure = Readonly<{ kind: string; message: string }>;
+
+export const redditResearchBinding = defineBinding({
   name: "reddit_research",
   title: "Reddit MTG discussion search & thread reader",
   description:
@@ -43,29 +46,29 @@ export const redditResearchTool = defineTool({
       .describe("Max comments to fetch (5-80)."),
     cursor: z.number().int().min(0).default(0).describe("Item cursor for paging long threads."),
   }),
-  async run(context, input) {
+  async call(capabilities, _actor, input): Promise<Result<unknown, Failure>> {
     if (input.post) {
-      const result = await context.container.reddit.getThread({
+      return capabilities.reddit.getThread({
         post: input.post,
         commentSort: input.commentSort,
         commentLimit: input.commentLimit,
         cursor: input.cursor,
       });
-      return result.ok ? done(result.value) : failed(result.error.kind, result.error.message);
     }
     if (input.query) {
-      const result = await context.container.reddit.searchPosts({
+      return capabilities.reddit.searchPosts({
         query: input.query,
         subreddit: input.subreddit,
         sortBy: input.sortBy,
         timeframe: input.timeframe,
         limit: input.limit,
       });
-      return result.ok ? done(result.value) : failed(result.error.kind, result.error.message);
     }
-    return failed(
-      "InvalidInput",
-      "Provide `query` to search Reddit posts or `post` to read a thread.",
-    );
+    return err<Failure>({
+      kind: "InvalidInput",
+      message: "Provide `query` to search Reddit posts or `post` to read a thread.",
+    });
   },
+  present: (value) => value,
+  describeError: (failure) => ({ kind: failure.kind, message: failure.message }),
 });

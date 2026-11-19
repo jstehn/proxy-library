@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { DECK_TECH_SEARCH_KINDS, SEARCH_SORT_MODES } from "@/modules/youtube";
-import { defineTool, done, failed } from "../tool";
+import { err, type Result } from "@/shared/kernel";
+import { defineBinding } from "../binding";
 
-export const youtubeResearchTool = defineTool({
+type Failure = Readonly<{ kind: string; message: string }>;
+
+export const youtubeResearchBinding = defineBinding({
   name: "youtube_research",
   title: "YouTube deck tech search & transcript",
   description:
@@ -26,28 +29,28 @@ export const youtubeResearchTool = defineTool({
     includeTimestamps: z.boolean().default(false).describe("Include [MM:SS] timestamps."),
     cursor: z.number().int().min(0).default(0).describe("Segment cursor for long transcripts."),
   }),
-  async run(context, input) {
+  async call(capabilities, _actor, input): Promise<Result<unknown, Failure>> {
     if (input.video) {
-      const result = await context.container.youtube.getTranscript({
+      return capabilities.youtube.getTranscript({
         video: input.video,
         lang: input.lang,
         includeTimestamps: input.includeTimestamps,
         cursor: input.cursor,
       });
-      return result.ok ? done(result.value) : failed(result.error.kind, result.error.message);
     }
     if (input.query) {
-      const result = await context.container.youtube.searchDeckTechs({
+      return capabilities.youtube.searchDeckTechs({
         query: input.query,
         kind: input.kind,
         sortBy: input.sortBy,
         limit: input.limit,
       });
-      return result.ok ? done(result.value) : failed(result.error.kind, result.error.message);
     }
-    return failed(
-      "InvalidInput",
-      "Provide `query` to search videos or `video` to get a transcript.",
-    );
+    return err<Failure>({
+      kind: "InvalidInput",
+      message: "Provide `query` to search videos or `video` to get a transcript.",
+    });
   },
+  present: (value) => value,
+  describeError: (failure) => ({ kind: failure.kind, message: failure.message }),
 });

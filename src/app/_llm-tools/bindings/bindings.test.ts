@@ -113,15 +113,21 @@ describe("the bindings list", () => {
   it("has unique names and a flat input each", () => {
     expect(BINDINGS.map((binding) => binding.name)).toEqual([
       "create_deck",
+      "draw_sample",
+      "edhrec_lookup",
       "edit_deck",
+      "find_combos",
       "find_replacements",
       "get_account",
       "get_cards",
       "get_deck",
       "list_decks",
       "manage_wishlist",
+      "reddit_research",
+      "rules_lookup",
       "search_cards",
       "update_deck",
+      "youtube_research",
     ]);
     expect(getAccountBinding.input.shape).toEqual({});
     expect(listDecksBinding.input.shape).toEqual({});
@@ -266,5 +272,85 @@ describe("update_deck binding", () => {
       kind: "outcome",
       outcome: { ok: false, error: { kind: "InvalidInput" } },
     });
+  });
+});
+
+describe("research bindings", () => {
+  const outcome = async (capabilities: object, name: string, input: unknown) => {
+    const result = await callTool(contextWith(capabilities), name, input);
+    if (result.kind !== "outcome") throw new Error("expected an outcome");
+    return result.outcome;
+  };
+
+  it("rules_lookup searches the rules by query and says when none are synced", async () => {
+    const searchRules = async () => ok({ crVersion: null, hits: [] });
+    const result = await outcome({ rulesLookup: { searchRules } }, "rules_lookup", { query: "x" });
+    expect(result).toMatchObject({ ok: true, value: { crVersion: null, hits: [] } });
+  });
+
+  it("rules_lookup wraps one card's rulings in `cards`, and names a missing card", async () => {
+    const found = { query: "A", found: true, rulings: [] };
+    const hit = await outcome(
+      { rulesLookup: { rulingsForCard: async () => ok(found) } },
+      "rules_lookup",
+      { cards: ["A"] },
+    );
+    expect(hit).toEqual({ ok: true, value: { cards: [found] } });
+    const miss = await outcome(
+      { rulesLookup: { rulingsForCard: async () => err({ kind: "CardNotFound", query: "A" }) } },
+      "rules_lookup",
+      { cards: ["A"] },
+    );
+    expect(miss).toEqual({
+      ok: false,
+      error: { kind: "CardNotFound", message: 'No card named "A" in catalog.' },
+    });
+  });
+
+  it("edhrec_lookup cuts the commander's cards to `limit`", async () => {
+    const data = {
+      commander: "Boss",
+      sourceUrl: "u",
+      fetchedAt: "t",
+      cached: true,
+      deckCount: 1200,
+      themes: [],
+      averageDecklist: null,
+      cards: [1, 2, 3].map((n) => ({ name: `C${n}`, inclusionPct: n, synergy: 0, category: "x" })),
+    };
+    const result = await outcome(
+      { edhrec: { forCommander: async () => ok(data) } },
+      "edhrec_lookup",
+      { commander: "Boss", limit: 2 },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: { totalCards: 3, cards: [{ name: "C1" }, { name: "C2" }], deckCount: 1200 },
+    });
+  });
+
+  it("edhrec_lookup says what to pass when given neither commander nor deck", async () => {
+    expect(await outcome({}, "edhrec_lookup", {})).toEqual({
+      ok: false,
+      error: { kind: "InvalidInput", message: "Provide `commander` or `deckId`." },
+    });
+  });
+
+  it("youtube_research and reddit_research say what to pass when given nothing", async () => {
+    expect(await outcome({}, "youtube_research", {})).toMatchObject({
+      ok: false,
+      error: { kind: "InvalidInput" },
+    });
+    expect(await outcome({}, "reddit_research", {})).toMatchObject({
+      ok: false,
+      error: { kind: "InvalidInput" },
+    });
+  });
+
+  it("youtube_research passes the service's answer and its failures through", async () => {
+    const searchDeckTechs = async () => err({ kind: "RateLimited", message: "slow down" });
+    expect(
+      await outcome({ youtube: { searchDeckTechs } }, "youtube_research", { query: "x" }),
+    ).toEqual({ ok: false, error: { kind: "RateLimited", message: "slow down" } });
   });
 });
