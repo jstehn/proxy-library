@@ -1,3 +1,4 @@
+import type { CastabilitySummary } from "./castability";
 import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
 import { getFormatRules } from "./format-rules";
@@ -428,3 +429,12 @@ function fillBasics(
   }
   return planned;
 }
+
+/** A land plan with how castable the spells are before and after adding it. */
+export type ManaBasePlanWithCastability = ManaBasePlan &
+  Readonly<{
+    castability: Readonly<{
+      before: CastabilitySummary;
+      after: CastabilitySummary;
+    }>;
+  }>;

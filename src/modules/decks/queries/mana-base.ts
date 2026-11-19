@@ -5,13 +5,13 @@ import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
-import {
-  simulateCastOnCurve,
-  type CastabilityLine,
-  type CastabilitySummary,
-} from "../domain/castability";
+import { simulateCastOnCurve, type CastabilityLine } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
-import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
+import {
+  planManaBase,
+  type LandCandidate,
+  type ManaBasePlanWithCastability,
+} from "../domain/mana-base";
 import { decks } from "../infrastructure/schema";
 import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
@@ -190,14 +190,6 @@ export async function landPoolsForDeck(
     store: store.rows.filter(withinTarget).map(toCandidate),
   };
 }
-
-export type ManaBasePlanWithCastability = ManaBasePlan &
-  Readonly<{
-    castability: Readonly<{
-      before: CastabilitySummary;
-      after: CastabilitySummary;
-    }>;
-  }>;
 
 /** A mana base plan for one of this player's decks, or null if the deck isn't theirs. */
 export async function manaBasePlan(

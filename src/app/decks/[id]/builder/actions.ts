@@ -14,7 +14,6 @@ import {
   deckSuggestions,
   draftForDeck,
   type DeckDraft,
-  manaBasePlan,
   type ManaBasePlan,
   optimizeDeckForView,
   type OptimizeDeckPool,
@@ -24,7 +23,6 @@ import {
   type DeckSuggestions,
   type SuggestionList,
   DeckId,
-  deckTokenLines,
   deckView,
   fingerprint,
   GROUPINGS,
@@ -42,7 +40,6 @@ import {
   otherDecksHolding,
   type OtherDeckUse,
   takeCopies,
-  getDeckProfile,
   updateDeckPrimer,
   updateDeckProfile,
   type DeckPlan,
@@ -349,7 +346,11 @@ export async function manaBaseAction(deckId: number): Promise<ManaBasePlan | nul
   const actor = await requireActor();
   const parsed = DeckIdInput.safeParse(deckId);
   if (!parsed.success) return null;
-  return manaBasePlan(getContainer().db, actor.userId, parsed.data);
+  const plan = await getContainer().capabilities.deckManaPlan({
+    userId: actor.userId,
+    deckId: parsed.data,
+  });
+  return plan.ok ? plan.value : null;
 }
 
 const DraftDeckInput = z.object({
@@ -649,19 +650,12 @@ export async function tokensAction(deckId: number): Promise<TokenLine[] | null> 
   const actor = await requireActor();
   const parsed = DeckIdInput.safeParse(deckId);
   if (!parsed.success) return null;
-  const { db } = getContainer();
-  const view = await deckView(db, actor.userId, parsed.data);
-  if (view === null) return null;
-  return deckTokenLines(
-    db,
-    view.deck.id,
-    view.lines.map((line) => ({
-      oracleId: line.oracleId,
-      printingId: line.printingId,
-      name: line.name,
-      board: line.board,
-    })),
-  );
+  const overview = await getContainer().capabilities.deckOverview({
+    userId: actor.userId,
+    deckId: parsed.data,
+    parts: { tokens: true },
+  });
+  return overview.ok ? [...(overview.value.tokens ?? [])] : null;
 }
 
 const EntryDetailsInput = z.object({
@@ -701,8 +695,13 @@ export type DeckPlanWithPrimer = Readonly<{ profile: DeckPlan; primer: string }>
 /** Loads the deck's plan and primer, or null if it isn't the player's. */
 export async function deckPlanAction(deckId: number): Promise<DeckPlanWithPrimer | null> {
   const actor = await requireActor();
-  const stored = await getDeckProfile(getContainer().db, actor.userId, deckId);
-  if (stored === null) return null;
+  const overview = await getContainer().capabilities.deckOverview({
+    userId: actor.userId,
+    deckId,
+    parts: { profile: true },
+  });
+  const stored = overview.ok ? overview.value.profile : null;
+  if (stored === null || stored === undefined) return null;
   return { profile: stored.profile, primer: stored.primer ?? "" };
 }
 

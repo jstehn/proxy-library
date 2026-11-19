@@ -65,6 +65,10 @@ export {
   type Format,
   type Grouping,
 } from "./domain/deck";
+export type { ManaBasePlanWithCastability } from "./domain/mana-base";
+export { makeDeckFacts, type DeckFacts } from "./application/deck-facts";
+export { makeDeckManaPlan } from "./application/deck-mana-plan";
+export { makeDeckSignals, type DeckSignals } from "./application/deck-signals";
 export {
   makeDeckOverview,
   type DeckOverview,
@@ -200,12 +204,8 @@ export {
   type SampleHand,
   type SimulateHandsOptions,
 } from "./domain/goldfish";
-export {
-  auditDeck,
-  type AuditFinding,
-  type AuditRoleStatus,
-  type DeckAuditReport,
-} from "./queries/audit";
+export { auditDeck, auditDeckView } from "./queries/audit";
+export type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "./domain/audit-report";
 export { type CardRating, type PowerTier, type RatingProfile } from "./domain/rate";
 export {
   BROWSE_SORTS,

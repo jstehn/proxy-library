@@ -7,81 +7,20 @@ import {
   bracketRuleReasons,
   bracketWarning,
   estimateBracket,
-  type Bracket,
-  type BracketRuleReason,
 } from "../domain/brackets";
-import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
+import { simulateCastOnCurve } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
-import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
-import { simulateOpeningHands, type GoldfishReport } from "../domain/goldfish";
-import { scoreDeck, type DeckScore } from "../domain/optimize";
+import { simulateOpeningHands } from "../domain/goldfish";
+import { scoreDeck } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
-import {
-  deckStats,
-  roleTargets,
-  suggestedLands,
-  TARGETED_TAGS,
-  type TargetedTag,
-} from "../domain/stats";
+import { deckStats, roleTargets, suggestedLands, TARGETED_TAGS } from "../domain/stats";
+import type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "../domain/audit-report";
 import { combosForDeck } from "./combos";
 import type { DeckView } from "../domain/deck-view";
 import { deckView } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
-
-export type AuditFinding = Readonly<{
-  severity: "error" | "warning" | "info";
-  area: "legality" | "bracket" | "mana" | "roles" | "goldfish" | "ownership";
-  message: string;
-}>;
-
-export type AuditRoleStatus = Readonly<{
-  tag: TargetedTag;
-  count: number;
-  target: number;
-  deficit: number;
-}>;
-
-export type DeckAuditReport = Readonly<{
-  deck: {
-    id: number;
-    name: string;
-    format: Format;
-    targetBracket: Bracket | null;
-    cardCount: number;
-    sideboardCount: number;
-  };
-  score: DeckScore;
-  legality: {
-    problemCount: number;
-    problems: readonly string[];
-  };
-  bracket: {
-    target: Bracket | null;
-    floor: Bracket;
-    overTarget: boolean;
-    gameChangers: number;
-    twoCardCombos: number;
-    reasons: readonly BracketRuleReason[];
-  } | null;
-  roles: readonly AuditRoleStatus[];
-  mana: {
-    lands: number;
-    suggestedLands: number;
-    averageManaValue: number;
-    underservedColors: readonly string[];
-    averageCastOnCurvePct: number;
-    strugglingSpells: readonly CardCastability[];
-  };
-  ownership: {
-    ownedCards: number;
-    missingCards: number;
-    estimatedMissingCents: number;
-  };
-  goldfish: GoldfishReport;
-  findings: readonly AuditFinding[];
-}>;
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,

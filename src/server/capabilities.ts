@@ -2,13 +2,19 @@ import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
 import { printingCards } from "@/modules/catalog";
 import {
+  auditDeckView,
   combosForDeck,
+  deckSignalCards,
   deckTokenLines,
   deckView,
   decksFor,
   getDeckProfile,
   listDeckSources,
+  makeDeckFacts,
+  makeDeckManaPlan,
   makeDeckOverview,
+  makeDeckSignals,
+  manaBasePlan,
   makeListDecks,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
@@ -41,6 +47,11 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       sources: (userId, deckId) => listDeckSources(db, userId, deckId),
       profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
     }),
+    deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
+    deckSignals: makeDeckSignals({
+      signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
+    }),
+    deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {
