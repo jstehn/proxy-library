@@ -40,3 +40,6 @@ test-results/
 
 # Database backups (scripts/backup.sh)
 backups/
+
+# Agent worktrees made by Claude Code (other branches checked out here)
+.claude/worktrees/

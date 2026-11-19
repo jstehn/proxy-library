@@ -103,7 +103,7 @@ of old and new tool output.
 
 ## Left by P16 (one mana curve)
 
-- [ ] **Look at the draft page's pool curve (P16):** the little bar chart under "Your pool" now has
+- [x] **Done 2026-11-19 (merge of P16 and P17, e2e database):** eight bars, 0 to 7+, dark at phone width, no horizontal scroll. **Look at the draft page's pool curve (P16):** the little bar chart under "Your pool" now has
       eight bars, labelled 0 to 7+ (it had six, 1 to 6+). Check it in dark mode and at phone width.
 - [ ] **Open a "Draft a deck" result and read the curve reasons (P16):** each curve pick says "3 mana
       curve slot", and the last says "7+ mana curve slot" (the old text was "1-2", "3", "4", "5+").
@@ -113,14 +113,14 @@ of old and new tool output.
 
 ## Left by P17 (one way to show a collection)
 
-- [ ] **Run the integration tests for the shared collection SQL (P17).** `pnpm test:int
+- [x] **Done 2026-11-19 (merge of P16 and P17, e2e database):** the full integration suite, 281 of 281. **Run the integration tests for the shared collection SQL (P17).** `pnpm test:int
 tests/integration/singles.int.test.ts tests/integration/real-collection.int.test.ts
 tests/integration/card-search.int.test.ts`, plus whatever covers the card page's "owned" boxes and
       the exports (`grep -l "exportRows\|ownedByOracle\|copiesOf" tests/integration`). Not run in the package
       (shared database).
-- [ ] **Look at `/collection`, `/collection/real` and `/players/<id>/real` in dark mode and at phone
+- [ ] **Partly done 2026-11-19:** all three pages (with sort and page) answer without errors; `/collection` checked by eye in dark at phone width. Still open: the real collection with real data. **Look at `/collection`, `/collection/real` and `/players/<id>/real` in dark mode and at phone
       width (P17):** the grid, sections, the "In: deck" line (game tab only), filters, sort "Newest
       first", pagination, and the export links.
-- [ ] **Download all three formats from `/api/export/collection` and `/api/export/real` (P17):**
+- [x] **Done 2026-11-19 (merge of P16 and P17, e2e database):** all six downloads answer with the right file names and headers (Moxfield CSV, text list, full CSV with first and last acquired). **Download all three formats from `/api/export/collection` and `/api/export/real` (P17):**
       file names (`collection*.csv/.txt`, `real-collection*.csv/.txt`), and the first and last acquired
       dates (game: first and last arrival; real: when added, when changed).

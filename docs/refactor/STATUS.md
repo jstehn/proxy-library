@@ -9,45 +9,45 @@
 Waves run in order. Inside a wave, packages marked parallel can run at the same time, each in
 its own worktree.
 
-| Id    | Package                                                                                  | Depends on              | Parallel with               | Status                                                                                  |
-| ----- | ---------------------------------------------------------------------------------------- | ----------------------- | --------------------------- | --------------------------------------------------------------------------------------- |
-|       | **Wave 0: set up**                                                                       |                         |                             |                                                                                         |
-| P00   | [Set up the refactor](packages/P00-setup.md)                                             | none                    | none                        | done                                                                                    |
-| P01   | [Delete dead code](packages/P01-dead-code.md)                                            | P00                     | none                        | done                                                                                    |
-|       | **Wave 1: the basics** (audit R2)                                                        |                         |                             |                                                                                         |
-| P02   | [One set of basic types; money](packages/P02-basic-types.md)                             | P01                     | none                        | done                                                                                    |
-| P03   | [One current-price query](packages/P03-current-price.md)                                 | P02                     | P04                         | done                                                                                    |
-| P04   | [One card-type helper](packages/P04-card-types.md)                                       | P02, decision 1         | P03                         | done                                                                                    |
-|       | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                           |                         |                             |                                                                                         |
-| P05   | [Capability and binding framework](packages/P05-framework.md)                            | P03, P04                | none                        | done                                                                                    |
-| P06   | [Deck read capabilities](packages/P06-deck-reads.md)                                     | P05                     | P07, P08                    | done                                                                                    |
-| P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)               | P05                     | P06, P08                    | done                                                                                    |
-| P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                                  | P07a                    | P08                         | done                                                                                    |
-| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                               | P07b                    | P08                         | done                                                                                    |
-| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)                    | P07a                    | P08                         | done                                                                                    |
-| P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                               | P07b, P07c              | P08                         | done                                                                                    |
-| P08   | [Deck edits and previews](packages/P08-edits-previews.md)                                | P05                     | P06, P07                    | done                                                                                    |
-| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                        | P06, P07a–d, P07b2, P08 | none                        | done                                                                                    |
-|       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                         |                             |                                                                                         |
-| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | done                                                                                    |
-| P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                    | P09d                        | done                                                                                    |
-| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | done                                                                                    |
-|       | **Wave 3: rules as data** (audit R4, R5)                                                 |                         |                             |                                                                                         |
-| P10   | [Formats as a strategy table](packages/P10-formats.md)                                   | P09c                    | P11–P14                     | in progress (agent)                                                                     |
-| P11   | [Card features: model and storage](packages/P11-card-features.md)                        | P09c, decision 3        | P10                         | waiting for the user: design doc 66 (10 questions), branch `refactor/P11-card-features` |
-| P12   | [Mana and casting from features](packages/P12-mana-casting.md)                           | P11                     | P10, P13, P14               | free                                                                                    |
-| P13   | [Tags, themes and signals](packages/P13-tags-signals.md)                                 | P11                     | P10, P12, P14               | free                                                                                    |
-| P14   | [Lands and draft cards from features](packages/P14-lands-drafts.md)                      | P11                     | P10, P12, P13               | free                                                                                    |
-|       | **Wave 4: merge parallel implementations** (audit R6) · milestone 2                      |                         |                             |                                                                                         |
-| P15   | [One opening-hand engine](packages/P15-opening-hands.md)                                 | P12, P14                | P16, P17                    | free                                                                                    |
-| P16   | [One mana curve](packages/P16-mana-curve.md)                                             | P10, decision 2         | P15, P17                    | free (decision 2 answered)                                                              |
-| P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                    | P15, P16                    | free                                                                                    |
-|       | **Wave 5: structure** (audit R7–R9) · milestone 3 (final)                                |                         |                             |                                                                                         |
-| P18   | [Split `decks` by responsibility](packages/P18-split-decks.md)                           | P10–P17, decision 4     | none                        | free (decision 4 answered)                                                              |
-| P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                    | any of waves 3–4 except P16 | done                                                                                    |
-| P20   | [Responsibility check for other modules; large files](packages/P20-large-files.md)       | P18                     | P21                         | free                                                                                    |
-| P21   | [Naming sweep and docs](packages/P21-naming-docs.md)                                     | P18                     | P20                         | free                                                                                    |
-| P22   | [Review and consolidate the design docs](packages/P22-design-docs.md)                    | P18                     | P20, P21                    | free                                                                                    |
+| Id    | Package                                                                                  | Depends on              | Parallel with               | Status                                                        |
+| ----- | ---------------------------------------------------------------------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------------- |
+|       | **Wave 0: set up**                                                                       |                         |                             |                                                               |
+| P00   | [Set up the refactor](packages/P00-setup.md)                                             | none                    | none                        | done                                                          |
+| P01   | [Delete dead code](packages/P01-dead-code.md)                                            | P00                     | none                        | done                                                          |
+|       | **Wave 1: the basics** (audit R2)                                                        |                         |                             |                                                               |
+| P02   | [One set of basic types; money](packages/P02-basic-types.md)                             | P01                     | none                        | done                                                          |
+| P03   | [One current-price query](packages/P03-current-price.md)                                 | P02                     | P04                         | done                                                          |
+| P04   | [One card-type helper](packages/P04-card-types.md)                                       | P02, decision 1         | P03                         | done                                                          |
+|       | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                           |                         |                             |                                                               |
+| P05   | [Capability and binding framework](packages/P05-framework.md)                            | P03, P04                | none                        | done                                                          |
+| P06   | [Deck read capabilities](packages/P06-deck-reads.md)                                     | P05                     | P07, P08                    | done                                                          |
+| P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)               | P05                     | P06, P08                    | done                                                          |
+| P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                                  | P07a                    | P08                         | done                                                          |
+| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                               | P07b                    | P08                         | done                                                          |
+| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)                    | P07a                    | P08                         | done                                                          |
+| P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                               | P07b, P07c              | P08                         | done                                                          |
+| P08   | [Deck edits and previews](packages/P08-edits-previews.md)                                | P05                     | P06, P07                    | done                                                          |
+| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                        | P06, P07a–d, P07b2, P08 | none                        | done                                                          |
+|       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                         |                             |                                                               |
+| P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | done                                                          |
+| P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                    | P09d                        | done                                                          |
+| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | done                                                          |
+|       | **Wave 3: rules as data** (audit R4, R5)                                                 |                         |                             |                                                               |
+| P10   | [Formats as a strategy table](packages/P10-formats.md)                                   | P09c                    | P11–P14                     | in progress (agent)                                           |
+| P11   | [Card features: model and storage](packages/P11-card-features.md)                        | P09c, decision 3        | P10                         | design accepted; build waits for the plan review (2026-11-19) |
+| P12   | [Mana and casting from features](packages/P12-mana-casting.md)                           | P11                     | P10, P13, P14               | free                                                          |
+| P13   | [Tags, themes and signals](packages/P13-tags-signals.md)                                 | P11                     | P10, P12, P14               | free                                                          |
+| P14   | [Lands and draft cards from features](packages/P14-lands-drafts.md)                      | P11                     | P10, P12, P13               | free                                                          |
+|       | **Wave 4: merge parallel implementations** (audit R6) · milestone 2                      |                         |                             |                                                               |
+| P15   | [One opening-hand engine](packages/P15-opening-hands.md)                                 | P12, P14                | P16, P17                    | free                                                          |
+| P16   | [One mana curve](packages/P16-mana-curve.md)                                             | P10, decision 2         | P15, P17                    | done                                                          |
+| P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                    | P15, P16                    | done                                                          |
+|       | **Wave 5: structure** (audit R7–R9) · milestone 3 (final)                                |                         |                             |                                                               |
+| P18   | [Split `decks` by responsibility](packages/P18-split-decks.md)                           | P10–P17, decision 4     | none                        | free (decision 4 answered)                                    |
+| P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                    | any of waves 3–4 except P16 | done                                                          |
+| P20   | [Responsibility check for other modules; large files](packages/P20-large-files.md)       | P18                     | P21                         | free                                                          |
+| P21   | [Naming sweep and docs](packages/P21-naming-docs.md)                                     | P18                     | P20                         | free                                                          |
+| P22   | [Review and consolidate the design docs](packages/P22-design-docs.md)                    | P18                     | P20, P21                    | free                                                          |
 
 ```mermaid
 flowchart LR
@@ -140,9 +140,14 @@ and by-eye checks the packages couldn't do).
    behaviour?
 8. (P19) **Reads that find nothing** ("not found or not yours") show nothing, as before. Should
    any of them show the player an error instead?
-9. (P11, tududi task 248) **Design doc 66's ten open questions** (section 12 of
-   `docs/design/66-card-features.md` on branch `refactor/P11-card-features`): accept the proposed
-   answers or choose per question. P11 waits for this.
+9. (P11, tududi task 248) **Design doc 66's ten open questions.** **Answered (2026-11-19):** the
+   proposed answer to all ten (one row per oracle card, each face recognized and merged, one ramp
+   tag plus a tapped-source feature, rituals are ramp, Scryfall's keywords, themes as the signal
+   vocabulary, both token sources, declared and recognized cost reducers, a stored land-cycle
+   array, phrase mining reads plain text). On storage the user asked what one row per card would
+   lose: nothing. Card text, types, produced mana, keywords and Game Changer status never differ
+   between printings; legalities, prices, art and finishes stay per printing. See doc 66,
+   section 12.
 
 ## Decisions made
 
