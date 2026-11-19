@@ -127,7 +127,7 @@ export function inMemoryAccessTokenRepository(): AccessTokenRepository {
   };
 }
 
-export function inMemoryOAuthRepository(): OAuthRepository {
+function inMemoryOAuthRepository(): OAuthRepository {
   const clients = new Map<string, OAuthClient>();
   const codes = new Map<string, { code: AuthorizationCode; used: boolean }>();
 

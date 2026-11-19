@@ -17,7 +17,7 @@ function inPool(draft: Draft, seatNumber: number, ref: CardRef): boolean {
 }
 
 /** Moves on to the next broker, or finishes the draft (pools are final, CR 905.1d). */
-export function nextDeal(draft: Draft, ctx: StepContext): Draft {
+function nextDeal(draft: Draft, ctx: StepContext): Draft {
   const [next, ...waiting] = draft.deals?.waiting ?? [];
   if (next === undefined) {
     return {

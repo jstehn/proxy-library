@@ -29,13 +29,7 @@ export type {
   ComprehensiveRuleRow,
   WpnGateway,
 } from "./application/ports";
-export {
-  cleanCardText,
-  EMBEDDING_DIMS,
-  EMBEDDING_MODEL,
-  EMBEDDING_TEXT_VERSION,
-} from "./domain/embedding-text";
-export { commanderSlug } from "./domain/edhrec";
+export { EMBEDDING_DIMS, EMBEDDING_MODEL, EMBEDDING_TEXT_VERSION } from "./domain/embedding-text";
 export type { SyncSummary } from "./application/sync";
 export {
   FINISHES,
@@ -62,7 +56,6 @@ export {
   printingCards,
   printingDetail,
   recentSyncRuns,
-  SEARCH_PAGE_SIZE,
   searchPrintings,
   setPrintings,
 } from "./queries/catalog";

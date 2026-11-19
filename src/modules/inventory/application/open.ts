@@ -183,7 +183,7 @@ export function makeOpenItem(dependencies: InventoryDependencies) {
 }
 
 /** The most items one "open all" may open, counting everything inside (a case of boxes). */
-export const OPEN_ALL_LIMIT = 500;
+const OPEN_ALL_LIMIT = 500;
 
 /**
  * Opens items and then everything that comes out of them (a box's packs, a bundle's packs and

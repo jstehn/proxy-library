@@ -15,7 +15,7 @@ function pairKey(a: UserId, b: UserId): string {
   return a < b ? `${a}::${b}` : `${b}::${a}`;
 }
 
-export function fakeProfileRepository(
+function fakeProfileRepository(
   initial: readonly PlayerProfile[] = [],
 ): ProfileRepository & { all(): PlayerProfile[] } {
   const map = new Map<string, PlayerProfile>(initial.map((p) => [p.userId, p]));
@@ -32,7 +32,7 @@ export function fakeProfileRepository(
   };
 }
 
-export function fakeFriendshipRepository(
+function fakeFriendshipRepository(
   initial: readonly Friendship[] = [],
 ): FriendshipRepository & { all(): Friendship[] } {
   const map = new Map<string, Friendship>(
@@ -61,7 +61,7 @@ export function fakeFriendshipRepository(
   };
 }
 
-export function fakePlayerLookup(activeIds: Iterable<UserId>): PlayerLookup {
+function fakePlayerLookup(activeIds: Iterable<UserId>): PlayerLookup {
   const active = new Set<string>(activeIds);
   return {
     async isActivePlayer(userId) {
@@ -70,7 +70,7 @@ export function fakePlayerLookup(activeIds: Iterable<UserId>): PlayerLookup {
   };
 }
 
-export function fakeShowcaseValidator(options?: {
+function fakeShowcaseValidator(options?: {
   ownedSharedDecks?: ReadonlyArray<{ ownerId: UserId; deckId: DeckId }>;
   existingPrintings?: Iterable<PrintingId>;
 }): ShowcaseValidator {

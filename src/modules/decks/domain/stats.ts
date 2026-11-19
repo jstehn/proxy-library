@@ -169,14 +169,14 @@ export function suggestedLands(format: string): number {
 export const TARGETED_TAGS = ["ramp", "draw", "removal", "wipe"] as const satisfies readonly Tag[];
 export type TargetedTag = (typeof TARGETED_TAGS)[number];
 
-export const COMMANDER_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
+const COMMANDER_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
   ramp: 10,
   draw: 10,
   removal: 8,
   wipe: 3,
 };
 
-export const SIXTY_CARD_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
+const SIXTY_CARD_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
   ramp: 4,
   draw: 6,
   removal: 6,

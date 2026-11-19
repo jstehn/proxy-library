@@ -82,7 +82,7 @@ export function inMemoryEconomySettingsRepository(
   };
 }
 
-export function inMemoryPlayerDirectory(playerIds: string[]): PlayerDirectory {
+function inMemoryPlayerDirectory(playerIds: string[]): PlayerDirectory {
   const ids = playerIds.map((id) => UserId.of(id));
   return {
     async exists(userId) {

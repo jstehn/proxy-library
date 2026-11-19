@@ -15,8 +15,6 @@ export type {
 export {
   MAX_QUANTITY,
   PRICING_MODES,
-  productKind,
-  resaleFloor,
   storePrice,
   type PriceInputs,
   type PricingMode,
@@ -33,7 +31,7 @@ export {
   type SingleReceipt,
 } from "./application/singles";
 export type { PricesChanged } from "./domain/errors";
-export { DEFAULT_BUYLIST_RATE_BPS, payoutPerCopy } from "./domain/singles";
+export { payoutPerCopy } from "./domain/singles";
 export {
   MAX_LIST_LINES,
   type Candidate,
@@ -57,7 +55,6 @@ export {
   productPrices,
   storePage,
   storeSearch,
-  storeSets,
   type FeaturedArt,
   type KindPriceRow,
   type ProductForSale,

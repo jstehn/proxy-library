@@ -126,7 +126,7 @@ const CURVE_BUCKET_SHARES: Readonly<Record<CurveBucket, number>> = {
 
 const STORE_PRICE_FLOOR_CENTS = 25;
 
-export function curveBucket(manaValue: number): CurveBucket {
+function curveBucket(manaValue: number): CurveBucket {
   if (manaValue <= 2) return "1-2";
   if (manaValue === 3) return "3";
   if (manaValue === 4) return "4";

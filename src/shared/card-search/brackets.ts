@@ -16,7 +16,7 @@ const rule = (source: string) => new RegExp(source, "i");
 /** One text rule: the flag and the patterns that find it (reminder text removed). */
 type BracketTextRule = Readonly<{ flag: Exclude<BracketFlag, "gameChanger">; patterns: RegExp[] }>;
 
-export const BRACKET_TEXT_RULES: readonly BracketTextRule[] = [
+const BRACKET_TEXT_RULES: readonly BracketTextRule[] = [
   {
     // Mass land denial, including Blood Moon and Back to Basics (design doc 31, decision 2).
     flag: "landDenial",

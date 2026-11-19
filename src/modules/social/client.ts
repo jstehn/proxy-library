@@ -3,7 +3,6 @@ export type { ViewerRelation } from "./domain/friendship";
 export {
   MANA_COLORS,
   MAX_BIO_LENGTH,
-  MAX_SHOWCASE_CARDS,
   VISIBILITIES,
   type SectionVisibility,
 } from "./domain/profile";

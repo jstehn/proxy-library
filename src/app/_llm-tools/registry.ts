@@ -51,7 +51,7 @@ export const INSTRUCTIONS = [
   'Rules: prefer owned cards; move agreed cuts to "maybe" instead of deleting. Only cards in this catalog exist here. Keep Commander brackets (1-5) within target. Use manage_wishlist to save cards to buy later.',
 ].join("\n");
 
-export function findTool(name: string): LlmTool | undefined {
+function findTool(name: string): LlmTool | undefined {
   return TOOLS.find((tool) => tool.name === name);
 }
 

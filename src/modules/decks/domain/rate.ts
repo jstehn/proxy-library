@@ -119,7 +119,7 @@ export const RATING_WEIGHTS = {
 
 export type RatingWeights = { readonly [K in keyof typeof RATING_WEIGHTS]: number };
 
-export const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
+const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
   casual: {
     ...RATING_WEIGHTS,
     synergy: 0.35,

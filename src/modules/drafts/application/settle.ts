@@ -19,7 +19,7 @@ import type { DraftsServices } from "./ports";
 const cardKey = (packNumber: number, slot: number) => `${packNumber}/${slot}`;
 
 /** Every printing in a draft's packs, for one facts query. */
-export function printingsIn(draft: Draft): PrintingId[] {
+function printingsIn(draft: Draft): PrintingId[] {
   return [...new Set(draft.packs.flatMap((pack) => pack.cards.map((card) => card.printingId)))];
 }
 

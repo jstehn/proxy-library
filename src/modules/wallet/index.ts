@@ -24,7 +24,7 @@ export type {
 export type { UpdateEconomySettingsError } from "./application/update-economy-settings";
 export { MAX_ALLOWANCE_PERIOD_DAYS, nextPayday, type EconomySettings } from "./domain/economy";
 export type { InsufficientFunds } from "./domain/errors";
-export { MAX_ENTRY_AMOUNT, MAX_NOTE_LENGTH, type LedgerKind } from "./domain/ledger";
+export { type LedgerKind } from "./domain/ledger";
 export {
   currentEconomySettings,
   playerMoney,

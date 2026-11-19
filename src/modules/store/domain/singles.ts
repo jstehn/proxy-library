@@ -7,7 +7,7 @@ export const FULL_RATE_BPS = 10_000; // 100%: what buying pays
 export const DEFAULT_BUYLIST_RATE_BPS = 5_000; // 50%
 
 /** The least the store pays for a copy that has a price, so bulk commons can always be sold. */
-export const MINIMUM_PAYOUT = Cents.of(1);
+const MINIMUM_PAYOUT = Cents.of(1);
 
 /**
  * What the store pays for one copy: the market price at the buylist rate, rounded DOWN to the

@@ -17,7 +17,7 @@ const DEFAULT_CONSTRUCTED: FormatRuleSet = {
   commandZoneTaxPerCast: 0,
 };
 
-export const FORMAT_RULES: Readonly<Record<string, FormatRuleSet>> = {
+const FORMAT_RULES: Readonly<Record<string, FormatRuleSet>> = {
   commander: {
     id: "commander",
     freeFirstMulligan: true,

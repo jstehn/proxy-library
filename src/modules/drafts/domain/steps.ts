@@ -695,7 +695,7 @@ export function dealDeadline(draft: Draft, deal: Deal, now: Date): Deal {
  * After any change: pass on what must be passed on, end rounds (and the draft, once nobody owes a
  * color choice), and move deadlines.
  */
-export function settleTable(draft: Draft, ctx: StepContext): Draft {
+function settleTable(draft: Draft, ctx: StepContext): Draft {
   let next = draft;
   for (let guard = 0; guard < 10 && next.status === "drafting"; guard += 1) {
     next = passOnSkipped(next, ctx);

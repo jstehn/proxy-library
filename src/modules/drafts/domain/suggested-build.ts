@@ -18,8 +18,8 @@ import type { DraftCard } from "./draft";
 // pool's two main colors, 17 basic lands split by how many mana symbols of each color the spells
 // show, and everything else on the sideboard. A starting point to edit, not a final answer.
 
-export const DECK_SIZE = 40;
-export const SPELLS = 23;
+const DECK_SIZE = 40;
+const SPELLS = 23;
 /** Dual lands in your colors take the place of basics, up to this many. */
 const MAX_DUALS = 3;
 

@@ -34,7 +34,7 @@ export type RealCollectionFilter = Readonly<{
   page: number; // from 1
 }>;
 
-export const REAL_COLLECTION_PAGE_SIZE = 60;
+const REAL_COLLECTION_PAGE_SIZE = 60;
 
 export type RealCollectionRow = Readonly<{
   printingId: string;

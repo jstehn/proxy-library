@@ -18,14 +18,7 @@ export {
   type Trades,
 } from "./application/trades";
 export type { Shortfall } from "./domain/errors";
-export {
-  MAX_CARD_QUANTITY,
-  MAX_MESSAGE_LENGTH,
-  MAX_MONEY,
-  TradeId,
-  type TradeItem,
-  type TradeSide,
-} from "./domain/trade";
+export { TradeId, type TradeItem, type TradeSide } from "./domain/trade";
 export {
   tradesFor,
   tradesWaitingForYou,

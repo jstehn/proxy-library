@@ -44,7 +44,7 @@ export type ActivityEvent =
 /** Events about a player's own library, which a reset forgets (design docs 12 and 21). */
 export const LIBRARY_EVENT_KINDS = ["pull", "purchase", "deckShared"] as const;
 
-export const NOTABLE_PRICE_CENTS = 500;
+const NOTABLE_PRICE_CENTS = 500;
 
 /** Rarities too common for the feed: every pack has a rare, so a plain rare isn't news. */
 const EVERYDAY_RARITIES: readonly string[] = ["common", "uncommon", "rare"];

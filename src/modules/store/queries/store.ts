@@ -132,7 +132,7 @@ async function featuredArt(db: DbExecutor, setCodes: readonly string[]) {
 }
 
 /** Enabled sets with at least one product for sale, newest first. */
-export async function storeSets(db: DbExecutor, query?: string): Promise<StoreSet[]> {
+async function storeSets(db: DbExecutor, query?: string): Promise<StoreSet[]> {
   const trimmed = (query ?? "").trim();
   const pattern = `%${trimmed.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
   const filter =

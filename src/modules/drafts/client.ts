@@ -2,9 +2,6 @@
 // Server code imports index.ts instead.
 export {
   abilityOf,
-  COLORS,
-  creatureTypes,
-  isConspiracyLine,
   isCreatureLine,
   type CardAbility,
   type CardRef,

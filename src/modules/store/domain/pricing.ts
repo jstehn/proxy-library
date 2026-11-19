@@ -91,7 +91,7 @@ export function storePrice(inputs: PriceInputs): StorePrice | null {
     : { price: listPrice, listPrice, isRaised: false };
 }
 
-export const MAX_PRICE = Cents.of(1_000_000); // $10,000.00
+const MAX_PRICE = Cents.of(1_000_000); // $10,000.00
 export const MAX_QUANTITY = 24;
 
 /** A price an admin typed: at least $0.01 and at most $10,000 (rule 8). */

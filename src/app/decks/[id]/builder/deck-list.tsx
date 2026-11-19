@@ -597,11 +597,3 @@ function LineControls(props: {
     </span>
   );
 }
-
-/** Board names as the builder shows them. */
-export const BOARD_LABELS: Record<Board, string> = {
-  commander: "Commander",
-  main: "Main deck",
-  side: "Sideboard",
-  maybe: "Maybeboard",
-};

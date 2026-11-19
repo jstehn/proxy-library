@@ -94,7 +94,7 @@ export function parseAgeMonths(text: string | null): number | null {
  * Balances popularity (`log10(views)`) with recency decay (`1 / (1 + ageMonths / 36)`)
  * so recent popular guides beat stale or low-view uploads while standout classics remain competitive.
  */
-export function scoreBalancedResult(result: YouTubeSearchResult): number {
+function scoreBalancedResult(result: YouTubeSearchResult): number {
   const views = parseViewCount(result.viewCountText) ?? 100;
   const popularity = Math.log10(Math.max(10, views));
   const ageMonths = parseAgeMonths(result.publishedText) ?? 24;
@@ -102,7 +102,7 @@ export function scoreBalancedResult(result: YouTubeSearchResult): number {
   return popularity * recencyWeight;
 }
 
-export function defaultMinDurationSec(kind: DeckTechSearchKind): number {
+function defaultMinDurationSec(kind: DeckTechSearchKind): number {
   return kind === "deck_tech" || kind === "guide" ? 180 : 0;
 }
 

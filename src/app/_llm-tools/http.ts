@@ -10,13 +10,13 @@ import type { ToolContext } from "./tool";
 // then hand the request to the MCP server or run one tool.
 
 /** The caller, from `Authorization: Bearer pl_…`, or null (rule 1: every failure looks alike). */
-export async function toolContextFor(request: Request): Promise<ToolContext | null> {
+async function toolContextFor(request: Request): Promise<ToolContext | null> {
   const container = getContainer();
   const found = await container.accounts.actorFromToken(request.headers.get("authorization"));
   return found === null ? null : { actor: found.actor, scopes: found.scopes, container };
 }
 
-export function unauthorized(): Response {
+function unauthorized(): Response {
   return Response.json(
     {
       error: {

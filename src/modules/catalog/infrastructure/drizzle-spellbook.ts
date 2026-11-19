@@ -1,7 +1,6 @@
 import { max } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import type { SpellbookRepository } from "../application/ports";
-import type { SpellbookTwoCardCombo } from "../domain/spellbook";
 import { spellbookTwoCardCombos } from "./schema";
 
 const INSERT_BATCH_SIZE = 500;

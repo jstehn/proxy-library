@@ -17,7 +17,7 @@ const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 /** A color of Magic: "W", "U", "B", "R" or "G". */
 type Color = z.infer<typeof ColorSchema>;
 
-export const BROWSE_PAGE_SIZE = 60;
+const BROWSE_PAGE_SIZE = 60;
 export const BROWSE_SORTS = ["name", "manaValue", "color", "type", "newest"] as const;
 export type BrowseSort = (typeof BROWSE_SORTS)[number];
 /** What the grid searches: the cards you own, or every card for sale (design doc 29). */

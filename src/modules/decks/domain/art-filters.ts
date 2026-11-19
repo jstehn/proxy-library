@@ -59,9 +59,9 @@ function blur(image: GrayPixels): GrayPixels {
 }
 
 /** Edge strengths below this are dropped (paper texture, soft shading); fixed (decision 3). */
-export const EDGE_THRESHOLD = 40;
+const EDGE_THRESHOLD = 40;
 /** Edge strengths above this print solid black. */
-export const EDGE_FULL = 220;
+const EDGE_FULL = 220;
 
 /**
  * Line art from a picture with the Sobel filter: dark lines where brightness changes sharply,

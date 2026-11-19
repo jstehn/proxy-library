@@ -4,7 +4,7 @@ import { marketValue, type FactsLookup, type PackCard, type PrintingFacts } from
 // Reveal order: "build suspense" (design doc 05, rule 8).
 
 /** Which group a card is revealed in: 1 first, 5 last. */
-export function revealTier(card: PackCard, printing: PrintingFacts): number {
+function revealTier(card: PackCard, printing: PrintingFacts): number {
   const isCommonOrUncommon = printing.rarity === "common" || printing.rarity === "uncommon";
   if (!isCommonOrUncommon) return 5; // rares, mythics, specials, bonus cards: any finish
   if (card.finish !== "nonfoil") return 4; // foil commons and uncommons

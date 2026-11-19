@@ -35,7 +35,7 @@ import {
 } from "./sim-pipeline";
 import { isLand } from "./stats";
 
-export { EMPTY_MANA_POOL, type ManaColor, type ManaPool, type ParsedManaCost } from "./mana";
+export { type ManaColor, type ManaPool, type ParsedManaCost } from "./mana";
 export type {
   BattlefieldPermanent,
   EndStepTrigger,
