@@ -14,7 +14,6 @@ import {
 } from "./tools/consolidated";
 import { createDeck } from "./tools/decks";
 import { findCombosForDeckTool } from "./tools/library";
-import { manageWishlist } from "./tools/wishlist";
 import { redditResearchTool } from "./tools/reddit";
 import { youtubeResearchTool } from "./tools/youtube";
 
@@ -34,7 +33,6 @@ const LEGACY_TOOLS: readonly LlmTool[] = [
   rulesLookupTool,
   youtubeResearchTool,
   redditResearchTool,
-  manageWishlist,
 ];
 
 /** Bindings first; an old tool is served only when no binding has its name. */

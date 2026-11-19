@@ -29,7 +29,15 @@ import {
   makeListDecks,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishesForCard, wishlistAnswers } from "@/modules/wishlist";
+import {
+  makeAddWishes,
+  makeRemoveWishes,
+  makeWishlistView,
+  WishId,
+  wishesForCard,
+  wishlistAnswers,
+  type Wishlist,
+} from "@/modules/wishlist";
 import type { DbExecutor } from "@/shared/db";
 import { ok, type Cents, type Clock, type UserId } from "@/shared/kernel";
 
@@ -41,10 +49,11 @@ type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  wishlist: Pick<Wishlist, "addWish" | "removeWish">;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet } = dependencies;
+  const { db, clock, wallet, wishlist } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -77,6 +86,32 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     checkOwnedCards: async (request: { userId: UserId; names: readonly string[] }) =>
       ok(await checkOwnedCards(db, request.userId, request.names)),
+    wishlistView: makeWishlistView({
+      answers: (userId) => wishlistAnswers(db, userId),
+      outlook: async (userId) => {
+        const [balance, settings] = await Promise.all([
+          wallet.refreshWallet(userId),
+          currentEconomySettings(db),
+        ]);
+        return {
+          balance,
+          allowance: settings.allowance,
+          allowancePeriodDays: settings.allowancePeriodDays,
+          nextPayday: nextPayday(
+            { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
+            clock.now(),
+          ),
+        };
+      },
+    }),
+    addWishes: makeAddWishes({
+      findCard: (nameOrId) => findCard(db, nameOrId),
+      addWish: (actor, input) => wishlist.addWish(actor, input),
+    }),
+    removeWishes: makeRemoveWishes(
+      { removeWish: (actor, wishId) => wishlist.removeWish(actor, wishId) },
+      (value) => WishId.of(value),
+    ),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

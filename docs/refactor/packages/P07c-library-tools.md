@@ -37,4 +37,27 @@ reference outputs.
 
 ## Handoff
 
-(empty)
+**Done so far (2 of 4 tools):**
+
+- `get_cards` is a binding (`bindings/get-cards.ts`, `present/get-cards.ts`) over two capabilities:
+  `lookUpCards` (`catalog/application/card-lookup.ts`, readers for the card, price trend, copies,
+  decks, wishes, store printings; `catalog/queries/store-printings.ts` is the one
+  "store printings of a card" read) and `checkOwnedCards` (a thin forward in
+  `capabilities.ts`: it has no logic to test; it becomes a real capability when P18 moves the
+  query). The old `get_cards`, its internal `getCard` and `printingsFor` are deleted.
+- `manage_wishlist` is a binding (`bindings/manage-wishlist.ts`, `present/wishlist.ts`) over
+  `wishlistView`, `addWishes` and `removeWishes` (`wishlist/application/wishlist-tools.ts`, fake
+  readers in `wishlist-tools.test.ts`). The old tool file `tools/wishlist.ts` and the dead
+  `getAccountCompact` are deleted.
+- **Checked:** for both, the new binding and the old tool gave identical JSON over every input
+  tried (get_cards: compact, price, full, owned, owned with price, a missing card; manage_wishlist:
+  list, empty add, empty remove, add with a missing card and two invalid finishes, then list and
+  remove). Reference outputs unchanged. `pnpm check` and the 278 integration tests pass.
+
+**Notes:** `registry.test.ts` now sorts the write tools (bindings are served first, so the
+order changed). The comparison scripts were temporary and are deleted.
+
+**Not done:** `find_replacements` (with the builder's similar and budget actions) and
+`search_cards` (with `browseAction`, `cardDetailAction`). `search_cards` calls
+`analyzeCards`, `semanticSearchForDeck`, `searchForDeck` and `searchCards`; `find_replacements`
+calls `similarCards` and `budgetReplacements` (both in `queries/` until P18 moves them).

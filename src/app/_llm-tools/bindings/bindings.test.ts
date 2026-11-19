@@ -116,6 +116,7 @@ describe("the bindings list", () => {
       "get_cards",
       "get_deck",
       "list_decks",
+      "manage_wishlist",
     ]);
     expect(getAccountBinding.input.shape).toEqual({});
     expect(listDecksBinding.input.shape).toEqual({});

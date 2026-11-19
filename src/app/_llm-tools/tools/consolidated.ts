@@ -26,7 +26,6 @@ import {
 import {
   budgetReplacementsTool,
   checkInteractionTool,
-  getAccount,
   getRulingsTool,
   lookupRulesTool,
   semanticSearchForDeckTool,
@@ -34,30 +33,8 @@ import {
 } from "./library";
 import { compactMoneyFields, stripProvenance } from "../present/money";
 import { analyzeCards, searchCards, searchForDeckTool } from "./search";
-import { compactWishlistPayload } from "./wishlist";
 
 const deckIdField = z.number().int().positive().describe("Deck id from list_decks.");
-
-/** 1. get_account */
-export const getAccountCompact = defineTool({
-  name: "get_account",
-  title: "My account",
-  description:
-    "Returns your play-money balance (cents), allowance, collection totals, deck/wish counts, and optionally your wishlist.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    includeWishlist: z.boolean().default(false).describe("Include compact wishlist lines."),
-  }),
-  async run(context, input) {
-    const base = await getAccount.run(context, {});
-    if (!base.ok) return base;
-    const compact = compactMoneyFields(base.value) as Record<string, unknown>;
-    if (!input.includeWishlist) return done(compact);
-    const wishlist = await compactWishlistPayload(context);
-    return done({ ...compact, wishlist });
-  },
-});
 
 /** 3. update_deck (merges update_deck, set_deck_profile, set_primer, deck_sources, delete_deck) */
 export const updateDeckConsolidated = defineTool({

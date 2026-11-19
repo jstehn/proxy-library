@@ -27,12 +27,14 @@ describe("the tool registry", () => {
   });
 
   it("writes only decks and the wishlist, with exactly these tools (rule 5)", () => {
-    const writes = TOOLS.filter((tool) => !tool.readOnly).map((tool) => [tool.name, tool.scope]);
+    const writes = TOOLS.filter((tool) => !tool.readOnly)
+      .map((tool) => [tool.name, tool.scope])
+      .sort();
     expect(writes).toEqual([
       ["create_deck", "decks:write"],
-      ["update_deck", "decks:write"],
       ["edit_deck", "decks:write"],
       ["manage_wishlist", "wishlist:write"],
+      ["update_deck", "decks:write"],
     ]);
     for (const tool of TOOLS.filter((each) => each.readOnly)) expect(tool.scope).toBe("read");
   });
