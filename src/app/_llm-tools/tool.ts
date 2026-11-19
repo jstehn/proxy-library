@@ -12,6 +12,8 @@ import { Cents } from "@/shared/kernel";
 export type ToolContext = Readonly<{
   actor: Actor;
   scopes: readonly Scope[];
+  /** Whether the token's scopes cover `scope`. */
+  allows(scope: Scope): boolean;
   container: Core;
 }>;
 

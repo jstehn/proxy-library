@@ -347,6 +347,35 @@ export default defineConfig([
     rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
   },
 
+  // Adapters stay thin (ADR 0026): tool bindings and server actions parse input, call capabilities
+  // and present the answer. Logic and data access live in the modules.
+  {
+    files: ["src/app/_llm-tools/bindings/**/*.ts", "src/app/**/actions.ts"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^@/modules/[^/]+/(domain|queries|application|infrastructure)",
+              message:
+                "An adapter imports a module only through its index.ts or client.ts (ADR 0026).",
+            },
+            {
+              regex: "^@/shared/(db|card-search/sql)",
+              message: "An adapter never reads the database. Call a capability (ADR 0026).",
+            },
+            {
+              regex: "(^|/)_llm-tools/tools/",
+              message: "An adapter never calls another adapter (ADR 0026).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Configuration is read in exactly one place.
   {
     files: SOURCE,

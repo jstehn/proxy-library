@@ -46,4 +46,31 @@ new `src/app/_llm-tools/bindings/`, `src/server/core.ts`, `eslint.config.mjs`.
 
 ## Handoff
 
-(empty)
+**Done:** ADR 0026 (status Proposed: needs the user's approval), `defineBinding`
+(`src/app/_llm-tools/binding.ts`), `bindings/{list-decks,get-account,index}.ts`, the registry
+serving `BINDINGS` first then `LEGACY_TOOLS`, `src/server/capabilities.ts` (wired as
+`core.capabilities`), the `action(schema, handler)` helper (`src/server/action.ts`, `makeAction`
+for tests; `action-instance.ts` is the real one), and an adapter lint rule (bindings and
+`actions.ts` may not import `domain|queries|application|infrastructure`, `@/shared/db`,
+`card-search/sql` or `tools/`). Capabilities: `makeListDecks` (decks) and `makeGetAccountOverview`
+(accounts, other modules' readers passed in as ports). Unit tests with fakes cover both
+capabilities, both bindings and `action`. Reference outputs for `list_decks` and `get_account` are
+unchanged. Source lines 91,012 → 91,358 (the framework; this falls as P06–P09 delete old tools).
+
+**How to follow it:** the "How to add a capability and a binding" section of ADR 0026.
+
+**Deviations and notes:**
+
+- `get_account` lost its `includeWishlist` flag. `manage_wishlist` (action `list`) returns the same
+  payload, so it was redundant; the description points there. P08 or the wishlist port can
+  restore it if wanted.
+- `ToolContext` gained `allows(scope)`, so `registry.ts` no longer imports `accounts`. `http.ts`
+  still imports `allows` from `@/modules/accounts` (to build that function) and `getContainer`.
+  The transports import no module otherwise; the brief's "no module imports" is met except this
+  one line.
+- A capability that needs another module's data (account overview) takes ports, wired in
+  `capabilities.ts`, rather than importing that module (ADR 0009).
+- The `action` helper returns `Result<Output, InvalidInput>`. No action is moved onto it yet
+  (P06–P09 do that; the lint rule already applies to every `actions.ts`).
+- `optimize.test.ts` timed out once under the parallel `pnpm check` and passed on rerun (a slow
+  test, unrelated).

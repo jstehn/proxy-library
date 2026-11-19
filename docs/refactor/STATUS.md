@@ -9,36 +9,36 @@
 Waves run in order. Inside a wave, packages marked parallel can run at the same time, each in
 its own worktree.
 
-| Id  | Package                                                                            | Depends on          | Parallel with               | Status               |
-| --- | ---------------------------------------------------------------------------------- | ------------------- | --------------------------- | -------------------- |
-|     | **Wave 0: set up**                                                                 |                     |                             |                      |
-| P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | done                 |
-| P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | done                 |
-|     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                      |
-| P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | done                 |
-| P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | done                 |
-| P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | done                 |
-|     | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                     |                     |                             |                      |
-| P05 | [Capability and binding framework](packages/P05-framework.md)                      | P03, P04            | none                        | free                 |
-| P06 | [Deck read capabilities](packages/P06-deck-reads.md)                               | P05                 | P07, P08                    | free                 |
-| P07 | [Candidate pool and store quote](packages/P07-candidates.md)                       | P05                 | P06, P08                    | free                 |
-| P08 | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                 | P06, P07                    | free                 |
-| P09 | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07, P08       | none                        | free                 |
-|     | **Wave 3: rules as data** (audit R4, R5)                                           |                     |                             |                      |
-| P10 | [Formats as a strategy table](packages/P10-formats.md)                             | P09                 | P11–P14                     | free                 |
-| P11 | [Card features: model and storage](packages/P11-card-features.md)                  | P09, decision 3     | P10                         | blocked (decision 3) |
-| P12 | [Mana and casting from features](packages/P12-mana-casting.md)                     | P11                 | P10, P13, P14               | free                 |
-| P13 | [Tags, themes and signals](packages/P13-tags-signals.md)                           | P11                 | P10, P12, P14               | free                 |
-| P14 | [Lands and draft cards from features](packages/P14-lands-drafts.md)                | P11                 | P10, P12, P13               | free                 |
-|     | **Wave 4: merge parallel implementations** (audit R6) · milestone 2                |                     |                             |                      |
-| P15 | [One opening-hand engine](packages/P15-opening-hands.md)                           | P12, P14            | P16, P17                    | free                 |
-| P16 | [One mana curve](packages/P16-mana-curve.md)                                       | P10, decision 2     | P15, P17                    | blocked (decision 2) |
-| P17 | [One way to show a collection](packages/P17-collections.md)                        | P09                 | P15, P16                    | free                 |
-|     | **Wave 5: structure** (audit R7–R9) · milestone 3 (final)                          |                     |                             |                      |
-| P18 | [Split `decks` by responsibility](packages/P18-split-decks.md)                     | P10–P17, decision 4 | none                        | blocked (decision 4) |
-| P19 | [Break up the deck builder UI](packages/P19-builder-ui.md)                         | P09                 | any of waves 3–4 except P16 | free                 |
-| P20 | [Responsibility check for other modules; large files](packages/P20-large-files.md) | P18                 | P21                         | free                 |
-| P21 | [Naming sweep and docs](packages/P21-naming-docs.md)                               | P18                 | P20                         | free                 |
+| Id  | Package                                                                            | Depends on          | Parallel with               | Status                           |
+| --- | ---------------------------------------------------------------------------------- | ------------------- | --------------------------- | -------------------------------- |
+|     | **Wave 0: set up**                                                                 |                     |                             |                                  |
+| P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | done                             |
+| P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | done                             |
+|     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                                  |
+| P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | done                             |
+| P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | done                             |
+| P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | done                             |
+|     | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                     |                     |                             |                                  |
+| P05 | [Capability and binding framework](packages/P05-framework.md)                      | P03, P04            | none                        | review (needs ADR 0026 approval) |
+| P06 | [Deck read capabilities](packages/P06-deck-reads.md)                               | P05                 | P07, P08                    | free                             |
+| P07 | [Candidate pool and store quote](packages/P07-candidates.md)                       | P05                 | P06, P08                    | free                             |
+| P08 | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                 | P06, P07                    | free                             |
+| P09 | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07, P08       | none                        | free                             |
+|     | **Wave 3: rules as data** (audit R4, R5)                                           |                     |                             |                                  |
+| P10 | [Formats as a strategy table](packages/P10-formats.md)                             | P09                 | P11–P14                     | free                             |
+| P11 | [Card features: model and storage](packages/P11-card-features.md)                  | P09, decision 3     | P10                         | blocked (decision 3)             |
+| P12 | [Mana and casting from features](packages/P12-mana-casting.md)                     | P11                 | P10, P13, P14               | free                             |
+| P13 | [Tags, themes and signals](packages/P13-tags-signals.md)                           | P11                 | P10, P12, P14               | free                             |
+| P14 | [Lands and draft cards from features](packages/P14-lands-drafts.md)                | P11                 | P10, P12, P13               | free                             |
+|     | **Wave 4: merge parallel implementations** (audit R6) · milestone 2                |                     |                             |                                  |
+| P15 | [One opening-hand engine](packages/P15-opening-hands.md)                           | P12, P14            | P16, P17                    | free                             |
+| P16 | [One mana curve](packages/P16-mana-curve.md)                                       | P10, decision 2     | P15, P17                    | blocked (decision 2)             |
+| P17 | [One way to show a collection](packages/P17-collections.md)                        | P09                 | P15, P16                    | free                             |
+|     | **Wave 5: structure** (audit R7–R9) · milestone 3 (final)                          |                     |                             |                                  |
+| P18 | [Split `decks` by responsibility](packages/P18-split-decks.md)                     | P10–P17, decision 4 | none                        | blocked (decision 4)             |
+| P19 | [Break up the deck builder UI](packages/P19-builder-ui.md)                         | P09                 | any of waves 3–4 except P16 | free                             |
+| P20 | [Responsibility check for other modules; large files](packages/P20-large-files.md) | P18                 | P21                         | free                             |
+| P21 | [Naming sweep and docs](packages/P21-naming-docs.md)                               | P18                 | P20                         | free                             |
 
 ```mermaid
 flowchart LR
