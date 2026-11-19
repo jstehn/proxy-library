@@ -45,11 +45,30 @@ These answers shape the revised plan. Questions without an answer yet are listed
 - **The AI-authorship note:** keep it clear and honest, lower in the README, not the first thing a
   reader sees.
 
+**The final questions (2026-11-19):**
+
+- **Dead and test-only code (P24): remove all of it** (items a to f). The owner will reimplement
+  anything that turns out to be needed.
+- **D1, one scorer: yes, if it's simpler.** Also, the MCP tools must not show scores or ranks: those
+  make heuristics sound authoritative. The tools are idea generators that surface cards to
+  consider, and their recommendations are often bad, so research and judgement matter. Tool output
+  is designed to use few tokens.
+- **D2, the type-line helper stays a plain function: yes.**
+- **D3, the simulator: remove the interactive goldfish feature.**
+  - Keep the server-side simulations that answer "can I cast X by turn Y?", with many runs: the
+    opening-hand and cast-on-curve simulations behind `draw_sample` and the scorecard.
+  - The plug-in structure was meant for cost reducers and rituals (such as Dark Ritual, which it
+    doesn't handle today). Keep that extension point as a small registry of effects, and drop
+    the injected options only tests use.
+- **D4, advice splits into scoring and building: yes.**
+- **D5, the rating weights were fitted from data.** The code says so, and names the script that fits
+  them.
+
 ## Still open
 
-- the licence choice
-- the query-layer detail
-- approving the revised plan
-- the dead-code list (P24, items a to f)
-- domain questions D1 to D5
-- the UI review's questions: `<img>` policy, custom error pages, colour tokens, dark-mode toggle
+- Approving the revised plan.
+- The UI review's four questions:
+  - the `<img>` policy
+  - custom error pages
+  - colour tokens
+  - a dark-mode toggle
