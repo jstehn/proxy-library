@@ -1,6 +1,6 @@
 # P09. Remaining tools and error text
 
-- **Branch:** `refactor/P09-remaining-tools` · **Depends on:** P06, P07a–c, P07b2, P08 · **Parallel with:** none
+- **Branch:** `refactor/P09-remaining-tools` · **Depends on:** P06, P07a–d, P07b2, P08 · **Parallel with:** none
 - **Audit:** doc 65 F2, F7, D8 · **Ends wave 2 → milestone 1**
 - **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (remaining rows) and [S7](../dedup-playbook.md#s7) · **Lines to remove:** about −800 to −1,200
 

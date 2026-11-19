@@ -26,7 +26,7 @@ its own worktree.
 | P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                         | P07b                    | P08                         | done                 |
 | P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)              | P07a (P07b for search)  | P08                         | free                 |
 | P08   | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                     | P06, P07                    | free                 |
-| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–c, P07b2, P08 | none                        | free                 |
+| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–d, P07b2, P08 | none                        | free                 |
 |       | **Wave 3: rules as data** (audit R4, R5)                                           |                         |                             |                      |
 | P10   | [Formats as a strategy table](packages/P10-formats.md)                             | P09                     | P11–P14                     | free                 |
 | P11   | [Card features: model and storage](packages/P11-card-features.md)                  | P09, decision 3         | P10                         | blocked (decision 3) |

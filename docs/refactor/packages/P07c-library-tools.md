@@ -1,5 +1,7 @@
 # P07c. Card and wishlist tools as bindings
 
+> **Done (2026-11-19) for `get_cards`, `manage_wishlist` and `find_replacements`.** `search_cards` moved to [P07d](P07d-search-cards.md).
+
 - **Branch:** `refactor/P07c-library-tools` · **Depends on:** P05, P07a (P07b for `search_cards` on the pool) · **Parallel with:** P08
 - **Audit:** doc 65 F6, D11
 - **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (`search_cards`, `get_cards`, `find_replacements`, `manage_wishlist` rows) · **Lines to remove:** about −500 to −800
