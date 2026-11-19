@@ -110,3 +110,17 @@ of old and new tool output.
 - [ ] **Play a short draft against the bots (P16):** the drafter now counts curve slots 0 to 7+ by
       rounding down, so its picks can differ a little from before. Nothing here is a bug; check they
       still look sensible.
+
+## Left by P17 (one way to show a collection)
+
+- [ ] **Run the integration tests for the shared collection SQL (P17).** `pnpm test:int
+tests/integration/singles.int.test.ts tests/integration/real-collection.int.test.ts
+tests/integration/card-search.int.test.ts`, plus whatever covers the card page's "owned" boxes and
+      the exports (`grep -l "exportRows\|ownedByOracle\|copiesOf" tests/integration`). Not run in the package
+      (shared database).
+- [ ] **Look at `/collection`, `/collection/real` and `/players/<id>/real` in dark mode and at phone
+      width (P17):** the grid, sections, the "In: deck" line (game tab only), filters, sort "Newest
+      first", pagination, and the export links.
+- [ ] **Download all three formats from `/api/export/collection` and `/api/export/real` (P17):**
+      file names (`collection*.csv/.txt`, `real-collection*.csv/.txt`), and the first and last acquired
+      dates (game: first and last arrival; real: when added, when changed).

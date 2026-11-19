@@ -1,13 +1,17 @@
 import { CardTile } from "@/app/_components/card-tile";
 import type { PrintingCard } from "@/modules/catalog";
-import type { RealCollectionRow } from "@/modules/real-collection";
+import type { CollectionRow } from "@/modules/collection";
 import { Cents } from "@/shared/kernel";
-import { FINISH_NAMES, sectionsOf } from "../shared";
+import { FINISH_NAMES, sectionsOf } from "@/ui/collection/options";
 
-/** A page of real cards in sections: the Real tab's grid, also shown read only to others. */
-export function RealCardGrid(props: {
-  rows: readonly RealCollectionRow[];
+/**
+ * A page of owned cards in sections: the Game and Real tabs' grid, and the real collection shown
+ * read only to others. `noteFor` adds a line under a card (the game tab shows its decks).
+ */
+export function CollectionCardGrid(props: {
+  rows: readonly CollectionRow[];
   cards: ReadonlyMap<string, PrintingCard>;
+  noteFor?: (printingId: string) => string | undefined;
 }) {
   return (
     <div className="flex flex-col gap-8">
@@ -26,6 +30,7 @@ export function RealCardGrid(props: {
                   isFoil={row.finish !== "nonfoil"}
                   href={`/cards/${row.printingId}`}
                   priceLine={`${row.quantity}× · ${FINISH_NAMES[row.finish]}${price}`}
+                  note={props.noteFor?.(row.printingId)}
                 />
               );
             })}
@@ -33,5 +38,24 @@ export function RealCardGrid(props: {
         </section>
       ))}
     </div>
+  );
+}
+
+/** The three export links of a collection; `path` is its export route. */
+export function ExportLinks(props: { path: string }) {
+  return (
+    <>
+      <a href={`${props.path}?format=moxfield`} className="underline">
+        Moxfield CSV
+      </a>{" "}
+      ·{" "}
+      <a href={`${props.path}?format=text`} className="underline">
+        text list
+      </a>{" "}
+      ·{" "}
+      <a href={`${props.path}?format=full`} className="underline">
+        full CSV
+      </a>
+    </>
   );
 }

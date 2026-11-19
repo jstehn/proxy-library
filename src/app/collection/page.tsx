@@ -1,18 +1,12 @@
 import Link from "next/link";
-import {
-  CardFilters,
-  filterValues,
-  oneOf,
-  pageNumber,
-  Pagination,
-  searchText,
-} from "@/app/_components/card-filters";
-import { CardTile } from "@/app/_components/card-tile";
+import { CardFilters, Pagination } from "@/app/_components/card-filters";
 import { type DeckRef } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
-import { FINISH_NAMES, SECTION_VALUES, SECTIONS, sectionsOf, SORT_VALUES, SORTS } from "./shared";
+import { SECTIONS, SORTS } from "@/ui/collection/options";
+import { CollectionCardGrid, ExportLinks } from "./card-grid";
+import { readCollectionQuery } from "./collection-query";
 import { CollectionTabs } from "./tabs";
 
 /** "In: Burn (4), Mono Red (2)", so you know which deck to pull a copy from. */
@@ -24,22 +18,10 @@ function deckNote(decks: readonly DeckRef[] | undefined): string | undefined {
 export default async function CollectionPage(props: PageProps<"/collection">) {
   const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
-  const values = filterValues(searchParams);
-  const page = pageNumber(searchParams);
-  const finish = oneOf(values.finish, ["", "nonfoil", "foil", "etched"] as const);
-  const isFiltered = ["q", "name", "set", "rarity", "color", "finish"].some((key) => key in values);
+  const { values, page, filter, isFiltered } = readCollectionQuery(searchParams);
 
   const [result, sets] = await Promise.all([
-    capabilities.collectionReads.page(actor.userId, {
-      search: searchText(values),
-      setCode: values.set,
-      rarity: values.rarity,
-      color: values.color,
-      finish: finish === "" ? undefined : finish,
-      sections: oneOf(values.sections, SECTION_VALUES),
-      sort: oneOf(values.sort, SORT_VALUES),
-      page,
-    }),
+    capabilities.collectionReads.page(actor.userId, filter),
     capabilities.catalogReads.enabledSets(),
   ]);
   const printingIds = result.rows.map((row) => row.printingId);
@@ -64,18 +46,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
           at market price{isFiltered && " (matching these filters)"}.
         </p>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Export everything:{" "}
-          <a href="/api/export/collection?format=moxfield" className="underline">
-            Moxfield CSV
-          </a>{" "}
-          ·{" "}
-          <a href="/api/export/collection?format=text" className="underline">
-            text list
-          </a>{" "}
-          ·{" "}
-          <a href="/api/export/collection?format=full" className="underline">
-            full CSV
-          </a>
+          Export everything: <ExportLinks path="/api/export/collection" />
         </p>
       </header>
 
@@ -102,30 +73,11 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
           .
         </p>
       ) : (
-        <div className="flex flex-col gap-8">
-          {sectionsOf(result.rows).map((section) => (
-            <section key={section.label || "all"} className="flex flex-col gap-3">
-              {section.label && <h2 className="text-lg font-medium">{section.label}</h2>}
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {section.rows.map((row) => {
-                  const printing = cards.get(row.printingId);
-                  if (printing === undefined) return null;
-                  const price = row.price === null ? "no price" : Cents.format(Cents.of(row.price));
-                  return (
-                    <CardTile
-                      key={`${row.printingId}/${row.finish}`}
-                      printing={printing}
-                      isFoil={row.finish !== "nonfoil"}
-                      href={`/cards/${row.printingId}`}
-                      priceLine={`${row.quantity}× · ${FINISH_NAMES[row.finish]}${price}`}
-                      note={deckNote(inDecks.get(row.printingId))}
-                    />
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <CollectionCardGrid
+          rows={result.rows}
+          cards={cards}
+          noteFor={(printingId) => deckNote(inDecks.get(printingId))}
+        />
       )}
       <Pagination action="/collection" values={values} page={page} pageCount={result.pageCount} />
     </main>

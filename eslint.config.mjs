@@ -61,7 +61,7 @@ const wiringFile = { element: { type: "module", fileInternalPath: "wiring.ts" } 
 const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
 // The card search language's pure half, and its SQL half (ADR 0017).
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
-const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql.ts" } };
+const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql*.ts" } };
 
 // --- no-restricted-syntax selectors ----------------------------------------------------
 const NONDETERMINISM = [
