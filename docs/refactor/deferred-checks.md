@@ -72,17 +72,17 @@ of old and new tool output.
 
 ## Left by P19 (builder UI split, by eye and in the browser)
 
-- [ ] **Run the e2e builder flows (P19).** `pnpm test:e2e tests/e2e/<the builder specs>` (or the
+- [x] **Done 2026-11-19, merge of P19, e2e database: full Playwright suite 26 of 26.** **Run the e2e builder flows (P19).** `pnpm test:e2e tests/e2e/<the builder specs>` (or the
       whole suite): nothing in the builder was driven in a browser in the package.
-- [ ] **Look at the builder in dark mode and at phone width (P19)**, with real data: the collection
+- [ ] **Partly done 2026-11-19, merge of P19, e2e database: dark mode, phone width, a 40-card draft deck: stats, curve, colors and roles fine, no horizontal scroll. Still open: real data and the keyboard shortcuts.** **Look at the builder in dark mode and at phone width (P19)**, with real data: the collection
       grid (filters, sort, card size S/M/L, "Show cards that don't fit", scrolling loads more),
       selecting a card from the grid and from the deck list (sheet sticks to the bottom on a wide
       screen, floats over the tab on a phone), arrow keys in the grid, Enter on the selected card,
       "+" and "-" for the quantity, "/" to search, "H" test hand, "S" suggestions, Escape.
-- [ ] **Each panel opens, loads and closes (P19):** suggestions, possible cuts, mana base, draft
+- [x] **Done 2026-11-19, merge of P19, e2e database: suggestions, possible cuts (swaps and optimizer), mana base and test hand opened with no error text.** **Each panel opens, loads and closes (P19):** suggestions, possible cuts, mana base, draft
       deck, test hand, snapshots, tokens, plan & primer, the bracket panel and the stats panel
       (highlighting a role or a bracket reason marks cards in the list, one at a time).
-- [ ] **Changes still show at once and undo on failure (P19):** add and remove a card, move to the
+- [ ] **Partly done 2026-11-19, merge of P19, e2e database: a swap (moved the cut to maybe, added the card) and + / − on a card showed at once and were saved (checked in the database). Still open: undo on failure.** **Changes still show at once and undo on failure (P19):** add and remove a card, move to the
       maybeboard and back, set a heading, rename, reorder and clear headings, switch By type or By
       heading, note, role and pin, choose a printing, take a card from another deck, swap a cut for
       a suggestion, add lands from the mana base and the draft, change the target bracket.

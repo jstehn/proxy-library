@@ -10,3 +10,5 @@ tests/fixtures/wpn/
 .claude/settings.local.json
 # Written by drizzle-kit (`pnpm db:generate`), never by hand
 drizzle/meta/
+# Agent worktrees (other branches checked out inside this one)
+.claude/worktrees/
