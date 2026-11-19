@@ -1,20 +1,66 @@
 // The size report (docs/refactor/README.md, "File size"). `pnpm sizes` lists source files over 500
 // lines and fails when one isn't in docs/refactor/oversize-allowlist.txt. It also prints the
 // totals that docs/refactor/STATUS.md tracks. Test files are reported but never fail the check.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+//
+// It is also a ratchet: the production code lines (no blanks or comments; no tests, `testing/`
+// folders or fixtures) must not exceed docs/refactor/sizes-baseline.txt. `--update` lowers the
+// baseline to today's count and never raises it.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 const LINE_LIMIT = 500;
 const INDEX_LIMIT = 150;
 const ROOTS = ["src", "worker", "scripts", "tests"];
+const PRODUCTION_ROOTS = ["src", "worker", "scripts"];
 const ALLOWLIST_PATH = "docs/refactor/oversize-allowlist.txt";
+const BASELINE_PATH = "docs/refactor/sizes-baseline.txt";
 
-export type SourceFile = { path: string; lines: number; codeLines: number; isTest: boolean };
+export type SourceFile = {
+  path: string;
+  lines: number;
+  codeLines: number;
+  isTest: boolean;
+  /** Helpers for tests that aren't tests themselves: `testing/` and `fixtures/` folders. */
+  isTestSupport: boolean;
+};
 
-const IGNORED_FOLDERS = new Set(["node_modules", ".next", ".dev", "fixtures"]);
+const IGNORED_FOLDERS = new Set(["node_modules", ".next", ".dev"]);
 
 function isTestFile(path: string): boolean {
   return /\.(test|spec)\.tsx?$/.test(path) || path.startsWith("tests/");
+}
+
+function isTestSupportFile(path: string): boolean {
+  return !isTestFile(path) && /(^|\/)(testing|fixtures)\//.test(path);
+}
+
+/** Production code: not a test, not test support, and under a production root. */
+export function isProductionFile(file: SourceFile): boolean {
+  return (
+    !file.isTest &&
+    !file.isTestSupport &&
+    PRODUCTION_ROOTS.some((root) => file.path.startsWith(`${root}/`))
+  );
+}
+
+/** The sum of code lines in the production files: the number the ratchet watches. */
+export function countProductionCodeLines(files: readonly SourceFile[]): number {
+  return files.filter(isProductionFile).reduce((total, file) => total + file.codeLines, 0);
+}
+
+export type BaselineVerdict =
+  { kind: "ok" } | { kind: "lower"; difference: number } | { kind: "over"; difference: number };
+
+/** Compares today's count with the baseline. A missing baseline (Infinity) is always "lower". */
+export function compareToBaseline(count: number, baseline: number): BaselineVerdict {
+  if (count > baseline) return { kind: "over", difference: count - baseline };
+  if (count < baseline) return { kind: "lower", difference: baseline - count };
+  return { kind: "ok" };
+}
+
+/** What `--update` writes: the lower of the two numbers, never a higher one. */
+export function nextBaseline(count: number, baseline: number): number {
+  return Math.min(count, baseline);
 }
 
 /** Lines that are neither blank nor only a comment: the part of a file that is code. */
@@ -47,7 +93,13 @@ function readFiles(projectRoot: string): SourceFile[] {
       } else if (/\.tsx?$/.test(entry.name)) {
         const text = readFileSync(join(projectRoot, path), "utf8");
         const lines = text === "" ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
-        files.push({ path, lines, codeLines: countCodeLines(text), isTest: isTestFile(path) });
+        files.push({
+          path,
+          lines,
+          codeLines: countCodeLines(text),
+          isTest: isTestFile(path),
+          isTestSupport: isTestSupportFile(path),
+        });
       }
     }
   }
@@ -105,8 +157,30 @@ function countContainerCalls(projectRoot: string, files: readonly SourceFile[]):
 function main(): void {
   const projectRoot = process.cwd();
   const files = readFiles(projectRoot);
-  const source = files.filter((file) => !file.isTest);
+  const production = files.filter(isProductionFile);
+  const support = files.filter((file) => file.isTestSupport);
+  const source = files.filter((file) => !file.isTest && !file.isTestSupport);
   const tests = files.filter((file) => file.isTest);
+  const productionCodeLines = countProductionCodeLines(files);
+  const baselinePath = join(projectRoot, BASELINE_PATH);
+  const baseline = existsSync(baselinePath)
+    ? Number(readFileSync(baselinePath, "utf8").trim())
+    : Infinity;
+
+  if (process.argv.includes("--update")) {
+    if (productionCodeLines < baseline || baseline === Infinity) {
+      writeFileSync(baselinePath, `${nextBaseline(productionCodeLines, baseline)}\n`);
+      console.log(`Size baseline lowered from ${baseline} to ${productionCodeLines}.`);
+    } else if (productionCodeLines > baseline) {
+      console.error(
+        `Refusing to raise the size baseline: ${productionCodeLines} is above ${baseline}. Only the owner may edit it by hand.`,
+      );
+      process.exitCode = 1;
+    } else {
+      console.log(`Size baseline stays at ${baseline}.`);
+    }
+    return;
+  }
 
   const allowlistText = existsSync(join(projectRoot, ALLOWLIST_PATH))
     ? readFileSync(join(projectRoot, ALLOWLIST_PATH), "utf8")
@@ -117,10 +191,16 @@ function main(): void {
   const offenders = findOffenders(files, allowed);
   const stale = [...allowed].filter((path) => !over.some((file) => file.path === path));
 
-  const codeLines = source.reduce((total, file) => total + file.codeLines, 0);
+  const codeOf = (list: readonly SourceFile[]) =>
+    list.reduce((total, file) => total + file.codeLines, 0);
   console.log(`Source lines: ${sum(source)} in ${source.length} files`);
-  console.log(`Code lines:   ${codeLines} (source lines without blanks or comment-only lines)`);
-  console.log(`Test lines:   ${sum(tests)} in ${tests.length} files`);
+  console.log(
+    `Production code lines: ${productionCodeLines} in ${production.length} files (baseline ${baseline})`,
+  );
+  console.log(`Test support: ${codeOf(support)} code lines in ${support.length} files`);
+  console.log(
+    `Tests:        ${codeOf(tests)} code lines (${sum(tests)} lines) in ${tests.length} files`,
+  );
   console.log(
     `Source files over ${LINE_LIMIT} lines: ${over.length} (${over.length - offenders.length} allowed)`,
   );
@@ -155,6 +235,15 @@ function main(): void {
   if (missingReasons.length > 0) {
     console.error(`Allowlist entries without a "# reason": ${missingReasons.join(", ")}`);
     process.exitCode = 1;
+  }
+  const verdict = compareToBaseline(productionCodeLines, baseline);
+  if (verdict.kind === "over") {
+    console.error(
+      `\nProduction code is ${verdict.difference} lines above the baseline (${productionCodeLines} > ${baseline}). Remove code, or ask the owner to approve the growth.`,
+    );
+    process.exitCode = 1;
+  } else if (verdict.kind === "lower") {
+    console.log(`${verdict.difference} lines below the baseline: run \`pnpm sizes --update\`.`);
   }
   if (offenders.length > 0) {
     console.error(

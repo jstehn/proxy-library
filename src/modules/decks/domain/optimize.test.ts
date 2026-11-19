@@ -200,7 +200,7 @@ describe("optimizeDeck", () => {
     for (const s of r1.swaps) {
       expect(s.cut.oracleId.startsWith("filler-")).toBe(true);
     }
-  });
+  }, 20_000);
 
   it("respects lockedOracleIds and maxAddedPriceCents", () => {
     const deck = makeCommanderDeck();
@@ -227,7 +227,7 @@ describe("optimizeDeck", () => {
     });
     expect(resBudget.after.metrics.addedPriceCents).toBeLessThanOrEqual(500);
     expect(resBudget.swaps.some((s) => s.add.oracleId === "add-draw-2")).toBe(false);
-  });
+  }, 20_000);
 
   it("does not penalize mono-color colorBalance for any-color mana sources", () => {
     const monoGreen: OptimizerCard[] = [

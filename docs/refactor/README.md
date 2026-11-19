@@ -22,6 +22,8 @@ clean context, read three or four short files, and work without reading the whol
 6. **Your package's "Deletes" section.** It lists the files, functions and exports the package
    will delete, with paths and line counts. It is your checklist (see "Process rules" below).
 
+Run `pnpm hooks:install` once per checkout: it adds a pre-commit hook (Prettier on staged files, typecheck, lint).
+
 Read doc 65 only when your package points to one of its sections. To save tokens, filter long
 output (`grep`, `tail`, `head`), and don't read files the package doesn't name unless a step needs
 them.

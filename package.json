@@ -11,6 +11,8 @@
     "lint:cycles": "tsx scripts/check-cycles.ts",
     "sizes": "tsx scripts/sizes.ts",
     "knip": "knip",
+    "knip:production": "knip --production",
+    "hooks:install": "scripts/install-hooks.sh",
     "clones": "tsx scripts/clones.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "db:start": "scripts/db.sh start",

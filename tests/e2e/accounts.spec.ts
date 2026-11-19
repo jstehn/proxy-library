@@ -844,7 +844,11 @@ async function pickFirstCard(page: Page): Promise<boolean> {
   if (!(await pack.isVisible())) return false;
   const before = await pickHeading(page);
   await pack.getByRole("button").first().dblclick();
-  await expect.poll(() => pickHeading(page)).not.toBe(before);
+  // The last pick doesn't change the heading: the page shows the finished text instead.
+  const finished = page.getByText(/Your \d+ cards are in your collection/);
+  await expect
+    .poll(async () => (await finished.isVisible()) || (await pickHeading(page)) !== before)
+    .toBe(true);
   return true;
 }
 

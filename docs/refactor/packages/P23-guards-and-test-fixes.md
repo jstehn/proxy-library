@@ -111,4 +111,30 @@ pickHeading(page)).not.toBe(before)` in `pickFirstCard` times out
 
 ## Handoff
 
-(empty)
+Sizes before: 79,560 code lines (old count: production plus `testing/`; fixtures skipped). After:
+production **77,318** code lines (baseline file), test support **2,345** (23 files), tests
+**32,905** code lines (36,730 lines, 230 files). Near-clone runs (`--near`): **229**. Exact clone
+runs unchanged. `knip --production`: **766** findings (29 files, 266 exports, 471 types), report only.
+`src` changed only in the two test files (timeouts). The scripts grew by about 30 production lines
+(sizes ratchet and near mode); the baseline already includes them.
+
+- **sizes:** `pnpm sizes` prints production code lines, test support and tests; fails above
+  `sizes-baseline.txt`; `--update` lowers and refuses to raise. `scripts/sizes.test.ts` is new.
+  Fixtures now count as test support (they were skipped before).
+- **near clones:** `pnpm clones --near`, 8-line windows, identifiers flattened to `i`, 100-character
+  minimum (200 left only 1 group, because flattened lines are short). Report only; `clones.test.ts` is new.
+- **knip:** `knip:production` script; `check.sh` gets a non-failing `knip (report)` line. In
+  production mode knip needs `!` on entries, so `knip.json` has `worker/index.ts!`. Unused-file
+  findings are real dead or test-only code (for P24), for example `catalog/client.ts`,
+  `decks/domain/eval.ts`, `mulligan-trainer.ts`, `packages.ts`, `tests/integration/harness.ts`, and
+  every `testing/` helper (test-only, so P24 must decide whether to mark them as entries).
+- **e2e (PM must run):** in `pickFirstCard` the poll now succeeds when the heading changed OR
+  `/Your \d+ cards are in your collection/` is visible. Run
+  `pnpm test:e2e tests/e2e/accounts.spec.ts -g "draft"` three times; I could not run Playwright.
+- **timeouts:** draft property test 30 s, the two optimizer tests 20 s each. Idle runs (3 each):
+  draft 1.2-1.3 s; optimizer 1.7-1.8 s and 1.45-1.5 s. Under a parallel `pnpm check`: draft 2.6 s,
+  optimizer 3.8 s (so the 5 s default was close).
+- **hook:** `scripts/install-hooks.sh` (`pnpm hooks:install`). `git rev-parse --git-path hooks`
+  resolves to the shared main `.git/hooks`, so I did not run it. I ran the hook body on a staged
+  badly formatted file: it failed as intended. The user runs `pnpm hooks:install` once.
+- STATUS size row "After P23" is for the PM to add (I don't edit STATUS).
