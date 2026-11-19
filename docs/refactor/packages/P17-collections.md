@@ -1,6 +1,6 @@
 # P17. One way to show a collection
 
-- **Branch:** `refactor/P17-collections` · **Depends on:** P09 · **Parallel with:** P15, P16
+- **Branch:** `refactor/P17-collections` · **Depends on:** P09c · **Parallel with:** P15, P16
 - **Audit:** doc 65 D10
 - **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S5](../dedup-playbook.md#s5) (collections, exports, pages) · **Lines to remove:** about −300 to −450
 

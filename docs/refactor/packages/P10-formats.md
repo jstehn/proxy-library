@@ -1,6 +1,6 @@
 # P10. Formats as a strategy table
 
-- **Branch:** `refactor/P10-formats` · **Depends on:** P09 · **Parallel with:** P11–P14
+- **Branch:** `refactor/P10-formats` · **Depends on:** P09c · **Parallel with:** P11–P14
 - **Audit:** doc 65 F3, D14
 - **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S6](../dedup-playbook.md#s6) · **Lines to remove:** about −150 to −300
 

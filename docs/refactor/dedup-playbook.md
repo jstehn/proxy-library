@@ -214,7 +214,9 @@ the second copy goes away.
    and input schema word for word** (the model was tuned against them), `call` the capability,
    and move the output shaping (including what `stripProvenance` and `compactMoneyFields` did)
    into `present`. `present` only reshapes; it never queries.
-5. Point the UI caller at the capability through `action()`. Delete its hand-composed version.
+5. Point the UI caller at the capability through `action()` (or `readPage()` for a page). Delete its hand-composed version.
+   **Wave 2 skipped this step for every tool** (milestone 1 review). P09b–P09d do it, so from P10 on
+   a package that adds a capability moves its UI caller in the same package.
 6. Compare the binding's output with the reference output. Differences are fine only if they're
    deliberate; list them in the handoff.
 7. Delete the public tool, the internal tools it called, and their tests. A binding never imports
