@@ -292,7 +292,7 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
-    capabilities: buildCapabilities({ db, clock, wallet }),
+    capabilities: buildCapabilities({ db, clock, wallet, wishlist }),
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

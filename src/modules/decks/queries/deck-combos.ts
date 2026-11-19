@@ -13,7 +13,7 @@ import {
   type CandidateRow,
 } from "./suggestion-sql";
 import { suggestionContext, withinTarget } from "./suggestions";
-import { type SuggestionCard } from "./suggestion-types";
+import { type SuggestionCard } from "../domain/suggestion-types";
 
 export type OneCardAwayCombo = Readonly<{
   card: SuggestionCard;

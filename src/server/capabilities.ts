@@ -1,26 +1,48 @@
 import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
-import { printingCards } from "@/modules/catalog";
+import {
+  makeCardLookup,
+  priceHistory,
+  printingCards,
+  printingDetail,
+  storePrintingsOfCard,
+} from "@/modules/catalog";
+import { ownedByOracle, ownedCopies as ownedOfPrinting } from "@/modules/collection";
+import { realOwnedByOracle } from "@/modules/real-collection";
 import {
   auditDeckView,
+  checkOwnedCards,
   combosForDeck,
+  decksUsing,
+  findCard,
   deckSignalCards,
   deckTokenLines,
   deckView,
   decksFor,
   getDeckProfile,
+  budgetReplacements,
   listDeckSources,
   makeDeckFacts,
+  makeFindReplacements,
   makeDeckManaPlan,
   makeDeckOverview,
   makeDeckSignals,
   manaBasePlan,
+  similarCards,
   makeListDecks,
 } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
+import {
+  makeAddWishes,
+  makeRemoveWishes,
+  makeWishlistView,
+  WishId,
+  wishesForCard,
+  wishlistAnswers,
+  type Wishlist,
+} from "@/modules/wishlist";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
+import { ok, type Cents, type Clock, type UserId } from "@/shared/kernel";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each is built here from its module's factory, with the
@@ -30,10 +52,11 @@ type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  wishlist: Pick<Wishlist, "addWish" | "removeWish">;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet } = dependencies;
+  const { db, clock, wallet, wishlist } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -52,6 +75,53 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
     }),
     deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
+    lookUpCards: makeCardLookup({
+      find: (query) => findCard(db, query),
+      detail: (printingId) => printingDetail(db, printingId),
+      history: (printingId) => priceHistory(db, printingId),
+      ownedOfPrinting: (userId, printingId) => ownedOfPrinting(db, userId, printingId),
+      gameCopies: (userId, oracleId) => ownedByOracle(db, userId, oracleId),
+      realCopies: (userId, oracleId) => realOwnedByOracle(db, userId, oracleId),
+      decksUsing: async (userId, printingId) =>
+        (await decksUsing(db, userId, [printingId])).get(printingId) ?? [],
+      wishes: (userId, printingId) => wishesForCard(db, userId, printingId),
+      storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
+    }),
+    checkOwnedCards: async (request: { userId: UserId; names: readonly string[] }) =>
+      ok(await checkOwnedCards(db, request.userId, request.names)),
+    wishlistView: makeWishlistView({
+      answers: (userId) => wishlistAnswers(db, userId),
+      outlook: async (userId) => {
+        const [balance, settings] = await Promise.all([
+          wallet.refreshWallet(userId),
+          currentEconomySettings(db),
+        ]);
+        return {
+          balance,
+          allowance: settings.allowance,
+          allowancePeriodDays: settings.allowancePeriodDays,
+          nextPayday: nextPayday(
+            { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
+            clock.now(),
+          ),
+        };
+      },
+    }),
+    addWishes: makeAddWishes({
+      findCard: (nameOrId) => findCard(db, nameOrId),
+      addWish: (actor, input) => wishlist.addWish(actor, input),
+    }),
+    removeWishes: makeRemoveWishes(
+      { removeWish: (actor, wishId) => wishlist.removeWish(actor, wishId) },
+      (value) => WishId.of(value),
+    ),
+    replacements: makeFindReplacements({
+      findCard: (nameOrId) => findCard(db, nameOrId),
+      similar: (userId, deckId, oracleId) => similarCards(db, userId, deckId, oracleId),
+      budget: (userId, deckId, options) => budgetReplacements(db, userId, deckId, options),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+    }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

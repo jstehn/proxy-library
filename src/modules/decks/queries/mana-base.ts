@@ -17,7 +17,7 @@ import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
-import { type SuggestionContext } from "./suggestion-types";
+import { type SuggestionContext } from "../domain/suggestion-types";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
 // play (yours, the basics, and the store's), and the pure planManaBase picks among them.

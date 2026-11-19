@@ -61,6 +61,9 @@ export {
   searchPrintings,
   setPrintings,
 } from "./queries/catalog";
+export { makeCardLookup } from "./application/card-lookup";
+export type { CardLookup } from "./application/card-lookup";
+export { storePrintingsOfCard, type StorePrinting } from "./queries/store-printings";
 export type {
   AdminSetRow,
   PricePoint,

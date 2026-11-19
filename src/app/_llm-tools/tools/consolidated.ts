@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  checkOwnedCards,
   colorPips,
   commanderOnlyProfile,
   deckView,
@@ -25,41 +24,15 @@ import {
   updateDeck,
 } from "./decks";
 import {
-  budgetReplacementsTool,
   checkInteractionTool,
-  getAccount,
-  getCard,
   getRulingsTool,
   lookupRulesTool,
   semanticSearchForDeckTool,
-  similarCardsTool,
 } from "./library";
 import { compactMoneyFields, stripProvenance } from "../present/money";
 import { analyzeCards, searchCards, searchForDeckTool } from "./search";
-import { compactWishlistPayload } from "./wishlist";
 
 const deckIdField = z.number().int().positive().describe("Deck id from list_decks.");
-
-/** 1. get_account */
-export const getAccountCompact = defineTool({
-  name: "get_account",
-  title: "My account",
-  description:
-    "Returns your play-money balance (cents), allowance, collection totals, deck/wish counts, and optionally your wishlist.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    includeWishlist: z.boolean().default(false).describe("Include compact wishlist lines."),
-  }),
-  async run(context, input) {
-    const base = await getAccount.run(context, {});
-    if (!base.ok) return base;
-    const compact = compactMoneyFields(base.value) as Record<string, unknown>;
-    if (!input.includeWishlist) return done(compact);
-    const wishlist = await compactWishlistPayload(context);
-    return done({ ...compact, wishlist });
-  },
-});
 
 /** 3. update_deck (merges update_deck, set_deck_profile, set_primer, deck_sources, delete_deck) */
 export const updateDeckConsolidated = defineTool({
@@ -442,91 +415,6 @@ export const searchCardsConsolidated = defineTool({
   },
 });
 
-/** 6. get_cards (merges get_cards + check_owned) */
-export const getCardsConsolidated = defineTool({
-  name: "get_cards",
-  title: "Get card details or batch-check ownership",
-  description:
-    "Look up 1-100 cards. `detail='owned'` (fast batch check: owned counts, decks), `detail='compact'` (default, up to 25 cards: adds manaCost, typeLine, oracle rules text, wishes), or `detail='full'` (adds store printings & price trend). Prices are omitted unless `includePrice: true` or `detail='full'`.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    cards: z.array(z.string().min(1)).min(1).max(100).describe("Card names or ids."),
-    detail: z
-      .enum(["owned", "compact", "full"])
-      .default("compact")
-      .describe("Response detail level: 'owned', 'compact' (default), or 'full'."),
-    includePrice: z
-      .boolean()
-      .default(false)
-      .describe("Include store price in cents (default false; always included in detail='full')."),
-    cursor: z.number().int().min(0).optional().describe("Pagination cursor if capped."),
-  }),
-  async run(context, input) {
-    if (input.detail === "owned") {
-      const checked = await checkOwnedCards(
-        context.container.db,
-        context.actor.userId,
-        input.cards,
-      );
-      return done({
-        cards: checked.map((e) =>
-          e.inCatalog
-            ? {
-                name: e.name,
-                inCatalog: true,
-                ownedGame: e.ownedGame,
-                ownedReal: e.ownedReal,
-                ...(input.includePrice ? { priceCents: priceCents(e.cheapestPriceCents) } : {}),
-                decks: e.decks,
-              }
-            : e,
-        ),
-      });
-    }
-
-    const slice = input.cards.slice(0, 25);
-    const fullRes = await getCard.run(context, { cards: slice, cursor: input.cursor });
-    if (!fullRes.ok) return fullRes;
-    if (input.detail === "full") {
-      return done(compactMoneyFields(fullRes.value));
-    }
-
-    const raw = fullRes.value as { cards?: Record<string, unknown>[] };
-    const compact = (raw.cards ?? []).map((c) => {
-      if (!c.found) return c;
-      const faces = (c.faces as { text?: string }[] | undefined) ?? [];
-      const text = faces
-        .map((f) => f.text ?? "")
-        .filter(Boolean)
-        .join("\n---\n");
-      const printings =
-        (c.printingsForSale as { prices?: Record<string, { cents?: number }> }[]) ?? [];
-      const allPrices = printings.flatMap((p) =>
-        Object.values(p.prices ?? {})
-          .map((m) => m?.cents)
-          .filter((n): n is number => typeof n === "number"),
-      );
-      const owned = c.owned as { game?: number; real?: number; total?: number } | undefined;
-      return {
-        name: c.name,
-        manaCost: c.manaCost,
-        typeLine: c.typeLine,
-        colorIdentity: c.colorIdentity,
-        text,
-        ownedGame: owned?.game ?? 0,
-        ownedReal: owned?.real ?? 0,
-        ...(input.includePrice
-          ? { cheapestPriceCents: allPrices.length > 0 ? Math.min(...allPrices) : null }
-          : {}),
-        decksUsing: c.decksUsing,
-        wishes: c.wishes,
-      };
-    });
-    return done({ cards: compact });
-  },
-});
-
 /** 7. edhrec_lookup (merges edhrec_commander + compare_to_edhrec) */
 export const edhrecLookupTool = defineTool({
   name: "edhrec_lookup",
@@ -574,54 +462,6 @@ export const edhrecLookupTool = defineTool({
       limit: input.limit,
     });
     return res.ok ? done(compactMoneyFields(res.value)) : res;
-  },
-});
-
-/** 8. find_replacements (merges similar_cards + idea_budget_replacements) */
-export const findReplacementsTool = defineTool({
-  name: "find_replacements",
-  title: "Find similar or budget replacement cards",
-  description:
-    "Find similar cards for a given `card` (optionally scoped to `deckId` and `maxPriceCents`), or find budget replacements for expensive cards in `deckId`.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    card: z.string().min(1).optional().describe("Card name to find alternatives for."),
-    deckId: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe("Optional deck id for color/format/bracket filtering."),
-    where: z.enum(["owned", "store", "both"]).default("both").describe("Candidate pool."),
-    maxPriceCents: z.number().int().min(0).optional().describe("Max price in cents."),
-    limit: z.number().int().min(1).max(20).default(10).describe("Max candidates (default 10)."),
-    includeText: z.boolean().default(false).describe("Include oracle rules text (default false)."),
-  }),
-  async run(context, input) {
-    if (input.card) {
-      const res = await similarCardsTool.run(context, {
-        card: input.card,
-        deckId: input.deckId,
-        where: input.where,
-        maxPriceCents: input.maxPriceCents,
-        limit: input.limit,
-        includeText: input.includeText,
-      });
-      return res.ok ? done(compactMoneyFields(stripProvenance(res.value))) : res;
-    }
-    if (input.deckId !== undefined) {
-      const res = await budgetReplacementsTool.run(context, {
-        deckId: input.deckId,
-        where: input.where,
-        maxPriceCents: input.maxPriceCents,
-        perCard: 3,
-        maxExpensiveCards: Math.min(8, input.limit),
-        includeText: input.includeText,
-      });
-      return res.ok ? done(compactMoneyFields(stripProvenance(res.value))) : res;
-    }
-    return failed("InvalidInput", "Provide `card` or `deckId`.");
   },
 });
 

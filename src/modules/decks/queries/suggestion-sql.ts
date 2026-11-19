@@ -5,7 +5,7 @@ import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
-import type { SuggestionCard, SuggestionContext, Wanted } from "./suggestion-types";
+import type { SuggestionCard, SuggestionContext, Wanted } from "../domain/suggestion-types";
 
 // The SQL that finds suggestion candidates (design doc 20, section 9): cards you own and cards in
 // the store that share something with the deck, on the pool in candidate-pool.ts.

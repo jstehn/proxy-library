@@ -1,11 +1,10 @@
-import { z } from "zod";
 import { type Tag, type Theme } from "@/shared/card-search";
-import { ColorSchema } from "@/shared/kernel";
-import { type Bracket, type BracketLine } from "../domain/brackets";
-import { type Format } from "../domain/deck";
-import type { RatingPart } from "../domain/rate";
-import { type EdhrecSignal, type ProfileLine, type Scored } from "../domain/suggest";
-import type { BrowseCard } from "./browse";
+import type { ManaColor } from "@/shared/kernel";
+import { type Bracket, type BracketLine } from "./brackets";
+import { type Format } from "./deck";
+import type { RatingPart } from "./rate";
+import { type EdhrecSignal, type ProfileLine, type Scored } from "./suggest";
+import type { BrowseCard } from "./browse-card";
 
 // The shapes of deck suggestions (design doc 20, section 9).
 
@@ -46,7 +45,7 @@ export type SuggestionContext = Readonly<{
   /** Whether real copies count as owned here (design doc 16). */
   usesRealCards: boolean;
   /** Colors a suggestion's identity must stay within, or null for any. */
-  colorLimit: Array<z.infer<typeof ColorSchema>> | null;
+  colorLimit: ManaColor[] | null;
   /** Oracle cards already at their format copy limit, not suggested again. */
   inDeck: string[];
   /** Counted quantity per oracle id currently in this deck (main + side + commander). */
@@ -66,4 +65,29 @@ export type Wanted = Readonly<{
   themes: readonly Theme[];
   tribes: readonly string[];
   keywords: readonly string[];
+}>;
+
+export type BudgetReplacementPick = Readonly<{
+  card: SuggestionCard;
+  similarityPct: number;
+  rating: number;
+  savedCents: number;
+  matchedRoles: readonly Tag[];
+}>;
+
+export type ExpensiveCardReplacements = Readonly<{
+  target: Readonly<{
+    oracleId: string;
+    name: string;
+    priceCents: number;
+    typeLine: string;
+  }>;
+  owned: BudgetReplacementPick[];
+  store: BudgetReplacementPick[];
+}>;
+
+export type BudgetReplacementsResult = Readonly<{
+  cards: ExpensiveCardReplacements[];
+  minPriceCents: number;
+  maxPriceCents: number;
 }>;

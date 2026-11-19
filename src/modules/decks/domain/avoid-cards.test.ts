@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_DECK_PROFILE } from "@/modules/decks/client";
-import { withoutAvoidCards } from "./avoid-cards";
+import { EMPTY_DECK_PROFILE, withoutAvoidCards } from "./deck-profile";
 
 describe("withoutAvoidCards", () => {
   const profile = {

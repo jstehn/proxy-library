@@ -66,6 +66,7 @@ export {
   type Grouping,
 } from "./domain/deck";
 export type { ManaBasePlanWithCastability } from "./domain/mana-base";
+export { makeFindReplacements, type SimilarCards } from "./application/find-replacements";
 export { makeDeckFacts, type DeckFacts } from "./application/deck-facts";
 export { makeDeckManaPlan } from "./application/deck-mana-plan";
 export { makeDeckSignals, type DeckSignals } from "./application/deck-signals";
@@ -211,7 +212,6 @@ export { type CardRating, type PowerTier, type RatingProfile } from "./domain/ra
 export {
   BROWSE_SORTS,
   browseCollection,
-  type BrowseCard,
   type BrowseInput,
   type BrowsePage,
   type BrowseSort,
@@ -231,17 +231,18 @@ export {
   type BudgetList,
   type DeckSuggestions,
 } from "./queries/suggestions";
-export {
-  budgetReplacements,
-  type BudgetReplacementPick,
-  type BudgetReplacementsResult,
-  type ExpensiveCardReplacements,
-} from "./queries/budget-replacements";
+export { budgetReplacements } from "./queries/budget-replacements";
+export type { BrowseCard } from "./domain/browse-card";
+export type {
+  BudgetReplacementPick,
+  BudgetReplacementsResult,
+  ExpensiveCardReplacements,
+} from "./domain/suggestion-types";
 export {
   type Suggestion,
   type SuggestionCard,
   type SuggestionList,
-} from "./queries/suggestion-types";
+} from "./domain/suggestion-types";
 export { embedSimForCards } from "./queries/embeddings";
 export {
   semanticSearchForDeck,
@@ -446,6 +447,8 @@ export {
   effectiveManaValue,
   declaredComboFor,
   isAvoidCard,
+  withoutAvoidCards,
+  type AvoidSplit,
   COST_REDUCER_SCOPES,
   isKeyCard,
   primerSections,
