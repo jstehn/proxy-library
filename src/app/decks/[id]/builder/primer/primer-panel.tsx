@@ -3,7 +3,8 @@ import { useEffect, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { DeckLine } from "@/modules/decks";
 import { NamePreview } from "@/app/_components/card-preview";
-import { deckPlanAction, saveDeckPlanAction, type DeckPlanWithPrimer } from "./plan/actions";
+import { settle, valueOr } from "../answer";
+import { deckPlanAction, saveDeckPlanAction, type DeckPlanWithPrimer } from "./actions";
 import {
   formatNamedLines,
   nonEmptyLines,
@@ -76,7 +77,7 @@ export function PrimerPanel(props: Props) {
   useEffect(() => {
     let current = true;
     void deckPlanAction(deckId).then((loaded) => {
-      if (current) setPlan(loaded);
+      if (current) setPlan(valueOr(loaded, null));
     });
     return () => {
       current = false;
@@ -94,23 +95,26 @@ export function PrimerPanel(props: Props) {
     event.preventDefault();
     if (draft === null) return;
     startSaving(async () => {
-      const result = await saveDeckPlanAction({
-        deckId,
-        plan: draft.plan.trim() === "" ? null : draft.plan,
-        winCons: nonEmptyLines(draft.winCons),
-        keyCards: parseNamedLines(draft.keyCards),
-        avoid: parseNamedLines(draft.avoid),
-        declaredCombos: nonEmptyLines(draft.declaredCombos),
-        mulligan: draft.mulligan.trim() === "" ? null : draft.mulligan,
-        pilotNotes: draft.pilotNotes.trim() === "" ? null : draft.pilotNotes,
-        primer: draft.primer,
-      });
+      const result = settle(
+        await saveDeckPlanAction({
+          deckId,
+          plan: draft.plan.trim() === "" ? null : draft.plan,
+          winCons: nonEmptyLines(draft.winCons),
+          keyCards: parseNamedLines(draft.keyCards),
+          avoid: parseNamedLines(draft.avoid),
+          declaredCombos: nonEmptyLines(draft.declaredCombos),
+          mulligan: draft.mulligan.trim() === "" ? null : draft.mulligan,
+          pilotNotes: draft.pilotNotes.trim() === "" ? null : draft.pilotNotes,
+          primer: draft.primer,
+        }),
+        "Something there is too long or empty; check the fields.",
+      );
       if (result.ok) {
-        setPlan(result.plan);
+        setPlan(result.value);
         setDraft(null);
         props.onSaved("Plan and primer saved.");
       } else {
-        props.onError(result.message);
+        props.onError(result.error.message);
       }
     });
   }

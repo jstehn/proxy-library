@@ -17,7 +17,7 @@ import {
 import { TAGS, type Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
-import { TAG_LABELS } from "../../labels";
+import { TAG_LABELS } from "@/app/decks/labels";
 
 // Live deck statistics (design doc 14, section 2.5): recomputed in the browser from the deck in
 // hand, so they change the moment a card goes in or out.

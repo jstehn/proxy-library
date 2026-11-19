@@ -1,7 +1,7 @@
 "use client";
 import type { Bracket, BracketEstimate, BracketRule } from "@/modules/decks";
 import { BRACKET_NAMES, BRACKETS, bracketWarning } from "@/modules/decks/client";
-import { estimateLabel, findingText, uncheckedText } from "../../labels";
+import { estimateLabel, findingText, uncheckedText } from "@/app/decks/labels";
 
 // The Commander bracket (design doc 31, section 5.2): the lowest bracket the cards allow, why,
 // and the bracket the owner is aiming for. Worked out in the browser, like the statistics.

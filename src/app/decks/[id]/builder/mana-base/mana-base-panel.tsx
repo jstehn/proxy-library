@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ManaBasePlan, PlannedLand } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
-import { landReasonText, landTargetReasonText } from "../../labels";
-import { manaBaseAction } from "./reads/actions";
+import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
+import { valueOr } from "../answer";
+import { manaBaseAction } from "./actions";
 
 // Mana base (design doc 35, section 9): how many lands and sources of each color to aim for,
 // and lands you could add: yours first (decks share cards), then basics; and store lands to
@@ -35,7 +36,7 @@ export function ManaBasePanel(props: {
       setLoading(true);
       void manaBaseAction(deckId).then((result) => {
         if (request !== latest.current) return; // the deck changed again meanwhile
-        setPlan(result);
+        setPlan(valueOr(result, null));
         setLoading(false);
       });
     }, WAIT_MILLISECONDS);

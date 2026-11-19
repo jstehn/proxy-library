@@ -14,7 +14,7 @@ The mana curve is computed by one function. Any curves that really differ are na
 
 `src/modules/decks/domain/{stats,rate,draft-deck}.ts`, `src/modules/drafts/domain/auto-pick.ts`,
 new `decks/domain/mana-curve.ts` (exported from `decks/client.ts` so drafts and the builder can
-use it), `app/decks/[id]/builder/stats-panel.tsx`.
+use it), `app/decks/[id]/builder/stats/stats-panel.tsx` (moved by P19).
 
 ## Steps
 

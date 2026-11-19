@@ -2,9 +2,9 @@
 import { useState, useTransition } from "react";
 import type { Board, DeckLine, PrintingFinish, PrintingOption } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
-import { choosePrintingAction } from "./actions";
-import { printingsAction } from "./reads/actions";
-import { type BuilderDeck } from "./action-helpers";
+import { NOT_UNDERSTOOD_TEXT, settle, valueOr } from "../answer";
+import { choosePrintingAction, printingsAction } from "./actions";
+import { type BuilderDeck } from "../action-helpers";
 
 // Choose which printing and finish a deck line uses (design doc 24, section 9).
 
@@ -57,7 +57,9 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
     setIsOpen(true);
     if (printings !== null) return;
     setPrintings("loading");
-    void printingsAction({ deckId, oracleId }).then((found) => setPrintings(found ?? []));
+    void printingsAction({ deckId, oracleId }).then((found) =>
+      setPrintings(valueOr(found, null) ?? []),
+    );
   }
 
   function choose(value: string) {
@@ -65,17 +67,20 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
     const [printingId, finish] = value.split(":") as [string, PrintingFinish];
     const pinned = value === AUTOMATIC ? null : { printingId, finish };
     startSaving(async () => {
-      const result = await choosePrintingAction({ deckId, oracleId, board: line.board, pinned });
+      const result = settle(
+        await choosePrintingAction({ deckId, oracleId, board: line.board, pinned }),
+        NOT_UNDERSTOOD_TEXT,
+      );
       setSaving(null);
       if (!result.ok) {
-        onError(result.message);
+        onError(result.error.message);
         return;
       }
       const chosen = Array.isArray(printings)
         ? printings.find((printing) => printing.printingId === printingId)
         : undefined;
       onChosen(
-        result.deck,
+        result.value,
         pinned === null
           ? `${line.name} follows your copies again.`
           : `${line.name}: ${chosen === undefined ? "printing" : `${chosen.setName} #${chosen.collectorNumber}`}, ${FINISH_WORDS[finish].toLowerCase()}.`,

@@ -3,38 +3,15 @@ import Link from "next/link";
 import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
-import { BOARDS, copiesToTake, isCounted } from "@/modules/decks/client";
-import type { BracketFlag, Tag } from "@/shared/card-search";
+import { copiesToTake } from "@/modules/decks/client";
+import type { BracketFlag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
-import { TAG_LABELS } from "../../labels";
-import { HiddenOverTarget, SuggestionRow } from "./suggestions";
-import { ownedWords } from "./derive";
+import { TAG_LABELS } from "@/app/decks/labels";
+import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-panel";
+import { ownedWords } from "../derive";
+import { countedCopies, type Selection } from "./selection";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
-
-export type Selection = Readonly<{
-  oracleId: string;
-  printingId: string;
-  name: string;
-  owned: number;
-  /** How many of `owned` are real copies (design doc 16). */
-  ownedReal: number;
-  /** Copies in this deck per board. */
-  inDeck: Readonly<Partial<Record<Board, number>>>;
-  /** How many of your other decks use it (ownership is shared between decks). */
-  otherDecks: number;
-  /** Copies owned that none of your other decks uses (task 42). */
-  free: number;
-  misfit: "color" | "legality" | null;
-  /** The shown printing's latest price, or null if it has none. */
-  priceCents: number | null;
-  /** The card's roles, read from its rules text (design doc 19). */
-  tags: readonly Tag[];
-  /** What counts against a Commander bracket (design doc 31). */
-  bracketFlags: readonly BracketFlag[];
-  /** Format copy limit for this card, or null when unlimited. */
-  copyLimit?: number | null;
-}>;
 
 const FLAG_LABELS: Readonly<Record<BracketFlag, string>> = {
   gameChanger: "Game Changer",
@@ -271,11 +248,6 @@ export function SelectedCard(props: {
       </div>
     </section>
   );
-}
-
-/** Copies on the boards that count: every board but the maybeboard (design doc 32). */
-export function countedCopies(perBoard: Readonly<Partial<Record<Board, number>>>): number {
-  return BOARDS.filter(isCounted).reduce((sum, board) => sum + (perBoard[board] ?? 0), 0);
 }
 
 /** Your other decks holding the card, each with a button to take its copies (task 42). */

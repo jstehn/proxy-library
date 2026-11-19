@@ -6,15 +6,16 @@ import {
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
 } from "@/modules/decks/client";
-import { estimateLabel, problemText, TAG_LABELS } from "../../labels";
+import { estimateLabel, problemText, TAG_LABELS } from "@/app/decks/labels";
 import {
   compareSnapshotAction,
   deleteSnapshotAction,
   listSnapshotsAction,
   restoreSnapshotAction,
   saveSnapshotAction,
-} from "./snapshots/actions";
-import { type BuilderDeck } from "./action-helpers";
+} from "./actions";
+import { settle } from "../answer";
+import { type BuilderDeck } from "../builder-deck";
 
 const BOARD_NAMES: Readonly<Record<Board, string>> = {
   main: "Main",
@@ -66,13 +67,14 @@ export function SnapshotsPanel(props: {
   // Load snapshots when opening the panel.
   useEffect(() => {
     let cancelled = false;
-    void listSnapshotsAction(deckId).then((result) => {
+    void listSnapshotsAction(deckId).then((answer) => {
       if (cancelled) return;
+      const result = settle(answer, "That deck wasn't recognized.");
       if (result.ok) {
-        setSnapshots(result.snapshots);
+        setSnapshots(result.value);
         setLoadError(null);
       } else {
-        setLoadError(result.message);
+        setLoadError(result.error.message);
       }
     });
     return () => {
@@ -85,9 +87,10 @@ export function SnapshotsPanel(props: {
     if (beforeId === null || afterId !== null) return;
     const request = ++latestCompare.current;
     void compareSnapshotAction({ deckId, beforeSnapshotId: beforeId, afterSnapshotId: null }).then(
-      (result) => {
+      (answer) => {
         if (request !== latestCompare.current) return;
-        if (result.ok) setComparison(result.comparison);
+        const result = settle(answer, "Couldn't compare those snapshots.");
+        if (result.ok) setComparison(result.value);
       },
     );
   }, [deckId, deckKey, beforeId, afterId]);
@@ -97,17 +100,20 @@ export function SnapshotsPanel(props: {
     setAfterId(nextAfterId);
     setComparing(true);
     const request = ++latestCompare.current;
-    const result = await compareSnapshotAction({
-      deckId,
-      beforeSnapshotId: nextBeforeId,
-      afterSnapshotId: nextAfterId,
-    });
+    const result = settle(
+      await compareSnapshotAction({
+        deckId,
+        beforeSnapshotId: nextBeforeId,
+        afterSnapshotId: nextAfterId,
+      }),
+      "Couldn't compare those snapshots.",
+    );
     if (request !== latestCompare.current) return;
     setComparing(false);
     if (result.ok) {
-      setComparison(result.comparison);
+      setComparison(result.value);
     } else {
-      onError(result.message);
+      onError(result.error.message);
     }
   }
 
@@ -120,41 +126,51 @@ export function SnapshotsPanel(props: {
     }
     setLabelError(null);
     setWorking(true);
-    const result = await saveSnapshotAction({ deckId, label: checked.value });
+    const result = settle(
+      await saveSnapshotAction({ deckId, label: checked.value }),
+      "That snapshot label wasn't understood.",
+    );
     setWorking(false);
     if (!result.ok) {
-      setLabelError(result.message);
-      onError(result.message);
+      setLabelError(result.error.message);
+      onError(result.error.message);
       return;
     }
-    setSnapshots(result.snapshots);
+    setSnapshots(result.value.snapshots);
     setLabel("");
     setStatusMessage(`Saved snapshot “${checked.value}”.`);
   }
 
   async function restore(snapshot: SnapshotSummary) {
     setWorking(true);
-    const result = await restoreSnapshotAction({ deckId, snapshotId: snapshot.id });
+    const result = settle(
+      await restoreSnapshotAction({ deckId, snapshotId: snapshot.id }),
+      "That snapshot wasn't understood.",
+    );
     setWorking(false);
     setConfirmRestoreId(null);
     if (!result.ok) {
-      onError(result.message);
+      onError(result.error.message);
       return;
     }
-    const msg = `Restored “${snapshot.label}” (${result.cardCount} ${result.cardCount === 1 ? "card" : "cards"}).`;
+    const { cardCount, deck } = result.value;
+    const msg = `Restored “${snapshot.label}” (${cardCount} ${cardCount === 1 ? "card" : "cards"}).`;
     setStatusMessage(msg);
-    onRestored(result.deck, msg);
+    onRestored(deck, msg);
   }
 
   async function remove(snapshot: SnapshotSummary) {
     setWorking(true);
-    const result = await deleteSnapshotAction({ deckId, snapshotId: snapshot.id });
+    const result = settle(
+      await deleteSnapshotAction({ deckId, snapshotId: snapshot.id }),
+      "That snapshot wasn't understood.",
+    );
     setWorking(false);
     if (!result.ok) {
-      onError(result.message);
+      onError(result.error.message);
       return;
     }
-    setSnapshots(result.snapshots);
+    setSnapshots(result.value);
     if (beforeId === Number(snapshot.id) || afterId === Number(snapshot.id)) {
       setBeforeId(null);
       setAfterId(null);
