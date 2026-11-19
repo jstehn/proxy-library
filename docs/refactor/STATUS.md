@@ -19,7 +19,7 @@ its own worktree.
 | P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | done                 |
 | P04 | [One card-type helper](packages/P04-card-types.md)                                 | P02, decision 1     | P03                         | done                 |
 |     | **Wave 2: capabilities and adapters** (audit R3) · milestone 1                     |                     |                             |                      |
-| P05 | [Capability and binding framework](packages/P05-framework.md)                      | P03, P04            | none                        | free                 |
+| P05 | [Capability and binding framework](packages/P05-framework.md)                      | P03, P04            | none                        | done                 |
 | P06 | [Deck read capabilities](packages/P06-deck-reads.md)                               | P05                 | P07, P08                    | free                 |
 | P07 | [Candidate pool and store quote](packages/P07-candidates.md)                       | P05                 | P06, P08                    | free                 |
 | P08 | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                 | P06, P07                    | free                 |

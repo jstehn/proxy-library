@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { allows, type Scope } from "@/modules/accounts";
+import type { Scope } from "@/modules/accounts";
+import { BINDINGS } from "./bindings";
 import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
 import {
@@ -7,14 +8,13 @@ import {
   edhrecLookupTool,
   editDeckConsolidated,
   findReplacementsTool,
-  getAccountCompact,
   getCardsConsolidated,
   getDeckConsolidated,
   rulesLookupTool,
   searchCardsConsolidated,
   updateDeckConsolidated,
 } from "./tools/consolidated";
-import { createDeck, listDecks } from "./tools/decks";
+import { createDeck } from "./tools/decks";
 import { findCombosForDeckTool } from "./tools/library";
 import { manageWishlist } from "./tools/wishlist";
 import { redditResearchTool } from "./tools/reddit";
@@ -23,9 +23,8 @@ import { youtubeResearchTool } from "./tools/youtube";
 // The tool registry (design doc 28, section 3.2): consolidated, token-efficient tools served
 // identically by /api/mcp and /api/tools/<name>.
 
-export const TOOLS: readonly LlmTool[] = [
-  getAccountCompact,
-  listDecks,
+/** Tools not yet ported to bindings (P06–P09 move them; P09 deletes this list). */
+const LEGACY_TOOLS: readonly LlmTool[] = [
   getDeckConsolidated,
   createDeck,
   updateDeckConsolidated,
@@ -40,6 +39,12 @@ export const TOOLS: readonly LlmTool[] = [
   youtubeResearchTool,
   redditResearchTool,
   manageWishlist,
+];
+
+/** Bindings first; an old tool is served only when no binding has its name. */
+export const TOOLS: readonly LlmTool[] = [
+  ...BINDINGS,
+  ...LEGACY_TOOLS.filter((tool) => !BINDINGS.some((binding) => binding.name === tool.name)),
 ];
 
 /** House rules, for MCP's server instructions and OpenAPI's description (rule 10 repeats them). */
@@ -73,7 +78,7 @@ export async function callTool(
 ): Promise<CallResult> {
   const tool = findTool(name);
   if (tool === undefined) return { kind: "problem", problem: { kind: "UnknownTool" } };
-  if (!allows(context.scopes, tool.scope)) {
+  if (!context.allows(tool.scope)) {
     return { kind: "problem", problem: { kind: "MissingScope", scope: tool.scope } };
   }
   const rawObj =
