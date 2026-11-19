@@ -46,7 +46,7 @@ new `src/app/_llm-tools/bindings/`, `src/server/core.ts`, `eslint.config.mjs`.
 
 ## Handoff
 
-**Done:** ADR 0026 (status Proposed: needs the user's approval), `defineBinding`
+**Done:** ADR 0026 (Accepted), `defineBinding`
 (`src/app/_llm-tools/binding.ts`), `bindings/{list-decks,get-account,index}.ts`, the registry
 serving `BINDINGS` first then `LEGACY_TOOLS`, `src/server/capabilities.ts` (wired as
 `core.capabilities`), the `action(schema, handler)` helper (`src/server/action.ts`, `makeAction`

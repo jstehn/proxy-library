@@ -1,6 +1,6 @@
 # 0026. Put capabilities in modules; keep adapters thin
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-19
 
 ## Context
