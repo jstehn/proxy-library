@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  enabledSets,
   lookupRules,
   priceHistory,
   printingCards,
@@ -10,13 +9,11 @@ import {
 import { collectionPage, ownedByOracle, ownedCopies } from "@/modules/collection";
 import { realOwnedByOracle } from "@/modules/real-collection";
 import {
-  budgetList,
   budgetReplacements,
   cardsToGetFor,
   checkOwnedCards,
   decksFor,
   decksUsing,
-  deckSuggestions,
   deckView,
   findCard,
   isPlayed,
@@ -204,27 +201,6 @@ async function printingsFor(context: ToolContext, ids: readonly string[]) {
   });
 }
 
-export const listSets = defineTool({
-  name: "list_sets",
-  title: "List the sets in the store",
-  description:
-    "The sets whose cards the store sells and the searches cover, newest first, with their codes (for s:CODE in a search).",
-  scope: "read",
-  readOnly: true,
-  input: z.object({}),
-  async run(context) {
-    const sets = await enabledSets(context.container.db);
-    return done({
-      sets: sets.map((set) => ({
-        code: set.code,
-        name: set.name,
-        released: set.releaseDate,
-        printings: set.printingCount,
-      })),
-    });
-  },
-});
-
 function suggestionView(suggestion: Suggestion, includeText: boolean) {
   const card = suggestion.card;
   return {
@@ -247,74 +223,10 @@ function suggestionView(suggestion: Suggestion, includeText: boolean) {
   };
 }
 
-function searchResultView(suggestion: Suggestion, includeText: boolean) {
-  const card = suggestion.card;
-  return {
-    name: card.name,
-    oracleId: card.oracleId,
-    printingId: card.printingId,
-    manaCost: card.manaCost,
-    typeLine: card.typeLine,
-    ...(includeText ? { text: card.text } : {}),
-    roleTags: card.roles,
-    themes: card.themes,
-    regexReasons: suggestion.reasons.map(reasonText),
-    ...(card.isGameChanger ? { isGameChanger: true } : {}),
-    owned: card.owned,
-    price: moneyOrNull(card.priceCents),
-  };
-}
-
-function asSearchResults(suggestions: readonly Suggestion[], includeText: boolean) {
-  return suggestions
-    .map((each) => searchResultView(each, includeText))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 const includeText = z
   .boolean()
   .default(false)
   .describe("Include each card's rules text (off by default to save space).");
-
-export const suggestForDeck = defineTool({
-  name: "idea_candidates",
-  title: "Unranked candidate pools from regex rules",
-  description: [
-    "Opt-in raw heuristic fallback: returns unranked candidate pools for the deck and for each short role, from your collection first and then the store, sorted alphabetically by name with no scores or verdicts — only the regex tags/reasons that matched.",
-    "Use it only when: the player explicitly asks for the app's regex candidate pools. Prefer outside research (EDHREC, Spellbook, guides) and search_for_deck; verify every card against its rules text before suggesting it.",
-    "With a target bracket on the deck, cards that would take it over are left out; hiddenOverTarget says how many.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    includeText: z
-      .boolean()
-      .default(true)
-      .describe("Include rules text. Set false to save space; you can't judge fit without it."),
-  }),
-  async run(context, input) {
-    const result = await deckSuggestions(context.container.db, context.actor.userId, input.deckId);
-    if (result === null) return deckNotFound(input.deckId);
-    return done({
-      provenance: heuristicProvenance("regex heuristic", ["card text", "edhrec"]),
-      profile: result.profile,
-      forDeck: {
-        owned: asSearchResults(result.forDeck.owned, input.includeText),
-        store: asSearchResults(result.forDeck.store, input.includeText),
-        hiddenOverTarget: result.forDeck.hiddenOverTarget,
-      },
-      forRoles: result.forRoles.map((role) => ({
-        role: role.tag,
-        count: role.count,
-        target: role.target,
-        owned: asSearchResults(role.owned, input.includeText),
-        store: asSearchResults(role.store, input.includeText),
-        hiddenOverTarget: role.hiddenOverTarget,
-      })),
-    });
-  },
-});
 
 export const similarCardsTool = defineTool({
   name: "similar_cards",
@@ -350,38 +262,6 @@ export const similarCardsTool = defineTool({
       store: store.kept.map((each) => suggestionView(each, input.includeText)),
       hiddenOverTarget: result.hiddenOverTarget,
       ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
-    });
-  },
-});
-
-export const budgetUpgrades = defineTool({
-  name: "idea_budget_upgrades",
-  title: "Unranked upgrade ideas within a budget",
-  description: [
-    "Store cards a deck could buy within a budget, picked greedily by simple regex rules and sorted alphabetically here with no scores. Raw ideas to verify against card text and outside sources, not recommendations.",
-    "Use it when: the player asks for rough store ideas within $N. Nothing is bought: verify against rules text and outside sources, then suggest purchases or add them to the wishlist with add_wish.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    budgetCents: z.number().int().min(1).describe("The budget in cents (2000 is $20)."),
-    includeText,
-  }),
-  async run(context, input) {
-    const result = await budgetList(
-      context.container.db,
-      context.actor.userId,
-      input.deckId,
-      input.budgetCents,
-    );
-    if (result === null) return deckNotFound(input.deckId);
-    return done({
-      provenance: heuristicProvenance("regex heuristic + greedy price", ["card text", "edhrec"]),
-      picks: asSearchResults(result.picks, input.includeText),
-      total: money(result.totalCents),
-      list: result.listText,
-      hiddenOverTarget: result.hiddenOverTarget,
     });
   },
 });
@@ -662,39 +542,6 @@ export const checkInteractionTool = defineTool({
       cards: resolved,
       sharedRules,
       ruleInteractions,
-    });
-  },
-});
-
-export const checkOwnedTool = defineTool({
-  name: "check_owned",
-  title: "Batch-check ownership, price, and deck usage",
-  description: [
-    'Checks up to 100 card names in one call: returns owned game copies, owned real copies, cheapest store price, and which of your decks use each card (or "not in catalog").',
-    "Use it when: verifying ownership and prices for a list of cards from outside research (EDHREC, Spellbook, guides).",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    names: z.array(z.string().min(1)).min(1).max(100).describe("Up to 100 card names to check."),
-  }),
-  async run(context, input) {
-    const checked = await checkOwnedCards(context.container.db, context.actor.userId, input.names);
-    return done({
-      cards: checked.map((entry) =>
-        entry.inCatalog
-          ? {
-              query: entry.query,
-              name: entry.name,
-              inCatalog: true,
-              ownedGame: entry.ownedGame,
-              ownedReal: entry.ownedReal,
-              ownedTotal: entry.ownedTotal,
-              cheapestPrice: moneyOrNull(entry.cheapestPriceCents),
-              decks: entry.decks,
-            }
-          : entry,
-      ),
     });
   },
 });

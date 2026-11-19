@@ -12,7 +12,7 @@ import {
   type WishRequest,
 } from "@/modules/wishlist";
 import { Cents } from "@/shared/kernel";
-import { defineTool, done, failed, money, moneyOrNull, type ToolContext } from "../tool";
+import { defineTool, done, failed, type ToolContext } from "../tool";
 
 // The wishlist (design doc 28, section 5.2; design doc 26). Saving a wish costs nothing; buying
 // stays in the web app (decision 2).
@@ -129,76 +129,6 @@ export const manageWishlist = defineTool({
       return failed("InvalidInput", "Provide at least 1 id in `wishIds` for action='remove'.");
     }
     return removeWish.run(context, { wishIds: input.wishIds });
-  },
-});
-
-function lineView(line: WishLine) {
-  return {
-    wishId: line.wish.id,
-    name: line.name,
-    quantity: line.wish.quantity,
-    owned: line.owned,
-    missing: line.missing,
-    target:
-      line.wish.target.kind === "anyPrinting"
-        ? { printing: "any", finish: line.wish.target.finish }
-        : { printing: line.wish.target.printingId, finish: line.wish.target.finish },
-    bestOffer:
-      line.offer === null
-        ? null
-        : {
-            printingId: line.offer.printingId,
-            set: line.offer.setCode,
-            number: line.offer.collectorNumber,
-            finish: line.offer.finish,
-            price: money(line.offer.price),
-          },
-    totalForMissing: moneyOrNull(line.total),
-    changeSinceSaved: moneyOrNull(line.changeSinceSaved),
-    targetPrice: moneyOrNull(line.wish.targetPrice),
-    atTarget: line.atTarget,
-    status:
-      line.status.kind === "shortBy"
-        ? { kind: "shortBy", shortfall: money(line.status.shortfall), paydays: line.status.paydays }
-        : { kind: line.status.kind },
-    note: line.wish.note,
-  };
-}
-
-export const getWishlist = defineTool({
-  name: "get_wishlist",
-  title: "My wishlist",
-  description: [
-    "Your wishlist: each wish at today's best price, how it moved since you saved it, whether your balance covers it (or how many paydays until it does), and wishes at their target price.",
-    "Use it when: planning what to buy, or before add_wishes (a wish for the same card is updated, not doubled).",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({}),
-  async run(context) {
-    const { db, clock, wallet } = context.container;
-    const userId = context.actor.userId;
-    const [answers, balance, settings] = await Promise.all([
-      wishlistAnswers(db, userId),
-      // Brings the wallet up to date (a due allowance is paid), as the Wishlist page does.
-      wallet.refreshWallet(userId),
-      currentEconomySettings(db),
-    ]);
-    const lines = wishLines(answers, {
-      balance,
-      allowance: settings.allowance,
-      allowancePeriodDays: settings.allowancePeriodDays,
-      nextPayday: nextPayday(
-        { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-        clock.now(),
-      ),
-    });
-    const sum = totals(lines);
-    return done({
-      balance: money(balance),
-      totalForMissing: money(sum.all),
-      wishes: lines.map(lineView),
-    });
   },
 });
 

@@ -9,8 +9,7 @@ import {
   SEARCH_POOLS,
   searchForDeck,
 } from "@/modules/decks";
-import { cardSignals, searchHelpText } from "@/shared/card-search";
-import { cookbookText } from "../cookbook";
+import { cardSignals } from "@/shared/card-search";
 import { deckNotFound, defineTool, done, failed, money, moneyOrNull } from "../tool";
 import { deckProfileFor, withoutAvoidCards } from "../avoid-cards";
 
@@ -274,22 +273,5 @@ export const analyzeCards = defineTool({
       notes,
       signals: cardSignals(cards, { minimumCards: input.minimumCards }),
     });
-  },
-});
-
-export const getSearchGuide = defineTool({
-  name: "get_search_guide",
-  title: "Card search syntax and synergy patterns",
-  description: [
-    'The card search reference (topic "syntax": every keyword, with examples) or tested synergy query patterns for common mechanics (topic "cookbook": treasure, artifacts, sacrifice, tokens, counters, landfall, blink, spells, graveyard, lifegain, equipment, tribal, combat, draw, mana base), as Markdown.',
-    "Use it when: writing searches for search_for_deck or search_cards, especially the first time, or when a search returned notes.",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    topic: z.enum(["syntax", "cookbook"]).default("syntax").describe("Which guide."),
-  }),
-  async run(_context, input) {
-    return done({ guide: input.topic === "syntax" ? searchHelpText() : cookbookText() });
   },
 });
