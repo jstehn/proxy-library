@@ -3,8 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { SetCode, describePhotoError } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 
 // Admin → Photos (design doc 13): pick a product's WPN photo, or set a set's page address.
 
@@ -16,7 +15,7 @@ const ChoiceForm = z.object({
 });
 
 export async function choosePhotoAction(formData: FormData): Promise<void> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = ChoiceForm.safeParse({
     code: formData.get("code"),
     productId: formData.get("productId"),
@@ -24,7 +23,7 @@ export async function choosePhotoAction(formData: FormData): Promise<void> {
   });
   if (!form.success) redirect("/admin/photos");
   const { code, productId, choice } = form.data;
-  const { catalog } = getContainer();
+  const { catalog } = capabilities;
 
   if (choice === "auto") {
     await catalog.clearPhotoChoice(admin, productId);
@@ -48,10 +47,10 @@ const SlugForm = z.object({
 });
 
 export async function setPageSlugAction(formData: FormData): Promise<void> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = SlugForm.safeParse({ code: formData.get("code"), slug: formData.get("slug") });
   if (!form.success) redirect("/admin/photos");
-  const result = await getContainer().catalog.setPageSlug(admin, {
+  const result = await capabilities.catalog.setPageSlug(admin, {
     setCode: SetCode.of(form.data.code),
     slug: form.data.slug.trim() === "" ? null : form.data.slug,
   });

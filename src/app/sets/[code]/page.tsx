@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
-import { FINISHES, findSet, setPrintings, type PrintingCard } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { FINISHES, type PrintingCard } from "@/modules/catalog";
 import { Cents, type Finish } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "@/app/_components/card-tile";
+import { readPage } from "@/server/page-instance";
 
 const FINISH_LABELS: Record<Finish, string> = {
   nonfoil: "Nonfoil",
@@ -24,12 +23,12 @@ function priceLine(printing: PrintingCard): string {
 }
 
 export default async function SetPage(props: PageProps<"/sets/[code]">) {
-  await requireActor();
+  const { capabilities } = await readPage();
   const { code } = await props.params;
-  const { db } = getContainer();
-  const set = await findSet(db, code);
+
+  const set = await capabilities.catalogReads.findSet(code);
   if (set === null) notFound();
-  const printings = await setPrintings(db, set.code);
+  const printings = await capabilities.catalogReads.setPrintings(set.code);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">

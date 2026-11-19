@@ -1,8 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { AccessTokenId, SCOPES } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 
 // Making and revoking access tokens for LLM clients (design doc 28, section 9).
 
@@ -16,13 +15,13 @@ export async function createTokenAction(
   _previous: CreateTokenState,
   formData: FormData,
 ): Promise<CreateTokenState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const scopes = formData
     .getAll("scope")
     .map(String)
     .filter((scope) => (SCOPES as readonly string[]).includes(scope));
   const name = String(formData.get("name") ?? "");
-  const result = await getContainer().accounts.createAccessToken(actor, { name, scopes });
+  const result = await capabilities.accounts.createAccessToken(actor, { name, scopes });
   if (!result.ok) {
     return {
       kind: "error",
@@ -37,10 +36,10 @@ export async function createTokenAction(
 }
 
 export async function revokeTokenAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const raw = Number(formData.get("tokenId"));
   if (Number.isSafeInteger(raw) && raw > 0) {
-    await getContainer().accounts.revokeAccessToken(actor, AccessTokenId.of(raw));
+    await capabilities.accounts.revokeAccessToken(actor, AccessTokenId.of(raw));
   }
   revalidatePath("/account/tokens");
 }

@@ -8,9 +8,8 @@ import {
   SetSelfFundingError,
   describePlayerActionError,
 } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { assertNever, UserId, type Result } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type PlayerActionState = {
   message: string | null;
@@ -39,14 +38,14 @@ export async function playerAction(
   _previousState: PlayerActionState,
   formData: FormData,
 ): Promise<PlayerActionState> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = PlayerActionForm.safeParse({
     userId: formData.get("userId"),
     intent: formData.get("intent"),
   });
   if (!form.success) return failure("That action wasn't understood.");
 
-  const { accounts } = getContainer();
+  const { accounts } = capabilities;
   const userId = UserId.of(form.data.userId);
 
   let result: Result<unknown, PlayerActionError>;

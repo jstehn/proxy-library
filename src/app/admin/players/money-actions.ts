@@ -2,9 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeCorrectBalanceError } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents, UserId } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type MoneyActionState = { message: string | null; tone: "error" | "success" };
 
@@ -20,7 +19,7 @@ export async function moneyAction(
   _previousState: MoneyActionState,
   formData: FormData,
 ): Promise<MoneyActionState> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = MoneyForm.safeParse({
     userId: formData.get("userId"),
     intent: formData.get("intent"),
@@ -33,7 +32,7 @@ export async function moneyAction(
   if (amount === null) return failure("Enter an amount like 12.50.");
 
   const input = { userId: UserId.of(form.data.userId), amount, note: form.data.note };
-  const { wallet } = getContainer();
+  const { wallet } = capabilities;
   const result =
     form.data.intent === "give"
       ? await wallet.grantMoney(admin, input)

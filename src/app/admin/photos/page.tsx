@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { photosOverview } from "@/modules/catalog";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 
 // Admin → Photos (design doc 13): which sets have their WPN page, and how many products got an
 // official photo.
@@ -14,8 +12,8 @@ const STATUS_LABELS = {
 } as const;
 
 export default async function PhotosPage() {
-  await requireAdminActor();
-  const sets = await photosOverview(getContainer().db);
+  const { capabilities } = await readPage({ admin: true });
+  const sets = await capabilities.catalogReads.photosOverview();
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">

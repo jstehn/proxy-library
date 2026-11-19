@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { FORMATS } from "@/modules/decks";
-import { getProfileForEdit } from "@/modules/social";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { ProfileForm } from "./profile-form";
+import { readPage } from "@/server/page-instance";
 
 export default async function EditProfilePage() {
-  const actor = await requireActor();
-  const initial = await getProfileForEdit(getContainer().db, actor.userId);
+  const { actor, capabilities } = await readPage();
+  const initial = await capabilities.socialReads.profileForEdit(actor.userId);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-12">

@@ -1,10 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { assertNever, Cents } from "@/shared/kernel";
 import { CONFIRMATION_WORD } from "./confirmation";
+import { readPage } from "@/server/page-instance";
 
 export type StartOverState = { message: string | null; tone: "error" | "success" };
 
@@ -15,13 +14,13 @@ export async function startOverAction(
   _previousState: StartOverState,
   formData: FormData,
 ): Promise<StartOverState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = StartOverForm.safeParse({ confirmation: formData.get("confirmation") });
   if (!form.success || form.data.confirmation.trim().toUpperCase() !== CONFIRMATION_WORD) {
     return { message: `Type ${CONFIRMATION_WORD} to confirm.`, tone: "error" };
   }
 
-  const { resetPlayer } = getContainer();
+  const { resetPlayer } = capabilities;
   const result = await resetPlayer(actor, actor.userId);
   if (!result.ok) {
     switch (result.error.kind) {

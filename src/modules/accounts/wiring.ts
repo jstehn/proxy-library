@@ -2,8 +2,10 @@ import { collectionPage } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishlistAnswers } from "@/modules/wishlist";
-import type { DbExecutor } from "@/shared/db";
+import { withDb, type DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
+import { listAccessTokens } from "./queries/access-tokens";
+import { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
 import { makeGetAccountOverview } from "./application/get-account-overview";
 
 // The accounts module's capabilities (ADR 0026): the account overview reads the balance, the
@@ -18,6 +20,12 @@ type AccountWiringDependencies = Readonly<{
 export function wireAccountCapabilities(dependencies: AccountWiringDependencies) {
   const { db, clock, wallet } = dependencies;
   return {
+    accountReads: {
+      hasAnyPlayers: withDb(db, hasAnyPlayers),
+      listAccessTokens: withDb(db, listAccessTokens),
+      listInvites: withDb(db, listInvites),
+      listPlayers: withDb(db, listPlayers),
+    },
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

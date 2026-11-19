@@ -2,15 +2,14 @@
 // Controller for the approval form (design doc 30): approve or deny, then send the browser back
 // to the app that asked.
 import { redirect } from "next/navigation";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { assertNever } from "@/shared/kernel";
 import { queryOf, readParameters } from "./parameters";
+import { readPage } from "@/server/page-instance";
 
 export async function decideAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parameters = readParameters((name) => formData.get(name));
-  const { accounts } = getContainer();
+  const { accounts } = capabilities;
   const back = `/oauth/authorize?${queryOf(parameters)}`;
 
   const result =

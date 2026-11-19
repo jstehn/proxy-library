@@ -1,23 +1,19 @@
 import Link from "next/link";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
+import { nextPayday } from "@/modules/wallet";
 import {
-  isWishlistShared,
-  sharedWishlists,
   totals,
   wishLines,
-  wishlistAnswers,
   type WishLine,
   type WishStatus,
   type WishTarget,
 } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { assertNever, Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { removeWishAction, setWishlistSharingAction } from "./actions";
 import { offerLabel } from "./labels";
 import { BuyWishForm, EditWishForm, RemoveWishButton } from "./wish-forms";
+import { readPage } from "@/server/page-instance";
 
 // The Wishlist page (design doc 26, section 9): each wish at today's price, how far your money
 // is from it, and buying it.
@@ -31,15 +27,15 @@ function targetText(target: WishTarget): string {
 }
 
 export default async function WishlistPage(props: PageProps<"/wishlist">) {
-  const actor = await requireActor();
-  const { db, wallet, clock } = getContainer();
+  const { actor, capabilities } = await readPage();
+  const { wallet } = capabilities;
   const [answers, balance, settings, isShared, shared] = await Promise.all([
-    wishlistAnswers(db, actor.userId),
+    capabilities.wishlistReads.answers(actor.userId),
     // Also pays any allowance that has come due, as the header does (design doc 03).
     wallet.refreshWallet(actor.userId),
-    currentEconomySettings(db),
-    isWishlistShared(db, actor.userId),
-    sharedWishlists(db),
+    capabilities.walletReads.economySettings(),
+    capabilities.wishlistReads.isShared(actor.userId),
+    capabilities.wishlistReads.shared(),
   ]);
   const others = shared.filter((player) => player.userId !== actor.userId);
   const schedule = { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays };
@@ -47,7 +43,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
     balance,
     allowance: settings.allowance,
     allowancePeriodDays: settings.allowancePeriodDays,
-    nextPayday: nextPayday(schedule, clock.now()),
+    nextPayday: nextPayday(schedule, capabilities.now()),
   });
   const sum = totals(lines);
   const searchParams = await props.searchParams;

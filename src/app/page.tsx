@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { activityFeed } from "@/modules/activity";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { ActivityList } from "./_components/activity-list";
+import { readPage } from "@/server/page-instance";
 
 // The home page: where to go, and what the playgroup has been up to.
 const sections = [
@@ -24,8 +22,8 @@ const sections = [
 
 export default async function Home() {
   // Runs on the server: a Server Component, the default in the App Router.
-  const actor = await requireActor();
-  const recent = await activityFeed(getContainer().db, 5);
+  const { actor, capabilities } = await readPage();
+  const recent = await capabilities.activityReads.feed(5);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">

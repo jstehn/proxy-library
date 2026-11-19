@@ -1,17 +1,17 @@
-import { listPlayers } from "@/modules/accounts";
-import { playerMoney } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { PlayerRow } from "./player-row";
+import { readPage } from "@/server/page-instance";
 
 export default async function AdminPlayersPage() {
-  const admin = await requireAdminActor();
-  const { db, wallet } = getContainer();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
+  const { wallet } = capabilities;
 
   // Pay due allowances (and open new wallets) first, so the balances shown are current.
   await wallet.refreshAllWallets();
-  const [players, money] = await Promise.all([listPlayers(db), playerMoney(db)]);
+  const [players, money] = await Promise.all([
+    capabilities.accountReads.listPlayers(),
+    capabilities.walletReads.playerMoney(),
+  ]);
   const moneyByPlayer = new Map(money.map((entry) => [entry.userId, entry]));
 
   return (

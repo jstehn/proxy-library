@@ -40,9 +40,9 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
    `{ actor, capabilities }`. Pages and routes use its twin, `readPage()`
    (`src/server/page-instance.ts`; `readPage({ allowVisitors: true })` allows a visitor, with
    `actor: null`). P09b–P09d move the callers onto them (P06–P09 built the capabilities and moved
-   only the tool bindings). A lint rule bans `getContainer` in `src/app`, with a shrinking list of
-   files not yet moved (`NOT_YET_ON_CAPABILITIES`) and a short list that must keep it
-   (`CONTAINER_ALLOWED`).
+   only the tool bindings). A lint rule bans `getContainer` in `src/app`, except a short list of files that
+   must keep it, each with a reason (`CONTAINER_ALLOWED`). `readCapabilities()` gives routes that
+   sign in some other way (a bearer token) the capabilities without resolving a player.
 
 ## How to add a capability and a binding
 
@@ -74,3 +74,5 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
 
 - 2026-11-19: wiring per module (`wiring.ts`), pages as the fifth adapter (`readPage()`), the
   `getContainer` ratchet, and the callers move in P09b–P09d (milestone 1 review).
+- 2026-11-19: P09b to P09d moved every page, route and action onto `readPage()`, `action()` and
+  `readCapabilities()`; the list of files not yet moved is gone.

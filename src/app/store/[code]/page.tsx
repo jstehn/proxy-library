@@ -1,10 +1,7 @@
 import { notFound } from "next/navigation";
 import { CardWithPreview } from "@/app/_components/card-preview";
-import { printingCards, type PrintingCard } from "@/modules/catalog";
-import { realProductCounts } from "@/modules/real-collection";
-import { storePage, type ProductForSale } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type PrintingCard } from "@/modules/catalog";
+import { type ProductForSale } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
 import { shapeForCategory } from "@/ui/product-art";
 import { KeyArt, ProductImage } from "@/ui/product-image";
@@ -12,26 +9,25 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
 import { RealProductForm } from "./real-product-form";
+import { readPage } from "@/server/page-instance";
 
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { code } = await props.params;
-  const { db, clock } = getContainer();
-  const page = await storePage(db, code);
-  const today = clock.now().toISOString().slice(0, 10);
+
+  const page = await capabilities.storeReads.page(code);
+  const today = capabilities.now().toISOString().slice(0, 10);
   // A Commander deck shows its commander's whole card (readable on hover), so it's clear who
   // leads the deck.
   const commanderOf = (product: ProductForSale): PrintingCard | undefined =>
     product.featured ? commanders.get(product.featured.printingId) : undefined;
-  const commanders = await printingCards(
-    db,
+  const commanders = await capabilities.printingDetails(
     page?.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])) ??
       [],
   );
   if (page === null) notFound();
   const { set } = page;
-  const ownedForReal = await realProductCounts(
-    db,
+  const ownedForReal = await capabilities.realCollectionReads.productCounts(
     actor.userId,
     page.products.map((product) => product.id),
   );

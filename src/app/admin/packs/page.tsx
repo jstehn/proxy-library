@@ -1,7 +1,6 @@
 import { CardTile } from "@/app/_components/card-tile";
-import { printingCards, SetCode, type PrintingCard } from "@/modules/catalog";
+import { SetCode, type PrintingCard } from "@/modules/catalog";
 import {
-  availableBoosters,
   COUNT_KEYS,
   SIMULATION_LIMIT,
   type BoosterChoice,
@@ -11,13 +10,12 @@ import {
   type SimulateOpeningsError,
   type SimulationReport,
 } from "@/modules/packs";
-import { packPrice } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents, type Result } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
+import type { Capabilities } from "@/server/capabilities";
+import { readPage } from "@/server/page-instance";
 
 // The Pack lab (design doc 05, section 10): open many packs of one booster, keep nothing, and
 // compare what came out with what the recipe promises. The form uses GET, so a run is just a URL.
@@ -51,10 +49,10 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function PackLabPage(props: PageProps<"/admin/packs">) {
-  const actor = await requireAdminActor();
+  const { actor, capabilities } = await readPage({ admin: true });
   const searchParams = await props.searchParams;
-  const { db, packs } = getContainer();
-  const choices = await availableBoosters(db);
+  const { packs } = capabilities;
+  const choices = await capabilities.packReads.availableBoosters();
 
   // "BLB/play" → set BLB, booster type "play".
   const booster = firstValue(searchParams.booster) ?? "";
@@ -91,7 +89,9 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
       {result !== null && !result.ok && (
         <Alert tone="error">{ERROR_MESSAGES[result.error.kind]}</Alert>
       )}
-      {result !== null && result.ok && <Report report={result.value} choices={choices} />}
+      {result !== null && result.ok && (
+        <Report capabilities={capabilities} report={result.value} choices={choices} />
+      )}
     </main>
   );
 }
@@ -154,16 +154,21 @@ function priceOf(card: PackCard, printing: PrintingCard | undefined): Cents {
 
 const FINISH_NAMES = { nonfoil: "", foil: "Foil ", etched: "Etched " };
 
-async function Report(props: { report: SimulationReport; choices: BoosterChoice[] }) {
+async function Report(props: {
+  capabilities: Capabilities;
+  report: SimulationReport;
+  choices: BoosterChoice[];
+}) {
+  const { capabilities } = props;
   const { report } = props;
-  const { db } = getContainer();
+
   const shownIds = [
     ...report.bestPulls.map((pull) => pull.printingId),
     ...report.samplePacks.flatMap((pack) => pack.cards.map((card) => card.printingId)),
   ];
   const [cards, price] = await Promise.all([
-    printingCards(db, shownIds),
-    packPrice(db, report.setCode, report.boosterType),
+    capabilities.printingDetails(shownIds),
+    capabilities.storeReads.packPrice(report.setCode, report.boosterType),
   ]);
   const setName =
     props.choices.find((choice) => choice.setCode === report.setCode)?.setName ?? report.setCode;

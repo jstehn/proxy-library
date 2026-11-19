@@ -2,9 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeUpdateEconomySettingsError } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type EconomyFormState = { message: string | null; tone: "error" | "success" };
 
@@ -20,7 +19,7 @@ export async function updateEconomyAction(
   _previousState: EconomyFormState,
   formData: FormData,
 ): Promise<EconomyFormState> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = EconomyForm.safeParse(Object.fromEntries(formData));
   if (!form.success) return failure("Please fill in every field.");
 
@@ -31,7 +30,7 @@ export async function updateEconomyAction(
     return failure("Enter amounts like 20.00.");
   }
 
-  const result = await getContainer().wallet.updateEconomySettings(admin, {
+  const result = await capabilities.wallet.updateEconomySettings(admin, {
     allowance,
     allowancePeriodDays: form.data.allowancePeriodDays,
     allowanceAnchor: new Date(form.data.anchorIso),

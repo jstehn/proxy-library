@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { deckProblems, deckView, shortList } from "@/modules/decks";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { deckProblems, shortList } from "@/modules/decks";
 import { ManaStylesheet } from "@/ui/mana";
 import { MAX_LIST_LINES } from "@/modules/store";
 import { ListBuyer } from "./list-buyer";
+import { readPage } from "@/server/page-instance";
 
 /** Characters accepted from `?list=`: plenty for MAX_LIST_LINES lines. */
 const MAX_LIST_TEXT = 20_000;
@@ -13,15 +12,15 @@ const MAX_LIST_TEXT = 20_000;
 // the cards that deck is short of; from a budget list ("?list=…", design doc 20), as that list.
 
 export default async function BuyListPage(props: PageProps<"/singles/list">) {
-  const actor = await requireActor();
-  const { db, wallet } = getContainer();
+  const { actor, capabilities } = await readPage();
+  const { wallet } = capabilities;
   const searchParams = await props.searchParams;
   const deckId = Number(typeof searchParams.deck === "string" ? searchParams.deck : NaN);
 
   let startingText = "";
   let deckName: string | null = null;
   if (Number.isSafeInteger(deckId) && deckId > 0) {
-    const view = await deckView(db, actor.userId, deckId);
+    const view = await capabilities.deckReads.deckView(actor.userId, deckId);
     if (view !== null) {
       deckName = view.deck.name;
       const owned = (oracleId: string) =>

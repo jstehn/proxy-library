@@ -1,3 +1,7 @@
+import { wireActivityCapabilities } from "@/modules/activity/wiring";
+import { wireSocialCapabilities } from "@/modules/social/wiring";
+import { wireTradeCapabilities } from "@/modules/trades/wiring";
+import { wireWalletCapabilities } from "@/modules/wallet/wiring";
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
@@ -33,9 +37,17 @@ import {
   type PreviewRepository,
 } from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
-import { wishesForCard, type Wishlist } from "@/modules/wishlist";
+import { wishesAtTarget, wishesForCard, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
-import type { makeDrafts } from "@/modules/drafts";
+import type { makeAccounts } from "@/modules/accounts";
+import type { makeCatalog } from "@/modules/catalog";
+import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
+import type { makePacks } from "@/modules/packs";
+import type { makeResetPlayer } from "@/modules/reset";
+import { incomingRequestCount, type makeSocial } from "@/modules/social";
+import { tradesWaitingForYou, type makeTrades } from "@/modules/trades";
+import type { makeWallet } from "@/modules/wallet";
+import type { makeWishlist } from "@/modules/wishlist";
 import type { makeInventory } from "@/modules/inventory";
 import type { makeRealCollection } from "@/modules/real-collection";
 import type { makeStore } from "@/modules/store";
@@ -70,6 +82,15 @@ type CapabilityDependencies = Readonly<{
     realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
     inventory: ReturnType<typeof makeInventory>;
+    accounts: ReturnType<typeof makeAccounts>;
+    wallet: ReturnType<typeof makeWallet>;
+    social: ReturnType<typeof makeSocial>;
+    trades: ReturnType<typeof makeTrades>;
+    wishlist: ReturnType<typeof makeWishlist>;
+    catalog: ReturnType<typeof makeCatalog>;
+    packs: ReturnType<typeof makePacks>;
+    resetPlayer: ReturnType<typeof makeResetPlayer>;
+    appUrl: string;
   }>;
   newPreviewId: () => string;
 }>;
@@ -94,6 +115,10 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     ...wireCatalogCapabilities({ db }),
     ...wireCollectionCapabilities({ db }),
+    ...wireActivityCapabilities({ db }),
+    ...wireSocialCapabilities({ db }),
+    ...wireTradeCapabilities({ db }),
+    ...wireWalletCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireDraftCapabilities({ db }),
     ...wireInventoryCapabilities({ db }),
@@ -108,6 +133,18 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     ...wireAccountCapabilities({ db, clock, wallet }),
     ...dependencies.services,
+    // The numbers in the site header, in one round trip. Showing the balance also pays any
+    // allowance that has come due (design doc 03, section 5).
+    headerSummary: async (userId: UserId) => {
+      const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
+        dependencies.services.wallet.refreshWallet(userId),
+        tradesWaitingForYou(db, userId),
+        wishesAtTarget(db, userId),
+        activeDraftOf(db, userId),
+        incomingRequestCount(db, userId),
+      ]);
+      return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
+    },
     now: () => clock.now(),
     youtube: dependencies.youtube,
     reddit: dependencies.reddit,

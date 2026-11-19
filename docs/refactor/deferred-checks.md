@@ -61,3 +61,8 @@ of old and new tool output.
       progress (lobby, picking, finished), inventory and opened packs (with the animation), a
       card's page, the Game and Real collection tabs, a shared deck and its public link and
       scorecard, the proxy print page and a PDF download, the commander finder.
+- [ ] **Pages moved in P09d, by eye** (dark theme, desktop and phone): the site header's counts
+      (trades waiting, wishes on target, a draft you're in, friend requests), account (profile,
+      tokens, password change after a reset), wallet, trades (new, open, history), friends, wishlist
+      and a friend's wishlist, singles, sets, store, a player's pages, every admin page, and the
+      OAuth consent flow with a real connector.

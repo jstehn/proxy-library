@@ -1,9 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getContainer } from "@/server/container";
-import { requireAdminActor } from "@/server/session";
 import { assertNever, Cents, UserId } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 export type ResetActionState = { message: string | null; tone: "error" | "success" };
 
@@ -18,7 +17,7 @@ export async function resetLibraryAction(
   _previousState: ResetActionState,
   formData: FormData,
 ): Promise<ResetActionState> {
-  const admin = await requireAdminActor();
+  const { actor: admin, capabilities } = await readPage({ admin: true });
   const form = ResetForm.safeParse({
     userId: formData.get("userId"),
     username: formData.get("username"),
@@ -29,7 +28,7 @@ export async function resetLibraryAction(
     return failure(`Type ${form.data.username} to confirm.`);
   }
 
-  const { resetPlayer } = getContainer();
+  const { resetPlayer } = capabilities;
   const result = await resetPlayer(admin, UserId.of(form.data.userId));
   if (!result.ok) {
     switch (result.error.kind) {

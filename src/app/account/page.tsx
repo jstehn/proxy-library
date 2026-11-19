@@ -1,19 +1,17 @@
 import Link from "next/link";
-import { currentEconomySettings, walletSummary } from "@/modules/wallet";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
 import { Cents } from "@/shared/kernel";
 import { InstallAppButton } from "../_components/install-app-button";
 import { CONFIRMATION_WORD } from "./confirmation";
 import { StartOverForm } from "./start-over-form";
+import { readPage } from "@/server/page-instance";
 
 /** The player's own account: their password, and starting over. */
 export default async function AccountPage() {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
+
   const [wallet, economy] = await Promise.all([
-    walletSummary(db, actor.userId),
-    currentEconomySettings(db),
+    capabilities.walletReads.summary(actor.userId),
+    capabilities.walletReads.economySettings(),
   ]);
   const startingAmount = Cents.format(economy.startingGrant);
 

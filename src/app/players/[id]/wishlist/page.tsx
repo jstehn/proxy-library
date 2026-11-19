@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { sharedWishlistFor, type SharedWishLine } from "@/modules/wishlist";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { type SharedWishLine } from "@/modules/wishlist";
 import { UserId } from "@/shared/kernel";
+import { readPage } from "@/server/page-instance";
 
 // Another player's shared wishlist, read-only (design doc 50). Never exposes targetCents,
 // wallet balance, or paydays.
@@ -23,11 +22,11 @@ function targetText(line: SharedWishLine): string {
 }
 
 export default async function PlayerWishlistPage(props: PageProps<"/players/[id]/wishlist">) {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const { id } = await props.params;
-  const { db } = getContainer();
+
   const ownerId = UserId.of(id);
-  const shared = await sharedWishlistFor(db, actor.userId, ownerId);
+  const shared = await capabilities.wishlistReads.sharedFor(actor.userId, ownerId);
   if (shared === null) notFound();
 
   const totalOwnedMatches = shared.lines.filter((line) => line.viewerOwned.length > 0).length;
