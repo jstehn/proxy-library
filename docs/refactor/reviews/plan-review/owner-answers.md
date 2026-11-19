@@ -64,11 +64,12 @@ These answers shape the revised plan. Questions without an answer yet are listed
 - **D5, the rating weights were fitted from data.** The code says so, and names the script that fits
   them.
 
-## Still open
+**The UI review's questions (2026-11-19), answered by approving the plan with the recommendations:**
 
-- Approving the revised plan.
-- The UI review's four questions:
-  - the `<img>` policy
-  - custom error pages
-  - colour tokens
-  - a dark-mode toggle
+- **Images:** keep plain `<img>` (the local image cache does the optimiser's job), behind one documented
+  `CardImage` component.
+- **Error pages:** simple custom `error`, `not-found` and `loading` pages.
+- **Colours:** design tokens (`surface`, `muted`, `accent`, `danger`, …) in place of raw `zinc-*` classes.
+- **Dark mode:** follows the system setting only; no toggle.
+
+**The revised plan was approved on 2026-11-19.**

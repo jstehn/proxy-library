@@ -1,4 +1,4 @@
-# Plan review after wave 4 (proposal, awaiting the owner's approval)
+# Plan review after wave 4 (approved by the owner, 2026-11-19)
 
 On 2026-11-19, five read-only agents reviewed `refactor/main` at `48f18af`, each from one angle.
 Their reports:
@@ -10,7 +10,7 @@ Their reports:
 5. [Docs, tests and the first impression](5-docs-tests-dx.md)
 
 The owner's answers so far are in [owner-answers.md](owner-answers.md). This page brings the five
-together into a revised plan. **Nothing here is in effect until the owner approves it.** The owner's answers (P24: delete all; D1–D5; licence 0BSD; the secure read layer; goldfish removed) are folded in below. After
+together into a revised plan. **Approved by the owner on 2026-11-19.** The owner's answers (P24: delete all; D1–D5; licence 0BSD; the secure read layer; goldfish removed) are folded in below. After
 that, STATUS, the package files and tududi change to match.
 
 ## What the reviews agree on
