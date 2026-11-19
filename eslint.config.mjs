@@ -29,6 +29,106 @@ const elements = [
   { type: "test-setup", pattern: "tests" },
 ];
 
+// Paths like `[id]` and `(auth)` are glob syntax, so they are escaped to match literally.
+const escapeGlob = (path) => path.replace(/[[\]()]/g, "\\$&");
+
+// The ratchet on `getContainer` in src/app (ADR 0026): adapters get what they need from
+// `action()` or `readPage()`. A file on NOT_YET_ON_CAPABILITIES still calls it; each package
+// (P09b to P09d, then P19) deletes the paths it moves, so the list only shrinks.
+const NOT_YET_ON_CAPABILITIES = [
+  "src/app/(auth)/register/actions.ts",
+  "src/app/(auth)/register/page.tsx",
+  "src/app/(auth)/sign-in/actions.ts",
+  "src/app/_llm-tools/http.ts",
+  "src/app/account/actions.ts",
+  "src/app/account/page.tsx",
+  "src/app/account/password/actions.ts",
+  "src/app/account/profile/actions.ts",
+  "src/app/account/profile/page.tsx",
+  "src/app/account/tokens/actions.ts",
+  "src/app/account/tokens/page.tsx",
+  "src/app/actions.ts",
+  "src/app/activity/page.tsx",
+  "src/app/admin/catalog/actions.ts",
+  "src/app/admin/catalog/page.tsx",
+  "src/app/admin/economy/actions.ts",
+  "src/app/admin/economy/page.tsx",
+  "src/app/admin/invites/actions.ts",
+  "src/app/admin/invites/page.tsx",
+  "src/app/admin/packs/page.tsx",
+  "src/app/admin/photos/[code]/page.tsx",
+  "src/app/admin/photos/actions.ts",
+  "src/app/admin/photos/page.tsx",
+  "src/app/admin/players/actions.ts",
+  "src/app/admin/players/money-actions.ts",
+  "src/app/admin/players/page.tsx",
+  "src/app/admin/players/reset-actions.ts",
+  "src/app/admin/store/actions.ts",
+  "src/app/admin/store/page.tsx",
+  "src/app/api/artwork/[imageId]/[size]/route.ts",
+  "src/app/api/drafts/[id]/events/route.ts",
+  "src/app/api/export/collection/route.ts",
+  "src/app/api/export/real/route.ts",
+  "src/app/api/images/[printingId]/[size]/[face]/route.ts",
+  "src/app/api/tools/openapi.json/route.ts",
+  "src/app/cards/[id]/actions.ts",
+  "src/app/cards/[id]/page.tsx",
+  "src/app/collection/page.tsx",
+  "src/app/collection/real/actions.ts",
+  "src/app/collection/real/page.tsx",
+  "src/app/d/[token]/page.tsx",
+  "src/app/d/[token]/scorecard/page.tsx",
+  "src/app/decks/[id]/export/page.tsx",
+  "src/app/decks/[id]/page.tsx",
+  "src/app/decks/[id]/print/actions.ts",
+  "src/app/decks/[id]/print/proxy-lines.ts",
+  "src/app/decks/[id]/proxies.pdf/route.ts",
+  "src/app/decks/actions.ts",
+  "src/app/decks/commanders/actions.ts",
+  "src/app/decks/commanders/page.tsx",
+  "src/app/decks/page.tsx",
+  "src/app/decks/shared/page.tsx",
+  "src/app/decks/to-get/page.tsx",
+  "src/app/drafts/[id]/page.tsx",
+  "src/app/drafts/actions.ts",
+  "src/app/drafts/page.tsx",
+  "src/app/friends/actions.ts",
+  "src/app/friends/page.tsx",
+  "src/app/inventory/actions.ts",
+  "src/app/inventory/opened/page.tsx",
+  "src/app/inventory/page.tsx",
+  "src/app/oauth/authorize/actions.ts",
+  "src/app/oauth/authorize/page.tsx",
+  "src/app/page.tsx",
+  "src/app/players/[id]/page.tsx",
+  "src/app/players/[id]/real/page.tsx",
+  "src/app/players/[id]/wishlist/page.tsx",
+  "src/app/sets/[code]/page.tsx",
+  "src/app/sets/page.tsx",
+  "src/app/singles/list/actions.ts",
+  "src/app/singles/list/page.tsx",
+  "src/app/singles/page.tsx",
+  "src/app/site-header.tsx",
+  "src/app/store/[code]/page.tsx",
+  "src/app/store/actions.ts",
+  "src/app/store/page.tsx",
+  "src/app/trades/[id]/page.tsx",
+  "src/app/trades/actions.ts",
+  "src/app/trades/new/page.tsx",
+  "src/app/trades/page.tsx",
+  "src/app/wallet/actions.ts",
+  "src/app/wallet/page.tsx",
+  "src/app/wishlist/actions.ts",
+  "src/app/wishlist/page.tsx",
+];
+// These keep `getContainer`, each for a reason.
+const CONTAINER_ALLOWED = [
+  // the OAuth protocol endpoints serve clients that have no player session, so they use the accounts module directly
+  "src/app/_oauth/http.ts",
+  // the health check has no player and reads no capability: it asks the container whether it is up
+  "src/app/api/health/route.ts",
+];
+
 // --- Selector helpers ------------------------------------------------------------------
 const el = (type) => ({ element: { type } });
 const layer = (name, { sameModule = false, file } = {}) => ({
@@ -381,10 +481,29 @@ export default defineConfig([
     rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
   },
 
+  // The ratchet (ADR 0026): no `getContainer` in src/app, except the files listed above.
+  {
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: [...TESTS, ...[...NOT_YET_ON_CAPABILITIES, ...CONTAINER_ALLOWED].map(escapeGlob)],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='getContainer']",
+          message: "Call capabilities through action() or readPage() (ADR 0026).",
+        },
+      ],
+    },
+  },
+
   // Adapters stay thin (ADR 0026): tool bindings and server actions parse input, call capabilities
   // and present the answer. Logic and data access live in the modules.
   {
-    files: ["src/app/_llm-tools/bindings/**/*.ts", "src/app/**/actions.ts"],
+    files: [
+      "src/app/_llm-tools/bindings/**/*.ts",
+      "src/app/**/actions.ts",
+      "src/app/**/{page.tsx,route.ts,layout.tsx}",
+    ],
     ignores: TESTS,
     rules: {
       "no-restricted-imports": [

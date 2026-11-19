@@ -5,7 +5,7 @@ import type { ManaBasePlan, PlannedLand } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { landReasonText, landTargetReasonText } from "../../labels";
-import { manaBaseAction } from "./actions";
+import { manaBaseAction } from "./reads/actions";
 
 // Mana base (design doc 35, section 9): how many lands and sources of each color to aim for,
 // and lands you could add: yours first (decks share cards), then basics; and store lands to

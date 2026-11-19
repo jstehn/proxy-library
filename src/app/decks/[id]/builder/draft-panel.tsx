@@ -4,7 +4,7 @@ import type { DeckDraft, DraftedSpell, Format } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { draftReasonText, landReasonText, TAG_LABELS } from "../../labels";
-import { draftDeckAction } from "./actions";
+import { draftDeckAction } from "./reads/actions";
 import type { LandsToAdd } from "./mana-base-panel";
 
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards

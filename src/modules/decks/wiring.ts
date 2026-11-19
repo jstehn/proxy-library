@@ -1,6 +1,7 @@
 import { printingCards } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { ok, type Clock, type UserId } from "@/shared/kernel";
+import { makeSwapCards, makeTakeFromDeck } from "./application/deck-builder-moves";
 import { makeDeckCombos } from "./application/deck-combos";
 import { makeEdhrecResearch } from "./application/deck-edhrec";
 import { makeDeckFacts } from "./application/deck-facts";
@@ -22,12 +23,23 @@ import { budgetReplacements } from "./queries/budget-replacements";
 import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./queries/card-facts";
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
-import { addDeckSource, deckView, decksFor, listDeckSources } from "./queries/decks";
+import {
+  addDeckSource,
+  deckView,
+  decksFor,
+  listDeckSources,
+  otherDecksHolding,
+} from "./queries/decks";
 import { manaBasePlan } from "./queries/mana-base";
+import { browseCollection, type BrowseInput } from "./queries/browse";
+import { draftForDeck } from "./queries/draft-deck";
+import { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
+import { cardPrintings } from "./queries/printings";
+import { compareDeckSnapshot, listDeckSnapshots } from "./queries/snapshots";
 import { deckChangePreview } from "./queries/preview";
 import { searchForDeck } from "./queries/search-for-deck";
 import { semanticSearchForDeck } from "./queries/semantic-search";
-import { similarCards } from "./queries/suggestions";
+import { budgetList, deckSuggestions, similarCards } from "./queries/suggestions";
 import { deckTokenLines } from "./queries/tokens";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
@@ -44,10 +56,7 @@ export type DeckWiringDependencies = Readonly<{
     fetchEdhrecCommander: EdhrecReader;
     fetchSpellbookCombos: CombosReader;
   }>;
-  decks: Pick<
-    Decks,
-    "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
-  >;
+  decks: Decks;
   previews: PreviewRepository;
   newPreviewId: () => string;
 }>;
@@ -113,12 +122,40 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
     }),
     // The deck-changing commands, as the decks module's use cases (each checks its own rules).
-    deckEdits: {
-      createDeck: decks.createDeck,
-      updateDeck: decks.updateDeck,
-      deleteDeck: decks.deleteDeck,
-      importList: decks.importList,
-      replaceList: decks.replaceList,
+    deckEdits: decks,
+    swapCards: makeSwapCards({
+      deckView: readDeck,
+      applyChanges: (actor, input) =>
+        decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
+    }),
+    takeFromDeck: makeTakeFromDeck({
+      deckView: readDeck,
+      setEntry: (actor, input) =>
+        decks.setEntry(actor, { ...input, deckId: DeckId.of(input.deckId) }),
+    }),
+    // The builder's reads: each answers one question, as the query already does.
+    deckReads: {
+      browse: (userId: UserId, input: BrowseInput) => browseCollection(db, userId, input),
+      printingsOf: (userId: UserId, deckId: number, oracleId: string) =>
+        cardPrintings(db, userId, deckId, oracleId),
+      otherDecksHolding: (userId: UserId, deckId: number, oracleId: string) =>
+        otherDecksHolding(db, userId, deckId, oracleId),
+      suggestions: (userId: UserId, deckId: number) => deckSuggestions(db, userId, deckId),
+      optimize: async (userId: UserId, deckId: number, pool: OptimizeDeckPool) =>
+        (await optimizeDeckForView(db, userId, deckId, { pool }))?.result ?? null,
+      draft: (userId: UserId, deckId: number, options: { includeStore?: "fill-gaps" | "none" }) =>
+        draftForDeck(db, userId, deckId, options),
+      similar: (userId: UserId, deckId: number, oracleId: string) =>
+        similarCards(db, userId, deckId, oracleId),
+      budgetList: (userId: UserId, deckId: number, budgetCents: number) =>
+        budgetList(db, userId, deckId, budgetCents),
+      snapshots: (userId: UserId, deckId: number) => listDeckSnapshots(db, userId, deckId),
+      compareSnapshots: (
+        userId: UserId,
+        deckId: number,
+        beforeSnapshotId: number,
+        afterSnapshotId?: number,
+      ) => compareDeckSnapshot(db, userId, deckId, beforeSnapshotId, afterSnapshotId),
     },
     deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
     deckSignals: makeDeckSignals({

@@ -1,4 +1,5 @@
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
+import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
   makeCardLookup,
   makeSearchCatalog,
@@ -39,10 +40,7 @@ type CapabilityDependencies = Readonly<{
   outsideData: OutsideDataService;
   youtube: ReturnType<typeof makeYoutube>;
   reddit: ReturnType<typeof makeReddit>;
-  decks: Pick<
-    Decks,
-    "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
-  >;
+  decks: Decks;
   previews: PreviewRepository;
   newPreviewId: () => string;
 }>;
@@ -65,6 +63,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       previews: dependencies.previews,
       newPreviewId: dependencies.newPreviewId,
     }),
+    ...wireCatalogCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
       clock,
