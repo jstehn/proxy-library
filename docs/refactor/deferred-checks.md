@@ -26,10 +26,10 @@ of old and new tool output.
 
 - [x] **Playwright suite (run 2026-11-19 after P09: 26 of 26 pass).** Seven stale test locators were fixed first (see commit); no app code changed. Original item: **The Playwright suite has not been run since P05.** Run it once now and after each wave:
       the deck builder (P06 changed how it loads), the deck page and shared view, wishlist pages.
-- [ ] **Look at it, dark mode and at phone width** (memory: user tests dark and mobile): the
+- [x] **Looked at 2026-11-19 (dark theme, desktop 1400 wide and phone 375 wide, after P09): deck list, deck page, builder grid and stats, suggestions panel, test hand, plan and primer save, edit as text (preview and save), new deck, wishlist; no horizontal scroll, bottom nav and Menu button fine.** Not looked at: light mode, the Visual deck view, the mana base and draft panels, tablet width. Original item: **Look at it, dark mode and at phone width** (memory: user tests dark and mobile): the
       builder grid and the suggestions panel after P07b changed which printing an owned card shows.
 
-- [ ] **Edit as text, the plan and primer panel, and new deck (P08).** In the browser: save a
+- [x] **Done in the browser 2026-11-19: Edit as text, the plan and primer panel, and new deck (P08).** In the browser: save a
       deck's plan with key and avoid cards, edit a deck as text, make a new deck.
 - [ ] **Stored previews survive a restart (P08).** Preview an `edit_deck` change, restart the app
       (`pnpm dev:all`), then save it with the `previewId` from an MCP client.
