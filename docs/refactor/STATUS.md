@@ -60,6 +60,7 @@ state".
 | ---------- | ------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
 | Baseline   | 93,361       | 32,194     | 28          | 43             | 83         | 191                              |
 | P00 script | 93,490 \*    | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
+| After P04  | 91,358       | 34,255     | 27          | 43             | 57         | 191                              |
 | **Target** | **≤ 80,000** | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
@@ -83,6 +84,10 @@ state".
 4. (tududi task 263) **Splitting `decks` (P18):** four modules (`decks`, `deck-play`, `deck-advice`, `proxies`), or one `decks/` module with
    four responsibility subfolders, the way `research/` holds `reddit/` and `youtube/`?
 5. (tududi task 264) **The 27 unregistered tools (P01):** any to bring back as bindings after P09?
+
+6. (tududi task 266) **The line target:** after P04 the remaining duplication adds up to about
+   −6,800 to −10,500 lines ([dedup playbook](dedup-playbook.md)), landing at roughly
+   80,900–84,600. Keep ≤ 80,000 as a stretch goal, or revise it?
 
 ## Decisions made
 
