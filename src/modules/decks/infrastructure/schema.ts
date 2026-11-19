@@ -12,7 +12,6 @@ import {
   primaryKey,
   smallint,
   text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
@@ -20,8 +19,7 @@ import { players } from "../../accounts/infrastructure/schema";
 import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
 import type { DeckPlan } from "../domain/deck-profile";
 import type { GoldfishState } from "../domain/goldfish-session";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 export const decks = pgTable(
   "decks",

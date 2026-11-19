@@ -7,14 +7,12 @@ import {
   jsonb,
   pgTable,
   text,
-  timestamp,
   bigserial,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 /** Every sealed thing a player owns or owned: products, packs and decks. */
 export const sealedItems = pgTable(
