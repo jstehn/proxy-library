@@ -1,7 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows } from "@/shared/db";
+import { latestPriceRows, textArray } from "@/shared/db";
 import { FinishSchema, type UserId } from "@/shared/kernel";
 import {
   nameKey,
@@ -14,14 +14,6 @@ import {
 // The quote for a pasted list of singles (design doc 15, section 3): read only, nothing saved.
 // One query each for the printings for sale, the names the catalog knows, and what the player
 // owns; the domain decides the rest.
-
-/** `array['a', 'b']::text[]` with every value as a parameter. */
-function textArray(values: readonly string[]): SQL {
-  return sql`array[${sql.join(
-    values.map((value) => sql`${value}`),
-    sql`, `,
-  )}]::text[]`;
-}
 
 /** Matches a printing "p" by its whole name or its front face's ("Delver of Secrets"). */
 function nameIn(names: SQL): SQL {

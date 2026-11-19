@@ -1,12 +1,12 @@
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { textArray, type DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { authUsers } from "../../accounts/infrastructure/schema";
 import { printings } from "../../catalog/infrastructure/schema";
 import { countAtTarget, type WishlistAnswers } from "../domain/lines";
 import { wishFromStored, type FinishPreference, type OwnedStack, type Wish } from "../domain/wish";
 import { wishes, wishlistSettings } from "../infrastructure/schema";
-import { offersOf, ownedOf, textArray } from "./for-sale";
+import { offersOf, ownedOf } from "./for-sale";
 
 type Finish = OwnedStack["finish"];
 

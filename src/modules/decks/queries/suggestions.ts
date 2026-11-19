@@ -1,6 +1,6 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import { type DbExecutor, newestDayPrice } from "@/shared/db";
+import { type DbExecutor, newestDayPrice, textArray } from "@/shared/db";
 import { latestPrice, latestPriceRows } from "@/shared/db";
 import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
@@ -98,13 +98,6 @@ type Wanted = Readonly<{
   tribes: readonly string[];
   keywords: readonly string[];
 }>;
-
-export function textArray(values: readonly string[]): SQL {
-  return sql`array[${sql.join(
-    [...values, "_"].map((value) => sql`${value}`), // "_" keeps an empty array typed
-    sql`, `,
-  )}]::text[]`;
-}
 
 /** The deck as the suggestions read it, or null if it isn't this player's. */
 export async function suggestionContext(

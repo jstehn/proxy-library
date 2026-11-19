@@ -1,6 +1,6 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows } from "@/shared/db";
+import { latestPriceRows, textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -40,13 +40,6 @@ type LandRow = {
   also_in: string[] | null;
   price_cents: number | null;
 };
-
-function textArray(values: readonly string[]): SQL {
-  return sql`array[${sql.join(
-    [...values, "_"].map((value) => sql`${value}`), // "_" keeps an empty array typed
-    sql`, `,
-  )}]::text[]`;
-}
 
 /** The columns a land row needs, from a printing `p`. */
 const LAND_COLUMNS = sql`p.oracle_id, p.name, p.type_line,

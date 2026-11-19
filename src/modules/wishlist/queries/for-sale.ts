@@ -1,20 +1,12 @@
-import { sql, type SQL } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows } from "@/shared/db";
+import { latestPriceRows, textArray } from "@/shared/db";
 import { Cents, FinishSchema, type UserId } from "@/shared/kernel";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack } from "../domain/wish";
 
 // What's for sale and what a player owns of some cards (design doc 26, section 9). Read by the
 // Wishlist page and by the use cases (through the WishCatalog adapter), so both see the same.
-
-/** `array['a', 'b']::text[]` with every value as a parameter. */
-export function textArray(values: readonly string[]): SQL {
-  return sql`array[${sql.join(
-    values.map((value) => sql`${value}`),
-    sql`, `,
-  )}]::text[]`;
-}
 
 /** Every printing of these cards that the store sells (enabled sets, priced), in every finish. */
 export async function offersOf(db: DbExecutor, oracleIds: readonly string[]): Promise<Offer[]> {
