@@ -1,6 +1,6 @@
 import type { ActivityServices } from "@/modules/activity";
-import type { Finish, PrintingId } from "@/modules/catalog";
-import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import type { PrintingId } from "@/modules/catalog";
+import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
 import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
 import type { GoldfishState } from "../domain/goldfish-session";
 import type { ProxyProgress } from "../domain/proxy-progress";

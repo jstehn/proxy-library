@@ -1,7 +1,6 @@
 import Papa from "papaparse";
-import type { Finish } from "@/modules/catalog";
 import { parseList, type ListSection } from "@/shared/card-search";
-import { err, ok, type Result } from "@/shared/kernel";
+import { type Finish, type Result, err, ok } from "@/shared/kernel";
 import { MAX_REAL_QUANTITY } from "./copies";
 import type { FormatNotRecognized } from "./errors";
 

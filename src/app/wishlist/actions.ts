@@ -15,14 +15,12 @@ import {
 } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { assertNever, Cents, type Result, type UserId } from "@/shared/kernel";
+import { Cents, FinishSchema, type Result, type UserId, assertNever } from "@/shared/kernel";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
 // Wishlist page both use these.
 
 export type WishState = { message: string | null; tone: "error" | "success" };
-
-const FINISH = z.enum(["nonfoil", "foil", "etched"]);
 
 const DetailsForm = z.object({
   quantity: z.coerce.number(),
@@ -51,7 +49,11 @@ const RequestForm = z.discriminatedUnion("kind", [
     printingId: z.string().min(1),
     finish: z.enum(["nonfoil", "foil", "cheapest"]),
   }),
-  z.object({ kind: z.literal("exactPrinting"), printingId: z.string().min(1), finish: FINISH }),
+  z.object({
+    kind: z.literal("exactPrinting"),
+    printingId: z.string().min(1),
+    finish: FinishSchema,
+  }),
 ]);
 
 function refresh(printingId?: string) {
@@ -126,7 +128,7 @@ export async function setWishlistSharingAction(formData: FormData): Promise<void
 const BuyForm = z.object({
   wishId: z.coerce.number().int().positive(),
   printingId: z.string().min(1),
-  finish: FINISH,
+  finish: FinishSchema,
   quantity: z.coerce.number(),
   expectedUnitPrice: z.coerce.number().int().nonnegative(),
   name: z.string().max(200),

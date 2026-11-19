@@ -1,8 +1,8 @@
 import { and, count, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { PrintingId, type Finish } from "@/modules/catalog";
+import { PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
-import { UserId } from "@/shared/kernel";
+import { type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import type {
   CardLookup,
   CardQuery,
@@ -28,7 +28,6 @@ import { isValidPublicToken } from "../domain/sharing";
 import { SnapshotId, type DeckSnapshot, type SnapshotEntry } from "../domain/snapshots";
 import { deckEntries, decks, deckSnapshots } from "./schema";
 
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 const SnapshotEntrySchema = z.object({
   oracleId: z.string(),
   board: z.enum(BOARDS),

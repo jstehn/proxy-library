@@ -1,4 +1,4 @@
-import type { Brand, Cents } from "@/shared/kernel";
+import type { Brand, Cents, Finish, ManaColor, Rarity } from "@/shared/kernel";
 
 // The catalog's own vocabulary (design doc 04, section 3). External data is translated into
 // these types by the anti-corruption layer in ../infrastructure; nothing else sees raw JSON.
@@ -30,11 +30,10 @@ export const SealedProductId = {
   },
 };
 
-export type Finish = "nonfoil" | "foil" | "etched";
-export const FINISHES: readonly Finish[] = ["nonfoil", "foil", "etched"];
-
-export type Rarity = "common" | "uncommon" | "rare" | "mythic" | "special" | "bonus";
-export type Color = "W" | "U" | "B" | "R" | "G";
+// The basic words live in the kernel (every layer may use them); the catalog re-exports them.
+export { COLORS, FINISHES, RARITIES } from "@/shared/kernel";
+export type { Finish, Rarity } from "@/shared/kernel";
+export type Color = ManaColor;
 
 export type CardSetInfo = Readonly<{
   code: SetCode;

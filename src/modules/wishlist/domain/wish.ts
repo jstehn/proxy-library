@@ -1,5 +1,13 @@
-import type { Finish } from "@/modules/catalog";
-import { assertNever, Cents, err, ok, UserId, type Brand, type Result } from "@/shared/kernel";
+import {
+  type Brand,
+  Cents,
+  type Finish,
+  type Result,
+  UserId,
+  assertNever,
+  err,
+  ok,
+} from "@/shared/kernel";
 import type { InvalidWish } from "./errors";
 
 // A wish: one card a player wants, how many copies, and which printing (design doc 26,

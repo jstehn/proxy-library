@@ -1,4 +1,5 @@
 import { cardTags, TAGS, type Tag } from "@/shared/card-search";
+import { COLORS, type ManaColor, type ManaSymbol } from "@/shared/kernel";
 import { isCounted, isPlayed, type Board } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
@@ -19,9 +20,7 @@ export type StatsLine = Readonly<{
   text?: string;
 }>;
 
-export const MANA_COLORS = ["W", "U", "B", "R", "G"] as const;
-export type ManaColor = (typeof MANA_COLORS)[number];
-export type ManaSource = ManaColor | "C";
+export type ManaSource = ManaSymbol;
 
 /** The types shown, in the order players usually list them. */
 export const TYPE_ORDER = [
@@ -79,7 +78,7 @@ export function isLand(typeLine: string): boolean {
 export function colorPips(manaCost: string | null | undefined): Record<ManaColor, number> {
   const pips: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0 };
   for (const symbol of manaCost?.match(/\{[^}]+\}/g) ?? []) {
-    for (const color of MANA_COLORS) if (symbol.includes(color)) pips[color] += 1;
+    for (const color of COLORS) if (symbol.includes(color)) pips[color] += 1;
   }
   return pips;
 }
@@ -132,7 +131,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     spells += line.quantity;
     totalManaValue += line.manaValue * line.quantity;
     const linePips = colorPips(line.manaCost);
-    for (const color of MANA_COLORS) pips[color] += linePips[color] * line.quantity;
+    for (const color of COLORS) pips[color] += linePips[color] * line.quantity;
   }
   return {
     curve,

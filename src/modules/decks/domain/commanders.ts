@@ -9,14 +9,8 @@ import {
   type DeckProfile,
   type Scored,
 } from "./suggest";
-import {
-  isLand,
-  MANA_COLORS,
-  roleTargets,
-  TARGETED_TAGS,
-  type ManaColor,
-  type TargetedTag,
-} from "./stats";
+import { isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.
@@ -121,7 +115,7 @@ const COLOR_BITS: Readonly<Record<ManaColor, number>> = { W: 1, U: 2, B: 4, R: 8
 export function colorMask(colors: readonly string[]): number {
   let mask = 0;
   for (const color of colors) {
-    if ((MANA_COLORS as readonly string[]).includes(color)) mask |= COLOR_BITS[color as ManaColor];
+    if ((COLORS as readonly string[]).includes(color)) mask |= COLOR_BITS[color as ManaColor];
   }
   return mask;
 }

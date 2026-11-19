@@ -1,5 +1,5 @@
-import { MANA_COLORS } from "../domain/mana-symbols";
 import type { PrintedCard, PrintedFace } from "../domain/playtest-card";
+import { COLORS } from "@/shared/kernel";
 
 // Printed cards for playtest proxy tests (design doc 22), from one-line overrides.
 
@@ -37,7 +37,7 @@ export function printedCard(
 /** Every subset of the five colours: colourless, 5 mono, 10 pairs, 10 triples, 5 fours, 1 five. */
 export function allColorCombinations(): string[][] {
   return Array.from({ length: 32 }, (_, bits) =>
-    MANA_COLORS.filter((_, index) => (bits & (1 << index)) !== 0),
+    COLORS.filter((_, index) => (bits & (1 << index)) !== 0),
   ).sort((one, other) => one.length - other.length);
 }
 

@@ -237,7 +237,9 @@ export default defineConfig([
       "src/shared/card-search/parse.ts",
       "src/shared/card-search/list.ts",
     ],
-    ignores: TESTS,
+    // kernel/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
+    // words (finish, color, rarity), shared by every module's parsing code (refactor P02).
+    ignores: [...TESTS, "src/shared/kernel/schemas.ts"],
     rules: {
       "no-restricted-imports": [
         "error",

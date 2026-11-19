@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import { itemOpenings, sealedItems } from "../infrastructure/schema";
 
 // Read models for the inventory screens (ADR 0006).
@@ -85,7 +85,7 @@ export async function recentOpenings(
 /** One card that came out of an opening. */
 export type OpenedCard = Readonly<{
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
 }>;
 

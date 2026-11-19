@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import { deckUsesRealCards, MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Every printing of one card, for the deck builder's printing picker (design doc 24, section 9).
 
-export type PrintingFinish = "nonfoil" | "foil" | "etched";
+export type PrintingFinish = Finish;
 
 /** One finish of a printing: its latest price and how many copies you own in it. */
 export type PrintingFinishOption = Readonly<{

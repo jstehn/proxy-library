@@ -1,3 +1,4 @@
+import type { Finish } from "@/shared/kernel";
 // The opening sequence as a state machine (design doc 08, section 3): a pure reducer, so every
 // transition is unit-tested and the component only draws the current state.
 
@@ -6,7 +7,7 @@ export type OpenerCard = Readonly<{
   printingId: string;
   name: string;
   rarity: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   priceCents: number | null;
   hasImage: boolean;
   variantLabel: string;

@@ -3,9 +3,7 @@
 // glyphs and colours below are copied from Mana's own stylesheet (mana-font/css/mana.css), so a
 // proxy's symbols look the way they do on Scryfall and other sites that use the font.
 
-/** The five colours, in the order cards list them. */
-export const MANA_COLORS = ["W", "U", "B", "R", "G"] as const;
-export type ManaColor = (typeof MANA_COLORS)[number];
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 /** A piece of rules text: plain words, or one symbol such as "T" or "W/U" (without braces). */
 export type TextRun = Readonly<{ kind: "text"; text: string } | { kind: "symbol"; symbol: string }>;
@@ -31,7 +29,7 @@ export function costSymbols(manaCost: string | null): string[] {
 /** The colours a cost asks for: "{1}{G/W}" → G and W; "{2/U}" → U; "{C}" → none. */
 export function colorsOfCost(manaCost: string | null): ManaColor[] {
   const parts = new Set(costSymbols(manaCost).flatMap((symbol) => symbol.split("/")));
-  return MANA_COLORS.filter((color) => parts.has(color));
+  return COLORS.filter((color) => parts.has(color));
 }
 
 /** How Mana draws one symbol: a coloured circle with a glyph, or a circle split in two. */

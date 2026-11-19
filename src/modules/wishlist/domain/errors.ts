@@ -1,4 +1,4 @@
-import type { Finish } from "@/modules/catalog";
+import type { Finish } from "@/shared/kernel";
 
 // Every expected failure in the wishlist module (design doc 26, section 5).
 

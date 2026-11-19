@@ -1,7 +1,7 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import { seededRng, type UserId } from "@/shared/kernel";
+import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
 import {
@@ -15,7 +15,7 @@ import {
 } from "../domain/deck-profile";
 import { planManaBase, type LandCandidate, type ManaBasePlan } from "../domain/mana-base";
 import { decks } from "../infrastructure/schema";
-import { deckStats, MANA_COLORS } from "../domain/stats";
+import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { ownedCopies } from "./owned";
 import { suggestionContext, type SuggestionContext } from "./suggestions";
@@ -131,11 +131,10 @@ export async function landPoolsForDeck(
   // Store lands worth a look: two of the deck's colors (one, for a one-color deck), or a role
   // or theme the deck has. Each at its cheapest printing for sale.
   const stats = deckStats(context.lines);
-  const cmdColors = (context.colorLimit ?? []).filter(
-    (color): color is (typeof MANA_COLORS)[number] =>
-      (MANA_COLORS as readonly string[]).includes(color),
+  const cmdColors = (context.colorLimit ?? []).filter((color): color is (typeof COLORS)[number] =>
+    (COLORS as readonly string[]).includes(color),
   );
-  const pipColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
+  const pipColors = COLORS.filter((color) => stats.pips[color] > 0);
   const deckColors = pipColors.length > 0 ? pipColors : cmdColors;
   const profile = deckProfile(context.lines, context.format);
   const deckRoles = profile.gaps.map((gap) => gap.tag);

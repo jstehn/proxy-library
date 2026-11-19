@@ -1,8 +1,8 @@
 import type { Actor } from "@/modules/accounts";
-import type { Finish, PrintingId } from "@/modules/catalog";
+import type { PrintingId } from "@/modules/catalog";
 import { giveUpCards, receiveCards, type NotEnoughCopies } from "@/modules/collection";
 import { receive, spend, type InsufficientFunds } from "@/modules/wallet";
-import { err, ok, type Cents, type Result } from "@/shared/kernel";
+import { type Cents, type Finish, type Result, err, ok } from "@/shared/kernel";
 import type {
   Forbidden,
   NoPrice,

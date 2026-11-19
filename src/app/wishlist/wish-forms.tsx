@@ -2,9 +2,8 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import type { Finish } from "@/modules/catalog";
 import type { FinishPreference, Offer, Wish } from "@/modules/wishlist";
-import { Cents } from "@/shared/kernel";
+import { Cents, type Finish } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import {
   addWishAction,

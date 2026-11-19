@@ -1,5 +1,4 @@
 import type {
-  Finish,
   PrintingId,
   SealedContent,
   SealedProduct,
@@ -7,7 +6,7 @@ import type {
   SetCode,
 } from "@/modules/catalog";
 import type { ListSection } from "@/shared/card-search";
-import { assertNever, err, ok, type Result } from "@/shared/kernel";
+import { type Finish, type Result, assertNever, err, ok } from "@/shared/kernel";
 import { sumCopies, type RealCopy } from "./copies";
 import type { ChoiceNeeded, ProductUnavailable } from "./errors";
 

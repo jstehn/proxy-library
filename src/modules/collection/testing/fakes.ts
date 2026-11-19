@@ -1,5 +1,5 @@
-import { PrintingId, type Finish } from "@/modules/catalog";
-import { err, ok, type UserId } from "@/shared/kernel";
+import { PrintingId } from "@/modules/catalog";
+import { type Finish, type UserId, err, ok } from "@/shared/kernel";
 import type { CollectionRepository } from "../application/ports";
 import type { Acquisition, CardGain } from "../domain/cards";
 

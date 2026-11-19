@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PrintingId, SetCode } from "@/modules/catalog";
 import type { DeckId } from "@/modules/decks";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, UserId } from "@/shared/kernel";
+import { Cents, ColorSchema, FinishSchema, UserId } from "@/shared/kernel";
 import type { DraftRepository } from "../application/ports";
 import {
   DraftId,
@@ -23,8 +23,6 @@ import { draftBasics, draftCards, draftPacks, draftReveals, drafts, draftSeats }
 // cards, dealt basics and reveals, with the abilities' state as JSON parsed back with Zod.
 
 const StatusSchema = z.enum(["lobby", "drafting", "dealing", "finished", "cancelled"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 const PickStateSchema = z.enum([
   "faceDown",
   "faceUp",

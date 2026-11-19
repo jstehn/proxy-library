@@ -1,15 +1,16 @@
-import { randomInt, seededRng, type Rng } from "@/shared/kernel";
+import {
+  COLORS,
+  type ManaColor,
+  type ManaSymbol as PoolManaColor,
+  type Rng,
+  randomInt,
+  seededRng,
+} from "@/shared/kernel";
 import { isPlayed, type Board } from "./boards";
 import { effectiveManaValue, type DeckProfile } from "./deck-profile";
-import {
-  extractTapManaProduction,
-  hasTapManaAbility,
-  parseManaCost,
-  totalMana,
-  type ManaColor as PoolManaColor,
-} from "./mana";
+import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
-import { isLand, MANA_COLORS, type ManaColor } from "./stats";
+import { isLand } from "./stats";
 
 export type CastabilityLine = Readonly<{
   oracleId: string;
@@ -313,7 +314,7 @@ export function simulateCastOnCurve(
       const castOnCurvePct = Math.round((castCounts[sIdx] / trials) * 1000) / 1000;
       let bottleneckColor: ManaColor | null = null;
       let maxMiss = 0;
-      for (const color of MANA_COLORS) {
+      for (const color of COLORS) {
         const misses = colorMissCounts[color][sIdx];
         if (misses > maxMiss) {
           maxMiss = misses;

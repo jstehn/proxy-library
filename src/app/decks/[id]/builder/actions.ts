@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PrintingId, printingCards, type PrintingCard } from "@/modules/catalog";
+import { type PrintingCard, PrintingId, printingCards } from "@/modules/catalog";
 import {
   BOARDS,
   BROWSE_SORTS,
@@ -55,12 +55,11 @@ import {
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
+import { ColorSchema, FinishSchema } from "@/shared/kernel";
 
 // The deck builder's server side (design doc 14). The browser holds the deck in memory for
 // instant statistics and problems (design doc 19); every change goes through the decks module,
 // and the fresh deck comes back.
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
 const BrowseInput = z.object({
   deckId: z.number().int().positive(),
@@ -322,9 +321,7 @@ const ChoosePrintingInput = z.object({
   oracleId: z.string().min(1),
   board: z.enum(BOARDS),
   /** null: follow my copies again. */
-  pinned: z
-    .object({ printingId: z.string().uuid(), finish: z.enum(["nonfoil", "foil", "etched"]) })
-    .nullable(),
+  pinned: z.object({ printingId: z.string().uuid(), finish: FinishSchema }).nullable(),
 });
 
 /** Pins a deck line to a printing and finish, or unpins it; returns the fresh deck. */

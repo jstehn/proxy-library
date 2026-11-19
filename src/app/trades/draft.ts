@@ -1,9 +1,10 @@
+import type { Finish } from "@/shared/kernel";
 // A trade being put together, kept in the URL (design doc 10, section 9): nothing is stored until
 // you propose it. Cards are written "printingId~finish~quantity", separated by commas.
 
 export type DraftCard = {
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
 };
 

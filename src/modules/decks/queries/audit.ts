@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { seededRng, type UserId } from "@/shared/kernel";
+import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import {
   bracketLine,
@@ -20,7 +20,6 @@ import { scoreDeck, type DeckScore } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
 import {
   deckStats,
-  MANA_COLORS,
   roleTargets,
   suggestedLands,
   TARGETED_TAGS,
@@ -142,15 +141,12 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
         });
 
   const underservedColors: string[] = [];
-  const totalPips = MANA_COLORS.reduce((s, c) => s + stats.pips[c], 0);
+  const totalPips = COLORS.reduce((s, c) => s + stats.pips[c], 0);
   // Sum sources only for colors the deck actually casts so "any color" dorks/altars don't dilute
   // a mono-color deck's source share via unused colors.
-  const totalSources = MANA_COLORS.reduce(
-    (s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s),
-    0,
-  );
+  const totalSources = COLORS.reduce((s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s), 0);
   if (totalPips > 0 && totalSources > 0) {
-    for (const color of MANA_COLORS) {
+    for (const color of COLORS) {
       if (stats.pips[color] === 0) continue;
       const pipShare = stats.pips[color] / totalPips;
       const sourceShare = stats.sources[color] / totalSources;

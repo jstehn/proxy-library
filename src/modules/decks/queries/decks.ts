@@ -1,7 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
-import { UserId } from "@/shared/kernel";
+import { ColorSchema, type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import {
   BOARDS,
   DeckId,
@@ -101,10 +101,10 @@ export type DeckLine = Readonly<{
    * card's standard printing (design doc 24).
    */
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   /** What the deck stores (null when not pinned): for Edit as text (design doc 23). */
   pinnedPrintingId: string | null;
-  pinnedFinish: "nonfoil" | "foil" | "etched" | null;
+  pinnedFinish: Finish | null;
   /** The deck's own heading for this line ("Ramp"), or null (design doc 34). */
   heading: string | null;
   /** Why this card is in the deck (design doc 41), or null. */
@@ -211,9 +211,6 @@ export type DeckView = Readonly<{
   lines: DeckLine[];
   rules: Readonly<Record<string, CardRules>>;
 }>;
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 /** A player's deck, ready for the builder, or null if it isn't theirs. */
 export async function deckView(

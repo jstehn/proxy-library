@@ -35,9 +35,9 @@ import type {
   MtgjsonSetFile,
   MtgjsonSetSummary,
 } from "./mtgjson-schema";
+import { COLORS } from "@/shared/kernel";
 
 const RARITIES: readonly Rarity[] = ["common", "uncommon", "rare", "mythic", "special", "bonus"];
-const COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
 
 export function mapSetSummary(raw: MtgjsonSetSummary): CardSetInfo {
   return {

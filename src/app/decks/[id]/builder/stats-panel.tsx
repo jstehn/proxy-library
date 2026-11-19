@@ -1,10 +1,10 @@
 "use client";
 import type { DeckLine } from "@/modules/decks";
+import { COLORS } from "@/shared/kernel";
 import {
   deckStats,
   EARLY_RAMP_MAX_MV,
   formatRulesSummary,
-  MANA_COLORS,
   deckSize,
   library,
   openingHandOdds,
@@ -51,9 +51,9 @@ export function StatsPanel(props: {
   // The mana base's land target (design doc 35): the usual count, moved by the curve.
   const landGoal = landTarget(props.format, stats).lands;
   const tallest = Math.max(...stats.curve, 1);
-  const neededColors = MANA_COLORS.filter((color) => stats.pips[color] > 0);
-  const mostPips = Math.max(...MANA_COLORS.map((color) => stats.pips[color]), 1);
-  const mostSources = Math.max(...MANA_COLORS.map((color) => stats.sources[color]), 1);
+  const neededColors = COLORS.filter((color) => stats.pips[color] > 0);
+  const mostPips = Math.max(...COLORS.map((color) => stats.pips[color]), 1);
+  const mostSources = Math.max(...COLORS.map((color) => stats.sources[color]), 1);
   const handOdds = openingHandOdds(library(props.lines), {
     onTheDraw: false,
     freeMulligan: props.format === "commander",

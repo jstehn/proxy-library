@@ -1,8 +1,7 @@
 import { eq, sql } from "drizzle-orm";
-import { z } from "zod";
 import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { ColorSchema, type UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
 import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
@@ -21,8 +20,6 @@ import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the
 // `owned.ts` SQL orderings so stats, legalities and prices agree with the deck builder.
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
 export type DeckChangePreview = ChangePreview &
   Readonly<{

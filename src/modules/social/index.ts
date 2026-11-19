@@ -17,12 +17,7 @@ export type {
 } from "./application/ports";
 export type { UpdateProfileError, UpdateProfileInput } from "./application/update-profile";
 export type { Friendship, FriendshipStatus, ViewerRelation } from "./domain/friendship";
-export {
-  MANA_COLORS,
-  VISIBILITIES,
-  type PlayerProfile,
-  type SectionVisibility,
-} from "./domain/profile";
+export { VISIBILITIES, type PlayerProfile, type SectionVisibility } from "./domain/profile";
 export {
   incomingRequestCount,
   listFriendRequests,

@@ -5,9 +5,9 @@ import {
   sealedProducts,
   wpnProducts,
 } from "@/modules/catalog/infrastructure/schema";
-import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog";
+import { SealedProductId, type PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, type UserId } from "@/shared/kernel";
+import { Cents, type Finish, type UserId } from "@/shared/kernel";
 import type {
   ProductValues,
   Listing,

@@ -12,8 +12,8 @@ import {
   type CommanderCandidate,
   type PoolCard,
 } from "./commanders";
-import type { ManaColor } from "./stats";
 import { deckFit, type DeckProfile } from "./suggest";
+import { type ManaColor } from "@/shared/kernel";
 
 const commander = (
   name: string,

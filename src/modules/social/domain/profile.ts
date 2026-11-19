@@ -1,12 +1,10 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { DeckId, Format } from "@/modules/decks";
-import { err, ok, type ManaColor, type Result, type UserId } from "@/shared/kernel";
+import { COLORS, err, ok, type ManaColor, type Result, type UserId } from "@/shared/kernel";
 import type { ViewerRelation } from "./friendship";
 
 export const MAX_BIO_LENGTH = 500;
 export const MAX_SHOWCASE_CARDS = 3;
-
-export const MANA_COLORS = ["W", "U", "B", "R", "G"] as const satisfies readonly ManaColor[];
 
 export const VISIBILITIES = ["everyone", "friends", "only_me"] as const;
 export type SectionVisibility = (typeof VISIBILITIES)[number];
@@ -49,7 +47,7 @@ export function checkBio(raw: string): Result<string, BioError> {
 
 export function normalizeFavoriteColors(colors: readonly ManaColor[]): readonly ManaColor[] {
   const chosen = new Set(colors);
-  return MANA_COLORS.filter((color) => chosen.has(color));
+  return COLORS.filter((color) => chosen.has(color));
 }
 
 export function normalizeFavoriteFormats(formats: readonly Format[]): readonly Format[] {

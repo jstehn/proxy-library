@@ -1,5 +1,5 @@
-import type { Color, PrintingId, Rarity } from "@/modules/catalog";
-import type { Cents } from "@/shared/kernel";
+import type { Color, PrintingId } from "@/modules/catalog";
+import { COLORS, type Cents, type Rarity } from "@/shared/kernel";
 import type { DraftCard, DraftPack } from "./draft";
 
 // Choosing a card the way a sensible drafter would (design doc 17, section 5): take the strongest
@@ -38,8 +38,6 @@ const UNKNOWN: DraftCardFacts = {
 export function factsOf(lookup: FactsLookup, printingId: PrintingId): DraftCardFacts {
   return lookup(printingId) ?? UNKNOWN;
 }
-
-export const COLOR_ORDER: readonly Color[] = ["W", "U", "B", "R", "G"];
 
 const RARITY_STRENGTH: Readonly<Record<Rarity, number>> = {
   common: 1,
@@ -81,7 +79,7 @@ function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number> {
 /** The pool's main colors, strongest first (ties in WUBRG order), at most `count`. */
 export function topColors(pool: readonly DraftCardFacts[], count = 2): Color[] {
   const weights = colorWeights(pool);
-  return COLOR_ORDER.filter((color) => (weights.get(color) ?? 0) > 0)
+  return COLORS.filter((color) => (weights.get(color) ?? 0) > 0)
     .sort((a, b) => (weights.get(b) ?? 0) - (weights.get(a) ?? 0))
     .slice(0, count);
 }

@@ -1,5 +1,5 @@
-import type { Finish, PrintingId } from "@/modules/catalog";
-import { Cents, err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
+import type { PrintingId } from "@/modules/catalog";
+import { type Brand, Cents, type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
 import type { AlreadyDecided, OfferInvalid, TradeNotFound } from "./errors";
 
 // The trades vocabulary and its state machine (design doc 10, sections 3–5).

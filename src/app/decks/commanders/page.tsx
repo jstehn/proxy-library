@@ -9,7 +9,7 @@ import {
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
 import { canonicalTheme, THEME_LABELS, THEMES, type Theme } from "@/shared/card-search";
-import { Cents } from "@/shared/kernel";
+import { COLORS, Cents, type ManaColor } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { planText, TAG_LABELS } from "../labels";
@@ -19,9 +19,7 @@ import { CommanderCards, CommanderThumbnail } from "./commander-cards";
 // Decks → Find a commander (design docs 36 and 39): the cards that could lead a deck, with
 // Oracle text, hover card preview, theme/tribe filtering, and coverage / popularity / power ordering.
 
-const COLORS = ["W", "U", "B", "R", "G"] as const;
-type Color = (typeof COLORS)[number];
-const COLOR_NAMES: Record<Color, string> = {
+const COLOR_NAMES: Record<ManaColor, string> = {
   W: "White",
   U: "Blue",
   B: "Black",
@@ -39,7 +37,7 @@ const SORT_LABELS: Readonly<Record<CommanderSort, string>> = {
 /** How many rows each "Show more" adds. */
 const PAGE = 25;
 
-function chosenColors(value: string | string[] | undefined): Color[] {
+function chosenColors(value: string | string[] | undefined): ManaColor[] {
   const text = Array.isArray(value) ? value.join("") : (value ?? "");
   return COLORS.filter((color) => text.includes(color));
 }

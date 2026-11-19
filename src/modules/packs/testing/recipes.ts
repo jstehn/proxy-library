@@ -5,10 +5,8 @@ import {
   type BoosterConfig,
   type BoosterSheet,
   type Color,
-  type Finish,
-  type Rarity,
 } from "@/modules/catalog";
-import { Cents } from "@/shared/kernel";
+import { Cents, type Finish, type Rarity } from "@/shared/kernel";
 import { factsLookup, type FactsLookup, type PrintingFacts } from "../domain/pack";
 
 // A small, made-up booster whose odds are easy to work out by hand, for the engine's tests.

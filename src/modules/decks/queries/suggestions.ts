@@ -2,7 +2,7 @@ import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import type { UserId } from "@/shared/kernel";
+import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
 import { isCounted, type Format } from "../domain/deck";
 import {
@@ -39,9 +39,6 @@ import { ownedCopies, STANDARD_FIRST } from "./owned";
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each
 // printing; the pure scoring in domain/suggest.ts ranks them and says why.
-
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 /** How many candidates SQL hands to the scoring, per pool. */
 const CANDIDATE_LIMIT = 400;

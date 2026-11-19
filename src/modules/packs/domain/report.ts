@@ -1,5 +1,5 @@
-import type { BoosterConfig, Finish, PrintingId, SetCode } from "@/modules/catalog";
-import { Cents } from "@/shared/kernel";
+import type { BoosterConfig, PrintingId, SetCode } from "@/modules/catalog";
+import { Cents, type Finish } from "@/shared/kernel";
 import { expectedPerPack, observedPerPack, type PerPackCounts } from "./odds";
 import { marketValue, type FactsLookup, type Pack } from "./pack";
 

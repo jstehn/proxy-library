@@ -1,6 +1,5 @@
 import type { Actor } from "@/modules/accounts";
-import type { Finish } from "@/modules/catalog";
-import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import { type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
 import type {
   CardNotFound,
   FinishNotAvailable,

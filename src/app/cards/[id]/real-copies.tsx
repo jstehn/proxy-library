@@ -1,6 +1,6 @@
-import type { Finish } from "@/modules/catalog";
 import { MAX_REAL_QUANTITY, type PrintingChoice } from "@/modules/real-collection";
 import { changeRealPrintingAction, setRealCopiesAction } from "@/app/collection/real/actions";
+import type { Finish } from "@/shared/kernel";
 
 // The card page's "Real copies" box (design doc 16, section 7): how many of this printing you
 // own for real, per finish, with − and + and a number, and moving them to another printing.

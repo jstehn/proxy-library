@@ -1,3 +1,4 @@
+import type { Finish } from "@/shared/kernel";
 // Exporting a collection (design doc 11, section 3): one shape for every format (Strategy), and
 // one function that quotes CSV fields correctly.
 
@@ -5,7 +6,7 @@ export type ExportRow = Readonly<{
   name: string;
   setCode: string;
   collectorNumber: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   rarity: string;
   quantity: number;
   priceCents: number | null;

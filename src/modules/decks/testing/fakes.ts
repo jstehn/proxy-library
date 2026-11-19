@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PrintingId, type Finish } from "@/modules/catalog";
-import type { UserId } from "@/shared/kernel";
+import { PrintingId } from "@/modules/catalog";
+import { type Finish, type UserId } from "@/shared/kernel";
 import type {
   CardLookup,
   CardQuery,

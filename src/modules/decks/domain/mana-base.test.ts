@@ -10,8 +10,9 @@ import {
   type ManaBaseInput,
   type ManaBasePlan,
 } from "./mana-base";
-import { deckStats, type ManaColor } from "./stats";
+import { deckStats } from "./stats";
 import type { ProfileLine } from "./suggest";
+import { type ManaColor } from "@/shared/kernel";
 
 // A mana base you could start from (design doc 35, sections 3-4).
 
