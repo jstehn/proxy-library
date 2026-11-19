@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P05-framework` · **Depends on:** P03, P04 · **Parallel with:** none (P06–P08 build on it)
 - **Audit:** doc 65 F2 (the diagram and "the root cause"), principle 4 in section 5
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (the shape and the first two rows) · **Lines to remove:** small: the framework adds code; the removal comes in P06–P09
 
 ## Goal
 

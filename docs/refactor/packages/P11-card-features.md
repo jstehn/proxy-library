@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P11-card-features` · **Depends on:** P09, **decision 3** · **Parallel with:** P10
 - **Audit:** doc 65 F4, F9, D12, principle 5
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S3](../dedup-playbook.md#s3) (the model and recognizers) · **Lines to remove:** small or positive: the model adds code; P12–P14 remove the copies
 
 ## Goal
 

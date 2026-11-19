@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P16-mana-curve` · **Depends on:** P10, **decision 2** · **Parallel with:** P15, P17
 - **Audit:** doc 65 D5
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S8](../dedup-playbook.md#s8) · **Lines to remove:** about −50 to −100
 
 ## Goal
 

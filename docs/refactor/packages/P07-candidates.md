@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P07-candidates` · **Depends on:** P05 · **Parallel with:** P06, P08
 - **Audit:** doc 65 F6, D2, D11
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S1](../dedup-playbook.md#s1) (`search_cards`, `get_cards`, `find_replacements`, `manage_wishlist` rows), [S2](../dedup-playbook.md#s2), [S5](../dedup-playbook.md#s5) (store quote) · **Lines to remove:** about −1,500 to −2,200
 
 ## Goal
 

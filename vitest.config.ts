@@ -14,6 +14,7 @@ export default defineConfig({
           name: "unit",
           include: ["src/**/*.test.ts", "worker/**/*.test.ts", "scripts/**/*.test.ts"],
           exclude: ["**/*.int.test.ts", "**/*.remote.test.ts"],
+          setupFiles: ["tests/setup/no-network.ts"],
         },
       },
       {
@@ -28,6 +29,7 @@ export default defineConfig({
             "tests/integration/**/*.int.test.ts",
           ],
           globalSetup: ["tests/setup/integration.ts"],
+          setupFiles: ["tests/setup/no-network.ts"],
           env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
           fileParallelism: false,
         },
