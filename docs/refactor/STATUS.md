@@ -40,7 +40,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                          | none               | done                                                 |
 | P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                          | none               | done                                                 |
 |       | **Wave 3a: clear the ground** (plan review) · before any card-features code              |                               |                    |                                                      |
-| P23   | [Guards and test fixes](packages/P23-guards-and-test-fixes.md)                           | none                          | none               | free (first)                                         |
+| P23   | [Guards and test fixes](packages/P23-guards-and-test-fixes.md)                           | none                          | none               | in progress (agent)                                  |
 | P24   | [Delete dead code and the interactive goldfish](packages/P24-dead-code.md)               | P23                           | P26                | free                                                 |
 | P25   | [The read layer, secure by construction](packages/P25-read-layer.md)                     | P23, P24                      | P26                | free (design doc 67 needs the owner's approval)      |
 | P26   | [Shared card and row types](packages/P26-shared-types.md)                                | P23                           | P24, P25           | free                                                 |
@@ -212,7 +212,7 @@ and by-eye checks the packages couldn't do).
 ## Tududi
 
 The refactor is tududi project **"Refactor: audit and consolidation (doc 65)"** (uid
-`saajqvk9drbreic`, ProxyLib account), with one task per package (P09b–P09d are tasks 274–276), each named `Pnn. …` and tagged
+`saajqvk9drbreic`, ProxyLib account), with one task per package (P09b–P09d are tasks 274–276, P23–P34 are 278–289), each named `Pnn. …` and tagged
 `refactor`. When a package changes status here, change its task too: in progress when started,
 done when merged into `refactor/main`.
 
