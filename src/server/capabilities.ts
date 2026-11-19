@@ -38,6 +38,11 @@ import {
   similarCards,
   makeListDecks,
   makeDeckPreviews,
+  makeDeckPlanEdits,
+  makeStartDeck,
+  updateDeckPrimer,
+  updateDeckProfile,
+  addDeckSource,
   deckChangePreview,
   DeckId,
   type Decks,
@@ -66,7 +71,10 @@ type CapabilityDependencies = Readonly<{
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
-  decks: Pick<Decks, "applyChanges">;
+  decks: Pick<
+    Decks,
+    "applyChanges" | "createDeck" | "updateDeck" | "deleteDeck" | "importList" | "replaceList"
+  >;
   previews: PreviewRepository;
   newPreviewId: () => string;
 }>;
@@ -105,6 +113,23 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       applyChanges: (actor, input) =>
         decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),
     }),
+    startDeck: makeStartDeck(decks),
+    deckPlanEdits: makeDeckPlanEdits({
+      clock,
+      updateProfile: (userId, deckId, patch, now) =>
+        updateDeckProfile(db, userId, deckId, patch, now),
+      updatePrimer: (userId, deckId, input, now) =>
+        updateDeckPrimer(db, userId, deckId, input, now),
+      addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
+    }),
+    // The deck-changing commands, as the decks module's use cases (each checks its own rules).
+    deckEdits: {
+      createDeck: decks.createDeck,
+      updateDeck: decks.updateDeck,
+      deleteDeck: decks.deleteDeck,
+      importList: decks.importList,
+      replaceList: decks.replaceList,
+    },
     deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
     deckSignals: makeDeckSignals({
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),

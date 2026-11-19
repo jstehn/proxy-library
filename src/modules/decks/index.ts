@@ -491,3 +491,9 @@ export {
   type StoredPreviewResult,
 } from "./application/deck-previews";
 export type { ChangeToSave, PreviewRecord, PreviewRepository } from "./application/ports";
+export {
+  makeDeckPlanEdits,
+  type DeckPlanWriters,
+  type SavedSource,
+} from "./application/deck-plan-edits";
+export { makeStartDeck, type StartDeckInput, type StartedDeck } from "./application/deck-start";
