@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { cardTags } from "@/shared/card-search";
 import { ok, type Result } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type BracketEstimate } from "../domain/brackets";
@@ -49,7 +50,7 @@ export function makeDeckFacts(readers: DeckFactsReaders) {
     const { view, includeMaybe } = request;
     const report = await readers.audit(view);
     const withMaybe =
-      includeMaybe && view.deck.format === "commander"
+      includeMaybe && formatRules(view.deck.format).bracketsApply
         ? estimateBracket(
             view.deck.format,
             view.lines.filter((l) => isPlayed(l.board) || l.board === "maybe").map(bracketLine),

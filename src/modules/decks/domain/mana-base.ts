@@ -1,8 +1,8 @@
 import type { CastabilitySummary } from "./castability";
 import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
-import { getFormatRules } from "./format-rules";
-import { colorPips, deckStats, suggestedLands, type DeckStats } from "./stats";
+import { formatRules } from "./format-rules";
+import { colorPips, deckStats, type DeckStats } from "./stats";
 import type { ProfileLine } from "./suggest";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
@@ -128,11 +128,11 @@ const SOURCE_FLOORS: Readonly<Record<"commander" | "other", readonly [number, nu
 
 /** The land count to aim for: the format's usual count, moved by the curve and other sources. */
 export function landTarget(format: Format | string, stats: DeckStats): LandTarget {
-  const base = suggestedLands(format);
+  const base = formatRules(format).suggestedLands;
   const reasons: LandTargetReason[] = [{ kind: "base", lands: base }];
   // Limited decks have few rocks and a known curve: the usual 17 stands.
   const spells = stats.curve.reduce((sum, count) => sum + count, 0);
-  if (format !== "limited" && spells >= CURVE_MINIMUM_SPELLS) {
+  if (formatRules(format).landTargetFollowsCurve && spells >= CURVE_MINIMUM_SPELLS) {
     const average = stats.averageManaValue;
     if (average < 2.5) reasons.push({ kind: "lowCurve", averageManaValue: average, change: -1 });
     else if (average >= 4) {
@@ -165,7 +165,7 @@ export function sourceTargets(
 ): SourceTarget[] {
   const stats = deckStats(lines);
   const allPips = COLORS.reduce((sum, color) => sum + stats.pips[color], 0);
-  const floors = SOURCE_FLOORS[getFormatRules(format).hasCommandZone ? "commander" : "other"];
+  const floors = SOURCE_FLOORS[formatRules(format).hasCommandZone ? "commander" : "other"];
   const heaviest = heaviestCosts(lines);
   return COLORS.filter((color) => stats.pips[color] > 0).map((color) => {
     const share = Math.round((target.lands * stats.pips[color]) / allPips);
@@ -246,7 +246,8 @@ export function planManaBase(input: ManaBaseInput): ManaBasePlan {
 
 /** How many copies of a card a deck of this format may hold. */
 function copyLimit(format: Format): number {
-  return getFormatRules(format).copyLimit;
+  const rules = formatRules(format);
+  return rules.buildsFromOwnedPool ? Number.POSITIVE_INFINITY : rules.plannedCopyLimit;
 }
 
 /** A non-basic's score against what the deck still needs, with its reasons. */

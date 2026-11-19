@@ -6,8 +6,8 @@ import type { Bracket, Format } from "@/modules/decks";
 import {
   bracketWarning,
   bracketLine,
-  deckSize,
   estimateBracket,
+  formatRules,
   isCounted,
 } from "@/modules/decks/client";
 import { BracketPanel } from "./bracket/bracket-panel";
@@ -56,7 +56,7 @@ export function DeckBuilder(props: {
   seed: string;
 }) {
   const { deckId, format } = props;
-  const isCommanderDeck = format === "commander";
+  const isCommanderDeck = formatRules(format).usesColorIdentity;
   const [state, dispatch] = useReducer(
     builderReducer,
     initialBuilderState(props.initialDeck, props.targetBracket),
@@ -243,7 +243,7 @@ export function DeckBuilder(props: {
             format={format}
             openPanels={state.openPanels}
             cardTotal={cardTotal}
-            draftTarget={deckSize(format).cards}
+            draftTarget={formatRules(format).deckSize.cards}
             dispatch={dispatch}
           />
           <OpenPanels

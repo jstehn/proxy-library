@@ -6,7 +6,6 @@ import {
   canBeCommander,
   copyLimitFor,
   deckProblems,
-  formatRulesSummary,
   legalFormatsForCards,
   pairProblem,
   shortCount,
@@ -469,26 +468,7 @@ describe("withEntry", () => {
 });
 
 describe("60-card helpers (design doc 44)", () => {
-  it("reports format rules summary and per-card copy limits", () => {
-    expect(formatRulesSummary("standard")).toEqual({
-      minMainCards: 60,
-      exactSize: false,
-      maxCopies: 4,
-      maxSideboard: 15,
-    });
-    expect(formatRulesSummary("commander")).toEqual({
-      minMainCards: 100,
-      exactSize: true,
-      maxCopies: 1,
-      maxSideboard: null,
-    });
-    expect(formatRulesSummary("limited")).toEqual({
-      minMainCards: 40,
-      exactSize: false,
-      maxCopies: null,
-      maxSideboard: null,
-    });
-
+  it("reports per-card copy limits", () => {
     expect(copyLimitFor("modern", CARDS.bolt)).toBe(4);
     expect(copyLimitFor("vintage", CARDS.lotus)).toBe(1);
     expect(copyLimitFor("modern", CARDS.mountain)).toBeNull();

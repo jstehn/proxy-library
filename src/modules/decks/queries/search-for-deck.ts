@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
+import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
@@ -88,10 +88,7 @@ function fitsDeck(context: Context): SQL {
           [...context.commanderColors, "_"].map((color) => sql`${color}`),
           sql`, `,
         )}]::text[]`;
-  const legal =
-    context.format === "casual"
-      ? sql`true`
-      : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
+  const legal = legalInFormat(context.format);
   const notInDeck = sql`not exists (select 1 from deck_entries e
                                      where e.deck_id = ${context.deckId} and e.oracle_id = p.oracle_id
                                        and e.board <> 'maybe')`;

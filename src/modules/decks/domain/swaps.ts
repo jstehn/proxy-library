@@ -1,6 +1,7 @@
 import type { Bracket } from "./brackets";
 import type { RankedCut } from "./cuts";
 import type { Format } from "./deck";
+import { formatRules } from "./format-rules";
 import type { Scored } from "./suggest";
 import type { TargetedTag } from "./stats";
 
@@ -67,7 +68,8 @@ export function suggestSwaps(
   const disallowGameChanger = options.targetBracket !== null && options.targetBracket <= 2;
 
   const eligibleAdds = candidates.filter((c) => {
-    if (options.format === "commander" && existing.has(c.card.oracleId)) return false;
+    if (formatRules(options.format).plannedCopyLimit === 1 && existing.has(c.card.oracleId))
+      return false;
     if (disallowGameChanger && c.card.isGameChanger) return false;
     return true;
   });

@@ -1,6 +1,7 @@
 // Creating, renaming, copying and deleting whole decks (design doc 09, section 5). Every use case works only on the actor's own decks (rule 7): someone else's deck is
 // reported as not found.
 
+import { formatRules } from "../domain/format-rules";
 import type { Actor } from "@/modules/accounts";
 import { type Result, err, ok } from "@/shared/kernel";
 import {
@@ -78,7 +79,7 @@ export function makeDeckLifecycle(dependencies: DecksDependencies) {
       const target =
         input.targetBracket !== undefined
           ? checkTargetBracket(format, input.targetBracket)
-          : ok(format === "commander" ? deck.targetBracket : null);
+          : ok(formatRules(format).bracketsApply ? deck.targetBracket : null);
       if (!target.ok) return target;
       await decks.save(
         {

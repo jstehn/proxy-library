@@ -4,7 +4,8 @@ import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { rateCard, type RatingEdhrecSignal, type RatingProfile } from "./rate";
 import { cardSignalIO, deckSignalProfile, synergyMatches } from "./signals";
-import { deckStats, isLand, roleTargets, type StatsLine, type TargetedTag } from "./stats";
+import { formatRules } from "./format-rules";
+import { deckStats, isLand, type StatsLine, type TargetedTag } from "./stats";
 import { deckProfile } from "./suggest";
 
 // Whole-deck objective and Simulated Annealing optimizer (design doc 55):
@@ -128,7 +129,7 @@ function toRatingProfile(cards: readonly OptimizerCard[], format: Format): Ratin
 }
 
 function computeRoleCoverage(tags: Readonly<Record<Tag, number>>, format: Format): number {
-  const targets = roleTargets(format);
+  const targets = formatRules(format).roleTargets;
   if (targets === null) return 75;
   let score = 0;
   for (const [tag, weight] of Object.entries(ROLE_WEIGHTS) as [TargetedTag, number][]) {
@@ -140,7 +141,7 @@ function computeRoleCoverage(tags: Readonly<Record<Tag, number>>, format: Format
 }
 
 function computeCurveScore(averageManaValue: number, format: Format): number {
-  const targetMv = format === "commander" ? 3.1 : 2.4;
+  const targetMv = formatRules(format).optimizerTargetManaValue;
   const diff = Math.abs(averageManaValue - targetMv);
   return round2(Math.max(0, 100 - diff * 25));
 }

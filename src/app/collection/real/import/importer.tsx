@@ -91,7 +91,9 @@ export function RealImporter() {
   const unmatched = lines.filter(
     (line): line is Extract<MatchedLine, { kind: "Unmatched" }> => line.kind === "Unmatched",
   );
-  const isList = answer?.ok === true && answer.preview.format === "list";
+  // The importer's own "format" is the file type read (list or CSV), not a deck format.
+  const fileType = answer?.ok === true ? answer.preview.format : null;
+  const isList = fileType === "list";
 
   function importIt() {
     if (!answer?.ok) return;

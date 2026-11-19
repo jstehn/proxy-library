@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { err, ok, seededRng, type Clock, type Result, type UserId } from "@/shared/kernel";
 import { colorPips } from "../domain/stats";
 import { commanderOnlyProfile, effectiveManaValue, type DeckPlan } from "../domain/deck-profile";
@@ -90,7 +91,7 @@ export function makeDrawSample(readers: DrawSampleReaders) {
       minLands: 2,
       maxLands: 4,
       requireEarlyPlay: true,
-      freeMulligan: view.deck.format === "commander",
+      freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
       onTheDraw: false,
       ...(mustCastBy ? { mustCastBy } : {}),
     });

@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, latestPrice } from "@/shared/db";
@@ -335,10 +336,9 @@ export async function deckView(
       tags: row.tags ?? [],
     })),
   };
-  const commanderIds =
-    deck.format === "commander"
-      ? lines.filter((line) => line.board === "commander").map((line) => line.oracleId)
-      : [];
+  const commanderIds = formatRules(deck.format).hasCommandZone
+    ? lines.filter((line) => line.board === "commander").map((line) => line.oracleId)
+    : [];
   const edhrecByCard =
     commanderIds.length > 0 ? await loadEdhrecSignals(db, commanderIds) : new Map();
   const linesWithEdhrec =

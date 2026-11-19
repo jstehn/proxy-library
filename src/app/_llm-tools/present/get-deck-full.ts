@@ -1,8 +1,7 @@
 import {
-  formatRulesSummary,
+  formatRules,
   legalFormatsForCards,
   resolveDeckProfileTargets,
-  roleTargets,
   shortList,
   summarizeDeckProfile,
   summarizeTokenChecklist,
@@ -25,6 +24,7 @@ export function fullDeckPayload(
 ): Record<string, unknown> {
   const { view, stats, list, fingerprint: print } = overview;
   const problems = [...overview.problems];
+  const rules = formatRules(view.deck.format);
   const handOdds = overview.odds ?? null;
   const toPercent = (probability: number) => Math.round(probability * 1000) / 10;
   const rawTokens = [...(overview.tokens ?? [])];
@@ -138,12 +138,16 @@ export function fullDeckPayload(
       value: money(stats.priceCents),
       costToComplete: money(missingTotalCents),
     },
-    formatRules: formatRulesSummary(view.deck.format),
-    cardLegalIn:
-      view.deck.format !== "commander" && view.deck.format !== "limited"
-        ? legalFormatsForCards(view.deck, (oracleId) => view.rules[oracleId])
-        : null,
-    roleTargets: roleTargets(view.deck.format),
+    formatRules: {
+      minMainCards: rules.deckSize.cards,
+      exactSize: rules.deckSize.exact,
+      maxCopies: rules.copyLimit,
+      maxSideboard: rules.sideboardSize,
+    },
+    cardLegalIn: rules.hasConstructedVariants
+      ? legalFormatsForCards(view.deck, (oracleId) => view.rules[oracleId])
+      : null,
+    roleTargets: rules.roleTargets,
     problems: problems.map(problemText),
     bracket: bracketView(overview.bracket),
     openingHandOdds:
@@ -194,7 +198,7 @@ export function fullDeckPayload(
     deckSources: deckSources ?? [],
   };
   const profile = overview.profile?.profile;
-  const baseTargets = roleTargets(view.deck.format);
+  const baseTargets = rules.roleTargets;
   if (profile && baseTargets !== null) {
     fullPayload.roleTargets =
       resolveDeckProfileTargets(profile, null, { landTarget: 37, roleTargets: baseTargets })

@@ -8,12 +8,12 @@ import {
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
+import { formatRules } from "./format-rules";
 import { deckSignalProfile, type DeckSignalProfile } from "./signals";
 import {
   deckStats,
   isLand,
   mainType,
-  roleTargets,
   TARGETED_TAGS,
   type StatsLine,
   type TargetedTag,
@@ -200,7 +200,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
   // Gaps: roles below the format's target. Formats without targets have none.
   const stats = deckStats(lines);
   const counts = stats.tags;
-  const targets = roleTargets(format);
+  const targets = formatRules(format).roleTargets;
   const gaps =
     targets === null
       ? []

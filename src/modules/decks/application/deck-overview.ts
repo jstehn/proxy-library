@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import type { PrintingCard } from "@/modules/catalog";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import type { DeckCombo } from "../domain/brackets";
@@ -87,7 +88,7 @@ export function makeDeckOverview(readers: DeckOverviewReaders) {
       board: line.board,
     }));
     const [combos, printings, tokens, sources, profile] = await Promise.all([
-      view.deck.format === "commander"
+      formatRules(view.deck.format).bracketsApply
         ? readers.combosFor(
             view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
           )
@@ -115,7 +116,7 @@ export function makeDeckOverview(readers: DeckOverviewReaders) {
         ? {
             odds: openingHandOdds(library(view.lines), {
               onTheDraw: false,
-              freeMulligan: view.deck.format === "commander",
+              freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
             }),
           }
         : {}),

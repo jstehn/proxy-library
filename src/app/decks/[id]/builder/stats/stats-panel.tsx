@@ -4,11 +4,9 @@ import { COLORS } from "@/shared/kernel";
 import {
   deckStats,
   EARLY_RAMP_MAX_MV,
-  formatRulesSummary,
-  deckSize,
+  formatRules,
   library,
   openingHandOdds,
-  roleTargets,
   TARGETED_TAGS,
   landTarget,
   TYPE_ORDER,
@@ -39,15 +37,15 @@ export function StatsPanel(props: {
   onHighlight: (tag: Tag | null) => void;
 }) {
   const stats = deckStats(props.lines);
-  const targets = roleTargets(props.format);
+  const rules = formatRules(props.format);
+  const targets = rules.roleTargets;
   const untargeted = TAGS.filter(
     (tag) => !(TARGETED_TAGS as readonly Tag[]).includes(tag) && stats.tags[tag] > 0,
   );
   const roleButton = (tag: Tag) =>
     `text-left underline-offset-2 hover:underline ${props.highlighted === tag ? "font-semibold underline" : ""}`;
   const toggle = (tag: Tag) => props.onHighlight(props.highlighted === tag ? null : tag);
-  const target = deckSize(props.format);
-  const rules = formatRulesSummary(props.format);
+  const target = rules.deckSize;
   // The mana base's land target (design doc 35): the usual count, moved by the curve.
   const landGoal = landTarget(props.format, stats).lands;
   const tallest = Math.max(...stats.curve, 1);
@@ -56,7 +54,7 @@ export function StatsPanel(props: {
   const mostSources = Math.max(...COLORS.map((color) => stats.sources[color]), 1);
   const handOdds = openingHandOdds(library(props.lines), {
     onTheDraw: false,
-    freeMulligan: props.format === "commander",
+    freeMulligan: rules.freeFirstMulligan,
   });
 
   return (
@@ -71,11 +69,11 @@ export function StatsPanel(props: {
               : "warn"
           }
         />
-        {rules.maxSideboard !== null && (
+        {rules.sideboardSize !== null && (
           <Figure
             label="Sideboard"
-            value={`${stats.sideboardCount} / ${rules.maxSideboard}`}
-            tone={stats.sideboardCount > rules.maxSideboard ? "warn" : undefined}
+            value={`${stats.sideboardCount} / ${rules.sideboardSize}`}
+            tone={stats.sideboardCount > rules.sideboardSize ? "warn" : undefined}
           />
         )}
         <Figure label="Average mana value" value={stats.averageManaValue.toFixed(2)} />
@@ -223,9 +221,7 @@ export function StatsPanel(props: {
           Read from each card&apos;s rules text, so a few may be missed or miscounted.{" "}
           {targets === null
             ? "Limited formats have no fixed role targets, so counts are shown alone."
-            : props.format === "commander"
-              ? "The targets are a common Commander guide."
-              : "The targets are a common 60-card guide."}{" "}
+            : `The targets are a common ${rules.roleGuideName} guide.`}{" "}
           Click a role to mark its cards in the list.
         </p>
       </div>

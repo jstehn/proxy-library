@@ -147,45 +147,6 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
   };
 }
 
-/**
- * How many cards a deck aims for: exactly 100 in Commander; at least 40 in limited (design doc
- * 17) and at least 60 in the other formats.
- */
-export function deckSize(format: string): Readonly<{ cards: number; exact: boolean }> {
-  if (format === "commander") return { cards: 100, exact: true };
-  return { cards: format === "limited" ? 40 : 60, exact: false };
-}
-
-/** The usual land count to aim for: 37 of 100 in Commander, 17 of 40 in limited, else 24 of 60. */
-export function suggestedLands(format: string): number {
-  if (format === "commander") return 37;
-  return format === "limited" ? 17 : 24;
-}
-
 /** The roles that have a target to aim for; the rest are only counted. */
 export const TARGETED_TAGS = ["ramp", "draw", "removal", "wipe"] as const satisfies readonly Tag[];
 export type TargetedTag = (typeof TARGETED_TAGS)[number];
-
-const COMMANDER_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
-  ramp: 10,
-  draw: 10,
-  removal: 8,
-  wipe: 3,
-};
-
-const SIXTY_CARD_ROLE_TARGETS: Readonly<Record<TargetedTag, number>> = {
-  ramp: 4,
-  draw: 6,
-  removal: 6,
-  wipe: 2,
-};
-
-/**
- * Role counts to aim for (design docs 19 & 44): a starting guide, not a rule.
- * Limited (40-card sealed/draft) depends on the opened pool, so it returns null.
- */
-export function roleTargets(format: string): Readonly<Record<TargetedTag, number>> | null {
-  if (format === "commander") return COMMANDER_ROLE_TARGETS;
-  if (format === "limited") return null;
-  return SIXTY_CARD_ROLE_TARGETS;
-}

@@ -4,7 +4,7 @@ import { latestPrice } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 
-import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
+import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import type { SuggestionCard, SuggestionContext, Wanted } from "../domain/suggestion-types";
 
 // The SQL that finds suggestion candidates (design doc 20, section 9): cards you own and cards in
@@ -19,10 +19,7 @@ export function fitsDeck(context: SuggestionContext): SQL {
     context.colorLimit === null
       ? sql`true`
       : sql`p.color_identity <@ ${textArray(context.colorLimit)}`;
-  const legal =
-    context.format === "casual"
-      ? sql`true`
-      : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
+  const legal = legalInFormat(context.format);
   return sql`${identity} and ${legal}
     and not (p.oracle_id = any(${textArray(context.inDeck)}))
     and p.type_line !~ '^Basic\\y.*\\yLand\\y'`;

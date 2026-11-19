@@ -115,6 +115,17 @@ const CANDIDATE_SQL = [
   },
 ];
 
+// A deck's format is compared nowhere but in format-rules.ts (refactor P10): ask a question of
+// formatRules(format) instead, so a new format is a compile error until its rules are filled in.
+const FORMAT_NAMES = [
+  {
+    selector:
+      "BinaryExpression[operator=/^[!=]==?$/][right.type='Literal']:matches([left.name='format'], [left.property.name='format'][left.computed=false])",
+    message:
+      "Don't compare a format's name. Ask a question of formatRules(format) from decks/domain/format-rules.ts (client code: @/modules/decks/client), and add the question there if it's missing (refactor P10).",
+  },
+];
+
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
   // npm packages and Node built-ins: allowed here, restricted per layer by no-restricted-imports.
@@ -346,7 +357,12 @@ export default defineConfig([
   // Nondeterminism goes through injected ports (ADR 0008).
   {
     files: SOURCE,
-    ignores: [...TESTS, "src/shared/runtime/**", "src/shared/kernel/testing/**"],
+    ignores: [
+      ...TESTS,
+      "src/shared/runtime/**",
+      "src/shared/kernel/testing/**",
+      "src/modules/decks/domain/format-rules.ts",
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -355,6 +371,7 @@ export default defineConfig([
         ...MONEY_TEXT,
         ...PRICE_TABLE,
         ...CANDIDATE_SQL,
+        ...FORMAT_NAMES,
       ],
     },
   },
@@ -369,6 +386,7 @@ export default defineConfig([
         ...BASIC_WORDS,
         ...MONEY_TEXT,
         ...PRICE_TABLE,
+        ...FORMAT_NAMES,
       ],
     },
   },
@@ -381,7 +399,9 @@ export default defineConfig([
       "src/shared/db/prices.ts",
     ],
     ignores: TESTS,
-    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT] },
+    rules: {
+      "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT, ...FORMAT_NAMES],
+    },
   },
   {
     files: ["src/shared/kernel/money.ts"],
@@ -405,6 +425,7 @@ export default defineConfig([
           selector: "CallExpression[callee.name='getContainer']",
           message: "Call capabilities through action() or readPage() (ADR 0026).",
         },
+        ...FORMAT_NAMES,
       ],
     },
   },

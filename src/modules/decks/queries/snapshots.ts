@@ -1,3 +1,4 @@
+import { formatRules } from "../domain/format-rules";
 import { cardTags, cardThemes } from "@/shared/card-search";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -217,16 +218,15 @@ export async function compareDeckSnapshot(
   });
 
   const liveByOracle = new Map(view.lines.map((line) => [line.oracleId, line]));
-  const commanderIds =
-    format === "commander"
-      ? [
-          ...new Set(
-            [...beforeLines, ...afterLines]
-              .filter((line) => line.board === "commander")
-              .map((line) => line.oracleId),
-          ),
-        ]
-      : [];
+  const commanderIds = formatRules(format).hasCommandZone
+    ? [
+        ...new Set(
+          [...beforeLines, ...afterLines]
+            .filter((line) => line.board === "commander")
+            .map((line) => line.oracleId),
+        ),
+      ]
+    : [];
   const edhrecByCard =
     missingIds.length > 0 && commanderIds.length > 0
       ? await loadEdhrecSignals(db, commanderIds)

@@ -2,6 +2,7 @@ import type { Tag, Theme } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
+import { formatRules } from "./format-rules";
 import {
   cardSignalIO as cardSignalIOFromText,
   deckSignalProfile,
@@ -195,14 +196,6 @@ function curveBucket(manaValue: number): number {
   return Math.min(6, Math.max(0, Math.floor(manaValue)));
 }
 
-function curveGuide(format: Format): number {
-  return format === "commander" ? 3.3 : 3.0;
-}
-
-function slotSaturationThreshold(format: Format): number {
-  return format === "commander" ? 20 : 12;
-}
-
 const LIFT_EPS = 0.005;
 
 /**
@@ -321,9 +314,9 @@ function computeRatingFeatures(
 
   const quality = qualityPrior(card);
 
-  const isHighCurve = profile.averageManaValue > curveGuide(profile.format);
+  const isHighCurve = profile.averageManaValue > formatRules(profile.format).curveGuide;
   const bucketCount = profile.curveCounts.get(curveBucket(card.manaValue)) ?? 0;
-  const saturated = bucketCount >= slotSaturationThreshold(profile.format);
+  const saturated = bucketCount >= formatRules(profile.format).roleSlotSaturation;
   const topHeavy = isHighCurve && card.manaValue >= 5 ? 1 : 0;
   const saturatedSlot = saturated ? 1 : 0;
 

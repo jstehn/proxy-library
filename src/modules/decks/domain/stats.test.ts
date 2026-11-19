@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  colorPips,
-  deckSize,
-  deckStats,
-  isLand,
-  mainType,
-  roleTargets,
-  suggestedLands,
-} from "./stats";
+import { colorPips, deckStats, isLand, mainType } from "./stats";
 
 describe("deckStats", () => {
   it("counts the curve without lands or the sideboard, 7+ together", () => {
@@ -133,15 +125,6 @@ describe("isLand and colorPips", () => {
   });
 });
 
-describe("deck size and lands to aim for", () => {
-  it("is 100 exactly in Commander, 40 or more in limited, 60 or more elsewhere", () => {
-    expect(deckSize("commander")).toEqual({ cards: 100, exact: true });
-    expect(deckSize("limited")).toEqual({ cards: 40, exact: false });
-    expect(deckSize("modern")).toEqual({ cards: 60, exact: false });
-    expect(["commander", "limited", "casual"].map(suggestedLands)).toEqual([37, 17, 24]);
-  });
-});
-
 describe("role tags in the statistics (design doc 19)", () => {
   it("counts copies per role, overlapping roles in both, never the sideboard", () => {
     const stats = deckStats([
@@ -186,14 +169,5 @@ describe("role tags in the statistics (design doc 19)", () => {
       tutor: 0,
       protection: 0,
     });
-  });
-
-  it("has role targets in Commander and 60-card formats, and null in Limited", () => {
-    expect(roleTargets("commander")).toEqual({ ramp: 10, draw: 10, removal: 8, wipe: 3 });
-    expect(roleTargets("standard")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
-    expect(roleTargets("pioneer")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
-    expect(roleTargets("modern")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
-    expect(roleTargets("casual")).toEqual({ ramp: 4, draw: 6, removal: 6, wipe: 2 });
-    expect(roleTargets("limited")).toBeNull();
   });
 });

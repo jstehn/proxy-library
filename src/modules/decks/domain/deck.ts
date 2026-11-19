@@ -11,6 +11,7 @@ import type {
   TargetBracketNotCommander,
 } from "./errors";
 import { isBracket, type Bracket } from "./brackets";
+import { formatRules } from "./format-rules";
 
 // The deck builder's vocabulary (design doc 09, section 3).
 
@@ -129,7 +130,7 @@ export function checkTargetBracket(
 ): Result<Bracket | null, TargetBracketInvalid | TargetBracketNotCommander> {
   if (target === null) return ok(null);
   if (!isBracket(target)) return err({ kind: "TargetBracketInvalid" });
-  if (format !== "commander") return err({ kind: "TargetBracketNotCommander" });
+  if (!formatRules(format).bracketsApply) return err({ kind: "TargetBracketNotCommander" });
   return ok(target);
 }
 

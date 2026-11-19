@@ -15,7 +15,7 @@ import {
 import { decks } from "../infrastructure/schema";
 import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
-import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
+import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
 import { type SuggestionContext } from "../domain/suggestion-types";
 
@@ -52,10 +52,7 @@ const LAND_COLUMNS = sql`p.oracle_id, p.name, p.type_line,
 function playableLand(format: string, colorLimit: readonly string[] | null): SQL {
   const identity =
     colorLimit === null ? sql`true` : sql`p.color_identity <@ ${textArray(colorLimit)}`;
-  const legal =
-    format === "casual"
-      ? sql`true`
-      : sql`coalesce(p.legalities->>${format}, 'legal') in ('legal', 'restricted')`;
+  const legal = legalInFormat(format);
   return sql`split_part(p.type_line, ' // ', 1) ~ '\\yLand\\y'
     and p.type_line !~ '^Basic\\y.*\\yLand\\y' and ${identity} and ${legal}`;
 }

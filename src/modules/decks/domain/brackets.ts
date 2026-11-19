@@ -3,6 +3,7 @@
 import { BRACKET_FLAGS, bracketFlags, type BracketFlag } from "@/shared/card-search";
 import { isPlayed, type Board } from "./boards";
 import type { Format } from "./deck";
+import { formatRules } from "./format-rules";
 
 export const BRACKETS = [1, 2, 3, 4, 5] as const;
 /** Wizards' Commander power bands: 1 Exhibition, 2 Core, 3 Upgraded, 4 Optimized, 5 cEDH. */
@@ -114,7 +115,7 @@ export function estimateBracket(
   lines: readonly BracketLine[],
   options?: Readonly<{ combos?: readonly DeckCombo[] }>,
 ): BracketEstimate | null {
-  if (format !== "commander") return null;
+  if (!formatRules(format).bracketsApply) return null;
   const counted = lines.filter((line) => isPlayed(line.board));
   const findings: BracketFinding[] = [];
   for (const rule of BRACKET_FLAG_RULE_NAMES) {
