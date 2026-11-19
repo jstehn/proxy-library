@@ -2,6 +2,7 @@
 
 - **Phase:** N
 - **Status:** Draft → In review → **Approved** (implementation starts only after approval)
+- **Superseded in part** (date, package): which section → where it lives now. Added later, one line per change; leave the rest of the doc as it was.
 - **Related ADRs:** 000X, 000Y
 - **Lesson:** yes (topics) | no
 

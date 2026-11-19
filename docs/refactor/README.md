@@ -167,6 +167,8 @@ Before stopping, even partway through:
    is a goal: a package that grows the total needs a sentence saying why.
 4. Fill in the **Handoff** section at the bottom of your package file: what's done, what's left,
    and anything surprising. Keep it short; it's what the next session reads first.
+5. Add a **"Superseded in part"** line to every design doc whose code you replaced (playbook,
+   Part A step 15). Commit it with the package.
 
 New ideas that aren't part of a package go to the **Backlog** in STATUS (and to tududi's inbox
 when it's connected), not into the current work.

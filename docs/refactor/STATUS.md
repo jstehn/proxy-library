@@ -39,6 +39,7 @@ its own worktree.
 | P19 | [Break up the deck builder UI](packages/P19-builder-ui.md)                         | P09                 | any of waves 3–4 except P16 | free                 |
 | P20 | [Responsibility check for other modules; large files](packages/P20-large-files.md) | P18                 | P21                         | free                 |
 | P21 | [Naming sweep and docs](packages/P21-naming-docs.md)                               | P18                 | P20                         | free                 |
+| P22 | [Review and consolidate the design docs](packages/P22-design-docs.md)              | P18                 | P20, P21                    | free                 |
 
 ```mermaid
 flowchart LR
@@ -48,7 +49,7 @@ flowchart LR
   P11 --> P12 & P13 & P14
   P12 & P14 --> P15
   P10 --> P16
-  P10 & P13 & P15 & P16 & P17 --> P18 --> P20 & P21
+  P10 & P13 & P15 & P16 & P17 --> P18 --> P20 & P21 & P22
 ```
 
 ## Size tracking

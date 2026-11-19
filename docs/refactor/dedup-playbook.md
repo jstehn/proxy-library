@@ -49,6 +49,13 @@ to avoid. Do it **one group at a time**, in your package's order.
 
 ### A1. Before writing anything
 
+**First, read the rules the copies must keep.** Find your group in
+[the design docs behind each group](#docs-behind-each-group) and read only these sections of
+each doc: **Invariants**, **Decisions** (or the decisions in its Status line) and **Out of
+scope**. Write the rules that still apply as a short list in your package's handoff. The merged
+version must keep every one; if two docs disagree, that's an A2 disagreement (step 5). Skip the
+docs' sections about files, ports and queries: they describe the layout the refactor replaces.
+
 1. Run your section's **inventory command**. Paste its output into your package's handoff (or a
    tududi comment) so the next session can see what you started from.
 2. For each copy, write one line: file, function, what it takes, what it returns, and anything it
@@ -104,6 +111,32 @@ to avoid. Do it **one group at a time**, in your package's order.
 13. Add a row to the "where does this live?" table in `docs/architecture/conventions.md`.
 14. Comment on your tududi task: the group, the commit's short SHA, lines before and after, and
     any disagreement you settled.
+15. **Mark the design docs.** In each doc from your group whose code you replaced, add one line
+    under its Status line:
+    `- **Superseded in part** (2026-11-…, P07): section 9's candidate queries → decks/queries/candidate-pool.ts (doc 65, S2).`
+    Don't edit the rest of the doc: it records why the feature was built that way. A doc whose
+    rules all still hold needs no line. P22 uses these lines to sort the docs.
+
+<a id="docs-behind-each-group"></a>
+
+### The design docs behind each group
+
+A starting list from the docs' titles and a keyword search (2026-11-19). If you find a doc that
+belongs to your group, add it here.
+
+| Group                          | Design docs (`docs/design/NN-*.md`)                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| S1. Tools and adapters         | 28 (LLM tools), 30 (OAuth for connectors), 40 (dry-run changes), 56, 57, 60, 61, 64; the builder side: 14, 19   |
+| S2. Candidates and suggestions | 15, 20, 29, 35, 36, 37, 39, 46, 47 (rating tuning and swaps), 53, 54, 55, 57                                    |
+| S3. Oracle text                | 19 (roles), 25 (token proxies), 31 (brackets), 38 (tags and themes), 42, 46, 52, 58, 59, 60 (simulator plugins) |
+| S4. Opening hands              | 19 (test hands), 43, 56, 58, 60                                                                                 |
+| S5. Collections and offers     | 06, 07, 16, 26, 33 (MSRP pricing), 51                                                                           |
+| S6. Formats                    | 09, 14, 31, 40 (partner rules), 44, 61                                                                          |
+| S7. Error text                 | 28 (tool errors); the rest is in ADR 0026 and conventions.md                                                    |
+| S8. Mana curve                 | 14, 17 (the drafter), 19, 37, 55                                                                                |
+| S9. Builder UI                 | 14, 19, 23, 24, 32, 34, 41, 59                                                                                  |
+| S10. Small clones              | 03 (wallet), 45 (EDHREC), 48 (social profiles and friends)                                                      |
+| P14: lands and draft abilities | 17, 18 (Conspiracy drafts)                                                                                      |
 
 ---
 
