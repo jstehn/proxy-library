@@ -16,9 +16,6 @@ export type ImportPlan = Readonly<{
   removed: readonly RealCopy[];
 }>;
 
-/** A plan that changes nothing. */
-export const EMPTY_PLAN: ImportPlan = { added: [], changed: [], removed: [] };
-
 /** Whether a plan changes anything. */
 export function isEmptyPlan(plan: ImportPlan): boolean {
   return plan.added.length + plan.changed.length + plan.removed.length === 0;

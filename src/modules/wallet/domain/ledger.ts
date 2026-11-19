@@ -46,7 +46,7 @@ export type LedgerEntry = Readonly<{
 
 /** The largest amount one entry may move: a guard against typos like an extra zero (rule 5). */
 export const MAX_ENTRY_AMOUNT = Cents.of(1_000_000); // $10,000.00
-export const MAX_NOTE_LENGTH = 200;
+const MAX_NOTE_LENGTH = 200;
 
 /**
  * Builds an entry, giving the amount the right sign for its kind. `size` is always positive:

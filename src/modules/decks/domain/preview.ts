@@ -98,7 +98,7 @@ export type ChangePreview = Readonly<{
 }>;
 
 /** Stable key matching `problemText` 1-to-1, so count shifts read as resolved + added. */
-export function problemKey(problem: DeckProblem): string {
+function problemKey(problem: DeckProblem): string {
   switch (problem.kind) {
     case "Short":
       return `Short:${problem.oracleId}:${problem.needed}:${problem.owned}`;

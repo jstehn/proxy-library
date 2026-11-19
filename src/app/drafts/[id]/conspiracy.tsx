@@ -40,7 +40,7 @@ const COLOR_NAMES: Readonly<Record<string, string>> = {
 const refValue = (ref: CardRef) => `${ref.packNumber}:${ref.slot}`;
 
 /** What a note says, in plain words. */
-export function noteText(note: Note, names: Names): string {
+function noteText(note: Note, names: Names): string {
   switch (note.kind) {
     case "count":
       return `noted ${note.value}`;

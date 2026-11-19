@@ -6,7 +6,7 @@ import type { PrintedCard } from "./playtest-card";
 //
 // Units are PDF points (72 per inch) and, as in PDF, the origin is the page's bottom-left corner.
 
-export const POINTS_PER_INCH = 72;
+const POINTS_PER_INCH = 72;
 export const POINTS_PER_MILLIMETER = POINTS_PER_INCH / 25.4;
 
 /** A real Magic card: 2.5 × 3.5 inches (63.5 × 88.9 mm). */
@@ -17,7 +17,7 @@ export const PAGE_MARGIN = POINTS_PER_INCH / 8;
 /** How far a corner mark reaches past the bleed at the sheet's edges. */
 export const MARK_LENGTH = 3 * POINTS_PER_MILLIMETER;
 
-export const PAPER_SIZES = {
+const PAPER_SIZES = {
   letter: { width: 8.5 * POINTS_PER_INCH, height: 11 * POINTS_PER_INCH },
   a4: { width: 210 * POINTS_PER_MILLIMETER, height: 297 * POINTS_PER_MILLIMETER },
 } as const;

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { PrintingId } from "@/modules/catalog";
 
 const EDHREC_FRAMING =
   "Popularity data: shows what people play, not what is good. Inclusion % is not win rate.";
@@ -1098,56 +1097,6 @@ export const replaceDeckList = defineTool({
       }
     }
     return done({ deckId: input.deckId, cards: result.value.cards });
-  },
-});
-
-export const choosePrinting = defineTool({
-  name: "choose_printing",
-  title: "Choose which printing a deck shows",
-  description: [
-    "Pins the printing and finish a deck line shows and exports, or clears the pin so it follows your copies again.",
-    "Use it when: the player asks for a particular art or set. Get printing ids from get_card.",
-  ].join("\n"),
-  scope: "decks:write",
-  readOnly: false,
-  input: z.object({
-    deckId,
-    card,
-    board,
-    printingId: z
-      .string()
-      .default("")
-      .describe("The printing to pin (from get_card), or empty to clear the pin."),
-    finish: z.enum(["nonfoil", "foil", "etched"]).default("nonfoil").describe("The finish to pin."),
-  }),
-  async run(context, input) {
-    const found = await findCard(context.container.db, input.card);
-    if (found === null) return cardNotFound(input.card);
-    const result = await context.container.decks.choosePrinting(context.actor, {
-      deckId: DeckId.of(input.deckId),
-      oracleId: found.oracleId,
-      board: input.board,
-      pinned:
-        input.printingId === ""
-          ? null
-          : { printingId: PrintingId.of(input.printingId), finish: input.finish },
-    });
-    if (!result.ok) {
-      switch (result.error.kind) {
-        case "DeckNotFound":
-          return deckNotFound(input.deckId);
-        case "EntryNotFound":
-          return failed(
-            "EntryNotFound",
-            `The deck has no ${found.name} on the ${input.board} board.`,
-          );
-        case "PrintingNotOfCard":
-          return failed("PrintingNotOfCard", `That printing isn't a printing of ${found.name}.`);
-        case "FinishNotAvailable":
-          return failed("FinishNotAvailable", `That printing doesn't come in ${input.finish}.`);
-      }
-    }
-    return done({ deckId: input.deckId, card: found.name, pinned: input.printingId !== "" });
   },
 });
 

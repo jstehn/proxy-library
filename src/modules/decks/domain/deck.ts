@@ -22,14 +22,7 @@ export const DeckId = {
   },
 };
 
-export {
-  BOARDS,
-  COUNTED_BOARDS,
-  isCounted,
-  isPlayed,
-  type Board,
-  type CountedBoard,
-} from "./boards";
+export { BOARDS, isCounted, isPlayed, type Board, type CountedBoard } from "./boards";
 import type { Board } from "./boards";
 
 export const FORMATS = [

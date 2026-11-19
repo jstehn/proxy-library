@@ -2,8 +2,8 @@ import { ok } from "@/shared/kernel";
 import { commanderSlug, dedupeEdhrecEntries } from "../domain/edhrec";
 import type { CatalogDependencies, CatalogServices } from "./ports";
 
-export const EDHREC_STALE_DAYS = 30;
-export const EDHREC_NIGHTLY_LIMIT = 200;
+const EDHREC_STALE_DAYS = 30;
+const EDHREC_NIGHTLY_LIMIT = 200;
 
 export type EdhrecSyncSummary = {
   synced: number;
@@ -11,7 +11,7 @@ export type EdhrecSyncSummary = {
   failed: number;
 };
 
-export function emptyEdhrecSummary(): EdhrecSyncSummary {
+function emptyEdhrecSummary(): EdhrecSyncSummary {
   return { synced: 0, notFound: 0, failed: 0 };
 }
 

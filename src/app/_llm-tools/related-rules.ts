@@ -32,7 +32,7 @@ export interface RuleInteractionMatch {
   toCards: string[];
 }
 
-export const RULE_GRAPH: ReadonlyArray<RuleDefinition> = [
+const RULE_GRAPH: ReadonlyArray<RuleDefinition> = [
   {
     rule: "CR 513",
     title: "End Step & Delayed Triggers",

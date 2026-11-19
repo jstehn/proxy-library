@@ -18,12 +18,12 @@ export const MAX_WISHES = 500;
 /** Rule 3: how many copies one wish may want. */
 export const MAX_WISH_QUANTITY = 99;
 /** Rule 3: the highest target price, $100,000. */
-export const MAX_TARGET_PRICE = 10_000_000;
+const MAX_TARGET_PRICE = 10_000_000;
 export const MAX_NOTE_LENGTH = 200;
 
 /** For an "any printing" wish: nonfoil only, foil only (foil or etched), or whichever is cheaper. */
 export type FinishPreference = "nonfoil" | "foil" | "cheapest";
-export const FINISH_PREFERENCES: readonly FinishPreference[] = ["nonfoil", "foil", "cheapest"];
+const FINISH_PREFERENCES: readonly FinishPreference[] = ["nonfoil", "foil", "cheapest"];
 
 /** Which copies would fill the wish. Both kinds know their card (oracle id). */
 export type WishTarget =

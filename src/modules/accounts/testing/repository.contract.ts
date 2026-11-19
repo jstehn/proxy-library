@@ -12,7 +12,7 @@ import type { DisplayName, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
 import { newPlayer, type Player } from "../domain/player";
 
-export function testPlayer(id: string, overrides: Partial<Player> = {}): Player {
+function testPlayer(id: string, overrides: Partial<Player> = {}): Player {
   return {
     ...newPlayer({
       userId: UserId.of(id),

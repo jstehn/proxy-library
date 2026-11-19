@@ -81,7 +81,7 @@ const DRAW_STRATEGIES: Record<SheetKind, DrawSheet> = {
 };
 
 export const ALL_COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
-export const COLOR_BALANCE_ATTEMPTS = 50;
+const COLOR_BALANCE_ATTEMPTS = 50;
 
 /** The colors of the mono-colored cards among these printings. */
 function monoColors(printingIds: readonly PrintingId[], facts: FactsLookup): Set<Color> {

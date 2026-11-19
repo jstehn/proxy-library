@@ -108,7 +108,7 @@ export type MissingCost = Readonly<{ picks: readonly MissingPick[]; totalCents: 
 export const SPELL_SLOTS = 62;
 
 /** The score's parts (section 3.1), in one place to tune. */
-export const COMMANDER_WEIGHTS = {
+const COMMANDER_WEIGHTS = {
   onPlan: 2,
   onPlanCap: 30,
   role: 1,
@@ -207,7 +207,7 @@ export const preparedForTest = (card: PoolCard): PreparedCard => prepare([card])
  * Bounded popularity bonus (0 to 25 points) from Scryfall's EDHREC rank (design doc 39, 3.1).
  * Rank <= 10 gives 25; rank 1,000 gives ~10.7; rank >= 31,623 or null gives 0.
  */
-export function popularityBonus(edhrecRank: number | null | undefined): number {
+function popularityBonus(edhrecRank: number | null | undefined): number {
   if (edhrecRank === null || edhrecRank === undefined || edhrecRank <= 0) return 0;
   const clamped = Math.max(10, edhrecRank);
   const raw = 25 * (1 - (Math.log10(clamped) - 1) / 3.5);
@@ -218,7 +218,7 @@ export function popularityBonus(edhrecRank: number | null | undefined): number {
  * Heuristic power score for a commander candidate (design doc 39, 3.1): combines Wizards' Game
  * Changer flag, card strength (rarity + low-mana efficiency + roles), plan richness, and popularity.
  */
-export function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
+function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
   const cardStrength = strength({
     rarity: candidate.rarity ?? "rare",
     priceCents: candidate.priceCents,

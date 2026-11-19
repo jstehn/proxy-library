@@ -322,7 +322,7 @@ function countedCardProblems(
   }
 }
 
-export const CONSTRUCTED_60_FORMATS = [
+const CONSTRUCTED_60_FORMATS = [
   "standard",
   "pioneer",
   "modern",

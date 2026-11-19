@@ -73,7 +73,7 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
 }
 
 /** At most this many cards are read for one analysis. */
-export const SIGNAL_CARD_LIMIT = 500;
+const SIGNAL_CARD_LIMIT = 500;
 
 type SignalRow = {
   name: string;

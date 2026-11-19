@@ -11,7 +11,7 @@ export type CookbookEntry = Readonly<{
   payoffs: readonly SynergyQuery[];
 }>;
 
-export const COOKBOOK: readonly CookbookEntry[] = [
+const COOKBOOK: readonly CookbookEntry[] = [
   {
     mechanic: "Treasure",
     whenToUse: "Commanders that make, count or sacrifice Treasures (Jolene, the Plunder Queen).",

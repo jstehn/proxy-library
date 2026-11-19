@@ -226,7 +226,7 @@ export function samplePrintingId(raw: string): PrintingId {
 }
 
 /** A real 8 × 8 JPEG (one blue square, drawn by Chromium), to stand in for card images. */
-export const TINY_JPEG = new Uint8Array(
+const TINY_JPEG = new Uint8Array(
   readFileSync(join(process.cwd(), "tests/fixtures/images/card.jpg")),
 );
 

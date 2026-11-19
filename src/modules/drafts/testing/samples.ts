@@ -13,7 +13,7 @@ import {
 // Sample drafts and cards for tests.
 
 export const START = new Date("2026-10-02T18:00:00Z");
-export const FEE = Cents.of(1647); // three packs at $5.49
+const FEE = Cents.of(1647); // three packs at $5.49
 
 /** A lobby hosted by the first player, with the others joined a second apart. */
 export function sampleLobby(

@@ -14,7 +14,6 @@ src/modules/decks/domain/optimize.ts  # pre-refactor, owned by P20
 src/modules/decks/domain/playtest-card.ts  # pre-refactor, owned by P20
 src/modules/decks/domain/rate.ts  # pre-refactor, owned by P16
 src/modules/decks/domain/sim-pipeline.ts  # pre-refactor, owned by P12
-src/modules/decks/index.ts  # pre-refactor, owned by P18
 src/modules/decks/queries/decks.ts  # pre-refactor, owned by P06
 src/modules/decks/queries/suggestions.ts  # pre-refactor, owned by P07
 src/modules/drafts/application/drafts.ts  # pre-refactor, owned by P20

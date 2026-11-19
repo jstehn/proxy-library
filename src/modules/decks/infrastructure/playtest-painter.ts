@@ -40,7 +40,7 @@ import type { Box, Point, ProxyOptions } from "../domain/proxy-sheet";
 // (domain/playtest-card.ts); this draws it: stripes, white panels, art, words and Mana symbols.
 
 /** Where the Mana font lives: the `mana-font` package (SIL OFL 1.1), installed with the app. */
-export const MANA_FONT_PATH = join(process.cwd(), "node_modules", "mana-font", "fonts", "mana.ttf");
+const MANA_FONT_PATH = join(process.cwd(), "node_modules", "mana-font", "fonts", "mana.ttf");
 
 export async function readManaFont(): Promise<Uint8Array> {
   return new Uint8Array(await readFile(MANA_FONT_PATH));

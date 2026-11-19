@@ -45,7 +45,7 @@ const TYPE_LINES: Readonly<Record<string, string>> = {
 export const nameOf = (printingId: string) => printingId.split("@")[0];
 
 /** Facts for test cards: the name, a type line, and some strength so auto-picks have a favorite. */
-export function conspiracyFacts(printingId: PrintingId): DraftCardFacts {
+function conspiracyFacts(printingId: PrintingId): DraftCardFacts {
   const name = nameOf(printingId);
   return {
     name,

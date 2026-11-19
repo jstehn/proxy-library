@@ -13,7 +13,7 @@ its own worktree.
 | --- | ---------------------------------------------------------------------------------- | ------------------- | --------------------------- | -------------------- |
 |     | **Wave 0: set up**                                                                 |                     |                             |                      |
 | P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | done                 |
-| P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | free                 |
+| P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | done                 |
 |     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                      |
 | P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | free                 |
 | P03 | [One current-price query](packages/P03-current-price.md)                           | P02                 | P04                         | free                 |

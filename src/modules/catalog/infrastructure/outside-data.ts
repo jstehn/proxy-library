@@ -12,8 +12,6 @@ import type { Clock } from "@/shared/kernel";
 import { commanderSlug } from "../domain/edhrec";
 
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-export const EDHREC_FRAMING =
-  "Popularity data: shows what people play, not what is good. Inclusion % is not win rate.";
 
 type CacheEntry<T> = {
   value: T;
@@ -53,7 +51,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function makePoliteFetch(clock: Clock, baseFetch: Fetch = platformFetch): Fetch {
+function makePoliteFetch(clock: Clock, baseFetch: Fetch = platformFetch): Fetch {
   return withUserAgent("ProxyLibrary/1.0 (+https://github.com/proxylib)")(
     withRateLimit({ perSecond: 5, clock, sleep })(withRetry({ attempts: 2, sleep })(baseFetch)),
   );
@@ -90,7 +88,7 @@ export type ScryfallRulingsResult = Readonly<{
   rulings: readonly ScryfallRuling[];
 }>;
 
-export async function fetchScryfallRulings(
+async function fetchScryfallRulings(
   target: { name: string; scryfallId?: string },
   options: {
     fetchFn: Fetch;
@@ -212,7 +210,7 @@ export type EdhrecCommanderData = Readonly<{
 
 type CachedEdhrecPayload = Omit<EdhrecCommanderData, "fetchedAt" | "cached">;
 
-export function parseEdhrecCommanderPage(
+function parseEdhrecCommanderPage(
   commanderName: string,
   slug: string,
   sourceUrl: string,
@@ -275,7 +273,7 @@ export function parseEdhrecCommanderPage(
   };
 }
 
-export async function fetchEdhrecCommander(
+async function fetchEdhrecCommander(
   commanderName: string,
   options: {
     theme?: string;
@@ -311,8 +309,7 @@ export async function fetchEdhrecCommander(
 
 // --- Commander Spellbook find-my-combos ---
 
-export const SPELLBOOK_FIND_MY_COMBOS_URL =
-  "https://backend.commanderspellbook.com/find-my-combos/";
+const SPELLBOOK_FIND_MY_COMBOS_URL = "https://backend.commanderspellbook.com/find-my-combos/";
 
 const SpellbookComboUseSchema = z.object({
   card: z.object({
@@ -392,7 +389,7 @@ function mapSpellbookVariant(v: z.infer<typeof SpellbookComboVariantSchema>): Sp
   };
 }
 
-export function parseSpellbookFindMyCombos(
+function parseSpellbookFindMyCombos(
   deckCardNames: readonly string[],
   raw: unknown,
 ): CachedSpellbookPayload {
@@ -417,7 +414,7 @@ export function parseSpellbookFindMyCombos(
   return { complete, oneCardAway };
 }
 
-export async function fetchSpellbookCombos(
+async function fetchSpellbookCombos(
   mainCards: readonly string[],
   commanders: readonly string[],
   options: {

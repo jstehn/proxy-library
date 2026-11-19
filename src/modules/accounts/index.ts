@@ -16,13 +16,12 @@ export type {
   RegisterClientInput,
   TokenRequest,
 } from "./application/oauth";
-export { MAX_REDIRECT_URIS, type OAuthClient } from "./domain/oauth";
+export { type OAuthClient } from "./domain/oauth";
 export {
   AccessTokenId,
   allows,
   MAX_LIVE_TOKENS,
   SCOPES,
-  TOKEN_NAME_MAX_LENGTH,
   type AccessToken,
   type Scope,
 } from "./domain/access-token";
@@ -53,11 +52,7 @@ export {
   type Invite,
   type InviteStatus,
 } from "./domain/invite";
-export {
-  PASSWORD_MIN_LENGTH,
-  USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
-} from "./domain/credentials";
+export { PASSWORD_MIN_LENGTH } from "./domain/credentials";
 export type { Actor, Player } from "./domain/player";
 export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
 export { listAccessTokens } from "./queries/access-tokens";

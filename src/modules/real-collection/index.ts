@@ -32,7 +32,6 @@ export {
   isRealCollectionShared,
   printingChoices,
   printingsOfSameCard,
-  REAL_COLLECTION_PAGE_SIZE,
   realCollectionPage,
   realCopiesOf,
   realOwnedByOracle,

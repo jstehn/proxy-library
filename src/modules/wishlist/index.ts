@@ -31,11 +31,8 @@ export {
   type WishStatus,
 } from "./domain/lines";
 export {
-  FINISH_PREFERENCES,
   MAX_NOTE_LENGTH,
-  MAX_TARGET_PRICE,
   MAX_WISH_QUANTITY,
-  MAX_WISHES,
   WishId,
   type FinishPreference,
   type Wish,

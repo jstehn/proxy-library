@@ -59,7 +59,7 @@ export const { db, close } = createDatabase(loadConfig().databaseUrl);
 export const clock = systemClock();
 
 /** Every module's repositories inside one transaction, like the app's composition root. */
-export function servicesFor(transaction: DbExecutor) {
+function servicesFor(transaction: DbExecutor) {
   return {
     catalog: drizzleCatalogRepository(transaction),
     syncRuns: drizzleSyncRunRepository(transaction),

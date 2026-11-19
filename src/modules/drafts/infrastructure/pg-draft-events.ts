@@ -30,7 +30,7 @@ export type DraftSubscriptions = Readonly<{
 }>;
 
 /** "12:7" → draft 12, version 7; anything else is ignored. */
-export function parseNotification(payload: string | undefined) {
+function parseNotification(payload: string | undefined) {
   const match = /^(\d+):(\d+)$/.exec(payload ?? "");
   return match === null ? null : { draftId: Number(match[1]), version: Number(match[2]) };
 }

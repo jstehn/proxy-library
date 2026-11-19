@@ -28,8 +28,8 @@ import { optimizeDeckAction, suggestionsAction } from "./actions";
 // the maybeboard, plus top-rated one-step swap pairs.
 
 /** How many cut candidates the panel shows. */
-export const CUTS_SHOWN = 10;
-export const SWAPS_SHOWN = 5;
+const CUTS_SHOWN = 10;
+const SWAPS_SHOWN = 5;
 
 export function CutsPanel(props: {
   deckId: number;

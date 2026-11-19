@@ -113,7 +113,7 @@ const CONSIDER_BUYING = 5;
 const BASIC_EQUIVALENT = 2;
 
 /** The points a land earns (section 3.3), in one place to tune. */
-export const LAND_WEIGHTS = {
+const LAND_WEIGHTS = {
   /** A short color it makes: this much, plus up to 1 more the shorter the color is. */
   shortColor: 2,
   /** A deck color it makes that isn't short. */

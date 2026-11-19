@@ -66,7 +66,7 @@ export function problemText(problem: DeckProblem): string {
 }
 
 /** "Bracket 3 · Upgraded" (design doc 31). */
-export function bracketLabel(bracket: Bracket): string {
+function bracketLabel(bracket: Bracket): string {
   return `Bracket ${bracket} · ${BRACKET_NAMES[bracket]}`;
 }
 
@@ -113,7 +113,7 @@ export function bracketWarningText(warning: BracketWarning): string {
 }
 
 /** What the estimate can't check, in words. */
-export const UNCHECKED_TEXT = "Not checked: two-card combos, and how you play the deck.";
+const UNCHECKED_TEXT = "Not checked: two-card combos, and how you play the deck.";
 
 export function uncheckedText(unchecked: readonly ("intent" | "combos")[]): string {
   return unchecked.includes("combos") ? UNCHECKED_TEXT : "Not checked: how you play the deck.";

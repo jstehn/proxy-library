@@ -39,9 +39,9 @@ export type Trade = Readonly<{
   decidedAt: Date | null;
 }>;
 
-export const MAX_CARD_QUANTITY = 99;
-export const MAX_MONEY = Cents.of(1_000_000); // $10,000
-export const MAX_MESSAGE_LENGTH = 300;
+const MAX_CARD_QUANTITY = 99;
+const MAX_MONEY = Cents.of(1_000_000); // $10,000
+const MAX_MESSAGE_LENGTH = 300;
 
 /**
  * Checks and tidies an offer (rule 1): at least one item, whole quantities 1–99, money $0.01–$10,000,
@@ -103,7 +103,7 @@ const ALLOWED: Record<TradeEvent, TradeSide> = {
 };
 
 /** The actor's side in a trade, or null if they aren't part of it. */
-export function sideOf(trade: Trade, userId: UserId): TradeSide | null {
+function sideOf(trade: Trade, userId: UserId): TradeSide | null {
   if (trade.proposerId === userId) return "proposer";
   if (trade.recipientId === userId) return "recipient";
   return null;

@@ -744,7 +744,7 @@ export async function similarCards(
 }
 
 /** The most cards a budget list holds. */
-export const BUDGET_LIST_MAXIMUM = 15;
+const BUDGET_LIST_MAXIMUM = 15;
 
 export type BudgetList = Readonly<{
   picks: Suggestion[];

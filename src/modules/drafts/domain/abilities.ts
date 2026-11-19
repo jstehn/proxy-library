@@ -56,7 +56,7 @@ export type CardAbility = Readonly<{
 const faceUp = (ability: DraftAbility): CardAbility => ({ faceUp: true, reveal: false, ability });
 const revealed = (ability: DraftAbility): CardAbility => ({ faceUp: false, reveal: true, ability });
 
-export const DRAFT_ABILITIES: Readonly<Record<string, CardAbility>> = {
+const DRAFT_ABILITIES: Readonly<Record<string, CardAbility>> = {
   // Conspiracy (CNS)
   "Aether Searcher": revealed({ kind: "nextCardName" }),
   "Agent of Acquisitions": faceUp({ kind: "wholePack" }),

@@ -10,7 +10,6 @@ import { collectionPage, ownedByOracle, ownedCopies } from "@/modules/collection
 import { realOwnedByOracle } from "@/modules/real-collection";
 import {
   budgetReplacements,
-  cardsToGetFor,
   checkOwnedCards,
   decksFor,
   decksUsing,
@@ -703,31 +702,6 @@ export const findCombosForDeckTool = defineTool({
           identity: combo.identity,
         };
       }),
-    });
-  },
-});
-
-export const cardsToGet = defineTool({
-  name: "cards_to_get",
-  title: "Cards my decks still need",
-  description:
-    "Every card your decks use that you don't own enough of, with which decks need it, the cheapest price in the store, and the total. Use it when: planning purchases across all decks.",
-  scope: "read",
-  readOnly: true,
-  input: z.object({}),
-  async run(context) {
-    const result = await cardsToGetFor(context.container.db, context.actor.userId);
-    return done({
-      cards: result.cards.map((card) => ({
-        name: card.name,
-        oracleId: card.oracleId,
-        missing: card.missing,
-        owned: card.owned,
-        decks: card.decks,
-        price: moneyOrNull(card.priceCents),
-      })),
-      total: money(result.totalCents),
-      list: result.listText,
     });
   },
 });

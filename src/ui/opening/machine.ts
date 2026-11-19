@@ -98,7 +98,7 @@ export function revealedCount(state: OpeningState, pack: OpenerPack): number {
 
 export type HitLevel = "none" | "rare" | "mythic";
 
-export const BIG_HIT_CENTS = 500; // any card worth $5 or more is treated like a mythic
+const BIG_HIT_CENTS = 500; // any card worth $5 or more is treated like a mythic
 
 /** How much fuss a card deserves when it's revealed (rule 3). */
 export function hitLevel(card: OpenerCard): HitLevel {

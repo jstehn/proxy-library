@@ -26,7 +26,7 @@ type TagRule = Readonly<{
 
 const rule = (source: string) => new RegExp(source, "i");
 
-export const TAG_RULES: readonly TagRule[] = [
+const TAG_RULES: readonly TagRule[] = [
   {
     tag: "ramp",
     notOnLands: true,
@@ -334,7 +334,7 @@ const VEHICLES = [
   rule(String.raw`\b(crew|saddle) \d+\b`),
 ];
 
-export const THEME_RULES: readonly ThemeRule[] = [
+const THEME_RULES: readonly ThemeRule[] = [
   {
     theme: "counters",
     label: "+1/+1 counters",

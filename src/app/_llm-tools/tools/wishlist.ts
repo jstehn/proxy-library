@@ -132,7 +132,7 @@ export const manageWishlist = defineTool({
   },
 });
 
-export const addWish = defineTool({
+const addWish = defineTool({
   name: "add_wishes",
   title: "Add cards to my wishlist",
   description: [
@@ -222,34 +222,7 @@ export const addWish = defineTool({
   },
 });
 
-export const updateWish = defineTool({
-  name: "update_wish",
-  title: "Change a wish",
-  description:
-    "Changes how many copies a wish wants, its target price, or its note, by its id from get_wishlist. Send all three: what you leave out is cleared.",
-  scope: "wishlist:write",
-  readOnly: false,
-  input: z.object({ wishId, quantity, targetPriceCents, note }),
-  async run(context, input) {
-    const result = await context.container.wishlist.updateWish(
-      context.actor,
-      WishId.of(input.wishId),
-      {
-        quantity: input.quantity,
-        targetPrice: input.targetPriceCents === undefined ? null : Cents.of(input.targetPriceCents),
-        note: input.note,
-      },
-    );
-    if (!result.ok) {
-      return result.error.kind === "WishNotFound"
-        ? failed("WishNotFound", `Wish ${input.wishId} isn't on your wishlist. Call get_wishlist.`)
-        : failed("InvalidWish", result.error.reason);
-    }
-    return done({ wishId: input.wishId, updated: true });
-  },
-});
-
-export const removeWish = defineTool({
+const removeWish = defineTool({
   name: "remove_wishes",
   title: "Remove wishes",
   description:

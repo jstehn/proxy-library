@@ -1,7 +1,7 @@
 import { ok } from "@/shared/kernel";
 import type { CatalogDependencies, CatalogServices } from "./ports";
 
-export const SPELLBOOK_STALE_DAYS = 7;
+const SPELLBOOK_STALE_DAYS = 7;
 
 export type SpellbookSyncSummary = {
   synced: number;

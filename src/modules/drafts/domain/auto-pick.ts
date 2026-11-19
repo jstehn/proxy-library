@@ -68,7 +68,7 @@ export function cardStrength(facts: DraftCardFacts): number {
 }
 
 /** How much of each color a pool has, weighting each card by its strength. */
-export function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number> {
+function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number> {
   const weights = new Map<Color, number>();
   for (const facts of pool) {
     if (facts.colors.length === 0) continue;
@@ -108,9 +108,9 @@ export function colorFit(facts: DraftCardFacts, top: readonly Color[], settled: 
 }
 
 /** About how many spells of each mana value a 23-spell limited deck wants (6 = six or more). */
-export const IDEAL_CURVE: Readonly<Record<number, number>> = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
+const IDEAL_CURVE: Readonly<Record<number, number>> = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
 
-export const curveBucket = (manaValue: number) => Math.min(6, Math.max(1, Math.round(manaValue)));
+const curveBucket = (manaValue: number) => Math.min(6, Math.max(1, Math.round(manaValue)));
 
 /** Small nudges for what the pool is missing: creatures, a gap in the curve, fixing. */
 function needsBonus(

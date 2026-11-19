@@ -1,10 +1,7 @@
 // The decks module's browser-safe public API (ADR 0016): pure domain code for client components.
 // Server code imports index.ts instead.
 export {
-  colorPips,
-  COMMANDER_ROLE_TARGETS,
   roleTargets,
-  SIXTY_CARD_ROLE_TARGETS,
   TARGETED_TAGS,
   type TargetedTag,
   deckSize,
@@ -12,7 +9,6 @@ export {
   isLand,
   MANA_COLORS,
   mainType,
-  suggestedLands,
   TYPE_ORDER,
   type DeckStats,
   type ManaColor,
@@ -35,10 +31,7 @@ export {
   filterTokenChecklist,
   sheetCards,
   summarizeTokenChecklist,
-  TOKEN_KINDS,
   tokenDescription,
-  tokenKind,
-  tokenRulesText,
   toTokenChecklistItem,
   type TokenArt,
   type TokenChecklistItem,
@@ -55,11 +48,8 @@ export {
   type ProxyStreamEvent,
 } from "./domain/proxy-progress";
 export { copiesToTake } from "./domain/free-copies";
-export { landTarget, tapped } from "./domain/mana-base";
+export { landTarget } from "./domain/mana-base";
 export {
-  CUT_WEIGHTS,
-  CUT_WEIGHTS_BY_TIER,
-  cutWeightsForBracket,
   rankCuts,
   type CutContext,
   type CutLine,
@@ -68,12 +58,7 @@ export {
   type RankedCut,
 } from "./domain/cuts";
 export {
-  powerTierForBracket,
-  RATING_BIAS,
-  RATING_WEIGHTS,
-  RATING_WEIGHTS_BY_TIER,
   rateCard,
-  weightsForBracket,
   type CardRating,
   type PowerTier,
   type RatingCandidate,
@@ -90,8 +75,6 @@ export {
   type SwapSuggestion,
 } from "./domain/swaps";
 export {
-  optimizeDeck,
-  scoreDeck,
   type DeckScore,
   type DeckScoreMetrics,
   type OptimizedSwap,
@@ -101,33 +84,24 @@ export {
   type ScoreDeckContext,
 } from "./domain/optimize";
 export {
-  rankBudgetReplacements,
   type BudgetReplacement,
   type BudgetReplacementOptions,
   type ReplacementCandidate,
 } from "./domain/replacements";
-export { BOARDS, COUNTED_BOARDS, isCounted, isPlayed, type Board } from "./domain/boards";
+export { BOARDS, isCounted, type Board } from "./domain/boards";
 export {
-  canBeCommander,
-  CONSTRUCTED_60_FORMATS,
   copyLimitFor,
   deckProblems,
   formatRulesSummary,
-  legalFormatsForCards,
   type CardRules,
   type DeckProblem,
   type DeckToCheck,
   type FormatRulesSummary,
 } from "./domain/rules";
 export {
-  chanceByTurn,
-  deckOdds,
   EARLY_RAMP_MAX_MV,
-  hypergeometricAtLeast,
-  hypergeometricAtLeast2Groups,
   library,
   nextHand,
-  OPENING_HAND,
   openingHandOdds,
   startHand,
   type DrawLine,
@@ -138,21 +112,14 @@ export {
   type TestHand,
   type TestHandEvent,
 } from "./domain/draws";
-export {
-  simulateOpeningHands,
-  type GoldfishReport,
-  type SampleHand,
-  type SimulateHandsOptions,
-} from "./domain/goldfish";
-export { creatureTypes, plural, type Reason } from "./domain/suggest";
+export { type GoldfishReport, type SampleHand, type SimulateHandsOptions } from "./domain/goldfish";
+export { plural, type Reason } from "./domain/suggest";
 export {
   BRACKET_NAMES,
-  BRACKET_RULES,
   BRACKETS,
   bracketLine,
   bracketWarning,
   estimateBracket,
-  isBracket,
   type Bracket,
   type BracketEstimate,
   type BracketFinding,
@@ -162,7 +129,7 @@ export {
   type BracketWarning,
   type DeckCombo,
 } from "./domain/brackets";
-export { checkHeading, headingMoved, MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
+export { headingMoved, MAX_HEADING_LENGTH } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
 export { MAX_ROLE_LENGTH, tidyRole } from "./domain/deck";
 export {
@@ -171,8 +138,6 @@ export {
   MAX_SNAPSHOTS_PER_DECK,
 } from "./domain/snapshots";
 export {
-  buildUpgradeRoadmap,
-  DEFAULT_UPGRADE_TIERS_CENTS,
   type BuildUpgradeRoadmapInput,
   type UpgradeCandidate,
   type UpgradeCut,
@@ -182,9 +147,6 @@ export {
 } from "./domain/upgrade-roadmap";
 export {
   EMPTY_DECK_PROFILE,
-  FIXED_CARD_ROLE_TAGS,
-  patchPrimerSection,
-  summarizeDeckProfile,
   type AvoidCard,
   type DeckProfile as DeckPlanProfile,
   type KeyCardPin,

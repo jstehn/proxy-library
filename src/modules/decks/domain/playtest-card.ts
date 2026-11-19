@@ -110,8 +110,8 @@ function clipPolygon(polygon: readonly Point[], side: (point: Point) => number):
  * far apart, cover about a fifth of the background (changed 2026-10-07 to save ink; they were
  * 5 pt with 5 pt gaps, half the background).
  */
-export const STRIPE_WIDTH = 1.5;
-export const STRIPE_GAP = 6;
+const STRIPE_WIDTH = 1.5;
+const STRIPE_GAP = 6;
 
 export type Stripe = Readonly<{ color: StripeColor; points: readonly Point[] }>;
 
@@ -214,7 +214,7 @@ function paragraphsOf(text: string): Paragraph[] {
 }
 
 /** The stats printed in the corner: power/toughness, loyalty or defence. */
-export function statsOf(face: PrintedFace): string | null {
+function statsOf(face: PrintedFace): string | null {
   if (face.power !== null && face.toughness !== null) return `${face.power}/${face.toughness}`;
   return face.loyalty ?? face.defense;
 }
@@ -369,7 +369,7 @@ function fittingSize(
 
 /** Mana cost symbols: 3.0 mm across, 0.3 mm apart, as measured on real cards (section 3.4). */
 export const COST_SYMBOL_DIAMETER = (3.0 / 25.4) * 72;
-export const COST_SYMBOL_GAP = (0.3 / 25.4) * 72;
+const COST_SYMBOL_GAP = (0.3 / 25.4) * 72;
 
 const MARGIN = 7;
 const GAP = 3;
