@@ -1,6 +1,22 @@
 import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
-import { decksFor, makeListDecks } from "@/modules/decks";
+import { printingCards } from "@/modules/catalog";
+import {
+  auditDeckView,
+  combosForDeck,
+  deckSignalCards,
+  deckTokenLines,
+  deckView,
+  decksFor,
+  getDeckProfile,
+  listDeckSources,
+  makeDeckFacts,
+  makeDeckManaPlan,
+  makeDeckOverview,
+  makeDeckSignals,
+  manaBasePlan,
+  makeListDecks,
+} from "@/modules/decks";
 import { currentEconomySettings, nextPayday } from "@/modules/wallet";
 import { wishlistAnswers } from "@/modules/wishlist";
 import type { DbExecutor } from "@/shared/db";
@@ -23,6 +39,19 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     listDecks: makeListDecks({
       decksFor: (userId) => decksFor(db, userId),
     }),
+    deckOverview: makeDeckOverview({
+      deckView: (userId, deckId) => deckView(db, userId, deckId),
+      combosFor: (oracleIds) => combosForDeck(db, oracleIds),
+      printingCards: (printingIds) => printingCards(db, printingIds),
+      tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
+      sources: (userId, deckId) => listDeckSources(db, userId, deckId),
+      profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
+    }),
+    deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
+    deckSignals: makeDeckSignals({
+      signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
+    }),
+    deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {

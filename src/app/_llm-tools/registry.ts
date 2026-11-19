@@ -9,7 +9,6 @@ import {
   editDeckConsolidated,
   findReplacementsTool,
   getCardsConsolidated,
-  getDeckConsolidated,
   rulesLookupTool,
   searchCardsConsolidated,
   updateDeckConsolidated,
@@ -25,7 +24,6 @@ import { youtubeResearchTool } from "./tools/youtube";
 
 /** Tools not yet ported to bindings (P06–P09 move them; P09 deletes this list). */
 const LEGACY_TOOLS: readonly LlmTool[] = [
-  getDeckConsolidated,
   createDeck,
   updateDeckConsolidated,
   editDeckConsolidated,

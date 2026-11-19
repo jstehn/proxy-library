@@ -65,6 +65,23 @@ export {
   type Format,
   type Grouping,
 } from "./domain/deck";
+export type { ManaBasePlanWithCastability } from "./domain/mana-base";
+export { makeDeckFacts, type DeckFacts } from "./application/deck-facts";
+export { makeDeckManaPlan } from "./application/deck-mana-plan";
+export { makeDeckSignals, type DeckSignals } from "./application/deck-signals";
+export {
+  makeDeckOverview,
+  type DeckOverview,
+  type DeckOverviewReaders,
+  type OverviewParts,
+} from "./application/deck-overview";
+export {
+  bracketReport,
+  listAndFingerprint,
+  problemsOfLines,
+  type BracketReport,
+} from "./domain/deck-reads";
+export { describeDeckError, type DeckError } from "./application/describe-error";
 export { MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
 export { MAX_ROLE_LENGTH } from "./domain/deck";
@@ -142,18 +159,21 @@ export {
   addDeckSource,
   decksUsing,
   listDeckSources,
-  type DeckSource,
   deckView,
   decksFor,
   type DeckRef,
   preconCommanders,
   type PreconCommanders,
-  type DeckLine,
   type DeckSummary,
-  type DeckView,
   otherDecksHolding,
-  type OtherDeckUse,
 } from "./queries/decks";
+export type {
+  DeckLine,
+  DeckSource,
+  DeckView,
+  OtherDeckUse,
+  StoredDeckProfile,
+} from "./domain/deck-view";
 export { takeCopies, type BoardCount } from "./domain/free-copies";
 export { type CutContext, type CutLine, type CutReason, type RankedCut } from "./domain/cuts";
 export {
@@ -184,12 +204,8 @@ export {
   type SampleHand,
   type SimulateHandsOptions,
 } from "./domain/goldfish";
-export {
-  auditDeck,
-  type AuditFinding,
-  type AuditRoleStatus,
-  type DeckAuditReport,
-} from "./queries/audit";
+export { auditDeck, auditDeckView } from "./queries/audit";
+export type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "./domain/audit-report";
 export { type CardRating, type PowerTier, type RatingProfile } from "./domain/rate";
 export {
   BROWSE_SORTS,
@@ -439,9 +455,4 @@ export {
   type KeyCardPin,
   type RoleTargetKey,
 } from "./domain/deck-profile";
-export {
-  getDeckProfile,
-  updateDeckPrimer,
-  updateDeckProfile,
-  type StoredDeckProfile,
-} from "./queries/deck-profile";
+export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";

@@ -40,4 +40,48 @@ out; SQL stays), `src/app/decks/[id]/builder/{actions,derive}.ts` (read actions 
 
 ## Handoff
 
-(empty)
+**Done:**
+
+- `describeDeckError` (`decks/application/describe-error.ts`): one exhaustive `switch` over every
+  decks error kind. It replaces the 11 inline `Record<string, string>` maps in
+  `builder/actions.ts`. The wording is now the same in the builder and for the model (a few
+  messages got slightly more specific; e.g. heading failures no longer say "That change wasn't
+  understood").
+- `deckOverview` (`application/deck-overview.ts`): one read of a deck: view, stats, problems,
+  bracket, combos, list text and fingerprint, plus parts on request (`printings`, `tokens`,
+  `sources`, `profile`, `odds`). Readers are ports; fakes in `decks/testing/deck-view.ts`.
+  Shared pure helpers in `domain/deck-reads.ts` (`problemsOfLines`, `bracketReport`,
+  `listAndFingerprint`) replace the copies in `_llm-tools/tools/decks.ts`, the builder's
+  `derive.ts` and the deck page (which had its own list/fingerprint code).
+- Small capabilities for what `get_deck` can add: `deckFacts`, `deckSignals`, `deckManaPlan`.
+- `get_deck` is a binding (`bindings/get-deck.ts`, 89 lines). Its output shaping moved to
+  `_llm-tools/present/get-deck*.ts` (compact, full, card details). The old `get_deck`, its
+  internal tools (`getDeck`, `deck_facts`, `mana_base_skeleton`, `get_deck_profile`) and
+  `fullDeckPayload`/`compactDeckPayload` are deleted.
+- The builder (`loadBuilderDeck`, `tokensAction`, `deckPlanAction`, `manaBaseAction`) and the
+  deck page read through the capabilities. Types `DeckLine`, `DeckView`, `OtherDeckUse`,
+  `DeckSource`, `StoredDeckProfile`, `DeckAuditReport`, `ManaBasePlanWithCastability` moved to
+  `domain/` so `application/` can name them.
+- **Checked:** the new binding and the old tool gave identical JSON for 10 inputs (compact, full,
+  every `include`, `cards`, `boards`, `cursor`, a missing deck). The reference outputs are
+  unchanged. `pnpm check` and the integration suite (265) pass.
+
+**Deviations and notes:**
+
+- `create_deck` and `update_deck` stay with P08 (the dedup playbook's S1 table gives them to
+  P08, and they share its write capabilities). Their old tool code is untouched.
+- Builder read actions that still use `getContainer().db`: `browseAction`, `cardDetailAction`,
+  `otherDecksAction`, `takeFromDeckAction`, `printingsAction`, `suggestionsAction`,
+  `optimizeDeckAction`, `draftDeckAction`, `similarAction`, `budgetAction` and the snapshot
+  reads. They belong to P07 (candidates, suggestions, similar, budget) and P08 (snapshots,
+  take). `builder/actions.ts` is 759 lines (was 842); P07/P08 take it below 350.
+- `get_deck` drops the internal-only `tag`, `singleTagOnly` and `fields` filters. The public
+  tool never passed them.
+- `describeError` in a binding now receives the request too (`BindingRequest`), so
+  "Deck 12 isn't yours" can name the id.
+- The shared deck page still loads the deck twice (`deckForViewer`, then `deckOverview`);
+  `deckForViewer` should return only the access answer. The owner path did this before.
+- Source lines 91,358 → 91,537 (+179). The new capabilities and shaping are in; the old
+  `_llm-tools/tools/decks.ts` is 2,145 → 1,223. The rest of that file (edit tools, profile,
+  primer, sources) goes with P08. This package adds lines; the saving comes when P08 and P09
+  delete the legacy edit tools and `consolidated.ts`.

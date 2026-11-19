@@ -11,7 +11,8 @@ import { compareDeckStates, type ChangePreview, type PreviewLine } from "../doma
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
 import type { EdhrecSignal } from "../domain/suggest";
 import { decks, deckSnapshots } from "../infrastructure/schema";
-import { deckView, loadEdhrecSignals, type DeckLine } from "./decks";
+import type { DeckLine } from "../domain/deck-view";
+import { deckView, loadEdhrecSignals } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
 import { lineToPreview, loadCardsForPreview, viewFingerprint } from "./preview";
 

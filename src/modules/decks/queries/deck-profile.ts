@@ -1,15 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { EMPTY_DECK_PROFILE, patchPrimerSection, type DeckPlan } from "../domain/deck-profile";
+import type { StoredDeckProfile } from "../domain/deck-view";
 import { decks } from "../infrastructure/schema";
-
-export interface StoredDeckProfile {
-  deckId: number;
-  deckName: string;
-  format: string;
-  profile: DeckPlan;
-  primer: string | null;
-}
 
 export async function getDeckProfile(
   db: DbExecutor,

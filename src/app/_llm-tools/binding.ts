@@ -40,7 +40,7 @@ export type Binding<Input extends ToolInputSchema, Value, Failure> = Readonly<{
    * An expected failure as a sentence the model can act on. Comes from the module's
    * `describe…Error`; leave it out only when the capability cannot fail.
    */
-  describeError?(failure: Failure): ToolError;
+  describeError?(failure: Failure, request: BindingRequest<Input>): ToolError;
 }>;
 
 /** Writes a binding. The result is what the transports serve. */
@@ -71,7 +71,14 @@ export function defineBinding<Input extends ToolInputSchema, Value, Failure>(
           `${binding.name}: the capability failed and the binding has no describeError`,
         );
       }
-      return { ok: false, error: binding.describeError(result.error) };
+      return {
+        ok: false,
+        error: binding.describeError(result.error, {
+          actor: context.actor,
+          scopes: context.scopes,
+          input,
+        }),
+      };
     },
   });
 }

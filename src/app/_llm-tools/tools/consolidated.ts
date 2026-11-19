@@ -15,14 +15,10 @@ import { seededRng } from "@/shared/kernel";
 import { deckNotFound, defineTool, done, failed, priceCents } from "../tool";
 import {
   applyChangesTool,
-  auditDeckTool,
   compareToEdhrecTool,
   deckSourcesTool,
   deleteDeckTool,
   edhrecCommanderTool,
-  getDeck,
-  getDeckProfileTool,
-  planManaBaseTool,
   replaceDeckList,
   setDeckProfileTool,
   setPrimerTool,
@@ -38,38 +34,11 @@ import {
   semanticSearchForDeckTool,
   similarCardsTool,
 } from "./library";
+import { compactMoneyFields, stripProvenance } from "../present/money";
 import { analyzeCards, searchCards, searchForDeckTool } from "./search";
 import { compactWishlistPayload } from "./wishlist";
 
 const deckIdField = z.number().int().positive().describe("Deck id from list_decks.");
-
-function stripProvenance(val: unknown): Record<string, unknown> {
-  if (typeof val !== "object" || val === null || Array.isArray(val)) {
-    return { value: val };
-  }
-  const copy = { ...(val as Record<string, unknown>) };
-  delete copy.provenance;
-  return copy;
-}
-
-function compactMoneyFields(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(compactMoneyFields);
-  if (typeof value !== "object" || value === null) return value;
-  const obj = value as Record<string, unknown>;
-  if (
-    Object.keys(obj).length === 2 &&
-    typeof obj.cents === "number" &&
-    typeof obj.text === "string"
-  ) {
-    return obj.cents;
-  }
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (k === "provenance") continue;
-    out[k] = compactMoneyFields(v);
-  }
-  return out;
-}
 
 /** 1. get_account */
 export const getAccountCompact = defineTool({
@@ -89,135 +58,6 @@ export const getAccountCompact = defineTool({
     if (!input.includeWishlist) return done(compact);
     const wishlist = await compactWishlistPayload(context);
     return done({ ...compact, wishlist });
-  },
-});
-
-/** 2. get_deck (merges get_deck, get_deck_profile, deck_facts, analyze_cards[deck], mana_base_skeleton) */
-export const getDeckConsolidated = defineTool({
-  name: "get_deck",
-  title: "Get deck",
-  description:
-    "Returns a compact deck view (header, profile summary, card lines, bracket, problems). Oracle text is off by default to save tokens, but you should set `includeText: true` (or `include: ['text']`) the first time you pull a deck. Pass `include` for 'facts', 'signals', 'mana_plan', 'primer', 'prices', etc.",
-  scope: "read",
-  readOnly: true,
-  pagesItself: true,
-  input: z.object({
-    deckId: deckIdField,
-    includeText: z
-      .boolean()
-      .default(false)
-      .describe(
-        "Include oracle rules text (off by default; set true the first time you pull a deck).",
-      ),
-    include: z
-      .array(
-        z.enum([
-          "facts",
-          "signals",
-          "mana_plan",
-          "primer",
-          "text",
-          "owners",
-          "prices",
-          "ids",
-          "tokens",
-          "odds",
-          "sources",
-          "formatRules",
-          "legality",
-        ]),
-      )
-      .optional()
-      .describe(
-        "Optional extra sections: 'facts', 'signals', 'mana_plan', 'primer', 'text', 'owners', 'prices', 'ids', 'tokens', 'odds', 'sources', 'formatRules', 'legality'.",
-      ),
-    view: z
-      .enum(["compact", "full"])
-      .default("compact")
-      .describe("Response shape: 'compact' (default) or 'full'."),
-    cards: z
-      .array(z.string().min(1))
-      .max(20)
-      .optional()
-      .describe("Inspect full detail for specific card names in this deck."),
-    boards: z
-      .array(z.enum(["main", "side", "commander", "maybe"]))
-      .optional()
-      .describe("Optional board filter (e.g. ['main', 'maybe'])."),
-    cursor: z.number().int().min(0).optional().describe("Pagination cursor from previous `next`."),
-  }),
-  async run(context, input) {
-    const inc = new Set(input.include ?? []);
-    const showText = input.includeText || inc.has("text");
-    const deckInclude: (
-      "prices" | "ids" | "owners" | "tokens" | "odds" | "sources" | "formatRules" | "legality"
-    )[] = [];
-    if (inc.has("prices")) deckInclude.push("prices");
-    if (inc.has("ids")) deckInclude.push("ids");
-    if (inc.has("owners")) deckInclude.push("owners");
-    if (inc.has("tokens")) deckInclude.push("tokens");
-    if (inc.has("odds")) deckInclude.push("odds");
-    if (inc.has("sources")) deckInclude.push("sources");
-    if (inc.has("formatRules")) deckInclude.push("formatRules");
-    if (inc.has("legality")) deckInclude.push("legality");
-
-    const baseInput = {
-      deckId: input.deckId,
-      view: input.view,
-      include: deckInclude.length > 0 ? deckInclude : undefined,
-      cards: input.cards,
-      boards: input.boards,
-      cursor: input.cursor,
-      text: showText,
-      includeText: showText,
-      includeOtherDecks: inc.has("owners"),
-      singleTagOnly: false,
-    };
-
-    const baseRes = await getDeck.run(context, baseInput);
-    if (!baseRes.ok) return baseRes;
-
-    const payload: Record<string, unknown> = {
-      ...(compactMoneyFields(baseRes.value) as Record<string, unknown>),
-    };
-
-    const extras: Promise<void>[] = [];
-    if (inc.has("facts")) {
-      extras.push(
-        auditDeckTool.run(context, { deckId: input.deckId, includeMaybe: false }).then((r) => {
-          if (r.ok) payload.facts = compactMoneyFields(stripProvenance(r.value));
-        }),
-      );
-    }
-    if (inc.has("signals")) {
-      extras.push(
-        analyzeCards
-          .run(context, { deckId: input.deckId, search: "", minimumCards: 1 })
-          .then((r) => {
-            if (r.ok) payload.signals = r.value;
-          }),
-      );
-    }
-    if (inc.has("mana_plan")) {
-      extras.push(
-        planManaBaseTool.run(context, { deckId: input.deckId }).then((r) => {
-          if (r.ok) payload.manaPlan = compactMoneyFields(stripProvenance(r.value));
-        }),
-      );
-    }
-    if (inc.has("primer")) {
-      extras.push(
-        getDeckProfileTool.run(context, { deckId: input.deckId, includePrimer: true }).then((r) => {
-          if (r.ok && typeof r.value === "object" && r.value !== null) {
-            const v = r.value as Record<string, unknown>;
-            if (v.primer !== undefined) payload.primer = v.primer;
-          }
-        }),
-      );
-    }
-
-    await Promise.all(extras);
-    return done(payload);
   },
 });
 
