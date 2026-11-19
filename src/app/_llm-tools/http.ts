@@ -2,7 +2,7 @@ import "server-only";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { resourceMetadataUrl } from "@/app/_oauth/http";
 import { allows } from "@/modules/accounts";
-import { readPage } from "@/server/page-instance";
+import { readCapabilities } from "@/server/page-instance";
 import { makeMcpServer } from "./mcp";
 import { callTool, problemMessage } from "./registry";
 import type { ToolContext } from "./tool";
@@ -12,7 +12,7 @@ import type { ToolContext } from "./tool";
 
 /** The caller, from `Authorization: Bearer pl_…`, or null (rule 1: every failure looks alike). */
 async function toolContextFor(request: Request): Promise<ToolContext | null> {
-  const { capabilities } = await readPage({ allowVisitors: true });
+  const capabilities = readCapabilities();
   const found = await capabilities.accounts.actorFromToken(request.headers.get("authorization"));
   return found === null
     ? null

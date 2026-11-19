@@ -1,4 +1,4 @@
-import { readPage } from "@/server/page-instance";
+import { readCapabilities } from "@/server/page-instance";
 
 const SIZES = ["small", "large"] as const;
 
@@ -15,7 +15,7 @@ export async function GET(
   const validSize = SIZES.find((candidate) => candidate === size);
   if (validSize === undefined) return new Response("Not found", { status: 404 });
 
-  const { capabilities } = await readPage({ allowVisitors: true });
+  const capabilities = readCapabilities();
   const image = await capabilities.catalog.artworkFor({ imageId, size: validSize });
   if (!image.ok) return new Response("Not found", { status: 404 });
 

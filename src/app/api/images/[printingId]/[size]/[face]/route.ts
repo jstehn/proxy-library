@@ -1,5 +1,5 @@
 import { PrintingId } from "@/modules/catalog";
-import { readPage } from "@/server/page-instance";
+import { readCapabilities } from "@/server/page-instance";
 
 const SIZES = ["small", "normal", "large"] as const;
 const FACES = ["front", "back"] as const;
@@ -19,7 +19,7 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const { capabilities } = await readPage({ allowVisitors: true });
+  const capabilities = readCapabilities();
   const image = await capabilities.catalog.imageFor({
     printingId: PrintingId.of(printingId),
     size: validSize,

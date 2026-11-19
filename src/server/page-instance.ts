@@ -10,3 +10,8 @@ export const readPage = makeReadPage({
   currentActor: () => getCurrentActor(),
   capabilities: () => getContainer().capabilities,
 });
+
+/** The capabilities alone, for routes that sign in some other way (a bearer token) or not at all. */
+export function readCapabilities() {
+  return getContainer().capabilities;
+}

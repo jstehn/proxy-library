@@ -31,7 +31,7 @@ its own worktree.
 |       | **Wave 2½: UI callers onto capabilities** ([milestone 1 review](reviews/milestone-1.md)) |                         |                             |                            |
 | P09b  | [Capability wiring per module; builder actions](packages/P09b-wiring-and-builder.md)     | P09                     | none                        | done                       |
 | P09c  | [Deck, draft and collection callers](packages/P09c-deck-callers.md)                      | P09b                    | P09d                        | done                       |
-| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | free                       |
+| P09d  | [The other callers](packages/P09d-other-callers.md)                                      | P09b                    | P09c, wave 3                | done                       |
 |       | **Wave 3: rules as data** (audit R4, R5)                                                 |                         |                             |                            |
 | P10   | [Formats as a strategy table](packages/P10-formats.md)                                   | P09c                    | P11–P14                     | free                       |
 | P11   | [Card features: model and storage](packages/P11-card-features.md)                        | P09c, decision 3        | P10                         | free (decision 3 answered) |
@@ -68,24 +68,25 @@ flowchart LR
 P00's `pnpm sizes` prints these. Add a row when each wave merges. Targets are from doc 65, "The end
 state".
 
-| After        | Source lines                         | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
-| ------------ | ------------------------------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
-| Baseline     | 93,361                               | 32,194     | 28          | 43             | 83         | 191                              |
-| P00 script   | 93,490 \*                            | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
-| After P04    | 91,358                               | 34,255     | 27          | 43             | 57         | 191                              |
-| After wave 2 | 92,251                               | 35,885     | 23          | 48             | 36         | 191                              |
-| **Target**   | **≤ 73,000 code lines** (decision 6) | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
+| After         | Source lines                         | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
+| ------------- | ------------------------------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
+| Baseline      | 93,361                               | 32,194     | 28          | 43             | 83         | 191                              |
+| P00 script    | 93,490 \*                            | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
+| After P04     | 91,358                               | 34,255     | 27          | 43             | 57         | 191                              |
+| After wave 2  | 92,251                               | 35,885     | 23          | 48             | 36         | 191                              |
+| After wave 2½ | 92,379 (79,270 code)                 | 36,098     | 21          | 49             | 36         | 4 (2 files, allowed)             |
+| **Target**    | **≤ 73,000 code lines** (decision 6) | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
 
 Before each milestone, run the checks in [deferred-checks.md](deferred-checks.md) (network, browser
 and by-eye checks the packages couldn't do).
 
-| Milestone | After       | Requires                                                                                                | Status                                                                                                  |
-| --------- | ----------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1         | Wave 2 + 2½ | full suite green; every LLM tool and builder feature working again; UI callers on capabilities (P09b–d) | **not complete**: wave 2 merged into `main` 2026-11-19; wave 2½ open ([review](reviews/milestone-1.md)) |
-| 2         | Wave 4      | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`                             | not reached                                                                                             |
-| 3         | Wave 5      | full suite green; no file over 500 lines without a reason; docs updated                                 | not reached                                                                                             |
+| Milestone | After       | Requires                                                                                                | Status                                                                                                                                                            |
+| --------- | ----------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1         | Wave 2 + 2½ | full suite green; every LLM tool and builder feature working again; UI callers on capabilities (P09b–d) | wave 2 merged into `main` 2026-11-19; wave 2½ done on `refactor/main` 2026-11-19, **waiting for your go to merge into `main`** ([review](reviews/milestone-1.md)) |
+| 2         | Wave 4      | full suite green; `getContainer()` in `src/app` only in `CONTAINER_ALLOWED`                             | not reached                                                                                                                                                       |
+| 3         | Wave 5      | full suite green; no file over 500 lines without a reason; docs updated                                 | not reached                                                                                                                                                       |
 
 **Remove later:** [removal-list.md](removal-list.md) lists the scaffolding and dead-code candidates left behind, with who removes each. Add to it whenever you leave something.
 
