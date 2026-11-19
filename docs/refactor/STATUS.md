@@ -24,7 +24,8 @@ its own worktree.
 | P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)         | P05                     | P06, P08                    | done                 |
 | P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                            | P07a                    | P08                         | done                 |
 | P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                         | P07b                    | P08                         | done                 |
-| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)              | P07a (P07b for search)  | P08                         | free                 |
+| P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)              | P07a                    | P08                         | done                 |
+| P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                         | P07b, P07c              | P08                         | done                 |
 | P08   | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                     | P06, P07                    | free                 |
 | P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–d, P07b2, P08 | none                        | free                 |
 |       | **Wave 3: rules as data** (audit R4, R5)                                           |                         |                             |                      |
