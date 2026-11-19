@@ -39,4 +39,20 @@ its readers), new `decks/application/candidate-pool.ts` (the port and the `Candi
 
 ## Handoff
 
-(empty)
+**Done (mechanical split, no behaviour change):** `queries/suggestions.ts` 978 lines is now
+four files by job: `suggestion-types.ts` (74: `SuggestionCard`, `Suggestion`, `SuggestionList`,
+`SuggestionContext`, `Wanted`), `suggestion-sql.ts` (301: `fitsDeck`, `candidateColumns`,
+`ownedCandidates`, `storeCandidates`, `ownedCandidatesForIds`, `toCard`), `suggestions.ts` (417:
+`suggestionContext`, `deckSuggestions`, `similarCards`, `budgetList`, scoring helpers) and
+`budget-replacements.ts` (244). Importers point at the right file (no re-exports). `suggestions.ts`
+is off the oversize allowlist. `pnpm check` and the 278 integration tests pass.
+
+**Not done: the `CandidatePool` port and `application/suggest-cards.ts`.** Reason found while
+doing it: `deckSuggestions` is also called by `queries/optimize.ts` and
+`queries/upgrade-roadmap.ts`, and `similarCards`/`budgetReplacements` carry inline SQL (nearest
+neighbours, the target card, pinned cards). Moving the orchestration to `application/` means
+moving those two callers with it and extracting about a dozen readers, and the types
+(`SuggestionCard` extends `BrowseCard`, which lives in `queries/browse.ts`) into `domain/`. That
+is the same restructure P18 does for the whole `decks` module (queries that do a service's job),
+so doing it here would be done twice. Recommendation: fold it into P18 (add a line to its brief),
+and treat P07b2's goal as met for size and file-by-job; the fake-pool tests come with the move.
