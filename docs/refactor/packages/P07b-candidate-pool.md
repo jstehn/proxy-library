@@ -91,6 +91,22 @@ for sale. The filter, ranking, limit and columns differ per caller.
    the deck context's `inDeck` list and excludes at the limit; suggestions keeps its extra
    "you'd have to take it from another deck" rule in the service.
 
+## Decisions (owner, 2026-11-19)
+
+All five proposals accepted, with these changes:
+
+1. **Both printings are surfaced.** A candidate carries the "most special" printing and finish
+   _and_ the "most copies" printing and finish. **Most special is the default** that callers
+   show and price; a caller that needs the other one asks for it. (This changes which printing
+   suggestions, draft and mana base show for an owned card.)
+2. Owned cards are priced at the finish of the printing shown.
+3. Mana base store lands are ranked by role/theme fit, not by `oracle_id`.
+4. One cheapest-for-sale rule, finish kept.
+5. **Sharing across decks has no limit**: a card can be in any number of decks (memory: decks
+   share cards). The pool never excludes or discounts a card because other decks use it;
+   `otherDecks` and `alsoIn` stay as information only. The only exclusion is this deck's own
+   copy limit (and a card whose copies are all already in this deck).
+
 ## Proposed shape
 
 - `decks/queries/candidate-pool.ts` is the only file with the owned-per-card and cheapest-for-sale
