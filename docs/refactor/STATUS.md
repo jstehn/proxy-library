@@ -27,7 +27,7 @@ its own worktree.
 | P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)              | P07a                    | P08                         | done                 |
 | P07d  | [search_cards as a binding](packages/P07d-search-cards.md)                         | P07b, P07c              | P08                         | done                 |
 | P08   | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                     | P06, P07                    | done                 |
-| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–d, P07b2, P08 | none                        | free                 |
+| P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–d, P07b2, P08 | none                        | done                 |
 |       | **Wave 3: rules as data** (audit R4, R5)                                           |                         |                             |                      |
 | P10   | [Formats as a strategy table](packages/P10-formats.md)                             | P09                     | P11–P14                     | free                 |
 | P11   | [Card features: model and storage](packages/P11-card-features.md)                  | P09, decision 3         | P10                         | blocked (decision 3) |
@@ -62,12 +62,13 @@ flowchart LR
 P00's `pnpm sizes` prints these. Add a row when each wave merges. Targets are from doc 65, "The end
 state".
 
-| After      | Source lines | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
-| ---------- | ------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
-| Baseline   | 93,361       | 32,194     | 28          | 43             | 83         | 191                              |
-| P00 script | 93,490 \*    | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
-| After P04  | 91,358       | 34,255     | 27          | 43             | 57         | 191                              |
-| **Target** | **≤ 80,000** | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
+| After        | Source lines | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
+| ------------ | ------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
+| Baseline     | 93,361       | 32,194     | 28          | 43             | 83         | 191                              |
+| P00 script   | 93,490 \*    | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
+| After P04    | 91,358       | 34,255     | 27          | 43             | 57         | 191                              |
+| After wave 2 | 92,251       | 35,885     | 23          | 48             | 36         | 191                              |
+| **Target**   | **≤ 80,000** | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
 

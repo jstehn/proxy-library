@@ -2,9 +2,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { RegisterPlayerError } from "@/modules/accounts";
+import { describeRegisterPlayerError } from "@/modules/accounts";
 import { getContainer } from "@/server/container";
-import { assertNever } from "@/shared/kernel";
 
 export type RegisterState = {
   error: string | null;
@@ -39,31 +38,13 @@ export async function registerAction(
   const { accounts } = getContainer();
   const registered = await accounts.registerPlayer({ username, displayName, password, inviteCode });
   if (!registered.ok) {
-    return { error: messageFor(registered.error), values: { username, displayName, inviteCode } };
+    return {
+      error: describeRegisterPlayerError(registered.error),
+      values: { username, displayName, inviteCode },
+    };
   }
 
   // Registration succeeded, so sign the new player straight in.
   await accounts.signIn({ username, password }, await headers());
   redirect("/");
-}
-
-function messageFor(error: RegisterPlayerError): string {
-  switch (error.kind) {
-    case "UsernameInvalid":
-      return `Username ${error.reason}.`;
-    case "DisplayNameInvalid":
-      return `Display name ${error.reason}.`;
-    case "PasswordInvalid":
-      return `Password ${error.reason}.`;
-    case "UsernameTaken":
-      return "That username is taken. Try another.";
-    case "InviteRequired":
-      return "You need an invite code from an admin to register.";
-    case "InviteNotFound":
-      return "That invite code doesn't exist. Check it for typos.";
-    case "InviteNotOpen":
-      return `That invite code has been ${error.status === "revoked" ? "cancelled" : error.status}. Ask an admin for a new one.`;
-    default:
-      return assertNever(error);
-  }
 }

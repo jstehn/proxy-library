@@ -1,10 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { UpdateEconomySettingsError } from "@/modules/wallet";
+import { describeUpdateEconomySettingsError } from "@/modules/wallet";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
-import { assertNever, Cents } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
 
 export type EconomyFormState = { message: string | null; tone: "error" | "success" };
 
@@ -38,7 +38,7 @@ export async function updateEconomyAction(
     startingGrant,
     selfFundLimit,
   });
-  if (!result.ok) return failure(messageFor(result.error));
+  if (!result.ok) return failure(describeUpdateEconomySettingsError(result.error));
 
   revalidatePath("/", "layout");
   return { message: "Saved. Changes apply from now on.", tone: "success" };
@@ -46,15 +46,4 @@ export async function updateEconomyAction(
 
 function failure(message: string): EconomyFormState {
   return { message, tone: "error" };
-}
-
-function messageFor(error: UpdateEconomySettingsError): string {
-  switch (error.kind) {
-    case "Forbidden":
-      return "Only admins can change the economy.";
-    case "SettingsInvalid":
-      return error.reason;
-    default:
-      return assertNever(error);
-  }
 }

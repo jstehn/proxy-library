@@ -1,11 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type {
+import {
   ResetPasswordError,
   SetAdminError,
   SetDisabledError,
   SetSelfFundingError,
+  describePlayerActionError,
 } from "@/modules/accounts";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
@@ -79,26 +80,11 @@ export async function playerAction(
       return assertNever(form.data.intent);
   }
 
-  if (!result.ok) return failure(messageFor(result.error));
+  if (!result.ok) return failure(describePlayerActionError(result.error));
   revalidatePath("/admin/players");
   return { message: "Saved.", tone: "success", temporaryPassword };
 }
 
 function failure(message: string): PlayerActionState {
   return { message, tone: "error", temporaryPassword: null };
-}
-
-function messageFor(error: PlayerActionError): string {
-  switch (error.kind) {
-    case "Forbidden":
-      return "Only admins can do that.";
-    case "PlayerNotFound":
-      return "That player no longer exists.";
-    case "LastAdmin":
-      return "There must always be at least one active admin. Promote someone else first.";
-    case "CannotDisableSelf":
-      return "You can't disable your own account. Ask another admin.";
-    default:
-      return assertNever(error);
-  }
 }

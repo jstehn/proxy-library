@@ -32,3 +32,8 @@ export {
   walletSummary,
 } from "./queries/wallet";
 export type { PlayerMoney, WalletHistoryItem, WalletSummary } from "./queries/wallet";
+export {
+  describeAddOwnFundsError,
+  describeCorrectBalanceError,
+  describeUpdateEconomySettingsError,
+} from "./application/describe-error";

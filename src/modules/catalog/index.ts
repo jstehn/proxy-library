@@ -111,3 +111,4 @@ export {
   type RulesCard,
   type RulesCardNotFound,
 } from "./application/rules-lookup";
+export { describePhotoError } from "./application/describe-error";

@@ -1,10 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { CorrectBalanceError } from "@/modules/wallet";
+import { describeCorrectBalanceError } from "@/modules/wallet";
 import { getContainer } from "@/server/container";
 import { requireAdminActor } from "@/server/session";
-import { assertNever, Cents, UserId } from "@/shared/kernel";
+import { Cents, UserId } from "@/shared/kernel";
 
 export type MoneyActionState = { message: string | null; tone: "error" | "success" };
 
@@ -38,7 +38,7 @@ export async function moneyAction(
     form.data.intent === "give"
       ? await wallet.grantMoney(admin, input)
       : await wallet.correctBalance(admin, input);
-  if (!result.ok) return failure(messageFor(result.error));
+  if (!result.ok) return failure(describeCorrectBalanceError(result.error));
 
   revalidatePath("/admin/players");
   const verb = form.data.intent === "give" ? "Gave" : "Took away";
@@ -50,19 +50,3 @@ function failure(message: string): MoneyActionState {
 }
 
 // CorrectBalanceError includes every GrantMoneyError, so one function covers both.
-function messageFor(error: CorrectBalanceError): string {
-  switch (error.kind) {
-    case "Forbidden":
-      return "Only admins can do that.";
-    case "AmountInvalid":
-      return `Amount ${error.reason}.`;
-    case "NoteInvalid":
-      return `Note ${error.reason}.`;
-    case "PlayerNotFound":
-      return "That player no longer exists.";
-    case "InsufficientFunds":
-      return `They only have ${Cents.format(error.balance)}, and a balance can't go below $0.00.`;
-    default:
-      return assertNever(error);
-  }
-}
