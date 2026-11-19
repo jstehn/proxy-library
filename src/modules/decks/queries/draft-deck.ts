@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPrice, latestPriceRows, textArray } from "@/shared/db";
+import { latestPrice, textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -14,7 +14,7 @@ import {
 import { TARGETED_TAGS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { landPoolsForDeck } from "./mana-base";
-import { ownedCopies } from "./owned";
+import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { fitsDeck, suggestionContext, tribePattern } from "./suggestions";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
@@ -99,13 +99,7 @@ export async function draftForDeck(
   const tribes = tribePattern(profile.tribes);
 
   const ownedRowsPromise = db.execute<SpellRow>(sql`
-    with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
-             (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
-        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
-    )
+    with owned as ${ownedPerCard(userId, context.usesRealCards)}
     select ${spellColumns(context.format)}, owned.owned,
            ${latestPrice("p.id", "owned.finish")} as price_cents,
            (select array_agg(distinct d.name order by d.name) from deck_entries e
@@ -136,9 +130,7 @@ export async function draftForDeck(
                      as rarity_rank
               from printings p join card_sets s on s.code = p.set_code and s.is_enabled
              where ${fitsDeck(context)} and ${NON_LAND}
-               and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-                                 join printings op on op.id = c.printing_id
-                                where op.oracle_id = p.oracle_id)
+               and ${notOwned(userId, context.usesRealCards)}
              order by p.oracle_id, rarity_rank desc
           ),
           kept as (
@@ -149,14 +141,7 @@ export async function draftForDeck(
           cheapest as (
             select kept.oracle_id, best.printing_id, best.usd_cents
               from kept
-              join lateral (
-                select p.id as printing_id, latest.usd_cents
-                  from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-                  join lateral ${latestPriceRows("p.id")} latest on true
-                 where p.oracle_id = kept.oracle_id
-                 order by latest.usd_cents, p.id
-                 limit 1
-              ) best on true
+              join lateral ${cheapestForSale(sql`kept.oracle_id`)} best on true
           )
           select ${spellColumns(context.format)}, 0 as owned, cheapest.usd_cents as price_cents, null::text[] as also_in
             from cheapest join printings p on p.id = cheapest.printing_id

@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
+import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import type { DbExecutor } from "@/shared/db";
-import { latestPrice, latestPriceRows } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import {
   parseSearch,
@@ -25,7 +26,6 @@ import {
 } from "../domain/search-for-deck";
 import { deckBrowseContext } from "./browse";
 import { deckView } from "./decks";
-import { MOST_SPECIAL_FIRST, ownedCopies } from "./owned";
 
 // Several synergy searches for one deck at once (design doc 28, section 3.3). Every query is
 // ANDed with the deck's rules (rule 12): the commanders' color identity, the format's legality
@@ -125,15 +125,8 @@ async function ownedHits(
   condition: SQL,
   limit: number,
 ): Promise<Row[]> {
-  const owned = ownedCopies(context.userId, sql`${context.usesRealCards}`);
   const rows = await db.execute<Row>(sql`
-    with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             (array_agg(c.printing_id order by ${MOST_SPECIAL_FIRST}))[1] as printing_id,
-             (array_agg(c.finish order by ${MOST_SPECIAL_FIRST}))[1] as finish
-        from ${owned} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
-    )
+    with owned as ${ownedPerCard(context.userId, context.usesRealCards)}
     select ${CARD_COLUMNS}, owned.owned,
            ${latestPrice("p.id", "owned.finish")} as price_cents,
            count(*) over ()::int as total
@@ -153,7 +146,6 @@ async function storeHits(
   limit: number,
   maxPriceCents: number | null,
 ): Promise<Row[]> {
-  const owned = ownedCopies(context.userId, sql`${context.usesRealCards}`);
   const priceLimit =
     maxPriceCents === null ? sql`true` : sql`cheapest.usd_cents <= ${maxPriceCents}`;
   const rows = await db.execute<Row>(sql`
@@ -161,20 +153,12 @@ async function storeHits(
       select distinct p.oracle_id
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
        where ${condition} and ${fitsDeck(context)}
-         and not exists (select 1 from ${owned} c join printings op on op.id = c.printing_id
-                          where op.oracle_id = p.oracle_id)
+         and ${notOwned(context.userId, context.usesRealCards)}
     ),
     cheapest as (
       select matching.oracle_id, best.printing_id, best.usd_cents
         from matching
-        join lateral (
-          select p.id as printing_id, latest.usd_cents
-            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral ${latestPriceRows("p.id")} latest on true
-           where p.oracle_id = matching.oracle_id
-           order by latest.usd_cents, p.id
-           limit 1
-        ) best on true
+        join lateral ${cheapestForSale(sql`matching.oracle_id`)} best on true
     )
     select ${CARD_COLUMNS}, 0 as owned, cheapest.usd_cents as price_cents,
            count(*) over ()::int as total

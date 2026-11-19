@@ -1,6 +1,6 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows, textArray } from "@/shared/db";
+import { textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -15,7 +15,7 @@ import {
 import { decks } from "../infrastructure/schema";
 import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
-import { ownedCopies } from "./owned";
+import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext, type SuggestionContext } from "./suggestions";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
@@ -95,12 +95,7 @@ export async function landPoolsForDeck(
 
   // Every land you own: decks share cards, so other decks only show up as a note.
   const owned = await db.execute<LandRow>(sql`
-    with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id
-        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
-    )
+    with owned as ${ownedPerCard(userId, context.usesRealCards)}
     select ${LAND_COLUMNS}, owned.owned, null::int as price_cents,
            (select array_agg(distinct d.name order by d.name) from deck_entries e
               join decks d on d.id = e.deck_id
@@ -140,23 +135,14 @@ export async function landPoolsForDeck(
                 where made = any(${textArray(deckColors)})) >= ${colorsWanted}
               or p.role_tags && ${textArray(deckRoles)}
               or p.theme_tags && ${textArray(themes)})
-         and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-                           join printings op on op.id = c.printing_id
-                          where op.oracle_id = p.oracle_id)
+         and ${notOwned(userId, context.usesRealCards)}
        order by p.oracle_id
        limit ${STORE_LIMIT}
     ),
     cheapest as (
       select matching.oracle_id, best.printing_id, best.usd_cents
         from matching
-        join lateral (
-          select p.id as printing_id, latest.usd_cents
-            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral ${latestPriceRows("p.id")} latest on true
-           where p.oracle_id = matching.oracle_id
-           order by latest.usd_cents, p.id
-           limit 1
-        ) best on true
+        join lateral ${cheapestForSale(sql`matching.oracle_id`)} best on true
     )
     select ${LAND_COLUMNS}, 0 as owned, cheapest.usd_cents as price_cents, null::text[] as also_in
       from cheapest join printings p on p.id = cheapest.printing_id
