@@ -142,7 +142,6 @@ export type { Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
 
-export { publicDeckScorecard } from "./queries/scorecard";
 export { type DeckDraft, type DraftedSpell, type DraftReason } from "./domain/draft-deck";
 export { commanderDetails, commandersICanBuild } from "./queries/commanders";
 export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "./domain/commanders";

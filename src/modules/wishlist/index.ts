@@ -1,33 +1,17 @@
 // The wishlist module's public API (design doc 26): the only file other modules and the app
 // may import.
 export { makeWishlist, type Wishlist } from "./application/make-wishlist";
-export {
-  makeAddWishes,
-  makeRemoveWishes,
-  makeWishlistView,
-  type AddWishesReport,
-  type WishlistView,
-  type WishToAdd,
-} from "./application/wishlist-tools";
-export type { BoughtWish, BuyWishError, BuyWishInput } from "./application/buy-wish";
+export { type AddWishesReport, type WishlistView } from "./application/wishlist-tools";
+export type { BuyWishError } from "./application/buy-wish";
 export type { WishedForCards } from "./application/wish-for-cards";
 export type { CardNeed } from "./domain/card-wishes";
 export {
   deleteWishlist,
-  type AddedWish,
   type AddWishError,
-  type AddWishInput,
   type UpdateWishError,
   type WishRequest,
 } from "./application/manage-wishes";
-export type {
-  NewWish,
-  PrintingFacts,
-  WishCatalog,
-  WishlistDependencies,
-  WishlistServices,
-  WishRepository,
-} from "./application/ports";
+export type { PrintingFacts, WishlistServices } from "./application/ports";
 export {
   totals,
   wishLines,
@@ -35,7 +19,6 @@ export {
   type Paydays,
   type WalletOutlook,
   type WishLine,
-  type WishlistTotals,
   type WishStatus,
 } from "./domain/lines";
 export {
@@ -55,8 +38,5 @@ export {
   wishesAtTarget,
   wishesForCard,
   wishlistAnswers,
-  type SharedWishCopy,
   type SharedWishLine,
-  type SharedWishlist,
-  type SharedWishlistSummary,
 } from "./queries/wishlist";

@@ -5,5 +5,7 @@ import { collectionPage, ownedCopies } from "./queries/collection";
 
 export function wireCollectionCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
   const { db } = dependencies;
-  return { collectionReads: { page: withDb(db, collectionPage), ownedCopies: withDb(db, ownedCopies) } };
+  return {
+    collectionReads: { page: withDb(db, collectionPage), ownedCopies: withDb(db, ownedCopies) },
+  };
 }

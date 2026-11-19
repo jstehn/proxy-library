@@ -1,33 +1,16 @@
 // The store module's public API: the only file other modules and the app may import.
-export type { BuyListError, BuyListInput, ListReceipt } from "./application/buy-list";
-export type { BuySealedError, BuySealedInput, SealedReceipt } from "./application/buy-sealed";
+export type { BuyListError } from "./application/buy-list";
+
 export { makeStore, type Store } from "./application/make-store";
-export type { SetKindPriceError, SetProductPriceError } from "./application/manage-prices";
-export type {
-  Listing,
-  PriceList,
-  ProductValue,
-  ProductValues,
-  StoreDependencies,
-  StoreLedger,
-  StoreServices,
-} from "./application/ports";
-export {
-  MAX_QUANTITY,
-  PRICING_MODES,
-  storePrice,
-  type PriceInputs,
-  type PricingMode,
-  type StorePrice,
-} from "./domain/pricing";
-export type { ValuationReport } from "./application/value-products";
+
+export type { Listing, StoreServices } from "./application/ports";
+export { MAX_QUANTITY, PRICING_MODES, storePrice, type PricingMode } from "./domain/pricing";
+
 export {
   buySingleIn,
   type BuySingleError,
   type BuySingleInError,
-  type BuySingleInInput,
   type SellSingleError,
-  type SingleInput,
   type SingleReceipt,
 } from "./application/singles";
 export type { PricesChanged } from "./domain/errors";
@@ -51,17 +34,10 @@ export {
   packMsrp,
   packMsrps,
   packPrice,
-  type PackPrice,
   productPrices,
   storePage,
   storeSearch,
-  type FeaturedArt,
-  type KindPriceRow,
   type ProductForSale,
-  type ProductPriceRow,
   type StorePage,
-  type StoreSearchProduct,
-  type StoreSearchResult,
-  type StoreSet,
 } from "./queries/store";
 export { describeBuySealedError } from "./application/describe-error";

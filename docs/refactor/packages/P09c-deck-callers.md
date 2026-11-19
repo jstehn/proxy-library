@@ -58,4 +58,52 @@ readPage()`. Keep the output the page renders the same. Map failures with the mo
 
 ## Handoff
 
-(empty)
+**Done:**
+
+- **Every page, route and action in `decks/`, `d/`, `drafts/`, `collection/`, `cards/` and
+  `inventory/` is off `getContainer()`** and imports no query. `getContainer()` in `src/app`: 161 to
+  90; `NOT_YET_ON_CAPABILITIES`: 84 to 60 files.
+- **How they read:** pages and the form actions call `readPage()` (FormData actions take no parsed
+  input, so `action(schema, …)` doesn't fit them; the schema-parsed actions in `builder/` use
+  `action()`). Reads go through bundles that each module's `wiring.ts` builds with `withDb`
+  (`src/shared/db/with-db.ts`: a query function with its database filled in): `deckReads`,
+  `collectionReads`, `realCollectionReads`, `draftReads`, `inventoryReads`, `storeReads`,
+  `catalogReads`, `packReads`, `wishlistReads`. New wiring files: `collection`, `real-collection`,
+  `drafts`, `inventory`, `store`, `packs`.
+- **Writes and services** are passed through `capabilities`: `deckEdits` (all of `Decks`),
+  `deckSharing`, `chooseToken`, `proxySheet`, `drafts`, `realCollection`, `store`, `inventory`,
+  `seeds`, `now()`. They are the modules' own application services, so the capabilities hand them over
+  as they are.
+- **New capability with logic and a test:** `proxyDeck` (`decks/application/proxy-deck.ts`): the
+  deck as proxy lines and tokens, which `print/proxy-lines.ts` built by hand.
+- **Builder:** `loadBuilderDeck` is split in two: `builderDeckFor(capabilities, userId, deckId)` in
+  `builder/builder-deck.ts` (the deck page calls it) and the server action `loadBuilderDeck` that
+  the builder component still calls to refresh.
+- **Edit as text** moved to `decks/edit-as-text/actions.ts` (it was 180 of `decks/actions.ts`'s
+  lines); `deckPath` moved to `decks/paths.ts`.
+- **Exports:** the `index.ts` files of `decks`, `catalog`, `collection`, `drafts`, `inventory`,
+  `real-collection`, `store`, `wishlist` and `packs` lost every name nothing outside the module uses
+  (for example `catalog` 103 to 56 names, `real-collection` 49 to 23, `store` 62 to 38, `decks`
+  217 to 216).
+- **Checked:** `pnpm check` green, 281 of 281 integration tests, Playwright 26 of 26.
+
+**Lines:** `decks/actions.ts` 383 to 197 (the target was ≤ 200). `drafts/actions.ts` 317 to 316 and
+`collection/real/actions.ts` 284 to 287: those two only swapped the container call for
+`capabilities`, so they are not shorter. Source 92,270 to 92,236 lines; code lines 79,262 to 79,180.
+Still no real shrink: the bundles are one-line forwards. The saving the playbook hoped for needs the
+queries behind them to merge (P11, P15 to P18), which is now one change each, not two.
+
+**Found, not done:**
+
+- Domain functions only tests use (candidates for P20, and for the question of whether the
+  card-package and mulligan-trainer features are dead): `decks/domain` `planPackageInsert`,
+  `dealMulliganDrill`, `evaluateMulliganDecision`, `chanceByTurn`, `exportWithTags`, `primerSections`,
+  `preparedForTest`; `store` `msrpFor`; `social` `viewerRelation`, `defaultProfile`.
+- `startDeckAction` in `decks/commanders/actions.ts` repeats `startDeck`'s create-and-import steps
+  (it adds `usesRealCards`). Give `startDeck` that option in P11 or P19.
+- The `ListPreviewSummary` mapping in `decks/edit-as-text/actions.ts` (about 70 lines) is
+  presentation of a capability's answer; it belongs with P19 or P10.
+
+**Not verified by eye:** the draft, inventory, opened-packs, cards, real collection and shared-deck
+pages were not looked at in the browser; only what the e2e suite touches was exercised (deck,
+shared deck, real collection, store, commanders). Added to `deferred-checks.md`.
