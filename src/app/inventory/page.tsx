@@ -1,13 +1,8 @@
 import Link from "next/link";
-import { packKey, packPhotos, productPhotos, variantFor } from "@/modules/catalog";
-import {
-  recentOpenings,
-  unopenedItems,
-  type OpenItemError,
-  type UnopenedGroup,
-} from "@/modules/inventory";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { packKey, variantFor } from "@/modules/catalog";
+import type { Capabilities } from "@/server/capabilities";
+import { type OpenItemError, type UnopenedGroup } from "@/modules/inventory";
+import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
@@ -29,14 +24,13 @@ function errorMessage(kind: string | string[] | undefined): string | null {
 }
 
 export default async function InventoryPage(props: PageProps<"/inventory">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
   const [groups, recent] = await Promise.all([
-    unopenedItems(db, actor.userId),
-    recentOpenings(db, actor.userId),
+    capabilities.inventoryReads.unopenedItems(actor.userId),
+    capabilities.inventoryReads.recentOpenings(actor.userId),
   ]);
   const error = errorMessage((await props.searchParams).error);
-  const photos = await photosFor(groups);
+  const photos = await photosFor(capabilities, groups);
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
@@ -137,14 +131,14 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
 }
 
 /** Each group's official photos (by its first item's id): its product's, or a loose pack's. */
-async function photosFor(groups: readonly UnopenedGroup[]): Promise<Map<number, string[]>> {
-  const { db } = getContainer();
-  const byProduct = await productPhotos(
-    db,
+async function photosFor(
+  capabilities: Capabilities,
+  groups: readonly UnopenedGroup[],
+): Promise<Map<number, string[]>> {
+  const byProduct = await capabilities.catalogReads.productPhotos(
     groups.flatMap((group) => (group.productId ? [group.productId] : [])),
   );
-  const byPack = await packPhotos(
-    db,
+  const byPack = await capabilities.catalogReads.packPhotos(
     groups.flatMap((group) =>
       group.contentKind === "pack" && group.setCode && group.boosterType
         ? [{ setCode: group.setCode, boosterType: group.boosterType }]

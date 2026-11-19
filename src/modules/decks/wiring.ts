@@ -25,6 +25,7 @@ import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
 import {
+  decksUsing,
   addDeckSource,
   deckView,
   decksFor,
@@ -152,6 +153,7 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
     // The builder's reads: each answers one question, as the query already does.
     deckReads: {
       deckView: readDeck,
+      decksUsing: withDb(db, decksUsing),
       deckForViewer: withDb(db, deckForViewer),
       comments: withDb(db, deckComments),
       decksFor: withDb(db, decksFor),

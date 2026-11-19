@@ -7,16 +7,7 @@ import {
   Pagination,
   searchText,
 } from "@/app/_components/card-filters";
-import { printingCards } from "@/modules/catalog";
-import {
-  isRealCollectionShared,
-  realCollectionPage,
-  realCollectionSets,
-  realProductsOf,
-  sharedRealCollections,
-} from "@/modules/real-collection";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
@@ -37,8 +28,7 @@ const button =
   "rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900";
 
 export default async function RealCollectionPage(props: PageProps<"/collection/real">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
   const searchParams = await props.searchParams;
   const values = filterValues(searchParams);
   const page = pageNumber(searchParams);
@@ -47,7 +37,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
   const message = typeof searchParams.message === "string" ? searchParams.message : null;
 
   const [result, sets, products, isShared, shared] = await Promise.all([
-    realCollectionPage(db, actor.userId, {
+    capabilities.realCollectionReads.page(actor.userId, {
       search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
@@ -57,16 +47,13 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
       sort: oneOf(values.sort, SORT_VALUES),
       page,
     }),
-    realCollectionSets(db, actor.userId),
-    realProductsOf(db, actor.userId),
-    isRealCollectionShared(db, actor.userId),
-    sharedRealCollections(db),
+    capabilities.realCollectionReads.sets(actor.userId),
+    capabilities.realCollectionReads.productsOf(actor.userId),
+    capabilities.realCollectionReads.isShared(actor.userId),
+    capabilities.realCollectionReads.shared(),
   ]);
   const others = shared.filter((player) => player.userId !== actor.userId);
-  const cards = await printingCards(
-    db,
-    result.rows.map((row) => row.printingId),
-  );
+  const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">

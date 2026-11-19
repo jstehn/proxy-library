@@ -1,15 +1,6 @@
 import Link from "next/link";
-import {
-  DEFAULT_PICK_SECONDS,
-  draftableBoosters,
-  draftsOverview,
-  MAX_SEATS,
-  MIN_SEATS,
-  type DraftSummary,
-} from "@/modules/drafts";
-import { packMsrps } from "@/modules/store";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { DEFAULT_PICK_SECONDS, MAX_SEATS, MIN_SEATS, type DraftSummary } from "@/modules/drafts";
+import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
@@ -72,12 +63,11 @@ function DraftRow(props: { draft: DraftSummary; canJoin: boolean }) {
 }
 
 export default async function DraftsPage(props: PageProps<"/drafts">) {
-  const actor = await requireActor();
-  const { db } = getContainer();
+  const { actor, capabilities } = await readPage();
   const [overview, boosters, prices] = await Promise.all([
-    draftsOverview(db, actor.userId),
-    draftableBoosters(db),
-    packMsrps(db),
+    capabilities.draftReads.overview(actor.userId),
+    capabilities.draftReads.boosters(),
+    capabilities.storeReads.packMsrps(),
   ]);
   const error = (await props.searchParams).error;
   const seatedSomewhere = overview.open.some((draft) => draft.youAreSeated);

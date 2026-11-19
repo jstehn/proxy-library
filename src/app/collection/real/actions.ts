@@ -2,20 +2,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { Actor } from "@/modules/accounts";
 import { PrintingId, SealedProductId } from "@/modules/catalog";
 import { becomesADeck } from "@/modules/decks";
 import {
   MAX_IMPORT_BYTES,
   MAX_IMPORT_LINES,
   MAX_REAL_QUANTITY,
-  printingChoices,
   type ImportPreview,
   type PrintingChoice,
   type ProductDeck,
 } from "@/modules/real-collection";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import type { PageContext } from "@/server/page";
+import { readPage } from "@/server/page-instance";
 import { FinishSchema } from "@/shared/kernel";
 
 // Server actions for the real collection (design doc 16, sections 7 and 15). The use cases check
@@ -28,23 +26,23 @@ function refresh() {
 
 /** "Let other players see my real collection" (rule 5, off by default). */
 export async function setRealSharingAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
-  await getContainer().realCollection.setRealSharing(actor, formData.get("shared") === "on");
+  const { actor, capabilities } = await readPage();
+  await capabilities.realCollection.setRealSharing(actor, formData.get("shared") === "on");
   refresh();
   redirect("/collection/real");
 }
 
 /** Empties the real collection, after the page's second click to confirm. */
 export async function clearRealCollectionAction(): Promise<void> {
-  const actor = await requireActor();
-  const removed = await getContainer().realCollection.clearRealCollection(actor);
+  const { actor, capabilities } = await readPage();
+  const removed = await capabilities.realCollection.clearRealCollection(actor);
   refresh();
   redirect(`/collection/real?message=${encodeURIComponent(`Removed ${removed} rows.`)}`);
 }
 
 /** Sets how many real copies of a printing you have, from the card page's box. */
 export async function setRealCopiesAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const printingId = String(formData.get("printingId") ?? "");
   const finish = FinishSchema.parse(formData.get("finish"));
   const quantity = z.coerce
@@ -54,7 +52,7 @@ export async function setRealCopiesAction(formData: FormData): Promise<void> {
     .max(MAX_REAL_QUANTITY)
     .catch(-1)
     .parse(formData.get("quantity"));
-  const result = await getContainer().realCollection.setRealCopies(actor, {
+  const result = await capabilities.realCollection.setRealCopies(actor, {
     printingId: PrintingId.of(printingId),
     finish,
     quantity,
@@ -67,13 +65,13 @@ export async function setRealCopiesAction(formData: FormData): Promise<void> {
 
 /** Moves your real copies of this printing to another printing of the same card. */
 export async function changeRealPrintingAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const from = {
     printingId: PrintingId.of(String(formData.get("printingId") ?? "")),
     finish: FinishSchema.parse(formData.get("finish")),
   };
   const [toPrinting, toFinish] = String(formData.get("to") ?? "").split("/");
-  const result = await getContainer().realCollection.changeRealPrinting(actor, from, {
+  const result = await capabilities.realCollection.changeRealPrinting(actor, from, {
     printingId: PrintingId.of(toPrinting ?? ""),
     finish: FinishSchema.catch("nonfoil").parse(toFinish),
   });
@@ -84,10 +82,10 @@ export async function changeRealPrintingAction(formData: FormData): Promise<void
 
 /** Deletes a real product's record, and its cards too when the box is ticked (rule 13). */
 export async function removeRealProductAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const realProductId = z.coerce.number().int().positive().parse(formData.get("realProductId"));
   const removeCards = formData.get("removeCards") === "on";
-  const result = await getContainer().realCollection.removeRealProduct(actor, {
+  const result = await capabilities.realCollection.removeRealProduct(actor, {
     realProductId,
     removeCards,
   });
@@ -102,13 +100,13 @@ export async function removeRealProductAction(formData: FormData): Promise<void>
 
 /** Makes a deck (real cards on) from each precon a real product holds (rule 11). */
 async function makeDecks(
-  actor: Actor,
+  { actor, capabilities }: PageContext,
   decks: readonly ProductDeck[],
 ): Promise<{ made: Array<{ id: number; name: string }>; failed: string[] }> {
   const made: Array<{ id: number; name: string }> = [];
   const failed: string[] = [];
   for (const deck of decks.filter((each) => becomesADeck(each.type))) {
-    const created = await getContainer().decks.createDeckFromCards(actor, {
+    const created = await capabilities.deckEdits.createDeckFromCards(actor, {
       name: deck.name,
       cards: deck.cards,
     });
@@ -137,7 +135,7 @@ export async function addRealProductAction(
   _previous: RealProductState,
   formData: FormData,
 ): Promise<RealProductState> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const productId = SealedProductId.of(String(formData.get("productId") ?? ""));
   const choices = String(formData.get("choices") ?? "")
     .split(",")
@@ -145,7 +143,7 @@ export async function addRealProductAction(
     .map(Number)
     .filter((choice) => Number.isSafeInteger(choice) && choice >= 0);
 
-  const result = await getContainer().realCollection.addRealProduct(actor, { productId, choices });
+  const result = await capabilities.realCollection.addRealProduct(actor, { productId, choices });
   if (!result.ok) {
     switch (result.error.kind) {
       case "ChoiceNeeded":
@@ -166,7 +164,7 @@ export async function addRealProductAction(
     }
   }
   const { cards } = result.value;
-  const decks = await makeDecks(actor, cards.decks);
+  const decks = await makeDecks({ actor, capabilities }, cards.decks);
   refresh();
   revalidatePath("/store/[code]", "page");
   return {
@@ -192,11 +190,11 @@ export type PreviewAnswer =
 export async function previewImportAction(
   input: z.input<typeof PreviewInput>,
 ): Promise<PreviewAnswer> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parsed = PreviewInput.safeParse(input);
   if (!parsed.success)
     return { ok: false, message: "That's too much to import at once (5 MB at most)." };
-  const result = await getContainer().realCollection.previewImport(actor, parsed.data);
+  const result = await capabilities.realCollection.previewImport(actor, parsed.data);
   if (!result.ok) {
     const message = {
       ImportEmpty: "There's nothing to import: paste a list or choose a file.",
@@ -209,7 +207,9 @@ export async function previewImportAction(
   const oracleIds = result.value.lines.flatMap((line) =>
     line.kind === "Matched" ? [line.oracleId] : [],
   );
-  const printings = Object.fromEntries(await printingChoices(getContainer().db, oracleIds));
+  const printings = Object.fromEntries(
+    await capabilities.realCollectionReads.printingChoices(oracleIds),
+  );
   return { ok: true, preview: result.value, printings };
 }
 
@@ -236,7 +236,7 @@ export type ApplyAnswer =
 
 /** Imports exactly the confirmed lines (rule 6), then makes the deck if asked. */
 export async function applyImportAction(input: z.input<typeof ApplyInput>): Promise<ApplyAnswer> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const parsed = ApplyInput.safeParse(input);
   if (!parsed.success)
     return { ok: false, message: "Something in the import wasn't readable.", changed: false };
@@ -247,7 +247,7 @@ export async function applyImportAction(input: z.input<typeof ApplyInput>): Prom
     quantity: line.quantity,
   }));
 
-  const result = await getContainer().realCollection.applyImport(actor, { copies, mode, version });
+  const result = await capabilities.realCollection.applyImport(actor, { copies, mode, version });
   if (!result.ok) {
     const message = {
       ImportEmpty: "No line matched a card, so there's nothing to import.",
@@ -272,7 +272,10 @@ export async function applyImportAction(input: z.input<typeof ApplyInput>): Prom
     printingId: PrintingId.of(line.printingId),
     quantity: Math.min(99, line.quantity),
   }));
-  const created = await getContainer().decks.createDeckFromCards(actor, { name: deckName, cards });
+  const created = await capabilities.deckEdits.createDeckFromCards(actor, {
+    name: deckName,
+    cards,
+  });
   if (!created.ok) {
     const why =
       created.error.kind === "TooManyDecks"

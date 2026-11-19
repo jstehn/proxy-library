@@ -4,8 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { becomesADeck } from "@/modules/decks";
 import { ItemId } from "@/modules/inventory";
-import { getContainer } from "@/server/container";
-import { requireActor } from "@/server/session";
+import { readPage } from "@/server/page-instance";
 
 const OpenForm = z.object({
   itemIds: z
@@ -17,11 +16,11 @@ const OpenForm = z.object({
 
 /** Opens one item, or opens items and everything inside them, then shows what came out. */
 export async function openAction(formData: FormData): Promise<void> {
-  const actor = await requireActor();
+  const { actor, capabilities } = await readPage();
   const form = OpenForm.safeParse({ itemIds: formData.get("itemIds"), mode: formData.get("mode") });
   if (!form.success) redirect("/inventory?error=ItemNotFound");
 
-  const { inventory } = getContainer();
+  const { inventory } = capabilities;
   const [first] = form.data.itemIds;
   const result =
     form.data.mode === "one"
@@ -36,7 +35,7 @@ export async function openAction(formData: FormData): Promise<void> {
   const newDecks: string[] = [];
   for (const opening of openings) {
     if (opening.kind !== "deck" || !becomesADeck(opening.deckType)) continue;
-    const created = await getContainer().decks.createDeckFromCards(actor, {
+    const created = await capabilities.deckEdits.createDeckFromCards(actor, {
       name: opening.item.name,
       cards: opening.cards,
     });
