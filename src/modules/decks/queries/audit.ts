@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { COLORS, type UserId, seededRng } from "@/shared/kernel";
+import { Cents, COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import {
   bracketLine,
@@ -249,7 +249,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     findings.push({
       severity: "info",
       area: "ownership",
-      message: `Missing ${missingCards} played card(s) (est. $${(estimatedMissingCents / 100).toFixed(2)}).`,
+      message: `Missing ${missingCards} played card(s) (est. ${Cents.format(Cents.of(estimatedMissingCents))}).`,
     });
   }
 

@@ -1,4 +1,4 @@
-import type { Finish } from "@/shared/kernel";
+import { Cents, type Finish } from "@/shared/kernel";
 // Exporting a collection (design doc 11, section 3): one shape for every format (Strategy), and
 // one function that quotes CSV fields correctly.
 
@@ -32,7 +32,9 @@ function csv(
   return [header, ...lines].map((line) => line.map(csvField).join(",")).join("\r\n") + "\r\n";
 }
 
-const dollars = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
+/** A price as a plain number for a CSV cell ("12.34", no "$"); empty when there's no price. */
+const dollars = (cents: number | null) =>
+  cents === null ? "" : Cents.toPlainDollars(Cents.of(cents));
 
 export const COLLECTION_EXPORTERS: Readonly<
   Record<"moxfield" | "text" | "full", CollectionExporter>

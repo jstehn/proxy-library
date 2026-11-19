@@ -424,9 +424,7 @@ async function fullDeckPayload(
     view.deck.format === "commander"
       ? combosForDeck(
           context.container.db,
-          view.lines
-            .filter((line) => line.board === "main" || line.board === "commander")
-            .map((line) => line.oracleId),
+          view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
         )
       : Promise.resolve(undefined),
     listDeckSources(context.container.db, context.actor.userId, input.deckId),

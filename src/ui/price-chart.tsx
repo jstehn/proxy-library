@@ -1,5 +1,6 @@
 // A small price-history chart, drawn as SVG on the server (design doc 07, section 10): one line
 // per finish, and markers for the player's own buys (▲) and sells (▼). No chart library.
+import { Cents } from "@/shared/kernel";
 
 export type ChartSeries = Readonly<{
   label: string;
@@ -19,7 +20,6 @@ const HEIGHT = 220;
 const PADDING = { top: 12, right: 12, bottom: 28, left: 56 };
 
 const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
-const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export function PriceChart(props: {
   series: readonly ChartSeries[];
@@ -77,7 +77,7 @@ export function PriceChart(props: {
           fontSize="11"
           fill="currentColor"
         >
-          {dollars(maxCents)}
+          {Cents.format(Cents.of(maxCents))}
         </text>
         <text x={PADDING.left - 6} y={y(0) + 4} textAnchor="end" fontSize="11" fill="currentColor">
           $0

@@ -3,6 +3,7 @@
 // lives in a pure reducer (machine.ts); this component only draws it and sends events. The
 // cards were decided on the server, so nothing here can change a pull.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { Cents } from "@/shared/kernel";
 import { ProductImage } from "../product-image";
 import { CardBack } from "./card-back";
 import {
@@ -22,7 +23,6 @@ const TEAR_MILLISECONDS = 900;
 const PRELOAD_WAIT_MILLISECONDS = 3000; // rule 7: wait this long at most for images
 const SUSPENSE_MILLISECONDS = { rare: 900, mythic: 1600 };
 
-const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 // The large size (672 × 936): the spotlight and the phone stack show cards big enough to read,
 // and the grid's thumbnails reuse the same file, so each card downloads once.
 const imageUrl = (card: OpenerCard) => `/api/images/${card.printingId}/large/front`;
@@ -250,9 +250,13 @@ export function PackOpener(props: PackOpenerProps) {
             <div className="flex flex-wrap items-center gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
               <p>
                 This pack is worth{" "}
-                <strong className="tabular-nums">{dollars(packValueCents(pack))}</strong> at market
-                price. Best card: <strong>{bestCard.name}</strong>
-                {bestCard.priceCents !== null && ` (${dollars(bestCard.priceCents)})`}.
+                <strong className="tabular-nums">
+                  {Cents.format(Cents.of(packValueCents(pack)))}
+                </strong>{" "}
+                at market price. Best card: <strong>{bestCard.name}</strong>
+                {bestCard.priceCents !== null &&
+                  ` (${Cents.format(Cents.of(bestCard.priceCents))})`}
+                .
               </p>
               <button
                 type="button"
@@ -298,7 +302,7 @@ function cardDetails(card: OpenerCard): string {
   return [
     card.variantLabel,
     card.finish === "nonfoil" ? "" : card.finish,
-    card.priceCents === null ? "no price" : dollars(card.priceCents),
+    card.priceCents === null ? "no price" : Cents.format(Cents.of(card.priceCents)),
   ]
     .filter((part) => part !== "")
     .join(" · ");

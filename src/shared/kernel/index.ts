@@ -6,7 +6,13 @@ export type { Clock } from "./clock";
 export { UserId } from "./ids";
 export { FINISHES, RARITIES } from "./card-words";
 export type { Finish, Rarity } from "./card-words";
-export { ColorSchema, FinishSchema, ManaSymbolSchema, RaritySchema } from "./schemas";
+export {
+  ColorSchema,
+  FinishOrCheapestSchema,
+  FinishSchema,
+  ManaSymbolSchema,
+  RaritySchema,
+} from "./schemas";
 export { COLORS, COLOR_COMBINATIONS, MANA_SYMBOLS, colorCombination } from "./colors";
 export type { ColorCombination, ManaColor, ManaSymbol } from "./colors";
 export { Cents } from "./money";

@@ -1,4 +1,5 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
+import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
   edhrecLogLift,
@@ -211,7 +212,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
 
   const signals = deckSignalProfile(
     lines
-      .filter((line) => line.board === "commander" || line.board === "main")
+      .filter((line) => isPlayed(line.board))
       .map((line) => ({
         name: line.typeLine,
         typeLine: line.typeLine,

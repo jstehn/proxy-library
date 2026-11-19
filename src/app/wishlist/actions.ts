@@ -15,7 +15,14 @@ import {
 } from "@/modules/wishlist";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { Cents, FinishSchema, type Result, type UserId, assertNever } from "@/shared/kernel";
+import {
+  Cents,
+  FinishOrCheapestSchema,
+  FinishSchema,
+  type Result,
+  type UserId,
+  assertNever,
+} from "@/shared/kernel";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
 // Wishlist page both use these.
@@ -47,7 +54,7 @@ const RequestForm = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("anyPrinting"),
     printingId: z.string().min(1),
-    finish: z.enum(["nonfoil", "foil", "cheapest"]),
+    finish: FinishOrCheapestSchema.exclude(["etched"]),
   }),
   z.object({
     kind: z.literal("exactPrinting"),

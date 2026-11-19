@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { Actor, Scope } from "@/modules/accounts";
 import type { Core } from "@/server/core";
+import { Cents } from "@/shared/kernel";
 
 // What an LLM tool is (design doc 28, section 3.2): defined once, served by both endpoints (MCP
 // at /api/mcp, plain HTTP described by OpenAPI at /api/tools). A tool is a thin controller: its
@@ -59,10 +60,7 @@ export type MoneyView = Readonly<{ cents: number; text: string }>;
 
 export function money(cents: number): MoneyView {
   const whole = Math.round(cents);
-  const sign = whole < 0 ? "-" : "";
-  const absolute = Math.abs(whole);
-  const dollars = Math.floor(absolute / 100).toLocaleString("en-US");
-  return { cents: whole, text: `${sign}$${dollars}.${String(absolute % 100).padStart(2, "0")}` };
+  return { cents: whole, text: Cents.format(Cents.of(whole)) };
 }
 
 export function moneyOrNull(cents: number | null | undefined): MoneyView | null {

@@ -49,6 +49,7 @@ import {
   type OtherDeckUse,
   takeCopies,
   getDeckProfile,
+  isPlayed,
   updateDeckPrimer,
   updateDeckProfile,
   type DeckPlan,
@@ -116,9 +117,7 @@ export async function loadBuilderDeck(deckId: number): Promise<BuilderDeck | nul
     view.deck.format === "commander"
       ? combosForDeck(
           db,
-          view.lines
-            .filter((line) => line.board === "main" || line.board === "commander")
-            .map((line) => line.oracleId),
+          view.lines.filter((line) => isPlayed(line.board)).map((line) => line.oracleId),
         )
       : Promise.resolve(undefined),
   ]);
