@@ -14,7 +14,7 @@ export type PrimerBlock =
   | Readonly<{ kind: "paragraph"; content: readonly PrimerInline[] }>;
 
 /** The sections a primer starts with when the player asks for them. */
-export const SUGGESTED_SECTIONS = [
+const SUGGESTED_SECTIONS = [
   "Plan",
   "How it wins",
   "Key cards",

@@ -1,3 +1,4 @@
+import { isCreature } from "@/shared/kernel";
 import { countMinimumPips } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [
@@ -66,7 +67,7 @@ export interface AvoidCard {
   reason: string;
 }
 
-export interface DeckProfile {
+export interface DeckPlan {
   plan: string | null;
   landTarget: number | null;
   roleTargets: Partial<Record<RoleTargetKey, number>> | null;
@@ -79,7 +80,7 @@ export interface DeckProfile {
   pilotNotes: string | null;
 }
 
-export const EMPTY_DECK_PROFILE: DeckProfile = {
+export const EMPTY_DECK_PROFILE: DeckPlan = {
   plan: null,
   landTarget: null,
   roleTargets: null,
@@ -107,12 +108,12 @@ export interface EdhrecProfileFallback {
 
 /**
  * Resolves land and role targets using the 3-step fallback chain:
- * 1. Explicit DeckProfile field
+ * 1. Explicit DeckPlan field
  * 2. EDHREC average for the commander
  * 3. Generic format default
  */
 export function resolveDeckProfileTargets(
-  profile: DeckProfile | null | undefined,
+  profile: DeckPlan | null | undefined,
   edhrec?: EdhrecProfileFallback | null,
   generic = GENERIC_COMMANDER_DEFAULTS,
 ): { landTarget: number; roleTargets: Record<RoleTargetKey, number> } {
@@ -138,17 +139,17 @@ function parsePower(power: string | number | null | undefined): number | null {
 
 export const DEFAULT_SCOPE_PREDICATES: Readonly<Record<CostReducerScope, ScopePredicate>> = {
   all_spells: () => true,
-  creatures: (card) => (card.typeLine ? /\bCreature\b/i.test(card.typeLine) : false),
-  noncreature: (card) => (card.typeLine ? !/\bCreature\b/i.test(card.typeLine) : false),
+  creatures: (card) => (card.typeLine ? isCreature(card.typeLine) : false),
+  noncreature: (card) => (card.typeLine ? !isCreature(card.typeLine) : false),
   artifacts: (card) => (card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false),
   enchantments: (card) => (card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false),
   instants_sorceries: (card) =>
     card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false,
   commander: (card) => card.isCommander === true,
   creature_power_gte_4: (card) => {
-    const isCreature = card.typeLine ? /\bCreature\b/i.test(card.typeLine) : true;
+    const creature = card.typeLine ? isCreature(card.typeLine) : true;
     const p = parsePower(card.power);
-    return isCreature && p !== null && p >= 4;
+    return creature && p !== null && p >= 4;
   },
   blitz: (card) =>
     card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false),
@@ -180,7 +181,7 @@ function matchesReducer(
 export function effectiveManaValue(
   baseManaValue: number,
   card: CostReducerCard,
-  profile: DeckProfile | null | undefined,
+  profile: DeckPlan | null | undefined,
   commandCasts = 1,
   scopePredicates: Readonly<Record<string, ScopePredicate>> = DEFAULT_SCOPE_PREDICATES,
 ): number {
@@ -197,7 +198,7 @@ export function effectiveManaValue(
 
 export function isKeyCard(
   cardName: string,
-  profile: DeckProfile | null | undefined,
+  profile: DeckPlan | null | undefined,
   entryPinned = false,
 ): boolean {
   if (entryPinned) return true;
@@ -206,14 +207,14 @@ export function isKeyCard(
   return profile.keyCards.some((k) => k.cardName.trim().toLowerCase() === needle);
 }
 
-export function isAvoidCard(cardName: string, profile: DeckProfile | null | undefined): boolean {
+export function isAvoidCard(cardName: string, profile: DeckPlan | null | undefined): boolean {
   if (!profile) return false;
   const needle = cardName.trim().toLowerCase();
   return profile.avoid.some((a) => a.cardName.trim().toLowerCase() === needle);
 }
 
-/** One-paragraph summary of a DeckProfile for `get_deck`'s top-level response. */
-export function summarizeDeckProfile(profile: DeckProfile | null | undefined): string | null {
+/** One-paragraph summary of a DeckPlan for `get_deck`'s top-level response. */
+export function summarizeDeckProfile(profile: DeckPlan | null | undefined): string | null {
   if (!profile) return null;
   const parts: string[] = [];
   if (profile.plan) parts.push(profile.plan);
@@ -312,9 +313,9 @@ export function declaredComboFor(
  * guaranteed to be on the battlefield).
  */
 export function commanderOnlyProfile(
-  profile: DeckProfile | null | undefined,
+  profile: DeckPlan | null | undefined,
   commanderNames: readonly string[],
-): DeckProfile | undefined {
+): DeckPlan | undefined {
   if (!profile) return undefined;
   const reducers = profile.costReducers ?? [];
   if (reducers.length === 0) return profile;
@@ -327,4 +328,26 @@ export function commanderOnlyProfile(
     );
   });
   return { ...profile, costReducers: filtered };
+}
+
+export type AvoidSplit<Item> = Readonly<{
+  kept: Item[];
+  /** Names of the avoid cards that were left out, once each. */
+  avoided: string[];
+}>;
+
+/** The items whose card isn't on the profile's avoid list, and the names of those that were. */
+export function withoutAvoidCards<Item>(
+  items: readonly Item[],
+  nameOf: (item: Item) => string,
+  profile: DeckPlan | null | undefined,
+): AvoidSplit<Item> {
+  const kept: Item[] = [];
+  const avoided = new Set<string>();
+  for (const item of items) {
+    const name = nameOf(item);
+    if (isAvoidCard(name, profile)) avoided.add(name);
+    else kept.push(item);
+  }
+  return { kept, avoided: [...avoided] };
 }

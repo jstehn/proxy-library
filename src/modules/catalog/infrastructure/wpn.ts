@@ -257,7 +257,7 @@ export function parseWpnPage(html: string, slug: string): WpnSetPage {
 // --- Gateways ----------------------------------------------------------------------------
 
 /** A download URL for an image at a width, as WebP (Wizards' image host resizes on request). */
-export function imageDownloadUrl(image: WpnImage, width: number): string {
+function imageDownloadUrl(image: WpnImage, width: number): string {
   return `https:${image.url}?w=${width}&fm=webp&q=82`;
 }
 

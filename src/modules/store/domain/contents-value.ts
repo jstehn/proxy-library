@@ -1,5 +1,5 @@
-import type { Finish, SealedContent } from "@/modules/catalog";
-import { assertNever, Cents } from "@/shared/kernel";
+import type { SealedContent } from "@/modules/catalog";
+import { Cents, type Finish, assertNever } from "@/shared/kernel";
 
 // What a sealed product's contents are worth on average (design doc 27, section 3.2). Pure: the
 // valuation gathers every pack's, deck's and card's value first, then this walks the tree.

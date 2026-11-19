@@ -1,4 +1,5 @@
 import type { Tag, Theme } from "@/shared/card-search";
+import { Cents } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import {
@@ -119,7 +120,7 @@ export const RATING_WEIGHTS = {
 
 export type RatingWeights = { readonly [K in keyof typeof RATING_WEIGHTS]: number };
 
-export const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
+const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
   casual: {
     ...RATING_WEIGHTS,
     synergy: 0.35,
@@ -491,7 +492,7 @@ export function rateCard(
     parts.push({
       kind: "pricePenalty",
       contribution: weights.pricePenalty,
-      label: `over $${(options.maxCardPriceCents / 100).toFixed(2)} cap`,
+      label: `over ${Cents.format(Cents.of(options.maxCardPriceCents))} cap`,
     });
   }
 

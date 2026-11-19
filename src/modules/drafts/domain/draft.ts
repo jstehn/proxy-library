@@ -1,20 +1,18 @@
-import type { Finish, PrintingId, SetCode } from "@/modules/catalog";
-import { Cents, err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
+import type { PrintingId, SetCode } from "@/modules/catalog";
+import { type Brand, Cents, type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
 import type {
   BotNotFound,
   BotsForAdminsOnly,
   DraftFull,
   DraftNotOpen,
-  DraftNotRunning,
   NotHost,
   NotSeated,
   SeatsInvalid,
-  StalePick,
   TimerInvalid,
   TooFewPlayers,
 } from "./errors";
 import type { CardRef, Note } from "./abilities";
-import { DRAFT_STYLES, passTarget, type DraftStyleName } from "./style";
+import { DRAFT_STYLES, type DraftStyleName } from "./style";
 
 // A live booster draft (design doc 17). The whole table is one aggregate: at most 8 seats × 3
 // packs × ~15 cards, small enough to load, change with pure functions, and save in one go.
@@ -88,7 +86,7 @@ export type SeatAbilities = Readonly<{
   awaitingChoices: CardRef | null;
 }>;
 
-export const NO_ABILITIES: SeatAbilities = {
+const NO_ABILITIES: SeatAbilities = {
   skipPacks: 0,
   lockedOutRound: null,
   turn: null,
@@ -220,8 +218,8 @@ export type NewDraft = Omit<Draft, "id">;
 
 export const MIN_SEATS = 2;
 export const MAX_SEATS = 8;
-export const MIN_PICK_SECONDS = 30;
-export const MAX_PICK_SECONDS = 300;
+const MIN_PICK_SECONDS = 30;
+const MAX_PICK_SECONDS = 300;
 export const DEFAULT_PICK_SECONDS = 90;
 
 export function checkSeats(maxSeats: number): Result<number, SeatsInvalid> {
@@ -568,9 +566,6 @@ export function queueOf(draft: Draft, seatNumber: number): DraftPack[] {
 export function currentPack(draft: Draft, seatNumber: number): DraftPack | null {
   return queueOf(draft, seatNumber)[0] ?? null;
 }
-
-export const allCards = (draft: Draft) =>
-  draft.packs.flatMap((pack) => pack.cards.map((card) => ({ pack, card })));
 
 export const refOf = (pack: DraftPack, card: DraftCard): CardRef => ({
   packNumber: pack.packNumber,

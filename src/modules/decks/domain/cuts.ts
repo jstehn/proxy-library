@@ -77,7 +77,7 @@ export type RankedCut = Readonly<{
 export type CutContext = Readonly<{ format: Format; targetBracket: Bracket | null }>;
 
 /** The points each part of the keep score is worth (section 3's table), in one place to tune. */
-export const CUT_WEIGHTS = {
+const CUT_WEIGHTS = {
   neededRole: 3,
   surplusRole: -1,
   /** A role counts as surplus only this far over its target. */
@@ -96,7 +96,7 @@ export const CUT_WEIGHTS = {
 
 export type CutWeights = { readonly [K in keyof typeof CUT_WEIGHTS]: number };
 
-export const CUT_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, CutWeights>> = {
+const CUT_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, CutWeights>> = {
   casual: {
     ...CUT_WEIGHTS,
     topHeavyPerMana: -0.5,
@@ -115,7 +115,7 @@ export const CUT_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, CutWeights>> = {
   },
 };
 
-export function cutWeightsForBracket(targetBracket: Bracket | null): CutWeights {
+function cutWeightsForBracket(targetBracket: Bracket | null): CutWeights {
   return CUT_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
 }
 

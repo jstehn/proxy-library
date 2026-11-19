@@ -1,5 +1,5 @@
-import type { Finish, PrintingId } from "@/modules/catalog";
-import { err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
+import type { PrintingId } from "@/modules/catalog";
+import { type Brand, type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
 import type {
   CommanderMove,
   EntryNotFound,
@@ -22,14 +22,7 @@ export const DeckId = {
   },
 };
 
-export {
-  BOARDS,
-  COUNTED_BOARDS,
-  isCounted,
-  isPlayed,
-  type Board,
-  type CountedBoard,
-} from "./boards";
+export { BOARDS, isCounted, isPlayed, type Board, type CountedBoard } from "./boards";
 import type { Board } from "./boards";
 
 export const FORMATS = [

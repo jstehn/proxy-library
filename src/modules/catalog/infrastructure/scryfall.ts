@@ -82,12 +82,6 @@ export const ScryfallBulkDataSchema = z.object({
   jsonl_download_uri: z.string(),
 });
 
-/** Response of POST /cards/collection. */
-export const ScryfallCollectionSchema = z.object({
-  data: z.array(ScryfallCardSchema),
-  not_found: z.array(z.unknown()).default([]),
-});
-
 function mapImages(raw: ScryfallCardJson): ImageUris | null {
   if (raw.image_uris !== undefined) return { front: raw.image_uris, back: null };
   const [front, back] = raw.card_faces ?? [];

@@ -2,12 +2,8 @@
 
 import { useActionState } from "react";
 import { formatLabel } from "@/app/decks/labels";
-import {
-  MANA_COLORS,
-  MAX_BIO_LENGTH,
-  VISIBILITIES,
-  type SectionVisibility,
-} from "@/modules/social/client";
+import { MAX_BIO_LENGTH, VISIBILITIES, type SectionVisibility } from "@/modules/social/client";
+import { COLORS } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { saveProfileAction, type ProfileFormState } from "./actions";
 
@@ -65,7 +61,7 @@ export function ProfileForm(props: {
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Favorite colors</legend>
         <div className="flex flex-wrap gap-3">
-          {MANA_COLORS.map((color) => (
+          {COLORS.map((color) => (
             <label key={color} className="flex items-center gap-1.5 text-sm">
               <input
                 type="checkbox"

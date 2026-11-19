@@ -1,0 +1,40 @@
+{
+  "tool": "find_combos",
+  "notCalled": "calls Commander Spellbook",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "deckId": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "description": "The deck's id, from list_decks."
+      },
+      "includeMaybe": {
+        "default": false,
+        "description": "Include cards on the maybeboard when checking for combos.",
+        "type": "boolean"
+      },
+      "bracket": {
+        "description": "Optional Spellbook bracket letter filter (E, P, O, S, R, C).",
+        "type": "string",
+        "enum": ["E", "P", "O", "S", "R", "C"]
+      },
+      "limit": {
+        "default": 20,
+        "description": "Max combos to return per status list (default 20, max 100).",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "offset": {
+        "default": 0,
+        "description": "Pagination offset into the combo lists.",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": ["deckId"]
+  }
+}

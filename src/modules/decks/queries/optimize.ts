@@ -4,8 +4,10 @@ import { seededRng, type Rng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import type { Deck } from "../domain/deck";
 import { optimizeDeck, type OptimizerCard, type OptimizeResult } from "../domain/optimize";
-import { deckView, type DeckLine } from "./decks";
-import { deckSuggestions, type Suggestion } from "./suggestions";
+import type { DeckLine } from "../domain/deck-view";
+import { deckView } from "./decks";
+import { deckSuggestions } from "./suggestions";
+import { type Suggestion } from "../domain/suggestion-types";
 
 export type OptimizeDeckPool = "owned" | "store" | "both";
 

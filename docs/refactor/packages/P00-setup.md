@@ -52,4 +52,17 @@ find src worker scripts \( -name '*.ts' -o -name '*.tsx' \) ! -name '*.test.*' |
 
 ## Handoff
 
-(empty)
+Done on `refactor/main` (tag `pre-refactor` on `main`): `pnpm sizes`, `pnpm clones`, both in
+`pnpm check`; allowlist (28 files, owners chosen by the package whose Touches names the file, else
+P20); reference JSON for the 16 tools; feature checklist.
+
+- `scripts/sizes.ts` counts `scripts/` and its own ~130 lines, so source is 93,490 against the
+  audit's 93,361. Test lines include `tests/` (33,860 against 32,194): different counting, not growth.
+- `scripts/clones.ts` counts distinct 6-line runs that occur in 2+ places: 63 today, not the
+  audit's 83 (a different counting method). `clone-baseline.txt` holds 63; later packages compare
+  with that.
+- `reference-outputs.ts`: run with `DATABASE_URL=$TEST_DATABASE_URL pnpm exec tsx scripts/reference-outputs.ts`.
+  The four tools that call outside services (edhrec_lookup, find_combos, youtube_research,
+  reddit_research) are not called; their file holds the input schema. `rules_lookup` returns "rules
+  not synced" in the fixture database. `draw_sample` card order changes from run to run.
+- Source lines before and after: 93,361 to 93,490 (the new scripts).

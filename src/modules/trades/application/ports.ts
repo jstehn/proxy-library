@@ -1,8 +1,8 @@
 import type { ActivityServices } from "@/modules/activity";
-import type { Finish, PrintingId } from "@/modules/catalog";
+import type { PrintingId } from "@/modules/catalog";
 import type { CollectionServices } from "@/modules/collection";
 import type { WalletServices } from "@/modules/wallet";
-import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
 import type { Trade, TradeId } from "../domain/trade";
 
 // Ports: what the trade use cases need from outside (design doc 10, section 7).

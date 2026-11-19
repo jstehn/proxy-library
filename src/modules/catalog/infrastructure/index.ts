@@ -8,7 +8,7 @@ export { drizzleCatalogRepository, drizzleSyncRunRepository } from "./drizzle-re
 export { huggingFaceTextEmbedder } from "./embedder";
 export { httpEdhrecGateway } from "./edhrec-gateway";
 export { httpComprehensiveRulesGateway } from "./rules-gateway";
-export { makeOutsideData } from "./outside-data";
+export { makeOutsideData, type OutsideDataService } from "./outside-data";
 export { httpSpellbookGateway } from "./spellbook-gateway";
 // File-based gateways over the recorded fixtures: for tests, and for loading sample data offline.
 export { fixtureMtgjsonGateway, fixtureScryfallGateway } from "./fixture-gateways";

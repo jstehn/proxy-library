@@ -1,4 +1,5 @@
 "use client";
+import { isLand } from "@/shared/kernel";
 import { useState } from "react";
 import { CardWithPreview, NamePreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
@@ -51,12 +52,8 @@ function groupsByRole(lines: readonly DeckLine[]): Group[] {
     title: TAG_LABELS[tag],
     lines: sortedByCost(main.filter((line) => tagsOf(line).includes(tag))),
   }));
-  const lands = main.filter(
-    (line) => mainType(line.typeLine) === "Land" && tagsOf(line).length === 0,
-  );
-  const other = main.filter(
-    (line) => mainType(line.typeLine) !== "Land" && tagsOf(line).length === 0,
-  );
+  const lands = main.filter((line) => isLand(line.typeLine) && tagsOf(line).length === 0);
+  const other = main.filter((line) => !isLand(line.typeLine) && tagsOf(line).length === 0);
   groups.push(
     { title: "Other", lines: sortedByCost(other) },
     { title: "Lands", lines: sortedByCost(lands) },
@@ -597,11 +594,3 @@ function LineControls(props: {
     </span>
   );
 }
-
-/** Board names as the builder shows them. */
-export const BOARD_LABELS: Record<Board, string> = {
-  commander: "Commander",
-  main: "Main deck",
-  side: "Sideboard",
-  maybe: "Maybeboard",
-};

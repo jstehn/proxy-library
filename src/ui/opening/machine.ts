@@ -1,3 +1,4 @@
+import type { Finish } from "@/shared/kernel";
 // The opening sequence as a state machine (design doc 08, section 3): a pure reducer, so every
 // transition is unit-tested and the component only draws the current state.
 
@@ -6,7 +7,7 @@ export type OpenerCard = Readonly<{
   printingId: string;
   name: string;
   rarity: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   priceCents: number | null;
   hasImage: boolean;
   variantLabel: string;
@@ -98,7 +99,7 @@ export function revealedCount(state: OpeningState, pack: OpenerPack): number {
 
 export type HitLevel = "none" | "rare" | "mythic";
 
-export const BIG_HIT_CENTS = 500; // any card worth $5 or more is treated like a mythic
+const BIG_HIT_CENTS = 500; // any card worth $5 or more is treated like a mythic
 
 /** How much fuss a card deserves when it's revealed (rule 3). */
 export function hitLevel(card: OpenerCard): HitLevel {

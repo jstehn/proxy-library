@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { PrintingId } from "@/modules/catalog";
 import { DeckId, FORMATS, type Format } from "@/modules/decks";
-import { MANA_COLORS, VISIBILITIES, type SectionVisibility } from "@/modules/social";
+import { VISIBILITIES, type SectionVisibility } from "@/modules/social";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
+import { COLORS } from "@/shared/kernel";
 import type { ManaColor } from "@/shared/kernel";
 
 export type ProfileFormState = { error: string | null };
@@ -20,7 +21,7 @@ export async function saveProfileAction(
 
   const rawColors = formData.getAll("favoriteColors").map(String);
   const favoriteColors = rawColors.filter((c): c is ManaColor =>
-    (MANA_COLORS as readonly string[]).includes(c),
+    (COLORS as readonly string[]).includes(c),
   );
 
   const rawFormats = formData.getAll("favoriteFormats").map(String);

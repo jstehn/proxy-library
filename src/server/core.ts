@@ -2,6 +2,7 @@
 // This is the ONLY place that creates real implementations (database, clock, ...) and
 // hands them to the functions that need them. Each phase adds its module's services here.
 import { randomBytes, randomUUID } from "node:crypto";
+import { buildCapabilities } from "./capabilities";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -47,6 +48,7 @@ import {
   drizzleDeckRepository,
   drizzleDeckSharing,
   drizzleDeckTokenRepository,
+  drizzleChangePreviewRepository,
   drizzleGoldfishSessionRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
@@ -291,6 +293,19 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
+    capabilities: buildCapabilities({
+      db,
+      clock,
+      wallet,
+      wishlist,
+      textEmbedder,
+      decks,
+      previews: drizzleChangePreviewRepository(db),
+      newPreviewId: randomUUID,
+      outsideData,
+      youtube,
+      reddit,
+    }),
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,
   };

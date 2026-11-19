@@ -1,6 +1,7 @@
 // The accounts module's public API: the only file other modules and the app may import.
 export { makeAccounts } from "./application/make-accounts";
 export type { Accounts } from "./application/make-accounts";
+export { makeGetAccountOverview, type AccountOverview } from "./application/get-account-overview";
 export type {
   CreateAccessTokenError,
   CreateAccessTokenInput,
@@ -16,13 +17,12 @@ export type {
   RegisterClientInput,
   TokenRequest,
 } from "./application/oauth";
-export { MAX_REDIRECT_URIS, type OAuthClient } from "./domain/oauth";
+export { type OAuthClient } from "./domain/oauth";
 export {
   AccessTokenId,
   allows,
   MAX_LIVE_TOKENS,
   SCOPES,
-  TOKEN_NAME_MAX_LENGTH,
   type AccessToken,
   type Scope,
 } from "./domain/access-token";
@@ -53,12 +53,15 @@ export {
   type Invite,
   type InviteStatus,
 } from "./domain/invite";
-export {
-  PASSWORD_MIN_LENGTH,
-  USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
-} from "./domain/credentials";
+export { PASSWORD_MIN_LENGTH } from "./domain/credentials";
 export type { Actor, Player } from "./domain/player";
 export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
 export { listAccessTokens } from "./queries/access-tokens";
 export type { InviteListItem, PlayerListItem } from "./queries/admin";
+export {
+  describeChangeOwnPasswordError,
+  describeSignInError,
+  describeRegisterPlayerError,
+  describePlayerActionError,
+  type PlayerActionError,
+} from "./application/describe-error";

@@ -1,15 +1,16 @@
-import { randomInt, seededRng, type Rng } from "@/shared/kernel";
-import { isPlayed, type Board } from "./boards";
-import { effectiveManaValue, type DeckProfile } from "./deck-profile";
 import {
-  extractTapManaProduction,
-  hasTapManaAbility,
-  parseManaCost,
-  totalMana,
-  type ManaColor as PoolManaColor,
-} from "./mana";
+  COLORS,
+  type ManaColor,
+  type ManaSymbol as PoolManaColor,
+  type Rng,
+  randomInt,
+  seededRng,
+  cardTypes,
+} from "@/shared/kernel";
+import { isPlayed, type Board } from "./boards";
+import { effectiveManaValue, type DeckPlan } from "./deck-profile";
+import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
-import { isLand, MANA_COLORS, type ManaColor } from "./stats";
 
 export type CastabilityLine = Readonly<{
   oracleId: string;
@@ -84,11 +85,6 @@ function toPoolColors(producedMana: readonly string[]): PoolManaColor[] {
   return out;
 }
 
-function hasBackFaceLand(typeLine: string): boolean {
-  const faces = typeLine.split(" // ");
-  return faces.length > 1 && /\bLand\b/i.test(faces[1] ?? "");
-}
-
 function buildPipOptions(manaCost: string | null): ReadonlyArray<readonly PoolManaColor[]> {
   const parsed = parseManaCost(manaCost, 0);
   const options: PoolManaColor[][] = [];
@@ -144,7 +140,7 @@ function missingPip(
  */
 export function simulateCastOnCurve(
   lines: readonly CastabilityLine[],
-  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckProfile | null }> = {},
+  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckPlan | null }> = {},
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
   const rng = options.rng ?? seededRng("cast-on-curve");
@@ -155,8 +151,11 @@ export function simulateCastOnCurve(
 
   for (const line of lines) {
     if (!isPlayed(line.board) || line.quantity <= 0) continue;
-    const land = isLand(line.typeLine);
-    const mdfcLand = !land && hasBackFaceLand(line.typeLine);
+    // A land on the back face is a spell until it is played turned over, and it enters tapped
+    // ("always"), so the simulator needs the front face apart from "has a land face".
+    const types = cardTypes(line.typeLine);
+    const land = types.isLandOnFront;
+    const mdfcLand = types.isLand && !land;
 
     if (line.board === "main") {
       const produces = toPoolColors(line.producedMana ?? []);
@@ -313,7 +312,7 @@ export function simulateCastOnCurve(
       const castOnCurvePct = Math.round((castCounts[sIdx] / trials) * 1000) / 1000;
       let bottleneckColor: ManaColor | null = null;
       let maxMiss = 0;
-      for (const color of MANA_COLORS) {
+      for (const color of COLORS) {
         const misses = colorMissCounts[color][sIdx];
         if (misses > maxMiss) {
           maxMiss = misses;

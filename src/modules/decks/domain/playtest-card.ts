@@ -1,11 +1,6 @@
-import {
-  colorsOfCost,
-  costSymbols,
-  MANA_COLORS,
-  splitSymbols,
-  type ManaColor,
-} from "./mana-symbols";
+import { colorsOfCost, costSymbols, splitSymbols } from "./mana-symbols";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
+import { COLORS, type ManaColor, isLand } from "@/shared/kernel";
 
 // Playtest proxies (design doc 22, section 3): a card drawn from its text instead of its scan.
 // Everything here is pure: given the card, its box on the page and a way to measure text, it
@@ -63,10 +58,10 @@ export type StripeColor = ManaColor | "C";
 export function stripeColors(card: PrintedCard, side: CardSide): ManaColor[] {
   const faces = facesOnSide(card, side);
   const fromCosts = new Set(faces.flatMap((face) => colorsOfCost(face.manaCost)));
-  if (fromCosts.size > 0) return MANA_COLORS.filter((color) => fromCosts.has(color));
-  const isLand = faces.some((face) => /\bLand\b/.test(face.typeLine));
-  const fallback = isLand && card.colors.length === 0 ? card.producedMana : card.colors;
-  return MANA_COLORS.filter((color) => fallback.includes(color));
+  if (fromCosts.size > 0) return COLORS.filter((color) => fromCosts.has(color));
+  const landFace = faces.some((face) => isLand(face.typeLine));
+  const fallback = landFace && card.colors.length === 0 ? card.producedMana : card.colors;
+  return COLORS.filter((color) => fallback.includes(color));
 }
 
 /**
@@ -110,8 +105,8 @@ function clipPolygon(polygon: readonly Point[], side: (point: Point) => number):
  * far apart, cover about a fifth of the background (changed 2026-10-07 to save ink; they were
  * 5 pt with 5 pt gaps, half the background).
  */
-export const STRIPE_WIDTH = 1.5;
-export const STRIPE_GAP = 6;
+const STRIPE_WIDTH = 1.5;
+const STRIPE_GAP = 6;
 
 export type Stripe = Readonly<{ color: StripeColor; points: readonly Point[] }>;
 
@@ -214,7 +209,7 @@ function paragraphsOf(text: string): Paragraph[] {
 }
 
 /** The stats printed in the corner: power/toughness, loyalty or defence. */
-export function statsOf(face: PrintedFace): string | null {
+function statsOf(face: PrintedFace): string | null {
   if (face.power !== null && face.toughness !== null) return `${face.power}/${face.toughness}`;
   return face.loyalty ?? face.defense;
 }
@@ -369,7 +364,7 @@ function fittingSize(
 
 /** Mana cost symbols: 3.0 mm across, 0.3 mm apart, as measured on real cards (section 3.4). */
 export const COST_SYMBOL_DIAMETER = (3.0 / 25.4) * 72;
-export const COST_SYMBOL_GAP = (0.3 / 25.4) * 72;
+const COST_SYMBOL_GAP = (0.3 / 25.4) * 72;
 
 const MARGIN = 7;
 const GAP = 3;

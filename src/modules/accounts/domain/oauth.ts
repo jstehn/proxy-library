@@ -25,9 +25,9 @@ export type AuthorizationCode = Readonly<{
 }>;
 
 export const MAX_REDIRECT_URIS = 5;
-export const REDIRECT_URI_MAX_LENGTH = 500;
+const REDIRECT_URI_MAX_LENGTH = 500;
 /** Rule 4: a code lives ten minutes. */
-export const CODE_LIFETIME_MILLISECONDS = 10 * 60_000;
+const CODE_LIFETIME_MILLISECONDS = 10 * 60_000;
 const CLIENT_ID_PREFIX = "plc_";
 /** RFC 7636: a verifier is 43 to 128 of these characters. */
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
@@ -35,7 +35,7 @@ const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 
 /** Bytes as base64url with no padding, as OAuth and PKCE use. */
-export function base64Url(bytes: Uint8Array): string {
+function base64Url(bytes: Uint8Array): string {
   const base64 = btoa(String.fromCharCode(...bytes));
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

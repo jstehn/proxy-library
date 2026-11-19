@@ -1,5 +1,6 @@
+import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import {
   parseSearch,
@@ -73,7 +74,7 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
 }
 
 /** At most this many cards are read for one analysis. */
-export const SIGNAL_CARD_LIMIT = 500;
+const SIGNAL_CARD_LIMIT = 500;
 
 type SignalRow = {
   name: string;
@@ -147,23 +148,7 @@ export async function ownedSignalCards(
   return { cards: rows.rows.map(toSignalCard), notes: parsed.notes };
 }
 
-export type OwnedCardCheck =
-  | Readonly<{
-      query: string;
-      inCatalog: false;
-      status: "not in catalog";
-    }>
-  | Readonly<{
-      query: string;
-      inCatalog: true;
-      name: string;
-      oracleId: string;
-      ownedGame: number;
-      ownedReal: number;
-      ownedTotal: number;
-      cheapestPriceCents: number | null;
-      decks: readonly { id: number; name: string; quantity: number }[];
-    }>;
+export type { OwnedCardCheck };
 
 /** Batch-checks ownership (game + real), cheapest store price, and deck usage for up to 100 names. */
 export async function checkOwnedCards(
@@ -228,12 +213,7 @@ export async function checkOwnedCards(
       select distinct on (p.oracle_id) p.oracle_id, latest.usd_cents as cheapest_cents
         from printings p
         join card_sets s on s.code = p.set_code and s.is_enabled
-        join lateral (
-          select ps.usd_cents from price_snapshots ps
-           where ps.printing_id = p.id
-           order by ps.day desc, ps.usd_cents asc
-           limit 1
-        ) latest on true
+        join lateral (select ${newestDayPrice("p.id")} as usd_cents) latest on true
        where p.oracle_id = any(${oracleArray})
        order by p.oracle_id, latest.usd_cents asc
     `),

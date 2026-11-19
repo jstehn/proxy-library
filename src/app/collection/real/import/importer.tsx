@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { MatchedLine, PrintingChoice, UnmatchedReason } from "@/modules/real-collection";
-import { assertNever, Cents } from "@/shared/kernel";
+import { Cents, type Finish, assertNever } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import {
   applyImportAction,
@@ -45,7 +45,7 @@ function reasonText(reason: UnmatchedReason): string {
 }
 
 /** "Bloomburrow #2 (Borderless) · $1.20" for a printing menu. */
-function choiceLabel(choice: PrintingChoice, finish: "nonfoil" | "foil" | "etched"): string {
+function choiceLabel(choice: PrintingChoice, finish: Finish): string {
   const price = choice.prices[finish];
   const variant = choice.variantLabel === "" ? "" : ` (${choice.variantLabel})`;
   const priceText = price === undefined ? "" : ` · ${Cents.format(Cents.of(price))}`;

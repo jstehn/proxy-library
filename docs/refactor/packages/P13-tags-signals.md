@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P13-tags-signals` · **Depends on:** P11 · **Parallel with:** P10, P12, P14
 - **Audit:** doc 65 F4, F9, D12
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S3](../dedup-playbook.md#s3) (tags, themes, one signals system) · **Lines to remove:** about −400 to −700
 
 ## Goal
 

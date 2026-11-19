@@ -36,3 +36,11 @@ across `src/app` and bindings. New `docs/adr/0028-split-decks.md`.
 ## Handoff
 
 (empty)
+
+## Added from P07b2
+
+Move the suggestion orchestration (`deckSuggestions`, `similarCards`, `budgetList`,
+`budgetReplacements` in `queries/suggestions.ts` and `budget-replacements.ts`) into
+`application/suggest-cards.ts` behind a `CandidatePool` port, with fake-pool unit tests. It
+brings `queries/optimize.ts` and `queries/upgrade-roadmap.ts` (they call `deckSuggestions`) and
+the `BrowseCard`/`SuggestionCard` types (to `domain/`) with it. See the P07b2 handoff.

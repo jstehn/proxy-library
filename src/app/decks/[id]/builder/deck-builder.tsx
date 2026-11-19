@@ -33,7 +33,7 @@ import {
   mainType,
 } from "@/modules/decks/client";
 import { bracketFlags, cardTags, hasTerm, toggleTerm, type Tag } from "@/shared/card-search";
-import { Cents } from "@/shared/kernel";
+import { COLORS, Cents, type ManaColor } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import {
   addLandsAction,
@@ -76,8 +76,6 @@ import { StatsPanel } from "./stats-panel";
 // component's state so the statistics change instantly; each change is saved by a server action,
 // which sends back the deck as the server now has it.
 
-type Color = "W" | "U" | "B" | "R" | "G";
-const COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
 const WAIT_MILLISECONDS = 250; // wait for a pause in typing before searching
 
 const SORT_LABELS: Readonly<Record<BrowseSort, string>> = {
@@ -219,14 +217,14 @@ export function DeckBuilder(props: {
 
   // What to browse. A Commander deck starts with its commander's colors (design doc 14,
   // decision 2); every other deck starts with every color, and anyone can pick colors.
-  const startingColors = (colors: Color[] | null): Color[] =>
+  const startingColors = (colors: ManaColor[] | null): ManaColor[] =>
     isCommanderDeck && colors !== null ? colors : [...COLORS];
   // The grid always starts on the cards you own; "All cards" searches the whole catalog
   // (design doc 29, decision 1).
   const [source, setSource] = useState<BrowseSource>("mine");
   const [search, setSearch] = useState("");
   const [waitedSearch, setWaitedSearch] = useState("");
-  const [colors, setColors] = useState<Color[]>(() => startingColors(commanderColors));
+  const [colors, setColors] = useState<ManaColor[]>(() => startingColors(commanderColors));
   const [includeColorless, setIncludeColorless] = useState(true);
   const [showEverything, setShowEverything] = useState(false);
   const [sort, setSort] = useState<BrowseSort>("name");
@@ -783,7 +781,7 @@ export function DeckBuilder(props: {
     selectFromGrid(browse.cards[target]);
   }
 
-  function toggleColor(color: Color) {
+  function toggleColor(color: ManaColor) {
     setShowEverything(false);
     setColors((current) =>
       current.includes(color)
@@ -1348,7 +1346,7 @@ export function DeckBuilder(props: {
   );
 }
 
-const COLOR_NAMES: Readonly<Record<Color, string>> = {
+const COLOR_NAMES: Readonly<Record<ManaColor, string>> = {
   W: "white",
   U: "blue",
   B: "black",

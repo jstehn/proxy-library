@@ -14,10 +14,8 @@ import {
   pgTable,
   primaryKey,
   text,
-  timestamp,
 } from "drizzle-orm/pg-core";
-
-const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+import { timestamptz } from "@/shared/db";
 
 export const cardSets = pgTable("card_sets", {
   code: text("code").primaryKey(),

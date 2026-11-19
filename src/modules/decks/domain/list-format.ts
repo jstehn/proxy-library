@@ -1,6 +1,6 @@
-import type { Finish } from "@/modules/catalog";
 import { BOARDS, isCounted, type Board } from "./boards";
 import type { DeckProblem } from "./rules";
+import type { Finish } from "@/shared/kernel";
 
 // Deck lists as text, out (design doc 09, section 10). Reading lists in is shared with the
 // store: @/shared/card-search (design doc 15).
@@ -190,7 +190,7 @@ export function fingerprint(entries: readonly FingerprintEntry[]): string {
 export type ShortLine = Readonly<{
   oracleId: string;
   name: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
 }>;
 
 /**

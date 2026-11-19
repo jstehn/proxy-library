@@ -6,7 +6,8 @@ import type {
   GoldfishState,
   GoldfishZone,
 } from "./goldfish-types";
-import { addMana, EMPTY_MANA_POOL, type ManaColor, type ManaPool } from "./mana";
+import { addMana, EMPTY_MANA_POOL, type ManaPool } from "./mana";
+import { type ManaSymbol, isCreature } from "@/shared/kernel";
 
 // Open-Closed Modifier & Trigger Pipelines for Play Simulation.
 // New casting mechanics (alt costs, taxes, cost reducers) and triggered abilities
@@ -180,7 +181,7 @@ export function permanentHasKeyword(
   ) {
     return true;
   }
-  if (/\bCreature\b/i.test(perm.card.typeLine)) {
+  if (isCreature(perm.card.typeLine)) {
     const grantPattern = new RegExp(`\\bcreatures you control have[^.\\n]*\\b${keyword}\\b`, "i");
     if (state.battlefield.some((other) => grantPattern.test(other.card.text ?? ""))) {
       return true;
@@ -343,7 +344,7 @@ export function addCardToZone(
 
 // --- Built-in CastModifiers ---
 
-export const commanderTaxModifier: CastModifier = {
+const commanderTaxModifier: CastModifier = {
   id: "commander_tax",
   phase: "increase",
   applies: (ctx) => ctx.from === "commandZone" && ctx.formatRules.commandZoneTaxPerCast > 0,
@@ -360,7 +361,7 @@ export const commanderTaxModifier: CastModifier = {
   },
 };
 
-export const explicitCostReductionModifier: CastModifier = {
+const explicitCostReductionModifier: CastModifier = {
   id: "explicit_cost_reduction",
   phase: "reduction",
   applies: (ctx) => (ctx.explicitReductionGeneric ?? 0) > 0,
@@ -370,7 +371,7 @@ export const explicitCostReductionModifier: CastModifier = {
   }),
 };
 
-export const blitzCastModifier: CastModifier = {
+const blitzCastModifier: CastModifier = {
   id: "alt_blitz",
   phase: "base",
   applies: (ctx) => ctx.alt === "blitz",
@@ -386,7 +387,7 @@ export const blitzCastModifier: CastModifier = {
           "Cannot cast with blitz: no blitz-granting permanent is on the battlefield and the card does not have blitz.",
       };
     }
-    if (!hasOwnBlitz && !/\bCreature\b/i.test(ctx.card.typeLine)) {
+    if (!hasOwnBlitz && !isCreature(ctx.card.typeLine)) {
       return {
         allowed: false,
         reason: "Cannot cast with blitz: only creature spells can be blitzed.",
@@ -400,7 +401,7 @@ export const blitzCastModifier: CastModifier = {
   },
 };
 
-export const freeAltCastModifier: CastModifier = {
+const freeAltCastModifier: CastModifier = {
   id: "alt_free",
   phase: "base",
   applies: (ctx) => ctx.alt === "free",
@@ -420,7 +421,7 @@ export const DEFAULT_CAST_MODIFIERS: readonly CastModifier[] = [
 
 // --- Built-in ZoneCastPermissions (CR 601.2 / 601.3) ---
 
-export const muldrothaGraveyardPermission: ZoneCastPermission = {
+const muldrothaGraveyardPermission: ZoneCastPermission = {
   id: "muldrotha_graveyard_permanent",
   applies: (ctx) =>
     ctx.from === "graveyard" &&
@@ -448,7 +449,7 @@ export const muldrothaGraveyardPermission: ZoneCastPermission = {
   },
 };
 
-export const mysticForgeTopPermission: ZoneCastPermission = {
+const mysticForgeTopPermission: ZoneCastPermission = {
   id: "mystic_forge_top_of_library",
   applies: (ctx) =>
     ctx.from === "library" &&
@@ -478,7 +479,7 @@ export const DEFAULT_ZONE_PERMISSIONS: readonly ZoneCastPermission[] = [
 
 // --- Built-in TriggerHandlers ---
 
-export const endStepDelayedTriggerHandler: TriggerHandler = {
+const endStepDelayedTriggerHandler: TriggerHandler = {
   id: "end_step_delayed_triggers",
   handles: (event) => event.kind === "PhaseEnded" && event.phase === "end_step",
   run(_event, state) {
@@ -545,7 +546,7 @@ export const endStepDelayedTriggerHandler: TriggerHandler = {
   },
 };
 
-export const endCombatExileHandler: TriggerHandler = {
+const endCombatExileHandler: TriggerHandler = {
   id: "end_combat_exile_tokens",
   handles: (event) => event.kind === "PhaseEnded" && event.phase === "end_combat",
   run(_event, state) {
@@ -582,7 +583,7 @@ export const endCombatExileHandler: TriggerHandler = {
   },
 };
 
-export const diesReturnTriggerHandler: TriggerHandler = {
+const diesReturnTriggerHandler: TriggerHandler = {
   id: "dies_return_undying_persist",
   handles: (event) =>
     event.kind === "ZoneChanged" && event.from === "battlefield" && event.to === "graveyard",
@@ -612,7 +613,7 @@ export const diesReturnTriggerHandler: TriggerHandler = {
 
 export const DEFAULT_REPLACEMENT_EFFECTS: readonly ReplacementEffect[] = [];
 
-export const sacrificeForManaAbility: ActivatedAbility = {
+const sacrificeForManaAbility: ActivatedAbility = {
   id: "sacrifice_creature_for_mana",
   canActivate: (source) =>
     /sacrifice\s+(?:a|another)\s+creature[^:\n]*:\s*add\b/i.test(source.card.text ?? ""),
@@ -621,7 +622,7 @@ export const sacrificeForManaAbility: ActivatedAbility = {
       return { ok: false, reason: `Choose a creature to sacrifice for ${ctx.source.card.name}.` };
     }
     const target = ctx.state.battlefield.find((p) => p.card.key === ctx.sacrificeKey);
-    if (!target || !/\bCreature\b/i.test(target.card.typeLine)) {
+    if (!target || !isCreature(target.card.typeLine)) {
       return { ok: false, reason: `${ctx.sacrificeKey} is not a creature on the battlefield.` };
     }
     const removed = removeCardFromZone(ctx.state, "battlefield", ctx.sacrificeKey);
@@ -649,7 +650,7 @@ export const sacrificeForManaAbility: ActivatedAbility = {
     if (addMatch) {
       const syms = addMatch[1].match(/\{([WUBRGC])\}/gi) ?? [];
       for (const s of syms) {
-        added[s.slice(1, -1).toUpperCase() as ManaColor] += 1;
+        added[s.slice(1, -1).toUpperCase() as ManaSymbol] += 1;
       }
     } else {
       added.C += 1;
@@ -677,7 +678,7 @@ export const sacrificeForManaAbility: ActivatedAbility = {
 
 export const DEFAULT_ACTIVATED_ABILITIES: readonly ActivatedAbility[] = [sacrificeForManaAbility];
 
-export const cascadeTriggerHandler: TriggerHandler = {
+const cascadeTriggerHandler: TriggerHandler = {
   id: "cascade_on_cast",
   handles: (event, state) => {
     if (event.kind !== "SpellCast") return false;

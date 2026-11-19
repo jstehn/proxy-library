@@ -1,5 +1,5 @@
-import type { Finish, PrintingId } from "@/modules/catalog";
-import type { UserId } from "@/shared/kernel";
+import type { PrintingId } from "@/modules/catalog";
+import { type Finish, type UserId } from "@/shared/kernel";
 
 // What the activity feed records (design doc 11, section 2). Money amounts other than card prices
 // are never recorded: they stay private.
@@ -44,7 +44,7 @@ export type ActivityEvent =
 /** Events about a player's own library, which a reset forgets (design docs 12 and 21). */
 export const LIBRARY_EVENT_KINDS = ["pull", "purchase", "deckShared"] as const;
 
-export const NOTABLE_PRICE_CENTS = 500;
+const NOTABLE_PRICE_CENTS = 500;
 
 /** Rarities too common for the feed: every pack has a rare, so a plain rare isn't news. */
 const EVERYDAY_RARITIES: readonly string[] = ["common", "uncommon", "rare"];

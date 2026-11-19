@@ -8,7 +8,7 @@ import {
   type SpellbookTwoCardCombo,
 } from "../domain/spellbook";
 
-export const SPELLBOOK_VARIANTS_URL = "https://json.commanderspellbook.com/variants.json";
+const SPELLBOOK_VARIANTS_URL = "https://json.commanderspellbook.com/variants.json";
 
 const SpellbookUseSchema = z.object({
   quantity: z.number().int().positive().optional().default(1),

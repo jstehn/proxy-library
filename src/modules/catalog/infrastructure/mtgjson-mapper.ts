@@ -35,9 +35,9 @@ import type {
   MtgjsonSetFile,
   MtgjsonSetSummary,
 } from "./mtgjson-schema";
+import { COLORS } from "@/shared/kernel";
 
 const RARITIES: readonly Rarity[] = ["common", "uncommon", "rare", "mythic", "special", "bonus"];
-const COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
 
 export function mapSetSummary(raw: MtgjsonSetSummary): CardSetInfo {
   return {
@@ -67,10 +67,7 @@ function mapFace(raw: MtgjsonCard): CardFace {
  * Maps one card, or returns null if it isn't a paper printing we can use. `otherFaces` are the
  * card's other faces (the back of a double-faced card), for their printed text.
  */
-export function mapPrinting(
-  raw: MtgjsonCard,
-  otherFaces: readonly MtgjsonCard[] = [],
-): Printing | null {
+function mapPrinting(raw: MtgjsonCard, otherFaces: readonly MtgjsonCard[] = []): Printing | null {
   const { scryfallId, scryfallOracleId } = raw.identifiers;
   if (!isPaperPrinting(raw.availability)) return null;
   if (scryfallId === undefined || scryfallOracleId === undefined) return null;
@@ -111,7 +108,7 @@ export function mapPrinting(
 export type FaceResolver = (uuid: string) => PrintingId;
 const sameId: FaceResolver = (uuid) => PrintingId.of(uuid);
 
-export function mapBooster(
+function mapBooster(
   setCode: SetCode,
   boosterType: string,
   raw: MtgjsonBooster,
@@ -145,7 +142,7 @@ function cardFinish(card: { foil?: boolean; finishes?: string[] }): Finish {
   return card.foil ? "foil" : "nonfoil";
 }
 
-export function mapContents(raw: MtgjsonContents, resolve: FaceResolver = sameId): SealedContent[] {
+function mapContents(raw: MtgjsonContents, resolve: FaceResolver = sameId): SealedContent[] {
   const contents: SealedContent[] = [];
   for (const card of raw.card ?? []) {
     contents.push({ kind: "card", printingId: resolve(card.uuid), finish: cardFinish(card) });
@@ -175,7 +172,7 @@ export function mapContents(raw: MtgjsonContents, resolve: FaceResolver = sameId
   return contents;
 }
 
-export function mapSealedProduct(
+function mapSealedProduct(
   setCode: SetCode,
   raw: MtgjsonSealedProduct,
   resolve: FaceResolver = sameId,
@@ -191,11 +188,7 @@ export function mapSealedProduct(
   };
 }
 
-export function mapDeck(
-  setCode: SetCode,
-  raw: MtgjsonDeck,
-  resolve: FaceResolver = sameId,
-): DeckList {
+function mapDeck(setCode: SetCode, raw: MtgjsonDeck, resolve: FaceResolver = sameId): DeckList {
   const toCard =
     (board: DeckCard["board"]) =>
     (card: MtgjsonDeck["mainBoard"][number]): DeckCard => ({

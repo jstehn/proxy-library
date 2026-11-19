@@ -2,8 +2,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { draftDeck, type DeckDraft, type DraftCandidate, type DraftInput } from "./draft-deck";
 import type { LandCandidate } from "./mana-base";
-import type { ManaColor } from "./stats";
 import type { ProfileLine } from "./suggest";
+import { type ManaColor } from "@/shared/kernel";
 
 // Draft a 100-card Commander deck from owned cards first (design doc 37, sections 3-4).
 

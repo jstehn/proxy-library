@@ -1,12 +1,11 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
-import { deckProblems, type CardRules } from "@/modules/decks/client";
+import { problemsOfLines, type CardRules } from "@/modules/decks/client";
 import { problemText } from "../../labels";
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // What the builder works out from the deck in hand (design doc 19, section 5.3): its problems,
 // the commanders' colors, and a provisional line for a card the server hasn't answered for yet.
 // Pure, so the browser and the tests agree with the server, which runs the same `deckProblems`.
-
-type Color = "W" | "U" | "B" | "R" | "G";
 
 export type ProblemInWords = Readonly<{ text: string; name: string | null }>;
 
@@ -16,25 +15,7 @@ export function problemsOf(
   lines: readonly DeckLine[],
   rules: Readonly<Record<string, CardRules>>,
 ): ProblemInWords[] {
-  // A line whose rules haven't arrived can't be checked yet; the server's answer brings them.
-  const checkable = lines.filter((line) => rules[line.oracleId] !== undefined);
-  const owned = new Map(checkable.map((line) => [line.oracleId, line.owned]));
-  const problems = deckProblems(
-    {
-      format,
-      entries: checkable.map((line) => ({
-        oracleId: line.oracleId,
-        board: line.board,
-        quantity: line.quantity,
-        printingId: null,
-        finish: null,
-        heading: null,
-        note: null,
-      })),
-    },
-    (oracleId) => rules[oracleId],
-    (oracleId) => owned.get(oracleId) ?? 0,
-  );
+  const problems = problemsOfLines(format, lines, rules);
   return problems.map((problem) => ({
     text: problemText(problem),
     name: "name" in problem ? problem.name : null,
@@ -51,11 +32,11 @@ export function commanderColorsOf(
   format: Format,
   lines: readonly DeckLine[],
   rules: Readonly<Record<string, CardRules>>,
-): Color[] | null {
+): ManaColor[] | null {
   const commanders = lines.filter((line) => line.board === "commander");
   if (format !== "commander" || commanders.length === 0) return null;
   const colors = new Set(commanders.flatMap((line) => rules[line.oracleId]?.colorIdentity ?? []));
-  return (["W", "U", "B", "R", "G"] as const).filter((color) => colors.has(color));
+  return COLORS.filter((color) => colors.has(color));
 }
 
 /** A deck line made from a grid card, shown until the server's answer replaces it. */

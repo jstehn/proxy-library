@@ -1,23 +1,22 @@
+import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { latestPrice } from "@/shared/db";
+import { ColorSchema, FinishSchema, type ManaColor, type UserId } from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
-import type { CardRules } from "../domain/rules";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
-import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
+import { ownedPerCard } from "./candidate-pool";
+import { STANDARD_FIRST } from "./owned";
 
 // Browsing cards while building a deck (design doc 14, section 2.1): one entry per card, with
 // what the deck needs to know. The grid searches either the cards you own or every card for sale
 // (design doc 29). Your cards are shown as your most special copy, others as their standard art.
 
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 /** A color of Magic: "W", "U", "B", "R" or "G". */
-type Color = z.infer<typeof ColorSchema>;
 
-export const BROWSE_PAGE_SIZE = 60;
+const BROWSE_PAGE_SIZE = 60;
 export const BROWSE_SORTS = ["name", "manaValue", "color", "type", "newest"] as const;
 export type BrowseSort = (typeof BROWSE_SORTS)[number];
 /** What the grid searches: the cards you own, or every card for sale (design doc 29). */
@@ -32,50 +31,13 @@ export type BrowseInput = Readonly<{
    * Show only cards whose color identity is within these colors; null shows every color. A
    * Commander deck starts with its commander's colors (design doc 14, decision 2).
    */
-  colors: readonly Color[] | null;
+  colors: readonly ManaColor[] | null;
   /** Whether colorless cards are shown (only matters when `colors` is set). */
   includeColorless: boolean;
   /** Whether cards that aren't legal in the deck's format are left out (the default view). */
   onlyLegal: boolean;
   sort: BrowseSort;
   page: number; // from 1
-}>;
-
-export type BrowseCard = Readonly<{
-  oracleId: string;
-  printingId: string;
-  name: string;
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  /**
-   * Copies counted as owned in this deck: game copies, plus real ones when it uses them. Zero for
-   * a card you don't own (only when browsing every card).
-   */
-  owned: number;
-  /** How many of `owned` are real copies (design doc 16). */
-  ownedReal: number;
-  inThisDeck: number;
-  /** How many of your other decks use this card (ownership is shared between decks). */
-  otherDecks: number;
-  /** Copies owned that none of your other decks uses (task 42). */
-  free: number;
-  /** Why it doesn't fit this deck, or null if it does. */
-  misfit: "color" | "legality" | null;
-  /**
-   * What the deck rules need, so the builder can check a card the moment it's added (design doc
-   * 19, section 5.3). Legalities hold only the deck's format.
-   */
-  rules: CardRules;
-  /** The rest of a provisional deck line, shown until the server answers. */
-  producedMana: string[];
-  text: string;
-  /** On Wizards' Game Changer list (design doc 31). */
-  isGameChanger: boolean;
-  setCode: string;
-  collectorNumber: string;
-  finish: "nonfoil" | "foil" | "etched";
-  priceCents: number | null;
 }>;
 
 export type BrowsePage = Readonly<{
@@ -93,7 +55,7 @@ export async function deckBrowseContext(
   deckId: number,
 ): Promise<{
   format: (typeof FORMATS)[number];
-  commanderColors: Color[] | null;
+  commanderColors: ManaColor[] | null;
   usesRealCards: boolean;
 } | null> {
   const [row] = (
@@ -181,7 +143,6 @@ export async function browseCollection(
       : sql`coalesce(p.legalities->>${context.format}, 'legal') in ('legal', 'restricted')`;
   const offset = (Math.max(1, input.page) - 1) * BROWSE_PAGE_SIZE;
   // The cards you own for this deck: real ones too when it uses them (design doc 16, rule 2).
-  const owned = ownedCopies(userId, sql`${context.usesRealCards}`);
   // What a printing "p" must satisfy to be in the grid.
   const matches = sql`${searchCondition(parsed.node, {
     userId,
@@ -263,15 +224,12 @@ export async function browseCollection(
     total: number;
   }>(sql`
     with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-             -- Your most special copy is the one shown and added (design doc 23, section 14).
-             (array_agg(c.printing_id order by ${MOST_SPECIAL_FIRST}))[1] as printing_id,
+      -- Your most special copy is the one shown and added (design doc 23, section 14).
+      select o.*,
              (select max(a.created_at) from acquisitions a
                join printings ap on ap.id = a.printing_id
-              where a.user_id = ${userId} and ap.oracle_id = p.oracle_id) as newest
-        from ${owned} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
+              where a.user_id = ${userId} and ap.oracle_id = o.oracle_id) as newest
+        from ${ownedPerCard(userId, context.usesRealCards)} o
     ),
     ${input.source === "mine" ? mineCandidates : allCandidates}
     select card.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
@@ -296,18 +254,14 @@ export async function browseCollection(
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
            p.produced_mana, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = p.id and s.finish = shown.finish
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
       from candidates card join printings p on p.id = card.printing_id
       -- The finish a new deck line shows, as the deck view picks it when nothing is pinned: your
       -- most special copy's, or nonfoil for a card you don't own (design doc 29, rule 4).
       cross join lateral (
         select coalesce(
-                 (select c.finish from ${owned} c
-                   where c.printing_id = p.id
-                   order by ${MOST_SPECIAL_FIRST} limit 1),
+                 (select o.finish from owned o where o.printing_id = p.id),
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown

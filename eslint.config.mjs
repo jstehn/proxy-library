@@ -48,6 +48,58 @@ const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } }
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
 const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql.ts" } };
 
+// --- no-restricted-syntax selectors ----------------------------------------------------
+const NONDETERMINISM = [
+  {
+    selector: "MemberExpression[object.name='Math'][property.name='random']",
+    message: "Inject an Rng instead of Math.random (ADR 0008).",
+  },
+  {
+    selector: "MemberExpression[object.name='Date'][property.name='now']",
+    message: "Inject a Clock instead of Date.now (ADR 0008).",
+  },
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "Inject a Clock instead of new Date() (ADR 0008).",
+  },
+];
+const BASIC_WORDS = [
+  {
+    selector:
+      "CallExpression[callee.object.name='z'][callee.property.name='enum'] ArrayExpression > Literal[value=/^(nonfoil|foil|etched|W|common|mythic)$/]",
+    message:
+      "Don't spell out finishes, colors or rarities: import FinishSchema, ColorSchema or RaritySchema from @/shared/kernel.",
+  },
+  {
+    // The dots stand for the backslashes of /\bLand\b/.
+    selector: "Literal[regex.pattern=/^.b(Land|Creature|Basic).b$/]",
+    message:
+      "Ask the type line with cardTypes, isLand, isCreature or isBasicLand from @/shared/kernel, not a regex.",
+  },
+];
+const MONEY_TEXT = [
+  {
+    selector:
+      "CallExpression[callee.property.name='toFixed'][callee.object.type='BinaryExpression'][callee.object.operator='/'][callee.object.right.value=100]",
+    message: "Format money with Cents.format (or Cents.toPlainDollars) from @/shared/kernel.",
+  },
+];
+const PRICE_TABLE = [
+  {
+    selector: "TemplateElement[value.raw=/price_snapshots/]",
+    message:
+      "Read prices through the fragments in @/shared/db (latestPrice, cheapestPrice, ...): only the catalog module and shared/db/prices.ts name the price_snapshots table.",
+  },
+];
+const CANDIDATE_SQL = [
+  {
+    selector:
+      "TemplateElement[value.raw=/order by latest\\.usd_cents|array_agg\\(c\\.printing_id/]",
+    message:
+      "Cards you own (one per card) and the cheapest printing for sale are written once, in decks/queries/candidate-pool.ts: use ownedPerCard, notOwned, cheapestForSale or cheapestOfCards.",
+  },
+];
+
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
   // npm packages and Node built-ins: allowed here, restricted per layer by no-restricted-imports.
@@ -60,6 +112,8 @@ const policies = [
   from(el("db"), el("kernel"), el("db")),
   from(el("http"), el("kernel"), el("http")),
   from(el("card-search"), el("kernel"), el("card-search")),
+  // sql.ts is card-search's SQL half; it reads prices through the db module's fragments (P03).
+  { from: cardSearchSql, allow: { to: el("db") } },
 
   // module layers: the dependency rule points inward (overview.md)
   from(layer("domain"), el("kernel"), layer("domain", { sameModule: true }), cardSearch),
@@ -237,7 +291,9 @@ export default defineConfig([
       "src/shared/card-search/parse.ts",
       "src/shared/card-search/list.ts",
     ],
-    ignores: TESTS,
+    // kernel/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
+    // words (finish, color, rarity), shared by every module's parsing code (refactor P02).
+    ignores: [...TESTS, "src/shared/kernel/schemas.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -270,17 +326,74 @@ export default defineConfig([
     rules: {
       "no-restricted-syntax": [
         "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+        ...CANDIDATE_SQL,
+      ],
+    },
+  },
+  // The candidate pool's own SQL (refactor P07b) is the one place that may spell it out.
+  {
+    files: ["src/modules/decks/queries/candidate-pool.ts"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+      ],
+    },
+  },
+  // The basic words and money text are defined in exactly one place each (refactor P02): the
+  // catalog and the kernel's schemas.ts / money.ts may spell them out (and shared/db/prices.ts the price table). They still follow ADR 0008.
+  {
+    files: [
+      "src/modules/catalog/**/*.ts",
+      "src/shared/kernel/schemas.ts",
+      "src/shared/db/prices.ts",
+    ],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT] },
+  },
+  {
+    files: ["src/shared/kernel/money.ts"],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...NONDETERMINISM, ...BASIC_WORDS, ...PRICE_TABLE] },
+  },
+  {
+    files: ["src/shared/runtime/**", "src/shared/kernel/testing/**"],
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
+  },
+
+  // Adapters stay thin (ADR 0026): tool bindings and server actions parse input, call capabilities
+  // and present the answer. Logic and data access live in the modules.
+  {
+    files: ["src/app/_llm-tools/bindings/**/*.ts", "src/app/**/actions.ts"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-imports": [
+        "error",
         {
-          selector: "MemberExpression[object.name='Math'][property.name='random']",
-          message: "Inject an Rng instead of Math.random (ADR 0008).",
-        },
-        {
-          selector: "MemberExpression[object.name='Date'][property.name='now']",
-          message: "Inject a Clock instead of Date.now (ADR 0008).",
-        },
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message: "Inject a Clock instead of new Date() (ADR 0008).",
+          patterns: [
+            {
+              regex: "^@/modules/[^/]+/(domain|queries|application|infrastructure)",
+              message:
+                "An adapter imports a module only through its index.ts or client.ts (ADR 0026).",
+            },
+            {
+              regex: "^@/shared/(db|card-search/sql)",
+              message: "An adapter never reads the database. Call a capability (ADR 0026).",
+            },
+            {
+              regex: "(^|/)_llm-tools/tools/",
+              message: "An adapter never calls another adapter (ADR 0026).",
+            },
+          ],
         },
       ],
     },

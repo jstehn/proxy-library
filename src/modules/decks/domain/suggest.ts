@@ -1,4 +1,5 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
+import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
   edhrecLogLift,
@@ -55,7 +56,7 @@ export type CandidateCard = Readonly<{
 export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
 
 /** What a deck is about: worked out from its lines, never stored. */
-export type DeckProfile = Readonly<{
+export type DeckFingerprint = Readonly<{
   format?: Format;
   themes: readonly Theme[];
   /** Creature types the deck cares about, singular: "Elf". */
@@ -154,7 +155,7 @@ function namesType(text: string, type: string): boolean {
 }
 
 /** What a deck is about (section 3.2, "Deck profile rules"). */
-export function deckProfile(lines: readonly ProfileLine[], format: Format): DeckProfile {
+export function deckProfile(lines: readonly ProfileLine[], format: Format): DeckFingerprint {
   const commanders = lines.filter((line) => line.board === "commander");
   const main = lines.filter((line) => line.board === "main");
   const facts = (line: ProfileLine) => ({
@@ -211,7 +212,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
 
   const signals = deckSignalProfile(
     lines
-      .filter((line) => line.board === "commander" || line.board === "main")
+      .filter((line) => isPlayed(line.board))
       .map((line) => ({
         name: line.typeLine,
         typeLine: line.typeLine,
@@ -268,7 +269,7 @@ function inTribe(card: CandidateCard, tribe: string): boolean {
 /** Points and reasons for fitting a deck, without the strength tie-break. Cuts use it too. */
 export function deckFit(
   card: CandidateCard,
-  profile: DeckProfile,
+  profile: DeckFingerprint,
 ): { points: number; reasons: Reason[] } {
   const reasons: Reason[] = [];
   let points = 0;
@@ -320,7 +321,7 @@ function edhrecFit(
   };
 }
 
-export function toRatingProfile(profile: DeckProfile): RatingProfile {
+export function toRatingProfile(profile: DeckFingerprint): RatingProfile {
   return {
     format: profile.format ?? "commander",
     themes: profile.themes,
@@ -336,7 +337,7 @@ export function toRatingProfile(profile: DeckProfile): RatingProfile {
 /** How well a card fits a deck, or null if it shares nothing with it. */
 export function scoreForDeck(
   card: CandidateCard,
-  profile: DeckProfile,
+  profile: DeckFingerprint,
   options?: RatingOptions,
 ): Scored | null {
   const { points, reasons } = deckFit(card, profile);
@@ -372,7 +373,11 @@ export function scoreForDeck(
  * How good a card is for one role in this deck, or null if it doesn't do that job. The deck's
  * other gaps don't count here, or the same do-everything cards would top every role's list.
  */
-export function scoreForRole(card: CandidateCard, tag: Tag, profile: DeckProfile): Scored | null {
+export function scoreForRole(
+  card: CandidateCard,
+  tag: Tag,
+  profile: DeckFingerprint,
+): Scored | null {
   if (!card.roles.includes(tag)) return null;
   const fit = deckFit(card, { ...profile, gaps: [] });
   const gap = profile.gaps.find((candidate) => candidate.tag === tag);

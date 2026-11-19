@@ -1,10 +1,10 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Finish } from "@/modules/catalog";
 import { parseList } from "@/shared/card-search";
 import { samplePrintingId } from "../testing/fakes";
 import { BOARDS, replacedEntries, type DeckEntry, type MatchedLine } from "./deck";
 import { deckText, fingerprint, type DeckTextLine } from "./list-format";
+import type { Finish } from "@/shared/kernel";
 
 // Design doc 23: editing a deck as text.
 

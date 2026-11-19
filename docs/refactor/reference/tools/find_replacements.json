@@ -1,0 +1,29 @@
+{
+  "tool": "find_replacements",
+  "input": {
+    "card": "Banishing Light",
+    "deckId": "<deckId>"
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "like": "Banishing Light",
+      "owned": [],
+      "store": [
+        {
+          "name": "Caretaker's Talent",
+          "oracleId": "c97957a2-8310-4cff-8aad-871b7901d124",
+          "printingId": "8bbc28f3-0f0b-5418-8f23-52b4aea94e67",
+          "manaCost": "{2}{W}",
+          "typeLine": "Enchantment — Class",
+          "owned": 0,
+          "price": 1109,
+          "rating": 100,
+          "ratingParts": [],
+          "why": ["Enchantments", "Reads like deck (100% sim)"]
+        }
+      ],
+      "hiddenOverTarget": 0
+    }
+  }
+}

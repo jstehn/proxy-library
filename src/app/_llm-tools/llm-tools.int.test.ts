@@ -5,7 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { Scope } from "@/modules/accounts";
+import { allows, type Scope } from "@/modules/accounts";
 import { buildCore } from "@/server/core";
 import { loadConfig } from "@/shared/config";
 import {
@@ -31,6 +31,7 @@ const jack = actor("jack");
 const context = (scopes: Scope[] = ["read", "decks:write", "wishlist:write"]): ToolContext => ({
   actor: jack,
   scopes,
+  allows: (scope) => allows(scopes, scope),
   container: core,
 });
 

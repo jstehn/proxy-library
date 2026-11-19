@@ -1,20 +1,19 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { rateCard } from "../domain/rate";
 import { deckProfile, toRatingProfile } from "../domain/suggest";
-import { ownedCopies } from "./owned";
+import { cheapestOfCards } from "./candidate-pool";
 import {
   candidateColumns,
   fitsDeck,
   ownedCandidatesForIds,
-  suggestionContext,
-  textArray,
   toCard,
-  withinTarget,
   type CandidateRow,
-  type SuggestionCard,
-} from "./suggestions";
+} from "./suggestion-sql";
+import { suggestionContext, withinTarget } from "./suggestions";
+import { type SuggestionCard } from "../domain/suggestion-types";
 
 export type SemanticSearchPick = Readonly<{
   card: SuggestionCard;
@@ -123,28 +122,10 @@ export async function semanticSearchForDeck(
     filterRows.forEach((row, idx) => filterRankById.set(row.oracle_id, idx + 1));
   }
 
-  const priceFilter =
-    options.maxPriceCents !== undefined
-      ? sql`and latest.usd_cents <= ${options.maxPriceCents}`
-      : sql``;
-
   const [rawOwned, storeRows] = await Promise.all([
     ownedCandidatesForIds(db, userId, context, neighborIds, options.maxPriceCents),
     db.execute<CandidateRow>(sql`
-      with cheapest as (
-        select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
-          from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-          join lateral (select distinct on (ps.finish) ps.finish, ps.usd_cents
-                          from price_snapshots ps where ps.printing_id = p.id
-                         order by ps.finish, ps.day desc) latest on true
-         where p.oracle_id = any(${textArray(neighborIds)})
-           and ${fitsDeck(context)}
-           ${priceFilter}
-           and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-                             join printings op on op.id = c.printing_id
-                            where op.oracle_id = p.oracle_id)
-         order by p.oracle_id, latest.usd_cents, p.id
-      )
+      with cheapest as ${cheapestOfCards(userId, context.usesRealCards, neighborIds, fitsDeck(context), options.maxPriceCents)}
       select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
              0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
              null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks

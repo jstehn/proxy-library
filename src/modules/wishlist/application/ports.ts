@@ -1,6 +1,5 @@
-import type { Finish } from "@/modules/catalog";
 import type { StoreServices } from "@/modules/store";
-import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack, Wish, WishDetails, WishId, WishTarget } from "../domain/wish";
 

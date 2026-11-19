@@ -1,17 +1,16 @@
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { PrintingId, type Finish } from "@/modules/catalog";
+import { PrintingId } from "@/modules/catalog";
 import { collectionCards } from "@/modules/collection/infrastructure/schema";
 import { players } from "@/modules/accounts/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
-import { assertNever, Cents, UserId } from "@/shared/kernel";
+import { Cents, type Finish, FinishSchema, UserId, assertNever } from "@/shared/kernel";
 import type { Holdings, NewTrade, TradePlayers, TradeRepository } from "../application/ports";
 import { TradeId, type Trade, type TradeItem } from "../domain/trade";
 import { tradeItems, trades } from "./schema";
 
 const StatusSchema = z.enum(["proposed", "accepted", "declined", "cancelled", "countered"]);
 const SideSchema = z.enum(["proposer", "recipient"]);
-const FinishSchema = z.enum(["nonfoil", "foil", "etched"]);
 
 function itemColumns(item: TradeItem) {
   switch (item.kind) {

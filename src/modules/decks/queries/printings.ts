@@ -1,11 +1,12 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { latestPrice } from "@/shared/db";
+import { type Finish, type UserId } from "@/shared/kernel";
 import { deckUsesRealCards, MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Every printing of one card, for the deck builder's printing picker (design doc 24, section 9).
 
-export type PrintingFinish = "nonfoil" | "foil" | "etched";
+export type PrintingFinish = Finish;
 
 /** One finish of a printing: its latest price and how many copies you own in it. */
 export type PrintingFinishOption = Readonly<{
@@ -72,9 +73,7 @@ export async function cardPrintings(
            ], null) as labels,
            (select coalesce(json_agg(json_build_object(
                      'finish', f.finish,
-                     'priceCents', (select ps.usd_cents from price_snapshots ps
-                                     where ps.printing_id = p.id and ps.finish = f.finish
-                                     order by ps.day desc limit 1),
+                     'priceCents', ${latestPrice("p.id", "f.finish")},
                      'owned', coalesce((select sum(c.quantity) from ${owned} c
                                          where c.printing_id = p.id and c.finish = f.finish), 0)
                    ) order by f.position), '[]'::json)

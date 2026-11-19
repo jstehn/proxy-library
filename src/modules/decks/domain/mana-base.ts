@@ -1,15 +1,10 @@
+import type { CastabilitySummary } from "./castability";
 import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
 import { getFormatRules } from "./format-rules";
-import {
-  colorPips,
-  deckStats,
-  MANA_COLORS,
-  suggestedLands,
-  type DeckStats,
-  type ManaColor,
-} from "./stats";
+import { colorPips, deckStats, suggestedLands, type DeckStats } from "./stats";
 import type { ProfileLine } from "./suggest";
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // A mana base you could start from (design doc 35): how many lands, how many sources of each
 // color, and which lands to add, owned non-basics first, then basics. Pure: the query gathers
@@ -101,7 +96,7 @@ export type ManaBaseInput = Readonly<{
   /** Roles the deck is short on and themes it has: a land doing these is a utility land. */
   deckRoles: readonly Tag[];
   deckThemes: readonly Theme[];
-  /** Optional explicit land target override from DeckProfile. */
+  /** Optional explicit land target override from DeckPlan. */
   landTargetOverride?: number | null;
 }>;
 
@@ -113,7 +108,7 @@ const CONSIDER_BUYING = 5;
 const BASIC_EQUIVALENT = 2;
 
 /** The points a land earns (section 3.3), in one place to tune. */
-export const LAND_WEIGHTS = {
+const LAND_WEIGHTS = {
   /** A short color it makes: this much, plus up to 1 more the shorter the color is. */
   shortColor: 2,
   /** A deck color it makes that isn't short. */
@@ -169,10 +164,10 @@ export function sourceTargets(
   target: LandTarget,
 ): SourceTarget[] {
   const stats = deckStats(lines);
-  const allPips = MANA_COLORS.reduce((sum, color) => sum + stats.pips[color], 0);
+  const allPips = COLORS.reduce((sum, color) => sum + stats.pips[color], 0);
   const floors = SOURCE_FLOORS[getFormatRules(format).hasCommandZone ? "commander" : "other"];
   const heaviest = heaviestCosts(lines);
-  return MANA_COLORS.filter((color) => stats.pips[color] > 0).map((color) => {
+  return COLORS.filter((color) => stats.pips[color] > 0).map((color) => {
     const share = Math.round((target.lands * stats.pips[color]) / allPips);
     const heaviestCost = heaviest[color];
     return {
@@ -190,9 +185,9 @@ function heaviestCosts(lines: readonly ProfileLine[]): Record<ManaColor, number>
   for (const line of lines) {
     if (line.board !== "main" && line.board !== "commander") continue;
     const pips = colorPips(line.manaCost);
-    for (const color of MANA_COLORS) heaviest[color] = Math.max(heaviest[color], pips[color]);
+    for (const color of COLORS) heaviest[color] = Math.max(heaviest[color], pips[color]);
   }
-  for (const color of MANA_COLORS) heaviest[color] = Math.min(3, heaviest[color]);
+  for (const color of COLORS) heaviest[color] = Math.min(3, heaviest[color]);
   return heaviest;
 }
 
@@ -434,3 +429,12 @@ function fillBasics(
   }
   return planned;
 }
+
+/** A land plan with how castable the spells are before and after adding it. */
+export type ManaBasePlanWithCastability = ManaBasePlan &
+  Readonly<{
+    castability: Readonly<{
+      before: CastabilitySummary;
+      after: CastabilitySummary;
+    }>;
+  }>;

@@ -1,4 +1,5 @@
 "use client";
+import { isBasicLand } from "@/shared/kernel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Bracket,
@@ -28,8 +29,8 @@ import { optimizeDeckAction, suggestionsAction } from "./actions";
 // the maybeboard, plus top-rated one-step swap pairs.
 
 /** How many cut candidates the panel shows. */
-export const CUTS_SHOWN = 10;
-export const SWAPS_SHOWN = 5;
+const CUTS_SHOWN = 10;
+const SWAPS_SHOWN = 5;
 
 export function CutsPanel(props: {
   deckId: number;
@@ -108,7 +109,7 @@ export function CutsPanel(props: {
       cutMeta.set(line.oracleId, {
         manaValue: line.manaValue,
         rating: r.rating,
-        isBasicLand: line.typeLine.includes("Basic Land"),
+        isBasicLand: isBasicLand(line.typeLine),
       });
     }
     const owned = new Map<string, Suggestion>();

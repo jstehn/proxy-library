@@ -1,34 +1,28 @@
 import { eq, sql } from "drizzle-orm";
-import { z } from "zod";
 import { parseList } from "@/shared/card-search";
-import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
-import { MAX_LIST_LINES, MAX_QUANTITY, type Board, type Format } from "../domain/deck";
-import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { type DbExecutor, latestPrice } from "@/shared/db";
+import { ColorSchema, type UserId } from "@/shared/kernel";
+import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "../domain/deck";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
 import { fingerprint } from "../domain/list-format";
 import {
   previewChanges,
-  type ChangePreview,
   type DeckChange,
+  type DeckChangePreview,
   type PreviewLine,
 } from "../domain/preview";
 import type { CardRules } from "../domain/rules";
 import { roleTargets, suggestedLands } from "../domain/stats";
 import { decks } from "../infrastructure/schema";
-import { deckView, type DeckLine, type DeckView } from "./decks";
+import type { DeckLine, DeckView } from "../domain/deck-view";
+import { deckView } from "./decks";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the
 // `owned.ts` SQL orderings so stats, legalities and prices agree with the deck builder.
 
-const ColorSchema = z.enum(["W", "U", "B", "R", "G"]);
-
-export type DeckChangePreview = ChangePreview &
-  Readonly<{
-    deck: Readonly<{ id: number; name: string; format: Format }>;
-    fingerprint: string;
-  }>;
+export type { DeckChangePreview };
 
 export type ListPreviewError = DeckNotFound | DeckChanged | ListProblems | ListTooLong;
 
@@ -105,11 +99,11 @@ export async function loadCardsForPreview(
            shown.rarity, shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
              where kp.oracle_id = w.oracle_id) as keywords,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = shown.id
-               and s.finish = coalesce(owned_finish.finish,
-                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)
-             order by s.day desc limit 1) as price_cents,
+           ${latestPrice(
+             "shown.id",
+             `coalesce(owned_finish.finish,
+                    case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end)`,
+           )} as price_cents,
            newest.is_basic_land, newest.face_text, newest.has_power_toughness,
            exists (select 1 from printings g
                     where g.oracle_id = w.oracle_id and g.is_game_changer) as is_game_changer,
@@ -199,7 +193,7 @@ async function previewFromView(
       .where(eq(decks.id, Number(view.deck.id)))
       .limit(1),
   ]);
-  const deckProfile = (profileRows[0]?.profileJson as DeckProfile | null | undefined) ?? null;
+  const deckProfile = (profileRows[0]?.profileJson as DeckPlan | null | undefined) ?? null;
   const baseTargets = roleTargets(view.deck.format);
   const resolvedTargets =
     baseTargets === null

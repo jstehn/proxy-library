@@ -1,7 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, cheapestPrice, textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import type { UserId } from "@/shared/kernel";
+import { COLORS, type ManaColor, type UserId } from "@/shared/kernel";
 import {
   coverageDetails,
   missingCost,
@@ -15,9 +15,9 @@ import {
   type WithIdentity,
 } from "../domain/commanders";
 import { canBeCommander } from "../domain/rules";
-import { MANA_COLORS, TARGETED_TAGS, type ManaColor } from "../domain/stats";
-import { ownedCopies } from "./owned";
-import { textArray, tribePattern } from "./suggestions";
+import { TARGETED_TAGS } from "../domain/stats";
+import { cheapestOfCards, ownedPerCard } from "./candidate-pool";
+import { tribePattern } from "./suggestion-sql";
 
 // Commanders I can build (design docs 36 and 39): SQL gathers your pool, your lands and the
 // cards that could lead a deck; the pure rankCommanders filters and orders them.
@@ -95,13 +95,8 @@ const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_c
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
   p.color_identity, p.keywords, p.rarity, p.role_tags, p.is_game_changer, p.edhrec_rank`;
 
-/** SQL: the latest price of printing `p`, in its cheapest finish. */
-const LATEST_PRICE = sql`(select min(latest.usd_cents) from (
-    select distinct on (ps.finish) ps.usd_cents from price_snapshots ps
-     where ps.printing_id = p.id order by ps.finish, ps.day desc) latest)`;
-
 const colorsOf = (values: readonly string[]): ManaColor[] =>
-  values.filter((value): value is ManaColor => (MANA_COLORS as readonly string[]).includes(value));
+  values.filter((value): value is ManaColor => (COLORS as readonly string[]).includes(value));
 
 function toPoolCard(row: PoolRow, pool: "owned" | "store"): PoolCard {
   return {
@@ -149,32 +144,6 @@ const leadsCommander = (row: CandidateRow) =>
     hasPowerToughness: row.has_power_toughness,
   });
 
-/** SQL: the copies that count as yours, one row per oracle card with its most-held printing. */
-function ownedByOracle(userId: UserId, withReal: boolean): SQL {
-  return sql`(select p.oracle_id, sum(c.quantity)::int as owned,
-                     (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id
-                from ${ownedCopies(userId, sql`${withReal}`)} c join printings p on p.id = c.printing_id
-               group by p.oracle_id)`;
-}
-
-/**
- * SQL: a table (id, price_cents) of the cards matching `filter` (on a printing `p`) that are for
- * sale in an enabled set and that you own no printing of: each at its cheapest printing, priced
- * once per printing (its latest price, in its cheapest finish).
- */
-function cheapestForSale(userId: UserId, withReal: boolean, filter: SQL): SQL {
-  return sql`(select distinct on (p.oracle_id) p.id, latest.usd_cents as price_cents
-                from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-                join lateral (
-                  select min(newest.usd_cents) as usd_cents from (
-                    select distinct on (ps.finish) ps.usd_cents from price_snapshots ps
-                     where ps.printing_id = p.id order by ps.finish, ps.day desc) newest
-                ) latest on latest.usd_cents is not null
-               where ${filter}
-                 and p.oracle_id not in (select owned.oracle_id from ${ownedByOracle(userId, withReal)} owned)
-               order by p.oracle_id, latest.usd_cents, p.id)`;
-}
-
 /** SQL: the names of your decks led by `oracleId` (a column expression). */
 function leadsDecks(userId: UserId, oracleId: SQL): SQL {
   return sql`(select array_agg(distinct d.name order by d.name) from deck_entries e
@@ -189,10 +158,10 @@ async function ownedPool(
   withReal: boolean,
 ): Promise<{ pool: PoolCard[]; lands: WithIdentity[] }> {
   const rows = await db.execute<PoolRow & { is_land: boolean; is_basic: boolean }>(sql`
-    select ${POOL_COLUMNS}, ${LATEST_PRICE} as price_cents,
+    select ${POOL_COLUMNS}, ${cheapestPrice("p.id")} as price_cents,
            split_part(p.type_line, ' // ', 1) ~ '\\mLand\\M' as is_land,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic
-      from ${ownedByOracle(userId, withReal)} owned join printings p on p.id = owned.printing_id
+      from ${ownedPerCard(userId, withReal)} owned join printings p on p.id = owned.printing_id
      where ${COMMANDER_LEGAL}
   `);
   const pool: PoolCard[] = [];
@@ -224,7 +193,7 @@ async function ownedCandidates(
   const rows = await db.execute<CandidateRow>(sql`
     select ${CANDIDATE_COLUMNS}, owned.owned, null::int as price_cents,
            ${leadsDecks(userId, sql`owned.oracle_id`)} as leads
-      from ${ownedByOracle(userId, search.withReal ?? false)} owned
+      from ${ownedPerCard(userId, search.withReal ?? false)} owned
       join printings p on p.id = owned.printing_id
      where ${MAYBE_COMMANDER} and ${COMMANDER_LEGAL} and ${includesColors(search.colors)}
   `);
@@ -237,15 +206,16 @@ async function storeCandidates(
   userId: UserId,
   search: CommanderSearch,
 ): Promise<CommanderCandidate[]> {
-  const forSale = cheapestForSale(
+  const forSale = cheapestOfCards(
     userId,
     search.withReal ?? false,
+    null,
     sql`${MAYBE_COMMANDER} and ${COMMANDER_LEGAL} and ${includesColors(search.colors)}`,
   );
   const rows = await db.execute<CandidateRow>(sql`
-    select ${CANDIDATE_COLUMNS}, 0 as owned, priced.price_cents,
+    select ${CANDIDATE_COLUMNS}, 0 as owned, priced.usd_cents as price_cents,
            ${leadsDecks(userId, sql`p.oracle_id`)} as leads
-      from ${forSale} priced join printings p on p.id = priced.id
+      from ${forSale} priced join printings p on p.id = priced.printing_id
   `);
   return rows.rows.filter(leadsCommander).map(toCandidate);
 }
@@ -281,9 +251,10 @@ async function storeFillers(
     tribes === null
       ? sql`false`
       : sql`(split_part(p.type_line, ' // ', 1) ~ ${tribes} or 'Changeling' = any(p.keywords))`;
-  const forSale = cheapestForSale(
+  const forSale = cheapestOfCards(
     userId,
     withReal,
+    null,
     sql`p.color_identity <@ ${textArray(commander.colorIdentity)} and ${COMMANDER_LEGAL}
         and split_part(p.type_line, ' // ', 1) !~ '\\mLand\\M'
         and p.oracle_id <> ${commander.oracleId}
@@ -291,9 +262,9 @@ async function storeFillers(
              or p.keywords && ${textArray(plan.keywords)} or ${tribeMatch})`,
   );
   const rows = await db.execute<PoolRow>(sql`
-    select ${POOL_COLUMNS}, priced.price_cents
-      from ${forSale} priced join printings p on p.id = priced.id
-     order by priced.price_cents, p.name
+    select ${POOL_COLUMNS}, priced.usd_cents as price_cents
+      from ${forSale} priced join printings p on p.id = priced.printing_id
+     order by priced.usd_cents, p.name
      limit ${STORE_LIMIT}
   `);
   return rows.rows.map((row) => toPoolCard(row, "store"));
@@ -308,12 +279,12 @@ export async function commanderDetails(
 ): Promise<CommanderDetails | null> {
   const rows = await db.execute<CandidateRow>(sql`
     select ${CANDIDATE_COLUMNS}, coalesce(owned.owned, 0) as owned,
-           case when owned.owned is null then ${LATEST_PRICE} end as price_cents,
+           case when owned.owned is null then ${cheapestPrice("p.id")} end as price_cents,
            ${leadsDecks(userId, sql`p.oracle_id`)} as leads
       from printings p
-      left join ${ownedByOracle(userId, withReal)} owned on owned.oracle_id = p.oracle_id
+      left join ${ownedPerCard(userId, withReal)} owned on owned.oracle_id = p.oracle_id
      where p.oracle_id = ${oracleId} and ${COMMANDER_LEGAL}
-     order by owned.owned is null, ${LATEST_PRICE} nulls last, p.id
+     order by owned.owned is null, ${cheapestPrice("p.id")} nulls last, p.id
      limit 1
   `);
   const row = rows.rows[0];

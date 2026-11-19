@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import { latestPrice } from "@/shared/db";
+import { type Finish, type UserId } from "@/shared/kernel";
 
 // Read models for the trade screens (design doc 10, section 9).
 
@@ -35,7 +36,7 @@ export type TradeItemView = Readonly<{
   from: "proposer" | "recipient";
   kind: "card" | "money";
   printingId: string | null;
-  finish: "nonfoil" | "foil" | "etched" | null;
+  finish: Finish | null;
   quantity: number | null;
   amountCents: number | null;
   name: string | null;
@@ -102,9 +103,7 @@ async function itemsOf(
   }>(sql`
     select i.trade_id, i.from_side, i.kind, i.printing_id, i.finish, i.quantity, i.amount_cents,
            p.name, p.set_code, p.collector_number,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = i.printing_id and s.finish = i.finish
-             order by s.day desc limit 1) as price
+           ${latestPrice("i.printing_id", "i.finish")} as price
       from trade_items i left join printings p on p.id = i.printing_id
      where i.trade_id = any(${sql.param([...tradeIds])}::bigint[])
      order by i.trade_id, i.position

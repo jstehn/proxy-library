@@ -21,7 +21,7 @@ import {
 } from "@/modules/drafts";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { assertNever, Cents } from "@/shared/kernel";
+import { COLORS, Cents, assertNever } from "@/shared/kernel";
 
 // Controllers for the draft pages (design doc 17): read the form, call the use case, and show
 // the outcome. No rules live here.
@@ -197,13 +197,11 @@ export async function decideAction(input: {
   return { error: result.ok ? null : errorMessage(result.error) };
 }
 
-const COLOR_VALUES = ["W", "U", "B", "R", "G"] as const;
-
 /** A color the player owes (Paliano, the High City; Regicide). */
 export async function chooseColorAction(formData: FormData): Promise<void> {
   const actor = await requireActor();
   const draftId = draftIdFrom(formData);
-  const color = COLOR_VALUES.find((each) => each === formData.get("color"));
+  const color = COLORS.find((each) => each === formData.get("color"));
   if (color === undefined) redirect(`/drafts/${draftId}`);
   const result = await getContainer().drafts.chooseColor(actor, { draftId, color });
   if (!result.ok) backTo(`/drafts/${draftId}`, result.error);

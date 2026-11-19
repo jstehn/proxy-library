@@ -1,6 +1,14 @@
 // The wishlist module's public API (design doc 26): the only file other modules and the app
 // may import.
 export { makeWishlist, type Wishlist } from "./application/make-wishlist";
+export {
+  makeAddWishes,
+  makeRemoveWishes,
+  makeWishlistView,
+  type AddWishesReport,
+  type WishlistView,
+  type WishToAdd,
+} from "./application/wishlist-tools";
 export type { BoughtWish, BuyWishError, BuyWishInput } from "./application/buy-wish";
 export type { WishedForCards } from "./application/wish-for-cards";
 export type { CardNeed } from "./domain/card-wishes";
@@ -31,11 +39,8 @@ export {
   type WishStatus,
 } from "./domain/lines";
 export {
-  FINISH_PREFERENCES,
   MAX_NOTE_LENGTH,
-  MAX_TARGET_PRICE,
   MAX_WISH_QUANTITY,
-  MAX_WISHES,
   WishId,
   type FinishPreference,
   type Wish,

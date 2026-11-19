@@ -80,6 +80,13 @@ update this table when they learn more):
 | Builder UI duplication found while splitting it (P19)                                   | −500 to −1,000                            |
 | **Total**                                                                               | **about −11,000 to −14,000**              |
 
+**Measured after P04 (2026-11-19).** P01 removed 2,682 lines (less than the knip row hoped), and
+P02–P04 added 297 (they fixed disagreements; they weren't meant to shrink much). The remaining
+groups, re-measured and ranked in [the dedup playbook](../refactor/dedup-playbook.md), add up to
+about −6,800 to −10,500, which lands at roughly 80,900–84,600 lines. The ≤ 80,000 target is now a
+stretch: it holds only if every group hits the top of its range or packages find more redundancy.
+The playbook keeps the per-group numbers; packages report what they actually removed.
+
 #### Readable from the directory tree
 
 The tree is split by **responsibility**. A folder's name always says what its contents are
@@ -467,6 +474,31 @@ stay separate, and get names that say why. Example: if the drafter really wants 
 values, it gets a named curve scheme (`DRAFT_CURVE`), not a private `curveBucket`. The test is:
 "if the rule changed, would both have to change?" If yes, it's one job.
 
+### 4.2½ Where the savings come from
+
+Ranked by lines removed, re-measured after P04. The [dedup playbook](../refactor/dedup-playbook.md)
+has each group's inventory command, target shape, edge cases and mistakes to avoid, written so a
+session can follow it step by step.
+
+| Rank | Group                                                   | Catalogue   | Removable, roughly | Packages |
+| ---- | ------------------------------------------------------- | ----------- | ------------------ | -------- |
+| 1    | Tools and server actions compose the same reads by hand | D13, F2, D9 | −3,000 to −4,000   | P05–P09  |
+| 2    | Queries doing a service's job; one candidate pool       | D2, F6      | −1,200 to −1,800   | P06, P07 |
+| 3    | Oracle text read in 11 files → card features            | D12, F4     | −1,000 to −1,800   | P11–P14  |
+| 4    | Four opening-hand engines → one                         | D3          | −500 to −800       | P15      |
+| 5    | Collections, store quote vs. wishlist offer             | D10, D11    | −350 to −500       | P07, P17 |
+| 6    | Format checks → `FormatRuleSet`                         | D14, F3     | −150 to −300       | P10      |
+| 7    | Error text → `describe<Module>Error`                    | D8, F7      | −150 to −250       | P09      |
+| 8    | Mana curve                                              | D5          | −50 to −100        | P16      |
+| 9    | Builder UI state and calls                              | F8          | −300 to −800       | P19      |
+| 10   | Small clones in social, catalog, wallet                 | —           | −100 to −200       | P20      |
+
+The pattern behind rank 1 is the most important finding: **writes already go through application
+services, but reads don't.** Server actions and tools both call query functions with
+`getContainer().db` and compose the answer themselves, so every read the builder and the model
+share is written twice. Making each read a capability (ADR 0026) removes the second copy and most
+of the tool layer.
+
 ### 4.3 Keeping it consolidated
 
 - **A clone check in `pnpm check`.** Add the clone scan as `scripts/clones.ts`, wired into
@@ -540,7 +572,7 @@ phases above to packages; the packages are the source of truth.
 | R6. Merge parallel implementations                          | P15, P16, P17 | 4    |
 | R7. Split `decks`                                           | P18           | 5    |
 | R8. Deck builder UI                                         | P19           | 2–4  |
-| R9. Naming and docs; large files left                       | P20, P21      | 5    |
+| R9. Naming and docs; large files left; design docs reviewed | P20, P21, P22 | 5    |
 
 **Branches.** `main` stays shippable. The work happens on `refactor/main`, one branch per package,
 and `refactor/main` is **allowed to break**: features may stop working and get rebuilt on the new
@@ -581,12 +613,14 @@ double-faced land rule (P04), the mana curve (P16), card features storage (P11),
 Newest first. One line per change: the date, what changed and why, and the package or
 conversation that changed it.
 
-| Date       | Change                                                                                                                                        | By                   |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| 2026-11-18 | Responsibilities can nest: a module may group related responsibilities as subfolders, with `research/{reddit,youtube}` as the model           | review with the user |
-| 2026-11-18 | Dropped the feature review: only redundant code is removed. The layout is by responsibility (modules plus layer folders), not feature folders | review with the user |
-| 2026-11-18 | Added "The end state": size and structure targets, the target tree, injection rules                                                           | review with the user |
-| 2026-11-18 | Split the plan into work packages (`docs/refactor/`), with branches and the 500-line benchmark; lessons moved to the backlog                  | review with the user |
-| 2026-11-18 | Added section 4, the duplication catalogue                                                                                                    | review with the user |
-| 2026-11-18 | Tools become thin bindings over module capabilities (F2, R3)                                                                                  | review with the user |
-| 2026-11-18 | First draft of the audit and plan                                                                                                             | audit session        |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | By                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| 2026-11-19 | The design docs were written one feature at a time: their product rules mostly hold, but their layout sections planned the duplication, many change one subsystem without saying so, and 8 were self-approved. Added: packages read their group's docs' rules first and mark replaced docs "Superseded in part" (playbook Part A: "read the rules" before step 1, and step 15; a doc map per group), and P22 consolidates the rules into `docs/modules/` and archives superseded docs | conversation (design doc review) |
+| 2026-11-19 | Added 4.2½ (savings ranked by lines, re-measured after P04) and the dedup playbook (`docs/refactor/dedup-playbook.md`) with a recipe per group; noted that ≤ 80,000 is now a stretch. Tests: the unit and integration suites can't reach the network (`tests/setup/no-network.ts`), and the README says which suites to run when                                                                                                                                                      | conversation (dedup review)      |
+| 2026-11-18 | Responsibilities can nest: a module may group related responsibilities as subfolders, with `research/{reddit,youtube}` as the model                                                                                                                                                                                                                                                                                                                                                   | review with the user             |
+| 2026-11-18 | Dropped the feature review: only redundant code is removed. The layout is by responsibility (modules plus layer folders), not feature folders                                                                                                                                                                                                                                                                                                                                         | review with the user             |
+| 2026-11-18 | Added "The end state": size and structure targets, the target tree, injection rules                                                                                                                                                                                                                                                                                                                                                                                                   | review with the user             |
+| 2026-11-18 | Split the plan into work packages (`docs/refactor/`), with branches and the 500-line benchmark; lessons moved to the backlog                                                                                                                                                                                                                                                                                                                                                          | review with the user             |
+| 2026-11-18 | Added section 4, the duplication catalogue                                                                                                                                                                                                                                                                                                                                                                                                                                            | review with the user             |
+| 2026-11-18 | Tools become thin bindings over module capabilities (F2, R3)                                                                                                                                                                                                                                                                                                                                                                                                                          | review with the user             |
+| 2026-11-18 | First draft of the audit and plan                                                                                                                                                                                                                                                                                                                                                                                                                                                     | audit session                    |

@@ -1,9 +1,9 @@
 // Role tags (design doc 19, section 3): the job a card does in a deck, composed from effect
 // primitives (./primitives). Rules as data: one row per tag, matching structured EffectPrimitives
 // instead of card-shaped one-off regexes.
+import { cardTypes } from "@/shared/kernel";
 import {
   extractEffects,
-  isFrontFaceLand,
   withoutReminders,
   type EffectExtractor,
   type EffectPrimitive,
@@ -26,7 +26,7 @@ type TagRule = Readonly<{
 
 const rule = (source: string) => new RegExp(source, "i");
 
-export const TAG_RULES: readonly TagRule[] = [
+const TAG_RULES: readonly TagRule[] = [
   {
     tag: "ramp",
     notOnLands: true,
@@ -103,7 +103,8 @@ export const TAG_RULES: readonly TagRule[] = [
 /** The roles a card plays, in TAGS order. */
 export function cardTags(card: TagFacts, extractors?: readonly EffectExtractor[]): Tag[] {
   const text = withoutReminders(card.text);
-  const land = isFrontFaceLand(card.typeLine);
+  // The front face: a spell with a land on its back is still tagged as the spell it is played as.
+  const land = cardTypes(card.typeLine).isLandOnFront;
   const effects = extractEffects(card, extractors);
   return TAG_RULES.filter(
     (row) => !(row.notOnLands && land) && row.matches(effects, card, text),
@@ -334,7 +335,7 @@ const VEHICLES = [
   rule(String.raw`\b(crew|saddle) \d+\b`),
 ];
 
-export const THEME_RULES: readonly ThemeRule[] = [
+const THEME_RULES: readonly ThemeRule[] = [
   {
     theme: "counters",
     label: "+1/+1 counters",

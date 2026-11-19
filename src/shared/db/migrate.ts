@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { Database } from "./client";
 
-export const MIGRATIONS_FOLDER = "drizzle";
+const MIGRATIONS_FOLDER = "drizzle";
 
 /**
  * Apply pending drizzle-kit migrations. Returns false when no migrations exist yet

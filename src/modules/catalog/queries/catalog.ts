@@ -227,7 +227,7 @@ export type PrintingSearch = Readonly<{
   oneRowPerCard?: boolean;
 }>;
 
-export const SEARCH_PAGE_SIZE = 60;
+const SEARCH_PAGE_SIZE = 60;
 
 /** SQL: printing "p" has exactly these colors. */
 function hasExactly(colors: readonly ManaColor[]): SQL {

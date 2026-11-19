@@ -1,5 +1,5 @@
-import type { Color, PrintingId, Rarity } from "@/modules/catalog";
-import type { Cents } from "@/shared/kernel";
+import type { Color, PrintingId } from "@/modules/catalog";
+import { COLORS, type Cents, type Rarity, cardTypes } from "@/shared/kernel";
 import type { DraftCard, DraftPack } from "./draft";
 
 // Choosing a card the way a sensible drafter would (design doc 17, section 5): take the strongest
@@ -39,8 +39,6 @@ export function factsOf(lookup: FactsLookup, printingId: PrintingId): DraftCardF
   return lookup(printingId) ?? UNKNOWN;
 }
 
-export const COLOR_ORDER: readonly Color[] = ["W", "U", "B", "R", "G"];
-
 const RARITY_STRENGTH: Readonly<Record<Rarity, number>> = {
   common: 1,
   uncommon: 1.6,
@@ -50,10 +48,9 @@ const RARITY_STRENGTH: Readonly<Record<Rarity, number>> = {
   bonus: 2,
 };
 
-export const isLand = (facts: DraftCardFacts) => /\bLand\b/.test(facts.typeLine);
-export const isBasicLand = (facts: DraftCardFacts) =>
-  /\bBasic\b/.test(facts.typeLine) && isLand(facts);
-export const isCreature = (facts: DraftCardFacts) => /\bCreature\b/.test(facts.typeLine);
+export const isLand = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isLand;
+export const isBasicLand = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isBasic;
+export const isCreature = (facts: DraftCardFacts) => cardTypes(facts.typeLine).isCreature;
 
 /** How good a card is on its own, about 0–4. Basic lands are worth nothing: they're free. */
 export function cardStrength(facts: DraftCardFacts): number {
@@ -68,7 +65,7 @@ export function cardStrength(facts: DraftCardFacts): number {
 }
 
 /** How much of each color a pool has, weighting each card by its strength. */
-export function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number> {
+function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number> {
   const weights = new Map<Color, number>();
   for (const facts of pool) {
     if (facts.colors.length === 0) continue;
@@ -81,7 +78,7 @@ export function colorWeights(pool: readonly DraftCardFacts[]): Map<Color, number
 /** The pool's main colors, strongest first (ties in WUBRG order), at most `count`. */
 export function topColors(pool: readonly DraftCardFacts[], count = 2): Color[] {
   const weights = colorWeights(pool);
-  return COLOR_ORDER.filter((color) => (weights.get(color) ?? 0) > 0)
+  return COLORS.filter((color) => (weights.get(color) ?? 0) > 0)
     .sort((a, b) => (weights.get(b) ?? 0) - (weights.get(a) ?? 0))
     .slice(0, count);
 }
@@ -108,9 +105,9 @@ export function colorFit(facts: DraftCardFacts, top: readonly Color[], settled: 
 }
 
 /** About how many spells of each mana value a 23-spell limited deck wants (6 = six or more). */
-export const IDEAL_CURVE: Readonly<Record<number, number>> = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
+const IDEAL_CURVE: Readonly<Record<number, number>> = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
 
-export const curveBucket = (manaValue: number) => Math.min(6, Math.max(1, Math.round(manaValue)));
+const curveBucket = (manaValue: number) => Math.min(6, Math.max(1, Math.round(manaValue)));
 
 /** Small nudges for what the pool is missing: creatures, a gap in the curve, fixing. */
 function needsBonus(

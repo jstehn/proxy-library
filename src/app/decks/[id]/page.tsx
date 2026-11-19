@@ -1,16 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { printingCards } from "@/modules/catalog";
 import {
-  combosForDeck,
   deckComments,
   deckForViewer,
-  deckText,
-  deckTokenLines,
   EXPORTERS,
-  fingerprint,
   FORMATS,
-  type DeckTextLine,
+  listAndFingerprint,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -41,7 +36,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { id } = await props.params;
   const deckId = Number(id);
   if (!Number.isSafeInteger(deckId) || deckId <= 0) notFound();
-  const { db, seeds } = getContainer();
+  const { db, seeds, capabilities } = getContainer();
   const searchParams = await props.searchParams;
 
   // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
@@ -63,30 +58,13 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   );
 
   if (!viewed.isOwner) {
-    const [cards, tokens, combos] = await Promise.all([
-      printingCards(
-        db,
-        view.lines.map((line) => line.printingId),
-      ),
-      deckTokenLines(
-        db,
-        deck.id,
-        view.lines.map((line) => ({
-          oracleId: line.oracleId,
-          printingId: line.printingId,
-          name: line.name,
-          board: line.board,
-        })),
-      ),
-      deck.format === "commander"
-        ? combosForDeck(
-            db,
-            view.lines
-              .filter((line) => line.board === "main" || line.board === "commander")
-              .map((line) => line.oracleId),
-          )
-        : Promise.resolve(undefined),
-    ]);
+    const shared = await capabilities.deckOverview({
+      userId: deck.ownerId,
+      deckId: deck.id,
+      parts: { printings: true, tokens: true },
+    });
+    if (!shared.ok) notFound();
+    const { printings, tokens, combos } = shared.value;
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
         <ManaStylesheet />
@@ -114,7 +92,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         <SharedDeckView
           lines={view.lines}
           rules={view.rules}
-          cards={Object.fromEntries(cards)}
+          cards={Object.fromEntries(printings ?? [])}
           format={deck.format}
           targetBracket={deck.targetBracket}
           seed={seeds.newSeed()}
@@ -124,7 +102,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           grouping={deck.grouping}
           combos={combos}
           headings={deck.headings}
-          tokens={tokens}
+          tokens={[...(tokens ?? [])]}
         />
         {commentSection}
       </main>
@@ -143,22 +121,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
 
   // The Edit as text box (design doc 23): printings only where pinned, so saving the text
   // unchanged leaves the deck as it was. The fingerprint is of what's stored.
-  const textLines: DeckTextLine[] = view.lines.map((line) => ({
-    quantity: line.quantity,
-    name: line.name,
-    board: line.board,
-    setCode: line.pinnedPrintingId === null ? null : line.setCode,
-    collectorNumber: line.pinnedPrintingId === null ? null : line.collectorNumber,
-    finish: line.pinnedFinish,
-    heading: line.heading,
-  }));
-  const deckFingerprint = fingerprint(
-    view.lines.map((line) => ({
-      ...line,
-      printingId: line.pinnedPrintingId,
-      finish: line.pinnedFinish,
-    })),
-  );
+  const { list: listText, fingerprint: deckFingerprint } = listAndFingerprint(view);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
@@ -236,7 +199,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <EditAsText
         key={deckFingerprint}
         deckId={deck.id}
-        text={deckText(textLines, deck.grouping === "custom" ? deck.headings : null)}
+        text={listText}
         fingerprint={deckFingerprint}
       />
 

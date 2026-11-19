@@ -73,7 +73,7 @@ export type WishLine = Readonly<{
 }>;
 
 /** Cheapest first; at the same price, the newer printing (the same order as Buy a list). */
-export function bestFirst(a: Offer, b: Offer): number {
+function bestFirst(a: Offer, b: Offer): number {
   return a.price - b.price || b.releaseDate.localeCompare(a.releaseDate);
 }
 
@@ -102,7 +102,7 @@ function statusFor(missing: number, total: Cents | null, outlook: WalletOutlook)
 }
 
 /** One wish's line. */
-export function wishLine(
+function wishLine(
   wish: Wish,
   answers: Omit<WishlistAnswers, "wishes">,
   outlook: WalletOutlook,
@@ -145,7 +145,7 @@ function shortfallOf(line: WishLine): number {
  * Section 9's order: at target first, then affordable, then the smallest shortfall, then not
  * for sale, with fulfilled wishes last. Ties go to the newest wish.
  */
-export function byPriority(a: WishLine, b: WishLine): number {
+function byPriority(a: WishLine, b: WishLine): number {
   return (
     Number(b.atTarget) - Number(a.atTarget) ||
     STATUS_ORDER[a.status.kind] - STATUS_ORDER[b.status.kind] ||

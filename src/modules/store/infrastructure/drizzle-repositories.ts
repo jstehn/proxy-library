@@ -5,9 +5,9 @@ import {
   sealedProducts,
   wpnProducts,
 } from "@/modules/catalog/infrastructure/schema";
-import { SealedProductId, type Finish, type PrintingId } from "@/modules/catalog";
-import type { DbExecutor } from "@/shared/db";
-import { Cents, type UserId } from "@/shared/kernel";
+import { SealedProductId, type PrintingId } from "@/modules/catalog";
+import { type DbExecutor, latestSnapshot, newestPriceDay } from "@/shared/db";
+import { Cents, type Finish, type UserId } from "@/shared/kernel";
 import type {
   ProductValues,
   Listing,
@@ -151,12 +151,9 @@ export function drizzleMarketPrices(db: DbExecutor): MarketPrices {
   async function quote(printingId: PrintingId, finish: Finish): Promise<MarketQuote | null> {
     const result = await db.execute<{ usd_cents: number; day: string; is_enabled: boolean }>(sql`
       select s.usd_cents, s.day::text as day, cs.is_enabled
-        from price_snapshots s
-        join printings p on p.id = s.printing_id
+        from ${latestSnapshot(sql`${printingId}`, sql`${finish}`)} s
+        join printings p on p.id = ${printingId}
         join card_sets cs on cs.code = p.set_code
-       where s.printing_id = ${printingId} and s.finish = ${finish}
-       order by s.day desc
-       limit 1
     `);
     const [row] = result.rows;
     if (row === undefined) return null;
@@ -219,9 +216,7 @@ export function drizzleProductValues(db: DbExecutor): ProductValues {
 
     async newestPriceDay() {
       const [row] = (
-        await db.execute<{ day: string | null }>(
-          sql`select max(day)::text as day from price_snapshots`,
-        )
+        await db.execute<{ day: string | null }>(sql`select ${newestPriceDay()}::text as day`)
       ).rows;
       return row?.day ?? null;
     },

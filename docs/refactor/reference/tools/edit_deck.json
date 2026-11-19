@@ -1,0 +1,142 @@
+{
+  "tool": "edit_deck",
+  "input": {
+    "deckId": "<deckId>",
+    "fingerprint": "<fingerprint>",
+    "changes": [
+      {
+        "card": "Plains",
+        "quantity": 8
+      }
+    ]
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "deck": {
+        "id": "<deckId>",
+        "name": "Reference deck",
+        "format": "commander"
+      },
+      "format": "commander",
+      "targetSize": {
+        "cards": 100,
+        "exact": true
+      },
+      "saved": false,
+      "fingerprint": "<fingerprint>",
+      "changes": [
+        {
+          "card": "Plains",
+          "board": "main",
+          "before": 10,
+          "after": 8
+        }
+      ],
+      "before": {
+        "cardCount": 12,
+        "lands": 10,
+        "otherManaSources": 0,
+        "averageManaValue": 3.5,
+        "curve": [0, 0, 0, 1, 1, 0, 0, 0],
+        "pips": {
+          "W": 3,
+          "U": 0,
+          "B": 0,
+          "R": 0,
+          "G": 0
+        },
+        "sources": {
+          "W": 10,
+          "U": 0,
+          "B": 0,
+          "R": 0,
+          "G": 0,
+          "C": 0
+        },
+        "value": {
+          "cents": 802,
+          "text": "$8.02"
+        },
+        "shortTotal": 1
+      },
+      "after": {
+        "cardCount": 10,
+        "lands": 8,
+        "otherManaSources": 0,
+        "averageManaValue": 3.5,
+        "curve": [0, 0, 0, 1, 1, 0, 0, 0],
+        "pips": {
+          "W": 3,
+          "U": 0,
+          "B": 0,
+          "R": 0,
+          "G": 0
+        },
+        "sources": {
+          "W": 8,
+          "U": 0,
+          "B": 0,
+          "R": 0,
+          "G": 0,
+          "C": 0
+        },
+        "value": {
+          "cents": 730,
+          "text": "$7.30"
+        },
+        "shortTotal": 1
+      },
+      "priceDelta": {
+        "cents": -72,
+        "text": "-$0.72"
+      },
+      "roles": [
+        {
+          "role": "ramp",
+          "label": "Ramp",
+          "before": 1,
+          "after": 1,
+          "target": 10
+        },
+        {
+          "role": "draw",
+          "label": "Card draw",
+          "before": 1,
+          "after": 1,
+          "target": 10
+        },
+        {
+          "role": "removal",
+          "label": "Removal",
+          "before": 1,
+          "after": 1,
+          "target": 8
+        },
+        {
+          "role": "wipe",
+          "label": "Board wipes",
+          "before": 0,
+          "after": 0,
+          "target": 3
+        }
+      ],
+      "newlyMetRoles": [],
+      "newlyMissedRoles": [],
+      "problems": {
+        "added": ["The deck has 10 cards; it needs exactly 100."],
+        "resolved": ["The deck has 12 cards; it needs exactly 100."],
+        "remaining": ["You own 0 Beza, the Bounding Spring, and the deck uses 1."]
+      },
+      "newlyShort": [],
+      "bracket": {
+        "target": 2,
+        "before": "Bracket 1–2",
+        "after": "Bracket 1–2",
+        "findingsAfter": [],
+        "overTargetAfter": null
+      },
+      "previewId": "<previewId>"
+    }
+  }
+}

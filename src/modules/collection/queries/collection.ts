@@ -1,5 +1,6 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import {
   COLLECTION_SECTIONS,
@@ -7,50 +8,19 @@ import {
   foilCopy,
   searchCondition,
 } from "@/shared/card-search/sql";
-import type { UserId } from "@/shared/kernel";
+import { type Finish, type UserId } from "@/shared/kernel";
 import type { ExportRow } from "../domain/export";
-import { acquisitions, collectionCards } from "../infrastructure/schema";
+import { collectionCards } from "../infrastructure/schema";
 
 // Read models for the collection screens (ADR 0006).
 
 export type OwnedCard = Readonly<{
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
   /** When the newest copy arrived, as an ISO string. */
   lastAcquiredAt: string;
 }>;
-
-/** Everything a player owns, newest arrivals first. */
-export async function collectionFor(db: DbExecutor, userId: UserId): Promise<OwnedCard[]> {
-  const rows = await db
-    .select({
-      printingId: collectionCards.printingId,
-      finish: collectionCards.finish,
-      quantity: collectionCards.quantity,
-      lastAcquiredAt: sql<string>`max(${acquisitions.createdAt})`,
-    })
-    .from(collectionCards)
-    .leftJoin(
-      acquisitions,
-      and(
-        eq(acquisitions.userId, collectionCards.userId),
-        eq(acquisitions.printingId, collectionCards.printingId),
-        eq(acquisitions.finish, collectionCards.finish),
-      ),
-    )
-    .where(eq(collectionCards.userId, userId))
-    .groupBy(collectionCards.userId, collectionCards.printingId, collectionCards.finish)
-    .orderBy(desc(sql`max(${acquisitions.createdAt})`));
-
-  return rows.map((row) => ({
-    printingId: row.printingId,
-    // The database only allows these three (a CHECK constraint).
-    finish: row.finish as OwnedCard["finish"],
-    quantity: row.quantity,
-    lastAcquiredAt: new Date(row.lastAcquiredAt).toISOString(),
-  }));
-}
 
 /** How the collection page can be filtered and sorted. Empty fields don't filter. */
 export type CollectionFilter = Readonly<{
@@ -63,7 +33,7 @@ export type CollectionFilter = Readonly<{
    * combination's code such as "GU" (exactly those colors).
    */
   color?: string;
-  finish?: "nonfoil" | "foil" | "etched";
+  finish?: Finish;
   /** How the page is divided into sections (feedback 2026-09-27: colors matter most). */
   sections: "none" | "color" | "type" | "rarity" | "set";
   /** The order within each section. */
@@ -71,11 +41,11 @@ export type CollectionFilter = Readonly<{
   page: number; // from 1
 }>;
 
-export const COLLECTION_PAGE_SIZE = 60;
+const COLLECTION_PAGE_SIZE = 60;
 
 export type CollectionRow = Readonly<{
   printingId: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
   /** Latest market price of one copy in this finish, or null if there's none. */
   price: number | null;
@@ -118,9 +88,7 @@ export async function collectionPage(
   const owned = sql`
     select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
            s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = c.printing_id and s.finish = c.finish
-             order by s.day desc limit 1) as price,
+           ${latestPrice("c.printing_id", "c.finish")} as price,
            (select max(a.created_at) from acquisitions a
              where a.user_id = c.user_id and a.printing_id = c.printing_id
                and a.finish = c.finish) as last_acquired_at
@@ -180,7 +148,7 @@ export async function ownedCopies(
   db: DbExecutor,
   userId: UserId,
   printingId: string,
-): Promise<Partial<Record<"nonfoil" | "foil" | "etched", number>>> {
+): Promise<Partial<Record<Finish, number>>> {
   const rows = await db
     .select({ finish: collectionCards.finish, quantity: collectionCards.quantity })
     .from(collectionCards)
@@ -192,7 +160,7 @@ export type OwnedPrintingCopy = Readonly<{
   printingId: string;
   setCode: string;
   collectorNumber: string;
-  finish: "nonfoil" | "foil" | "etched";
+  finish: Finish;
   quantity: number;
 }>;
 
@@ -206,7 +174,7 @@ export async function ownedByOracle(
     printing_id: string;
     set_code: string;
     collector_number: string;
-    finish: "nonfoil" | "foil" | "etched";
+    finish: Finish;
     quantity: number;
   }>(sql`
     select c.printing_id, p.set_code, p.collector_number, c.finish, c.quantity
@@ -238,9 +206,7 @@ export async function exportRows(db: DbExecutor, userId: UserId): Promise<Export
     last_acquired: Date;
   }>(sql`
     select p.name, p.set_code, p.collector_number, c.finish, p.rarity, c.quantity,
-           (select s.usd_cents from price_snapshots s
-             where s.printing_id = c.printing_id and s.finish = c.finish
-             order by s.day desc limit 1) as price,
+           ${latestPrice("c.printing_id", "c.finish")} as price,
            (select min(a.created_at) from acquisitions a
              where a.user_id = c.user_id and a.printing_id = c.printing_id and a.finish = c.finish) as first_acquired,
            (select max(a.created_at) from acquisitions a

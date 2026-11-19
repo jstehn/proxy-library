@@ -5,13 +5,13 @@ import { PrintingId } from "@/modules/catalog";
 import type { BuySingleError, SellSingleError } from "@/modules/store";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { assertNever, Cents } from "@/shared/kernel";
+import { Cents, FinishSchema, assertNever } from "@/shared/kernel";
 
 export type TradeState = { message: string | null; tone: "error" | "success" };
 
 const SingleForm = z.object({
   printingId: z.string().min(1),
-  finish: z.enum(["nonfoil", "foil", "etched"]),
+  finish: FinishSchema,
   quantity: z.coerce.number(),
 });
 

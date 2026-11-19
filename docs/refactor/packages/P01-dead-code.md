@@ -35,4 +35,19 @@ for t in $(grep -hoE "export const [a-zA-Z]+ = defineTool" src/app/_llm-tools/to
 
 ## Handoff
 
-(empty)
+Done on `refactor/P01-dead-code`.
+
+- Step 1: the 27 unregistered tool definitions are deleted, with the imports and helpers only they
+  used (the domain and query code they called stays where something else uses it).
+- Step 2: `knip` is a dev dependency (`pnpm knip`, config in `knip.json`). Its unused files were
+  false positives (`public/sw.js` is registered by string, `mana-font` is read by path,
+  `scripts/eval-ratings.ts` is a tool you run by hand), so they're in the config. I ran
+  `knip --fix --fix-type exports` (357 unused exports lose the `export` keyword), then deleted what
+  that left unused. Unused exported **types** (729) are left alone: exporting a type does no harm.
+- Ten exports remain that knip flags, because a type uses them through `typeof` (the lint rule
+  cannot see that): `COUNTED_BOARDS`, the `BRACKET_*` tables, `FIXED_CARD_ROLE_TAGS`,
+  `SIGNAL_TAGS`, `TOKEN_KINDS`, and a few others. Later packages that touch those files can drop
+  the `export`.
+- Source lines: 93,743 before, 91,061 after. Clone baseline 63 to 58. `decks/index.ts` is no
+  longer over 500 lines (off the allowlist). Integration and e2e tests not run: the changes only
+  delete code and `export` keywords, and `pnpm check` passes.

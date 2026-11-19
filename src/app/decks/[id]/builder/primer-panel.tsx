@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { DeckLine } from "@/modules/decks";
 import { NamePreview } from "@/app/_components/card-preview";
-import { deckPlanAction, saveDeckPlanAction, type DeckPlan } from "./actions";
+import { deckPlanAction, saveDeckPlanAction, type DeckPlanWithPrimer } from "./actions";
 import {
   formatNamedLines,
   nonEmptyLines,
@@ -39,7 +39,7 @@ type Draft = Readonly<{
   primer: string;
 }>;
 
-function draftOf(plan: DeckPlan): Draft {
+function draftOf(plan: DeckPlanWithPrimer): Draft {
   const { profile } = plan;
   return {
     plan: profile.plan ?? "",
@@ -53,7 +53,7 @@ function draftOf(plan: DeckPlan): Draft {
   };
 }
 
-function isEmptyPlan(plan: DeckPlan): boolean {
+function isEmptyPlan(plan: DeckPlanWithPrimer): boolean {
   const { profile } = plan;
   return (
     plan.primer.trim() === "" &&
@@ -69,7 +69,7 @@ function isEmptyPlan(plan: DeckPlan): boolean {
 
 export function PrimerPanel(props: Props) {
   const { deckId } = props;
-  const [plan, setPlan] = useState<DeckPlan | null | "loading">("loading");
+  const [plan, setPlan] = useState<DeckPlanWithPrimer | null | "loading">("loading");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [isSaving, startSaving] = useTransition();
 

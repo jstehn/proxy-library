@@ -1,0 +1,47 @@
+{
+  "tool": "get_cards",
+  "input": {
+    "cards": ["Banishing Light", "Plains"]
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "cards": [
+        {
+          "name": "Banishing Light",
+          "manaCost": "{2}{W}",
+          "typeLine": "Enchantment",
+          "colorIdentity": ["W"],
+          "text": "When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.",
+          "ownedGame": 1,
+          "ownedReal": 0,
+          "decksUsing": [
+            {
+              "id": "<deckId>",
+              "name": "Reference deck",
+              "quantity": 1
+            }
+          ],
+          "wishes": []
+        },
+        {
+          "name": "Plains",
+          "manaCost": null,
+          "typeLine": "Basic Land — Plains",
+          "colorIdentity": ["W"],
+          "text": "({T}: Add {W}.)",
+          "ownedGame": 0,
+          "ownedReal": 0,
+          "decksUsing": [
+            {
+              "id": "<deckId>",
+              "name": "Reference deck",
+              "quantity": 10
+            }
+          ],
+          "wishes": []
+        }
+      ]
+    }
+  }
+}

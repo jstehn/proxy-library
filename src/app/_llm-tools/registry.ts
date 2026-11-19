@@ -1,46 +1,14 @@
 import { z } from "zod";
-import { allows, type Scope } from "@/modules/accounts";
+import type { Scope } from "@/modules/accounts";
+import { BINDINGS } from "./bindings";
 import { capToolResponse } from "./cap-response";
 import type { LlmTool, ToolContext, ToolOutcome } from "./tool";
-import {
-  drawSampleTool,
-  edhrecLookupTool,
-  editDeckConsolidated,
-  findReplacementsTool,
-  getAccountCompact,
-  getCardsConsolidated,
-  getDeckConsolidated,
-  rulesLookupTool,
-  searchCardsConsolidated,
-  updateDeckConsolidated,
-} from "./tools/consolidated";
-import { createDeck, listDecks } from "./tools/decks";
-import { findCombosForDeckTool } from "./tools/library";
-import { manageWishlist } from "./tools/wishlist";
-import { redditResearchTool } from "./tools/reddit";
-import { youtubeResearchTool } from "./tools/youtube";
 
 // The tool registry (design doc 28, section 3.2): consolidated, token-efficient tools served
 // identically by /api/mcp and /api/tools/<name>.
 
-export const TOOLS: readonly LlmTool[] = [
-  getAccountCompact,
-  listDecks,
-  getDeckConsolidated,
-  createDeck,
-  updateDeckConsolidated,
-  editDeckConsolidated,
-  searchCardsConsolidated,
-  getCardsConsolidated,
-  edhrecLookupTool,
-  findCombosForDeckTool,
-  findReplacementsTool,
-  drawSampleTool,
-  rulesLookupTool,
-  youtubeResearchTool,
-  redditResearchTool,
-  manageWishlist,
-];
+/** Every tool, served identically by /api/mcp and /api/tools/<name>. */
+export const TOOLS: readonly LlmTool[] = BINDINGS;
 
 /** House rules, for MCP's server instructions and OpenAPI's description (rule 10 repeats them). */
 export const INSTRUCTIONS = [
@@ -51,7 +19,7 @@ export const INSTRUCTIONS = [
   'Rules: prefer owned cards; move agreed cuts to "maybe" instead of deleting. Only cards in this catalog exist here. Keep Commander brackets (1-5) within target. Use manage_wishlist to save cards to buy later.',
 ].join("\n");
 
-export function findTool(name: string): LlmTool | undefined {
+function findTool(name: string): LlmTool | undefined {
   return TOOLS.find((tool) => tool.name === name);
 }
 
@@ -73,7 +41,7 @@ export async function callTool(
 ): Promise<CallResult> {
   const tool = findTool(name);
   if (tool === undefined) return { kind: "problem", problem: { kind: "UnknownTool" } };
-  if (!allows(context.scopes, tool.scope)) {
+  if (!context.allows(tool.scope)) {
     return { kind: "problem", problem: { kind: "MissingScope", scope: tool.scope } };
   }
   const rawObj =

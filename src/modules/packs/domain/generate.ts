@@ -1,5 +1,12 @@
 import type { BoosterConfig, BoosterSheet, Color, PrintingId } from "@/modules/catalog";
-import { seededRng, weightedPick, weightedSample, type Rng, type Weighted } from "@/shared/kernel";
+import {
+  COLORS,
+  type Rng,
+  type Weighted,
+  seededRng,
+  weightedPick,
+  weightedSample,
+} from "@/shared/kernel";
 import { finishFor, type FactsLookup, type Pack, type PackCard } from "./pack";
 import { revealOrder } from "./reveal";
 
@@ -80,8 +87,7 @@ const DRAW_STRATEGIES: Record<SheetKind, DrawSheet> = {
   distinct: drawDistinct,
 };
 
-export const ALL_COLORS: readonly Color[] = ["W", "U", "B", "R", "G"];
-export const COLOR_BALANCE_ATTEMPTS = 50;
+const COLOR_BALANCE_ATTEMPTS = 50;
 
 /** The colors of the mono-colored cards among these printings. */
 function monoColors(printingIds: readonly PrintingId[], facts: FactsLookup): Set<Color> {
@@ -108,12 +114,12 @@ function drawBalanced(
 ): PrintingId[] {
   const sheetPrintings = sheet.cards.map((card) => card.printingId);
   const isPossible =
-    count >= ALL_COLORS.length && monoColors(sheetPrintings, facts).size === ALL_COLORS.length;
+    count >= COLORS.length && monoColors(sheetPrintings, facts).size === COLORS.length;
 
   let drawn = draw(rng, sheet, count, facts);
   if (!isPossible) return drawn;
   for (let attempt = 1; attempt < COLOR_BALANCE_ATTEMPTS; attempt++) {
-    if (monoColors(drawn, facts).size === ALL_COLORS.length) break;
+    if (monoColors(drawn, facts).size === COLORS.length) break;
     drawn = draw(rng, sheet, count, facts);
   }
   return drawn;

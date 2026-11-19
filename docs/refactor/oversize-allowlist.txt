@@ -1,0 +1,24 @@
+# Source files allowed to be over 500 lines (docs/refactor/README.md). Format: path  # reason
+src/app/decks/[id]/builder/actions.ts  # pre-refactor, owned by P19
+src/app/decks/[id]/builder/deck-builder.tsx  # pre-refactor, owned by P19
+src/app/decks/[id]/builder/deck-list.tsx  # pre-refactor, owned by P19
+src/app/drafts/[id]/page.tsx  # pre-refactor, owned by P20
+src/modules/catalog/infrastructure/drizzle-repositories.ts  # pre-refactor, owned by P20
+src/modules/decks/domain/draft-deck.ts  # pre-refactor, owned by P16
+src/modules/decks/domain/goldfish-session.ts  # pre-refactor, owned by P15
+src/modules/decks/domain/optimize.ts  # pre-refactor, owned by P20
+src/modules/decks/domain/playtest-card.ts  # pre-refactor, owned by P20
+src/modules/decks/domain/rate.ts  # pre-refactor, owned by P16
+src/modules/decks/domain/sim-pipeline.ts  # pre-refactor, owned by P12
+src/modules/decks/queries/decks.ts  # pre-refactor, owned by P06
+src/modules/drafts/application/drafts.ts  # pre-refactor, owned by P20
+src/modules/drafts/domain/draft.ts  # pre-refactor, owned by P20
+src/modules/drafts/domain/steps.ts  # pre-refactor, owned by P20
+src/modules/drafts/infrastructure/drizzle-draft-repository.ts  # pre-refactor, owned by P20
+src/modules/reddit/infrastructure/reddit-http-gateway.ts  # pre-refactor, owned by P20
+src/modules/store/queries/store.ts  # pre-refactor, owned by P20
+src/shared/card-search/parse.ts  # pre-refactor, owned by P13
+src/shared/card-search/signals.ts  # pre-refactor, owned by P13
+src/shared/card-search/sql.ts  # pre-refactor, owned by P03
+src/shared/card-search/tags.ts  # pre-refactor, owned by P13
+src/modules/decks/index.ts  # public API barrel grew with the new capabilities; P18 splits the decks module

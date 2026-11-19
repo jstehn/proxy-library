@@ -38,6 +38,11 @@ browser tests answer card-image requests locally (`page.route("**/api/images/**"
 that really must hit a live endpoint belongs in an opt-in `pnpm test:remote` suite that never runs
 by default. A few manual real calls while developing are fine.
 
+This is enforced: the unit and integration projects load `tests/setup/no-network.ts`, which makes
+the global `fetch` reject with a message saying what to do instead. Gateways take a `fetchFn`, so
+their tests pass a fake one. Run a `*.remote.test.ts` file only while working on the gateway it
+covers (`pnpm vitest run --project remote <file>`), not as part of a routine check.
+
 ## Recorded fixtures
 
 `tests/fixtures/` holds small, trimmed copies of **real** MTGJSON and Scryfall data (provenance

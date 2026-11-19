@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
-import { auditDeck, auditDeckView, type DeckAuditReport } from "./audit";
+import type { DeckAuditReport } from "../domain/audit-report";
+import { auditDeckView } from "./audit";
 import { publicDeckByToken } from "./sharing";
 
 export type PublicDeckScorecard = Readonly<{
@@ -22,15 +22,4 @@ export async function publicDeckScorecard(
     ownerName: found.ownerName,
     report,
   };
-}
-
-/**
- * Builds a scorecard for an owned deck.
- */
-export async function deckScorecard(
-  db: DbExecutor,
-  userId: UserId,
-  deckId: number,
-): Promise<DeckAuditReport | null> {
-  return auditDeck(db, userId, deckId);
 }

@@ -3,9 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { SignInError } from "@/modules/accounts";
+import { describeSignInError } from "@/modules/accounts";
 import { getContainer } from "@/server/container";
-import { assertNever } from "@/shared/kernel";
 import { safeNextPath } from "@/server/next-path";
 
 export type SignInState = { error: string | null; username: string };
@@ -23,19 +22,8 @@ export async function signInAction(
   if (!form.success) return { error: "Please fill in both fields.", username: "" };
 
   const result = await getContainer().accounts.signIn(form.data, await headers());
-  if (!result.ok) return { error: messageFor(result.error), username: form.data.username };
+  if (!result.ok) return { error: describeSignInError(result.error), username: form.data.username };
 
   if (result.value.mustChangePassword) redirect("/account/password");
   redirect(safeNextPath(formData.get("next")) ?? "/");
-}
-
-function messageFor(error: SignInError): string {
-  switch (error.kind) {
-    case "InvalidCredentials":
-      return "That username and password don't match.";
-    case "AccountDisabled":
-      return "This account has been disabled. Ask an admin if you think that's a mistake.";
-    default:
-      return assertNever(error);
-  }
 }

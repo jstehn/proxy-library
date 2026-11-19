@@ -14,7 +14,7 @@ import type {
 // Pure catalog rules (design doc 04, section 3). No I/O: everything comes in as arguments.
 
 /** How long after release a set is re-imported every night (rule 12). */
-export const SETTLING_DAYS = 120;
+const SETTLING_DAYS = 120;
 
 /**
  * Rule 12: a set released recently (or not yet released) is still "settling": MTGJSON keeps
@@ -32,7 +32,7 @@ export function isStillSettling(releaseDate: string, now: Date): boolean {
  * 2026-10-01: singles of any card, product from every expansion and Commander release). Other
  * kinds (promos, tokens, Masters, Un-sets, …) stay off until an admin enables them.
  */
-export const SET_TYPES_ENABLED_BY_DEFAULT: readonly string[] = ["expansion", "core", "commander"];
+const SET_TYPES_ENABLED_BY_DEFAULT: readonly string[] = ["expansion", "core", "commander"];
 
 /** How many reference sets a nightly sync imports, so no single night is long (design doc 16). */
 export const REFERENCE_SETS_PER_RUN = 40;

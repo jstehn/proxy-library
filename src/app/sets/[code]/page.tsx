@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { FINISHES, findSet, setPrintings, type Finish, type PrintingCard } from "@/modules/catalog";
+import { FINISHES, findSet, setPrintings, type PrintingCard } from "@/modules/catalog";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
-import { Cents } from "@/shared/kernel";
+import { Cents, type Finish } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "@/app/_components/card-tile";

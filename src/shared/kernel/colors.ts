@@ -1,7 +1,13 @@
 // Magic's multicolored combinations and their community names (feedback 2026-09-28: filter and
 // sort a collection by "Green-Blue (Simic)" rather than just "Multicolored").
 
-export type ManaColor = "W" | "U" | "B" | "R" | "G";
+/** The five colors, in the order cards list them (W, U, B, R, G). */
+export const COLORS = ["W", "U", "B", "R", "G"] as const;
+export type ManaColor = (typeof COLORS)[number];
+
+/** Every kind of mana: the five colors and colorless. */
+export const MANA_SYMBOLS = [...COLORS, "C"] as const;
+export type ManaSymbol = (typeof MANA_SYMBOLS)[number];
 
 export type ColorCombination = Readonly<{
   /** The value used in URLs and forms, e.g. "GU". */

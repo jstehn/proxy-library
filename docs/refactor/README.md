@@ -2,7 +2,7 @@
 
 This folder turns the audit ([design doc 65](../design/65-codebase-audit-and-refactor.md)) into
 **work packages** small enough for one session each. A session, or an agent, can start from a
-clean context, read three short files, and work without reading the whole audit.
+clean context, read three or four short files, and work without reading the whole audit.
 
 ## Starting a session (read these, in order)
 
@@ -11,6 +11,10 @@ clean context, read three short files, and work without reading the whole audit.
    now, and the decisions already made.
 3. **Your package**, `packages/Pnn-*.md`. It lists the files to touch, the steps, what "done"
    means, and the commands that re-check its numbers.
+4. **If your package merges duplicates** (it has a **Recipe** line), Part A of
+   [dedup-playbook.md](dedup-playbook.md) once, then only your group's section. It says where the
+   copies are, what the single version looks like, the edge cases to test and the mistakes to
+   avoid.
 
 Read doc 65 only when your package points to one of its sections. To save tokens, filter long
 output (`grep`, `tail`, `head`), and don't read files the package doesn't name unless a step needs
@@ -108,20 +112,36 @@ the rules below keep them cheap.
 
 ## The merge gate (package → `refactor/main`)
 
-| Must pass                                                  | Why                                                                                                                                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm typecheck` and `pnpm lint`                           | Other sessions build on `refactor/main`, so it must compile                                                                         |
-| Unit tests **for the code this package wrote or moved**    | New architecture, new tests                                                                                                         |
-| The size and clone reports (P00) show no **new** offenders | See "File size" below                                                                                                               |
-| Every other failing test is listed in STATUS               | Breaking is fine; _unknown_ breakage isn't. Each entry names the package that will fix it, or says "delete: tests old architecture" |
+| Must pass                                                                | Why                                                                                                                                 |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck` and `pnpm lint`                                         | Other sessions build on `refactor/main`, so it must compile                                                                         |
+| Unit tests **for the code this package wrote or moved**                  | New architecture, new tests                                                                                                         |
+| `pnpm test:int`, only if the package changed SQL, repositories or wiring | Unit tests can't see SQL mistakes; other packages skip it to keep runs fast (see the table below)                                   |
+| The size and clone reports (P00) show no **new** offenders               | See "File size" below                                                                                                               |
+| Every other failing test is listed in STATUS                             | Breaking is fine; _unknown_ breakage isn't. Each entry names the package that will fix it, or says "delete: tests old architecture" |
 
 **Tests.** Old tests for code that's being replaced are deleted along with that code, not ported
 line by line. The package writes new tests against the new design. The P00 reference outputs
 (`docs/refactor/reference/`) describe what the old code returned, so rebuilt features can be
 compared with them. They're a guide, not a gate: a deliberate change is fine, but write it down.
 
-While building, run targeted tests (`pnpm vitest run <path>`). Run the full suite only at the merge
-gate.
+### Which tests to run, and when
+
+Tests get run over and over in this refactor, so the slow and outside ones are opt-in: run them
+only when your package works on what they cover.
+
+| Suite                                                                  | Speed                      | Run it                                                                                                     |
+| ---------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Unit, one file (`pnpm vitest run <path>`)                              | seconds                    | All the time while building                                                                                |
+| Unit, all (inside `pnpm check`)                                        | about 10 s                 | Before each commit                                                                                         |
+| Integration, one file (`pnpm vitest run --project integration <path>`) | seconds to a minute        | When your package changes SQL, a repository or wiring, for the files it touched                            |
+| Integration, all (`pnpm test:int`)                                     | about 1 min, needs the DB  | At the merge gate, **only** if the package changed SQL, repositories or `src/server`; always at milestones |
+| End to end (`pnpm test:e2e`)                                           | minutes, a browser         | At milestones. In a package, only the one spec for a page you changed (`pnpm test:e2e tests/e2e/<spec>`)   |
+| Remote (`*.remote.test.ts`)                                            | calls MTGJSON, Scryfall, … | **Never** as a routine check. Only the one file, by hand, when your package changes that gateway           |
+
+No unit or integration test can reach the network: `tests/setup/no-network.ts` makes `fetch`
+reject. If a test fails with "Tests stay offline", give the code a fake `fetchFn` or a recorded
+fixture; don't remove the guard.
 
 ## File size: the 500-line benchmark
 
@@ -147,6 +167,11 @@ Before stopping, even partway through:
    is a goal: a package that grows the total needs a sentence saying why.
 4. Fill in the **Handoff** section at the bottom of your package file: what's done, what's left,
    and anything surprising. Keep it short; it's what the next session reads first.
+5. Add a **"Superseded in part"** line to every design doc whose code you replaced (playbook,
+   Part A step 15). Commit it with the package.
+6. If something couldn't be verified in the session (it needs the network, a browser or a
+   person's eye), add it to [deferred-checks.md](deferred-checks.md) instead of leaving it in a
+   comment.
 
 New ideas that aren't part of a package go to the **Backlog** in STATUS (and to tududi's inbox
 when it's connected), not into the current work.

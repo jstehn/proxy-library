@@ -3,6 +3,7 @@
 - **Branch:** `refactor/P19-builder-ui` · **Depends on:** P09 · **Parallel with:** waves 3–4,
   except P16 (both touch `stats-panel.tsx`)
 - **Audit:** doc 65 F8
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S9](../dedup-playbook.md#s9) · **Lines to remove:** about −300 to −800 (low confidence)
 
 ## Goal
 

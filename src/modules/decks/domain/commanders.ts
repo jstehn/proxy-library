@@ -6,17 +6,11 @@ import {
   scoreForDeck,
   strength,
   type CandidateCard,
-  type DeckProfile,
+  type DeckFingerprint,
   type Scored,
 } from "./suggest";
-import {
-  isLand,
-  MANA_COLORS,
-  roleTargets,
-  TARGETED_TAGS,
-  type ManaColor,
-  type TargetedTag,
-} from "./stats";
+import { isLand, roleTargets, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.
@@ -108,7 +102,7 @@ export type MissingCost = Readonly<{ picks: readonly MissingPick[]; totalCents: 
 export const SPELL_SLOTS = 62;
 
 /** The score's parts (section 3.1), in one place to tune. */
-export const COMMANDER_WEIGHTS = {
+const COMMANDER_WEIGHTS = {
   onPlan: 2,
   onPlanCap: 30,
   role: 1,
@@ -121,7 +115,7 @@ const COLOR_BITS: Readonly<Record<ManaColor, number>> = { W: 1, U: 2, B: 4, R: 8
 export function colorMask(colors: readonly string[]): number {
   let mask = 0;
   for (const color of colors) {
-    if ((MANA_COLORS as readonly string[]).includes(color)) mask |= COLOR_BITS[color as ManaColor];
+    if ((COLORS as readonly string[]).includes(color)) mask |= COLOR_BITS[color as ManaColor];
   }
   return mask;
 }
@@ -132,7 +126,7 @@ export function withinIdentity(cardMask: number, commanderMask: number): boolean
 }
 
 /** The deck profile of a deck that holds only this commander: its plan, and every role short. */
-function commanderProfile(candidate: CommanderCandidate): DeckProfile {
+function commanderProfile(candidate: CommanderCandidate): DeckFingerprint {
   return deckProfile(
     [
       {
@@ -149,7 +143,7 @@ function commanderProfile(candidate: CommanderCandidate): DeckProfile {
 }
 
 /** The profile without role gaps: "on-plan" is about themes, tribes and keywords only. */
-const planOnly = (profile: DeckProfile): DeckProfile => ({ ...profile, gaps: [] });
+const planOnly = (profile: DeckFingerprint): DeckFingerprint => ({ ...profile, gaps: [] });
 
 const TARGETS = roleTargets("commander") ?? { ramp: 10, draw: 10, removal: 8, wipe: 3 };
 
@@ -191,7 +185,7 @@ function onColor(candidate: CommanderCandidate, pool: readonly PreparedCard[]): 
  * Whether a card shares a theme, tribe or keyword with the plan: `deckFit(card, plan).points > 0`
  * (every weight is positive), without building the reasons. A test checks the two agree.
  */
-export function sharesPlan(entry: PreparedCard, plan: DeckProfile): boolean {
+export function sharesPlan(entry: PreparedCard, plan: DeckFingerprint): boolean {
   const { card } = entry;
   return (
     plan.themes.some((theme) => card.themes.includes(theme)) ||
@@ -207,7 +201,7 @@ export const preparedForTest = (card: PoolCard): PreparedCard => prepare([card])
  * Bounded popularity bonus (0 to 25 points) from Scryfall's EDHREC rank (design doc 39, 3.1).
  * Rank <= 10 gives 25; rank 1,000 gives ~10.7; rank >= 31,623 or null gives 0.
  */
-export function popularityBonus(edhrecRank: number | null | undefined): number {
+function popularityBonus(edhrecRank: number | null | undefined): number {
   if (edhrecRank === null || edhrecRank === undefined || edhrecRank <= 0) return 0;
   const clamped = Math.max(10, edhrecRank);
   const raw = 25 * (1 - (Math.log10(clamped) - 1) / 3.5);
@@ -218,7 +212,7 @@ export function popularityBonus(edhrecRank: number | null | undefined): number {
  * Heuristic power score for a commander candidate (design doc 39, 3.1): combines Wizards' Game
  * Changer flag, card strength (rarity + low-mana efficiency + roles), plan richness, and popularity.
  */
-export function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
+function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
   const cardStrength = strength({
     rarity: candidate.rarity ?? "rare",
     priceCents: candidate.priceCents,

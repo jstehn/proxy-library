@@ -241,7 +241,7 @@ const TAGGER_ALIASES: Readonly<Record<string, TaggerEntry>> = {
 };
 
 /** The tag or theme a tagger value stands for, or null. `removal-…` values are all removal. */
-export function taggerAlias(value: string): { field: "tag" | "theme"; value: string } | null {
+function taggerAlias(value: string): { field: "tag" | "theme"; value: string } | null {
   const text = value.toLowerCase();
   if (text.startsWith("removal-")) return { field: "tag", value: "removal" };
   return TAGGER_ALIASES[text] ?? null;

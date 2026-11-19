@@ -1,4 +1,5 @@
-import type { Finish, PrintingId } from "@/modules/catalog";
+import type { PrintingId } from "@/modules/catalog";
+import type { Finish } from "@/shared/kernel";
 
 // The collection's vocabulary (design doc 06, section 3; ADR 0011: printing × finish).
 

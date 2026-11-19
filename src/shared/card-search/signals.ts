@@ -17,7 +17,7 @@ export type SignalCard = Readonly<{
   themes: readonly Theme[];
 }>;
 
-export const SIGNAL_KINDS = [
+const SIGNAL_KINDS = [
   "counter",
   "token",
   "creatureType",

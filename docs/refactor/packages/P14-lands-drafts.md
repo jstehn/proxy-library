@@ -2,6 +2,7 @@
 
 - **Branch:** `refactor/P14-lands-drafts` · **Depends on:** P11 · **Parallel with:** P10, P12, P13
 - **Audit:** doc 65 D4, F4
+- **Recipe:** [dedup playbook](../dedup-playbook.md), Part A, then [S3](../dedup-playbook.md#s3) (lands, draft abilities) · **Lines to remove:** about −200 to −400
 
 ## Goal
 

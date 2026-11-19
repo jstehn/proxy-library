@@ -3,7 +3,7 @@ import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { scoreDeck, type DeckScore, type OptimizerCard } from "./optimize";
 
-export const DEFAULT_UPGRADE_TIERS_CENTS: readonly number[] = [2500, 7500, 20000];
+const DEFAULT_UPGRADE_TIERS_CENTS: readonly number[] = [2500, 7500, 20000];
 
 export type UpgradeCut = Readonly<{
   oracleId: string;

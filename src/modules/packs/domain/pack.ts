@@ -1,5 +1,5 @@
-import type { BoosterSheet, Color, Finish, PrintingId, Rarity, SetCode } from "@/modules/catalog";
-import { Cents } from "@/shared/kernel";
+import type { BoosterSheet, Color, PrintingId, SetCode } from "@/modules/catalog";
+import { Cents, type Finish, type Rarity } from "@/shared/kernel";
 
 // The pack engine's vocabulary (design doc 05, section 3).
 

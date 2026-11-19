@@ -1,0 +1,21 @@
+{
+  "tool": "list_decks",
+  "input": {},
+  "output": {
+    "ok": true,
+    "value": {
+      "decks": [
+        {
+          "id": "<deckId>",
+          "name": "Reference deck",
+          "format": "commander",
+          "cards": 12,
+          "short": 1,
+          "usesRealCards": true,
+          "visibility": "private",
+          "updatedAt": "<timestamp>"
+        }
+      ]
+    }
+  }
+}

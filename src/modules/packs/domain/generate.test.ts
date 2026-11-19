@@ -12,7 +12,8 @@ import {
 } from "../testing/recipes";
 import { factsLookup } from "./pack";
 import { packProblems } from "./checks";
-import { ALL_COLORS, generatePack, openPack } from "./generate";
+import { COLORS } from "@/shared/kernel";
+import { generatePack, openPack } from "./generate";
 
 // The sample booster (testing/recipes.ts): 14 cards; a land in 3 of 4 packs, a foil in the
 // other; a rare slot where mythics are 25%; six color-balanced commons; a fixed 3-card starter.
@@ -212,7 +213,7 @@ describe("color balance (rule 5)", () => {
   it("always shows all five colors among the commons when it can", () => {
     fc.assert(
       fc.property(fc.string(), (seed) => {
-        expect(colorsIn(idsFrom("common", seed)).size).toBe(ALL_COLORS.length);
+        expect(colorsIn(idsFrom("common", seed)).size).toBe(COLORS.length);
       }),
     );
   });
@@ -225,7 +226,7 @@ describe("color balance (rule 5)", () => {
     );
     const seeds = Array.from({ length: 200 }, (_, index) => `seed-${index}`);
     const missingAColor = seeds.filter(
-      (seed) => colorsIn(idsFrom("common", seed, unbalanced)).size < ALL_COLORS.length,
+      (seed) => colorsIn(idsFrom("common", seed, unbalanced)).size < COLORS.length,
     );
     expect(missingAColor.length).toBeGreaterThan(100); // about 76% of packs
   });

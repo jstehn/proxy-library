@@ -1,87 +1,26 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { seededRng, type UserId } from "@/shared/kernel";
+import { Cents, COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import {
   bracketLine,
   bracketRuleReasons,
   bracketWarning,
   estimateBracket,
-  type Bracket,
-  type BracketRuleReason,
 } from "../domain/brackets";
-import { simulateCastOnCurve, type CardCastability } from "../domain/castability";
-import { resolveDeckProfileTargets, type DeckProfile } from "../domain/deck-profile";
+import { simulateCastOnCurve } from "../domain/castability";
+import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
-import type { Format } from "../domain/deck";
 import { library } from "../domain/draws";
-import { simulateOpeningHands, type GoldfishReport } from "../domain/goldfish";
-import { scoreDeck, type DeckScore } from "../domain/optimize";
+import { simulateOpeningHands } from "../domain/goldfish";
+import { scoreDeck } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
-import {
-  deckStats,
-  MANA_COLORS,
-  roleTargets,
-  suggestedLands,
-  TARGETED_TAGS,
-  type TargetedTag,
-} from "../domain/stats";
+import { deckStats, roleTargets, suggestedLands, TARGETED_TAGS } from "../domain/stats";
+import type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "../domain/audit-report";
 import { combosForDeck } from "./combos";
-import { deckView, type DeckView } from "./decks";
+import type { DeckView } from "../domain/deck-view";
+import { deckView } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
-
-export type AuditFinding = Readonly<{
-  severity: "error" | "warning" | "info";
-  area: "legality" | "bracket" | "mana" | "roles" | "goldfish" | "ownership";
-  message: string;
-}>;
-
-export type AuditRoleStatus = Readonly<{
-  tag: TargetedTag;
-  count: number;
-  target: number;
-  deficit: number;
-}>;
-
-export type DeckAuditReport = Readonly<{
-  deck: {
-    id: number;
-    name: string;
-    format: Format;
-    targetBracket: Bracket | null;
-    cardCount: number;
-    sideboardCount: number;
-  };
-  score: DeckScore;
-  legality: {
-    problemCount: number;
-    problems: readonly string[];
-  };
-  bracket: {
-    target: Bracket | null;
-    floor: Bracket;
-    overTarget: boolean;
-    gameChangers: number;
-    twoCardCombos: number;
-    reasons: readonly BracketRuleReason[];
-  } | null;
-  roles: readonly AuditRoleStatus[];
-  mana: {
-    lands: number;
-    suggestedLands: number;
-    averageManaValue: number;
-    underservedColors: readonly string[];
-    averageCastOnCurvePct: number;
-    strugglingSpells: readonly CardCastability[];
-  };
-  ownership: {
-    ownedCards: number;
-    missingCards: number;
-    estimatedMissingCents: number;
-  };
-  goldfish: GoldfishReport;
-  findings: readonly AuditFinding[];
-}>;
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,
@@ -111,7 +50,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
       .where(eq(decks.id, view.deck.id))
       .limit(1),
   ]);
-  const deckProfile: DeckProfile | null = profileRows[0]?.profileJson ?? null;
+  const deckProfile: DeckPlan | null = profileRows[0]?.profileJson ?? null;
 
   const ownedByOracle = new Map<string, number>();
   for (const line of view.lines) ownedByOracle.set(line.oracleId, line.owned);
@@ -142,15 +81,12 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
         });
 
   const underservedColors: string[] = [];
-  const totalPips = MANA_COLORS.reduce((s, c) => s + stats.pips[c], 0);
+  const totalPips = COLORS.reduce((s, c) => s + stats.pips[c], 0);
   // Sum sources only for colors the deck actually casts so "any color" dorks/altars don't dilute
   // a mono-color deck's source share via unused colors.
-  const totalSources = MANA_COLORS.reduce(
-    (s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s),
-    0,
-  );
+  const totalSources = COLORS.reduce((s, c) => (stats.pips[c] > 0 ? s + stats.sources[c] : s), 0);
   if (totalPips > 0 && totalSources > 0) {
-    for (const color of MANA_COLORS) {
+    for (const color of COLORS) {
       if (stats.pips[color] === 0) continue;
       const pipShare = stats.pips[color] / totalPips;
       const sourceShare = stats.sources[color] / totalSources;
@@ -253,7 +189,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     findings.push({
       severity: "info",
       area: "ownership",
-      message: `Missing ${missingCards} played card(s) (est. $${(estimatedMissingCents / 100).toFixed(2)}).`,
+      message: `Missing ${missingCards} played card(s) (est. ${Cents.format(Cents.of(estimatedMissingCents))}).`,
     });
   }
 

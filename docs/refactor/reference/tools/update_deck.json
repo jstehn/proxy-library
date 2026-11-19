@@ -1,0 +1,16 @@
+{
+  "tool": "update_deck",
+  "input": {
+    "deckId": "<deckId>",
+    "plan": "Go wide with tokens.",
+    "targetBracket": 2
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "deckId": "<deckId>",
+      "metadataUpdated": true,
+      "profileUpdated": true
+    }
+  }
+}
