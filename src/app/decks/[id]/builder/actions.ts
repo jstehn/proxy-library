@@ -30,12 +30,7 @@ import {
   fingerprint,
   GROUPINGS,
   listDeckSnapshots,
-  MAX_HEADING_LENGTH,
-  MAX_HEADINGS,
-  MAX_NOTE_LENGTH,
   MAX_ROLE_LENGTH,
-  MAX_SNAPSHOT_LABEL_LENGTH,
-  MAX_SNAPSHOTS_PER_DECK,
   compareDeckSnapshot,
   SnapshotId,
   type SnapshotComparison,
@@ -53,6 +48,7 @@ import {
   updateDeckPrimer,
   updateDeckProfile,
   type DeckPlan,
+  describeDeckError,
 } from "@/modules/decks";
 import { getContainer } from "@/server/container";
 import { requireActor } from "@/server/session";
@@ -157,12 +153,7 @@ export async function setQuantityAction(
     printingId: printingId ? PrintingId.of(printingId) : undefined,
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      CardNotFound: "That card isn't in the catalog.",
-      QuantityInvalid: "That's not a quantity the deck allows (0 to 99).",
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't change the deck." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const deck = await loadBuilderDeck(deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
@@ -188,12 +179,7 @@ export async function moveLineAction(input: z.input<typeof MoveInput>): Promise<
     deckId: DeckId.of(parsed.data.deckId),
   });
   if (!result.ok) {
-    const messages: Record<typeof result.error.kind, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      EntryNotFound: "That card isn't on that board any more.",
-      CommanderMove: "Commanders stay where they are.",
-    };
-    return { ok: false, message: messages[result.error.kind] };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const deck = await loadBuilderDeck(parsed.data.deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
@@ -341,13 +327,7 @@ export async function choosePrintingAction(
         : { printingId: PrintingId.of(pinned.printingId), finish: pinned.finish },
   });
   if (!result.ok) {
-    const messages: Record<(typeof result.error)["kind"], string> = {
-      DeckNotFound: "That deck isn't yours.",
-      EntryNotFound: "That card isn't in the deck any more.",
-      PrintingNotOfCard: "That printing isn't of this card.",
-      FinishNotAvailable: "That printing doesn't come in that finish.",
-    };
-    return { ok: false, message: messages[result.error.kind] };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const deck = await loadBuilderDeck(deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
@@ -420,12 +400,7 @@ export async function addLandsAction(
     cards: lands,
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      CardNotFound: "One of those lands isn't in the catalog.",
-      QuantityInvalid: "That would put more than 99 copies of a land in the deck.",
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't add the lands." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const deck = await loadBuilderDeck(deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
@@ -478,12 +453,7 @@ export async function setTargetBracketAction(
     targetBracket: parsed.data.target,
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      TargetBracketInvalid: "A target bracket is 1 to 5.",
-      TargetBracketNotCommander: "Only Commander decks have a target bracket.",
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the bracket." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   // The shared view shows the target too.
   revalidatePath(`/decks/${parsed.data.deckId}`);
@@ -510,19 +480,6 @@ const HeadingInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("grouping"), deckId: DeckIdInput, grouping: z.enum(GROUPINGS) }),
 ]);
 
-/** What a heading refusal says, by its kind. */
-const HEADING_MESSAGES: Readonly<Record<string, string>> = {
-  DeckNotFound: "That deck isn't yours.",
-  EntryNotFound: "That card isn't on that board any more.",
-  HeadingInvalid: `A heading starts with a letter, has at most ${MAX_HEADING_LENGTH} characters, and isn't a board or card type ("Sideboard", "Creatures").`,
-  HeadingNotFound: "That heading isn't in the deck any more.",
-  HeadingOrderInvalid: "The headings changed meanwhile: try again.",
-  TooManyHeadings: `A deck can have at most ${MAX_HEADINGS} headings.`,
-  NameInvalid: "That change wasn't understood.",
-  TargetBracketInvalid: "That change wasn't understood.",
-  TargetBracketNotCommander: "That change wasn't understood.",
-};
-
 /** Sets a card's heading, renames or orders headings, or switches the grouping (design doc 34). */
 export async function headingAction(input: z.input<typeof HeadingInput>): Promise<QuantityResult> {
   const actor = await requireActor();
@@ -540,7 +497,7 @@ export async function headingAction(input: z.input<typeof HeadingInput>): Promis
           ? await decks.orderHeadings(actor, { deckId, order: change.order })
           : await decks.updateDeck(actor, { deckId, grouping: change.grouping });
   if (!result.ok) {
-    return { ok: false, message: HEADING_MESSAGES[result.error.kind] ?? "That didn't work." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const deck = await loadBuilderDeck(change.deckId);
   if (deck === null) return { ok: false, message: "That deck isn't yours." };
@@ -566,12 +523,7 @@ export async function noteAction(input: z.input<typeof NoteInput>): Promise<Quan
     note: parsed.data.note,
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      EntryNotFound: "That card isn't on that board any more.",
-      NoteInvalid: `A note can have at most ${MAX_NOTE_LENGTH} characters.`,
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the note." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   revalidatePath(`/decks/${parsed.data.deckId}`);
   const deck = await loadBuilderDeck(parsed.data.deckId);
@@ -613,12 +565,7 @@ export async function saveSnapshotAction(
     label: parsed.data.label,
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      SnapshotLabelInvalid: `Give the snapshot a label (up to ${MAX_SNAPSHOT_LABEL_LENGTH} characters).`,
-      TooManySnapshots: `A deck can have at most ${MAX_SNAPSHOTS_PER_DECK} snapshots. Delete an older one first.`,
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save the snapshot." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const snapshots = await listDeckSnapshots(db, actor.userId, parsed.data.deckId);
   return {
@@ -675,15 +622,7 @@ export async function restoreSnapshotAction(
     snapshotId: SnapshotId.of(parsed.data.snapshotId),
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      SnapshotNotFound: "That snapshot isn't in this deck anymore.",
-      DeckChanged: "The deck changed meanwhile; try restoring again.",
-    };
-    return {
-      ok: false,
-      message: messages[result.error.kind] ?? "Couldn't restore that snapshot.",
-    };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   revalidatePath(`/decks/${parsed.data.deckId}`);
   const deck = await loadBuilderDeck(parsed.data.deckId);
@@ -708,14 +647,7 @@ export async function deleteSnapshotAction(
     snapshotId: SnapshotId.of(parsed.data.snapshotId),
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      SnapshotNotFound: "That snapshot was already removed.",
-    };
-    return {
-      ok: false,
-      message: messages[result.error.kind] ?? "Couldn't delete that snapshot.",
-    };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   const snapshots = await listDeckSnapshots(db, actor.userId, parsed.data.deckId);
   if (snapshots === null) return { ok: false, message: "That deck isn't yours." };
@@ -765,11 +697,7 @@ export async function entryDetailsAction(
     ...(parsed.data.pinned !== undefined ? { pinned: parsed.data.pinned } : {}),
   });
   if (!result.ok) {
-    const messages: Record<string, string> = {
-      DeckNotFound: "That deck isn't yours.",
-      EntryNotFound: "That card isn't on that board any more.",
-    };
-    return { ok: false, message: messages[result.error.kind] ?? "Couldn't save that." };
+    return { ok: false, message: describeDeckError(result.error) };
   }
   revalidatePath(`/decks/${parsed.data.deckId}`);
   const deck = await loadBuilderDeck(parsed.data.deckId);

@@ -65,6 +65,7 @@ export {
   type Format,
   type Grouping,
 } from "./domain/deck";
+export { describeDeckError, type DeckError } from "./application/describe-error";
 export { MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
 export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
 export { MAX_ROLE_LENGTH } from "./domain/deck";
