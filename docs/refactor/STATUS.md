@@ -40,10 +40,10 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P17   | [One way to show a collection](packages/P17-collections.md)                              | P09c                          | none               | done                                                 |
 | P19   | [Break up the deck builder UI](packages/P19-builder-ui.md)                               | P09b                          | none               | done                                                 |
 |       | **Wave 3a: clear the ground** (plan review) · before any card-features code              |                               |                    |                                                      |
-| P23   | [Guards and test fixes](packages/P23-guards-and-test-fixes.md)                           | none                          | none               | in progress (agent)                                  |
-| P24   | [Delete dead code and the interactive goldfish](packages/P24-dead-code.md)               | P23                           | P26                | free                                                 |
+| P23   | [Guards and test fixes](packages/P23-guards-and-test-fixes.md)                           | none                          | none               | done                                                 |
+| P24   | [Delete dead code and the interactive goldfish](packages/P24-dead-code.md)               | P23                           | P26                | in progress (agent)                                  |
 | P25   | [The read layer, secure by construction](packages/P25-read-layer.md)                     | P23, P24                      | P26                | free (design doc 67 needs the owner's approval)      |
-| P26   | [Shared card and row types](packages/P26-shared-types.md)                                | P23                           | P24, P25           | free                                                 |
+| P26   | [Shared card and row types](packages/P26-shared-types.md)                                | P23                           | P24, P25           | in progress (agent)                                  |
 |       | **Wave 3b: card features, by ability**                                                   |                               |                    |                                                      |
 | P11   | [Card features: model and store](packages/P11-card-features.md)                          | P25, P26, decision 3          | none               | free (doc 66 accepted; re-scoped, see package)       |
 | P12   | [Mana and casting, by ability](packages/P12-mana-casting.md)                             | P11                           | P13, P14           | free                                                 |
@@ -97,14 +97,15 @@ flowchart LR
 P00's `pnpm sizes` prints these. Add a row when each wave merges. Targets are from doc 65, "The end
 state".
 
-| After         | Source lines                                                                                                            | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
-| Baseline      | 93,361                                                                                                                  | 32,194     | 28          | 43             | 83         | 191                              |
-| P00 script    | 93,490 \*                                                                                                               | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
-| After P04     | 91,358                                                                                                                  | 34,255     | 27          | 43             | 57         | 191                              |
-| After wave 2  | 92,251                                                                                                                  | 35,885     | 23          | 48             | 36         | 191                              |
-| After wave 2½ | 92,379 (79,270 code)                                                                                                    | 36,098     | 21          | 49             | 36         | 4 (2 files, allowed)             |
-| **Target**    | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
+| After                 | Source lines                                                                                                            | Test lines | Files > 500 | Biggest folder | Clone runs     | `getContainer()` in app          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | -------------- | -------------- | -------------------------------- |
+| Baseline              | 93,361                                                                                                                  | 32,194     | 28          | 43             | 83             | 191                              |
+| P00 script            | 93,490 \*                                                                                                               | 33,860     | 28          | 43             | 63 \*\*        | 191                              |
+| After P04             | 91,358                                                                                                                  | 34,255     | 27          | 43             | 57             | 191                              |
+| After wave 2          | 92,251                                                                                                                  | 35,885     | 23          | 48             | 36             | 191                              |
+| After wave 2½         | 92,379 (79,270 code)                                                                                                    | 36,098     | 21          | 49             | 36             | 4 (2 files, allowed)             |
+| After P23 (new count) | 77,318 production code lines; test support 2,345; tests 32,905                                                          | —          | 19          | —              | 25 (near: 229) | 4 (2 files, allowed)             |
+| **Target**            | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**       | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
 
