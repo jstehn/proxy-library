@@ -1,4 +1,6 @@
-# P07b. Candidate pool and suggestion service
+# P07b. Candidate pool (SQL)
+
+> **Done (2026-11-19).** The suggestion service half moved to [P07b2](P07b2-suggestion-service.md).
 
 - **Branch:** `refactor/P07b-candidate-pool` · **Depends on:** P05, P07a · **Parallel with:** P08
 - **Audit:** doc 65 F6, D2
@@ -146,7 +148,7 @@ All five proposals accepted, with these changes:
 - Clone runs 48 to 37. Source lines 91,511 to 91,458. `pnpm check` and the 278 integration
   tests pass.
 
-**Not done (step 2): the suggestion service.** `queries/suggestions.ts` is 978 lines (target
+**Moved to P07b2: the suggestion service.** `queries/suggestions.ts` is 978 lines (target
 under 500). It still mixes SQL readers (`ownedCandidates`, `storeCandidates`, `candidateColumns`,
 `fitsDeck`, ~350 lines) with orchestration and scoring (`deckSuggestions`, `similarCards`,
 `budgetList`, `budgetReplacements`, ~450 lines). Plan: the readers stay in `queries/` behind a
