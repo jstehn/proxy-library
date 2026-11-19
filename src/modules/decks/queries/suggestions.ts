@@ -1,7 +1,7 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, newestDayPrice, textArray } from "@/shared/db";
-import { latestPrice, latestPriceRows } from "@/shared/db";
+import { latestPrice } from "@/shared/db";
 import { cardTags, TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget, type Bracket, type BracketLine } from "../domain/brackets";
@@ -31,7 +31,8 @@ import type { BrowseCard } from "./browse";
 import { comboPartnersForDeck } from "./combos";
 import { deckView } from "./decks";
 import { embedSimForCards } from "./embeddings";
-import { ownedCopies, STANDARD_FIRST } from "./owned";
+import { STANDARD_FIRST } from "./owned";
+import { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./candidate-pool";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each
@@ -304,14 +305,7 @@ async function ownedCandidates(
   comboPartnerIds: readonly string[] = [],
 ): Promise<SuggestionCard[]> {
   const rows = await db.execute<CandidateRow>(sql`
-    with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
-             (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
-        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
-    ),
+    with owned as ${ownedPerCard(userId, context.usesRealCards)},
     edhrec as (
       ${edhrecCte(context.commanderOracleIds)}
     )
@@ -367,9 +361,7 @@ async function storeCandidates(
         left join edhrec on edhrec.card_oracle_id = p.oracle_id
        where ${fitsDeck(context)}
          and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15 or ${isComboPartnerSql(comboPartnerIds)})
-         and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-                           join printings op on op.id = c.printing_id
-                          where op.oracle_id = p.oracle_id)
+         and ${notOwned(userId, context.usesRealCards)}
        order by p.oracle_id, rarity_rank desc
     ),
     kept as (
@@ -381,14 +373,7 @@ async function storeCandidates(
     cheapest as (
       select kept.oracle_id, best.printing_id, best.finish, best.usd_cents
         from kept
-        join lateral (
-          select p.id as printing_id, latest.finish, latest.usd_cents
-            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral ${latestPriceRows("p.id")} latest on true
-           where p.oracle_id = kept.oracle_id
-           order by latest.usd_cents, p.id
-           limit 1
-        ) best on true
+        join lateral ${cheapestForSale(sql`kept.oracle_id`)} best on true
     )
     select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
            0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
@@ -586,16 +571,7 @@ export async function ownedCandidatesForIds(
       ? sql`and ps.usd_cents is not null and ps.usd_cents <= ${maxPriceCents}`
       : sql``;
   const rows = await db.execute<CandidateRow>(sql`
-    with owned as (
-      select p.oracle_id, sum(c.quantity)::int as owned,
-             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-             (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1] as printing_id,
-             (array_agg(c.finish order by c.quantity desc, c.printing_id))[1] as finish
-        from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-        join printings p on p.id = c.printing_id
-       where p.oracle_id = any(${textArray(oracleIds)})
-       group by p.oracle_id
-    )
+    with owned as ${ownedPerCard(userId, context.usesRealCards, oracleIds)}
     select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
            ps.usd_cents as price_cents,
            (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
@@ -657,17 +633,7 @@ export async function similarCards(
     const [ownedCards, storeRows] = await Promise.all([
       ownedCandidatesForIds(db, userId, withoutTarget, neighborIds),
       db.execute<CandidateRow>(sql`
-        with cheapest as (
-          select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
-            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral ${latestPriceRows("p.id")} latest on true
-           where p.oracle_id = any(${textArray(neighborIds)})
-             and ${fitsDeck(withoutTarget)}
-             and not exists (select 1 from ${ownedCopies(userId, sql`${withoutTarget.usesRealCards}`)} c
-                               join printings op on op.id = c.printing_id
-                              where op.oracle_id = p.oracle_id)
-           order by p.oracle_id, latest.usd_cents, p.id
-        )
+        with cheapest as ${cheapestOfCards(userId, withoutTarget.usesRealCards, neighborIds, fitsDeck(withoutTarget))}
         select ${candidateColumns(withoutTarget)}, cheapest.finish, cheapest.usd_cents as price_cents,
                0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
                null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
@@ -910,18 +876,7 @@ export async function budgetReplacements(
     const [rawOwnedCards, storeRows] = await Promise.all([
       ownedCandidatesForIds(db, userId, context, neighborIds, effectiveMaxPrice),
       db.execute<CandidateRow>(sql`
-        with cheapest as (
-          select distinct on (p.oracle_id) p.id as printing_id, latest.finish, latest.usd_cents
-            from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-            join lateral ${latestPriceRows("p.id")} latest on true
-           where p.oracle_id = any(${textArray(neighborIds)})
-             and ${fitsDeck(context)}
-             and latest.usd_cents <= ${effectiveMaxPrice}
-             and not exists (select 1 from ${ownedCopies(userId, sql`${context.usesRealCards}`)} c
-                               join printings op on op.id = c.printing_id
-                              where op.oracle_id = p.oracle_id)
-           order by p.oracle_id, latest.usd_cents, p.id
-        )
+        with cheapest as ${cheapestOfCards(userId, context.usesRealCards, neighborIds, fitsDeck(context), effectiveMaxPrice)}
         select ${candidateColumns(context)}, cheapest.finish, cheapest.usd_cents as price_cents,
                0 as owned, 0 as owned_real, 0 as other_decks, 0 as free,
                null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks

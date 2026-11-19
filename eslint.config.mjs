@@ -91,6 +91,14 @@ const PRICE_TABLE = [
       "Read prices through the fragments in @/shared/db (latestPrice, cheapestPrice, ...): only the catalog module and shared/db/prices.ts name the price_snapshots table.",
   },
 ];
+const CANDIDATE_SQL = [
+  {
+    selector:
+      "TemplateElement[value.raw=/order by latest\\.usd_cents|array_agg\\(c\\.printing_id/]",
+    message:
+      "Cards you own (one per card) and the cheapest printing for sale are written once, in decks/queries/candidate-pool.ts: use ownedPerCard, notOwned, cheapestForSale or cheapestOfCards.",
+  },
+];
 
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
@@ -315,6 +323,21 @@ export default defineConfig([
   {
     files: SOURCE,
     ignores: [...TESTS, "src/shared/runtime/**", "src/shared/kernel/testing/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+        ...CANDIDATE_SQL,
+      ],
+    },
+  },
+  // The candidate pool's own SQL (refactor P07b) is the one place that may spell it out.
+  {
+    files: ["src/modules/decks/queries/candidate-pool.ts"],
+    ignores: TESTS,
     rules: {
       "no-restricted-syntax": [
         "error",
