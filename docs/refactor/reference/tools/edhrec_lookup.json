@@ -1,0 +1,39 @@
+{
+  "tool": "edhrec_lookup",
+  "notCalled": "calls EDHREC",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "commander": {
+        "description": "Commander name (when not passing deckId).",
+        "type": "string",
+        "minLength": 1
+      },
+      "deckId": {
+        "description": "Deck id to compare against EDHREC.",
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "bracket": {
+        "description": "Optional EDHREC bracket filter (1-5).",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 5
+      },
+      "theme": {
+        "description": "Optional EDHREC theme slug.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      },
+      "limit": {
+        "default": 15,
+        "description": "Max cards to return (default 15).",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 40
+      }
+    }
+  }
+}

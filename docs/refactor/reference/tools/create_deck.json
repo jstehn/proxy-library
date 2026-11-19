@@ -1,0 +1,14 @@
+{
+  "tool": "create_deck",
+  "input": {
+    "name": "Another deck",
+    "format": "casual"
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "deckId": "<deckId>",
+      "added": 0
+    }
+  }
+}

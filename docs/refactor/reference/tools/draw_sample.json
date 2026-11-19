@@ -1,0 +1,143 @@
+{
+  "tool": "draw_sample",
+  "input": {
+    "deckId": "<deckId>",
+    "hands": 2
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "deckId": "<deckId>",
+      "samples": [
+        {
+          "hand": [
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Banishing Light",
+              "manaCost": "{2}{W}",
+              "typeLine": "Enchantment"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            }
+          ],
+          "nextDraws": [
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            }
+          ]
+        },
+        {
+          "hand": [
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Banishing Light",
+              "manaCost": "{2}{W}",
+              "typeLine": "Enchantment"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            }
+          ],
+          "nextDraws": [
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            },
+            {
+              "name": "Plains",
+              "manaCost": "",
+              "typeLine": "Basic Land — Plains"
+            }
+          ]
+        }
+      ],
+      "odds": {
+        "trials": 500,
+        "keepablePct": 0,
+        "turn3LandPct": 100,
+        "earlyRampPct": 0
+      }
+    }
+  }
+}

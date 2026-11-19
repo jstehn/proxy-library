@@ -1,0 +1,14 @@
+{
+  "tool": "rules_lookup",
+  "input": {
+    "query": "100.1"
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "crVersion": null,
+      "note": "Comprehensive Rules have not been synced yet (run `pnpm worker sync-rules`). An empty result does not mean no rule exists.",
+      "hits": []
+    }
+  }
+}

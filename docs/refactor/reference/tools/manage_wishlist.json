@@ -1,0 +1,14 @@
+{
+  "tool": "manage_wishlist",
+  "input": {
+    "action": "list"
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "balanceCents": 5000,
+      "totalForMissingCents": 0,
+      "wishes": []
+    }
+  }
+}

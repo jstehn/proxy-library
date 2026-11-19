@@ -12,7 +12,7 @@ its own worktree.
 | Id  | Package                                                                            | Depends on          | Parallel with               | Status               |
 | --- | ---------------------------------------------------------------------------------- | ------------------- | --------------------------- | -------------------- |
 |     | **Wave 0: set up**                                                                 |                     |                             |                      |
-| P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | free                 |
+| P00 | [Set up the refactor](packages/P00-setup.md)                                       | none                | none                        | done                 |
 | P01 | [Delete dead code](packages/P01-dead-code.md)                                      | P00                 | none                        | free                 |
 |     | **Wave 1: the basics** (audit R2)                                                  |                     |                             |                      |
 | P02 | [One set of basic types; money](packages/P02-basic-types.md)                       | P01                 | none                        | free                 |
@@ -59,6 +59,7 @@ state".
 | After      | Source lines | Test lines | Files > 500 | Biggest folder | Clone runs | `getContainer()` in app          |
 | ---------- | ------------ | ---------- | ----------- | -------------- | ---------- | -------------------------------- |
 | Baseline   | 93,361       | 32,194     | 28          | 43             | 83         | 191                              |
+| P00 script | 93,490 \*    | 33,860     | 28          | 43             | 63 \*\*    | 191                              |
 | **Target** | **≤ 80,000** | —          | **0**       | **≤ 12**       | **≤ 20**   | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
@@ -116,3 +117,5 @@ The refactor is tududi project **"Refactor: audit and consolidation (doc 65)"** 
 `saajqvk9drbreic`, ProxyLib account), with one task per package, each named `Pnn. …` and tagged
 `refactor`. When a package changes status here, change its task too: in progress when started,
 done when merged into `refactor/main`.
+
+\* includes the P00 scripts (about 130 lines). \*\* a different counting method from the audit's 83: compare later runs with 63.

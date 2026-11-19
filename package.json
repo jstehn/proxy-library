@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "lint:cycles": "tsx scripts/check-cycles.ts",
+    "sizes": "tsx scripts/sizes.ts",
+    "clones": "tsx scripts/clones.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "db:start": "scripts/db.sh start",
     "db:stop": "scripts/db.sh stop",

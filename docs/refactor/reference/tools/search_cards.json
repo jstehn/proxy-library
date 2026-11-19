@@ -1,0 +1,51 @@
+{
+  "tool": "search_cards",
+  "input": {
+    "deckId": "<deckId>",
+    "search": "t:enchantment",
+    "includePrice": true
+  },
+  "output": {
+    "ok": true,
+    "value": {
+      "deck": {
+        "id": "<deckId>",
+        "name": "Reference deck",
+        "format": "commander",
+        "commanderColors": ["W"],
+        "targetBracket": 2
+      },
+      "leftOutOverTarget": ["gameChanger", "landDenial"],
+      "goal": null,
+      "queries": [
+        {
+          "synergy": "search",
+          "search": "t:enchantment",
+          "found": 2,
+          "shown": 2,
+          "capped": false,
+          "notes": [],
+          "hint": null
+        }
+      ],
+      "cards": [
+        {
+          "name": "Builder's Talent",
+          "manaCost": "{1}{W}",
+          "typeLine": "Enchantment — Class",
+          "owned": 0,
+          "priceCents": 19,
+          "synergies": ["search"]
+        },
+        {
+          "name": "Caretaker's Talent",
+          "manaCost": "{2}{W}",
+          "typeLine": "Enchantment — Class",
+          "owned": 0,
+          "priceCents": 1109,
+          "synergies": ["search"]
+        }
+      ]
+    }
+  }
+}

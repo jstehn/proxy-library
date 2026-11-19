@@ -1,0 +1,112 @@
+// The clone ratchet (docs/refactor/README.md). `pnpm clones` finds runs of 6 normalized lines that
+// appear in more than one place and fails when there are more of them than the baseline in
+// docs/refactor/clone-baseline.txt. `--update` lowers the baseline to today's count (never raises).
+//
+// Normalizing: comments, imports, string and number literals, whitespace and lines holding only
+// brackets are dropped or flattened, so two copies that differ in names of strings or numbers still
+// match. Runs shorter than 200 characters are skipped (too small to be worth a function).
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const RUN_LENGTH = 6;
+const MINIMUM_CHARACTERS = 200;
+const ROOTS = ["src", "worker", "scripts"];
+const BASELINE_PATH = "docs/refactor/clone-baseline.txt";
+const IGNORED_FOLDERS = new Set(["node_modules", ".next", "testing", "fixtures"]);
+
+type NormalizedLine = { text: string; lineNumber: number };
+
+/** The lines of a file that count for clone detection, flattened. */
+export function normalize(source: string): NormalizedLine[] {
+  const withoutBlockComments = source.replace(/\/\*[\s\S]*?\*\//g, (match) =>
+    match.replace(/[^\n]/g, ""),
+  );
+  const result: NormalizedLine[] = [];
+  withoutBlockComments.split("\n").forEach((rawLine, index) => {
+    let line = rawLine.replace(/\/\/.*$/, "");
+    line = line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '"s"').replace(/\b\d[\d_.]*\b/g, "0");
+    line = line.replace(/\s+/g, "");
+    if (line === "" || /^[{}()[\];,]+$/.test(line)) return;
+    if (/^(import|export\*from|exporttype\{)/.test(line) && /from"s"/.test(line)) return;
+    if (/^import"s"/.test(line)) return;
+    result.push({ text: line, lineNumber: index + 1 });
+  });
+  return result;
+}
+
+/** Hash → every place a long enough run of lines starts. */
+export function findCloneRuns(files: ReadonlyMap<string, string>): Map<string, string[]> {
+  const runs = new Map<string, string[]>();
+  for (const [path, source] of files) {
+    const lines = normalize(source);
+    for (let start = 0; start + RUN_LENGTH <= lines.length; start++) {
+      const window = lines.slice(start, start + RUN_LENGTH);
+      const text = window.map((line) => line.text).join("\n");
+      if (text.length < MINIMUM_CHARACTERS) continue;
+      const places = runs.get(text) ?? [];
+      places.push(`${path}:${window[0]?.lineNumber ?? 0}`);
+      runs.set(text, places);
+    }
+  }
+  return runs;
+}
+
+/** How many distinct runs appear in more than one place. */
+export function countClones(files: ReadonlyMap<string, string>): {
+  count: number;
+  examples: string[][];
+} {
+  const examples: string[][] = [];
+  for (const places of findCloneRuns(files).values()) {
+    if (places.length > 1) examples.push(places);
+  }
+  return { count: examples.length, examples };
+}
+
+function readSourceFiles(projectRoot: string): Map<string, string> {
+  const files = new Map<string, string>();
+  function walk(folder: string): void {
+    for (const entry of readdirSync(join(projectRoot, folder), { withFileTypes: true })) {
+      const path = `${folder}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (!IGNORED_FOLDERS.has(entry.name)) walk(path);
+      } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+        files.set(path, readFileSync(join(projectRoot, path), "utf8"));
+      }
+    }
+  }
+  for (const root of ROOTS) if (existsSync(join(projectRoot, root))) walk(root);
+  return files;
+}
+
+function main(): void {
+  const projectRoot = process.cwd();
+  const { count, examples } = countClones(readSourceFiles(projectRoot));
+  const baselinePath = join(projectRoot, BASELINE_PATH);
+  const baseline = existsSync(baselinePath)
+    ? Number(readFileSync(baselinePath, "utf8").trim())
+    : Infinity;
+
+  if (process.argv.includes("--update")) {
+    if (count < baseline) {
+      writeFileSync(baselinePath, `${count}\n`);
+      console.log(`Clone baseline lowered from ${baseline} to ${count}.`);
+    } else {
+      console.log(`Clone baseline stays at ${baseline} (today: ${count}); it only goes down.`);
+      if (baseline === Infinity) writeFileSync(baselinePath, `${count}\n`);
+    }
+    return;
+  }
+
+  console.log(`Duplicated 6-line runs: ${count} (baseline ${baseline})`);
+  if (count > baseline) {
+    console.error(`More clones than the baseline allows. Some of the duplicated places:`);
+    for (const places of examples.slice(0, 10))
+      console.error(`  ${places.slice(0, 3).join("  =  ")}`);
+    process.exitCode = 1;
+  } else if (count < baseline) {
+    console.log("Fewer than the baseline: run `pnpm clones --update` to lower it.");
+  }
+}
+
+if (process.argv[1] !== undefined && /clones\.ts$/.test(process.argv[1])) main();

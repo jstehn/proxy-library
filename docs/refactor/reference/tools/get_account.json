@@ -1,0 +1,23 @@
+{
+  "tool": "get_account",
+  "input": {},
+  "output": {
+    "ok": true,
+    "value": {
+      "player": {
+        "username": "jack",
+        "displayName": "jack"
+      },
+      "scopes": ["read", "decks:write", "wishlist:write"],
+      "balance": 5000,
+      "allowance": null,
+      "collection": {
+        "differentCards": 1,
+        "copies": 1,
+        "value": 12
+      },
+      "decks": 1,
+      "wishes": 0
+    }
+  }
+}
