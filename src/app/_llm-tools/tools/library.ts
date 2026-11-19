@@ -1,14 +1,6 @@
 import { z } from "zod";
 import { lookupRules } from "@/modules/catalog";
-import {
-  checkOwnedCards,
-  deckView,
-  findCard,
-  isPlayed,
-  semanticSearchForDeck,
-  declaredComboFor,
-  withoutAvoidCards,
-} from "@/modules/decks";
+import { checkOwnedCards, deckView, findCard, isPlayed, declaredComboFor } from "@/modules/decks";
 import { deckProfileFor } from "../avoid-cards";
 import { findRuleInteractions, findSharedRules, matchRelatedRules } from "../related-rules";
 import { deckNotFound, defineTool, done, failed, moneyOrNull } from "../tool";
@@ -16,98 +8,6 @@ import { deckNotFound, defineTool, done, failed, moneyOrNull } from "../tool";
 // Your account, cards and the app's own recommendations (design doc 28, section 5.2).
 
 const deckId = z.number().int().positive().describe("The deck's id, from list_decks.");
-
-const includeText = z
-  .boolean()
-  .default(false)
-  .describe("Include each card's rules text (off by default to save space).");
-
-export const semanticSearchForDeckTool = defineTool({
-  name: "semantic_search_for_deck",
-  title: "Semantic concept search for a deck",
-  description: [
-    "Finds legal cards in a deck's color identity matching a natural-language effect description (via card embeddings), optionally fused with a keyword filter.",
-    "Use it when: searching for an effect or mechanic by concept rather than exact MTG wording (e.g. 'free sacrifice outlets that draw cards').",
-  ].join("\n"),
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId,
-    concept: z
-      .string()
-      .min(2)
-      .describe("Natural-language description of the effect or role you want."),
-    filter: z
-      .string()
-      .min(1)
-      .optional()
-      .describe("Optional substring filter on name, type line, or rules text (fused via RRF)."),
-    types: z
-      .array(z.string().min(1))
-      .max(10)
-      .optional()
-      .describe(
-        "Optional card types to include (OR-matched on type line before ranking, e.g. ['creature', 'artifact', 'enchantment', 'planeswalker', 'land']).",
-      ),
-    excludeTypes: z
-      .array(z.string().min(1))
-      .max(10)
-      .optional()
-      .describe("Optional card types to exclude before ranking (e.g. ['instant', 'sorcery'])."),
-    maxPriceCents: z
-      .number()
-      .int()
-      .min(1)
-      .optional()
-      .describe("Optional maximum card price in cents."),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(25)
-      .optional()
-      .describe("Maximum results per pool (default 10, max 25)."),
-    includeText,
-  }),
-  async run(context, input) {
-    const result = await semanticSearchForDeck(
-      context.container.db,
-      context.container.textEmbedder,
-      context.actor.userId,
-      input.deckId,
-      {
-        concept: input.concept,
-        filter: input.filter,
-        types: input.types,
-        excludeTypes: input.excludeTypes,
-        maxPriceCents: input.maxPriceCents,
-        limit: input.limit,
-      },
-    );
-    if (result === null) return deckNotFound(input.deckId);
-    const mapPick = (pick: (typeof result.owned)[number]) => ({
-      name: pick.card.name,
-      oracleId: pick.card.oracleId,
-      typeLine: pick.card.typeLine,
-      manaCost: pick.card.manaCost,
-      price: moneyOrNull(pick.card.priceCents),
-      similarityPct: pick.similarityPct,
-      rating: pick.rating,
-      ...(input.includeText ? { text: pick.card.text } : {}),
-    });
-    const profile = await deckProfileFor(context, input.deckId);
-    const owned = withoutAvoidCards(result.owned, (pick) => pick.card.name, profile);
-    const store = withoutAvoidCards(result.store, (pick) => pick.card.name, profile);
-    const avoided = [...new Set([...owned.avoided, ...store.avoided])];
-    return done({
-      concept: result.concept,
-      owned: owned.kept.map(mapPick),
-      store: store.kept.map(mapPick),
-      hiddenOverTarget: result.hiddenOverTarget,
-      ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
-    });
-  },
-});
 
 export const getRulingsTool = defineTool({
   name: "get_rulings",

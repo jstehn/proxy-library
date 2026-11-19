@@ -4,6 +4,7 @@ import { getCardsBinding } from "./get-cards";
 import { getDeckBinding } from "./get-deck";
 import { listDecksBinding } from "./list-decks";
 import { manageWishlistBinding } from "./manage-wishlist";
+import { searchCardsBinding } from "./search-cards";
 
 /** Every ported tool. The registry serves these first, then the old tools for the rest. */
 export const BINDINGS = [
@@ -13,4 +14,5 @@ export const BINDINGS = [
   getDeckBinding,
   listDecksBinding,
   manageWishlistBinding,
+  searchCardsBinding,
 ];

@@ -2,13 +2,15 @@ import { makeGetAccountOverview } from "@/modules/accounts";
 import { collectionPage } from "@/modules/collection";
 import {
   makeCardLookup,
+  makeSearchCatalog,
+  searchPrintings,
   priceHistory,
   printingCards,
   printingDetail,
   storePrintingsOfCard,
 } from "@/modules/catalog";
 import { ownedByOracle, ownedCopies as ownedOfPrinting } from "@/modules/collection";
-import { realOwnedByOracle } from "@/modules/real-collection";
+import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
 import {
   auditDeckView,
   checkOwnedCards,
@@ -23,6 +25,11 @@ import {
   budgetReplacements,
   listDeckSources,
   makeDeckFacts,
+  makeDeckSearch,
+  makeSearchSignals,
+  ownedSignalCards,
+  searchForDeck,
+  semanticSearchForDeck,
   makeFindReplacements,
   makeDeckManaPlan,
   makeDeckOverview,
@@ -52,11 +59,12 @@ type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
   wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet, wishlist } = dependencies;
+  const { db, clock, wallet, wishlist, textEmbedder } = dependencies;
 
   return {
     listDecks: makeListDecks({
@@ -121,6 +129,32 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       budget: (userId, deckId, options) => budgetReplacements(db, userId, deckId, options),
       profile: async (userId, deckId) =>
         (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+    }),
+    searchCatalog: makeSearchCatalog({
+      collection: (userId, page, search) =>
+        collectionPage(db, userId, { search, sections: "none", sort: "name", page }),
+      realCollection: (userId, page, search) =>
+        realCollectionPage(db, userId, { search, sections: "none", sort: "name", page }),
+      store: (userId, search, page, oneRowPerCard) =>
+        searchPrintings(db, { userId, search, sort: "name", page, oneRowPerCard }),
+      printings: (ids) => printingCards(db, ids),
+    }),
+    deckSearch: makeDeckSearch({
+      searchForDeck: (userId, request) =>
+        searchForDeck(db, userId, {
+          deckId: request.deckId,
+          queries: request.queries,
+          where: request.where,
+          perQuery: request.perQuery,
+          maxPriceCents: request.maxPriceCents,
+        }),
+      semantic: (userId, deckId, request) =>
+        semanticSearchForDeck(db, textEmbedder, userId, deckId, request),
+      profile: async (userId, deckId) =>
+        (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+    }),
+    searchSignals: makeSearchSignals({
+      ownedCards: (userId, search) => ownedSignalCards(db, userId, search),
     }),
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),

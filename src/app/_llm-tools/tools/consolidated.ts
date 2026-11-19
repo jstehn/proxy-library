@@ -11,7 +11,7 @@ import {
   type MustCastByOption,
 } from "@/modules/decks";
 import { seededRng } from "@/shared/kernel";
-import { deckNotFound, defineTool, done, failed, priceCents } from "../tool";
+import { deckNotFound, defineTool, done, failed } from "../tool";
 import {
   applyChangesTool,
   compareToEdhrecTool,
@@ -23,14 +23,8 @@ import {
   setPrimerTool,
   updateDeck,
 } from "./decks";
-import {
-  checkInteractionTool,
-  getRulingsTool,
-  lookupRulesTool,
-  semanticSearchForDeckTool,
-} from "./library";
-import { compactMoneyFields, stripProvenance } from "../present/money";
-import { analyzeCards, searchCards, searchForDeckTool } from "./search";
+import { checkInteractionTool, getRulingsTool, lookupRulesTool } from "./library";
+import { compactMoneyFields } from "../present/money";
 
 const deckIdField = z.number().int().positive().describe("Deck id from list_decks.");
 
@@ -255,163 +249,6 @@ export const editDeckConsolidated = defineTool({
       previewId: input.previewId,
       fingerprint: input.fingerprint,
     });
-  },
-});
-
-/** 5. search_cards (merges search_for_deck, search_cards, semantic_search_for_deck, analyze_cards[search]) */
-export const searchCardsConsolidated = defineTool({
-  name: "search_cards",
-  title: "Search cards (catalog, deck-filtered, semantic, or signals)",
-  description:
-    "Search cards in the collection or store. Pass `deckId` to auto-filter to deck colors/format/bracket and exclude cards already in the deck. Modes: 'syntax' (default, Scryfall-style `search` or `queries`), 'semantic' (natural-language `query`), or 'signals' (recurring mechanics in owned `search`).",
-  scope: "read",
-  readOnly: true,
-  input: z.object({
-    deckId: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe("Optional deck id for color/format/bracket filtering."),
-    mode: z.enum(["syntax", "semantic", "signals"]).default("syntax").describe("Search mode."),
-    search: z
-      .string()
-      .min(1)
-      .max(2000)
-      .optional()
-      .describe("Scryfall-style search string (for syntax/signals)."),
-    queries: z
-      .array(
-        z.object({
-          synergy: z.string().min(1).max(60).describe("Synergy label."),
-          search: z.string().min(1).max(2000).describe("Scryfall-style search."),
-        }),
-      )
-      .min(1)
-      .max(6)
-      .optional()
-      .describe("Up to 6 synergy queries when deckId + mode='syntax'."),
-    query: z
-      .string()
-      .min(1)
-      .max(400)
-      .optional()
-      .describe("Natural-language query (for mode='semantic')."),
-    where: z
-      .enum(["owned", "game", "real", "store", "both"])
-      .optional()
-      .describe("Pool: owned, game, real, store, or both."),
-    maxPerQuery: z
-      .number()
-      .int()
-      .min(1)
-      .max(20)
-      .default(10)
-      .describe("Max cards per query (default 10)."),
-    maxPriceCents: z.number().int().min(0).optional().describe("Max store price in cents."),
-    includeText: z
-      .boolean()
-      .default(false)
-      .describe("Include oracle rules text (default false to save tokens)."),
-    includePrice: z
-      .boolean()
-      .default(false)
-      .describe("Include store price in cents (default false unless requested)."),
-    oneRowPerCard: z
-      .boolean()
-      .default(true)
-      .describe("Store search: cheapest printing per card (true) or all printings (false)."),
-    page: z.number().int().min(1).default(1).describe("Page number for plain syntax search."),
-  }),
-  async run(context, input) {
-    if (input.mode === "signals") {
-      return analyzeCards.run(context, {
-        deckId: input.deckId,
-        search: input.search ?? "",
-        minimumCards: 3,
-      });
-    }
-
-    if (input.mode === "semantic") {
-      if (!input.deckId || !input.query) {
-        return failed("InvalidInput", "Semantic search requires `deckId` and `query`.");
-      }
-      const where = input.where === "owned" || input.where === "store" ? input.where : "both";
-      const res = await semanticSearchForDeckTool.run(context, {
-        deckId: input.deckId,
-        query: input.query,
-        where,
-        limit: input.maxPerQuery,
-        maxPriceCents: input.maxPriceCents,
-        includeText: input.includeText,
-      });
-      if (!res.ok) return res;
-      return done(compactMoneyFields(stripProvenance(res.value)));
-    }
-
-    if (input.deckId !== undefined) {
-      const queries =
-        input.queries ?? (input.search ? [{ synergy: "search", search: input.search }] : undefined);
-      if (!queries) {
-        return failed("InvalidInput", "Provide `search` or `queries` when searching for a deck.");
-      }
-      const where = input.where === "owned" || input.where === "store" ? input.where : "both";
-      const res = await searchForDeckTool.run(context, {
-        deckId: input.deckId,
-        queries,
-        where,
-        goal: "",
-        maxPerQuery: input.maxPerQuery,
-        maxPriceCents: input.maxPriceCents,
-        includeText: input.includeText,
-      });
-      if (!res.ok) return res;
-      const showPrice = input.includePrice || input.maxPriceCents !== undefined;
-      const raw = res.value as { cards?: Record<string, unknown>[]; [k: string]: unknown };
-      const compactCards = (raw.cards ?? []).map((c) => ({
-        name: c.name,
-        manaCost: c.manaCost,
-        typeLine: c.typeLine,
-        ...(input.includeText && c.text ? { text: c.text } : {}),
-        owned: c.owned,
-        ...(showPrice
-          ? { priceCents: priceCents((c.price as { cents?: number } | null)?.cents ?? null) }
-          : {}),
-        synergies: c.synergies,
-        ...(c.isGameChanger ? { isGameChanger: true } : {}),
-      }));
-      return done({ ...raw, cards: compactCards });
-    }
-
-    if (!input.search) {
-      return failed("InvalidInput", "Provide `search` (or `deckId` + `queries`).");
-    }
-    const where =
-      input.where === "owned" || input.where === "game" || input.where === "real"
-        ? input.where
-        : "store";
-    const res = await searchCards.run(context, {
-      search: input.search,
-      where,
-      page: input.page,
-      oneRowPerCard: input.oneRowPerCard,
-    });
-    if (!res.ok) return res;
-    const showPrice = input.includePrice || input.maxPriceCents !== undefined;
-    const raw = res.value as { cards?: Record<string, unknown>[]; [k: string]: unknown };
-    const compactCards = (raw.cards ?? []).slice(0, input.maxPerQuery * 2).map((c) => {
-      const cheapest = (c.cheapest as { cents?: number } | null)?.cents;
-      const price = (c.price as { cents?: number } | null)?.cents;
-      return {
-        name: c.name,
-        ...(c.set ? { set: c.set } : {}),
-        ...(c.source ? { source: c.source } : {}),
-        ...(c.quantity !== undefined ? { quantity: c.quantity } : {}),
-        ...(input.includeText && c.text ? { text: c.text } : {}),
-        ...(showPrice ? { priceCents: priceCents(cheapest ?? price ?? null) } : {}),
-      };
-    });
-    return done({ ...raw, cards: compactCards });
   },
 });
 

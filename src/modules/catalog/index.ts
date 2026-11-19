@@ -61,6 +61,8 @@ export {
   searchPrintings,
   setPrintings,
 } from "./queries/catalog";
+export { makeSearchCatalog } from "./application/search-catalog";
+export type { CatalogSearch } from "./application/search-catalog";
 export { makeCardLookup } from "./application/card-lookup";
 export type { CardLookup } from "./application/card-lookup";
 export { storePrintingsOfCard, type StorePrinting } from "./queries/store-printings";

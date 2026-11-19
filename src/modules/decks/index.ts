@@ -69,7 +69,13 @@ export type { ManaBasePlanWithCastability } from "./domain/mana-base";
 export { makeFindReplacements, type SimilarCards } from "./application/find-replacements";
 export { makeDeckFacts, type DeckFacts } from "./application/deck-facts";
 export { makeDeckManaPlan } from "./application/deck-mana-plan";
-export { makeDeckSignals, type DeckSignals } from "./application/deck-signals";
+export {
+  makeDeckSignals,
+  makeSearchSignals,
+  type DeckSignals,
+  type SearchSignals,
+} from "./application/deck-signals";
+export { makeDeckSearch } from "./application/deck-search";
 export {
   makeDeckOverview,
   type DeckOverview,
