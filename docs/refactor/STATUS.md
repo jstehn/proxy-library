@@ -23,7 +23,7 @@ its own worktree.
 | P06   | [Deck read capabilities](packages/P06-deck-reads.md)                               | P05                     | P07, P08                    | done                 |
 | P07a  | [Shared SQL pieces: text arrays, store offers](packages/P07-candidates.md)         | P05                     | P06, P08                    | done                 |
 | P07b  | [Candidate pool (SQL)](packages/P07b-candidate-pool.md)                            | P07a                    | P08                         | done                 |
-| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                         | P07b                    | P08                         | free                 |
+| P07b2 | [Suggestion service](packages/P07b2-suggestion-service.md)                         | P07b                    | P08                         | done                 |
 | P07c  | [Card and wishlist tools as bindings](packages/P07c-library-tools.md)              | P07a (P07b for search)  | P08                         | free                 |
 | P08   | [Deck edits and previews](packages/P08-edits-previews.md)                          | P05                     | P06, P07                    | free                 |
 | P09   | [Remaining tools and error text](packages/P09-remaining-tools.md)                  | P06, P07a–c, P07b2, P08 | none                        | free                 |
