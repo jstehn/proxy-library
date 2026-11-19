@@ -1,8 +1,18 @@
 # P22. Review and consolidate the design docs
 
-- **Branch:** `refactor/P22-design-docs` · **Depends on:** P18 · **Parallel with:** P20, P21 (P22 touches only `docs/design/` and the new `docs/modules/`; P21 owns `docs/architecture/`)
-- **Audit:** this package came from a review on 2026-11-19 (doc 65 change log); no F or D number
-- **Lines to remove:** none from source. Docs get shorter to read, not deleted
+- **Branch:** `refactor/P22-design-docs` · **Depends on:** P18, P30 (the module layout it documents) · **Parallel with:** P20, P21, P31–P34 (P22 touches only `docs/design/`, `docs/modules/`, a new check script and `scripts/`; P21 owns `docs/architecture/`)
+- **Audit:** this package came from a review on 2026-11-19 (doc 65 change log); no F or D number. The [plan review](../reviews/plan-review/README.md) (report [5](../reviews/plan-review/5-docs-tests-dx.md), finding 3) added the citation check.
+- **Lines:** none from source. About +60 lines for the check script and its test. Docs get shorter to read, not deleted.
+
+## Deletes
+
+Docs only, and nothing is deleted from history:
+
+| What                                                                                                                                      | Where                                               | Lines                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------ |
+| Design docs whose rules all live in `docs/modules/` now: moved (`git mv`), not deleted                                                    | `docs/design/NN-*.md` → `docs/design/archive/`      | moved, about 8,000 to 12,000 of the 16,000 lines |
+| Stale "where the code goes" sections that planned the duplicated layout (doc 28 and others)                                               | marked superseded in the Status line, not rewritten | 0                                                |
+| The design docs for features P24 deleted (60, the card-packages parts of 59, the roadmap parts of 57–58): add a "Superseded in part" line | those docs                                          | 0                                                |
 
 ## Why
 
@@ -63,13 +73,29 @@ doc map). **Avoid:** `docs/architecture/` (P21), source code.
    replaced: add `- **Superseded** (date): by docs/modules/<x>.md` under its Status, and
    `git mv` it to `docs/design/archive/`. Fix links to it (`grep -rn "design/NN-" docs lessons src`).
    Docs with rules still only in them stay where they are.
-6. **Numbering.** Don't renumber (it breaks links from lessons, ADRs and code comments). Note in
+6. **The citation check.** Code comments, ADRs, lessons and docs cite design docs about 900 times
+   ("design doc 28", "doc 28", `docs/design/28-…`). The review counted 891; a plain
+   `grep -rniE "design doc [0-9]+" src worker tests scripts docs lessons` finds more, because it
+   includes tests: use the script's own count. Archiving must never leave a citation pointing
+   nowhere.
+   - Add `scripts/check-doc-citations.ts` and `"docs:citations": "tsx scripts/check-doc-citations.ts"`.
+     It scans `src`, `worker`, `tests`, `scripts`, `docs`, `lessons` and the README for
+     `design doc NN`, `doc NN` (only when `design` or `docs/design` appears in the same file or the
+     phrase is "design doc"), and `design/NN-name.md` links. For each number it checks that
+     `docs/design/NN-*.md` **or** `docs/design/archive/NN-*.md` exists. The numbers with two docs
+     (47, 48) are fine; the missing ones (50, 62, 63) are listed in an allowlist with a reason, and
+     any other missing number fails. Links with a path must point to a file that exists.
+   - Unit-test the matcher on a few lines, including "design doc 09" and `docs/design/archive/…`.
+   - Add it to `scripts/check.sh` once it exits 0. Run it before **and** after step 5's moves; it
+     must pass both times.
+7. **Numbering.** Don't renumber (it breaks links from lessons, ADRs and code comments). Note in
    the index that 47 and 48 each have two docs and 50, 62, 63 don't exist.
-7. **Template.** `docs/design/TEMPLATE.md` gains a line: a new design doc names the
+8. **Template.** `docs/design/TEMPLATE.md` gains a line: a new design doc names the
    `docs/modules/` page it changes, and updates that page when it's built.
 
 ## Done when
 
+- `pnpm docs:citations` exits 0, and `pnpm check` runs it.
 - `docs/design/README.md` lists all 63 docs with a status.
 - Every responsibility in the P18 layout has a `docs/modules/` page, or the index says why not.
 - No unresolved contradiction is left only in the docs: each is a decision task or fixed.
