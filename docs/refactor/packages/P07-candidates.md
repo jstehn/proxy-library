@@ -1,4 +1,9 @@
-# P07. Candidate pool and store quote
+# P07a. Shared SQL pieces: text arrays and store offers
+
+> **P07 was split (2026-11-19).** The candidate queries differ in meaning (ordering, cheapest-finish
+> rule, EDHREC joins, combo partners, owned-vs-store exclusion), so the pool and the four tool
+> bindings are separate packages: [P07b](P07b-candidate-pool.md) and [P07c](P07c-library-tools.md).
+> This file keeps the slices that were safe to do first.
 
 - **Branch:** `refactor/P07-candidates` · **Depends on:** P05 · **Parallel with:** P06, P08
 - **Audit:** doc 65 F6, D2, D11
@@ -47,4 +52,16 @@ grep -rlniE "with cheapest|cheapest as|function (ownedCandidates|storeCandidates
 
 ## Handoff
 
-(empty)
+**Done:**
+
+- `textArray` is one function in `@/shared/db` (`text-array.ts`). Four copies are gone. The two
+  decks copies added a `"_"` element to keep an empty array typed; it is dropped, because
+  `array[]::text[]` is valid and the integration suite passes.
+- `storeOfferRows(db, filter)` in `@/shared/db` (`offers.ts`) is the one "what the store sells
+  today" read (every printing in an enabled set, once per priced finish). The shopping list
+  (`store/queries/shopping-list.ts`) and the wishlist (`wishlist/queries/for-sale.ts`) call it.
+- Clone runs 57 → 48 (baseline lowered). Source lines 91,537 → 91,511. `pnpm check` and the 265
+  integration tests pass.
+
+**Not done here (moved on):** the candidate pool, `suggestions.ts` and the four tool bindings.
+See P07b and P07c.

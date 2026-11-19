@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPrice, latestPriceRows } from "@/shared/db";
+import { latestPrice, latestPriceRows, textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
@@ -15,7 +15,7 @@ import { TARGETED_TAGS } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { landPoolsForDeck } from "./mana-base";
 import { ownedCopies } from "./owned";
-import { fitsDeck, suggestionContext, textArray, tribePattern } from "./suggestions";
+import { fitsDeck, suggestionContext, tribePattern } from "./suggestions";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
 // (design docs 37 & 44): SQL gathers your legal non-land cards, store non-land candidates, and the

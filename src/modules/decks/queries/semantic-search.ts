@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows } from "@/shared/db";
+import { latestPriceRows, textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { rateCard } from "../domain/rate";
 import { deckProfile, toRatingProfile } from "../domain/suggest";
@@ -10,7 +10,6 @@ import {
   fitsDeck,
   ownedCandidatesForIds,
   suggestionContext,
-  textArray,
   toCard,
   withinTarget,
   type CandidateRow,

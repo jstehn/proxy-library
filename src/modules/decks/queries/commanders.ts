@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { type DbExecutor, cheapestPrice } from "@/shared/db";
+import { type DbExecutor, cheapestPrice, textArray } from "@/shared/db";
 import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type ManaColor, type UserId } from "@/shared/kernel";
 import {
@@ -17,7 +17,7 @@ import {
 import { canBeCommander } from "../domain/rules";
 import { TARGETED_TAGS } from "../domain/stats";
 import { ownedCopies } from "./owned";
-import { textArray, tribePattern } from "./suggestions";
+import { tribePattern } from "./suggestions";
 
 // Commanders I can build (design docs 36 and 39): SQL gathers your pool, your lands and the
 // cards that could lead a deck; the pure rankCommanders filters and orders them.

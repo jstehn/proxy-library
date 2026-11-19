@@ -1,7 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
-import { latestPriceRows } from "@/shared/db";
+import { storeOfferRows, textArray } from "@/shared/db";
 import { FinishSchema, type UserId } from "@/shared/kernel";
 import {
   nameKey,
@@ -14,14 +14,6 @@ import {
 // The quote for a pasted list of singles (design doc 15, section 3): read only, nothing saved.
 // One query each for the printings for sale, the names the catalog knows, and what the player
 // owns; the domain decides the rest.
-
-/** `array['a', 'b']::text[]` with every value as a parameter. */
-function textArray(values: readonly string[]): SQL {
-  return sql`array[${sql.join(
-    values.map((value) => sql`${value}`),
-    sql`, `,
-  )}]::text[]`;
-}
 
 /** Matches a printing "p" by its whole name or its front face's ("Delver of Secrets"). */
 function nameIn(names: SQL): SQL {
@@ -41,26 +33,7 @@ export async function quoteShoppingList(
   const wanted = textArray(names);
 
   const [forSaleRows, knownRows] = await Promise.all([
-    db.execute<{
-      printing_id: string;
-      oracle_id: string;
-      name: string;
-      set_code: string;
-      set_name: string;
-      collector_number: string;
-      variant_label: string;
-      release_date: string;
-      finish: string;
-      usd_cents: number;
-    }>(sql`
-      select p.id as printing_id, p.oracle_id, p.name, p.set_code, s.name as set_name,
-             p.collector_number, p.variant_label, s.release_date, latest.finish, latest.usd_cents
-        from printings p
-        join card_sets s on s.code = p.set_code and s.is_enabled
-        -- The newest price of each finish: what buying it would cost (as the store's quote).
-        join lateral ${latestPriceRows("p.id")} latest on true
-       where ${nameIn(wanted)}
-    `),
+    storeOfferRows(db, nameIn(wanted)),
     db.execute<{ name: string; oracle_id: string }>(sql`
       select distinct p.name, p.oracle_id from printings p where ${nameIn(wanted)}
     `),
@@ -80,7 +53,7 @@ export async function quoteShoppingList(
   // Each printing is findable by its whole name and by its front face's name.
   const keysOf = (name: string) => [...new Set([nameKey(name), nameKey(name.split(" // ")[0])])];
   const forSale = new Map<string, Candidate[]>();
-  for (const row of forSaleRows.rows) {
+  for (const row of forSaleRows) {
     const candidate: Candidate = {
       printingId: row.printing_id,
       oracleId: row.oracle_id,

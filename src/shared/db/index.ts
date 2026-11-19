@@ -6,3 +6,5 @@ export type { SystemService } from "./system";
 export { makeDrizzleUnitOfWork } from "./unit-of-work";
 export { cents, timestamptz } from "./columns";
 export * from "./prices";
+export { textArray } from "./text-array";
+export * from "./offers";
