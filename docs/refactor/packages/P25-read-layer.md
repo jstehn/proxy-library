@@ -249,3 +249,92 @@ the `bind-db.ts` knip ignore is gone. Clone baseline 25 to 22 (lowered).
 `formAction`, the final lint rules (no `@/shared/db` or `queries/` in `src/app`). `printingDetails`
 and `headerSummary` still live in `capabilities.ts`. Pages still read `capabilities.printingDetails`
 (14 call sites) beside `reads`.
+
+### Part 2c (services, describe-error, forms, lint; same branch, commits `P25c:`)
+
+**Done.**
+
+- **The 17 services are narrow capabilities, one module per commit, each deleting its whole-service
+  entry.** `capabilities.services` and `services:` in `core.ts` are gone; `grep -c services
+src/server/capabilities.ts` is 0; `capabilities.ts` is 106 lines (was 161). It lists the
+  services it is handed, calls each module's `wire…Capabilities` and spreads the results.
+  `core.ts` passes the services straight in. Helpers: `pick(service, ...names)`
+  (`shared/kernel/pick.ts`) and `pickForAdmin(service, ...names)` (`accounts/domain/player.ts`):
+  the second types each method's first parameter as `AdminActor`.
+
+  | Service                                                 | Now                                                                                                                                                                                                   |
+  | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `packs`                                                 | `packs/wiring.ts`: `simulateOpenings` (AdminActor)                                                                                                                                                    |
+  | `inventory`                                             | `inventory/wiring.ts`: `openItem`, `openAll`                                                                                                                                                          |
+  | `wallet`                                                | `wallet/wiring.ts`: `refreshWallet`, `addOwnFunds`; AdminActor: `grantMoney`, `correctBalance`, `updateEconomySettings`, `refreshAllWallets`                                                          |
+  | `social`                                                | `social/wiring.ts`: 6 methods (all of them)                                                                                                                                                           |
+  | `trades`                                                | `trades/wiring.ts`: 5 methods (all of them)                                                                                                                                                           |
+  | `wishlist`                                              | `wishlist/wiring.ts`: 6. `addWish`/`removeWish` stay beside `addWishes`/`removeWishes`: they are not duplicates (typed form input vs the model's batch with its own sentences), so nothing was merged |
+  | `realCollection`                                        | `real-collection/wiring.ts`: 8                                                                                                                                                                        |
+  | `store`                                                 | `store/wiring.ts`: `buySingle`, `sellSingle`, `buySealed`, `buyList`; AdminActor: the 4 price settings                                                                                                |
+  | `drafts`                                                | `drafts/wiring.ts`: 17 (not `runTimers`: the worker holds the service)                                                                                                                                |
+  | `catalog`                                               | `catalog/wiring.ts`: `imageFor`, `artworkFor`; AdminActor: `choosePhoto`, `clearPhotoChoice`, `enableStandardSets`, `requestSync`, `setPageSlug`, `setSetEnabled`. `printingDetails` moved here       |
+  | `accounts`                                              | `accounts/wiring.ts`: 10 plus AdminActor: `createInvite`, `revokeInvite`, `setAdmin`, `setDisabled`, `setSelfFunding`, `resetPassword`                                                                |
+  | `deckSharing`, `chooseToken`, `proxySheet`, `deckEdits` | `decks/wiring.ts`: `deckSharing` (6), the two functions, `deckEdits` = the 19 builder methods                                                                                                         |
+  | `resetPlayer`                                           | `reset/wiring.ts` (new)                                                                                                                                                                               |
+  | `reddit`, `youtube`                                     | their own `wiring.ts` (new)                                                                                                                                                                           |
+  | `seeds`, `appUrl`, `headerSummary`                      | `site.newSeed()`, `site.appUrl`, `site.headerSummary(actor)` in `src/server/site.ts`; the four counts come from `reads`                                                                               |
+
+  `rulesLookup`, `lookUpCards` and `searchCatalog` (the cross-module ones) moved to
+  `src/server/lookups.ts` and take their readers from `reads`.
+
+- **`describe-error`** added for drafts (`describeDraftError`), wishlist (add, update, buy), trades
+  (propose, decide) and, in the existing store file, singles and cards (`describeBuySingleError`,
+  `describeSellSingleError`, `describeBuyListError`), each with a messages test. The switches left
+  `app/drafts`, `app/wishlist`, `app/trades`, `app/cards/[id]` and `app/singles/list`.
+- **`formAction` forms** (each keeps its messages and redirects; the components take `FormState`
+  and start from `{ message: null, tone: null }`): wallet add funds, store buy, account start
+  over, admin economy, admin money, admin reset library, card page buy and sell, admin catalog
+  sync and "enable Standard". `formAction` gained `invalidInput` (the form's own sentence when the
+  schema rejects) and `FormState` is a union, so `state.message &&` narrows `tone`. The admin
+  overload is listed first, or an `admin: true` form was typed with a plain `Actor`.
+- **Lint:** in `src/app` (components included, tests excepted), `@/shared/db`, `@/shared/card-search/sql`
+  and any `@/modules/<m>/queries…` are `no-restricted-imports` errors (boundaries already refused
+  them; now the message says why). The `UserId`-first check is `bindDb`'s compile-time one,
+  unchanged. The `form-action*` knip ignore is gone.
+
+**Kept as they were (the old behaviour can't be kept through `formAction` as it is).**
+
+- Forms that `redirect` with `?error=`/`?message=` on a plain `<form action>`: drafts, decks
+  (all), decks/commanders, trades, inventory open, admin store, admin photos, collection/real,
+  wishlist remove and sharing. `formAction` returns a state and a `<form action>` can't take one.
+  Wrapping each in a redirecting function would also change what an unreadable form does (today a
+  silent redirect, then the issues text).
+- Forms with their own state: sign-in and register (keep the typed values), change password (needs
+  `allowPasswordChangePending`, which `formAction`'s session check lacks), tokens (shows the secret
+  once), admin players actions (temporary password), admin invites create (the link), profile,
+  edit-as-text, OAuth approve.
+- Wishlist add, update, buy and "wish for short cards": the old code gives a different sentence for
+  a bad request than for a bad quantity, and `RequestForm` is a discriminated union
+  (`formAction` takes a `z.object`). A single `invalidInput` would merge the sentences.
+- The silent plain forms (friends, revoke token, revoke invite, set-set-enabled): void actions.
+- `grep -rl "formData.get" src/app` still lists 20 action files and 1 component.
+
+**Numbers.** Production code 74,868 to 75,151 (+362 over the baseline of 74,789; was +79). The
+wiring files, `pick`, `site.ts` and `lookups.ts` add about 280 lines; the services type, the old
+`headerSummary` and the old arguments in `core.ts` take away about 60; the migrated forms are
+level (a schema, the same messages and a handler replace the same parsing). The baseline was not
+lowered. Knip 396 to 391 (baseline lowered). Clones 22 to 21 (lowered). The `queries/*.ts` knip
+ignore stays: without it 100 findings return.
+
+**Not checked.** `next build` can't run in the agent's worktree (Turbopack rejects the
+`node_modules` symlink), so `export const x = formAction(...)` in a `"use server"` file was not
+compiled by Next (next-safe-action does the same). No e2e run. The PM should open the wallet,
+the store, "start over", the card page and the admin economy, money, reset and catalog pages in the
+browser.
+
+### P25 as a whole
+
+Reads: 14 `*Reads` bundles and `withDb` are gone; `reads.<module>.<query>` binds `db` once with
+`bindDb`, a per-player read takes the `Actor` and filters in SQL, a visitor gets `PublicReads`.
+Capabilities: every one of the 17 services is narrow, admin methods take `AdminActor`, and
+`capabilities.ts` only joins the module wirings. 97 reads and the 10 security findings are covered
+by `access-rules.int.test.ts`. `describe-error` exists for every module whose forms show errors.
+Not met: the line count (+362, the plan's -1,100 to -1,800 assumed the services and the form
+parsing would shrink; the pass-through was about 60 lines and a schema plus handler is as long as
+the parsing it replaces), and 20 action files still read FormData.
