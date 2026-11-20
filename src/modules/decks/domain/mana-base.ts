@@ -1,10 +1,16 @@
 import type { CastabilitySummary } from "./castability";
-import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
 import { colorPips, deckStats, type DeckStats } from "./stats";
 import type { ProfileLine } from "./suggest";
-import { COLORS, type ManaColor, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import {
+  type CardFacts,
+  type CardIdentity,
+  COLORS,
+  type ManaColor,
+  type Tag,
+  type Theme,
+} from "@/shared/kernel";
 
 // A mana base you could start from (design doc 35): how many lands, how many sources of each
 // color, and which lands to add, owned non-basics first, then basics. Pure: the query gathers

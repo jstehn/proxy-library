@@ -1,4 +1,6 @@
 "use client";
+
+import { type Tag } from "@/shared/kernel";
 import { useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
@@ -12,7 +14,6 @@ import type {
   TokenLine,
 } from "@/modules/decks";
 import { bracketLine, estimateBracket } from "@/modules/decks/client";
-import type { Tag } from "@/shared/card-search";
 import { BracketPanel } from "./builder/bracket/bracket-panel";
 import { DeckList } from "./builder/list/deck-list";
 import { problemsOf } from "./builder/derive";

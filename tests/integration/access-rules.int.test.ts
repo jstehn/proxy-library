@@ -8,7 +8,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { testAdminActor } from "@/modules/accounts/testing/actors";
 import { activityQueries } from "@/modules/activity";
-import { PrintingId } from "@/modules/catalog";
+import { catalogQueries, PrintingId, SealedProductId, SetCode } from "@/modules/catalog";
 import { makeInventory, inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
 import { socialQueries } from "@/modules/social";
@@ -16,7 +16,6 @@ import { makeStore, storeQueries, type QuoteOptions } from "@/modules/store";
 import { makeTrades, tradeQueries, type TradeItem } from "@/modules/trades";
 import { makeWallet, walletQueries } from "@/modules/wallet";
 import { makeWishlist, wishlistQueries } from "@/modules/wishlist";
-import { SealedProductId, SetCode } from "@/modules/catalog";
 import { bindPublicDb } from "@/shared/db";
 import { Cents, UserId } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
@@ -24,7 +23,6 @@ import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { collectionQueries } from "@/modules/collection";
 import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
 import { realCollectionQueries } from "@/modules/real-collection";
-import { catalogQueries } from "@/modules/catalog";
 import { randomBytes } from "node:crypto";
 import {
   canViewDeck,

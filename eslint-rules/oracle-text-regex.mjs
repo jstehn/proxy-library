@@ -63,10 +63,6 @@ export const NOT_YET_RECOGNIZED = [
   "src/modules/decks/domain/mana-base.ts",
   "src/modules/decks/domain/rules.ts",
   "src/modules/decks/domain/token-proxies.ts",
-  "src/shared/card-search/brackets.ts",
   "src/shared/card-search/parse.ts",
-  "src/shared/card-search/primitives.ts",
-  "src/shared/card-search/signals.ts",
   "src/shared/card-search/sql.ts",
-  "src/shared/card-search/tags.ts",
 ];

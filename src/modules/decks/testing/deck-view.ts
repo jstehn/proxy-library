@@ -1,12 +1,15 @@
-import { UserId } from "@/shared/kernel";
+import { extractFeatures } from "@/modules/catalog";
+import { type Tag, UserId } from "@/shared/kernel";
 import { DeckId } from "../domain/deck";
+import { bracketFlagsOf } from "../domain/brackets";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
 
 // A deck as the readers return it, for tests of what is built on top of `deckView`.
 
+/** A deck line; its role tags come from its text and mana unless the test names them. */
 export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine {
-  return {
+  const line: DeckLine = {
     oracleId: `oracle-${name}`,
     board: "main",
     quantity: 1,
@@ -21,6 +24,11 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     manaValue: 2,
     manaCost: "{1}{G}",
     producedMana: [],
+    roles: [],
+    themes: [],
+    leaderThemes: [],
+    bracketFlags: [],
+    signals: { makes: [], uses: [] },
     text: "",
     isGameChanger: false,
     priceCents: 25,
@@ -36,7 +44,56 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     free: 1,
     ...overrides,
   };
+  const text = featuresOfText(line);
+  return {
+    ...line,
+    roles: overrides.roles ?? text.roles,
+    themes: overrides.themes ?? text.themes,
+    leaderThemes: overrides.leaderThemes ?? text.leaderThemes,
+    bracketFlags: overrides.bracketFlags ?? text.bracketFlags,
+    signals: overrides.signals ?? text.signals,
+  };
 }
+
+/**
+ * What the catalog's recognizers say a card's text does, named as a line carries it (tests build
+ * lines from text). Spread it under what a test names itself.
+ */
+type CardInput = {
+  typeLine: string;
+  text?: string;
+  producedMana?: readonly string[];
+  isGameChanger?: boolean;
+  manaValue?: number;
+  name?: string;
+  keywords?: readonly string[];
+};
+
+/** Every feature of a single-faced card, worked out by the catalog's recognizers. */
+export function cardFeaturesOf(card: CardInput) {
+  return extractFeatures({
+    oracleId: card.name ?? "test",
+    producedMana: card.producedMana ?? [],
+    keywords: card.keywords ?? [],
+    manaValue: card.manaValue ?? 0,
+    faces: [{ name: card.name ?? "Test", typeLine: card.typeLine, text: card.text ?? "" }],
+  });
+}
+
+export function featuresOfText(card: CardInput) {
+  const features = cardFeaturesOf(card);
+  return {
+    roles: features.roleTags,
+    themes: features.themes,
+    leaderThemes: features.leaderThemes,
+    bracketFlags: bracketFlagsOf(card.isGameChanger ?? false, features.bracketFlags),
+    signals: features.signalIO,
+  };
+}
+
+export const roleTagsOf = (card: Parameters<typeof featuresOfText>[0]): Tag[] => [
+  ...featuresOfText(card).roles,
+];
 
 export function aRules(name: string, overrides: Partial<CardRules> = {}): CardRules {
   return {

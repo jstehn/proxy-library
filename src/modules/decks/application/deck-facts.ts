@@ -1,5 +1,4 @@
 import { formatRules } from "../domain/format-rules";
-import { cardTags } from "@/shared/card-search";
 import { ok, type Result } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type BracketEstimate } from "../domain/brackets";
 import { isPlayed } from "../domain/boards";
@@ -29,13 +28,8 @@ export function cardsBehindRoleCounts(lines: readonly DeckLine[]): Record<string
   const roleCards: Record<string, string[]> = { ramp: [], draw: [], removal: [], wipe: [] };
   for (const line of lines) {
     if (!isPlayed(line.board)) continue;
-    const tags = cardTags({
-      typeLine: line.typeLine,
-      text: line.text ?? "",
-      producedMana: line.producedMana,
-    });
     for (const role of COUNTED_ROLES) {
-      if (tags.includes(role) && !roleCards[role].includes(line.name)) {
+      if (line.roles.includes(role) && !roleCards[role].includes(line.name)) {
         roleCards[role].push(line.name);
       }
     }

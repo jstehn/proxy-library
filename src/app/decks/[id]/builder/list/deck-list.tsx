@@ -1,10 +1,11 @@
 "use client";
+
+import { type Tag } from "@/shared/kernel";
 import { useState } from "react";
 import { CardWithPreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, DeckLine, Grouping } from "@/modules/decks";
-import type { Tag } from "@/shared/card-search";
-import { groupsByHeading, groupsByRole, groupsOf, tagsOf } from "./groups";
+import { groupsByHeading, groupsByRole, groupsOf } from "./groups";
 import { HeadingTitle } from "./heading-title";
 import { LineControls, ListLine } from "./list-line";
 
@@ -90,7 +91,7 @@ export function DeckList(props: {
       option === (props.grouping === "custom" ? "headings" : "list"),
   );
   const isHighlighted = (line: DeckLine) =>
-    (props.highlighted !== null && tagsOf(line).includes(props.highlighted)) ||
+    (props.highlighted !== null && line.roles.includes(props.highlighted)) ||
     (props.highlightedNames?.has(line.name) ?? false);
 
   return (

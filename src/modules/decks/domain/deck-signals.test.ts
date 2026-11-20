@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { parseSearch } from "./parse";
-import { cardSignals, phrasesOf, plainText, type SignalCard } from "./signals";
+import { cardFeaturesOf } from "../testing/deck-view";
+import { parseSearch } from "@/shared/card-search";
+import { countSignals, phrasesOf, type SignalCard } from "./signals";
 
-const card = (name: string, typeLine: string, text: string, extra: Partial<SignalCard> = {}) =>
-  ({ name, typeLine, text, keywords: [], roleTags: [], themes: [], ...extra }) satisfies SignalCard;
+/** A card as counting reads it: its features, worked out from its text by the recognizers. */
+const card = (
+  name: string,
+  typeLine: string,
+  text: string,
+  extra: { roles?: SignalCard["roleTags"]; keywords?: readonly string[] } = {},
+): SignalCard => {
+  const features = cardFeaturesOf({ name, typeLine, text, keywords: extra.keywords });
+  return {
+    name,
+    roleTags: extra.roles ?? features.roleTags,
+    themes: features.themes,
+    signals: features.signals,
+    faces: features.faces,
+  };
+};
 
 // A fungus deck in the style of the Shroofus example (rules text abridged).
 const FUNGUS: readonly SignalCard[] = [
@@ -32,11 +47,11 @@ const FUNGUS: readonly SignalCard[] = [
     "Creature — Fungus",
     "Whenever a land you control enters, create a 1/1 green Saproling creature token.",
   ),
-  card("Llanowar Elves", "Creature — Elf Druid", "{T}: Add {G}.", { roleTags: ["ramp"] }),
+  card("Llanowar Elves", "Creature — Elf Druid", "{T}: Add {G}.", { roles: ["ramp"] }),
 ];
 
 const signal = (cards: readonly SignalCard[], name: string) =>
-  cardSignals(cards).find((each) => each.name === name);
+  countSignals(cards).find((each) => each.name === name);
 
 describe("cardSignals", () => {
   it("finds the spore counters and Saprolings a commander's text wouldn't mention", () => {
@@ -53,16 +68,16 @@ describe("cardSignals", () => {
   });
 
   it("puts the signals on the most cards first", () => {
-    const counts = cardSignals(FUNGUS).map((each) => each.cards);
+    const counts = countSignals(FUNGUS).map((each) => each.cards);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
   });
 
   it("needs a signal on at least minimumCards cards", () => {
     expect(signal(FUNGUS, "sacrifice trigger")).toBeUndefined();
-    expect(cardSignals(FUNGUS, { minimumCards: 2 }).map((each) => each.name)).toContain(
+    expect(countSignals(FUNGUS, { minimumCards: 2 }).map((each) => each.name)).toContain(
       "sacrifice a saproling",
     );
-    expect(cardSignals(FUNGUS).map((each) => each.name)).not.toContain("sacrifice a saproling");
+    expect(countSignals(FUNGUS).map((each) => each.name)).not.toContain("sacrifice a saproling");
   });
 
   it("counts a card once per signal, however often its text says it", () => {
@@ -77,7 +92,7 @@ describe("cardSignals", () => {
         "Counter target spell. (Put an oil counter on it, said nobody.)",
       ),
     );
-    expect(cardSignals(cards).filter((each) => each.kind === "counter")).toEqual([]);
+    expect(countSignals(cards).filter((each) => each.kind === "counter")).toEqual([]);
   });
 
   it("finds a recurring phrase no rule names", () => {
@@ -92,22 +107,13 @@ describe("cardSignals", () => {
   });
 
   it("gives follow-up searches that all parse with no notes", () => {
-    for (const each of cardSignals(FUNGUS, { minimumCards: 1, limit: 200 })) {
+    for (const each of countSignals(FUNGUS, { minimumCards: 1, limit: 200 })) {
       expect(parseSearch(each.followUp).notes, each.followUp).toEqual([]);
     }
   });
 });
 
-describe("plainText and phrasesOf", () => {
-  it("replaces the card's name and short name with ~ and drops reminder text", () => {
-    expect(
-      plainText({
-        name: "Jolene, the Plunder Queen",
-        text: "Put four +1/+1 counters on Jolene. (Reminder.)",
-      }),
-    ).toBe("Put four +1/+1 counters on ~. ");
-  });
-
+describe("phrasesOf", () => {
   it("skips phrases made only of common words, or with numbers", () => {
     const phrases = phrasesOf("Target creature you control gets +1/+1 until end of turn.");
     expect(phrases.has("target creature")).toBe(false);
@@ -118,6 +124,6 @@ describe("plainText and phrasesOf", () => {
 
 describe("phrases a named signal explains", () => {
   it("leaves out a phrase that only repeats a token or counter signal", () => {
-    expect(cardSignals(FUNGUS).filter((each) => each.kind === "phrase")).toEqual([]);
+    expect(countSignals(FUNGUS).filter((each) => each.kind === "phrase")).toEqual([]);
   });
 });

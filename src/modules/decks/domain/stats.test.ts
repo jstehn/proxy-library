@@ -133,7 +133,7 @@ describe("role tags in the statistics (design doc 19)", () => {
         manaValue: 1,
         typeLine: "Artifact",
         board: "main",
-        text: "{T}: Add {C}{C}.",
+        roles: ["ramp"],
         producedMana: ["C"],
       },
       {
@@ -141,23 +141,23 @@ describe("role tags in the statistics (design doc 19)", () => {
         manaValue: 2,
         typeLine: "Sorcery",
         board: "main",
-        text: "Destroy target creature. Draw a card.",
+        roles: ["draw", "removal"],
       },
       {
         quantity: 3,
         manaValue: 2,
         typeLine: "Instant",
         board: "side",
-        text: "Counter target spell.",
+        roles: ["counter"],
       },
       {
         quantity: 1,
         manaValue: 4,
         typeLine: "Legendary Creature — Elf",
         board: "commander",
-        text: "Whenever you cast a spell, draw a card.",
+        roles: ["draw"],
       },
-      // No text: no tags (a line from before this phase).
+      // No roles: no tags.
       { quantity: 4, manaValue: 1, typeLine: "Instant", board: "main" },
     ]);
     expect(stats.tags).toEqual({

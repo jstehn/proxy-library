@@ -1,172 +1,26 @@
-// Role tags (design doc 19, section 3): the job a card does in a deck, composed from effect
-// primitives (./primitives). Rules as data: one row per tag, matching structured EffectPrimitives
-// instead of card-shaped one-off regexes.
-import { cardTypes, hasTypeWord } from "@/shared/kernel";
-import {
-  extractEffects,
-  withoutReminders,
-  type EffectExtractor,
-  type EffectPrimitive,
-  type TagFacts,
-} from "./primitives";
-
-export type { TagFacts } from "./primitives";
-
-export const TAGS = ["ramp", "draw", "removal", "wipe", "counter", "tutor", "protection"] as const;
-/** A job a card does in a deck. A card can have several, or none. */
-export type Tag = (typeof TAGS)[number];
-
-type TagRule = Readonly<{
-  tag: Tag;
-  /** The card has the tag if any extracted effect primitive satisfies this predicate. */
-  matches: (effects: readonly EffectPrimitive[], card: TagFacts, text: string) => boolean;
-  /** Lands never get this tag: a land that taps for mana is a land, not ramp. */
-  notOnLands?: boolean;
-}>;
-
-const rule = (source: string) => new RegExp(source, "i");
-
-const TAG_RULES: readonly TagRule[] = [
-  {
-    tag: "ramp",
-    notOnLands: true,
-    matches: (effects) =>
-      effects.some(
-        (e) =>
-          e.kind === "mana_production" ||
-          (e.kind === "search_library" && e.subject === "land" && e.toZone === "battlefield") ||
-          e.kind === "extra_land_play" ||
-          e.kind === "put_land_from_hand" ||
-          (e.kind === "create_token" && e.tokenKind === "treasure"),
-      ),
-  },
-  {
-    tag: "draw",
-    matches: (effects) => effects.some((e) => e.kind === "draw_cards" && !e.conditional),
-  },
-  {
-    tag: "removal",
-    matches: (effects) =>
-      effects.some(
-        (e) =>
-          (e.kind === "destroy_or_exile" &&
-            e.scope === "target" &&
-            e.excludesYouControl &&
-            !e.fromGraveyard &&
-            e.subject !== "land") ||
-          (e.kind === "damage" &&
-            e.scope === "target" &&
-            (e.subject === "any_target" ||
-              e.subject === "creature" ||
-              e.subject === "planeswalker" ||
-              e.subject === "battle")) ||
-          (e.kind === "fight" && e.scope === "target") ||
-          (e.kind === "modify_pt" && e.scope === "target" && e.negative) ||
-          e.kind === "prevent_combat" ||
-          (e.kind === "bounce" && e.scope === "target" && e.excludesYouControl),
-      ),
-  },
-  {
-    tag: "wipe",
-    matches: (effects) =>
-      effects.some(
-        (e) =>
-          (e.kind === "destroy_or_exile" &&
-            e.scope === "all" &&
-            e.excludesYouControl &&
-            e.subject !== "land") ||
-          (e.kind === "damage" && e.scope === "all" && e.excludesYouControl) ||
-          (e.kind === "modify_pt" &&
-            (e.scope === "all" || e.scope === "opponents") &&
-            e.negative) ||
-          (e.kind === "bounce" && e.scope === "all" && e.excludesYouControl) ||
-          (e.kind === "fight" && e.scope === "token_per_opponent_creature") ||
-          e.kind === "sacrifice_all",
-      ),
-  },
-  {
-    tag: "counter",
-    matches: (effects) => effects.some((e) => e.kind === "counter_stack"),
-  },
-  {
-    tag: "tutor",
-    matches: (effects) =>
-      effects.some((e) => e.kind === "search_library" && e.subject === "card" && !e.namedOnly),
-  },
-  {
-    tag: "protection",
-    matches: (effects) =>
-      effects.some((e) => e.kind === "grant_protection" || e.kind === "phase_out"),
-  },
-];
-
-/** The roles a card plays, in TAGS order. */
-export function cardTags(card: TagFacts, extractors?: readonly EffectExtractor[]): Tag[] {
-  const text = withoutReminders(card.text);
-  // The front face: a spell with a land on its back is still tagged as the spell it is played as.
-  const land = cardTypes(card.typeLine).isLandOnFront;
-  const effects = extractEffects(card, extractors);
-  return TAG_RULES.filter(
-    (row) => !(row.notOnLands && land) && row.matches(effects, card, text),
-  ).map((row) => row.tag);
-}
-
 // Themes (design docs 20 and 38): what a deck builds around. A theme has two sides: what a
 // commander says when it leads one ("sacrifice another creature"), and what a card says when it
 // plays into one ("when this dies"). Umbrella themes (tokens, artifact-tokens, politics) overlap
 // with their sub-themes so specific matches score higher while broad searches still find all of them.
-
-export const THEMES = [
-  "counters",
-  "tokens",
-  "creature-tokens",
-  "artifact-tokens",
-  "treasures",
-  "food",
-  "clues",
-  "sacrifice",
-  "graveyard",
-  "artifacts",
-  "enchantments",
-  "lifegain",
-  "spells",
-  "landfall",
-  "equipment",
-  "politics",
-  "goad",
-  "voting",
-  "group-hug",
-  "monarch",
-  "each-opponent",
-  "blink",
-  "wheels",
-  "clones",
-  "theft",
-  "planeswalkers",
-  "legends",
-  "exile",
-  "extra-combat",
-  "stax",
-  "poison",
-  "vehicles",
-] as const;
-/** Something a deck builds around. */
-export type Theme = (typeof THEMES)[number];
+// Moved from shared/card-search/tags.ts.
+import { hasTypeWord, plainText, type Theme } from "@/shared/kernel";
+import type { CardText, Recognizer } from "../types";
+import { grantedKeywords } from "./grants";
 
 type ThemeRule = Readonly<{
   theme: Theme;
-  /** How the builder names it: "+1/+1 counters". */
-  label: string;
   /** A commander leads this theme if its text matches one of these. */
   leads: readonly RegExp[];
   /** A card plays into this theme. */
-  fits: (card: TagFacts, text: string) => boolean;
+  fits: (typeLine: string, text: string) => boolean;
 }>;
+
+const rule = (source: string) => new RegExp(source, "i");
 
 const matchesAny = (patterns: readonly RegExp[], text: string) =>
   patterns.some((pattern) => pattern.test(text));
-const frontFaceHas = (card: TagFacts, typeWords: readonly string[]) =>
-  hasTypeWord(card.typeLine, typeWords, true);
+const frontFaceHas = (typeLine: string, typeWords: readonly string[]) =>
+  hasTypeWord(typeLine, typeWords, true);
 
 const COUNTERS = [rule(String.raw`\+1/\+1 counters?\b`), rule(String.raw`\bproliferate\b`)];
 const LIFEGAIN = [rule(String.raw`\byou gain [^.]*\blife\b`), rule(String.raw`\blifelink\b`)];
@@ -339,242 +193,223 @@ const VEHICLES = [
 const THEME_RULES: readonly ThemeRule[] = [
   {
     theme: "counters",
-    label: "+1/+1 counters",
     leads: COUNTERS,
-    fits: (_card, text) => matchesAny(COUNTERS, text),
+    fits: (_typeLine, text) => matchesAny(COUNTERS, text),
   },
   {
     theme: "tokens",
-    label: "Tokens",
     leads: [...TOKENS, rule(String.raw`\bwhenever [^.]*\btokens? [^.]*\benters?\b`)],
-    fits: (_card, text) => matchesAny(TOKENS, text),
+    fits: (_typeLine, text) => matchesAny(TOKENS, text),
   },
   {
     theme: "creature-tokens",
-    label: "Creature tokens",
     leads: CREATURE_TOKENS,
-    fits: (_card, text) => matchesAny(CREATURE_TOKENS, text),
+    fits: (_typeLine, text) => matchesAny(CREATURE_TOKENS, text),
   },
   {
     theme: "artifact-tokens",
-    label: "Artifact tokens",
     leads: ARTIFACT_TOKENS,
-    fits: (card, text) =>
-      matchesAny(ARTIFACT_TOKENS, text) || frontFaceHas(card, ["Treasure", "Food", "Clue"]),
+    fits: (typeLine, text) =>
+      matchesAny(ARTIFACT_TOKENS, text) || frontFaceHas(typeLine, ["Treasure", "Food", "Clue"]),
   },
   {
     theme: "treasures",
-    label: "Treasures",
     leads: TREASURES,
-    fits: (card, text) => matchesAny(TREASURES, text) || frontFaceHas(card, ["Treasure"]),
+    fits: (typeLine, text) => matchesAny(TREASURES, text) || frontFaceHas(typeLine, ["Treasure"]),
   },
   {
     theme: "food",
-    label: "Food",
     leads: FOOD,
-    fits: (card, text) => matchesAny(FOOD, text) || frontFaceHas(card, ["Food"]),
+    fits: (typeLine, text) => matchesAny(FOOD, text) || frontFaceHas(typeLine, ["Food"]),
   },
   {
     theme: "clues",
-    label: "Clues",
     leads: CLUES,
-    fits: (card, text) => matchesAny(CLUES, text) || frontFaceHas(card, ["Clue"]),
+    fits: (typeLine, text) => matchesAny(CLUES, text) || frontFaceHas(typeLine, ["Clue"]),
   },
   {
     theme: "sacrifice",
-    label: "Sacrifice",
     leads: [
       rule(
         String.raw`\bsacrifices? (a|an|another|one or more|x|\w+) (other )?(creatures?|artifacts?|permanents?)\b`,
       ),
       rule(String.raw`\bwhenever (a|another|one or more) [^.]*creatures? [^.]*\bdies?\b`),
     ],
-    fits: (_card, text) => /\bsacrifice\b|\bdies\b/i.test(text),
+    fits: (_typeLine, text) => /\bsacrifice\b|\bdies\b/i.test(text),
   },
   {
     theme: "graveyard",
-    label: "Graveyard",
     leads: [rule(String.raw`\b(from|in) your graveyard\b`), rule(String.raw`\bmills?\b`)],
-    fits: (_card, text) =>
+    fits: (_typeLine, text) =>
       /\bgraveyard\b|\bmills?\b|\bsurveil\b|\b(flashback|unearth|escape|embalm|eternalize|encore|dredge)\b/i.test(
         text,
       ),
   },
   {
     theme: "artifacts",
-    label: "Artifacts",
     leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\bartifacts?\b`)],
-    fits: (card) => frontFaceHas(card, ["Artifact"]),
+    fits: (typeLine) => frontFaceHas(typeLine, ["Artifact"]),
   },
   {
     theme: "enchantments",
-    label: "Enchantments",
     leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\benchantments?\b`)],
-    fits: (card) => frontFaceHas(card, ["Enchantment"]),
+    fits: (typeLine) => frontFaceHas(typeLine, ["Enchantment"]),
   },
   {
     theme: "lifegain",
-    label: "Lifegain",
     leads: [rule(String.raw`\bwhenever you gain life\b`), rule(String.raw`\bgained life\b`)],
-    fits: (_card, text) => matchesAny(LIFEGAIN, text),
+    fits: (_typeLine, text) => matchesAny(LIFEGAIN, text),
   },
   {
     theme: "spells",
-    label: "Instants and sorceries",
     leads: [
       rule(String.raw`\b(instant (or|and) sorcery|noncreature) spells?\b`),
       rule(String.raw`\b(magecraft|prowess)\b`),
     ],
-    fits: (card) => frontFaceHas(card, ["Instant", "Sorcery"]),
+    fits: (typeLine) => frontFaceHas(typeLine, ["Instant", "Sorcery"]),
   },
   {
     theme: "landfall",
-    label: "Landfall",
     leads: [
       rule(String.raw`\blandfall\b`),
       rule(String.raw`\bwhenever (a|one or more) lands? [^.]*\benters?\b`),
     ],
-    fits: (_card, text) =>
+    fits: (_typeLine, text) =>
       /\blandfall\b|\bplay (an|two|\w+) additional lands?\b|\blands? cards? [^.]*onto the battlefield\b/i.test(
         text,
       ),
   },
   {
     theme: "equipment",
-    label: "Equipment and Auras",
     leads: [
       rule(String.raw`\b(equipped|enchanted|modified) creatures?\b`),
       rule(String.raw`\b(equipment|auras?)\b`),
     ],
-    fits: (card) => frontFaceHas(card, ["Equipment", "Aura"]),
+    fits: (typeLine) => frontFaceHas(typeLine, ["Equipment", "Aura"]),
   },
   {
     theme: "politics",
-    label: "Politics",
     leads: POLITICS,
-    fits: (_card, text) => matchesAny(POLITICS, text),
+    fits: (_typeLine, text) => matchesAny(POLITICS, text),
   },
   {
     theme: "goad",
-    label: "Goad",
     leads: GOAD,
-    fits: (_card, text) => matchesAny(GOAD, text),
+    fits: (_typeLine, text) => matchesAny(GOAD, text),
   },
   {
     theme: "voting",
-    label: "Voting",
     leads: VOTING,
-    fits: (_card, text) => matchesAny(VOTING, text),
+    fits: (_typeLine, text) => matchesAny(VOTING, text),
   },
   {
     theme: "group-hug",
-    label: "Group hug",
     leads: GROUP_HUG,
-    fits: (_card, text) => matchesAny(GROUP_HUG, text),
+    fits: (_typeLine, text) => matchesAny(GROUP_HUG, text),
   },
   {
     theme: "monarch",
-    label: "Monarch and initiative",
     leads: MONARCH,
-    fits: (_card, text) => matchesAny(MONARCH, text),
+    fits: (_typeLine, text) => matchesAny(MONARCH, text),
   },
   {
     theme: "each-opponent",
-    label: "Each opponent",
     leads: EACH_OPPONENT_LEADS,
-    fits: (_card, text) => matchesAny(EACH_OPPONENT_FITS, text),
+    fits: (_typeLine, text) => matchesAny(EACH_OPPONENT_FITS, text),
   },
   {
     theme: "blink",
-    label: "Blink and flicker",
     leads: BLINK_LEADS,
-    fits: (_card, text) => matchesAny(BLINK_LEADS, text),
+    fits: (_typeLine, text) => matchesAny(BLINK_LEADS, text),
   },
   {
     theme: "wheels",
-    label: "Discard and wheels",
     leads: WHEELS_LEADS,
-    fits: (_card, text) => matchesAny(WHEELS_FITS, text),
+    fits: (_typeLine, text) => matchesAny(WHEELS_FITS, text),
   },
   {
     theme: "clones",
-    label: "Copy and clones",
     leads: CLONES,
-    fits: (_card, text) => matchesAny(CLONES, text),
+    fits: (_typeLine, text) => matchesAny(CLONES, text),
   },
   {
     theme: "theft",
-    label: "Theft",
     leads: THEFT,
-    fits: (_card, text) => matchesAny(THEFT, text),
+    fits: (_typeLine, text) => matchesAny(THEFT, text),
   },
   {
     theme: "planeswalkers",
-    label: "Planeswalkers",
     leads: PLANESWALKERS_LEADS,
-    fits: (card, text) =>
-      frontFaceHas(card, ["Planeswalker"]) || matchesAny(PLANESWALKERS_LEADS, text),
+    fits: (typeLine, text) =>
+      frontFaceHas(typeLine, ["Planeswalker"]) || matchesAny(PLANESWALKERS_LEADS, text),
   },
   {
     theme: "legends",
-    label: "Legends and historic",
     leads: LEGENDS,
-    fits: (_card, text) => matchesAny(LEGENDS, text),
+    fits: (_typeLine, text) => matchesAny(LEGENDS, text),
   },
   {
     theme: "exile",
-    label: "Cast from exile",
     leads: EXILE,
-    fits: (card, text) => matchesAny(EXILE, text) || /\bAdventure\b/.test(card.typeLine),
+    fits: (typeLine, text) => matchesAny(EXILE, text) || /\bAdventure\b/.test(typeLine),
   },
   {
     theme: "extra-combat",
-    label: "Extra combat",
     leads: EXTRA_COMBAT,
-    fits: (_card, text) => matchesAny(EXTRA_COMBAT, text),
+    fits: (_typeLine, text) => matchesAny(EXTRA_COMBAT, text),
   },
   {
     theme: "stax",
-    label: "Taxes and stax",
     leads: STAX,
-    fits: (_card, text) => matchesAny(STAX, text),
+    fits: (_typeLine, text) => matchesAny(STAX, text),
   },
   {
     theme: "poison",
-    label: "Poison and infect",
     leads: POISON,
-    fits: (_card, text) => matchesAny(POISON, text),
+    fits: (_typeLine, text) => matchesAny(POISON, text),
   },
   {
     theme: "vehicles",
-    label: "Vehicles and mounts",
     leads: VEHICLES,
-    fits: (card, text) =>
-      matchesAny(VEHICLES, text) || frontFaceHas(card, ["Vehicle", "Mount", "Spacecraft", "Pilot"]),
+    fits: (typeLine, text) =>
+      matchesAny(VEHICLES, text) ||
+      frontFaceHas(typeLine, ["Vehicle", "Mount", "Spacecraft", "Pilot"]),
   },
 ];
 
-/** The themes a card plays into. */
-export function cardThemes(card: TagFacts): Theme[] {
-  const text = withoutReminders(card.text);
-  return THEME_RULES.filter((row) => row.fits(card, text)).map((row) => row.theme);
+/** The themes some face satisfies, in THEMES order. */
+function themesWhere(
+  card: CardText,
+  matches: (row: ThemeRule, typeLine: string, text: string) => boolean,
+) {
+  const typeLine = card.faces.map((face) => face.typeLine).join(" // ");
+  const texts = card.faces.map((face) => plainText(face.text));
+  return THEME_RULES.filter((row) => texts.some((text) => matches(row, typeLine, text))).map(
+    (row) => row.theme,
+  );
 }
+
+/** Haste: a card that gives it (the enablers), or a creature that has it or blitz (the users). */
+export const hasHaste = (card: CardText) =>
+  grantedKeywords(card).includes("Haste") ||
+  card.keywords.some((k) => k === "Haste" || k === "Blitz");
+
+/** The themes a card plays into. */
+export const themes: Recognizer<"themes"> = {
+  id: "themes",
+  field: "themes",
+  recognize: (card) => [
+    ...themesWhere(card, (row, typeLine, text) => row.fits(typeLine, text)),
+    ...(hasHaste(card) ? (["haste"] as const) : []),
+  ],
+};
 
 /** The themes a commander builds around (read from its text). */
-export function leaderThemes(card: TagFacts): Theme[] {
-  const text = withoutReminders(card.text);
-  return THEME_RULES.filter((row) => matchesAny(row.leads, text)).map((row) => row.theme);
-}
-
-/** How the builder names each theme. */
-export const THEME_LABELS: Readonly<Record<Theme, string>> = Object.fromEntries(
-  THEME_RULES.map((row) => [row.theme, row.label]),
-) as Record<Theme, string>;
-
-/**
- * Bumped whenever TAG_RULES, THEME_RULES or BRACKET_TEXT_RULES (./brackets.ts) change: the
- * catalog sync then works out every printing's stored features again (design doc 20,
- * invariant 1). Version 2: bracket flags (design doc 31). Version 3: expanded themes (design
- * doc 38). Version 4: one-sided -X/-X wipes like Massacre Wurm (design doc 61).
- */
-export const CARD_FEATURES_VERSION = 4;
+export const leaderThemes: Recognizer<"leaderThemes"> = {
+  id: "leader-themes",
+  field: "leaderThemes",
+  recognize: (card) => [
+    ...themesWhere(card, (row, _typeLine, text) => matchesAny(row.leads, text)),
+    ...(grantedKeywords(card).includes("Haste") ? (["haste"] as const) : []),
+  ],
+};

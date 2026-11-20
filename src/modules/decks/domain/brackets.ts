@@ -1,7 +1,7 @@
 // Commander brackets (design doc 31, sections 3.2 and 3.3): the lowest bracket a deck's cards
 // allow, why, and whether it's within the bracket its owner chose. Pure, and safe for the browser.
 import type { CardFacts } from "@/shared/kernel";
-import { BRACKET_FLAGS, bracketFlags, type BracketFlag } from "@/shared/card-search";
+import { BRACKET_FLAGS, type BracketFlag } from "@/shared/kernel";
 import { isPlayed, type Board, type DeckCount } from "./boards";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
@@ -30,16 +30,25 @@ export type BracketLine = Readonly<{
   flags: readonly BracketFlag[];
 }>;
 
-/** What a deck line needs for its bracket flags: the card's text and Scryfall's flag. */
+/** What a deck line needs for its bracket flags (see `bracketFlagsOf`). */
 export type BracketSource = DeckCount &
-  Pick<CardFacts, "name" | "typeLine" | "text"> &
-  Readonly<{
-    isGameChanger: boolean;
-  }>;
+  Pick<CardFacts, "name"> &
+  Readonly<{ bracketFlags: readonly BracketFlag[] }>;
+
+/**
+ * A card's flags: Scryfall's Game Changer flag (Wizards changes the list, so it is read from the
+ * printing, not the text), then the flags the catalog's card features found in the text.
+ */
+export function bracketFlagsOf(
+  isGameChanger: boolean,
+  textFlags: readonly BracketFlag[],
+): BracketFlag[] {
+  return isGameChanger ? ["gameChanger", ...textFlags] : [...textFlags];
+}
 
 /** A deck line as the estimate reads it, with its flags worked out by the one rule table. */
 export function bracketLine(line: BracketSource): BracketLine {
-  return { name: line.name, quantity: line.quantity, board: line.board, flags: bracketFlags(line) };
+  return { name: line.name, quantity: line.quantity, board: line.board, flags: line.bracketFlags };
 }
 
 export const BRACKET_FLAG_RULE_NAMES = ["gameChangers", "landDenial", "extraTurns"] as const;

@@ -37,6 +37,24 @@ export type SearchContext = Readonly<{
 }>;
 
 /** Store: the printing is sold in foil or etched. */
+/**
+ * A card's stored feature array (the catalog's `card_features`, design doc 66): `role_tags`, and as
+ * their recognizers arrive `theme_tags` and `bracket_flags`. By the printing's alias; empty until
+ * the features pass has worked the card out.
+ */
+export function featureArray(
+  column: "role_tags" | "theme_tags" | "leader_themes" | "bracket_flags",
+  printing = "p",
+): SQL {
+  return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
+}
+
+/** What a card makes and uses, as `{ makes: Theme[], uses: Theme[] }` (card features, doc 66). */
+export function signalIO(printing = "p"): SQL {
+  return sql`coalesce((select f.features->'signalIO' from card_features f
+    where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{"makes": [], "uses": []}'::jsonb)`;
+}
+
 export const FOIL_IN_CATALOG = sql`p.finishes && array['foil', 'etched']::text[]`;
 
 /** Collection: the copy in this row is foil or etched (`column` is its finish). */
@@ -166,9 +184,9 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "fullOracle":
       return textTerm(oracleCondition(term, { withReminders: true }), comparison);
     case "tag":
-      return textTerm(sql`${value.toLowerCase()} = any(p.role_tags)`, comparison);
+      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("role_tags")})`, comparison);
     case "theme":
-      return textTerm(sql`${value.toLowerCase()} = any(p.theme_tags)`, comparison);
+      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("theme_tags")})`, comparison);
     case "banned":
     case "restricted":
       return textTerm(sql`p.legalities->>${value.toLowerCase()} = ${term.field}`, comparison);
@@ -529,9 +547,9 @@ function isCondition(value: string, context: SearchContext): SQL {
     case "gc":
       return sql`p.is_game_changer`;
     case "landdenial":
-      return sql`'landDenial' = any(p.bracket_flags)`;
+      return sql`'landDenial' = any(${featureArray("bracket_flags")})`;
     case "extraturn":
-      return sql`'extraTurn' = any(p.bracket_flags)`;
+      return sql`'extraTurn' = any(${featureArray("bracket_flags")})`;
     default:
       return landCycle(value) ?? sql`false`; // the parser refuses other values
   }

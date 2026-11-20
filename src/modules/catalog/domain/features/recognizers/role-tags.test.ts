@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_EFFECT_EXTRACTORS, extractEffects, type EffectExtractor } from "./primitives";
-import { cardTags, TAGS, type Tag, type TagFacts } from "./tags";
+import { TAGS, type Tag } from "@/shared/kernel";
+import { extractEffects } from "./effects";
+import { roleTags } from "./role-tags";
+
+/** What a card's text and mana are before a recognizer reads them. */
+type TagFacts = Readonly<{ typeLine: string; text: string; producedMana?: readonly string[] }>;
+
+/** The recognizer's answer for one single-faced card. */
+const cardTags = (card: TagFacts): readonly Tag[] =>
+  roleTags.recognize({
+    oracleId: "test",
+    producedMana: card.producedMana ?? [],
+    keywords: [],
+    manaValue: 0,
+    faces: [{ name: "Test", typeLine: card.typeLine, text: card.text }],
+  });
 
 // Real Oracle text, quoted: the fixture catalog has too few staples (design doc 19, invariant 3).
 type Example = Readonly<{ name: string } & TagFacts>;
@@ -357,25 +371,6 @@ describe("cardTags", () => {
       excludesYouControl: true,
       fromGraveyard: false,
     });
-  });
-
-  it("supports OCP extension via custom EffectExtractor without modifying TAG_RULES", () => {
-    const customRampExtractor: EffectExtractor = {
-      id: "custom_convoke_mana",
-      extract: (_card, text) =>
-        /\badd \{G\} for each creature\b/i.test(text)
-          ? [{ kind: "mana_production", colors: ["G"] }]
-          : [],
-    };
-    const weirdCard = card(
-      "Custom Mana Spell",
-      "Sorcery",
-      "Add {G} for each creature you control.",
-    );
-    expect(cardTags(weirdCard)).toEqual([]);
-    expect(cardTags(weirdCard, [...DEFAULT_EFFECT_EXTRACTORS, customRampExtractor])).toEqual([
-      "ramp",
-    ]);
   });
 
   it("tags sacrifice wipes (All Is Dust), land-aura ramp (Wild Growth/Utopia Sprawl), and mana rocks", () => {

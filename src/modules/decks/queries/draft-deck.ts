@@ -1,10 +1,13 @@
+import type { SignalIO } from "@/shared/kernel";
+import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
+import { featureArray, signalIO } from "@/shared/card-search/sql";
 import { formatRules } from "../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
+import { type Tag, type Theme } from "@/shared/kernel";
 import type { UserId } from "@/shared/kernel";
-import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
 import {
   draftDeck,
@@ -30,7 +33,8 @@ const NON_LAND = sql`split_part(p.type_line, ' // ', 1) !~ '\\yLand\\y'`;
 
 function spellColumns(format: string) {
   return sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, p.role_tags, p.theme_tags, p.produced_mana, p.is_game_changer,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+    ${featureArray("bracket_flags")} as bracket_flags, ${signalIO()} as signals, p.produced_mana, p.is_game_changer,
     coalesce((p.legalities->>${format}) = 'restricted', false) as is_restricted,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
 }
@@ -43,8 +47,10 @@ type SpellRow = {
   type_line: string;
   rarity: string;
   keywords: string[];
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  bracket_flags: BracketFlag[];
+  signals: SignalIO;
+  theme_tags: Theme[];
   produced_mana: string[] | null;
   is_game_changer: boolean;
   is_restricted: boolean;
@@ -64,10 +70,9 @@ function toCandidate(row: SpellRow, pool: "owned" | "store"): DraftCandidate {
     text: row.face_text,
     producedMana: row.produced_mana ?? [],
     keywords: row.keywords,
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roles: row.role_tags,
+    themes: row.theme_tags,
+    signals: row.signals,
     rarity: row.rarity,
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
     pool,
@@ -121,8 +126,8 @@ export async function draftForDeck(
       : db.execute<SpellRow>(sql`
           with matching as (
             select distinct on (p.oracle_id) p.oracle_id,
-                   ((p.role_tags && ${textArray(wantedRoles)})::int
-                    + (p.theme_tags && ${textArray(wantedThemes)})::int
+                   ((${featureArray("role_tags")} && ${textArray(wantedRoles)})::int
+                    + (${featureArray("theme_tags")} && ${textArray(wantedThemes)})::int
                     + (p.keywords && ${textArray(profile.keywords)})::int
                     + ${
                       tribes === null
@@ -159,14 +164,7 @@ export async function draftForDeck(
   const withinTarget = (row: SpellRow): boolean => {
     const target = context.targetBracket;
     if (target === null) return true;
-    const { flags } = bracketLine({
-      name: row.name,
-      quantity: 1,
-      board: "main",
-      typeLine: row.type_line,
-      text: row.face_text,
-      isGameChanger: row.is_game_changer,
-    });
+    const flags = bracketFlagsOf(row.is_game_changer, row.bracket_flags);
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 

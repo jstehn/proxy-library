@@ -63,8 +63,7 @@ verify every exercise solution compiles and passes, and commit at the end of eac
   (`sync [prices|full]` runs a catalog sync now; `sync features` works out card features only; `schedule` runs the nightly sync + admin-queued runs
   and the draft pick timers; `draft-timers` runs the pick timers once;
   `check-packs [n]` opens n packs of every booster recipe and reports rule violations;
-  `check-products` checks every product for sale contains something; `tag-cards` stores role tags
-  and themes for printings missing them; `check-commanders` checks every
+  `check-products` checks every product for sale contains something; `check-commanders` checks every
   precon's commander is allowed to lead a deck), `pnpm test:remote` (the only
   tests that call MTGJSON/Scryfall; never run automatically).
 - Automated tests never touch the network: recorded fixtures, local image responses.

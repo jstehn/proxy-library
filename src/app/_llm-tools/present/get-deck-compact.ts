@@ -1,11 +1,11 @@
 import {
-  isKeyCard,
   type DeckLine,
   type DeckOverview,
   type DeckProblem,
   type DeckView,
+  formatRules,
+  isKeyCard,
 } from "@/modules/decks";
-import { formatRules } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
 import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
 import { groupCompactLines, pageCompactGroups } from "./compact-deck";

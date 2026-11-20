@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { PrintingId } from "@/modules/catalog";
-import { seededRng } from "@/shared/kernel";
+import { COLORS, seededRng } from "@/shared/kernel";
 import {
   SAMPLE_BOOSTER,
   SAMPLE_FACTS,
@@ -12,7 +12,6 @@ import {
 } from "../testing/recipes";
 import { factsLookup } from "./pack";
 import { packProblems } from "./checks";
-import { COLORS } from "@/shared/kernel";
 import { generatePack, openPack } from "./generate";
 
 // The sample booster (testing/recipes.ts): 14 cards; a land in 3 of 4 packs, a foil in the

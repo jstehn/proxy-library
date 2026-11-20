@@ -1,5 +1,12 @@
-import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
-import { hasTypeWord, manaCurve, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import {
+  type CardFacts,
+  type CardIdentity,
+  hasTypeWord,
+  manaCurve,
+  type SignalIO,
+  type Tag,
+  type Theme,
+} from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -39,6 +46,7 @@ export type CandidateCard = Pick<CardIdentity, "oracleId"> &
   Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
   Readonly<{
     text?: string;
+    signals?: SignalIO;
     keywords: readonly string[];
     roles: readonly Tag[];
     themes: readonly Theme[];
@@ -158,19 +166,14 @@ function namesType(text: string, type: string): boolean {
 export function deckProfile(lines: readonly ProfileLine[], format: Format): DeckFingerprint {
   const commanders = lines.filter((line) => line.board === "commander");
   const main = lines.filter((line) => line.board === "main");
-  const facts = (line: ProfileLine) => ({
-    typeLine: line.typeLine,
-    text: line.text ?? "",
-    producedMana: line.producedMana,
-  });
 
   // Themes: what the commanders lead, and what much of the deck already does.
-  const themes = new Set<Theme>(commanders.flatMap((line) => leaderThemes(facts(line))));
+  const themes = new Set<Theme>(commanders.flatMap((line) => line.leaderThemes ?? []));
   const spells = main.filter((line) => !isLand(line.typeLine));
   const spellCount = spells.reduce((sum, line) => sum + line.quantity, 0);
   const fitting = new Map<Theme, number>();
   for (const line of spells) {
-    for (const theme of cardThemes(facts(line))) {
+    for (const theme of line.themes ?? []) {
       fitting.set(theme, (fitting.get(theme) ?? 0) + line.quantity);
     }
   }
@@ -210,18 +213,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
           target: targets[tag],
         }));
 
-  const signals = deckSignalProfile(
-    lines
-      .filter((line) => isPlayed(line.board))
-      .map((line) => ({
-        name: line.typeLine,
-        typeLine: line.typeLine,
-        text: line.text ?? "",
-        manaValue: line.manaValue,
-        board: line.board,
-        quantity: line.quantity,
-      })),
-  );
+  const signals = deckSignalProfile(lines.filter((line) => isPlayed(line.board)));
   const curveCounts = manaCurve(spells);
 
   const keywords = [...new Set(commanders.flatMap((line) => line.keywords ?? []))];

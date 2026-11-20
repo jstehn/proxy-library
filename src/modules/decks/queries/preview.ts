@@ -1,7 +1,11 @@
+import type { SignalIO } from "@/shared/kernel";
+import { bracketFlagsOf } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { ColorSchema, type UserId } from "@/shared/kernel";
+import { featureArray, signalIO } from "@/shared/card-search/sql";
+import { ColorSchema, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "../domain/deck";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
@@ -50,9 +54,13 @@ export function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
     typeLine: line.typeLine,
     manaCost: line.manaCost,
     producedMana: line.producedMana,
+    roles: line.roles,
+    themes: line.themes,
+    signals: line.signals,
     priceCents: line.priceCents,
     text: line.text,
     isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
     owned: line.owned,
     rules,
     keywords: line.keywords,
@@ -79,6 +87,10 @@ export async function loadCardsForPreview(
     mana_value: number;
     mana_cost: string | null;
     produced_mana: string[] | null;
+    role_tags: Tag[];
+    bracket_flags: BracketFlag[];
+    signals: SignalIO;
+    theme_tags: Theme[];
     price_cents: number | null;
     is_basic_land: boolean;
     face_text: string;
@@ -96,6 +108,10 @@ export async function loadCardsForPreview(
     )
     select w.oracle_id,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
+           ${featureArray("role_tags", "shown")} as role_tags,
+           ${featureArray("bracket_flags", "shown")} as bracket_flags,
+           ${signalIO("shown")} as signals,
+           ${featureArray("theme_tags", "shown")} as theme_tags,
            shown.rarity, shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
              where kp.oracle_id = w.oracle_id) as keywords,
@@ -160,9 +176,13 @@ export async function loadCardsForPreview(
       typeLine: row.type_line,
       manaCost: row.mana_cost,
       producedMana: row.produced_mana ?? [],
+      roles: row.role_tags,
+      themes: row.theme_tags,
+      signals: row.signals,
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       text: row.face_text,
       isGameChanger: row.is_game_changer,
+      bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
       owned: row.owned,
       rules,
       keywords: row.keywords ?? [],

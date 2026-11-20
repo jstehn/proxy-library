@@ -1,4 +1,5 @@
 // Pure text preparation for card embeddings (design doc 53, #58).
+import { plainText } from "@/shared/kernel";
 
 export const EMBEDDING_MODEL = "Xenova/bge-small-en-v1.5";
 export const EMBEDDING_DIMS = 384;
@@ -10,7 +11,7 @@ export const EMBEDDING_TEXT_VERSION = 1;
  * with `~`.
  */
 export function cleanCardText(name: string, typeLine: string, text: string): string {
-  let cleaned = text.replace(/\([^)]*\)/g, "");
+  let cleaned = plainText(text);
   if (name) {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     cleaned = cleaned.replace(new RegExp(escaped, "g"), "~");

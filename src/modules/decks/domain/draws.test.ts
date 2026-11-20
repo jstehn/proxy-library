@@ -12,16 +12,26 @@ import {
   type DrawLine,
   type LibraryCard,
 } from "./draws";
+import { roleTagsOf } from "../testing/deck-view";
 
-const line = (name: string, quantity: number, overrides: Partial<DrawLine> = {}): DrawLine => ({
-  oracleId: name.toLowerCase(),
-  name,
-  printingId: `printing-${name}`,
-  board: "main",
-  quantity,
-  typeLine: "Instant",
-  ...overrides,
-});
+/** A deck line; its roles come from the text it is given, as the catalog's recognizer reads it. */
+const line = (
+  name: string,
+  quantity: number,
+  { text, ...overrides }: Partial<DrawLine> & { text?: string } = {},
+): DrawLine => {
+  const typeLine = overrides.typeLine ?? "Instant";
+  return {
+    oracleId: name.toLowerCase(),
+    name,
+    printingId: `printing-${name}`,
+    board: "main",
+    quantity,
+    typeLine,
+    roles: roleTagsOf({ typeLine, text, producedMana: overrides.producedMana }),
+    ...overrides,
+  };
+};
 
 /** A 60-card deck: 24 lands, 36 spells. */
 const SIXTY = library([

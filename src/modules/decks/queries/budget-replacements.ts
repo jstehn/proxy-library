@@ -8,8 +8,7 @@ import {
 import { suggestionContext, withinTarget } from "./suggestions";
 import { eq, sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice, textArray } from "@/shared/db";
-import { cardTags, type Tag } from "@/shared/card-search";
-import { hasTypeWord, type UserId } from "@/shared/kernel";
+import { hasTypeWord, type Tag, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/deck";
 import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
@@ -128,13 +127,7 @@ export async function budgetReplacements(
     ]);
 
     const targetLine = context.lines.find((l) => l.oracleId === target.oracle_id);
-    const targetRoles: readonly Tag[] = targetLine
-      ? cardTags({
-          typeLine: targetLine.typeLine,
-          text: targetLine.text ?? "",
-          producedMana: targetLine.producedMana,
-        })
-      : [];
+    const targetRoles: readonly Tag[] = targetLine?.roles ?? [];
 
     const targetText = targetLine?.text ?? "";
     const REANIMATE_RE =

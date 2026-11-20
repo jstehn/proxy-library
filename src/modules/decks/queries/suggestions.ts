@@ -11,8 +11,7 @@ import {
 } from "./suggestion-sql";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, textArray } from "@/shared/db";
-import { type Tag } from "@/shared/card-search";
-import { type UserId } from "@/shared/kernel";
+import { type Tag, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/deck";
 import { copyLimitFor } from "../domain/rules";
