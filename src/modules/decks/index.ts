@@ -215,4 +215,8 @@ export {
   type EdhrecUnavailable,
 } from "./application/deck-edhrec";
 export { type DeckCombos, type SpellbookUnavailable } from "./application/deck-combos";
-export { type DeckTooSmall } from "./application/draw-sample";
+export {
+  type CastCardNotInDeck,
+  type CastReport,
+  type DeckTooSmall,
+} from "./application/draw-sample";

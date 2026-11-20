@@ -1,10 +1,10 @@
-import { COLORS, type Rng } from "@/shared/kernel";
-import { firstUnpaidPip, type Pip } from "./mana-payment";
+import type { Rng } from "@/shared/kernel";
 import {
   COMMANDER_KEEP,
   drawsByTurn,
   isEarlyPlay,
   isEarlyRamp,
+  MAX_MULLIGANS,
   playOpening,
 } from "./opening-hand/hand";
 import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
@@ -12,24 +12,10 @@ import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
 // Monte Carlo London-mulligan opening hand simulator (design doc 56):
 // pure and deterministic via injected Rng (ADR 0008).
 
-/** After this many mulligans a hand is kept, keepable or not. */
-const MAX_MULLIGANS = 2;
-
-export type MustCastByOption = Readonly<{
-  cardName: string;
-  manaValue: number;
-  turn: number;
-  /** True if the card must be drawn from the library; false if in the command zone. */
-  inLibrary?: boolean;
-  /** The colored pips of its cost (`parseCost(manaCost).pips`); left out counts only the total. */
-  pips?: readonly Pip[];
-}>;
-
 export type SimulateHandsOptions = Readonly<{
   rng: Rng;
   trials?: number;
   freeMulligan?: boolean;
-  mustCastBy?: MustCastByOption;
 }>;
 
 export type SampleHand = Readonly<{
@@ -52,7 +38,6 @@ export type GoldfishReport = Readonly<{
   manaFloodPct: number;
   keptByMulligan: readonly number[];
   sampleHands: readonly SampleHand[];
-  mustCastByPct?: number;
 }>;
 
 function round1(n: number): number {
@@ -61,70 +46,6 @@ function round1(n: number): number {
 
 function pct(count: number, total: number): number {
   return total === 0 ? 0 : round1((count / total) * 100);
-}
-
-/** The colors a card adds once in play: its own, or any color for land-fetching ramp. */
-function sourceColors(card: LibraryCard): readonly string[] {
-  return card.producedMana !== undefined && card.producedMana.length > 0
-    ? card.producedMana
-    : COLORS;
-}
-
-function canCastByTurn(
-  finalHand: readonly LibraryCard[],
-  restOfLibrary: readonly LibraryCard[],
-  mustCast: MustCastByOption,
-  onTheDraw: boolean,
-): boolean {
-  const handPool = [...finalHand];
-  let drawIdx = 0;
-  const sources: (readonly string[])[] = [];
-  const targetLower = mustCast.cardName.trim().toLowerCase();
-  const pips = mustCast.pips ?? [];
-  const canPay = () =>
-    sources.length >= mustCast.manaValue && firstUnpaidPip(pips, sources) === null;
-
-  for (let turn = 1; turn <= mustCast.turn; turn++) {
-    if ((turn > 1 || onTheDraw) && drawIdx < restOfLibrary.length) {
-      handPool.push(restOfLibrary[drawIdx++]);
-    }
-    // Play the land that makes the most colors the target still needs.
-    let bestLand = -1;
-    let bestScore = -1;
-    handPool.forEach((card, index) => {
-      if (!card.isLand) return;
-      const colors = card.producedMana ?? [];
-      const score = pips.filter((pip) => pip.some((color) => colors.includes(color))).length;
-      if (score > bestScore) {
-        bestScore = score;
-        bestLand = index;
-      }
-    });
-    if (bestLand !== -1) {
-      const [land] = handPool.splice(bestLand, 1);
-      sources.push(land.producedMana ?? ["C"]);
-    }
-
-    const hasTarget =
-      mustCast.inLibrary === false ||
-      handPool.some((c) => c.name.trim().toLowerCase() === targetLower);
-    if (hasTarget && canPay()) return true;
-
-    // Greedily cast affordable ramp spells on earlier turns; their mana counts from next turn.
-    if (turn < mustCast.turn) {
-      let available = sources.length;
-      while (true) {
-        const rampIdx = handPool.findIndex(
-          (c) => !c.isLand && c.tags.includes("ramp") && (c.manaValue ?? 99) <= available,
-        );
-        if (rampIdx === -1) break;
-        const [rampCard] = handPool.splice(rampIdx, 1);
-        available -= rampCard.manaValue ?? 0;
-        sources.push(sourceColors(rampCard));
-      }
-    }
-  }
-  return false;
 }
 
 /**
@@ -162,7 +83,6 @@ export function simulateOpeningHands(
   let turn3LandCount = 0;
   let manaScrewCount = 0;
   let manaFloodCount = 0;
-  let mustCastCount = 0;
   const keptByMulligan = Array.from({ length: MAX_MULLIGANS + 1 }, () => 0);
   const sampleHands: SampleHand[] = [];
 
@@ -193,9 +113,6 @@ export function simulateOpeningHands(
     const drawnByT3 = restOfLibrary.slice(0, drawsByTurn(3, false));
     const totalLandsByT3 = lands + drawnByT3.filter((c) => c.isLand).length;
     if (totalLandsByT3 >= 3) turn3LandCount += 1;
-    if (options.mustCastBy && canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, false)) {
-      mustCastCount += 1;
-    }
 
     if (sampleHands.length < 3) {
       sampleHands.push({
@@ -220,6 +137,5 @@ export function simulateOpeningHands(
     manaFloodPct: pct(manaFloodCount, trials),
     keptByMulligan,
     sampleHands,
-    ...(options.mustCastBy ? { mustCastByPct: pct(mustCastCount, trials) } : {}),
   };
 }

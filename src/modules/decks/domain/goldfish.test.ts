@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
-import { simulateOpeningHands, type MustCastByOption } from "./goldfish";
+import { simulateOpeningHands } from "./goldfish";
 import { library, type DrawLine } from "./opening-hand/library";
 
 function buildLibrary(landsCount: number, rampCount: number, fillerCount: number) {
@@ -68,46 +68,5 @@ describe("simulateOpeningHands", () => {
     expect(ok.keepableRatePct).toBeGreaterThan(bad.keepableRatePct);
     expect(bad.manaScrewPct).toBeGreaterThan(ok.manaScrewPct);
     expect(ok.turn3LandDropPct).toBeGreaterThan(bad.turn3LandDropPct);
-  });
-
-  it("computes mustCastByPct counting dorks/rocks for commander by turn N", () => {
-    const withRamp = buildLibrary(36, 15, 48);
-    const noRamp = buildLibrary(36, 0, 63);
-
-    const resRamp = simulateOpeningHands(withRamp, {
-      rng: seededRng("mcb-1"),
-      trials: 300,
-      mustCastBy: { cardName: "Henzie", manaValue: 3, turn: 3, inLibrary: false },
-    });
-    const resNoRamp = simulateOpeningHands(noRamp, {
-      rng: seededRng("mcb-1"),
-      trials: 300,
-      mustCastBy: { cardName: "Henzie", manaValue: 3, turn: 3, inLibrary: false },
-    });
-
-    expect(resRamp.mustCastByPct).toBeGreaterThan(50);
-    expect(resRamp.mustCastByPct ?? 0).toBeGreaterThan(resNoRamp.mustCastByPct ?? 0);
-  });
-
-  it("needs the right colors, not just enough mana, for mustCastBy", () => {
-    const henzie: MustCastByOption = {
-      cardName: "Henzie",
-      manaValue: 3,
-      turn: 3,
-      inLibrary: false,
-      pips: [["B"], ["R"], ["G"]],
-    };
-    const forestsOnly = simulateOpeningHands(buildLibrary(36, 0, 63), {
-      rng: seededRng("mcb-colors"),
-      trials: 200,
-      mustCastBy: henzie,
-    });
-    expect(forestsOnly.mustCastByPct).toBe(0);
-    const anyColorCount = simulateOpeningHands(buildLibrary(36, 0, 63), {
-      rng: seededRng("mcb-colors"),
-      trials: 200,
-      mustCastBy: { ...henzie, pips: undefined },
-    });
-    expect(anyColorCount.mustCastByPct ?? 0).toBeGreaterThan(50);
   });
 });

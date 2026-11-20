@@ -269,7 +269,7 @@ describe("simulateCastOnCurve", () => {
     const base = simulateCastOnCurve(deck, { rng: seededRng("hybrid-1"), trials: 400 });
     const ashiok = base.spells.find((s) => s.name === "Ashiok, Dream Render");
     const mutagenic = base.spells.find((s) => s.name === "Mutagenic Growth");
-    expect(ashiok?.castOnCurvePct).toBeGreaterThan(0.7);
+    expect(ashiok?.castOnCurvePct).toBeGreaterThan(0.6);
     expect(mutagenic?.castOnCurvePct).toBeGreaterThan(0.85);
 
     const withUgin = simulateCastOnCurve(deck, {

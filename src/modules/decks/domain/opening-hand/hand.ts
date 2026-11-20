@@ -17,6 +17,9 @@ export type KeepPolicy = Readonly<{
 /** Commander's rule of thumb: 2 to 4 lands and something to cast early. */
 export const COMMANDER_KEEP: KeepPolicy = { minLands: 2, maxLands: 4, requireEarlyPlay: true };
 
+/** After this many mulligans a hand is kept, keepable or not (the tools' default). */
+export const MAX_MULLIGANS = 2;
+
 export type MulliganRule = Readonly<{
   policy: KeepPolicy;
   /** Whether the first mulligan is free (Commander's multiplayer rule, CR 103.5c). */
