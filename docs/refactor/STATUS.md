@@ -97,18 +97,19 @@ flowchart LR
 P00's `pnpm sizes` prints these. Add a row when each wave merges. Targets are from doc 65, "The end
 state".
 
-| After                 | Source lines                                                                                                            | Test lines | Files > 500 | Biggest folder | Clone runs     | `getContainer()` in app          |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | -------------- | -------------- | -------------------------------- |
-| Baseline              | 93,361                                                                                                                  | 32,194     | 28          | 43             | 83             | 191                              |
-| P00 script            | 93,490 \*                                                                                                               | 33,860     | 28          | 43             | 63 \*\*        | 191                              |
-| After P04             | 91,358                                                                                                                  | 34,255     | 27          | 43             | 57             | 191                              |
-| After wave 2          | 92,251                                                                                                                  | 35,885     | 23          | 48             | 36             | 191                              |
-| After wave 2½         | 92,379 (79,270 code)                                                                                                    | 36,098     | 21          | 49             | 36             | 4 (2 files, allowed)             |
-| After P23 (new count) | 77,318 production code lines; test support 2,345; tests 32,905                                                          | —          | 19          | —              | 25 (near: 229) | 4 (2 files, allowed)             |
-| After P24 and P26     | 74,789 production code lines                                                                                            | —          | —           | —              | —              | knip 457                         |
-| After P25             | 75,151 production code lines (baseline raised once, owner approved)                                                     | —          | —           | —              | 21             | knip 391                         |
-| After P11             | 75,382 production code lines (P11's approved exception, +231)                                                           | —          | —           | —              | 21             | knip 391; card-text regexes 128  |
-| **Target**            | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**       | **one per file, via `action()`** |
+| After                  | Source lines                                                                                                            | Test lines | Files > 500 | Biggest folder | Clone runs     | `getContainer()` in app          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | -------------- | -------------- | -------------------------------- |
+| Baseline               | 93,361                                                                                                                  | 32,194     | 28          | 43             | 83             | 191                              |
+| P00 script             | 93,490 \*                                                                                                               | 33,860     | 28          | 43             | 63 \*\*        | 191                              |
+| After P04              | 91,358                                                                                                                  | 34,255     | 27          | 43             | 57             | 191                              |
+| After wave 2           | 92,251                                                                                                                  | 35,885     | 23          | 48             | 36             | 191                              |
+| After wave 2½          | 92,379 (79,270 code)                                                                                                    | 36,098     | 21          | 49             | 36             | 4 (2 files, allowed)             |
+| After P23 (new count)  | 77,318 production code lines; test support 2,345; tests 32,905                                                          | —          | 19          | —              | 25 (near: 229) | 4 (2 files, allowed)             |
+| After P24 and P26      | 74,789 production code lines                                                                                            | —          | —           | —              | —              | knip 457                         |
+| After P25              | 75,151 production code lines (baseline raised once, owner approved)                                                     | —          | —           | —              | 21             | knip 391                         |
+| After P11              | 75,382 production code lines (P11's approved exception, +231)                                                           | —          | —           | —              | 21             | knip 391; card-text regexes 128  |
+| After P12–P14 (wave 3) | 75,422 production code lines (P14 +37, owner accepted)                                                                  | —          | 14          | —              | —              | knip 383; card-text regexes 99   |
+| **Target**             | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**       | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
 
