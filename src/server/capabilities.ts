@@ -38,6 +38,7 @@ import type { YoutubeService } from "@/modules/youtube";
 import { wireYoutubeCapabilities } from "@/modules/youtube/wiring";
 import type { DbExecutor } from "@/shared/db";
 import type { Clock } from "@/shared/kernel";
+import { accountOverviewReaders } from "./account-overview";
 import { wireLookupCapabilities } from "./lookups";
 import type { Reads } from "./reads";
 import { wireSiteCapabilities } from "./site";
@@ -79,7 +80,7 @@ type CapabilityDependencies = Readonly<{
 export function buildCapabilities(dependencies: CapabilityDependencies) {
   const { db, clock } = dependencies;
   return {
-    ...wireAccountCapabilities(dependencies),
+    ...wireAccountCapabilities({ ...dependencies, readers: accountOverviewReaders(dependencies) }),
     ...wireCatalogCapabilities(dependencies),
     ...wireDeckCapabilities(dependencies),
     ...wireDraftCapabilities(dependencies),

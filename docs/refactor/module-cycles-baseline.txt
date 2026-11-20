@@ -1,12 +1,3 @@
-accounts -> collection -> accounts
-accounts -> collection -> catalog -> accounts
-accounts -> decks -> accounts
-accounts -> decks -> activity -> accounts
-accounts -> wallet -> accounts
-accounts -> wishlist -> accounts
-accounts -> wishlist -> inventory -> accounts
-accounts -> wishlist -> inventory -> packs -> accounts
-accounts -> wishlist -> store -> accounts
 decks/advice -> decks/core -> decks/advice
 decks/core -> decks/play -> decks/core
 decks -> decks/advice -> decks
