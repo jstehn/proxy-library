@@ -28,6 +28,7 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     themes: [],
     leaderThemes: [],
     bracketFlags: [],
+    signals: { makes: [], uses: [] },
     text: "",
     isGameChanger: false,
     priceCents: 25,
@@ -50,6 +51,7 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     themes: overrides.themes ?? text.themes,
     leaderThemes: overrides.leaderThemes ?? text.leaderThemes,
     bracketFlags: overrides.bracketFlags ?? text.bracketFlags,
+    signals: overrides.signals ?? text.signals,
   };
 }
 
@@ -57,22 +59,35 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
  * What the catalog's recognizers say a card's text does, named as a line carries it (tests build
  * lines from text). Spread it under what a test names itself.
  */
-export function featuresOfText(card: {
+type CardInput = {
   typeLine: string;
   text?: string;
   producedMana?: readonly string[];
   isGameChanger?: boolean;
-}) {
-  const features = extractFeatures({
-    oracleId: "test",
+  manaValue?: number;
+  name?: string;
+  keywords?: readonly string[];
+};
+
+/** Every feature of a single-faced card, worked out by the catalog's recognizers. */
+export function cardFeaturesOf(card: CardInput) {
+  return extractFeatures({
+    oracleId: card.name ?? "test",
     producedMana: card.producedMana ?? [],
-    faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
+    keywords: card.keywords ?? [],
+    manaValue: card.manaValue ?? 0,
+    faces: [{ name: card.name ?? "Test", typeLine: card.typeLine, text: card.text ?? "" }],
   });
+}
+
+export function featuresOfText(card: CardInput) {
+  const features = cardFeaturesOf(card);
   return {
     roles: features.roleTags,
     themes: features.themes,
     leaderThemes: features.leaderThemes,
     bracketFlags: bracketFlagsOf(card.isGameChanger ?? false, features.bracketFlags),
+    signals: features.signalIO,
   };
 }
 

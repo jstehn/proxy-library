@@ -95,7 +95,7 @@ export function CutsPanel(props: {
           name: line.name,
           typeLine: line.typeLine,
           manaValue: line.manaValue,
-          text: line.text,
+          signals: line.signals,
           keywords: line.keywords,
           roles: line.roles,
           themes: line.themes,

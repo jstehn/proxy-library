@@ -49,6 +49,12 @@ export function featureArray(
   return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
 }
 
+/** What a card makes and uses, as `{ makes: Theme[], uses: Theme[] }` (card features, doc 66). */
+export function signalIO(printing = "p"): SQL {
+  return sql`coalesce((select f.features->'signalIO' from card_features f
+    where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{"makes": [], "uses": []}'::jsonb)`;
+}
+
 export const FOIL_IN_CATALOG = sql`p.finishes && array['foil', 'etched']::text[]`;
 
 /** Collection: the copy in this row is foil or etched (`column` is its finish). */

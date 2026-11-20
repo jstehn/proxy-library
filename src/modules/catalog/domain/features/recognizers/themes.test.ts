@@ -10,7 +10,9 @@ const card = (typeLine: string, text: string) => ({ typeLine, text });
 const textOf = (example: ReturnType<typeof card>) => ({
   oracleId: "test",
   producedMana: [],
-  faces: [example],
+  keywords: [],
+  manaValue: 0,
+  faces: [{ name: "Test", ...example }],
 });
 const cardThemes = (example: ReturnType<typeof card>) =>
   themesRecognizer.recognize(textOf(example));

@@ -1,5 +1,5 @@
 import type { BracketFlag } from "@/shared/kernel";
-import type { Finish, CardFacts, CardIdentity, Tag, Theme } from "@/shared/kernel";
+import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
 import type { DeckPlan } from "./deck-profile";
@@ -43,6 +43,8 @@ export type DeckLine = DeckCount &
     isGameChanger: boolean;
     /** Why it may count against a bracket: Game Changer, land denial, extra turns (design doc 31). */
     bracketFlags: readonly BracketFlag[];
+    /** The themes it makes and uses (card features). */
+    signals: SignalIO;
     /** Latest market price of one copy in its finish, in cents, if known. */
     priceCents: number | null;
     setCode: string;

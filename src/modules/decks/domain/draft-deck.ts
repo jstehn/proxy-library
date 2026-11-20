@@ -139,6 +139,9 @@ function toProfileLine(candidate: DraftCandidate, quantity = 1): ProfileLine {
     priceCents: candidate.priceCents,
     text: candidate.text,
     keywords: candidate.keywords,
+    roles: candidate.roles,
+    themes: candidate.themes,
+    signals: candidate.signals,
   };
 }
 

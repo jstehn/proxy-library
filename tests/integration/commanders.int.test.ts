@@ -54,7 +54,9 @@ async function addCard(card: TestCard): Promise<void> {
   const leaderThemes = extractFeatures({
     oracleId,
     producedMana: [],
-    faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
+    keywords: [],
+    manaValue: 0,
+    faces: [{ name: card.name, typeLine: card.typeLine, text: card.text ?? "" }],
   }).leaderThemes;
   await storeFeatureArrays(oracleId, { roleTags: card.roles, leaderThemes });
   if (card.priceCents !== undefined) {

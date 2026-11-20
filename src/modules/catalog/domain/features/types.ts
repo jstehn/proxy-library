@@ -1,12 +1,18 @@
-import type { BracketFlag, Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag, SignalIO, SignalKind, Tag, Theme } from "@/shared/kernel";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */
 export type CardText = Readonly<{
   oracleId: string;
-  faces: ReadonlyArray<Pick<CardFace, "typeLine" | "text">>;
+  faces: ReadonlyArray<Pick<CardFace, "name" | "typeLine" | "text">>;
   producedMana: readonly string[];
+  /** Scryfall's keyword list ("Flying", "Ward"). */
+  keywords: readonly string[];
+  manaValue: number;
 }>;
+
+/** One thing a card's text shows, with a card search that finds more like it. */
+export type SignalFact = Readonly<{ kind: SignalKind; name: string; followUp: string }>;
 
 /** Whether and how much mana a card adds when tapped (moved unchanged from decks/domain/mana.ts). */
 export type TapMana = Readonly<{
@@ -29,6 +35,12 @@ export type CardFeatureFields = Readonly<{
   leaderThemes: readonly Theme[];
   /** Land denial and extra turns, from the text (Game Changers are Scryfall's own list). */
   bracketFlags: readonly Exclude<BracketFlag, "gameChanger">[];
+  /** What the card's text mentions, for the deck-level counting in decks (design doc 28). */
+  signals: readonly SignalFact[];
+  /** The themes the card makes and uses: a Treasure maker makes treasures, a payoff uses them. */
+  signalIO: SignalIO;
+  /** Each face's rules text without reminder text and with the card's own names as "~". */
+  faces: readonly Readonly<{ plainText: string }>[];
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

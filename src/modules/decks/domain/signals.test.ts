@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import {
-  cardSignalIO,
-  deckSignalProfile,
-  SIGNAL_LABELS,
-  synergyMatches,
-  type SignalLine,
-} from "./signals";
+import { cardFeaturesOf } from "../testing/deck-view";
+import { THEME_LABELS, type SignalIO } from "@/shared/kernel";
+import type { Board } from "./boards";
+import { deckSignalProfile, synergyMatches } from "./signals";
+
+type TextCard = Readonly<{ name: string; typeLine: string; manaValue: number; text: string }>;
+type SignalLine = TextCard & Readonly<{ board: Board; quantity: number }>;
+
+/** What the catalog's recognizers say a card makes and uses, worked out from its text. */
+function cardSignalIO(card: TextCard): SignalIO {
+  const features = cardFeaturesOf(card);
+  return features.signalIO;
+}
+
+const profileOf = (lines: readonly SignalLine[]) =>
+  deckSignalProfile(lines.map((line) => ({ ...line, signals: cardSignalIO(line) })));
 
 describe("cardSignalIO", () => {
   it("tags Treasure makers as making treasure + artifact_synergy", () => {
@@ -15,9 +24,9 @@ describe("cardSignalIO", () => {
       manaValue: 4,
       text: "Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, you create a Treasure token.",
     });
-    expect(io.makes).toContain("treasure");
-    expect(io.makes).toContain("artifact_synergy");
-    expect(io.makes).toContain("enchantment_synergy");
+    expect(io.makes).toContain("treasures");
+    expect(io.makes).toContain("artifacts");
+    expect(io.makes).toContain("enchantments");
   });
 
   it("tags artifact sacrifice payoffs as using treasure and sacrifice", () => {
@@ -28,7 +37,7 @@ describe("cardSignalIO", () => {
       text: "Whenever a player sacrifices a permanent, Mayhem Devil deals 1 damage to any target.",
     });
     expect(io.uses).toContain("sacrifice");
-    expect(io.uses).toContain("treasure");
+    expect(io.uses).toContain("treasures");
   });
 
   it("ignores reminder text when extracting signals", () => {
@@ -38,7 +47,7 @@ describe("cardSignalIO", () => {
       manaValue: 2,
       text: "Vigilance (Attacking doesn't cause this creature to tap.)\nAmass Orcs 1 (Put a +1/+1 counter on an Army you control.)",
     });
-    expect(io.makes).not.toContain("plus_one_counter");
+    expect(io.makes).not.toContain("counters");
   });
 
   it("tags cheap instants/sorceries as making spellslinger and payoffs as using it", () => {
@@ -54,8 +63,8 @@ describe("cardSignalIO", () => {
       manaValue: 3,
       text: "Whenever you cast an instant or sorcery spell, Guttersnipe deals 2 damage to each opponent.",
     });
-    expect(bolt.makes).toContain("spellslinger");
-    expect(gutternsnipe.uses).toContain("spellslinger");
+    expect(bolt.makes).toContain("spells");
+    expect(gutternsnipe.uses).toContain("spells");
   });
 });
 
@@ -80,14 +89,14 @@ describe("deckSignalProfile & synergyMatches", () => {
   ];
 
   it("weights commander signals 3x compared to main-deck cards", () => {
-    const profile = deckSignalProfile(deck);
+    const profile = profileOf(deck);
     // Korvold uses sacrifice (3) + makes sacrifice (3); Pitiless Plunderer uses sacrifice (1) + makes treasure (1)
     expect(profile.uses.get("sacrifice")).toBe(4);
-    expect(profile.makes.get("treasure")).toBe(1);
+    expect(profile.makes.get("treasures")).toBe(1);
   });
 
   it("matches a Treasure maker to a sacrifice-using deck with sqrt dampening", () => {
-    const profile = deckSignalProfile(deck);
+    const profile = profileOf(deck);
     const dockside = cardSignalIO({
       name: "Professional Face-Breaker",
       typeLine: "Creature — Human Warrior",
@@ -96,8 +105,8 @@ describe("deckSignalProfile & synergyMatches", () => {
     });
     const result = synergyMatches(dockside, profile);
     expect(result.total).toBeGreaterThan(0);
-    expect(result.matches.some((m) => m.tag === "treasure")).toBe(true);
-    expect(SIGNAL_LABELS.treasure).toBeTruthy();
+    expect(result.matches.some((m) => m.tag === "treasures")).toBe(true);
+    expect(THEME_LABELS.treasures).toBeTruthy();
   });
 
   it("dampens repeated deck counts sublinearly", () => {
@@ -125,8 +134,8 @@ describe("deckSignalProfile & synergyMatches", () => {
       manaValue: 1,
       text: "Sacrifice a creature: Scry 1.",
     });
-    const r1 = synergyMatches(sacOutlet, deckSignalProfile(small));
-    const r9 = synergyMatches(sacOutlet, deckSignalProfile(large));
+    const r1 = synergyMatches(sacOutlet, profileOf(small));
+    const r9 = synergyMatches(sacOutlet, profileOf(large));
     // 9x deck cards -> sqrt(9)/sqrt(1) = 3x, not 9x
     expect(r9.total).toBeCloseTo(r1.total * 3, 5);
   });

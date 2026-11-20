@@ -3,6 +3,7 @@ import {
   type CardIdentity,
   hasTypeWord,
   manaCurve,
+  type SignalIO,
   type Tag,
   type Theme,
 } from "@/shared/kernel";
@@ -45,6 +46,7 @@ export type CandidateCard = Pick<CardIdentity, "oracleId"> &
   Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
   Readonly<{
     text?: string;
+    signals?: SignalIO;
     keywords: readonly string[];
     roles: readonly Tag[];
     themes: readonly Theme[];
@@ -211,18 +213,7 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
           target: targets[tag],
         }));
 
-  const signals = deckSignalProfile(
-    lines
-      .filter((line) => isPlayed(line.board))
-      .map((line) => ({
-        name: line.typeLine,
-        typeLine: line.typeLine,
-        text: line.text ?? "",
-        manaValue: line.manaValue,
-        board: line.board,
-        quantity: line.quantity,
-      })),
-  );
+  const signals = deckSignalProfile(lines.filter((line) => isPlayed(line.board)));
   const curveCounts = manaCurve(spells);
 
   const keywords = [...new Set(commanders.flatMap((line) => line.keywords ?? []))];

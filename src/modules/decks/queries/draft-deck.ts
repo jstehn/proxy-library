@@ -1,6 +1,7 @@
+import type { SignalIO } from "@/shared/kernel";
 import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
-import { featureArray } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/shared/card-search/sql";
 import { formatRules } from "../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
@@ -33,7 +34,7 @@ const NON_LAND = sql`split_part(p.type_line, ' // ', 1) !~ '\\yLand\\y'`;
 function spellColumns(format: string) {
   return sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
     p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
-    ${featureArray("bracket_flags")} as bracket_flags, p.produced_mana, p.is_game_changer,
+    ${featureArray("bracket_flags")} as bracket_flags, ${signalIO()} as signals, p.produced_mana, p.is_game_changer,
     coalesce((p.legalities->>${format}) = 'restricted', false) as is_restricted,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
 }
@@ -48,6 +49,7 @@ type SpellRow = {
   keywords: string[];
   role_tags: Tag[];
   bracket_flags: BracketFlag[];
+  signals: SignalIO;
   theme_tags: Theme[];
   produced_mana: string[] | null;
   is_game_changer: boolean;
@@ -70,6 +72,7 @@ function toCandidate(row: SpellRow, pool: "owned" | "store"): DraftCandidate {
     keywords: row.keywords,
     roles: row.role_tags,
     themes: row.theme_tags,
+    signals: row.signals,
     rarity: row.rarity,
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
     pool,

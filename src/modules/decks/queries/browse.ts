@@ -1,3 +1,4 @@
+import type { SignalIO } from "@/shared/kernel";
 import { bracketFlagsOf } from "../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
 import { formatRules } from "../domain/format-rules";
@@ -16,7 +17,7 @@ import {
 } from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
 import { parseSearch } from "@/shared/card-search";
-import { featureArray, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { featureArray, signalIO, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 import { legalInFormat, ownedPerCard } from "./candidate-pool";
 import { STANDARD_FIRST } from "./owned";
 
@@ -226,6 +227,7 @@ export async function browseCollection(
     produced_mana: string[] | null;
     role_tags: Tag[];
     bracket_flags: BracketFlag[];
+    signals: SignalIO;
     theme_tags: Theme[];
     set_code: string;
     collector_number: string;
@@ -264,7 +266,7 @@ export async function browseCollection(
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
            p.produced_mana, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
-           ${featureArray("bracket_flags")} as bracket_flags, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
+           ${featureArray("bracket_flags")} as bracket_flags, ${signalIO()} as signals, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
            ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
       from candidates card join printings p on p.id = card.printing_id
@@ -313,6 +315,7 @@ export async function browseCollection(
       text: row.face_text,
       roles: row.role_tags,
       themes: row.theme_tags,
+      signals: row.signals,
     })),
     total,
     pageCount: Math.max(1, Math.ceil(total / BROWSE_PAGE_SIZE)),

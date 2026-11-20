@@ -4,19 +4,15 @@ import {
   Cents,
   curveSlot,
   curveSlotLabel,
+  type SignalIO,
   type Tag,
+  THEME_LABELS,
   type Theme,
 } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
-import {
-  cardSignalIO as cardSignalIOFromText,
-  deckSignalProfile,
-  SIGNAL_LABELS,
-  synergyMatches,
-  type DeckSignalProfile,
-} from "./signals";
+import { deckSignalProfile, NO_SIGNALS, synergyMatches, type DeckSignalProfile } from "./signals";
 import type { TargetedTag } from "./stats";
 
 // Unified 0–100 Card Rating (design doc 46, #53/#55/#56/#59):
@@ -71,7 +67,7 @@ export type RatingProfile = Readonly<{
 export type RatingCandidate = Pick<CardIdentity, "oracleId"> &
   Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
   Readonly<{
-    text?: string;
+    signals?: SignalIO;
     keywords: readonly string[];
     roles: readonly Tag[];
     themes: readonly Theme[];
@@ -229,7 +225,7 @@ export type RatingFeatureVector = Readonly<{
 
 type ComputedRatingFeatures = Readonly<{
   features: RatingFeatureVector;
-  synergyMatches: readonly { tag: keyof typeof SIGNAL_LABELS; deckWeight: number }[];
+  synergyMatches: readonly { tag: Theme; deckWeight: number }[];
   fitLabels: readonly string[];
   filledRoles: readonly string[];
 }>;
@@ -241,19 +237,11 @@ function computeRatingFeatures(
   keywordCap: number = RATING_WEIGHTS.keywordCap,
 ): ComputedRatingFeatures {
   let synergyTotal = 0;
-  let synergyMatchList: readonly { tag: keyof typeof SIGNAL_LABELS; deckWeight: number }[] = [];
-  if (card.text !== undefined && card.text.length > 0) {
-    const io = {
-      name: card.name,
-      typeLine: card.typeLine,
-      text: card.text,
-      manaValue: card.manaValue,
-    };
-    const { total, matches } = synergyMatches(cardSignalIOFromText(io), profile.signals);
-    if (total > 0 && matches.length > 0) {
-      synergyTotal = total;
-      synergyMatchList = matches;
-    }
+  let synergyMatchList: readonly { tag: Theme; deckWeight: number }[] = [];
+  const { total, matches } = synergyMatches(card.signals ?? NO_SIGNALS, profile.signals);
+  if (total > 0 && matches.length > 0) {
+    synergyTotal = total;
+    synergyMatchList = matches;
   }
 
   let themeCount = 0;
@@ -386,7 +374,7 @@ export function rateCard(
     const contribution = Math.min(weights.synergyCap, weights.synergy * features.synergyTotal);
     const top = matches
       .slice(0, 2)
-      .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
+      .map((m) => `${THEME_LABELS[m.tag]} ×${m.deckWeight}`)
       .join(", ");
     parts.push({
       kind: "synergy",

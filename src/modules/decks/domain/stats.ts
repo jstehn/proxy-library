@@ -8,6 +8,7 @@ import {
   isLand,
   type ManaColor,
   type ManaSymbol,
+  type SignalIO,
   type Tag,
   TAGS,
   type Theme,
@@ -33,6 +34,8 @@ export type StatsLine = DeckCount &
     /** What deck the card plays into, and what deck it leads as a commander (card features). */
     themes?: readonly Theme[];
     leaderThemes?: readonly Theme[];
+    /** The themes it makes and uses, for matching it to the deck it plays in (card features). */
+    signals?: SignalIO;
   }>;
 
 export type ManaSource = ManaSymbol;

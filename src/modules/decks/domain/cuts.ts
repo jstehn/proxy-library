@@ -1,4 +1,4 @@
-import { type BracketFlag } from "@/shared/kernel";
+import { THEME_LABELS, type BracketFlag } from "@/shared/kernel";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -19,7 +19,7 @@ import {
   powerTierForBracket,
   type PowerTier,
 } from "./rate";
-import { cardSignalIO, SIGNAL_LABELS, synergyMatches } from "./signals";
+import { NO_SIGNALS, synergyMatches } from "./signals";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
 // each with the reasons for its score. The same local rules as suggestions (design doc 20) judge
@@ -160,21 +160,13 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         fitProfile,
       );
       const synergy = profile.signals
-        ? synergyMatches(
-            cardSignalIO({
-              name: line.name,
-              typeLine: line.typeLine,
-              text: line.text,
-              manaValue: line.manaValue,
-            }),
-            profile.signals,
-          )
+        ? synergyMatches(line.signals ?? NO_SIGNALS, profile.signals)
         : { total: 0, matches: [] };
       const allFitReasons = [...fit.reasons];
       if (synergy.total > 0 && synergy.matches.length > 0) {
         const top = synergy.matches
           .slice(0, 2)
-          .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
+          .map((m) => `${THEME_LABELS[m.tag]} ×${m.deckWeight}`)
           .join(", ");
         allFitReasons.push({ kind: "synergy", label: `matches ${top}` });
       }

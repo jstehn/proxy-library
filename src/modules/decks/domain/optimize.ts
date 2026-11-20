@@ -3,7 +3,7 @@ import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kern
 import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { rateCard, type RatingEdhrecSignal, type RatingProfile } from "./rate";
-import { cardSignalIO, deckSignalProfile, synergyMatches } from "./signals";
+import { deckSignalProfile, NO_SIGNALS, synergyMatches } from "./signals";
 import { formatRules } from "./format-rules";
 import { deckStats, isLand, type StatsLine, type TargetedTag } from "./stats";
 import { deckProfile } from "./suggest";
@@ -123,7 +123,7 @@ function toRatingProfile(cards: readonly OptimizerCard[], format: Format): Ratin
     tribes: profile.tribes,
     gaps: profile.gaps,
     keywords: profile.keywords,
-    signals: profile.signals ?? deckSignalProfile(cards.map((c) => ({ ...c, text: c.text ?? "" }))),
+    signals: profile.signals ?? deckSignalProfile(cards),
     averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
     curveCounts: profile.curveCounts ?? [],
   };
@@ -182,13 +182,9 @@ function computeSynergyCohesion(
 
   let matchedCards = 0;
   for (const card of nonLandMain) {
-    const io = cardSignalIO({
-      name: card.name,
-      typeLine: card.typeLine,
-      text: card.text ?? "",
-      manaValue: card.manaValue,
-    });
-    if (synergyMatches(io, ratingProfile.signals).matches.length > 0) matchedCards += 1;
+    if (synergyMatches(card.signals ?? NO_SIGNALS, ratingProfile.signals).matches.length > 0) {
+      matchedCards += 1;
+    }
   }
   const signalScore = clamp01(matchedCards / Math.max(1, nonLandMain.length * 0.5)) * 100;
 
@@ -233,7 +229,7 @@ export function scoreDeck(cards: readonly OptimizerCard[], context: ScoreDeckCon
         name: card.name,
         typeLine: card.typeLine,
         manaValue: card.manaValue,
-        text: card.text,
+        signals: card.signals,
         keywords: card.keywords,
         roles: card.roles,
         themes: card.themes,
@@ -464,7 +460,7 @@ export function optimizeDeck(
         name: cut.name,
         typeLine: cut.typeLine,
         manaValue: cut.manaValue,
-        text: cut.text,
+        signals: cut.signals,
         keywords: cut.keywords,
         roles: cut.roles,
         themes: cut.themes,
@@ -481,7 +477,7 @@ export function optimizeDeck(
         name: add.name,
         typeLine: add.typeLine,
         manaValue: add.manaValue,
-        text: add.text,
+        signals: add.signals,
         keywords: add.keywords,
         roles: add.roles,
         themes: add.themes,

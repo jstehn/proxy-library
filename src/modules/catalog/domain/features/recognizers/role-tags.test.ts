@@ -11,7 +11,9 @@ const cardTags = (card: TagFacts): readonly Tag[] =>
   roleTags.recognize({
     oracleId: "test",
     producedMana: card.producedMana ?? [],
-    faces: [{ typeLine: card.typeLine, text: card.text }],
+    keywords: [],
+    manaValue: 0,
+    faces: [{ name: "Test", typeLine: card.typeLine, text: card.text }],
   });
 
 // Real Oracle text, quoted: the fixture catalog has too few staples (design doc 19, invariant 3).

@@ -25,7 +25,7 @@ export {
   type SealedProduct,
 } from "./domain/types";
 export { extractFeatures } from "./domain/features/registry";
-export type { TapMana } from "./domain/features/types";
+export type { SignalFact, TapMana } from "./domain/features/types";
 export { printingCards } from "./queries/printing-cards";
 export * as catalogQueries from "./queries";
 export { makeSearchCatalog } from "./application/search-catalog";

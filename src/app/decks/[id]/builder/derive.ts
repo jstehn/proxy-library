@@ -63,6 +63,7 @@ export function provisionalLine(
     producedMana: card.producedMana,
     roles: card.roles,
     themes: card.themes,
+    signals: card.signals,
     leaderThemes: [],
     text: card.text,
     isGameChanger: card.isGameChanger,

@@ -19,10 +19,13 @@ export type { ColorCombination, ManaColor, ManaSymbol } from "./colors";
 export { plainText } from "./plain-text";
 export {
   BRACKET_FLAGS,
+  SIGNAL_KINDS,
   TAGS,
   THEME_LABELS,
   THEMES,
   type BracketFlag,
+  type SignalIO,
+  type SignalKind,
   type Tag,
   type Theme,
 } from "./card-vocabulary";

@@ -216,6 +216,8 @@ const policies = [
   // Design doc 66: the one decks read that calls the catalog for card features (a value, so the
   // lazy repair of a missing row stays in the catalog).
   { from: layer("queries", { file: "tap-mana.ts" }), allow: { to: publicApi } },
+  // The signals read (deck_signals) reads the stored features the same way.
+  { from: layer("queries", { file: "card-facts.ts" }), allow: { to: publicApi } },
   from(
     layer("testing"),
     el("kernel"),

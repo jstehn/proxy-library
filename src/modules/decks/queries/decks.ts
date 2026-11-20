@@ -1,10 +1,11 @@
+import type { SignalIO } from "@/shared/kernel";
 import { bracketFlagsOf, isBracket } from "../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
 import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { featureArray } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/shared/card-search/sql";
 import { ColorSchema, FinishSchema, type Tag, type Theme, UserId } from "@/shared/kernel";
 import {
   BOARDS,
@@ -179,6 +180,7 @@ export async function deckView(
     produced_mana: string[] | null;
     role_tags: Tag[];
     bracket_flags: BracketFlag[];
+    signals: SignalIO;
     theme_tags: Theme[];
     leader_themes: Theme[];
     price_cents: number | null;
@@ -206,6 +208,7 @@ export async function deckView(
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
            ${featureArray("role_tags", "shown")} as role_tags,
            ${featureArray("bracket_flags", "shown")} as bracket_flags,
+           ${signalIO("shown")} as signals,
            ${featureArray("theme_tags", "shown")} as theme_tags,
            ${featureArray("leader_themes", "shown")} as leader_themes,
            ${latestPrice(
@@ -305,6 +308,7 @@ export async function deckView(
       producedMana: row.produced_mana ?? [],
       roles: row.role_tags,
       themes: row.theme_tags,
+      signals: row.signals,
       leaderThemes: row.leader_themes,
       text: row.face_text,
       faceTexts: row.face_texts ?? [],

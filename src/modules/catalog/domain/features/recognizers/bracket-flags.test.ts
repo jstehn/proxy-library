@@ -10,7 +10,9 @@ const bracketFlags = (card: BracketFacts): BracketFlag[] => [
   ...recognizer.recognize({
     oracleId: "test",
     producedMana: [],
-    faces: [{ typeLine: card.typeLine, text: card.text }],
+    keywords: [],
+    manaValue: 0,
+    faces: [{ name: "Test", typeLine: card.typeLine, text: card.text }],
   }),
 ];
 

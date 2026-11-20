@@ -41,6 +41,7 @@ const gridCard = (name: string): BrowseCard => ({
   roles: [],
   themes: [],
   bracketFlags: [],
+  signals: { makes: [], uses: [] },
   text: "",
   setCode: "tst",
   collectorNumber: "1",

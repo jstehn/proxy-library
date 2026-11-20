@@ -2,9 +2,10 @@ import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
-import { type Tag, type Theme } from "@/shared/kernel";
-import { parseSearch, type SignalCard } from "@/shared/card-search";
-import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
+import { catalogQueries } from "@/modules/catalog";
+import { parseSearch } from "@/shared/card-search";
+import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import type { SignalCard } from "../domain/signals";
 import { ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Card facts for the LLM tools (design doc 28): finding a card by the name a person (or a model)
@@ -66,27 +67,20 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
 /** At most this many cards are read for one analysis. */
 const SIGNAL_CARD_LIMIT = 500;
 
-type SignalRow = {
-  name: string;
-  type_line: string;
-  face_text: string;
-  keywords: string[];
-  role_tags: Tag[];
-  theme_tags: Theme[];
-};
+type SignalRow = { oracle_id: string; name: string };
 
-const SIGNAL_COLUMNS = sql`p.name, p.type_line, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
-  coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
+const SIGNAL_COLUMNS = sql`p.oracle_id, p.name`;
 
-function toSignalCard(row: SignalRow): SignalCard {
-  return {
-    name: row.name,
-    typeLine: row.type_line,
-    text: row.face_text,
-    keywords: row.keywords,
-    roleTags: row.role_tags,
-    themes: row.theme_tags,
-  };
+/** The cards with what their features say each shows (the catalog's card features). */
+async function toSignalCards(db: DbExecutor, rows: readonly SignalRow[]): Promise<SignalCard[]> {
+  const features = await catalogQueries.cardFeatures(
+    db,
+    rows.map((row) => row.oracle_id),
+  );
+  return rows.flatMap((row) => {
+    const card = features.get(row.oracle_id);
+    return card === undefined ? [] : [{ name: row.name, ...card }];
+  });
 }
 
 /** The cards of one of your decks (commander and main deck, one each), or null if it isn't yours. */
@@ -109,7 +103,7 @@ export async function deckSignalCards(
      order by p.name
      limit ${SIGNAL_CARD_LIMIT}
   `);
-  return rows.rows.map(toSignalCard);
+  return toSignalCards(db, rows.rows);
 }
 
 /** Your cards (game and real) matching a search, one per card, and the search's notes. */
@@ -133,7 +127,7 @@ export async function ownedSignalCards(
      order by p.name
      limit ${SIGNAL_CARD_LIMIT}
   `);
-  return { cards: rows.rows.map(toSignalCard), notes: parsed.notes };
+  return { cards: await toSignalCards(db, rows.rows), notes: parsed.notes };
 }
 
 export type { OwnedCardCheck };

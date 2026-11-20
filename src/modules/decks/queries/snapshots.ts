@@ -74,6 +74,7 @@ function previewLineToOptimizerCard(
     keywords: line.keywords ?? [],
     roles: line.roles ?? [],
     themes: line.themes ?? [],
+    signals: line.signals,
     rarity: line.rarity ?? "common",
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,

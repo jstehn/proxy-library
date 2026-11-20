@@ -79,6 +79,25 @@ export const THEME_LABELS: Readonly<Record<Theme, string>> = {
   vehicles: "Vehicles and mounts",
 };
 
+export const SIGNAL_KINDS = [
+  "counter",
+  "token",
+  "creatureType",
+  "keyword",
+  "trigger",
+  "cost",
+  "zone",
+  "cardType",
+  "role",
+  "theme",
+  "phrase",
+] as const;
+/** What kind of thing a deck keeps doing (design doc 28, section 3.7). */
+export type SignalKind = (typeof SIGNAL_KINDS)[number];
+
+/** The themes a card makes and the themes it uses, for matching a card to the deck it plays in. */
+export type SignalIO = Readonly<{ makes: readonly Theme[]; uses: readonly Theme[] }>;
+
 export const BRACKET_FLAGS = ["gameChanger", "landDenial", "extraTurn"] as const;
 /** A reason a card counts against a bracket. A card can have several, or none. */
 export type BracketFlag = (typeof BRACKET_FLAGS)[number];
