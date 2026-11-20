@@ -70,7 +70,7 @@ export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
         cards={Object.fromEntries(cards)}
         format={deck.format}
         targetBracket={deck.targetBracket}
-        seed={capabilities.seeds.newSeed()}
+        seed={capabilities.site.newSeed()}
         ownerName={ownerName}
         listText={EXPORTERS.names(view.lines)}
         grouping={deck.grouping}

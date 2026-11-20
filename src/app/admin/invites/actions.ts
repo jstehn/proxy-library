@@ -26,7 +26,10 @@ export async function createInviteAction(
   if (!invite.ok) return { error: createMessageFor(invite.error), created: null };
 
   revalidatePath("/admin/invites");
-  const link = new URL(`/register?invite=${invite.value.code}`, capabilities.appUrl).toString();
+  const link = new URL(
+    `/register?invite=${invite.value.code}`,
+    capabilities.site.appUrl,
+  ).toString();
   return {
     error: null,
     created: { code: invite.value.code, link, expiresAt: invite.value.expiresAt.toISOString() },

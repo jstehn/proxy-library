@@ -17,8 +17,8 @@ export default async function TokensPage() {
   const { actor, capabilities, reads } = await readPage();
 
   const tokens = await reads.accounts.listAccessTokens(actor);
-  const mcpUrl = new URL("/api/mcp", capabilities.appUrl).toString();
-  const openApiUrl = new URL("/api/tools/openapi.json", capabilities.appUrl).toString();
+  const mcpUrl = new URL("/api/mcp", capabilities.site.appUrl).toString();
+  const openApiUrl = new URL("/api/tools/openapi.json", capabilities.site.appUrl).toString();
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-12">

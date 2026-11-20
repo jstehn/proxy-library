@@ -87,7 +87,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           cards={Object.fromEntries(printings ?? [])}
           format={deck.format}
           targetBracket={deck.targetBracket}
-          seed={capabilities.seeds.newSeed()}
+          seed={capabilities.site.newSeed()}
           ownerName={viewed.ownerName}
           yourCopies={viewed.yourCopies}
           listText={EXPORTERS.names(view.lines)}
@@ -264,7 +264,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         format={deck.format}
         initialDeck={builderDeck}
         targetBracket={deck.targetBracket}
-        seed={capabilities.seeds.newSeed()}
+        seed={capabilities.site.newSeed()}
       />
     </main>
   );
