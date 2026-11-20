@@ -1,6 +1,6 @@
 // The real collection's public API (design doc 16): the only file the app, the composition
 // roots and the decks module may import. No game module may (rule 1, lint-enforced).
-export { makeRealCollection } from "./application/make-real-collection";
+export { makeRealCollection, type RealCollection } from "./application/make-real-collection";
 export {
   MAX_IMPORT_BYTES,
   MAX_IMPORT_LINES,

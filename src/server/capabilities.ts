@@ -36,7 +36,8 @@ import { tradeQueries, type Trades } from "@/modules/trades";
 import { wireTradeCapabilities } from "@/modules/trades/wiring";
 import type { Wallet } from "@/modules/wallet";
 import { wireWalletCapabilities } from "@/modules/wallet/wiring";
-import type { makeRealCollection } from "@/modules/real-collection";
+import type { RealCollection } from "@/modules/real-collection";
+import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
 import type { makeStore } from "@/modules/store";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
@@ -54,6 +55,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  realCollection: RealCollection;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Wishlist;
   outsideData: OutsideDataService;
@@ -70,7 +72,6 @@ type CapabilityDependencies = Readonly<{
     proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
     drafts: ReturnType<typeof makeDrafts>;
-    realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
     accounts: ReturnType<typeof makeAccounts>;
     catalog: ReturnType<typeof makeCatalog>;
@@ -111,6 +112,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireWalletCapabilities(dependencies),
     ...wireSocialCapabilities(dependencies),
     ...wireTradeCapabilities(dependencies),
+    ...wireRealCollectionCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
