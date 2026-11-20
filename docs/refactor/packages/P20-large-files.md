@@ -57,7 +57,12 @@ The files above, `worker/`, `tests/e2e/`, `playwright.config.ts` (only if the sp
 5. **Close the rows.** Delete the rows from `removal-list.md` that P25 and P30 closed, and every
    "P20" row you closed. Anything left with "P20" in the list gets done, moved to a named package,
    or deleted with a sentence.
-6. `pnpm check`, `pnpm test:int`, `pnpm test:e2e`. `pnpm sizes --update`; `pnpm clones --update`.
+6. **Tests live with what they cover** (owner decision, 2026-11-19; `docs/architecture/testing.md`,
+   "Layout"). Move each `tests/integration/*.int.test.ts` that tests one module into that module
+   (beside the code it covers). Keep only journeys across modules in `tests/integration/`. Move
+   `src/app/_llm-tools/llm-tools.int.test.ts` next to the bindings it covers. Moves only: no test
+   changes. Do this after P18 and P30, so each test moves once.
+7. `pnpm check`, `pnpm test:int`, `pnpm test:e2e`. `pnpm sizes --update`; `pnpm clones --update`.
 
 ## What not to do
 
@@ -72,6 +77,8 @@ The files above, `worker/`, `tests/e2e/`, `playwright.config.ts` (only if the sp
   `index.ts` is over 150 lines (`pnpm sizes`).
 - `ls tests/e2e` shows no spec over 400 lines, and `pnpm test:e2e` runs the same tests as before.
 - `wc -l worker/index.ts` is ≤ 150.
+- Every file left in `tests/integration/` tests more than one module (say which in the handoff), and
+  `pnpm test:int` runs the same number of tests as before.
 - `pnpm clones --near` reports fewer groups than at P23 by the number the handoff names.
 - STATUS's size table shows the code lines at the end of this package, against the ≤ 75,000 target.
 
