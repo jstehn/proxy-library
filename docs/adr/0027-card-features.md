@@ -19,7 +19,7 @@ whole catalog, so they are **computed at sync and on update, and stored**.
 ## Decision
 
 - **One pure function**, `extractFeatures(cardText)`, in `src/modules/catalog/domain/features/`,
-  returns `CardFeatures`: faces and types, mana production, cost changes, cast permissions,
+  returns `CardFeatures`: tap mana, mana production, cost changes, cast permissions,
   triggers, effects, role tags, themes, signals, land facts.
 - It runs a **registry** of recognizers, `{ id, field, recognize }`. Each field has one owning
   recognizer; each regex over card text lives in exactly one recognizer, with a fixture test on
@@ -32,10 +32,12 @@ whole catalog, so they are **computed at sync and on update, and stored**.
   current version. A reader that finds a missing or old row computes and saves it (lazy repair),
   so a deploy never serves empty features.
 - Consumers read `CardFeatures` through `catalog.cardFeatures(oracleIds)` and never read oracle
-  text. The package split is P11 (model, storage, faces and types), P12 (mana and casting),
+  text. The package split is P11 (model, storage, tap mana), P12 (mana and casting),
   P13 (tags, themes, signals), P14 (lands, types, drafts).
 - Moving code into a recognizer does not change what it answers. Improvements are separate,
   tested commits with a version bump.
+
+- P11 ships **no faces-and-types recognizer**: P26 keeps `cardTypes` as the pure type-line helper.
 
 ## Consequences
 

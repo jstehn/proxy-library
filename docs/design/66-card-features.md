@@ -53,8 +53,13 @@ catalog stores it for every oracle card. Every consumer reads that value and non
 text. A new ability is a new **recognizer** (one regex in one file, with a fixture test), not an
 edit in five files.
 
-**P11 ships** the model, the recognizer registry, storage, `pnpm worker sync features`, the
-faces-and-types recognizer, and the test pattern. **P12** (mana, costs, casting, triggers), **P13**
+**P11 ships** the model, the recognizer registry, storage, `pnpm worker sync features`, the first
+recognizer (`tap-mana`, which replaces the tap-for-mana code in `decks/domain/mana.ts` and
+`castability.ts`), and the test pattern. There is **no faces-and-types recognizer**: P26 keeps
+`cardTypes` as the pure type-line helper (owner answer D2), and the features carry oracle-text
+facts only. Reminder-text stripping and name substitution (`plainText`) arrive with P13, which
+deletes the copies in `tags.ts`, `primitives.ts` and `brackets.ts`; P11 has no recognizer that
+needs them, so it ships no unused preprocessing. **P12** (mana, costs, casting, triggers), **P13**
 (tags, themes, signals) and **P14** (lands, types, draft cards) add their recognizers and move
 their consumers.
 
@@ -90,8 +95,7 @@ export type CardText = Readonly<{
 
 export type CardFeatures = Readonly<{
   featuresVersion: number;
-  faces: readonly FaceFeatures[]; // P11
-  types: TypeFeatures; // P11 (replaces kernel `cardTypes`, P14 removes that)
+  tapMana: TapMana; // P11 (shipped)
   manaProduction: readonly ManaProduction[]; // P12
   costChanges: readonly CostChange[]; // P12
   castPermissions: readonly CastPermission[]; // P12
@@ -106,38 +110,23 @@ export type CardFeatures = Readonly<{
 }>;
 ```
 
-P11's `CardFeatures` has only the first three fields. **Each later package adds its fields to
+P11's `CardFeatures` has only `featuresVersion` and `tapMana`. **Each later package adds its fields to
 this type in the same commit as its recognizer and bumps `featuresVersion`.** So nobody ever
 reads an empty field that "will be filled later".
 
-**Faces and types (P11).**
+**Tap mana (P11, shipped).**
 
 ```ts
-export type FaceFeatures = Readonly<{
-  name: string;
-  manaCost: string | null;
-  typeLine: string;
-  supertypes: readonly string[]; // Basic, Legendary, Snow
-  cardTypes: readonly string[]; // Land, Creature, Instant, Conspiracy, …
-  subtypes: readonly string[]; // Forest, Vehicle, Background, Elf, …
-  power: string | null;
-  toughness: string | null;
-  loyalty: string | null;
-  defense: string | null;
-  plainText: string; // no reminder text, own name as "~"
-}>;
-
-export type TypeFeatures = Readonly<{
-  isLand: boolean; // a land on any face (STATUS decision 1)
-  isLandOnFront: boolean; // for "what is on the table" questions only
-  isBasicLand: boolean;
-  isCreature: boolean;
-  isArtifact: boolean;
-  isEnchantment: boolean;
-  isInstantOrSorcery: boolean;
-  isLegendary: boolean;
+export type TapMana = Readonly<{
+  isSource: boolean; // a {T} ability that adds mana, or Scryfall lists mana it produces
+  amount: number; // mana added by one tap, 0 when it depends on the board (no battlefield here)
+  requiresFiveLands: boolean; // "Activate only if you control five or more lands"
 }>;
 ```
+
+Moved unchanged from `decks/domain/mana.ts`: it reads the printed face text (not `plainText`),
+as the old code did, so a Powerstone-making card's reminder text still counts. Reading
+`plainText` is a later change with a version bump.
 
 **Later fields (sketches; P12 to P14 finalize each union with their fixture cards).**
 
@@ -208,13 +197,13 @@ module shares.
 ```ts
 /** One recognizer fills the fields it owns, from one card's text. */
 export type Recognizer<Field extends keyof CardFeatureFields> = Readonly<{
-  id: string; // "faces-and-types", "tap-mana", "muldrotha-permission"
+  id: string; // "tap-mana", "muldrotha-permission"
   field: Field; // the one field it owns
   /** `earlier` holds the fields recognized before this one (roleTags read effects). */
   recognize(card: CardText, earlier: Partial<CardFeatureFields>): CardFeatureFields[Field];
 }>;
 
-export const RECOGNIZERS: readonly AnyRecognizer[] = [facesAndTypes /* P11 */ /* P12 to P14 add */];
+export const RECOGNIZERS: readonly AnyRecognizer[] = [tapMana /* P11 */ /* P12 to P14 add */];
 
 export function extractFeatures(card: CardText): CardFeatures {
   /* run RECOGNIZERS in order, collect each field, add featuresVersion */
@@ -227,7 +216,7 @@ the way `TAG_RULES` is today. Order matters only where one field reads another: 
 role tags, tags and themes before signals. The registry's order says so, and a test asserts it.
 
 Reminder text, name substitution and face joining are done **before** the recognizers run, in
-`faces-and-types` (`plainText`). Recognizers run **per face** and merge (a card has the feature
+`plainText` (P13). Recognizers run **per face** and merge (a card has the feature
 if any face has it), except rules that name the front face (`isLandOnFront`). Open question 2.
 
 Where a recognizer needs Scryfall's own facts (`keywords`, `producedMana`), `CardText` carries
@@ -259,10 +248,10 @@ callers, delete the old function and its tests (playbook A4).
 
 | Consumer today                                                                       | Recognizer(s) that replace it                                                   | Package    |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ---------- |
-| `kernel/card-types.ts` `cardTypes`, `isLand`, `isBasicLand`, `isCreature` (59 calls) | `faces-and-types` (shipped in P11)                                              | P14        |
-| `rules.ts` Legendary, Vehicle, Background, Conspiracy type checks                    | `faces-and-types` (`supertypes`, `subtypes`)                                    | P14        |
-| `deck-profile.ts` scope predicates on the type line (`Artifact`, `Enchantment`, …)   | `faces-and-types` (`TypeFeatures`)                                              | P12        |
-| `mana.ts` `hasTapManaAbility`, `extractTapManaProduction`, doublers                  | `tap-mana`, `conditional-mana`, `mana-doubler`                                  | P12        |
+| `kernel/card-types.ts` `cardTypes`, `isLand`, `isBasicLand`, `isCreature` (59 calls) | none: P26 keeps `cardTypes` pure                                                | P14        |
+| `rules.ts` Legendary, Vehicle, Background, Conspiracy type checks                    | `cardTypes` (kernel, P26)                                                       | P14        |
+| `deck-profile.ts` scope predicates on the type line (`Artifact`, `Enchantment`, …)   | `cardTypes` (kernel, P26)                                                       | P12        |
+| `mana.ts` `hasTapManaAbility`, `extractTapManaProduction`, doublers                  | `tap-mana` (**shipped in P11**; the dead battlefield branches are deleted)      | P11        |
 | `castability.ts` `isManaSource`, five-lands check; `mana-base.ts` `tapped()`         | `tap-mana`; `enters-tapped` (a land feature)                                    | P12, P14   |
 | `sim-pipeline.ts` keyword checks, extra land drops, blitz, cascade, undying/persist  | `granted-keywords`, `extra-land-drops`, `cost-alternatives`, `death-return`     | P12        |
 | `sim-pipeline.ts` Muldrotha, Mystic Forge, Ashnod's-style sacrifice mana             | `cast-permissions`, `sacrifice-mana`                                            | P12        |
