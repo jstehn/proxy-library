@@ -39,5 +39,5 @@ export async function loadDeck(
   { actor, capabilities }: ActionContext,
   deckId: number,
 ): Promise<BuilderDeck | null> {
-  return builderDeckFor(capabilities, actor.userId, deckId);
+  return builderDeckFor(capabilities, actor, deckId);
 }

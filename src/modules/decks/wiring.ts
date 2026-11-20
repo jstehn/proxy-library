@@ -1,3 +1,4 @@
+import type { Actor } from "@/modules/accounts";
 import { printingCards } from "@/modules/catalog";
 import { withDb, type DbExecutor } from "@/shared/db";
 import { ok, type Clock, type UserId } from "@/shared/kernel";
@@ -48,6 +49,7 @@ import {
   cardsToGetFor,
   deckComments,
   deckForViewer,
+  deckViewForViewer,
   publicDeckByToken,
   sharedDecks,
 } from "./queries/sharing";
@@ -86,12 +88,13 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
   return {
     listDecks: makeListDecks({ decksFor: (userId) => decksFor(db, userId) }),
     deckOverview: makeDeckOverview({
-      deckView: readDeck,
+      deckView: (actor, deckId) => deckView(db, actor.userId, deckId),
+      viewableDeckView: (actor, deckId) => deckViewForViewer(db, actor.userId, deckId),
       combosFor: (oracleIds) => combosForDeck(db, oracleIds),
       printingCards: (printingIds) => printingCards(db, printingIds),
       tokenLines: (deckId, makers) => deckTokenLines(db, deckId, makers),
-      sources: (userId, deckId) => listDeckSources(db, userId, deckId),
-      profile: (userId, deckId) => getDeckProfile(db, userId, deckId),
+      sources: (actor, deckId) => listDeckSources(db, actor.userId, deckId),
+      profile: (actor, deckId) => getDeckProfile(db, actor.userId, deckId),
     }),
     deckPreviews: makeDeckPreviews({
       previews,
@@ -194,8 +197,8 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),
     }),
     deckManaPlan: makeDeckManaPlan({ plan: (userId, deckId) => manaBasePlan(db, userId, deckId) }),
-    checkOwnedCards: async (request: { userId: UserId; names: readonly string[] }) =>
-      ok(await ownedChecks(request.userId, request.names)),
+    checkOwnedCards: async (actor: Actor, request: { names: readonly string[] }) =>
+      ok(await ownedChecks(actor.userId, request.names)),
     replacements: makeFindReplacements({
       findCard: (nameOrId) => findCard(db, nameOrId),
       similar: (userId, deckId, oracleId) => similarCards(db, userId, deckId, oracleId),

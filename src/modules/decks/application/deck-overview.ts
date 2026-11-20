@@ -1,6 +1,7 @@
 import { formatRules } from "../domain/format-rules";
 import type { PrintingCard } from "@/modules/catalog";
-import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import type { Actor } from "@/modules/accounts";
+import { err, ok, type Result } from "@/shared/kernel";
 import type { DeckCombo } from "../domain/brackets";
 import type { Board } from "../domain/deck";
 import { isPlayed } from "../domain/boards";
@@ -26,15 +27,17 @@ export type TokenMaker = Readonly<{
 }>;
 
 export type DeckOverviewReaders = Readonly<{
-  /** The player's deck with its lines, or null when it isn't theirs. */
-  deckView(userId: UserId, deckId: number): Promise<DeckView | null>;
+  /** The actor's own deck with its lines, or null when it isn't theirs. */
+  deckView(actor: Actor, deckId: number): Promise<DeckView | null>;
+  /** A deck the actor may see (their own, or another player's shared one), or null. */
+  viewableDeckView(actor: Actor, deckId: number): Promise<DeckView | null>;
   /** The deck's two-card combos from Commander Spellbook; undefined when they aren't synced. */
   combosFor(oracleIds: readonly string[]): Promise<readonly DeckCombo[] | undefined>;
   /** Card art and faces by printing id, for the builder. */
   printingCards(printingIds: readonly string[]): Promise<ReadonlyMap<string, PrintingCard>>;
   tokenLines(deckId: number, makers: readonly TokenMaker[]): Promise<TokenLine[]>;
-  sources(userId: UserId, deckId: number): Promise<DeckSource[] | null>;
-  profile(userId: UserId, deckId: number): Promise<StoredDeckProfile | null>;
+  sources(actor: Actor, deckId: number): Promise<DeckSource[] | null>;
+  profile(actor: Actor, deckId: number): Promise<StoredDeckProfile | null>;
 }>;
 
 /** The parts of the overview that cost a query or a simulation; each is off unless asked for. */
@@ -67,18 +70,25 @@ export type DeckOverview = Readonly<{
 }>;
 
 export type DeckOverviewRequest = Readonly<{
-  userId: UserId;
   deckId: number;
   parts?: OverviewParts;
+  /**
+   * Read a deck the actor may only view (another player's shared deck) instead of requiring it
+   * to be their own. The deck page uses it after `deckForViewer`; tools never do.
+   */
+  asViewer?: boolean;
 }>;
 
 export function makeDeckOverview(readers: DeckOverviewReaders) {
   async function deckOverview(
+    actor: Actor,
     request: DeckOverviewRequest,
   ): Promise<Result<DeckOverview, DeckNotFound>> {
-    const { userId, deckId } = request;
+    const { deckId } = request;
     const parts = request.parts ?? {};
-    const view = await readers.deckView(userId, deckId);
+    const view = request.asViewer
+      ? await readers.viewableDeckView(actor, deckId)
+      : await readers.deckView(actor, deckId);
     if (view === null) return err({ kind: "DeckNotFound" });
 
     const makers = view.lines.map((line) => ({
@@ -97,8 +107,8 @@ export function makeDeckOverview(readers: DeckOverviewReaders) {
         ? readers.printingCards(view.lines.map((line) => line.printingId))
         : Promise.resolve(undefined),
       parts.tokens ? readers.tokenLines(deckId, makers) : Promise.resolve(undefined),
-      parts.sources ? readers.sources(userId, deckId) : Promise.resolve(undefined),
-      parts.profile ? readers.profile(userId, deckId) : Promise.resolve(undefined),
+      parts.sources ? readers.sources(actor, deckId) : Promise.resolve(undefined),
+      parts.profile ? readers.profile(actor, deckId) : Promise.resolve(undefined),
     ]);
 
     return ok({

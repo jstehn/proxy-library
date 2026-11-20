@@ -60,8 +60,7 @@ export const getDeckBinding = defineBinding({
   async call(capabilities, actor, input) {
     const { deckId } = input;
     const asked = { ...input, include: input.include ?? [] };
-    const overview = await capabilities.deckOverview({
-      userId: actor.userId,
+    const overview = await capabilities.deckOverview(actor, {
       deckId,
       parts: overviewPartsFor(asked),
     });

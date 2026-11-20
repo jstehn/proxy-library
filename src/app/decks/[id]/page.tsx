@@ -50,9 +50,9 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   );
 
   if (!viewed.isOwner) {
-    const shared = await capabilities.deckOverview({
-      userId: deck.ownerId,
+    const shared = await capabilities.deckOverview(actor, {
       deckId: deck.id,
+      asViewer: true,
       parts: { printings: true, tokens: true },
     });
     if (!shared.ok) notFound();
@@ -101,7 +101,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     );
   }
 
-  const builderDeck = await builderDeckFor(capabilities, actor.userId, deckId);
+  const builderDeck = await builderDeckFor(capabilities, actor, deckId);
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries

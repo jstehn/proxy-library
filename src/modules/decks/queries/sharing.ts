@@ -75,6 +75,25 @@ export async function deckForViewer(
   };
 }
 
+/**
+ * The deck's lines as its owner sees them, if the viewer may see the deck (their own, or shared).
+ * The visibility rule is in the SQL (design doc 67, F6); `canViewDeck` is the same rule in code.
+ */
+export async function deckViewForViewer(
+  db: DbExecutor,
+  viewerId: UserId,
+  deckId: number,
+): Promise<DeckView | null> {
+  const [row] = (
+    await db.execute<{ owner_id: string }>(sql`
+      select d.owner_id from decks d
+       where d.id = ${deckId} and (d.owner_id = ${viewerId} or d.visibility = 'shared')
+    `)
+  ).rows;
+  if (row === undefined) return null;
+  return deckView(db, UserId.of(row.owner_id), deckId);
+}
+
 export type PublicDeck = Readonly<{
   view: DeckView;
   ownerName: string;
