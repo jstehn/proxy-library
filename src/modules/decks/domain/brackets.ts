@@ -1,7 +1,8 @@
 // Commander brackets (design doc 31, sections 3.2 and 3.3): the lowest bracket a deck's cards
 // allow, why, and whether it's within the bracket its owner chose. Pure, and safe for the browser.
+import type { CardFacts } from "@/shared/kernel";
 import { BRACKET_FLAGS, bracketFlags, type BracketFlag } from "@/shared/card-search";
-import { isPlayed, type Board } from "./boards";
+import { isPlayed, type Board, type DeckCount } from "./boards";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
 
@@ -30,14 +31,11 @@ export type BracketLine = Readonly<{
 }>;
 
 /** What a deck line needs for its bracket flags: the card's text and Scryfall's flag. */
-export type BracketSource = Readonly<{
-  name: string;
-  quantity: number;
-  board: Board;
-  typeLine: string;
-  text: string;
-  isGameChanger: boolean;
-}>;
+export type BracketSource = DeckCount &
+  Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{
+    isGameChanger: boolean;
+  }>;
 
 /** A deck line as the estimate reads it, with its flags worked out by the one rule table. */
 export function bracketLine(line: BracketSource): BracketLine {

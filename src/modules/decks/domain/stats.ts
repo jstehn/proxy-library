@@ -8,26 +8,25 @@ import {
   isLand,
   isCreature,
   hasTypeWord,
+  type CardFacts,
 } from "@/shared/kernel";
-import { isCounted, isPlayed, type Board } from "./boards";
+import { isCounted, isPlayed, type DeckCount } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
 // exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.
 
-export type StatsLine = Readonly<{
-  quantity: number;
-  manaValue: number;
-  typeLine: string;
-  board: Board;
-  /** e.g. "{2}{W}{U}"; missing or null for cards without a cost (lands). */
-  manaCost?: string | null;
-  /** Colors of mana it can make: "W", "U", "B", "R", "G", "C" (lands, rocks, dorks). */
-  producedMana?: readonly string[];
-  /** Market price of one copy, in cents, if known. */
-  priceCents?: number | null;
-  /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
-  text?: string;
-}>;
+export type StatsLine = DeckCount &
+  Pick<CardFacts, "manaValue" | "typeLine"> &
+  Readonly<{
+    /** e.g. "{2}{W}{U}"; missing or null for cards without a cost (lands). */
+    manaCost?: string | null;
+    /** Colors of mana it can make: "W", "U", "B", "R", "G", "C" (lands, rocks, dorks). */
+    producedMana?: readonly string[];
+    /** Market price of one copy, in cents, if known. */
+    priceCents?: number | null;
+    /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
+    text?: string;
+  }>;
 
 export type ManaSource = ManaSymbol;
 

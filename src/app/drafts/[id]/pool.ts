@@ -1,9 +1,9 @@
 // Sorting your picks while you draft: by color, with a mana curve, the way players lay out their
 // cards on the table. Pure, from what the card faces print.
 
-import { CURVE_SLOTS, curveSlot, isLand } from "@/shared/kernel";
+import { CURVE_SLOTS, curveSlot, isLand, type CardFacts } from "@/shared/kernel";
 
-export type FaceFacts = Readonly<{ manaCost: string | null; typeLine: string }>;
+export type FaceFacts = Pick<CardFacts, "manaCost" | "typeLine">;
 
 export type PoolColumn = "W" | "U" | "B" | "R" | "G" | "multicolor" | "colorless" | "land";
 

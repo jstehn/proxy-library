@@ -1,5 +1,12 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { COLORS, type Cents, type Rarity, cardTypes, curveSlot } from "@/shared/kernel";
+import {
+  COLORS,
+  type Cents,
+  type Rarity,
+  cardTypes,
+  curveSlot,
+  type CardFacts,
+} from "@/shared/kernel";
 
 import type { DraftCard, DraftPack } from "./draft";
 
@@ -11,16 +18,13 @@ import type { DraftCard, DraftPack } from "./draft";
 // hint. A ratings table could replace `cardStrength` later without touching the rest.
 
 /** What the scoring needs to know about a printing. */
-export type DraftCardFacts = Readonly<{
-  name: string;
-  rarity: Rarity;
-  colors: readonly Color[];
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  producedMana: readonly Color[];
-  marketPrice: Cents | null;
-}>;
+export type DraftCardFacts = Pick<CardFacts, "name" | "manaCost" | "manaValue" | "typeLine"> &
+  Readonly<{
+    rarity: Rarity;
+    colors: readonly Color[];
+    producedMana: readonly Color[];
+    marketPrice: Cents | null;
+  }>;
 
 export type FactsLookup = (printingId: PrintingId) => DraftCardFacts | undefined;
 

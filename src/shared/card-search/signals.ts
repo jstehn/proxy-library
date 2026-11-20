@@ -4,19 +4,16 @@
 // costs, recurring phrases) and leaves the judgment to whoever reads it, a player or an LLM.
 // Pure: the deck builder may use it in the browser later.
 
-import { hasTypeWord } from "@/shared/kernel";
+import { hasTypeWord, type CardFacts } from "@/shared/kernel";
 import type { Tag, Theme } from "./tags";
 
 /** What the signal rules read about one card. */
-export type SignalCard = Readonly<{
-  name: string;
-  typeLine: string;
-  /** Every face's rules text, reminder text included (it's removed here). */
-  text: string;
-  keywords: readonly string[];
-  roleTags: readonly Tag[];
-  themes: readonly Theme[];
-}>;
+export type SignalCard = Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{
+    keywords: readonly string[];
+    roleTags: readonly Tag[];
+    themes: readonly Theme[];
+  }>;
 
 const SIGNAL_KINDS = [
   "counter",

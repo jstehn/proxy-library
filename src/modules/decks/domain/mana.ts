@@ -1,7 +1,7 @@
 // Shared mana cost parsing, pool arithmetic, and tap-mana production extraction.
 // Used across goldfish-session, castability, and deck-profile so mana rules live in one place.
 
-import { isLand } from "@/shared/kernel";
+import { isLand, type CardFacts } from "@/shared/kernel";
 
 export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
 export type ManaPool = Record<ManaColor, number>;
@@ -129,12 +129,9 @@ export function addMana(pool: ManaPool, delta: ManaPool): ManaPool {
   };
 }
 
-export type ManaSourceFacts = Readonly<{
-  typeLine: string;
-  text?: string;
-  producedMana?: readonly string[];
-  isLand?: boolean;
-}>;
+export type ManaSourceFacts = Pick<CardFacts, "typeLine"> &
+  Partial<Pick<CardFacts, "text" | "producedMana">> &
+  Readonly<{ isLand?: boolean }>;
 
 /** Whether a card has an activated tap-mana ability or structured `producedMana`. */
 export function hasTapManaAbility(card: Pick<ManaSourceFacts, "text" | "producedMana">): boolean {

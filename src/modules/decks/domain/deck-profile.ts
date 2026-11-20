@@ -1,4 +1,4 @@
-import { hasTypeWord, isCreature } from "@/shared/kernel";
+import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
 import { countMinimumPips } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [
@@ -33,15 +33,14 @@ export const COST_REDUCER_SCOPES = [
 
 export type CostReducerScope = (typeof COST_REDUCER_SCOPES)[number];
 
-export type CostReducerCard = Readonly<{
-  oracleText?: string;
-  typeLine?: string;
-  manaCost?: string | null;
-  power?: string | number | null;
-  isCommander?: boolean;
-  isBlitz?: boolean;
-  fromZone?: string;
-}>;
+export type CostReducerCard = Partial<Pick<CardFacts, "typeLine" | "manaCost">> &
+  Readonly<{
+    oracleText?: string;
+    power?: string | number | null;
+    isCommander?: boolean;
+    isBlitz?: boolean;
+    fromZone?: string;
+  }>;
 
 export type ScopePredicate = (card: CostReducerCard) => boolean;
 

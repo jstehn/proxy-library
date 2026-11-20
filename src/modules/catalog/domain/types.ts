@@ -1,4 +1,12 @@
-import type { Brand, Cents, Finish, ManaColor, Rarity } from "@/shared/kernel";
+import type {
+  Brand,
+  Cents,
+  Finish,
+  ManaColor,
+  Rarity,
+  CardFacts,
+  CardIdentity,
+} from "@/shared/kernel";
 
 // The catalog's own vocabulary (design doc 04, section 3). External data is translated into
 // these types by the anti-corruption layer in ../infrastructure; nothing else sees raw JSON.
@@ -53,37 +61,31 @@ export type Treatments = Readonly<{
 }>;
 
 /** One face of a card: what's printed on it. Most cards have one; double-faced cards have two. */
-export type CardFace = Readonly<{
-  name: string;
-  manaCost: string | null; // "{2}{W}{W}"
-  typeLine: string;
-  text: string; // rules text, "" if none; "\n" between paragraphs
-  power: string | null; // strings, because of values like "*" or "1+*"
-  toughness: string | null;
-  loyalty: string | null;
-  defense: string | null;
-}>;
+export type CardFace = Pick<CardFacts, "name" | "manaCost" | "typeLine" | "text"> &
+  Readonly<{
+    power: string | null; // strings, because of values like "*" or "1+*"
+    toughness: string | null;
+    loyalty: string | null;
+    defense: string | null;
+  }>;
 
-export type Printing = Readonly<{
-  id: PrintingId;
-  setCode: SetCode;
-  collectorNumber: string;
-  name: string;
-  oracleId: string;
-  scryfallId: string;
-  rarity: Rarity;
-  colors: readonly Color[];
-  colorIdentity: readonly Color[];
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  layout: string;
-  finishes: readonly Finish[];
-  treatments: Treatments;
-  variantLabel: string; // "" for the regular version, "Borderless · Showcase" otherwise
-  faces: readonly CardFace[];
-  artist: string | null;
-}>;
+export type Printing = Pick<CardFacts, "name" | "manaCost" | "manaValue" | "typeLine"> &
+  Pick<CardIdentity, "oracleId"> &
+  Readonly<{
+    id: PrintingId;
+    setCode: SetCode;
+    collectorNumber: string;
+    scryfallId: string;
+    rarity: Rarity;
+    colors: readonly Color[];
+    colorIdentity: readonly Color[];
+    layout: string;
+    finishes: readonly Finish[];
+    treatments: Treatments;
+    variantLabel: string; // "" for the regular version, "Borderless · Showcase" otherwise
+    faces: readonly CardFace[];
+    artist: string | null;
+  }>;
 
 export type BoosterSheet = Readonly<{
   cards: ReadonlyArray<Readonly<{ printingId: PrintingId; weight: number }>>;

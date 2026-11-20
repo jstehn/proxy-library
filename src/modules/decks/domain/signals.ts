@@ -1,6 +1,6 @@
 import { plainText } from "@/shared/card-search";
-import { hasTypeWord } from "@/shared/kernel";
-import type { Board } from "./boards";
+import { hasTypeWord, type CardFacts } from "@/shared/kernel";
+import type { DeckCount } from "./boards";
 
 // Produces/consumes synergy signals (design doc 46, #54): regex rules over oracle text
 // (reminder text stripped) that tag what resources/triggers a card makes and uses.
@@ -38,12 +38,8 @@ export const SIGNAL_LABELS: Readonly<Record<SignalTag, string>> = {
   draw_discard: "draw / discard",
 };
 
-export type SignalCardInput = Readonly<{
-  name: string;
-  typeLine: string;
-  text: string;
-  manaValue?: number;
-}>;
+export type SignalCardInput = Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{ manaValue?: number }>;
 
 export type SignalIO = Readonly<{
   makes: readonly SignalTag[];
@@ -232,7 +228,7 @@ export function cardSignalIO(card: SignalCardInput): SignalIO {
   return { makes, uses };
 }
 
-export type SignalLine = SignalCardInput & Readonly<{ board: Board; quantity: number }>;
+export type SignalLine = SignalCardInput & DeckCount;
 
 export type DeckSignalProfile = Readonly<{
   makes: ReadonlyMap<SignalTag, number>;

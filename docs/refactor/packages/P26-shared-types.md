@@ -70,4 +70,29 @@ table, `src/shared/kernel/card-types.ts` and its test, `src/shared/kernel/index.
 
 ## Handoff
 
-(empty)
+- **Base types** (`src/shared/kernel/card-shapes.ts`, exported from the kernel): `CardFacts`
+  (name, typeLine, manaCost, manaValue, text, producedMana) and `CardIdentity` (oracleId,
+  printingId). `DeckCount` ({ quantity, board }) lives in `decks/domain/boards.ts` because `Board`
+  is a decks word; the browser gets it from `decks/client`.
+- **Replaced:** 35 hand-written shapes now use `Pick<CardFacts, …>` / `CardIdentity` / `DeckCount`
+  (catalog `Printing`, `CardFace`, `FoundCard`, `TaggablePrinting`, `CardTextToEmbed`; decks
+  `DeckLine`, `BrowseCard`, `FoundCard`, `CardRules`, `DraftedSpell`, `BracketSource`,
+  `CandidateCard`, `RatingCandidate`, `StatsLine`, `CastabilityLine`, `LandCandidate`,
+  `CommanderCandidate`, `DrawLine`, `SignalCardInput`, `ManaSourceFacts`, `PrintedFace`,
+  `CardReference`, `SampleCard`, …; `TagFacts`, `SignalCard`, `CurveLine`, `FaceFacts`,
+  `CompactLineSource`). `BoardCount` (free-copies) is gone: it was `DeckCount`.
+- **Type-line checks:** new `hasTypeWord(typeLine, words, frontOnly?)` in `card-types.ts` (tested).
+  About 40 raw regexes now call it (tags, rules, suggest, both signals files, deck-profile, stats
+  `mainType`, compact-deck, budget-replacements, drafts abilities). Lint rule `TYPE_LINE_WORDS`
+  bans `\bLegendary|Creature|Land|Planeswalker\b` regex literals outside tests.
+- **Kept as they were:** Kindred/Tribal still count as creature types (suggest, card-search
+  signals use `hasTypeWord(types, ["Creature", "Kindred", "Tribal"])`, not `isCreature`).
+  `deck-profile` (artifact, enchantment, instant/sorcery) and budget-replacements used `/i`
+  regexes; `hasTypeWord` is case-sensitive. Scryfall type lines are always capitalised, so no
+  real card changes, but it is a difference. `token-proxies.ts` (`/\bemblem\b/i`) and the Urza
+  land names in `mana.ts` were left alone.
+- **Skipped (P24 deletes them):** `goldfish-types.ts`, `goldfish-session.ts`, `sim-pipeline.ts`.
+- Not done: the other deck-line shapes (`{ oracleId, board, quantity }` in preview, builder-state,
+  list-format) and the row types inside SQL queries; each would save about one line.
+- Production code lines 77318 to 77313 (baseline lowered). The `Pick` form needs more lines than
+  a short copy once Prettier wraps it, so the saving is mostly in the long ones.

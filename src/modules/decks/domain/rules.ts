@@ -1,4 +1,4 @@
-import { hasTypeWord, isCreature } from "@/shared/kernel";
+import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 import { isCounted, isPlayed } from "./boards";
 import { FORMATS, type Deck, type DeckEntry, type Format } from "./deck";
@@ -9,17 +9,14 @@ import { formatRules } from "./format-rules";
 // enforced.
 
 /** What the rules need to know about one oracle card. */
-export type CardRules = Readonly<{
-  name: string;
-  typeLine: string;
-  /** Rules text of every face, for "can be your commander" and "any number of cards named". */
-  text: string;
-  colorIdentity: readonly Color[];
-  legalities: Readonly<Record<string, string>>; // Scryfall's, e.g. { modern: "legal" }
-  isBasicLand: boolean;
-  /** Whether a face has a printed power and toughness (a Spacecraft or Vehicle can). */
-  hasPowerToughness: boolean;
-}>;
+export type CardRules = Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{
+    colorIdentity: readonly Color[];
+    legalities: Readonly<Record<string, string>>; // Scryfall's, e.g. { modern: "legal" }
+    isBasicLand: boolean;
+    /** Whether a face has a printed power and toughness (a Spacecraft or Vehicle can). */
+    hasPowerToughness: boolean;
+  }>;
 
 export type RulesLookup = (oracleId: string) => CardRules;
 /** What the rules read from a deck: its format and lines (the builder has no more than this). */
@@ -279,7 +276,10 @@ function countedCardProblems(
         (entry) =>
           isPlayed(entry.board) &&
           // Conspiracies start the game in the command zone, not the deck (CR 905.4).
-          !(format.conspiraciesLeaveDeck && /\bConspiracy\b/.test(rules(entry.oracleId).typeLine)),
+          !(
+            format.conspiraciesLeaveDeck &&
+            hasTypeWord(rules(entry.oracleId).typeLine, ["Conspiracy"])
+          ),
       ),
     );
     const minimum = format.deckSize.cards;

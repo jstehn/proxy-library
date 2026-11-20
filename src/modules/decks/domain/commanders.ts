@@ -11,7 +11,7 @@ import {
 } from "./suggest";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
-import { COLORS, type ManaColor } from "@/shared/kernel";
+import { COLORS, type ManaColor, type CardFacts, type CardIdentity } from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.
@@ -32,29 +32,25 @@ export type RankCommandersOptions = Readonly<{
 export type PoolCard = CandidateCard & Readonly<{ colorIdentity: readonly ManaColor[] }>;
 
 /** A card that could lead the deck. */
-export type CommanderCandidate = Readonly<{
-  oracleId: string;
-  /** The printing to show: your most-held copy, or the store's cheapest. */
-  printingId: string;
-  name: string;
-  manaCost?: string | null;
-  manaValue?: number;
-  typeLine: string;
-  text: string;
-  colorIdentity: readonly ManaColor[];
-  keywords: readonly string[];
-  rarity?: string;
-  roles?: readonly Tag[];
-  isGameChanger: boolean;
-  /** Scryfall's EDHREC popularity rank (1 = most popular on EDHREC, null when unranked). */
-  edhrecRank?: number | null;
-  /** Copies you own (0 for a store legend). */
-  ownedCopies: number;
-  /** Store price of its cheapest printing, for a legend you don't own; otherwise null. */
-  priceCents: number | null;
-  /** Your decks that already have it as commander: a note, never a reason to leave it out. */
-  leads: readonly string[];
-}>;
+export type CommanderCandidate = CardIdentity &
+  Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{
+    manaCost?: string | null;
+    manaValue?: number;
+    colorIdentity: readonly ManaColor[];
+    keywords: readonly string[];
+    rarity?: string;
+    roles?: readonly Tag[];
+    isGameChanger: boolean;
+    /** Scryfall's EDHREC popularity rank (1 = most popular on EDHREC, null when unranked). */
+    edhrecRank?: number | null;
+    /** Copies you own (0 for a store legend). */
+    ownedCopies: number;
+    /** Store price of its cheapest printing, for a legend you don't own; otherwise null. */
+    priceCents: number | null;
+    /** Your decks that already have it as commander: a note, never a reason to leave it out. */
+    leads: readonly string[];
+  }>;
 
 /** Anything with a color identity (an owned land, for the lands note). */
 export type WithIdentity = Readonly<{ colorIdentity: readonly ManaColor[] }>;

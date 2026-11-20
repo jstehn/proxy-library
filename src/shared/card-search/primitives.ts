@@ -1,12 +1,11 @@
 // Composable MTG effect primitives extracted from Oracle text and structured card facts.
 // Open-Closed: new mechanics are added as EffectExtractor entries without modifying role/theme rules.
 
+import type { CardFacts } from "@/shared/kernel";
+
 /** Minimal card facts read by effect extractors and tag/bracket rules. */
-export type TagFacts = Readonly<{
-  typeLine: string;
-  text: string;
-  producedMana?: readonly string[];
-}>;
+export type TagFacts = Pick<CardFacts, "typeLine" | "text"> &
+  Partial<Pick<CardFacts, "producedMana">>;
 
 export type EffectSubject =
   | "creature"

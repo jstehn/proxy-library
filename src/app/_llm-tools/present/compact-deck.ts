@@ -3,30 +3,26 @@
 // need. Pages by whole groups so a page never splits a heading unless one heading alone is too
 // big. Pure: no database, no clock.
 
-import { hasTypeWord, isLand, isCreature } from "@/shared/kernel";
-import type { Board } from "@/modules/decks/client";
+import { hasTypeWord, isLand, isCreature, type CardFacts } from "@/shared/kernel";
+import type { DeckCount } from "@/modules/decks/client";
 
 /** The facts about one deck line that the compact view shows. */
-export type CompactLineSource = Readonly<{
-  name: string;
-  board: Board;
-  quantity: number;
-  heading: string | null;
-  note: string | null;
-  tags?: readonly string[];
-  /** The card's one-line job in this deck. */
-  role?: string | null;
-  /** Pinned on the line or a keyCard in the deck profile: never suggested as a cut. */
-  pinned?: boolean;
-  manaCost: string | null;
-  typeLine: string;
-  text: string;
-  faceTexts?: readonly string[];
-  printedStats?: string | null;
-  isGameChanger: boolean;
-  isBasicLand: boolean;
-  owned: number;
-}>;
+export type CompactLineSource = DeckCount &
+  Pick<CardFacts, "name" | "manaCost" | "typeLine" | "text"> &
+  Readonly<{
+    heading: string | null;
+    note: string | null;
+    tags?: readonly string[];
+    /** The card's one-line job in this deck. */
+    role?: string | null;
+    /** Pinned on the line or a keyCard in the deck profile: never suggested as a cut. */
+    pinned?: boolean;
+    faceTexts?: readonly string[];
+    printedStats?: string | null;
+    isGameChanger: boolean;
+    isBasicLand: boolean;
+    owned: number;
+  }>;
 
 export type CompactLineOptions = Readonly<{
   /** Append the card's (trimmed) oracle text. */
