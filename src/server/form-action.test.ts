@@ -164,6 +164,14 @@ describe("formAction", () => {
     expect(state.message).toContain("; ");
   });
 
+  it("says the form's own sentence when the input is rejected and one is given", async () => {
+    const save = build()(z.object({ amount: z.string() }), async () => ok(null), {
+      describeError,
+      invalidInput: "Enter an amount.",
+    });
+    expect(await save(form([]))).toEqual({ message: "Enter an amount.", tone: "error" });
+  });
+
   it("treats a file where text is expected as a problem", async () => {
     const save = build()(z.object({ name: z.string() }), async () => ok(null), { describeError });
     const state = await save(form([["name", new File(["x"], "x.txt")]]));

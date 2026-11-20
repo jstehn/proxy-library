@@ -11,10 +11,9 @@ import type { Reads } from "./reads";
 // handler never touches FormData.
 
 /** What a form shows after it was sent. Every form uses this one shape. */
-export type FormState = Readonly<{
-  message: string | null;
-  tone: "error" | "success" | null;
-}>;
+export type FormState = Readonly<
+  { message: null; tone: null } | { message: string; tone: "error" | "success" }
+>;
 
 export type AdminActionContext = Readonly<{
   actor: AdminActor;
@@ -36,6 +35,8 @@ export type FormActionSources = Readonly<{
 export type FormActionOptions<Value, Failure> = Readonly<{
   /** The sentence for each expected failure the handler returns. */
   describeError(error: Failure): string;
+  /** What the form says when the schema rejects the input, instead of listing the issues. */
+  invalidInput?: string;
   /** Shown after success. Leave out for a form that redirects or shows nothing. */
   successMessage?: string | ((value: Value) => string);
   /** Where to go after success, instead of showing a message. */
@@ -119,7 +120,9 @@ export function makeFormAction(sources: FormActionSources) {
         ? await sources.requireAdminActor()
         : await sources.requireActor();
       const parsed = schema.safeParse(readForm(schema, formData));
-      if (!parsed.success) return { message: problemsAsText(parsed.error), tone: "error" };
+      if (!parsed.success) {
+        return { message: options.invalidInput ?? problemsAsText(parsed.error), tone: "error" };
+      }
 
       // `actor` is an AdminActor exactly when `options.admin` is set, which the overloads tie to the handler.
       const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
