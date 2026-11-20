@@ -1,4 +1,5 @@
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
+import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
 import { wirePackCapabilities } from "@/modules/packs/wiring";
 import {
   makeCardLookup,
@@ -23,7 +24,7 @@ import {
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
 import { wishlistQueries, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
-import type { makeInventory } from "@/modules/inventory";
+import type { Inventory } from "@/modules/inventory";
 import type { Packs } from "@/modules/packs";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
@@ -57,6 +58,7 @@ type CapabilityDependencies = Readonly<{
   decks: Decks;
   previews: PreviewRepository;
   packs: Packs;
+  inventory: Inventory;
   /** The services that change things: the capabilities pass them through for the adapters. */
   services: Readonly<{
     deckSharing: DeckSharing;
@@ -66,7 +68,6 @@ type CapabilityDependencies = Readonly<{
     drafts: ReturnType<typeof makeDrafts>;
     realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
-    inventory: ReturnType<typeof makeInventory>;
     accounts: ReturnType<typeof makeAccounts>;
     wallet: ReturnType<typeof makeWallet>;
     social: ReturnType<typeof makeSocial>;
@@ -106,6 +107,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     ...wireAccountCapabilities({ db, clock, wallet }),
     ...wirePackCapabilities(dependencies),
+    ...wireInventoryCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).

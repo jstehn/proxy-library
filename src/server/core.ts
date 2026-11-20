@@ -290,6 +290,7 @@ export function buildCore(config: Config) {
       textEmbedder,
       decks,
       packs,
+      inventory,
       previews: drizzleChangePreviewRepository(db),
       services: {
         deckSharing,
@@ -299,7 +300,6 @@ export function buildCore(config: Config) {
         drafts,
         realCollection,
         store,
-        inventory,
         accounts,
         wallet,
         social,
