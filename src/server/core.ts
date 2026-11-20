@@ -292,6 +292,7 @@ export function buildCore(config: Config) {
       packs,
       inventory,
       social,
+      trades,
       previews: drizzleChangePreviewRepository(db),
       services: {
         deckSharing,
@@ -302,7 +303,6 @@ export function buildCore(config: Config) {
         realCollection,
         store,
         accounts,
-        trades,
         wishlist,
         catalog,
         resetPlayer,
