@@ -9,7 +9,7 @@ import { suggestionContext, withinTarget } from "./suggestions";
 import { eq, sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice, textArray } from "@/shared/db";
 import { cardTags, type Tag } from "@/shared/card-search";
-import { type UserId } from "@/shared/kernel";
+import { hasTypeWord, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/deck";
 import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
@@ -148,9 +148,7 @@ export async function budgetReplacements(
       "Enchantment",
       "Planeswalker",
     ];
-    const targetPrimaryTypes = PRIMARY_TYPES.filter((t) =>
-      new RegExp(`\\b${t}\\b`, "i").test(target.type_line),
-    );
+    const targetPrimaryTypes = PRIMARY_TYPES.filter((t) => hasTypeWord(target.type_line, [t]));
 
     const filterCandidates = (list: SuggestionCard[]) => {
       const base = list.filter((c) => !isAvoidCard(c.name, deckPlanProfile));
@@ -163,7 +161,7 @@ export async function budgetReplacements(
       }
       if (targetPrimaryTypes.length > 0) {
         const sameType = base.filter((c) =>
-          targetPrimaryTypes.some((t) => new RegExp(`\\b${t}\\b`, "i").test(c.typeLine)),
+          targetPrimaryTypes.some((t) => hasTypeWord(c.typeLine, [t])),
         );
         if (sameType.length > 0) return sameType;
       }

@@ -2,7 +2,13 @@ import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import { FOIL_IN_CATALOG, searchCondition } from "@/shared/card-search/sql";
-import { Cents, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
+import {
+  Cents,
+  colorCombination,
+  type ManaColor,
+  type UserId,
+  type CardFacts,
+} from "@/shared/kernel";
 import type { CardFace, Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 
@@ -316,14 +322,14 @@ export async function searchPrintings(
   };
 }
 
-export type PrintingDetail = Readonly<{
-  card: PrintingCard;
-  setCode: string;
-  setName: string;
-  keyruneCode: string;
-  isSetEnabled: boolean;
-  typeLine: string;
-}>;
+export type PrintingDetail = Pick<CardFacts, "typeLine"> &
+  Readonly<{
+    card: PrintingCard;
+    setCode: string;
+    setName: string;
+    keyruneCode: string;
+    isSetEnabled: boolean;
+  }>;
 
 /** One printing with its set, for the card page. */
 export async function printingDetail(db: DbExecutor, id: string): Promise<PrintingDetail | null> {

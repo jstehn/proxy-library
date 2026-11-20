@@ -1,4 +1,4 @@
-import { isCreature } from "@/shared/kernel";
+import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
 import { countMinimumPips } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [
@@ -33,15 +33,14 @@ export const COST_REDUCER_SCOPES = [
 
 export type CostReducerScope = (typeof COST_REDUCER_SCOPES)[number];
 
-export type CostReducerCard = Readonly<{
-  oracleText?: string;
-  typeLine?: string;
-  manaCost?: string | null;
-  power?: string | number | null;
-  isCommander?: boolean;
-  isBlitz?: boolean;
-  fromZone?: string;
-}>;
+export type CostReducerCard = Partial<Pick<CardFacts, "typeLine" | "manaCost">> &
+  Readonly<{
+    oracleText?: string;
+    power?: string | number | null;
+    isCommander?: boolean;
+    isBlitz?: boolean;
+    fromZone?: string;
+  }>;
 
 export type ScopePredicate = (card: CostReducerCard) => boolean;
 
@@ -141,10 +140,10 @@ export const DEFAULT_SCOPE_PREDICATES: Readonly<Record<CostReducerScope, ScopePr
   all_spells: () => true,
   creatures: (card) => (card.typeLine ? isCreature(card.typeLine) : false),
   noncreature: (card) => (card.typeLine ? !isCreature(card.typeLine) : false),
-  artifacts: (card) => (card.typeLine ? /\bArtifact\b/i.test(card.typeLine) : false),
-  enchantments: (card) => (card.typeLine ? /\bEnchantment\b/i.test(card.typeLine) : false),
+  artifacts: (card) => (card.typeLine ? hasTypeWord(card.typeLine, ["Artifact"]) : false),
+  enchantments: (card) => (card.typeLine ? hasTypeWord(card.typeLine, ["Enchantment"]) : false),
   instants_sorceries: (card) =>
-    card.typeLine ? /\b(?:Instant|Sorcery)\b/i.test(card.typeLine) : false,
+    card.typeLine ? hasTypeWord(card.typeLine, ["Instant", "Sorcery"]) : false,
   commander: (card) => card.isCommander === true,
   creature_power_gte_4: (card) => {
     const creature = card.typeLine ? isCreature(card.typeLine) : true;

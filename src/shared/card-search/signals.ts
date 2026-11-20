@@ -4,18 +4,16 @@
 // costs, recurring phrases) and leaves the judgment to whoever reads it, a player or an LLM.
 // Pure: the deck builder may use it in the browser later.
 
+import { hasTypeWord, type CardFacts } from "@/shared/kernel";
 import type { Tag, Theme } from "./tags";
 
 /** What the signal rules read about one card. */
-export type SignalCard = Readonly<{
-  name: string;
-  typeLine: string;
-  /** Every face's rules text, reminder text included (it's removed here). */
-  text: string;
-  keywords: readonly string[];
-  roleTags: readonly Tag[];
-  themes: readonly Theme[];
-}>;
+export type SignalCard = Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{
+    keywords: readonly string[];
+    roleTags: readonly Tag[];
+    themes: readonly Theme[];
+  }>;
 
 const SIGNAL_KINDS = [
   "counter",
@@ -160,7 +158,7 @@ function creatureTypeFindings(typeLine: string): Finding[] {
   const findings: Finding[] = [];
   for (const face of typeLine.split(" // ")) {
     const [types, subtypes] = face.split(" — ");
-    if (subtypes === undefined || !/\b(Creature|Kindred|Tribal)\b/.test(types)) continue;
+    if (subtypes === undefined || !hasTypeWord(types, ["Creature", "Kindred", "Tribal"])) continue;
     for (const subtype of subtypes.split(" ")) {
       if (subtype === "") continue;
       findings.push({
@@ -221,18 +219,20 @@ function rule(kind: SignalKind, name: string, source: string): TextRule {
 }
 
 /** Card types worth counting: a deck with many of one says "artifacts matter" and the like. */
-const CARD_TYPES: ReadonlyArray<Readonly<{ name: string; pattern: RegExp; followUp: string }>> = [
-  { name: "artifacts", pattern: /\bArtifact\b/, followUp: "t:artifact" },
-  { name: "enchantments", pattern: /\bEnchantment\b/, followUp: "t:enchantment" },
+const CARD_TYPES: ReadonlyArray<
+  Readonly<{ name: string; words: readonly string[]; followUp: string }>
+> = [
+  { name: "artifacts", words: ["Artifact"], followUp: "t:artifact" },
+  { name: "enchantments", words: ["Enchantment"], followUp: "t:enchantment" },
   {
     name: "instants and sorceries",
-    pattern: /\b(Instant|Sorcery)\b/,
+    words: ["Instant", "Sorcery"],
     followUp: "(t:instant or t:sorcery)",
   },
-  { name: "planeswalkers", pattern: /\bPlaneswalker\b/, followUp: "t:planeswalker" },
-  { name: "Equipment", pattern: /\bEquipment\b/, followUp: "t:equipment" },
-  { name: "Auras", pattern: /\bAura\b/, followUp: "t:aura" },
-  { name: "legendaries", pattern: /\bLegendary\b/, followUp: "is:legendary" },
+  { name: "planeswalkers", words: ["Planeswalker"], followUp: "t:planeswalker" },
+  { name: "Equipment", words: ["Equipment"], followUp: "t:equipment" },
+  { name: "Auras", words: ["Aura"], followUp: "t:aura" },
+  { name: "legendaries", words: ["Legendary"], followUp: "is:legendary" },
 ];
 
 /** Everything one card shows, each signal once. */
@@ -248,7 +248,7 @@ function findingsFor(card: SignalCard): Finding[] {
       followUp: `kw:"${keyword.toLowerCase()}"`,
     })),
     ...TEXT_RULES.filter((row) => row.pattern.test(text)),
-    ...CARD_TYPES.filter((row) => row.pattern.test(card.typeLine)).map((row) => ({
+    ...CARD_TYPES.filter((row) => hasTypeWord(card.typeLine, row.words)).map((row) => ({
       kind: "cardType" as const,
       name: row.name,
       followUp: row.followUp,

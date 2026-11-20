@@ -1,5 +1,13 @@
 import { formatRules } from "../domain/format-rules";
-import { err, ok, seededRng, type Clock, type Result, type UserId } from "@/shared/kernel";
+import {
+  err,
+  ok,
+  seededRng,
+  type Clock,
+  type Result,
+  type UserId,
+  type CardFacts,
+} from "@/shared/kernel";
 import { colorPips } from "../domain/stats";
 import { commanderOnlyProfile, effectiveManaValue, type DeckPlan } from "../domain/deck-profile";
 import type { DeckView } from "../domain/deck-view";
@@ -27,7 +35,7 @@ export type DrawSampleRequest = Readonly<{
   seed?: string;
 }>;
 
-export type SampleCard = Readonly<{ name: string; manaCost: string; typeLine: string }>;
+export type SampleCard = Readonly<Pick<CardFacts, "name" | "typeLine"> & { manaCost: string }>;
 
 export type DrawSample = Readonly<{
   deckId: number;

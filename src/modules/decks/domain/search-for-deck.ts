@@ -1,3 +1,4 @@
+import type { CardFacts, CardIdentity } from "@/shared/kernel";
 import type { Tag, Theme } from "@/shared/card-search";
 
 // Searching for a deck with several synergy queries at once (design doc 28, section 3.3): the
@@ -16,24 +17,18 @@ export const SEARCH_POOLS = ["owned", "store", "both"] as const;
 export type SearchPool = (typeof SEARCH_POOLS)[number];
 
 /** A card one query found. */
-export type FoundCard = Readonly<{
-  oracleId: string;
-  /** The copy to use: your most special one, or the store's cheapest printing. */
-  printingId: string;
-  name: string;
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  text: string;
-  roleTags: readonly Tag[];
-  themes: readonly Theme[];
-  /** On Wizards' Game Changer list (design doc 31). */
-  isGameChanger: boolean;
-  /** Copies you can put in this deck (real ones too when the deck uses them). */
-  owned: number;
-  /** The store's price for the printing above, in cents; null when it isn't for sale. */
-  priceCents: number | null;
-}>;
+export type FoundCard = CardIdentity &
+  Pick<CardFacts, "name" | "manaCost" | "manaValue" | "typeLine" | "text"> &
+  Readonly<{
+    roleTags: readonly Tag[];
+    themes: readonly Theme[];
+    /** On Wizards' Game Changer list (design doc 31). */
+    isGameChanger: boolean;
+    /** Copies you can put in this deck (real ones too when the deck uses them). */
+    owned: number;
+    /** The store's price for the printing above, in cents; null when it isn't for sale. */
+    priceCents: number | null;
+  }>;
 
 /** What one query found, before merging. */
 export type QueryHits = Readonly<{

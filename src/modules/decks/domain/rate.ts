@@ -1,5 +1,11 @@
 import type { Tag, Theme } from "@/shared/card-search";
-import { Cents, curveSlot, curveSlotLabel } from "@/shared/kernel";
+import {
+  Cents,
+  curveSlot,
+  curveSlotLabel,
+  type CardFacts,
+  type CardIdentity,
+} from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
@@ -61,26 +67,24 @@ export type RatingProfile = Readonly<{
   curveCounts: readonly number[];
 }>;
 
-export type RatingCandidate = Readonly<{
-  oracleId: string;
-  name: string;
-  typeLine: string;
-  manaValue: number;
-  text?: string;
-  keywords: readonly string[];
-  roles: readonly Tag[];
-  themes: readonly Theme[];
-  rarity: string;
-  priceCents: number | null;
-  edhrec?: RatingEdhrecSignal | null;
-  edhrecRank?: number | null;
-  preconCount?: number | null;
-  isGameChanger?: boolean;
-  /** Names of cards already in the deck that form a two-card combo with this candidate. */
-  comboPartners?: readonly string[] | null;
-  /** Mean cosine similarity to top-5 most similar deck cards, in [0, 1] (design doc 53). */
-  embedSim?: number | null;
-}>;
+export type RatingCandidate = Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
+  Readonly<{
+    text?: string;
+    keywords: readonly string[];
+    roles: readonly Tag[];
+    themes: readonly Theme[];
+    rarity: string;
+    priceCents: number | null;
+    edhrec?: RatingEdhrecSignal | null;
+    edhrecRank?: number | null;
+    preconCount?: number | null;
+    isGameChanger?: boolean;
+    /** Names of cards already in the deck that form a two-card combo with this candidate. */
+    comboPartners?: readonly string[] | null;
+    /** Mean cosine similarity to top-5 most similar deck cards, in [0, 1] (design doc 53). */
+    embedSim?: number | null;
+  }>;
 
 export type RatingOptions = Readonly<{
   maxCardPriceCents?: number | null;

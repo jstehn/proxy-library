@@ -1,6 +1,6 @@
 import { cardTags, type Tag } from "@/shared/card-search";
-import { shuffled, type Rng } from "@/shared/kernel";
-import type { Board } from "./deck";
+import { shuffled, type Rng, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import type { DeckCount } from "./boards";
 import { isLand } from "./stats";
 
 // The draw simulator (design doc 19, section 3.4): test hands, London mulligans and the exact
@@ -8,17 +8,14 @@ import { isLand } from "./stats";
 // (ADR 0008's implementation note), so nothing here decides anything that matters.
 
 /** What the simulator needs from a deck line. */
-export type DrawLine = Readonly<{
-  oracleId: string;
-  name: string;
-  printingId: string;
-  board: Board;
-  quantity: number;
-  typeLine: string;
-  manaValue?: number;
-  text?: string;
-  producedMana?: readonly string[];
-}>;
+export type DrawLine = DeckCount &
+  CardIdentity &
+  Pick<CardFacts, "name" | "typeLine"> &
+  Readonly<{
+    manaValue?: number;
+    text?: string;
+    producedMana?: readonly string[];
+  }>;
 
 /** One copy of a card in the library. */
 export type LibraryCard = Readonly<{

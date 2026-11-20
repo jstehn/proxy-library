@@ -1,5 +1,5 @@
 import { type Tag, type Theme } from "@/shared/card-search";
-import type { ManaColor } from "@/shared/kernel";
+import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
 import { type Bracket, type BracketLine } from "./brackets";
 import { type Format } from "./deck";
 import type { RatingPart } from "./rate";
@@ -76,12 +76,9 @@ export type BudgetReplacementPick = Readonly<{
 }>;
 
 export type ExpensiveCardReplacements = Readonly<{
-  target: Readonly<{
-    oracleId: string;
-    name: string;
-    priceCents: number;
-    typeLine: string;
-  }>;
+  target: Pick<CardIdentity, "oracleId"> &
+    Pick<CardFacts, "name" | "typeLine"> &
+    Readonly<{ priceCents: number }>;
   owned: BudgetReplacementPick[];
   store: BudgetReplacementPick[];
 }>;

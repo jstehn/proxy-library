@@ -1,5 +1,5 @@
 import { cardTags, type Tag, type Theme } from "@/shared/card-search";
-import { curveSlot, manaCurve } from "@/shared/kernel";
+import { curveSlot, manaCurve, type CardFacts, type CardIdentity } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
@@ -50,21 +50,18 @@ export type DraftOptions = Readonly<{
   includeStore?: "fill-gaps" | "none";
 }>;
 
-export type DraftedSpell = Readonly<{
-  oracleId: string;
-  name: string;
-  quantity: number;
-  manaCost: string | null;
-  manaValue: number;
-  typeLine: string;
-  pool: "owned" | "store";
-  section: DraftSection;
-  primaryRole?: TargetedTag;
-  score: number;
-  reasons: readonly DraftReason[];
-  priceCents: number | null;
-  alsoIn: readonly string[];
-}>;
+export type DraftedSpell = Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "manaCost" | "manaValue" | "typeLine"> &
+  Readonly<{
+    quantity: number;
+    pool: "owned" | "store";
+    section: DraftSection;
+    primaryRole?: TargetedTag;
+    score: number;
+    reasons: readonly DraftReason[];
+    priceCents: number | null;
+    alsoIn: readonly string[];
+  }>;
 
 export type RoleProgress = Readonly<{
   tag: TargetedTag;

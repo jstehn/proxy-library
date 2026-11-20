@@ -126,6 +126,15 @@ const FORMAT_NAMES = [
   },
 ];
 
+// A type line is read in one place (refactor P26): kernel/card-types.ts. Tests may spell it out.
+const TYPE_LINE_WORDS = [
+  {
+    selector: "Literal[regex.pattern=/\\\\b(Legendary|Creature|Land|Planeswalker)\\\\b/]",
+    message:
+      "Read a type line with cardTypes(), isLand(), isCreature() or hasTypeWord() from @/shared/kernel (refactor P26).",
+  },
+];
+
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
   // npm packages and Node built-ins: allowed here, restricted per layer by no-restricted-imports.
@@ -372,6 +381,7 @@ export default defineConfig([
         ...PRICE_TABLE,
         ...CANDIDATE_SQL,
         ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
       ],
     },
   },
@@ -387,6 +397,7 @@ export default defineConfig([
         ...MONEY_TEXT,
         ...PRICE_TABLE,
         ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
       ],
     },
   },
@@ -400,7 +411,13 @@ export default defineConfig([
     ],
     ignores: TESTS,
     rules: {
-      "no-restricted-syntax": ["error", ...NONDETERMINISM, ...MONEY_TEXT, ...FORMAT_NAMES],
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...MONEY_TEXT,
+        ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
+      ],
     },
   },
   {
@@ -426,6 +443,7 @@ export default defineConfig([
           message: "Call capabilities through action() or readPage() (ADR 0026).",
         },
         ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
       ],
     },
   },

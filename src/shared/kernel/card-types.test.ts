@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { cardTypes } from "./card-types";
+import { cardTypes, hasTypeWord } from "./card-types";
+
+describe("hasTypeWord", () => {
+  it("finds a whole word on any face", () => {
+    expect(hasTypeWord("Legendary Artifact Creature — Golem", ["Legendary"])).toBe(true);
+    expect(hasTypeWord("Instant // Land — Forest", ["Land"])).toBe(true);
+    expect(hasTypeWord("Artifact — Equipment", ["Equip"])).toBe(false);
+  });
+
+  it("takes any of several words", () => {
+    expect(hasTypeWord("Kindred Sorcery — Elf", ["Creature", "Kindred", "Tribal"])).toBe(true);
+    expect(hasTypeWord("Sorcery", ["Instant", "Creature"])).toBe(false);
+  });
+
+  it("can look at the front face only", () => {
+    expect(hasTypeWord("Enchantment // Artifact", ["Artifact"])).toBe(true);
+    expect(hasTypeWord("Enchantment // Artifact", ["Artifact"], true)).toBe(false);
+  });
+});
 
 describe("cardTypes", () => {
   const cases: ReadonlyArray<

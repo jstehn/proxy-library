@@ -1,5 +1,6 @@
 import { plainText } from "@/shared/card-search";
-import type { Board } from "./boards";
+import { hasTypeWord, type CardFacts } from "@/shared/kernel";
+import type { DeckCount } from "./boards";
 
 // Produces/consumes synergy signals (design doc 46, #54): regex rules over oracle text
 // (reminder text stripped) that tag what resources/triggers a card makes and uses.
@@ -37,12 +38,8 @@ export const SIGNAL_LABELS: Readonly<Record<SignalTag, string>> = {
   draw_discard: "draw / discard",
 };
 
-export type SignalCardInput = Readonly<{
-  name: string;
-  typeLine: string;
-  text: string;
-  manaValue?: number;
-}>;
+export type SignalCardInput = Pick<CardFacts, "name" | "typeLine" | "text"> &
+  Readonly<{ manaValue?: number }>;
 
 export type SignalIO = Readonly<{
   makes: readonly SignalTag[];
@@ -147,7 +144,8 @@ const SIGNAL_RULES: readonly SignalRule[] = [
   },
   {
     tag: "spellslinger",
-    makesCard: (card) => /\b(Instant|Sorcery)\b/.test(card.typeLine) && (card.manaValue ?? 99) <= 3,
+    makesCard: (card) =>
+      hasTypeWord(card.typeLine, ["Instant", "Sorcery"]) && (card.manaValue ?? 99) <= 3,
     makesPatterns: [
       r(String.raw`\bcopy target (instant|sorcery)\b`),
       r(String.raw`\b(storm|rebound)\b`),
@@ -169,7 +167,7 @@ const SIGNAL_RULES: readonly SignalRule[] = [
   },
   {
     tag: "artifact_synergy",
-    makesCard: (card) => /\bArtifact\b/.test(card.typeLine) && (card.manaValue ?? 99) <= 3,
+    makesCard: (card) => hasTypeWord(card.typeLine, ["Artifact"]) && (card.manaValue ?? 99) <= 3,
     makesPatterns: [
       r(
         String.raw`\bcreates? [^.]*\b(treasure|clue|food|blood|thopter|servo|powerstone|map) tokens?\b`,
@@ -184,7 +182,7 @@ const SIGNAL_RULES: readonly SignalRule[] = [
   },
   {
     tag: "enchantment_synergy",
-    makesCard: (card) => /\bEnchantment\b/.test(card.typeLine) && (card.manaValue ?? 99) <= 4,
+    makesCard: (card) => hasTypeWord(card.typeLine, ["Enchantment"]) && (card.manaValue ?? 99) <= 4,
     makesPatterns: [],
     usesPatterns: [
       r(String.raw`\bconstellation\b`),
@@ -230,7 +228,7 @@ export function cardSignalIO(card: SignalCardInput): SignalIO {
   return { makes, uses };
 }
 
-export type SignalLine = SignalCardInput & Readonly<{ board: Board; quantity: number }>;
+export type SignalLine = SignalCardInput & DeckCount;
 
 export type DeckSignalProfile = Readonly<{
   makes: ReadonlyMap<SignalTag, number>;

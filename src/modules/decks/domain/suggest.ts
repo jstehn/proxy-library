@@ -1,5 +1,5 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
-import { manaCurve } from "@/shared/kernel";
+import { hasTypeWord, manaCurve, type CardFacts, type CardIdentity } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -35,25 +35,23 @@ export type EdhrecSignal = Readonly<{
 }>;
 
 /** A card that could be suggested, from your collection or the store. */
-export type CandidateCard = Readonly<{
-  oracleId: string;
-  name: string;
-  typeLine: string;
-  manaValue: number;
-  text?: string;
-  keywords: readonly string[];
-  roles: readonly Tag[];
-  themes: readonly Theme[];
-  rarity: string;
-  priceCents: number | null;
-  pool: "owned" | "store";
-  edhrec?: EdhrecSignal | null;
-  edhrecRank?: number | null;
-  preconCount?: number | null;
-  isGameChanger?: boolean;
-  comboPartners?: readonly string[] | null;
-  embedSim?: number | null;
-}>;
+export type CandidateCard = Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
+  Readonly<{
+    text?: string;
+    keywords: readonly string[];
+    roles: readonly Tag[];
+    themes: readonly Theme[];
+    rarity: string;
+    priceCents: number | null;
+    pool: "owned" | "store";
+    edhrec?: EdhrecSignal | null;
+    edhrecRank?: number | null;
+    preconCount?: number | null;
+    isGameChanger?: boolean;
+    comboPartners?: readonly string[] | null;
+    embedSim?: number | null;
+  }>;
 
 export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
 
@@ -122,7 +120,7 @@ const TRIBE_SHARE = 1 / 3;
 export function creatureTypes(typeLine: string): string[] {
   const front = typeLine.split(" // ")[0];
   const [types, subtypes] = front.split(" — ");
-  if (subtypes === undefined || !/\b(Creature|Kindred|Tribal)\b/.test(types)) return [];
+  if (subtypes === undefined || !hasTypeWord(types, ["Creature", "Kindred", "Tribal"])) return [];
   return subtypes.split(" ").filter((word) => word.length > 0);
 }
 

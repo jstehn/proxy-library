@@ -1,5 +1,6 @@
 // The mana curve (lives in the kernel because both decks and drafts use it): how many spells sit at each mana value. One curve for the whole app (the deck
 // builder's): slots 0 to 6, and slot 7 holds everything that costs seven or more.
+import type { CardFacts } from "./card-shapes";
 import { isLand } from "./card-types";
 
 /** The last slot of the curve; it holds this mana value and everything above it. */
@@ -25,7 +26,7 @@ export function curveSlotLabel(slot: number): string {
   return slot >= CURVE_LAST_SLOT ? `${CURVE_LAST_SLOT}+` : String(slot);
 }
 
-export type CurveLine = Readonly<{ typeLine: string; manaValue: number; quantity: number }>;
+export type CurveLine = Pick<CardFacts, "typeLine" | "manaValue"> & Readonly<{ quantity: number }>;
 
 /**
  * How many spells (lands left out) sit in each slot, 8 numbers from 0 to 7+. A card with a land

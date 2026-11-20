@@ -1,5 +1,5 @@
 import type { ImageSize } from "../domain/images";
-import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import type { Clock, UnitOfWork, UserId, CardFacts, CardIdentity } from "@/shared/kernel";
 import type {
   CardSetInfo,
   Finish,
@@ -102,13 +102,8 @@ export type CardExtras = Readonly<{
 export type TokenLink = Readonly<{ printingId: PrintingId; tokenId: string }>;
 
 /** What the tag pass reads from a printing (design doc 20, section 8). */
-export type TaggablePrinting = Readonly<{
-  id: PrintingId;
-  typeLine: string;
-  /** Every face's rules text, joined with spaces (as the deck queries join it). */
-  text: string;
-  producedMana: readonly string[];
-}>;
+export type TaggablePrinting = Pick<CardFacts, "typeLine" | "text" | "producedMana"> &
+  Readonly<{ id: PrintingId }>;
 
 /** A printing's role tags and themes, as the tag pass works them out. */
 export type CardFeatures = Readonly<{
@@ -275,12 +270,8 @@ export interface SpellbookRepository {
 /** Local text embedding model adapter (design doc 53, #58). */
 export type TextEmbedder = (texts: readonly string[]) => Promise<number[][]>;
 
-export type CardTextToEmbed = Readonly<{
-  oracleId: string;
-  name: string;
-  typeLine: string;
-  text: string;
-}>;
+export type CardTextToEmbed = Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "typeLine" | "text">;
 
 export type CardEmbeddingRow = Readonly<{
   oracleId: string;

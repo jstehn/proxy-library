@@ -7,26 +7,26 @@ import {
   type ManaSymbol,
   isLand,
   isCreature,
+  hasTypeWord,
+  type CardFacts,
 } from "@/shared/kernel";
-import { isCounted, isPlayed, type Board } from "./boards";
+import { isCounted, isPlayed, type DeckCount } from "./boards";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
 // exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.
 
-export type StatsLine = Readonly<{
-  quantity: number;
-  manaValue: number;
-  typeLine: string;
-  board: Board;
-  /** e.g. "{2}{W}{U}"; missing or null for cards without a cost (lands). */
-  manaCost?: string | null;
-  /** Colors of mana it can make: "W", "U", "B", "R", "G", "C" (lands, rocks, dorks). */
-  producedMana?: readonly string[];
-  /** Market price of one copy, in cents, if known. */
-  priceCents?: number | null;
-  /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
-  text?: string;
-}>;
+export type StatsLine = DeckCount &
+  Pick<CardFacts, "manaValue" | "typeLine"> &
+  Readonly<{
+    /** e.g. "{2}{W}{U}"; missing or null for cards without a cost (lands). */
+    manaCost?: string | null;
+    /** Colors of mana it can make: "W", "U", "B", "R", "G", "C" (lands, rocks, dorks). */
+    producedMana?: readonly string[];
+    /** Market price of one copy, in cents, if known. */
+    priceCents?: number | null;
+    /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
+    text?: string;
+  }>;
 
 export type ManaSource = ManaSymbol;
 
@@ -71,7 +71,7 @@ export type DeckStats = Readonly<{
 
 /** The first matching type, in TYPE_ORDER ("Artifact Creature" is a Creature). */
 export function mainType(typeLine: string): string {
-  return TYPE_ORDER.find((type) => new RegExp(`\\b${type}\\b`).test(typeLine)) ?? "Other";
+  return TYPE_ORDER.find((type) => hasTypeWord(typeLine, [type])) ?? "Other";
 }
 
 // A card with a land on either face is a land (STATUS decision 1); the rule is in the kernel.

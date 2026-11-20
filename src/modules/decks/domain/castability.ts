@@ -6,24 +6,23 @@ import {
   randomInt,
   seededRng,
   cardTypes,
+  type CardFacts,
+  type CardIdentity,
 } from "@/shared/kernel";
-import { isPlayed, type Board } from "./boards";
+import { isPlayed, type DeckCount } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
 import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
 import { tapped } from "./mana-base";
 
-export type CastabilityLine = Readonly<{
-  oracleId: string;
-  name: string;
-  board: Board;
-  quantity: number;
-  typeLine: string;
-  manaValue: number;
-  manaCost?: string | null;
-  producedMana?: readonly string[];
-  text?: string;
-  power?: string | number | null;
-}>;
+export type CastabilityLine = DeckCount &
+  Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
+  Readonly<{
+    manaCost?: string | null;
+    producedMana?: readonly string[];
+    text?: string;
+    power?: string | number | null;
+  }>;
 
 export type CardCastability = Readonly<{
   oracleId: string;

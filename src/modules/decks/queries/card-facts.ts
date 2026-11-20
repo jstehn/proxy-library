@@ -1,7 +1,7 @@
 import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
+import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
 import {
   parseSearch,
   TAGS,
@@ -17,16 +17,12 @@ import { ownedCopies, STANDARD_FIRST } from "./owned";
 // writes, and the cards a deck or a search holds, as analyze_cards reads them (section 3.7).
 
 /** A card found by name or id: its oracle card and standard printing (design doc 24). */
-export type CardReference = Readonly<{
-  oracleId: string;
-  printingId: string;
-  scryfallId: string;
-  name: string;
-  typeLine: string;
-  manaCost: string | null;
-  text: string;
-  colorIdentity: string[];
-}>;
+export type CardReference = CardIdentity &
+  Pick<CardFacts, "name" | "typeLine" | "manaCost" | "text"> &
+  Readonly<{
+    scryfallId: string;
+    colorIdentity: string[];
+  }>;
 
 /**
  * Finds a card by its name (any letter case; a double-faced card's front name works too), its

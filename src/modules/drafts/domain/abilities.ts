@@ -1,4 +1,4 @@
-import { isCreature } from "@/shared/kernel";
+import { hasTypeWord, isCreature } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 
 // Cards that do something during the draft (design doc 18, section 3), as data: the pick engine
@@ -118,4 +118,4 @@ export function creatureTypes(typeLine: string): string[] {
 }
 
 export { isCreature as isCreatureLine } from "@/shared/kernel";
-export const isConspiracyLine = (typeLine: string) => /\bConspiracy\b/.test(typeLine);
+export const isConspiracyLine = (typeLine: string) => hasTypeWord(typeLine, ["Conspiracy"]);

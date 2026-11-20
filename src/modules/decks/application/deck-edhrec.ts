@@ -1,5 +1,5 @@
 import type { EdhrecCardItem, EdhrecCommanderData } from "@/modules/catalog";
-import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import { err, ok, type Result, type UserId, type CardFacts } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import { isAvoidCard, type DeckPlan } from "../domain/deck-profile";
 import type { DeckView } from "../domain/deck-view";
@@ -36,7 +36,7 @@ export type EdhrecDeckComparison = Readonly<{
   data: EdhrecCommanderData;
   inDeckWithEdhrec: readonly DeckCardOnEdhrec[];
   highInclusionNotInDeck: readonly EdhrecMissingCard[];
-  inDeckNotOnEdhrec: readonly Readonly<{ name: string; typeLine: string }>[];
+  inDeckNotOnEdhrec: readonly Pick<CardFacts, "name" | "typeLine">[];
   /** Popular cards left out because the deck's profile says to avoid them. */
   leftOutAvoid: readonly string[];
 }>;
@@ -104,7 +104,7 @@ export function makeEdhrecResearch(readers: EdhrecReaders) {
     const deckKeys = new Set(played.flatMap((line) => keysOf(line.name)));
 
     const inDeckWithEdhrec: DeckCardOnEdhrec[] = [];
-    const inDeckNotOnEdhrec: { name: string; typeLine: string }[] = [];
+    const inDeckNotOnEdhrec: Pick<CardFacts, "name" | "typeLine">[] = [];
     for (const line of played) {
       const match = keysOf(line.name)
         .map((key) => edhrecByName.get(key))

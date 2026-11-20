@@ -1,11 +1,9 @@
+import type { DeckCount } from "./boards";
 import type { Board } from "./deck";
 
 // Free copies (task 42). Ownership is shared between decks: every deck counts all the copies you
 // own. A copy is "free" when none of your other decks uses it. Taking a card from another deck
 // frees its copies for this one. Pure: counts in, counts out.
-
-/** How many copies of a card one deck has on one board. */
-export type BoardCount = Readonly<{ board: Board; quantity: number }>;
 
 /** The order copies are taken from another deck: the sideboard before the main deck. */
 const TAKE_ORDER: readonly Board[] = ["side", "main"];
@@ -23,8 +21,8 @@ export function copiesToTake(wanted: number, free: number, available: number): n
  * the sideboard first, then the main deck, never the commander. Boards that don't change aren't
  * listed.
  */
-export function takeCopies(counts: readonly BoardCount[], count: number): BoardCount[] {
-  const changes: BoardCount[] = [];
+export function takeCopies(counts: readonly DeckCount[], count: number): DeckCount[] {
+  const changes: DeckCount[] = [];
   let left = count;
   for (const board of TAKE_ORDER) {
     const current = counts

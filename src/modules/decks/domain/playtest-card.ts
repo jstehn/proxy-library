@@ -1,6 +1,6 @@
 import { colorsOfCost, costSymbols, splitSymbols } from "./mana-symbols";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
-import { COLORS, type ManaColor, isLand } from "@/shared/kernel";
+import { COLORS, type ManaColor, isLand, type CardFacts } from "@/shared/kernel";
 
 // Playtest proxies (design doc 22, section 3): a card drawn from its text instead of its scan.
 // Everything here is pure: given the card, its box on the page and a way to measure text, it
@@ -9,16 +9,13 @@ import { COLORS, type ManaColor, isLand } from "@/shared/kernel";
 // Units are PDF points (72 per inch); y grows upwards, as in PDF.
 
 /** What's printed on one face, as the catalog stores it. */
-export type PrintedFace = Readonly<{
-  name: string;
-  manaCost: string | null;
-  typeLine: string;
-  text: string;
-  power: string | null;
-  toughness: string | null;
-  loyalty: string | null;
-  defense: string | null;
-}>;
+export type PrintedFace = Pick<CardFacts, "name" | "manaCost" | "typeLine" | "text"> &
+  Readonly<{
+    power: string | null;
+    toughness: string | null;
+    loyalty: string | null;
+    defense: string | null;
+  }>;
 
 /** What a playtest proxy needs to know about a printing. */
 export type PrintedCard = Readonly<{

@@ -4,31 +4,26 @@ import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
 import { colorPips, deckStats, type DeckStats } from "./stats";
 import type { ProfileLine } from "./suggest";
-import { COLORS, type ManaColor } from "@/shared/kernel";
+import { COLORS, type ManaColor, type CardFacts, type CardIdentity } from "@/shared/kernel";
 
 // A mana base you could start from (design doc 35): how many lands, how many sources of each
 // color, and which lands to add, owned non-basics first, then basics. Pure: the query gathers
 // the candidates, this picks them and says why. Like suggestions, these are ideas to weigh.
 
 /** A land the plan may add: one you own, a basic, or one from the store. */
-export type LandCandidate = Readonly<{
-  oracleId: string;
-  name: string;
-  typeLine: string;
-  /** Rules text of every face, for "enters tapped". */
-  text: string;
-  /** Colors it can make: "W", "U", "B", "R", "G", "C". */
-  producedMana: readonly string[];
-  isBasicLand: boolean;
-  /** Copies you own. Decks share cards, so other decks using it don't lower this. */
-  ownedCopies: number;
-  /** Your other decks that play it too: a note for the player, never a limit. */
-  alsoIn: readonly string[];
-  /** Store price of one copy, in cents (store candidates only). */
-  priceCents: number | null;
-  roles: readonly Tag[];
-  themes: readonly Theme[];
-}>;
+export type LandCandidate = Pick<CardIdentity, "oracleId"> &
+  Pick<CardFacts, "name" | "typeLine" | "text" | "producedMana"> &
+  Readonly<{
+    isBasicLand: boolean;
+    /** Copies you own. Decks share cards, so other decks using it don't lower this. */
+    ownedCopies: number;
+    /** Your other decks that play it too: a note for the player, never a limit. */
+    alsoIn: readonly string[];
+    /** Store price of one copy, in cents (store candidates only). */
+    priceCents: number | null;
+    roles: readonly Tag[];
+    themes: readonly Theme[];
+  }>;
 
 /** Whether a land enters the battlefield tapped: always, only sometimes ("unless …"), or never. */
 export type Tapped = "never" | "sometimes" | "always";

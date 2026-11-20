@@ -1,18 +1,22 @@
-import { ok, type Finish, type Result, type UserId } from "@/shared/kernel";
+import {
+  ok,
+  type Finish,
+  type Result,
+  type UserId,
+  type CardFacts,
+  type CardIdentity,
+} from "@/shared/kernel";
 
 // Looking cards up by name or id for a player: the card itself, its price trend and store
 // printings, and what the player has of it (audit S1: the get_cards tool and any page that
 // answers the same question). What belongs to other modules (copies, decks, wishes) comes
 // through ports wired in src/server/capabilities.ts.
 
-export type FoundCard = Readonly<{
-  oracleId: string;
-  printingId: string;
-  name: string;
-  typeLine: string;
-  manaCost: string | null;
-  colorIdentity: readonly string[];
-}>;
+export type FoundCard = CardIdentity &
+  Pick<CardFacts, "name" | "typeLine" | "manaCost"> &
+  Readonly<{
+    colorIdentity: readonly string[];
+  }>;
 
 export type CopyOfPrinting = Readonly<{
   printingId: string;
