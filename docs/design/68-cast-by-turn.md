@@ -37,13 +37,14 @@ mulligan, the card need not be drawn) and the tool and the builder's chart.
 
 ## The registry
 
-`decks/domain/cast-effects.ts`: `CAST_EFFECTS`, one handler per kind, three kinds only.
+`decks/domain/cast-effects.ts`: `CAST_EFFECTS`, one handler per kind, four kinds only.
 
-| kind      | does                                                 | example            |
-| --------- | ---------------------------------------------------- | ------------------ |
-| `ritual`  | cast from hand: pay a cost, add mana                 | Dark Ritual        |
-| `reducer` | in play: spells of some types cost generic mana less | Foundry Inspector  |
-| `tapMana` | in play: taps for mana (from the card features)      | Sol Ring, Llanowar |
+| kind        | does                                                 | example            |
+| ----------- | ---------------------------------------------------- | ------------------ |
+| `ritual`    | cast from hand: pay a cost, add mana                 | Dark Ritual        |
+| `reducer`   | in play: spells of some types cost generic mana less | Foundry Inspector  |
+| `tapMana`   | in play: taps for mana (from the card features)      | Sol Ring, Llanowar |
+| `landFetch` | cast: a land joins the battlefield (card features)   | Rampant Growth     |
 
 A card gets an effect from `CARD_EFFECTS` (by name) or from the catalog's `tapMana` feature; a card
 with none is not affected. More names are one line each.

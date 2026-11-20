@@ -1,4 +1,4 @@
-import type { BracketFlag, SignalIO, SignalKind, Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag, ManaSymbol, SignalIO, SignalKind, Tag, Theme } from "@/shared/kernel";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */
@@ -27,10 +27,19 @@ export type TapMana = Readonly<{
 /** Whether a land enters the battlefield tapped: always, only sometimes ("unless …"), or never. */
 export type EntersTapped = "never" | "sometimes" | "always";
 
+/** A spell that puts a land onto the battlefield (Rampant Growth): how it enters, what it fetches. */
+export type LandFetch = Readonly<{
+  entersTapped: boolean;
+  /** The colours of the basic land types it may fetch ("G" for a Forest); all five for "a basic". */
+  colors: readonly ManaSymbol[];
+}>;
+
 /** Every feature a recognizer fills, by field name. Each field has exactly one recognizer. */
 export type CardFeatureFields = Readonly<{
   tapMana: TapMana;
   entersTapped: EntersTapped;
+  /** Set for a spell that fetches a land onto the battlefield; null for every other card. */
+  landFetch: LandFetch | null;
   /** The card gives an opponent something (cards, life, mana, a creature): a drawback on a land. */
   helpsOpponents: boolean;
   /** The `is:` land cycles the card belongs to ("shockland", …); empty when it is not a land. */

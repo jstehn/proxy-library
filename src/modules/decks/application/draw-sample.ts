@@ -16,14 +16,17 @@ import { library, OPENING_HAND } from "../domain/opening-hand/library";
 import type { DeckNotFound } from "../domain/errors";
 import { simulateOpeningHands } from "../domain/goldfish";
 import { simulateCasting, type CastCurve, type CastTarget } from "../domain/cast-by-turn";
-import type { TapMana, EntersTapped } from "@/modules/catalog";
+import type { CardFeatures } from "@/modules/catalog";
 
 // A few shuffled opening hands from a deck, the odds of a good start over many trials, and the
 // chance of casting a card by each turn: the one capability behind `draw_sample` and the builder.
 
 /** The deck lines with what the catalog's card features say about mana (ramp, tapped lands). */
 export type CastDeckView = Omit<DeckView, "lines"> &
-  Readonly<{ lines: readonly (DeckLine & { tapMana?: TapMana; entersTapped?: EntersTapped })[] }>;
+  Readonly<{
+    lines: readonly (DeckLine &
+      Partial<Pick<CardFeatures, "tapMana" | "entersTapped" | "landFetch">>)[];
+  }>;
 
 export type DrawSampleReaders = Readonly<{
   deckView(userId: UserId, deckId: number): Promise<CastDeckView | null>;

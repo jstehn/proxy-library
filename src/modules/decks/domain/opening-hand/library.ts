@@ -1,5 +1,5 @@
 import { cardTypes, type CardFacts, type CardIdentity, type Tag } from "@/shared/kernel";
-import type { EntersTapped, TapMana } from "@/modules/catalog";
+import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
 import type { DeckCount } from "../boards";
 import { isLand } from "../stats";
 
@@ -14,6 +14,8 @@ export type DrawLine = DeckCount &
     /** What the card does when tapped for mana, and whether a land enters tapped (card features). */
     tapMana?: TapMana;
     entersTapped?: EntersTapped;
+    /** A spell that fetches a land onto the battlefield (card features). */
+    landFetch?: CardFeatures["landFetch"];
   }>;
 
 /** One copy of a card in the library. */
@@ -30,6 +32,7 @@ export type LibraryCard = Readonly<{
   producedMana?: readonly string[];
   tapMana?: TapMana;
   entersTapped?: EntersTapped;
+  landFetch?: CardFeatures["landFetch"];
 }>;
 
 export const OPENING_HAND = 7;
@@ -56,6 +59,7 @@ export function library(lines: readonly DrawLine[]): LibraryCard[] {
           ? { producedMana: line.producedMana }
           : {}),
         ...(line.tapMana !== undefined ? { tapMana: line.tapMana } : {}),
+        ...(line.landFetch != null ? { landFetch: line.landFetch } : {}),
         ...entersTappedOf(line),
       }));
     });

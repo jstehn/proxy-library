@@ -1,4 +1,4 @@
-import { creatureTypes, hasTypeWord, manaCurve, type Tag, type Theme } from "@/shared/kernel";
+import { creatureTypes, manaCurve, type Tag, type Theme } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
