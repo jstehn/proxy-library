@@ -22,11 +22,11 @@ function targetText(line: SharedWishLine): string {
 }
 
 export default async function PlayerWishlistPage(props: PageProps<"/players/[id]/wishlist">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const { id } = await props.params;
 
   const ownerId = UserId.of(id);
-  const shared = await capabilities.wishlistReads.sharedFor(actor.userId, ownerId);
+  const shared = await reads.wishlist.sharedFor(actor, ownerId);
   if (shared === null) notFound();
 
   const totalOwnedMatches = shared.lines.filter((line) => line.viewerOwned.length > 0).length;

@@ -12,12 +12,10 @@ import { readPage } from "@/server/page-instance";
 // Not shared looks the same as no such player, so the page doesn't tell who has a collection.
 
 export default async function PlayerRealCollectionPage(props: PageProps<"/players/[id]/real">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
 
-  const owner = (await capabilities.realCollectionReads.shared()).find(
-    (player) => player.userId === id,
-  );
+  const owner = (await reads.realCollection.shared()).find((player) => player.userId === id);
   if (owner === undefined && id !== actor.userId) notFound();
   const ownerId = UserId.of(id);
   const name = owner?.displayName ?? actor.displayName;
@@ -25,9 +23,9 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
   const searchParams = await props.searchParams;
   const { values, page, filter } = readCollectionQuery(searchParams);
   const [result, sets, products] = await Promise.all([
-    capabilities.realCollectionReads.page(ownerId, filter),
-    capabilities.realCollectionReads.sets(ownerId),
-    capabilities.realCollectionReads.productsOf(ownerId),
+    reads.realCollection.page(actor, ownerId, filter),
+    reads.realCollection.sets(actor, ownerId),
+    reads.realCollection.productsOf(actor, ownerId),
   ]);
   const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
   const path = `/players/${id}/real`;

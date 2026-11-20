@@ -59,7 +59,7 @@ const fieldClass =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
 
 export default async function FindCommanderPage(props: PageProps<"/decks/commanders">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const searchParams = await props.searchParams;
   const colors = chosenColors(searchParams.colors);
   const theme = chosenTheme(searchParams.theme);
@@ -68,7 +68,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
   const includeStore = searchParams.store === "1";
   const withReal = searchParams.real === "1";
   const shown = Math.max(PAGE, Number(searchParams.show) || PAGE);
-  const ranked = await capabilities.deckReads.commandersICanBuild(actor.userId, {
+  const ranked = await reads.decks.commandersICanBuild(actor, {
     colors,
     theme,
     tribe: tribe || undefined,

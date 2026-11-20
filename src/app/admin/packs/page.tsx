@@ -15,6 +15,7 @@ import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
 import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 
 // The Pack lab (design doc 05, section 10): open many packs of one booster, keep nothing, and
@@ -49,10 +50,10 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function PackLabPage(props: PageProps<"/admin/packs">) {
-  const { actor, capabilities } = await readPage({ admin: true });
+  const { actor, capabilities, reads } = await readPage({ admin: true });
   const searchParams = await props.searchParams;
   const { packs } = capabilities;
-  const choices = await capabilities.packReads.availableBoosters();
+  const choices = await reads.packs.availableBoosters();
 
   // "BLB/play" → set BLB, booster type "play".
   const booster = firstValue(searchParams.booster) ?? "";
@@ -90,7 +91,7 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
         <Alert tone="error">{ERROR_MESSAGES[result.error.kind]}</Alert>
       )}
       {result !== null && result.ok && (
-        <Report capabilities={capabilities} report={result.value} choices={choices} />
+        <Report capabilities={capabilities} reads={reads} report={result.value} choices={choices} />
       )}
     </main>
   );
@@ -156,10 +157,11 @@ const FINISH_NAMES = { nonfoil: "", foil: "Foil ", etched: "Etched " };
 
 async function Report(props: {
   capabilities: Capabilities;
+  reads: Reads;
   report: SimulationReport;
   choices: BoosterChoice[];
 }) {
-  const { capabilities } = props;
+  const { capabilities, reads } = props;
   const { report } = props;
 
   const shownIds = [
@@ -168,7 +170,7 @@ async function Report(props: {
   ];
   const [cards, price] = await Promise.all([
     capabilities.printingDetails(shownIds),
-    capabilities.storeReads.packPrice(report.setCode, report.boosterType),
+    reads.store.packPrice(report.setCode, report.boosterType),
   ]);
   const setName =
     props.choices.find((choice) => choice.setCode === report.setCode)?.setName ?? report.setCode;

@@ -70,12 +70,12 @@ export async function previewListAction(
   _previous: EditAsTextPreviewState,
   formData: FormData,
 ): Promise<EditAsTextPreviewState> {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const deckId = Number(formData.get("deckId"));
   if (!Number.isSafeInteger(deckId) || deckId <= 0) redirect("/decks");
   const listText = String(formData.get("list") ?? "");
-  const result = await capabilities.deckReads.listPreview(
-    actor.userId,
+  const result = await reads.decks.listPreview(
+    actor,
     deckId,
     listText,
     String(formData.get("fingerprint") ?? ""),

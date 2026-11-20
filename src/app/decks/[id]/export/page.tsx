@@ -7,11 +7,9 @@ import { readPage } from "@/server/page-instance";
 // Arena all read, or names only; and with the deck's own headings (design doc 34).
 
 export default async function ExportPage(props: PageProps<"/decks/[id]/export">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const deckId = Number((await props.params).id);
-  const view = Number.isSafeInteger(deckId)
-    ? await capabilities.deckReads.deckView(actor.userId, deckId)
-    : null;
+  const view = Number.isSafeInteger(deckId) ? await reads.decks.deckView(actor, deckId) : null;
   if (view === null) notFound();
 
   const lines: ExportLine[] = view.lines.map((line) => ({

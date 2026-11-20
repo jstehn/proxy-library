@@ -12,10 +12,10 @@ import { RealProductForm } from "./real-product-form";
 import { readPage } from "@/server/page-instance";
 
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { code } = await props.params;
 
-  const page = await capabilities.storeReads.page(code);
+  const page = await reads.store.page(code);
   const today = capabilities.now().toISOString().slice(0, 10);
   // A Commander deck shows its commander's whole card (readable on hover), so it's clear who
   // leads the deck.
@@ -27,8 +27,8 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   );
   if (page === null) notFound();
   const { set } = page;
-  const ownedForReal = await capabilities.realCollectionReads.productCounts(
-    actor.userId,
+  const ownedForReal = await reads.realCollection.productCounts(
+    actor,
     page.products.map((product) => product.id),
   );
 

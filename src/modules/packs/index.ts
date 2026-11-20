@@ -10,4 +10,5 @@ export type { BoosterUnavailable, CountInvalid } from "./domain/errors";
 export { COUNT_KEYS, expectedPackValue, type CountKey } from "./domain/odds";
 export type { Pack, PackCard, PrintingFacts } from "./domain/pack";
 export { SIMULATION_LIMIT, type SimulationReport } from "./domain/report";
-export { availableBoosters, type BoosterChoice } from "./queries/boosters";
+export type { BoosterChoice } from "./queries/boosters";
+export * as packsQueries from "./queries";

@@ -1,3 +1,4 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { isNotable } from "@/modules/activity";
@@ -6,7 +7,7 @@ import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
-import { err, UserId } from "@/shared/kernel";
+import { err } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { ItemId, type Item } from "../domain/item";
 import {
@@ -20,14 +21,7 @@ import { makeInventory } from "./make-inventory";
 import { receiveItems } from "./receive-items";
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 
 const jack = actor("jack");

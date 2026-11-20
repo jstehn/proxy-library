@@ -1,28 +1,12 @@
 import "server-only";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { resourceMetadataUrl } from "@/app/_oauth/http";
-import { allows } from "@/modules/accounts";
-import { readCapabilities } from "@/server/page-instance";
+import { readTool } from "@/server/read-tool";
 import { makeMcpServer } from "./mcp";
 import { callTool, problemMessage } from "./registry";
-import type { ToolContext } from "./tool";
 
 // The two endpoints' request handling (design doc 28, section 2): sign in with the bearer token,
 // then hand the request to the MCP server or run one tool.
-
-/** The caller, from `Authorization: Bearer pl_…`, or null (rule 1: every failure looks alike). */
-async function toolContextFor(request: Request): Promise<ToolContext | null> {
-  const capabilities = readCapabilities();
-  const found = await capabilities.accounts.actorFromToken(request.headers.get("authorization"));
-  return found === null
-    ? null
-    : {
-        actor: found.actor,
-        scopes: found.scopes,
-        allows: (scope) => allows(found.scopes, scope),
-        capabilities,
-      };
-}
 
 function unauthorized(): Response {
   return Response.json(
@@ -45,7 +29,7 @@ function unauthorized(): Response {
 
 /** POST /api/mcp: one stateless MCP exchange. */
 export async function handleMcp(request: Request): Promise<Response> {
-  const context = await toolContextFor(request);
+  const context = await readTool(request);
   if (context === null) return unauthorized();
   const server = makeMcpServer(context);
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -62,7 +46,7 @@ export async function handleMcp(request: Request): Promise<Response> {
 
 /** POST /api/tools/<name>: the tool's input as the JSON body, its output as the answer. */
 export async function handleToolCall(request: Request, name: string): Promise<Response> {
-  const context = await toolContextFor(request);
+  const context = await readTool(request);
   if (context === null) return unauthorized();
   let body: unknown = {};
   const text = await request.text();

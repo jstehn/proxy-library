@@ -1,6 +1,6 @@
 import type { z } from "zod";
-import type { Actor, Scope } from "@/modules/accounts";
-import type { Capabilities } from "@/server/capabilities";
+import type { Scope } from "@/modules/accounts";
+import type { ToolRequest } from "@/server/read-tool";
 import { Cents } from "@/shared/kernel";
 
 // What an LLM tool is (design doc 28, section 3.2): defined once, served by both endpoints (MCP
@@ -8,14 +8,8 @@ import { Cents } from "@/shared/kernel";
 // input is already checked against its schema, it calls existing queries and use cases with
 // the token's Actor, and it turns their expected failures into sentences a model can act on.
 
-/** Who is calling, what their token may do, and what the app can do. */
-export type ToolContext = Readonly<{
-  actor: Actor;
-  scopes: readonly Scope[];
-  /** Whether the token's scopes cover `scope`. */
-  allows(scope: Scope): boolean;
-  capabilities: Capabilities;
-}>;
+/** Who is calling, what their token may do, and what the app can do (`readTool` builds it). */
+export type ToolContext = ToolRequest;
 
 /** An expected failure, for the model: its kind and what to do next (invariant 8). */
 export type ToolError = Readonly<{ kind: string; message: string }>;

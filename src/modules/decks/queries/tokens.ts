@@ -1,5 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
+import { isValidPublicToken } from "../domain/sharing";
 import {
   deckTokens,
   newestFirst,
@@ -91,6 +92,23 @@ export async function deckTokenLines(
     })),
     chosen,
   );
+}
+
+/**
+ * A publicly shared deck's tokens, found by its link token (design doc 67, F3): a visitor can't
+ * ask for the token choices of a deck by its number. A wrong or revoked token gives no tokens.
+ */
+export async function publicDeckTokens(
+  db: DbExecutor,
+  token: string,
+  makers: readonly TokenMaker[],
+): Promise<TokenLine[]> {
+  if (!isValidPublicToken(token)) return [];
+  const [deck] = (
+    await db.execute<{ id: number }>(sql`select id from decks where public_token = ${token}`)
+  ).rows;
+  if (deck === undefined) return [];
+  return deckTokenLines(db, Number(deck.id), makers);
 }
 
 async function tokenArtsByIds(

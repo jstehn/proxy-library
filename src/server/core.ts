@@ -3,6 +3,7 @@
 // hands them to the functions that need them. Each phase adds its module's services here.
 import { randomBytes, randomUUID } from "node:crypto";
 import { buildCapabilities } from "./capabilities";
+import { buildPublicReads, buildReads } from "./reads";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -252,6 +253,8 @@ export function buildCore(config: Config) {
     }),
   });
 
+  const reads = buildReads(db);
+
   return {
     config,
     db,
@@ -279,37 +282,36 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
+    reads,
+    publicReads: buildPublicReads(db),
     capabilities: buildCapabilities({
       db,
       clock,
+      reads,
+      textEmbedder,
+      outsideData,
+      seeds,
+      appUrl: config.appUrl,
+      newPreviewId: randomUUID,
+      previews: drizzleChangePreviewRepository(db),
+      accounts,
+      catalog,
+      decks,
+      deckSharing,
+      chooseToken,
+      proxySheet,
+      drafts,
+      inventory,
+      packs,
+      realCollection,
+      reddit,
+      resetPlayer,
+      social,
+      store,
+      trades,
       wallet,
       wishlist,
-      textEmbedder,
-      decks,
-      previews: drizzleChangePreviewRepository(db),
-      services: {
-        deckSharing,
-        chooseToken,
-        proxySheet,
-        seeds,
-        drafts,
-        realCollection,
-        store,
-        inventory,
-        accounts,
-        wallet,
-        social,
-        trades,
-        wishlist,
-        catalog,
-        packs,
-        resetPlayer,
-        appUrl: config.appUrl,
-      },
-      newPreviewId: randomUUID,
-      outsideData,
       youtube,
-      reddit,
     }),
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,

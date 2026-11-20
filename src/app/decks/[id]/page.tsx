@@ -25,18 +25,18 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
   const deckId = Number(id);
   if (!Number.isSafeInteger(deckId) || deckId <= 0) notFound();
   const searchParams = await props.searchParams;
 
   // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
-  const viewed = await capabilities.deckReads.deckForViewer(actor.userId, deckId);
+  const viewed = await reads.decks.deckForViewer(actor, deckId);
   if (viewed === null) notFound();
   const { view } = viewed;
   const { deck } = view;
-  const comments = await capabilities.deckReads.comments(deckId);
+  const comments = await reads.decks.deckComments(actor, deckId);
   const commentSection = (
     <DeckComments
       deckId={deck.id}
@@ -50,9 +50,9 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   );
 
   if (!viewed.isOwner) {
-    const shared = await capabilities.deckOverview({
-      userId: deck.ownerId,
+    const shared = await capabilities.deckOverview(actor, {
       deckId: deck.id,
+      asViewer: true,
       parts: { printings: true, tokens: true },
     });
     if (!shared.ok) notFound();
@@ -87,7 +87,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           cards={Object.fromEntries(printings ?? [])}
           format={deck.format}
           targetBracket={deck.targetBracket}
-          seed={capabilities.seeds.newSeed()}
+          seed={capabilities.site.newSeed()}
           ownerName={viewed.ownerName}
           yourCopies={viewed.yourCopies}
           listText={EXPORTERS.names(view.lines)}
@@ -101,7 +101,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     );
   }
 
-  const builderDeck = await builderDeckFor(capabilities, actor.userId, deckId);
+  const builderDeck = await builderDeckFor(capabilities, actor, deckId);
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
@@ -264,7 +264,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         format={deck.format}
         initialDeck={builderDeck}
         targetBracket={deck.targetBracket}
-        seed={capabilities.seeds.newSeed()}
+        seed={capabilities.site.newSeed()}
       />
     </main>
   );

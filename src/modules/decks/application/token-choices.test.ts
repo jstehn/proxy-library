@@ -1,6 +1,7 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
-import { err, ok, UserId } from "@/shared/kernel";
+import { err, ok } from "@/shared/kernel";
 import { inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { DeckId } from "../domain/deck";
 import { inMemoryDeckRepository, inMemoryDeckTokens } from "../testing/fakes";
@@ -9,14 +10,7 @@ import { makeTokenChoices } from "./token-choices";
 // Choosing a token's art, or leaving it out (design doc 25).
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 
 const jack = actor("jack");

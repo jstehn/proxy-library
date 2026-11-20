@@ -1,35 +1,55 @@
-import { collectionPage } from "@/modules/collection";
+import { collectionQueries } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
-import { withDb, type DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
-import { listAccessTokens } from "./queries/access-tokens";
-import { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
+import { nextPayday, walletQueries } from "@/modules/wallet";
+import { wishlistQueries } from "@/modules/wishlist";
+import type { DbExecutor } from "@/shared/db";
+import { pick, type Cents, type Clock } from "@/shared/kernel";
+import { pickForAdmin, type Actor } from "./domain/player";
+import type { Accounts } from "./application/make-accounts";
 import { makeGetAccountOverview } from "./application/get-account-overview";
 
 // The accounts module's capabilities (ADR 0026): the account overview reads the balance, the
 // collection, the decks and the wishlist through those modules' public APIs.
 
 type AccountWiringDependencies = Readonly<{
+  accounts: Accounts;
   db: DbExecutor;
   clock: Clock;
-  wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
 }>;
 
 export function wireAccountCapabilities(dependencies: AccountWiringDependencies) {
-  const { db, clock, wallet } = dependencies;
+  const { accounts, db, clock, wallet } = dependencies;
   return {
-    accountReads: {
-      hasAnyPlayers: withDb(db, hasAnyPlayers),
-      listAccessTokens: withDb(db, listAccessTokens),
-      listInvites: withDb(db, listInvites),
-      listPlayers: withDb(db, listPlayers),
+    // `signIn`, `registerPlayer` and `signOut` are for visitors, so they take no actor.
+    accounts: {
+      ...pick(
+        accounts,
+        "signIn",
+        "signOut",
+        "registerPlayer",
+        "actorFromToken",
+        "changeOwnPassword",
+        "createAccessToken",
+        "revokeAccessToken",
+        "checkAuthorizationRequest",
+        "approveAuthorization",
+        "denyAuthorization",
+      ),
+      ...pickForAdmin(
+        accounts,
+        "createInvite",
+        "revokeInvite",
+        "setAdmin",
+        "setDisabled",
+        "setSelfFunding",
+        "resetPassword",
+      ),
     },
     getAccountOverview: makeGetAccountOverview({
-      refreshBalance: (userId) => wallet.refreshWallet(userId),
+      refreshBalance: (actor) => wallet.refreshWallet(actor),
       allowance: async () => {
-        const settings = await currentEconomySettings(db);
+        const settings = await walletQueries.economySettings(db);
         if (settings.allowance <= 0) return null;
         return {
           amountCents: settings.allowance,
@@ -40,16 +60,20 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
           ),
         };
       },
-      collectionTotals: async (userId) => {
-        const page = await collectionPage(db, userId, { sections: "none", sort: "name", page: 1 });
+      collectionTotals: async (actor) => {
+        const page = await collectionQueries.page(db, actor, {
+          sections: "none",
+          sort: "name",
+          page: 1,
+        });
         return {
           differentCards: page.totals.different,
           copies: page.totals.copies,
           valueCents: page.totals.valueCents,
         };
       },
-      deckCount: async (userId) => (await decksFor(db, userId)).length,
-      wishCount: async (userId) => (await wishlistAnswers(db, userId)).wishes.length,
+      deckCount: async (actor) => (await decksFor(db, actor.userId)).length,
+      wishCount: async (actor) => (await wishlistQueries.answers(db, actor)).wishes.length,
     }),
   };
 }

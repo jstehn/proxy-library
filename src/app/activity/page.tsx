@@ -3,13 +3,10 @@ import { ActivityList } from "../_components/activity-list";
 import { readPage } from "@/server/page-instance";
 
 export default async function ActivityPage(props: PageProps<"/activity">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const searchParams = await props.searchParams;
   const scope = searchParams.scope === "friends" ? "friends" : "all";
-  const items = await capabilities.activityReads.feed(50, {
-    actorId: actor.userId,
-    scope,
-  });
+  const items = await reads.activity.feed(actor, { scope });
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-wrap items-start justify-between gap-4">

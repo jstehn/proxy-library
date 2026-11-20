@@ -4,11 +4,11 @@ import { EnableStandardButton, RefreshWhileSyncing, SetsTable, SyncButtons } fro
 import { readPage } from "@/server/page-instance";
 
 export default async function AdminCatalogPage() {
-  const { capabilities } = await readPage({ admin: true });
+  const { actor: admin, reads } = await readPage({ admin: true });
 
   const [runs, sets] = await Promise.all([
-    capabilities.catalogReads.recentSyncRuns(),
-    capabilities.catalogReads.listSetsForAdmin(),
+    reads.catalog.recentSyncRuns(admin),
+    reads.catalog.listSetsForAdmin(admin),
   ]);
   const isSyncing = runs.some((run) => run.status === "queued" || run.status === "running");
 

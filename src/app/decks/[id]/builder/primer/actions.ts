@@ -16,8 +16,7 @@ export type DeckPlanWithPrimer = Readonly<{ profile: DeckPlan; primer: string }>
 export const deckPlanAction = action(
   DeckIdInput,
   async ({ actor, capabilities }, deckId): Promise<DeckPlanWithPrimer | null> => {
-    const overview = await capabilities.deckOverview({
-      userId: actor.userId,
+    const overview = await capabilities.deckOverview(actor, {
       deckId,
       parts: { profile: true },
     });

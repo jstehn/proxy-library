@@ -27,15 +27,15 @@ function targetText(target: WishTarget): string {
 }
 
 export default async function WishlistPage(props: PageProps<"/wishlist">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { wallet } = capabilities;
   const [answers, balance, settings, isShared, shared] = await Promise.all([
-    capabilities.wishlistReads.answers(actor.userId),
+    reads.wishlist.answers(actor),
     // Also pays any allowance that has come due, as the header does (design doc 03).
-    wallet.refreshWallet(actor.userId),
-    capabilities.walletReads.economySettings(),
-    capabilities.wishlistReads.isShared(actor.userId),
-    capabilities.wishlistReads.shared(),
+    wallet.refreshWallet(actor),
+    reads.wallet.economySettings(),
+    reads.wishlist.isShared(actor),
+    reads.wishlist.shared(),
   ]);
   const others = shared.filter((player) => player.userId !== actor.userId);
   const schedule = { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays };

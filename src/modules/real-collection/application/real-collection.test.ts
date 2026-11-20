@@ -1,7 +1,7 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { PrintingId, SealedProductId, SetCode, type SealedProduct } from "@/modules/catalog";
-import { UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import {
   candidate,
@@ -13,14 +13,7 @@ import {
 import { makeRealCollection } from "./make-real-collection";
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 const jack = actor("jack");
 const mallory = actor("mallory");

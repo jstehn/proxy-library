@@ -1,16 +1,18 @@
 import { count, desc, eq, sql, type SQL } from "drizzle-orm";
+import type { Actor, AdminActor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import { FOIL_IN_CATALOG, searchCondition } from "@/shared/card-search/sql";
-import {
-  Cents,
-  colorCombination,
-  type ManaColor,
-  type UserId,
-  type CardFacts,
-} from "@/shared/kernel";
-import type { CardFace, Finish } from "../domain/types";
+import { Cents, colorCombination, type ManaColor, type CardFacts } from "@/shared/kernel";
+import type { Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
+import {
+  PRINTING_CARD_COLUMNS,
+  printingCards,
+  toPrintingCard,
+  type PrintingCard,
+  type PrintingCardRow,
+} from "./printing-cards";
 
 // Read models for the catalog screens (ADR 0006): plain objects, ready to render.
 
@@ -25,7 +27,8 @@ export type AdminSetRow = Readonly<{
   printingCount: number;
 }>;
 
-export async function listSetsForAdmin(db: DbExecutor): Promise<AdminSetRow[]> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+export async function listSetsForAdmin(db: DbExecutor, admin: AdminActor): Promise<AdminSetRow[]> {
   return db
     .select({
       code: cardSets.code,
@@ -85,82 +88,6 @@ export async function findSet(db: DbExecutor, code: string): Promise<SetSummary 
   return row ?? null;
 }
 
-export type PrintingCard = Readonly<{
-  id: string;
-  name: string;
-  collectorNumber: string;
-  rarity: string;
-  variantLabel: string;
-  finishes: Finish[];
-  hasImage: boolean;
-  /** Whether it has a second card face with its own image (double-faced cards, not split ones). */
-  hasBackImage: boolean;
-  /** What's printed on each face (front first), for the hover overlay. */
-  faces: CardFace[];
-  artist: string | null;
-  setCode: string;
-  /** Scryfall's layout: "normal", "split", "adventure", "transform", … */
-  layout: string;
-  colors: string[];
-  /** Colors of mana it makes ("W", …, "C"), e.g. for a land's colour on a playtest proxy. */
-  producedMana: string[];
-  /** Latest market price per finish; a finish is missing when there's no price. */
-  prices: Partial<Record<Finish, Cents>>;
-}>;
-
-type PrintingCardRow = {
-  id: string;
-  name: string;
-  collector_number: string;
-  rarity: string;
-  variant_label: string;
-  finishes: Finish[];
-  has_image: boolean;
-  has_back_image: boolean;
-  faces: CardFace[];
-  artist: string | null;
-  set_code: string;
-  layout: string;
-  colors: string[];
-  produced_mana: string[];
-  prices: Record<string, number> | null;
-};
-
-/** The columns of a PrintingCard, for printings aliased "p". */
-const PRINTING_CARD_COLUMNS = sql`
-  p.id, p.name, p.collector_number, p.rarity, p.variant_label, p.finishes,
-  p.image_uris is not null as has_image,
-  coalesce(jsonb_typeof(p.image_uris->'back') = 'object', false) as has_back_image,
-  p.faces, p.artist, p.set_code, p.layout, p.colors, p.produced_mana,
-  -- For each finish, the newest snapshot's price ("distinct on" keeps the first row per finish).
-  (select jsonb_object_agg(latest.finish, latest.usd_cents)
-     from (select distinct on (s.finish) s.finish, s.usd_cents
-             from price_snapshots s
-            where s.printing_id = p.id
-            order by s.finish, s.day desc) latest) as prices`;
-
-function toPrintingCard(row: PrintingCardRow): PrintingCard {
-  return {
-    id: row.id,
-    name: row.name,
-    collectorNumber: row.collector_number,
-    rarity: row.rarity,
-    variantLabel: row.variant_label,
-    finishes: row.finishes,
-    hasImage: row.has_image,
-    hasBackImage: row.has_back_image,
-    faces: row.faces,
-    artist: row.artist,
-    setCode: row.set_code,
-    layout: row.layout,
-    colors: row.colors,
-    producedMana: row.produced_mana,
-    prices: Object.fromEntries(
-      Object.entries(row.prices ?? {}).map(([finish, cents]) => [finish, Cents.of(Number(cents))]),
-    ),
-  };
-}
-
 /** A set's printings in collector-number order, each with its latest price per finish. */
 export async function setPrintings(db: DbExecutor, code: string): Promise<PrintingCard[]> {
   const rows = await db.execute<PrintingCardRow>(sql`
@@ -174,20 +101,6 @@ export async function setPrintings(db: DbExecutor, code: string): Promise<Printi
   return rows.rows.map(toPrintingCard);
 }
 
-/** These printings (any set), by id. Ids the catalog doesn't have are left out. */
-export async function printingCards(
-  db: DbExecutor,
-  ids: readonly string[],
-): Promise<Map<string, PrintingCard>> {
-  if (ids.length === 0) return new Map();
-  const rows = await db.execute<PrintingCardRow>(sql`
-    select ${PRINTING_CARD_COLUMNS}
-      from printings p
-     where p.id = any(${sql.param([...new Set(ids)])}::text[])
-  `);
-  return new Map(rows.rows.map((row) => [row.id, toPrintingCard(row)]));
-}
-
 export type SyncRunRow = Readonly<{
   id: number;
   kind: string;
@@ -199,7 +112,11 @@ export type SyncRunRow = Readonly<{
   error: string | null;
 }>;
 
-export async function recentSyncRuns(db: DbExecutor, limit = 20): Promise<SyncRunRow[]> {
+export async function recentSyncRuns(
+  db: DbExecutor,
+  admin: AdminActor,
+  limit = 20,
+): Promise<SyncRunRow[]> {
   const rows = await db.select().from(syncRuns).orderBy(desc(syncRuns.requestedAt)).limit(limit);
   return rows.map((row) => ({
     id: row.id,
@@ -216,8 +133,6 @@ export async function recentSyncRuns(db: DbExecutor, limit = 20): Promise<SyncRu
 
 /** What the singles store can be filtered and sorted by. Empty fields don't filter. */
 export type PrintingSearch = Readonly<{
-  /** The player searching (`own` counts their copies). */
-  userId: UserId;
   /** Card search text, Scryfall-style (design doc 15): `bolt`, `t:creature mv<=2`, … */
   search?: string;
   setCode?: string;
@@ -245,10 +160,13 @@ function hasExactly(colors: readonly ManaColor[]): SQL {
 }
 
 /** SQL conditions for a search, on printings aliased "p", and notes about ignored parts. */
-function printingConditions(search: PrintingSearch): { where: SQL; notes: readonly string[] } {
+function printingConditions(
+  actor: Actor,
+  search: PrintingSearch,
+): { where: SQL; notes: readonly string[] } {
   const parsed = parseSearch(search.search ?? "");
   const conditions = [
-    searchCondition(parsed.node, { userId: search.userId, foil: FOIL_IN_CATALOG }),
+    searchCondition(parsed.node, { userId: actor.userId, foil: FOIL_IN_CATALOG }),
   ];
   if (search.setCode) conditions.push(sql`p.set_code = ${search.setCode.toUpperCase()}`);
   if (search.rarity) conditions.push(sql`p.rarity = ${search.rarity}`);
@@ -274,9 +192,10 @@ export type SearchResult = Readonly<{
  */
 export async function searchPrintings(
   db: DbExecutor,
+  actor: Actor,
   search: PrintingSearch,
 ): Promise<SearchResult> {
-  const { where, notes } = printingConditions(search);
+  const { where, notes } = printingConditions(actor, search);
   const order = {
     name: sql`p.name, p.set_code, p.collector_number`,
     number: sql`p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last, p.collector_number`,

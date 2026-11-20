@@ -10,15 +10,15 @@ import {
 import { readPage } from "@/server/page-instance";
 
 export default async function FriendsPage(props: PageProps<"/friends">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
 
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q : "";
 
   const [friends, requests, players] = await Promise.all([
-    capabilities.socialReads.friends(actor.userId),
-    capabilities.socialReads.friendRequests(actor.userId),
-    capabilities.socialReads.searchPlayers(actor.userId, query),
+    reads.social.friends(actor),
+    reads.social.friendRequests(actor),
+    reads.social.searchPlayers(actor, query),
   ]);
 
   return (

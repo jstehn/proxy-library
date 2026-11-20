@@ -65,6 +65,11 @@ export type CollectionPage = Readonly<{
   notes: readonly string[];
 }>;
 
+/** What a collection read gives when it may not show anything (no such owner, or not shared). */
+export function emptyCollectionPage(): CollectionPage {
+  return { rows: [], totals: { different: 0, copies: 0, valueCents: 0 }, pageCount: 1, notes: [] };
+}
+
 /** One row of an export: what the exporters need to know about a stack of copies. */
 export type CollectionExportRow = Readonly<{
   name: string;

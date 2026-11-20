@@ -16,18 +16,18 @@ function deckNote(decks: readonly DeckRef[] | undefined): string | undefined {
 }
 
 export default async function CollectionPage(props: PageProps<"/collection">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const { values, page, filter, isFiltered } = readCollectionQuery(searchParams);
 
   const [result, sets] = await Promise.all([
-    capabilities.collectionReads.page(actor.userId, filter),
-    capabilities.catalogReads.enabledSets(),
+    reads.collection.page(actor, filter),
+    reads.catalog.enabledSets(),
   ]);
   const printingIds = result.rows.map((row) => row.printingId);
   const [cards, inDecks] = await Promise.all([
     capabilities.printingDetails(printingIds),
-    capabilities.deckReads.decksUsing(actor.userId, printingIds),
+    reads.decks.decksUsing(actor, printingIds),
   ]);
 
   return (

@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import type { ManaColor } from "@/shared/kernel";
 import type { ViewerRelation } from "../domain/friendship";
@@ -70,11 +71,13 @@ export type ProfileEditView = Readonly<{
   sharedDecks: readonly ShowcaseDeckView[];
 }>;
 
-export async function getPlayerProfile(
+/** A player's profile as `actor` may see it: each section follows its visibility (kind S). */
+export async function playerProfile(
   db: DbExecutor,
-  viewerId: string,
+  actor: Actor,
   idOrUsername: string,
 ): Promise<PlayerProfileView | null> {
+  const viewerId = actor.userId;
   const normalized = idOrUsername.trim().toLowerCase();
   const targetRows = await db.execute<{
     user_id: string;
@@ -278,7 +281,9 @@ export async function getPlayerProfile(
   };
 }
 
-export async function getProfileForEdit(db: DbExecutor, userId: string): Promise<ProfileEditView> {
+/** The actor's own profile, for the edit form. */
+export async function profileForEdit(db: DbExecutor, actor: Actor): Promise<ProfileEditView> {
+  const userId = actor.userId;
   const [profileRows, sharedDeckRows] = await Promise.all([
     db.execute<{
       bio: string;

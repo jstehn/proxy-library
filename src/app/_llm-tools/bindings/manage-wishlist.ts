@@ -69,7 +69,7 @@ export const manageWishlistBinding = defineBinding({
   }),
   async call(capabilities, actor, input) {
     if (input.action === "list") {
-      const view = await capabilities.wishlistView({ userId: actor.userId });
+      const view = await capabilities.wishlistView(actor);
       return view.ok ? ok<Answer>({ action: "list", view: view.value }) : view;
     }
     if (input.action === "add") {

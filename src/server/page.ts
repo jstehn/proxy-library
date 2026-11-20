@@ -1,43 +1,62 @@
-import type { Actor } from "@/modules/accounts";
+import type { Actor, AdminActor } from "@/modules/accounts";
 import type { Capabilities } from "./capabilities";
+import type { PublicReads, Reads } from "./reads";
 
 // `action()`'s twin for pages and routes (ADR 0026): find out who is looking, and hand over the
-// capabilities. A page reads through these, never through `getContainer().db`.
+// capabilities and the reads. A page reads through `reads`, never through `getContainer().db`.
 
-export type PageContext = Readonly<{ actor: Actor; capabilities: Capabilities }>;
-export type VisitorPageContext = Readonly<{ actor: Actor | null; capabilities: Capabilities }>;
+export type PageContext = Readonly<{ actor: Actor; capabilities: Capabilities; reads: Reads }>;
+export type AdminPageContext = Readonly<{
+  actor: AdminActor;
+  capabilities: Capabilities;
+  reads: Reads;
+}>;
+/**
+ * A page visitors may open too. Narrow on `actor`: a signed-in player gets every read, a visitor
+ * only `PublicReads` (the reads whose credential is a token).
+ */
+export type VisitorPageContext =
+  PageContext | Readonly<{ actor: null; capabilities: Capabilities; reads: PublicReads }>;
 
 export type PageSources = Readonly<{
   /** The signed-in player (sends visitors who aren't signed in to the sign-in page). */
   requireActor(options?: { allowPasswordChangePending?: boolean }): Promise<Actor>;
   /** The signed-in admin; anyone else sees "not found". */
-  requireAdminActor(): Promise<Actor>;
+  requireAdminActor(): Promise<AdminActor>;
   /** The signed-in player, or null for a visitor. */
   currentActor(): Promise<Actor | null>;
   capabilities(): Capabilities;
+  reads(): Reads;
+  publicReads(): PublicReads;
 }>;
 
-/** Builds `readPage` from where the actor and the capabilities come from (fakes in tests). */
+/** Builds `readPage` from where the actor, the capabilities and the reads come from (fakes in tests). */
 export function makeReadPage(sources: PageSources) {
   /** A signed-in player's page. */
   function readPage(): Promise<PageContext>;
-  /** An admin's page. */
-  function readPage(options: { admin: true }): Promise<PageContext>;
+  /** An admin's page: `actor` is an `AdminActor`, so admin reads compile only here. */
+  function readPage(options: { admin: true }): Promise<AdminPageContext>;
   /** The page of a player who must change a reset password first can still open. */
   function readPage(options: { allowPasswordChangePending: true }): Promise<PageContext>;
   /** A page visitors may open too: `actor` is null for them. */
   function readPage(options: { allowVisitors: true }): Promise<VisitorPageContext>;
   async function readPage(
     options: { admin?: true; allowPasswordChangePending?: true; allowVisitors?: true } = {},
-  ) {
-    const actor = options.allowVisitors
-      ? await sources.currentActor()
-      : options.admin
-        ? await sources.requireAdminActor()
-        : await sources.requireActor({
-            allowPasswordChangePending: options.allowPasswordChangePending,
-          });
-    return { actor, capabilities: sources.capabilities() };
+  ): Promise<PageContext | AdminPageContext | VisitorPageContext> {
+    const capabilities = sources.capabilities();
+    if (options.allowVisitors) {
+      const actor = await sources.currentActor();
+      return actor === null
+        ? { actor: null, capabilities, reads: sources.publicReads() }
+        : { actor, capabilities, reads: sources.reads() };
+    }
+    if (options.admin) {
+      return { actor: await sources.requireAdminActor(), capabilities, reads: sources.reads() };
+    }
+    const actor = await sources.requireActor({
+      allowPasswordChangePending: options.allowPasswordChangePending,
+    });
+    return { actor, capabilities, reads: sources.reads() };
   }
   return readPage;
 }

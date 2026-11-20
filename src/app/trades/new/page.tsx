@@ -96,11 +96,11 @@ function Chosen(props: {
 }
 
 export default async function NewTradePage(props: PageProps<"/trades/new">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
   const searchParams = await props.searchParams;
   const draft = readDraft(searchParams);
-  const partners = await capabilities.tradeReads.partners(actor.userId);
+  const partners = await reads.trades.partners(actor);
   const partner = partners.find((candidate) => candidate.userId === draft.withUserId) ?? null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
 
@@ -130,17 +130,16 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
     );
   }
 
-  const search = (userId: string, name: string) =>
-    capabilities.collectionReads.page(UserId.of(userId), {
-      search: name || undefined,
-      sections: "none",
-      sort: "name",
-      page: 1,
-    });
+  const filterFor = (name: string) => ({
+    search: name || undefined,
+    sections: "none" as const,
+    sort: "name" as const,
+    page: 1,
+  });
   const [mine, theirs, partnerWishlist] = await Promise.all([
-    search(actor.userId, draft.mine),
-    search(partner.userId, draft.theirs),
-    capabilities.wishlistReads.sharedFor(actor.userId, UserId.of(partner.userId)),
+    reads.collection.page(actor, filterFor(draft.mine)),
+    reads.collection.pageOfPartner(actor, UserId.of(partner.userId), filterFor(draft.theirs)),
+    reads.wishlist.sharedFor(actor, UserId.of(partner.userId)),
   ]);
   const cards = await capabilities.printingDetails([
     ...mine.rows.map((row) => row.printingId),

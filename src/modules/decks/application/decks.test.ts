@@ -1,6 +1,7 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
-import { err, UserId } from "@/shared/kernel";
+import { err } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
 import { fingerprint } from "../domain/list-format";
@@ -10,14 +11,7 @@ import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "..
 import { makeDecks } from "./make-decks";
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 
 const jack = actor("jack");

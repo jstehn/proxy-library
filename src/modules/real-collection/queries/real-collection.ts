@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import { type DbExecutor, latestPricesByFinish } from "@/shared/db";
 import {
   type CollectionExportRow,
@@ -7,13 +8,14 @@ import {
   type CollectionRow,
   type CopiesSource,
   type OwnedPrintingCopy,
+  emptyCollectionPage,
   readCollectionExport,
   readCollectionPage,
   readCopiesOf,
   readOwnedByOracle,
 } from "@/shared/card-search/sql-collection";
 import { type Finish, type UserId } from "@/shared/kernel";
-import { realCards, realCollectionSettings, realProducts } from "../infrastructure/schema";
+import { realCollectionSettings, realProducts } from "../infrastructure/schema";
 import { authUsers } from "../../accounts/infrastructure/schema";
 import { sealedProducts } from "../../catalog/infrastructure/schema";
 
@@ -33,41 +35,57 @@ const REAL_COPIES: CopiesSource = {
   lastArrival: sql`c.updated_at`,
 };
 
-/** Every printing someone owns for real: priced every night although its set isn't sold. */
-export async function realPrintingIds(db: DbExecutor): Promise<string[]> {
-  const rows = await db.selectDistinct({ id: realCards.printingId }).from(realCards);
-  return rows.map((row) => row.id);
+/**
+ * Rule 5, in SQL (design doc 67, F1): a real collection is visible to its owner, and to everyone
+ * else only while the owner shares it. Every read of someone's real collection carries this.
+ */
+function visibleTo(actor: Actor, ownerId: UserId): SQL {
+  return sql`(${ownerId} = ${actor.userId} or exists (
+    select 1 from real_collection_settings shared
+     where shared.user_id = ${ownerId} and shared.is_shared))`;
 }
 
-/** One page of a player's real collection, with the game collection's filters and sections. */
-export function realCollectionPage(
+async function mayView(db: DbExecutor, actor: Actor, ownerId: UserId): Promise<boolean> {
+  const rows = await db.execute<{ visible: boolean }>(
+    sql`select ${visibleTo(actor, ownerId)} as visible`,
+  );
+  return rows.rows[0]?.visible === true;
+}
+
+/**
+ * One page of `ownerId`'s real collection, with the game collection's filters and sections (kind
+ * S): your own, or another player's while they share it; otherwise an empty page.
+ */
+export async function page(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
+  ownerId: UserId,
   filter: RealCollectionFilter,
 ): Promise<RealCollectionPage> {
-  return readCollectionPage(db, userId, REAL_COPIES, filter);
+  if (!(await mayView(db, actor, ownerId))) return emptyCollectionPage();
+  return readCollectionPage(db, ownerId, REAL_COPIES, filter);
 }
 
-/** How many copies of one printing a player owns for real, per finish (the card page's box). */
-export function realCopiesOf(
+/** How many copies of one printing the actor owns for real, per finish (the card page's box). */
+export function copiesOf(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   printingId: string,
 ): Promise<Partial<Record<Finish, number>>> {
-  return readCopiesOf(db, userId, REAL_COPIES, printingId);
+  return readCopiesOf(db, actor.userId, REAL_COPIES, printingId);
 }
 
-/** Every real card a player has, for exporting, in set and number order. */
-export function realExportRows(db: DbExecutor, userId: UserId): Promise<CollectionExportRow[]> {
-  return readCollectionExport(db, userId, REAL_COPIES);
+/** Every real card the actor has, for exporting, in set and number order. */
+export function exportRows(db: DbExecutor, actor: Actor): Promise<CollectionExportRow[]> {
+  return readCollectionExport(db, actor.userId, REAL_COPIES);
 }
 
-/** Rule 5: whether the player lets the others see their real collection (off by default). */
-export async function isRealCollectionShared(db: DbExecutor, userId: UserId): Promise<boolean> {
+/** Rule 5: whether the actor lets the others see their real collection (off by default). */
+export async function isShared(db: DbExecutor, actor: Actor): Promise<boolean> {
   const [row] = await db
     .select({ isShared: realCollectionSettings.isShared })
     .from(realCollectionSettings)
-    .where(eq(realCollectionSettings.userId, userId));
+    .where(eq(realCollectionSettings.userId, actor.userId));
   return row?.isShared ?? false;
 }
 
@@ -75,7 +93,7 @@ export async function isRealCollectionShared(db: DbExecutor, userId: UserId): Pr
 export type SharedRealCollection = Readonly<{ userId: string; displayName: string }>;
 
 /** Every player sharing their real collection, by name. */
-export async function sharedRealCollections(db: DbExecutor): Promise<SharedRealCollection[]> {
+export async function shared(db: DbExecutor): Promise<SharedRealCollection[]> {
   const rows = await db
     .select({ userId: realCollectionSettings.userId, displayName: authUsers.name })
     .from(realCollectionSettings)
@@ -94,8 +112,12 @@ export type RealProductRow = Readonly<{
   addedAt: string;
 }>;
 
-/** A player's real products, newest first. */
-export async function realProductsOf(db: DbExecutor, userId: UserId): Promise<RealProductRow[]> {
+/** `ownerId`'s real products, newest first (kind S: the owner, or anyone while they share). */
+export async function productsOf(
+  db: DbExecutor,
+  actor: Actor,
+  ownerId: UserId,
+): Promise<RealProductRow[]> {
   const rows = await db
     .select({
       id: realProducts.id,
@@ -106,35 +128,39 @@ export async function realProductsOf(db: DbExecutor, userId: UserId): Promise<Re
     })
     .from(realProducts)
     .innerJoin(sealedProducts, eq(sealedProducts.id, realProducts.productId))
-    .where(eq(realProducts.userId, userId))
+    .where(and(eq(realProducts.userId, ownerId), visibleTo(actor, ownerId)))
     .orderBy(desc(realProducts.addedAt), desc(realProducts.id));
   return rows.map((row) => ({ ...row, addedAt: row.addedAt.toISOString() }));
 }
 
-/** How many copies of each product the player owns for real (the store page's "You own 1"). */
-export async function realProductCounts(
+/** How many copies of each product the actor owns for real (the store page's "You own 1"). */
+export async function productCounts(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   productIds: readonly string[],
 ): Promise<Map<string, number>> {
   if (productIds.length === 0) return new Map();
   const rows = await db
     .select({ productId: realProducts.productId, count: sql<number>`count(*)::int` })
     .from(realProducts)
-    .where(and(eq(realProducts.userId, userId), inArray(realProducts.productId, [...productIds])))
+    .where(
+      and(eq(realProducts.userId, actor.userId), inArray(realProducts.productId, [...productIds])),
+    )
     .groupBy(realProducts.productId);
   return new Map(rows.map((row) => [row.productId, row.count]));
 }
 
-/** The sets a player's real cards are from, newest first, for the Real tab's set filter. */
-export async function realCollectionSets(
+/** The sets `ownerId`'s real cards are from, newest first, for the Real tab's set filter (kind S). */
+export async function sets(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
+  ownerId: UserId,
 ): Promise<Array<{ code: string; name: string }>> {
   const rows = await db.execute<{ code: string; name: string }>(sql`
     select s.code, s.name from card_sets s
      where exists (select 1 from real_cards c join printings p on p.id = c.printing_id
-                    where c.user_id = ${userId} and p.set_code = s.code)
+                    where c.user_id = ${ownerId} and p.set_code = s.code)
+       and ${visibleTo(actor, ownerId)}
      order by s.release_date desc, s.code
   `);
   return rows.rows;
@@ -195,13 +221,13 @@ export async function printingChoices(
   return choices;
 }
 
-/** Every copy of a card (any printing) a player owns in their real collection. */
-export function realOwnedByOracle(
+/** Every copy of a card (any printing) the actor owns in their real collection. */
+export function ownedByOracle(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   oracleId: string,
 ): Promise<OwnedPrintingCopy[]> {
-  return readOwnedByOracle(db, userId, REAL_COPIES, oracleId);
+  return readOwnedByOracle(db, actor.userId, REAL_COPIES, oracleId);
 }
 
 /** Every printing of the same card as this one, for moving real copies between printings. */

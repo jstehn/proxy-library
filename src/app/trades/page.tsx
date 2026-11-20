@@ -45,12 +45,12 @@ function TradeLine(props: {
 }
 
 export default async function TradesPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
 
   const [trades, shared, sharedWishes] = await Promise.all([
-    capabilities.tradeReads.tradesFor(actor.userId),
-    capabilities.realCollectionReads.shared(),
-    capabilities.wishlistReads.shared(),
+    reads.trades.tradesFor(actor),
+    reads.realCollection.shared(),
+    reads.wishlist.shared(),
   ]);
   // Players who share their real collection or wishlist get a link next to their name.
   const sharingReal = new Set(shared.map((player) => player.userId));

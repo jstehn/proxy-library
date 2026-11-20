@@ -4,8 +4,8 @@ import { ProfileForm } from "./profile-form";
 import { readPage } from "@/server/page-instance";
 
 export default async function EditProfilePage() {
-  const { actor, capabilities } = await readPage();
-  const initial = await capabilities.socialReads.profileForEdit(actor.userId);
+  const { actor, reads } = await readPage();
+  const initial = await reads.social.profileForEdit(actor);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-12">

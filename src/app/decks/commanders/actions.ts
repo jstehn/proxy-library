@@ -27,8 +27,8 @@ export async function commanderCardsAction(
   oracleId: string,
   withReal: boolean,
 ): Promise<CommanderCardsView | null> {
-  const { actor, capabilities } = await readPage();
-  const details = await capabilities.deckReads.commanderDetails(actor.userId, oracleId, withReal);
+  const { actor, reads } = await readPage();
+  const details = await reads.decks.commanderDetails(actor, oracleId, withReal);
   if (details === null) return null;
   return {
     plan: planText(details.coverage.plan),

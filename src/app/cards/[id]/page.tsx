@@ -28,21 +28,21 @@ const FINISH_COLORS: Record<Finish, string> = {
 };
 
 export default async function CardPage(props: PageProps<"/cards/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const { id } = await props.params;
-  const detail = await capabilities.catalogReads.printingDetail(id);
+  const detail = await reads.catalog.printingDetail(id);
   if (detail === null) notFound();
 
   const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings, wishes] =
     await Promise.all([
-      capabilities.catalogReads.priceHistory(id),
-      capabilities.collectionReads.ownedCopies(actor.userId, id),
-      capabilities.storeReads.singleHistory(actor.userId, id),
-      capabilities.storeReads.buylistRate(),
-      capabilities.deckReads.decksUsing(actor.userId, [id]),
-      capabilities.realCollectionReads.copiesOf(actor.userId, id),
-      capabilities.realCollectionReads.printingsOfSameCard(id),
-      capabilities.wishlistReads.forCard(actor.userId, id),
+      reads.catalog.priceHistory(id),
+      reads.collection.ownedCopies(actor, id),
+      reads.store.singleHistory(actor, id),
+      reads.store.buylistRate(),
+      reads.decks.decksUsing(actor, [id]),
+      reads.realCollection.copiesOf(actor, id),
+      reads.realCollection.printingsOfSameCard(id),
+      reads.wishlist.forCard(actor, id),
     ]);
   const searchParams = await props.searchParams;
   const realError = typeof searchParams.realError === "string" ? searchParams.realError : null;

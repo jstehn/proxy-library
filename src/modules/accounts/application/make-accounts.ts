@@ -1,3 +1,4 @@
+import { asAdmin } from "../domain/player";
 import { makeChangeOwnPassword } from "./change-own-password";
 import { makeCreateInvite, makeRevokeInvite } from "./manage-invites";
 import {
@@ -31,6 +32,8 @@ export function makeAccounts(dependencies: AccountsDependencies) {
     signIn: makeSignIn(dependencies),
     signOut: makeSignOut(dependencies),
     getActor: makeGetActor(dependencies),
+    /** Only `src/server/session.ts` calls this: the one door to an `AdminActor`. */
+    asAdmin,
     changeOwnPassword: makeChangeOwnPassword(dependencies),
     createInvite: makeCreateInvite(dependencies),
     revokeInvite: makeRevokeInvite(dependencies),

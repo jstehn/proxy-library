@@ -7,8 +7,7 @@ import { DeckIdInput } from "../action-helpers";
 export const tokensAction = action(
   DeckIdInput,
   async ({ actor, capabilities }, deckId): Promise<TokenLine[] | null> => {
-    const overview = await capabilities.deckOverview({
-      userId: actor.userId,
+    const overview = await capabilities.deckOverview(actor, {
       deckId,
       parts: { tokens: true },
     });

@@ -10,8 +10,8 @@ import { FORMAT_LABELS } from "../../decks/labels";
 
 export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<Metadata> {
   const { token } = await props.params;
-  const { capabilities } = await readPage({ allowVisitors: true });
-  const found = await capabilities.deckReads.publicDeck(token);
+  const { reads } = await readPage({ allowVisitors: true });
+  const found = await reads.decks.publicDeck(token);
   if (found === null) return { title: "Deck not found — Proxy Library" };
   return {
     title: `${found.view.deck.name} — Proxy Library`,
@@ -22,16 +22,16 @@ export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<
 export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
   const { token } = await props.params;
   const searchParams = await props.searchParams;
-  const { actor, capabilities } = await readPage({ allowVisitors: true });
-  const found = await capabilities.deckReads.publicDeck(token);
+  const { actor, capabilities, reads } = await readPage({ allowVisitors: true });
+  const found = await reads.decks.publicDeck(token);
   if (found === null) notFound();
 
   const { view, ownerName } = found;
   const { deck } = view;
   const [cards, tokens] = await Promise.all([
     capabilities.printingDetails(view.lines.map((line) => line.printingId)),
-    capabilities.deckReads.tokenLines(
-      deck.id,
+    reads.decks.publicDeckTokens(
+      token,
       view.lines.map((line) => ({
         oracleId: line.oracleId,
         printingId: line.printingId,
@@ -70,7 +70,7 @@ export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
         cards={Object.fromEntries(cards)}
         format={deck.format}
         targetBracket={deck.targetBracket}
-        seed={capabilities.seeds.newSeed()}
+        seed={capabilities.site.newSeed()}
         ownerName={ownerName}
         listText={EXPORTERS.names(view.lines)}
         grouping={deck.grouping}

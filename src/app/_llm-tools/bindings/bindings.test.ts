@@ -25,6 +25,7 @@ function contextWith(capabilities: object): ToolContext {
     scopes: ["read"],
     allows: () => true,
     capabilities: capabilities as unknown as ToolContext["capabilities"],
+    reads: {} as ToolContext["reads"],
   };
 }
 

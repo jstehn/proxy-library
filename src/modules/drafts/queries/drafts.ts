@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { Cents, type UserId } from "@/shared/kernel";
 import { DRAFT_STYLE_NAMES, DRAFT_STYLES, DRAFTABLE_BOOSTER_TYPES } from "../domain/style";
@@ -83,7 +84,8 @@ export type DraftsOverview = Readonly<{
   finished: DraftSummary[];
 }>;
 
-export async function draftsOverview(db: DbExecutor, userId: UserId): Promise<DraftsOverview> {
+export async function overview(db: DbExecutor, actor: Actor): Promise<DraftsOverview> {
+  const userId = actor.userId;
   const open = await db.execute<SummaryRow>(sql`
     select ${SUMMARY_COLUMNS(userId)}
       from drafts d
@@ -109,8 +111,9 @@ export async function draftsOverview(db: DbExecutor, userId: UserId): Promise<Dr
 /** The lobby or draft you're seated at, for the header's reminder, or null. */
 export async function activeDraftOf(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
 ): Promise<{ id: number; status: DraftStatusName } | null> {
+  const userId = actor.userId;
   const rows = await db.execute<{ id: number; status: DraftStatusName }>(sql`
     select d.id, d.status
       from draft_seats x join drafts d on d.id = x.draft_id
@@ -132,7 +135,7 @@ export type DraftableBooster = Readonly<{
  * Every enabled set's draft booster, newest set first: one per set, preferring the Play Booster,
  * then the Draft Booster, then an older set's only booster.
  */
-export async function draftableBoosters(db: DbExecutor): Promise<DraftableBooster[]> {
+export async function boosters(db: DbExecutor): Promise<DraftableBooster[]> {
   const rows = await db.execute<{
     set_code: string;
     set_name: string;
@@ -156,8 +159,16 @@ export async function draftableBoosters(db: DbExecutor): Promise<DraftableBooste
   }));
 }
 
-/** A draft's version, for a browser that has just connected to the live updates. */
-export async function draftVersion(db: DbExecutor, draftId: number): Promise<number | null> {
+/**
+ * A draft's version, for a browser that has just connected to the live updates. Drafts are open
+ * to every signed-in player (design doc 67, F4), the same rule as `view`; the actor is the proof
+ * that someone is signed in.
+ */
+export async function version(
+  db: DbExecutor,
+  actor: Actor,
+  draftId: number,
+): Promise<number | null> {
   const rows = await db.execute<{ version: number }>(
     sql`select version from drafts where id = ${draftId}`,
   );
@@ -209,13 +220,14 @@ export type DraftView = Readonly<{
   you: YourSeat | null;
 }>;
 
-/** One draft as `userId` may see it at `now` (rule 13). */
-export async function draftView(
+/** One draft as the actor may see it at `now` (rule 13). */
+export async function view(
   db: DbExecutor,
+  actor: Actor,
   draftId: number,
-  userId: UserId,
   now: Date,
 ): Promise<DraftView | null> {
+  const userId = actor.userId;
   const drafts = await db.execute<{
     id: number;
     set_code: string;

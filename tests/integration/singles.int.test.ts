@@ -1,8 +1,8 @@
 // Buying and selling singles against real Postgres (design doc 07, section 12).
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrintingId, searchPrintings } from "@/modules/catalog";
-import { collectionPage } from "@/modules/collection";
+import { catalogQueries, PrintingId } from "@/modules/catalog";
+import { collectionQueries } from "@/modules/collection";
 import { makeStore } from "@/modules/store";
 import {
   actor,
@@ -101,7 +101,7 @@ describe("collectionPage", () => {
       quantity: 1,
     });
 
-    const page = await collectionPage(db, jack.userId, {
+    const page = await collectionQueries.page(db, jack, {
       sections: "color",
       sort: "mana",
       page: 1,
@@ -109,7 +109,7 @@ describe("collectionPage", () => {
     const sections = page.rows.map((row) => row.section);
     expect(sections.at(-1)).toBe("Lands"); // lands come last
     expect(["White", "Blue", "Black", "Red", "Green", "Colorless"]).toContain(sections[0]);
-    const byType = await collectionPage(db, jack.userId, {
+    const byType = await collectionQueries.page(db, jack, {
       sections: "type",
       sort: "name",
       page: 1,
@@ -131,21 +131,21 @@ describe("collectionPage", () => {
     });
     expect(bought.ok).toBe(true);
 
-    const bySection = await collectionPage(db, jack.userId, {
+    const bySection = await collectionQueries.page(db, jack, {
       sections: "color",
       sort: "name",
       page: 1,
     });
     expect(bySection.rows.map((row) => row.section)).toEqual(["Green-White (Selesnya)"]);
 
-    const selesnya = await collectionPage(db, jack.userId, {
+    const selesnya = await collectionQueries.page(db, jack, {
       color: "WG", // any order
       sections: "none",
       sort: "name",
       page: 1,
     });
     expect(selesnya.totals.different).toBe(1);
-    const simic = await collectionPage(db, jack.userId, {
+    const simic = await collectionQueries.page(db, jack, {
       color: "GU",
       sections: "none",
       sort: "name",
@@ -154,8 +154,7 @@ describe("collectionPage", () => {
     expect(simic.totals.different).toBe(0);
 
     // The singles store filters the same way: only Bria is exactly Blue-Red (Izzet).
-    const izzet = await searchPrintings(db, {
-      userId: jack.userId,
+    const izzet = await catalogQueries.searchPrintings(db, jack, {
       color: "UR",
       sort: "name",
       page: 1,
@@ -174,20 +173,24 @@ describe("collectionPage", () => {
     const card = await affordableCard();
     await store.buySingle(jack, { printingId: card.id, finish: "nonfoil", quantity: 3 });
 
-    const all = await collectionPage(db, jack.userId, { sections: "none", sort: "value", page: 1 });
+    const all = await collectionQueries.page(db, jack, {
+      sections: "none",
+      sort: "value",
+      page: 1,
+    });
     expect(all.totals).toEqual({ different: 1, copies: 3, valueCents: 3 * card.price });
     expect(all.rows).toEqual([
       { printingId: card.id, finish: "nonfoil", quantity: 3, price: card.price, section: "" },
     ]);
 
-    const byName = await collectionPage(db, jack.userId, {
+    const byName = await collectionQueries.page(db, jack, {
       search: card.name.slice(0, 4).toLowerCase(),
       sections: "none",
       sort: "name",
       page: 1,
     });
     expect(byName.rows).toHaveLength(1);
-    const foilsOnly = await collectionPage(db, jack.userId, {
+    const foilsOnly = await collectionQueries.page(db, jack, {
       finish: "foil",
       sections: "none",
       sort: "newest",

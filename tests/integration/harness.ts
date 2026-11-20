@@ -1,5 +1,6 @@
 // Shared wiring for cross-module integration tests: the real Drizzle repositories of every
 // module, the catalog loaded from recorded fixtures (no network), and players made with SQL.
+import { testActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
@@ -52,7 +53,6 @@ import {
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
 import { loadConfig } from "@/shared/config";
 import { createDatabase, makeDrizzleUnitOfWork, type DbExecutor } from "@/shared/db";
-import { UserId } from "@/shared/kernel";
 import { systemClock } from "@/shared/runtime";
 
 export const { db, close } = createDatabase(loadConfig().databaseUrl);
@@ -146,14 +146,7 @@ export async function resetPlayers(ids: readonly string[]): Promise<void> {
 }
 
 export function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 export async function count(table: string, where = "true"): Promise<number> {

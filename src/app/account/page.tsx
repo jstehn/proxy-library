@@ -7,11 +7,11 @@ import { readPage } from "@/server/page-instance";
 
 /** The player's own account: their password, and starting over. */
 export default async function AccountPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
 
   const [wallet, economy] = await Promise.all([
-    capabilities.walletReads.summary(actor.userId),
-    capabilities.walletReads.economySettings(),
+    reads.wallet.summary(actor),
+    reads.wallet.economySettings(),
   ]);
   const startingAmount = Cents.format(economy.startingGrant);
 

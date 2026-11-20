@@ -23,12 +23,12 @@ function priceLine(printing: PrintingCard): string {
 }
 
 export default async function SetPage(props: PageProps<"/sets/[code]">) {
-  const { capabilities } = await readPage();
+  const { reads } = await readPage();
   const { code } = await props.params;
 
-  const set = await capabilities.catalogReads.findSet(code);
+  const set = await reads.catalog.findSet(code);
   if (set === null) notFound();
-  const printings = await capabilities.catalogReads.setPrintings(set.code);
+  const printings = await reads.catalog.setPrintings(set.code);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">

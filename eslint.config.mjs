@@ -135,6 +135,16 @@ const TYPE_LINE_WORDS = [
   },
 ];
 
+// An `Actor` is made in one place (design doc 67, section 6): `toActor` in accounts/domain/player.ts.
+// Tests and `testing/` folders may cast one (they use `testActor`).
+const FORGED_ACTOR = [
+  {
+    selector: "TSAsExpression[typeAnnotation.typeName.name=/^(Actor|AdminActor)$/]",
+    message:
+      "Don't cast to Actor or AdminActor: only accounts' toActor and asAdmin make one. Tests use testActor() from @/modules/accounts/testing/actors (design doc 67).",
+  },
+];
+
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
 const policies = [
   // npm packages and Node built-ins: allowed here, restricted per layer by no-restricted-imports.
@@ -190,6 +200,8 @@ const policies = [
     cardSearch,
     cardSearchSql, // searches run as SQL in queries (ADR 0017)
   ),
+  // A query takes the `Actor` (design doc 67): another module's public API, for its types only.
+  { from: layer("queries"), allow: { to: publicApi, dependency: { kind: "type" } } },
   from(
     layer("testing"),
     el("kernel"),
@@ -281,6 +293,8 @@ const policies = [
     el("runtime"),
     publicApi,
     layer("infrastructure", { file: "index.ts" }),
+    // The harness builds its players with testActor (design doc 67, section 6).
+    layer("testing", { file: "actors.ts" }),
   ),
   {
     from: { file: { categories: "test" } },
@@ -382,6 +396,24 @@ export default defineConfig([
         ...CANDIDATE_SQL,
         ...FORMAT_NAMES,
         ...TYPE_LINE_WORDS,
+        ...FORGED_ACTOR,
+      ],
+    },
+  },
+  // The one place that makes an Actor (design doc 67): accounts' domain and its test helpers.
+  {
+    files: ["src/modules/accounts/domain/player.ts", "src/modules/accounts/testing/**/*.ts"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+        ...CANDIDATE_SQL,
+        ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
       ],
     },
   },
@@ -398,6 +430,7 @@ export default defineConfig([
         ...PRICE_TABLE,
         ...FORMAT_NAMES,
         ...TYPE_LINE_WORDS,
+        ...FORGED_ACTOR,
       ],
     },
   },
@@ -417,6 +450,7 @@ export default defineConfig([
         ...MONEY_TEXT,
         ...FORMAT_NAMES,
         ...TYPE_LINE_WORDS,
+        ...FORGED_ACTOR,
       ],
     },
   },
@@ -444,6 +478,33 @@ export default defineConfig([
         },
         ...FORMAT_NAMES,
         ...TYPE_LINE_WORDS,
+        ...FORGED_ACTOR,
+      ],
+    },
+  },
+
+  // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a
+  // component included, imports the database or a module's `queries/` folder.
+  {
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^@/shared/(db|card-search/sql)",
+              message:
+                "src/app never reads the database. Read through `reads` or call a capability (design doc 67).",
+            },
+            {
+              regex: "^@/modules/[^/]+/queries",
+              message:
+                "src/app never imports a module's queries/ folder. Read through `reads.<module>.<query>` (design doc 67).",
+            },
+          ],
+        },
       ],
     },
   },

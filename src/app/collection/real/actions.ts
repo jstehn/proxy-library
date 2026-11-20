@@ -100,7 +100,7 @@ export async function removeRealProductAction(formData: FormData): Promise<void>
 
 /** Makes a deck (real cards on) from each precon a real product holds (rule 11). */
 async function makeDecks(
-  { actor, capabilities }: PageContext,
+  { actor, capabilities }: Pick<PageContext, "actor" | "capabilities">,
   decks: readonly ProductDeck[],
 ): Promise<{ made: Array<{ id: number; name: string }>; failed: string[] }> {
   const made: Array<{ id: number; name: string }> = [];
@@ -190,7 +190,7 @@ export type PreviewAnswer =
 export async function previewImportAction(
   input: z.input<typeof PreviewInput>,
 ): Promise<PreviewAnswer> {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const parsed = PreviewInput.safeParse(input);
   if (!parsed.success)
     return { ok: false, message: "That's too much to import at once (5 MB at most)." };
@@ -207,9 +207,7 @@ export async function previewImportAction(
   const oracleIds = result.value.lines.flatMap((line) =>
     line.kind === "Matched" ? [line.oracleId] : [],
   );
-  const printings = Object.fromEntries(
-    await capabilities.realCollectionReads.printingChoices(oracleIds),
-  );
+  const printings = Object.fromEntries(await reads.realCollection.printingChoices(oracleIds));
   return { ok: true, preview: result.value, printings };
 }
 

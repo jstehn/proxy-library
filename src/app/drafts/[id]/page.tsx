@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Actor } from "@/modules/accounts";
 import { type PrintingCard } from "@/modules/catalog";
 import {
   DraftId,
@@ -11,7 +12,8 @@ import {
 } from "@/modules/drafts";
 import { readPage } from "@/server/page-instance";
 import type { Capabilities } from "@/server/capabilities";
-import { Cents, curveSlotLabel, type UserId } from "@/shared/kernel";
+import type { Reads } from "@/server/reads";
+import { Cents, curveSlotLabel } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "../../_components/card-tile";
@@ -46,7 +48,7 @@ import {
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
 
 // One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
-// Deal Broker stage and the finished pool. Names, deadlines and presence come from `draftView`;
+// Deal Broker stage and the finished pool. Names, deadlines and presence come from `reads.drafts.view`;
 // everything about cards comes from `drafts.view`, which returns only what this player may see
 // (design doc 18, section 4). LiveUpdates reloads both whenever the draft changes.
 
@@ -81,12 +83,12 @@ function printingIdsIn(seen: DraftSeen): string[] {
 }
 
 export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const draftId = Number((await props.params).id);
   if (!Number.isSafeInteger(draftId) || draftId <= 0) notFound();
   const now = capabilities.now();
   const [view, seen] = await Promise.all([
-    capabilities.draftReads.view(draftId, actor.userId, now),
+    reads.drafts.view(actor, draftId, now),
     capabilities.drafts.view(actor, DraftId.of(draftId)),
   ]);
   if (view === null || seen === null) notFound();
@@ -130,7 +132,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
           seen={seen}
           names={names}
           serverNow={now.toISOString()}
-          lore={await loreSources(capabilities, seen, actor.userId)}
+          lore={await loreSources(capabilities, reads, seen, actor)}
         />
       )}
       {view.status === "dealing" && seen.deal !== null && (
@@ -164,8 +166,9 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
  */
 async function loreSources(
   capabilities: Capabilities,
+  reads: Reads,
   seen: DraftSeen,
-  userId: UserId,
+  actor: Actor,
 ): Promise<LoreSources | null> {
   const you = seen.you;
   if (you === null) return null;
@@ -173,9 +176,9 @@ async function loreSources(
   const cards = await capabilities.printingDetails(candidates.map((card) => card.printingId));
   if (![...cards.values()].some((card) => card.name === "Lore Seeker")) return null;
   const [items, options, prices] = await Promise.all([
-    capabilities.inventoryReads.unopenedItems(userId),
-    capabilities.draftReads.boosterOptions(),
-    capabilities.storeReads.packMsrps(),
+    reads.inventory.unopenedItems(actor),
+    reads.drafts.boosterOptions(),
+    reads.store.packMsrps(),
   ]);
   return {
     inventory: items

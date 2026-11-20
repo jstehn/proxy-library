@@ -20,6 +20,5 @@ const BrowseInput = z.object({
 /** One page of your collection (or of every card for sale), filtered and sorted for this deck. */
 export const browseAction = action(
   BrowseInput,
-  async ({ actor, capabilities }, input): Promise<BrowsePage | null> =>
-    capabilities.deckReads.browse(actor.userId, input),
+  async ({ actor, reads }, input): Promise<BrowsePage | null> => reads.decks.browse(actor, input),
 );

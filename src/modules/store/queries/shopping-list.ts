@@ -1,8 +1,9 @@
 import { sql, type SQL } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { storeOfferRows, textArray } from "@/shared/db";
-import { FinishSchema, type UserId } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/kernel";
 import {
   nameKey,
   quoteList,
@@ -23,10 +24,11 @@ function nameIn(names: SQL): SQL {
 /** What the list would buy right now, at today's prices. */
 export async function quoteShoppingList(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   text: string,
   options: QuoteOptions,
 ): Promise<ListQuote> {
+  const userId = actor.userId;
   const parsed = parseList(text);
   const names = [...new Set(parsed.lines.map((line) => nameKey(line.name)))];
   if (names.length === 0) return quoteList([], parsed.unreadable, emptyAnswers(), options);

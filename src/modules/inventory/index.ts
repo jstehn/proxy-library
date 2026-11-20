@@ -15,11 +15,5 @@ export type {
 } from "./domain/errors";
 export { ItemId, type Item } from "./domain/item";
 export { productProblems } from "./domain/unpack";
-export {
-  openingView,
-  recentOpenings,
-  unopenedItems,
-  type OpenedCard,
-  type OpeningView,
-  type UnopenedGroup,
-} from "./queries/inventory";
+export type { OpenedCard, OpeningView, UnopenedGroup } from "./queries/inventory";
+export * as inventoryQueries from "./queries";

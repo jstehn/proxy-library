@@ -23,15 +23,14 @@ const SORTS = [
 const FINISH_LABELS = { nonfoil: "", foil: "Foil ", etched: "Etched " };
 
 export default async function SinglesPage(props: PageProps<"/singles">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
   const searchParams = await props.searchParams;
   const values = filterValues(searchParams);
   const page = pageNumber(searchParams);
 
   const [result, sets] = await Promise.all([
-    capabilities.catalogReads.searchPrintings({
-      userId: actor.userId,
+    reads.catalog.searchPrintings(actor, {
       search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
@@ -42,11 +41,11 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
       ),
       page,
     }),
-    capabilities.catalogReads.enabledSets(),
+    reads.catalog.enabledSets(),
   ]);
   const [cards, wished] = await Promise.all([
     capabilities.printingDetails(result.printingIds),
-    capabilities.wishlistReads.wished(actor.userId, result.printingIds),
+    reads.wishlist.wished(actor, result.printingIds),
   ]);
 
   return (

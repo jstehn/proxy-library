@@ -19,9 +19,9 @@ const fieldClass =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
 
 export default async function SetPhotosPage(props: PageProps<"/admin/photos/[code]">) {
-  const { capabilities } = await readPage({ admin: true });
+  const { actor: admin, reads } = await readPage({ admin: true });
   const { code } = await props.params;
-  const view = await capabilities.catalogReads.setPhotos(code);
+  const view = await reads.catalog.setPhotos(admin, code);
   if (view === null) notFound();
   const searchParams = await props.searchParams;
   const message = typeof searchParams.message === "string" ? searchParams.message : null;

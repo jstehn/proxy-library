@@ -1,9 +1,10 @@
 "use client";
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
-import { buySingleAction, sellSingleAction, type TradeState } from "./actions";
+import { buySingleAction, sellSingleAction } from "./actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: TradeState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 const select =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 

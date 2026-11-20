@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor, AdminActor } from "@/modules/accounts";
 import { type DbExecutor, newestDayPrices } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
 import type { PricingMode } from "../domain/pricing";
@@ -191,7 +192,7 @@ export type StorePage = Readonly<{
 }>;
 
 /** One enabled set's products for sale, cheapest first within each category. */
-export async function storePage(db: DbExecutor, code: string): Promise<StorePage | null> {
+export async function page(db: DbExecutor, code: string): Promise<StorePage | null> {
   const [set] = (
     await db.execute<{
       code: string;
@@ -281,7 +282,7 @@ export type StoreSearchResult = Readonly<{
  * Search the store across enabled sets and products for sale (by set, deck, sealed product,
  * category, description, or commander name).
  */
-export async function storeSearch(
+export async function search(
   db: DbExecutor,
   input: { query?: string; category?: string },
 ): Promise<StoreSearchResult> {
@@ -392,8 +393,9 @@ export type KindPriceRow = Readonly<{
   example: string; // one product's name, to recognize the kind by
 }>;
 
-/** Every product kind in enabled sets, with its MSRP (or none), for the admin page. */
-export async function kindPrices(db: DbExecutor): Promise<KindPriceRow[]> {
+/** Every product kind in enabled sets, with its MSRP (or none), for the admin page (kind A). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+export async function kindPrices(db: DbExecutor, admin: AdminActor): Promise<KindPriceRow[]> {
   const rows = await db.execute<{
     kind: string;
     cents: number | null;
@@ -434,8 +436,12 @@ export type ProductPriceRow = Readonly<{
   isRaised: boolean;
 }>;
 
-/** Every product in one enabled set with its kind price and override, for the admin page. */
-export async function productPrices(db: DbExecutor, setCode: string): Promise<ProductPriceRow[]> {
+/** Every product in one enabled set with its kind price and override, for the admin page (kind A). */
+export async function productPrices(
+  db: DbExecutor,
+  admin: AdminActor,
+  setCode: string,
+): Promise<ProductPriceRow[]> {
   const rows = await db.execute<{
     id: string;
     set_code: string;
@@ -506,18 +512,9 @@ export async function packPrice(
     : { price: Cents.of(Number(row.msrp)), listPrice: Cents.of(Number(row.list_price)) };
 }
 
-/** The store price of a single booster pack of this set and type, or null (a draft's packs). */
-export async function packMsrp(
-  db: DbExecutor,
-  setCode: string,
-  boosterType: string,
-): Promise<Cents | null> {
-  return (await packPrice(db, setCode, boosterType))?.price ?? null;
-}
-
 /**
  * The price of one pack of every booster sold as a single pack, keyed "SET/boosterType": the same
- * rule as `packMsrp`, in one query (a draft's entry fee is three packs, design doc 17).
+ * rule as `packPrice`, in one query (a draft's entry fee is three packs, design doc 17).
  */
 export async function packMsrps(db: DbExecutor): Promise<Map<string, Cents>> {
   const rows = await db.execute<{ set_code: string; booster_type: string; msrp: number }>(sql`
@@ -527,7 +524,7 @@ export async function packMsrps(db: DbExecutor): Promise<Map<string, Cents>> {
       from sealed_products sp
       ${PRICE_JOINS}
      where jsonb_array_length(sp.contents) = 1
-       -- exactly one pack and nothing else, like packMsrp's whole-contents comparison
+       -- exactly one pack and nothing else, like packPrice's whole-contents comparison
        and sp.contents->0 = jsonb_build_object('kind', 'pack',
                                                'setCode', sp.contents->0->>'setCode',
                                                'boosterType', sp.contents->0->>'boosterType')
@@ -555,9 +552,10 @@ export type SingleHistoryRow = Readonly<{
 /** A player's buys and sells of one printing, oldest first (ADR 0013). */
 export async function singleHistory(
   db: DbExecutor,
-  userId: string,
+  actor: Actor,
   printingId: string,
 ): Promise<SingleHistoryRow[]> {
+  const userId = actor.userId;
   const rows = await db.execute<{
     id: number;
     direction: "buy" | "sell";
@@ -593,9 +591,10 @@ export async function singleHistory(
 /**
  * How many products for sale have a list price (official MSRP or kind price) below what their
  * contents sell back for: the products value-based pricing raises and MSRP pricing doesn't
- * (design doc 33).
+ * (design doc 33). Kind A: the admin page only.
  */
-export async function msrpsBelowResale(db: DbExecutor): Promise<number> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+export async function msrpsBelowResale(db: DbExecutor, admin: AdminActor): Promise<number> {
   const [row] = (
     await db.execute<{ count: number }>(sql`
       select count(*)::int as count
@@ -609,7 +608,7 @@ export async function msrpsBelowResale(db: DbExecutor): Promise<number> {
 }
 
 /** How the store prices sealed product (design doc 33). */
-export async function currentPricingMode(db: DbExecutor): Promise<PricingMode> {
+export async function pricingMode(db: DbExecutor): Promise<PricingMode> {
   const [row] = (
     await db.execute<{ mode: string }>(
       sql`select pricing_mode as mode from store_settings where id = 1`,
@@ -619,7 +618,7 @@ export async function currentPricingMode(db: DbExecutor): Promise<PricingMode> {
 }
 
 /** The store's buylist rate, in basis points. */
-export async function currentBuylistRate(db: DbExecutor): Promise<number> {
+export async function buylistRate(db: DbExecutor): Promise<number> {
   const [row] = (
     await db.execute<{ rate: number }>(
       sql`select buylist_rate_bps as rate from store_settings where id = 1`,

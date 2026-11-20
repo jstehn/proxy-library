@@ -10,9 +10,9 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const searchParams = await props.searchParams;
-  const allDecks = await capabilities.deckReads.decksFor(actor.userId);
+  const allDecks = await reads.decks.decksFor(actor);
   // ?show=drafts lists only the decks finished drafts made (design doc 17).
   const onlyDrafts = searchParams.show === "drafts";
   const decks = onlyDrafts ? allDecks.filter((deck) => deck.origin !== null) : allDecks;

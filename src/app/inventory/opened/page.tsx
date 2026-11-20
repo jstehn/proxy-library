@@ -3,6 +3,7 @@ import { CardTile } from "@/app/_components/card-tile";
 import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
 import { type OpenedCard, type OpeningView } from "@/modules/inventory";
 import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
@@ -23,7 +24,7 @@ function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
 }
 
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const raw = searchParams.items;
   const animate = searchParams.animate === "1";
@@ -34,13 +35,13 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     .slice(0, MAX_SHOWN);
 
   const openings = (
-    await Promise.all(ids.map((id) => capabilities.inventoryReads.openingView(actor.userId, id)))
+    await Promise.all(ids.map((id) => reads.inventory.openingView(actor, id)))
   ).filter((opening): opening is OpeningView => opening !== null);
   const cards = await capabilities.printingDetails(
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
-  const themes = await capabilities.packReads.themes(packs);
+  const themes = await reads.packs.themes(packs);
   const total = Cents.sum(
     openings.flatMap((opening) =>
       opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),
@@ -115,7 +116,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(capabilities, packs, cards, themes)}>
+        <PackOpener packs={await openerPacks(capabilities, reads, packs, cards, themes)}>
           {results}
         </PackOpener>
       ) : (
@@ -131,6 +132,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
  */
 async function openerPacks(
   capabilities: Capabilities,
+  reads: Reads,
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
   themes: ReadonlyMap<number, string>,
@@ -140,15 +142,15 @@ async function openerPacks(
     await Promise.all(
       setCodes.map(async (code) => {
         const [set, page] = await Promise.all([
-          capabilities.catalogReads.findSet(code),
-          capabilities.storeReads.page(code),
+          reads.catalog.findSet(code),
+          reads.store.page(code),
         ]);
         return [code, { set, featured: page?.set.featured ?? null }] as const;
       }),
     ),
   );
 
-  const photos = await capabilities.catalogReads.packPhotos(
+  const photos = await reads.catalog.packPhotos(
     packs.flatMap((pack) =>
       pack.setCode && pack.boosterType
         ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]

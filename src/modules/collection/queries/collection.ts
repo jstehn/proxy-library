@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import {
   type CollectionExportRow,
@@ -7,6 +8,7 @@ import {
   type CollectionRow,
   type CopiesSource,
   type OwnedPrintingCopy,
+  emptyCollectionPage,
   readCollectionExport,
   readCollectionPage,
   readCopiesOf,
@@ -33,34 +35,55 @@ const GAME_COPIES: CopiesSource = {
   lastArrival: arrivalOf("max"),
 };
 
-/** One page of a player's collection. */
-export function collectionPage(
+/** One page of the actor's collection (kind P). */
+export function page(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   filter: CollectionFilter,
 ): Promise<CollectionPage> {
-  return readCollectionPage(db, userId, GAME_COPIES, filter);
+  return readCollectionPage(db, actor.userId, GAME_COPIES, filter);
 }
 
-/** How many copies of one printing a player owns, per finish. */
+/**
+ * One page of a trading partner's game collection (kind S). The owner chose to keep every active
+ * player's collection visible to every signed-in player for trading (design doc 10, rule 2; doc 67
+ * F5), so the rule here is "an active player other than you"; anyone else gives an empty page.
+ */
+export async function pageOfPartner(
+  db: DbExecutor,
+  actor: Actor,
+  partnerId: UserId,
+  filter: CollectionFilter,
+): Promise<CollectionPage> {
+  const partner = await db.execute(sql`
+    select 1 from players
+     where user_id = ${partnerId} and disabled_at is null and user_id <> ${actor.userId}
+  `);
+  if (partner.rows.length === 0) {
+    return emptyCollectionPage();
+  }
+  return readCollectionPage(db, partnerId, GAME_COPIES, filter);
+}
+
+/** How many copies of one printing the actor owns, per finish. */
 export function ownedCopies(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   printingId: string,
 ): Promise<Partial<Record<Finish, number>>> {
-  return readCopiesOf(db, userId, GAME_COPIES, printingId);
+  return readCopiesOf(db, actor.userId, GAME_COPIES, printingId);
 }
 
-/** Every copy of a card (any printing) a player owns in their game collection. */
+/** Every copy of a card (any printing) the actor owns in their game collection. */
 export function ownedByOracle(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   oracleId: string,
 ): Promise<OwnedPrintingCopy[]> {
-  return readOwnedByOracle(db, userId, GAME_COPIES, oracleId);
+  return readOwnedByOracle(db, actor.userId, GAME_COPIES, oracleId);
 }
 
-/** Every card a player owns, with what the exporters need, in set and number order. */
-export function exportRows(db: DbExecutor, userId: UserId): Promise<CollectionExportRow[]> {
-  return readCollectionExport(db, userId, GAME_COPIES);
+/** Every card the actor owns, with what the exporters need, in set and number order. */
+export function exportRows(db: DbExecutor, actor: Actor): Promise<CollectionExportRow[]> {
+  return readCollectionExport(db, actor.userId, GAME_COPIES);
 }

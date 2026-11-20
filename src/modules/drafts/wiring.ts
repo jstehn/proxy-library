@@ -1,27 +1,30 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import {
-  activeDraftOf,
-  boosterOptions,
-  draftVersion,
-  draftView,
-  draftableBoosters,
-  draftsOverview,
-} from "./queries/drafts";
+import { pick } from "@/shared/kernel";
+import type { Drafts } from "./application/drafts";
 
-// The drafts module's capabilities (ADR 0026): what its pages read, each a query with the database
-// filled in. They forward to the query functions until those merge into real capabilities
-// (docs/refactor/removal-list.md).
+// The drafts module's capabilities (ADR 0026): only what callers use. The pick timers are for
+// the worker, which holds the whole service. `view` stays here because it hides other seats' packs.
 
-export function wireDraftCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
+export function wireDraftCapabilities({ drafts }: Readonly<{ drafts: Drafts }>) {
   return {
-    draftReads: {
-      boosters: withDb(db, draftableBoosters),
-      boosterOptions: withDb(db, boosterOptions),
-      overview: withDb(db, draftsOverview),
-      view: withDb(db, draftView),
-      activeDraftOf: withDb(db, activeDraftOf),
-      version: withDb(db, draftVersion),
-    },
+    drafts: pick(
+      drafts,
+      "createDraft",
+      "joinDraft",
+      "leaveDraft",
+      "startDraft",
+      "makePick",
+      "pickForAway",
+      "answerDeal",
+      "endDeals",
+      "chooseColor",
+      "decideCard",
+      "makeDraftDeck",
+      "addBot",
+      "removeBot",
+      "peekWithSneak",
+      "watchWithInformant",
+      "markPresence",
+      "view",
+    ),
   };
 }

@@ -2,26 +2,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { Actor } from "@/modules/accounts";
 import { deckProblems } from "@/modules/decks";
 import {
   WishId,
+  describeAddWishError,
+  describeBuyWishError,
+  describeUpdateWishError,
   type CardNeed,
   type WishedForCards,
-  type AddWishError,
-  type BuyWishError,
-  type UpdateWishError,
   type WishDetails,
   type WishRequest,
 } from "@/modules/wishlist";
-import {
-  Cents,
-  FinishOrCheapestSchema,
-  FinishSchema,
-  type Result,
-  type UserId,
-  assertNever,
-} from "@/shared/kernel";
-import type { Capabilities } from "@/server/capabilities";
+import { Cents, FinishOrCheapestSchema, FinishSchema, type Result } from "@/shared/kernel";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
@@ -84,7 +78,7 @@ export async function addWishAction(_previous: WishState, formData: FormData): P
     request: request.data satisfies WishRequest,
     details: details.value,
   });
-  if (!result.ok) return { message: addMessage(result.error), tone: "error" };
+  if (!result.ok) return { message: describeAddWishError(result.error), tone: "error" };
   refresh(request.data.printingId);
   return {
     message: result.value.isNew ? "Added to your wishlist." : "Your wish is updated.",
@@ -109,7 +103,7 @@ export async function updateWishAction(
     WishId.of(wishId.data),
     details.value,
   );
-  if (!result.ok) return { message: updateMessage(result.error), tone: "error" };
+  if (!result.ok) return { message: describeUpdateWishError(result.error), tone: "error" };
   refresh();
   return { message: "Saved.", tone: "success" };
 }
@@ -161,7 +155,7 @@ export async function buyWishAction(_previous: WishState, formData: FormData): P
   });
   // A changed price or a filled wish means the page shows something else now.
   refresh(line.printingId);
-  if (!result.ok) return { message: buyMessage(result.error), tone: "error" };
+  if (!result.ok) return { message: describeBuyWishError(result.error), tone: "error" };
   const { receipt, isFulfilled } = result.value;
   // A filled wish leaves the list, and its form (and message) with it: say so at the top.
   if (isFulfilled) {
@@ -181,16 +175,14 @@ export async function wishForShortCardsAction(
   _previous: WishState,
   formData: FormData,
 ): Promise<WishState> {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const rawDeckId = formData.get("deckId");
   let needs: CardNeed[];
   if (rawDeckId === null) {
-    needs = await allDecksNeed(capabilities, actor.userId);
+    needs = await allDecksNeed(reads, actor);
   } else {
     const deckId = DeckIdForm.safeParse(rawDeckId);
-    const forDeck = deckId.success
-      ? await deckNeeds(capabilities, actor.userId, deckId.data)
-      : null;
+    const forDeck = deckId.success ? await deckNeeds(reads, actor, deckId.data) : null;
     if (forDeck === null) return { message: "That deck is gone.", tone: "error" };
     needs = forDeck;
   }
@@ -204,8 +196,8 @@ export async function wishForShortCardsAction(
 }
 
 /** Each card your decks are short of, at the copies the hungriest deck uses (design doc 21). */
-async function allDecksNeed(capabilities: Capabilities, userId: UserId): Promise<CardNeed[]> {
-  const toGet = await capabilities.deckReads.cardsToGet(userId);
+async function allDecksNeed(reads: Reads, actor: Actor): Promise<CardNeed[]> {
+  const toGet = await reads.decks.cardsToGet(actor);
   return toGet.cards.map((card) => ({ oracleId: card.oracleId, quantity: card.needed }));
 }
 
@@ -213,12 +205,8 @@ async function allDecksNeed(capabilities: Capabilities, userId: UserId): Promise
  * The cards one deck is short of, as game copies: a wish counts only those, so the real copies
  * a deck may use (design doc 16) come off what it needs. Null when it isn't your deck.
  */
-async function deckNeeds(
-  capabilities: Capabilities,
-  userId: UserId,
-  deckId: number,
-): Promise<CardNeed[] | null> {
-  const view = await capabilities.deckReads.deckView(userId, deckId);
+async function deckNeeds(reads: Reads, actor: Actor, deckId: number): Promise<CardNeed[] | null> {
+  const view = await reads.decks.deckView(actor, deckId);
   if (view === null) return null;
   const lineOf = (oracleId: string) => view.lines.find((line) => line.oracleId === oracleId);
   const problems = deckProblems(
@@ -247,55 +235,4 @@ function wishedMessage(wished: WishedForCards): string {
   if (skipped > 0) parts.push(`${skipped} didn't fit: your wishlist is full`);
   const sentence = parts.join(", ");
   return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
-}
-
-function addMessage(error: AddWishError): string {
-  switch (error.kind) {
-    case "InvalidWish":
-      return error.reason;
-    case "CardNotFound":
-      return "That card isn't in the catalog.";
-    case "FinishNotAvailable":
-      return `This printing only comes in ${error.finishes.join(" and ")}.`;
-    case "WishlistFull":
-      return `Your wishlist is full (${error.max} wishes). Remove some first.`;
-    default:
-      return assertNever(error);
-  }
-}
-
-function updateMessage(error: UpdateWishError): string {
-  switch (error.kind) {
-    case "InvalidWish":
-      return error.reason;
-    case "WishNotFound":
-      return "That wish is gone.";
-    default:
-      return assertNever(error);
-  }
-}
-
-function buyMessage(error: BuyWishError): string {
-  switch (error.kind) {
-    case "WishNotFound":
-      return "That wish is gone.";
-    case "AlreadyOwned":
-      return "You already own every copy you wanted.";
-    case "DoesNotFit":
-      return "That printing isn't what this wish asks for.";
-    case "BuyQuantityInvalid":
-      return `You can buy 1 to ${error.max}: the copies you're still missing.`;
-    case "QuantityInvalid":
-      return `You can buy 1 to ${error.max} at a time.`;
-    case "PricesChanged":
-      return `The price went up since the page loaded: it's ${Cents.format(error.total)} now. Check it and buy again.`;
-    case "NotForSale":
-      return "This card's set isn't in the store any more.";
-    case "NoPrice":
-      return "There's no market price for this finish now, so the store can't sell it.";
-    case "InsufficientFunds":
-      return `Not enough money: you have ${Cents.format(error.balance)} and this costs ${Cents.format(error.required)}.`;
-    default:
-      return assertNever(error);
-  }
 }
