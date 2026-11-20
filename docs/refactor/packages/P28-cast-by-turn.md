@@ -12,6 +12,12 @@ for LLMs and tools: "what is the probability that I can cast X by turn Y?", esti
 way, by bootstrapping (many simulated shuffles of the deck, counting how often X is castable by
 turn Y). The answer is a probability, not a verdict and not a score.
 
+**A distribution, not one turn (owner, 2026-11-20).** The typical case is a commander like Henzie:
+"when can I cast my commander?" Each simulated game records the **first turn** X became castable,
+so one set of runs gives the whole curve: the probability of casting X by turn 1, 2, 3 … up to a
+limit (say turn 10), plus the median turn. The tool shows that distribution; a single "by turn Y"
+question is just one row of it.
+
 The owner answered **D3**: remove the interactive goldfish (P24 did), and **keep the server-side
 simulations that answer "can I cast X by turn Y?", with many runs**: the opening-hand and
 cast-on-curve simulations behind `draw_sample` and the scorecard. The old plug-in structure existed
@@ -44,11 +50,15 @@ commit is named in P24's handoff. Read it for ideas, but write the registry fres
    - The question the tool answers: **"what is the probability that I can cast card X (or any of
      these) by turn Y, on the play or on the draw?"** It's estimated by bootstrapping: shuffle the
      deck N times (seeded), deal the opening hand (with the deck's mulligan rule), draw a card each
-     turn, play a land a turn and use the mana effects in scope, and count the runs where X is
-     castable by turn Y.
-   - The answer: the **probability** (for example 0.83), the **number of runs**, a **margin of
-     error** (for example a 95% interval: with 2,000 runs about ±2 points), and the most common
-     reasons a run failed (no source of a colour, too few lands, X not drawn). Where an exact answer
+     turn, play a land a turn and use the mana effects in scope, and record **the first turn each
+     run could cast X** (or "not by the last turn simulated").
+   - **The commander:** a card in the command zone is always available, so for it the question is
+     only whether the mana (colours and amount) is there. Include the commander tax for a recast
+     only if asked.
+   - The answer: the **distribution**: for each turn 1 to the limit, the probability X is
+     castable by then (cumulative, for example turn 3: 0.41, turn 4: 0.78, turn 5: 0.92), the
+     **median turn**, the **number of runs**, a **margin of error** (for example a 95% interval: with
+     2,000 runs about ±2 points), and the most common reasons a run failed (no source of a colour, too few lands, X not drawn). Where an exact answer
      exists (just "have I drawn X by turn Y", or a land count), check the simulation against the
      hypergeometric formula `draws.ts` already has, in a test.
    - Where runs happen: **server-side**, with an injected `Rng` and `Clock`. Pick the run count
@@ -68,8 +78,11 @@ commit is named in P24's handoff. Read it for ideas, but write the registry fres
    effect. The first test is Dark Ritual: with it in hand, a 3-mana spell is castable on turn 1.
    Wire it into `simulateCastOnCurve` and `simulateOpeningHands`, and delete whatever hard-coded
    ramp logic the registry replaces **in the same commit**.
-5. **"By turn Y" input.** `draw_sample` (and the capability behind it) accepts a card or list, a
-   turn, and play or draw, and returns the probability, the run count and the margin of error. Keep the tool answer compact (owner answer D5: few
+5. **The input and output.** `draw_sample` (and the capability behind it) accepts a card, a list,
+   or "my commander", play or draw, and an optional last turn (default 10). It returns the
+   cumulative probability for every turn up to that one, the median turn, the run count and the
+   margin of error, in a compact table for the model (one short line per turn). A "by turn Y"
+   question reads one row. Keep the tool answer compact (owner answer D5: few
    tokens, no scores or ranks; a rate of "castable in 83% of runs" is a measurement, not a score).
    Update the tool description, `cookbook.ts` and the tool tests.
 6. **Split every function over 100 lines** in the list above into named steps in the same file or a
