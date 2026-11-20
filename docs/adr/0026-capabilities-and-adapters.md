@@ -76,3 +76,32 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
   `getContainer` ratchet, and the callers move in P09b–P09d (milestone 1 review).
 - 2026-11-19: P09b to P09d moved every page, route and action onto `readPage()`, `action()` and
   `readCapabilities()`; the list of files not yet moved is gone.
+
+## Reads (design doc 67, proposed)
+
+Proposed in P25; takes effect when the owner approves doc 67. It changes decision 1: reads are not
+capabilities.
+
+1. **Reads are each module's typed query functions.** A module exports its public reads as one
+   namespace from `queries/index.ts`. Pages, actions and routes call them as `reads.<module>.<query>`;
+   `reads` comes from `readPage()`, `action()` and `formAction()`, and is built once in
+   `src/server/reads.ts` with a generic `bindDb(db, queries)` (it replaces `withDb` and the 14
+   `*Reads` bundles). Capabilities stay for writes and for anything with rules or permissions.
+2. **Three kinds of read.** A **player** read takes the signed-in `Actor` and filters by it in SQL;
+   it never takes a plain `UserId`. A **shared** read checks visibility in SQL (shared deck, shared
+   wishlist, public link token) or shows catalog data to any signed-in player. An **admin** read
+   takes an `AdminActor`.
+3. **Actors can't be forged.** `Actor` and `AdminActor` are branded types. Only the accounts
+   module makes them, and only `src/server/session.ts` makes an `AdminActor`. A visitor's page gets
+   `PublicReads`, which holds only the token reads.
+4. **Whole services aren't passed through.** Each module's `wiring.ts` exposes a narrow capability
+   with only the methods its callers use.
+5. **One helper for forms.** `formAction(schema, handler, { describeError })` reads `FormData`,
+   checks the session as `action()` does, parses, and turns `Result` errors into the form's message.
+6. **Enforced** by a type check on each `queries/index.ts` (no public read takes a `UserId` first),
+   the existing adapter lint (no `@/shared/db`, no `queries/` imports in `src/app`), and
+   `tests/integration/access-rules.int.test.ts`, one test per row of doc 67's table.
+
+Alternatives considered: reads as capabilities (about 97 forwards and a second signature to keep in
+step), a `bindDb` per request (hidden state), and binding the actor into `reads` (hides who a read
+is for).
