@@ -1,3 +1,4 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
@@ -12,7 +13,7 @@ import {
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
-import { Cents, err, UserId } from "@/shared/kernel";
+import { Cents, err } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import {
   inMemoryMarketPrices,
@@ -28,14 +29,7 @@ import type { Listing } from "./ports";
 // failed purchase is a database job, tested in tests/integration.)
 
 function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 const jack = actor("jack");

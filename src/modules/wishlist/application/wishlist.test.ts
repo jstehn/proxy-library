@@ -1,3 +1,4 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
@@ -26,14 +27,7 @@ import type { PrintingFacts } from "./ports";
 // and collection. Jack starts with the $50 starting grant.
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 
 const jack = actor("jack");

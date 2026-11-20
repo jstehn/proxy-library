@@ -13,8 +13,14 @@ export type Player = Readonly<{
   joinedAt: Date;
 }>;
 
-/** The signed-in player performing an action. Only active players can be actors. */
-export type Actor = Readonly<{
+// The two brands exist only in the type system and are not exported, so no other file can write
+// an object that type-checks as an `Actor` (design doc 67, section 6). The one place that makes
+// them is this file: `toActor` for a signed-in player, `asAdmin` for an admin.
+declare const actorBrand: unique symbol;
+declare const adminBrand: unique symbol;
+
+/** The fields of an actor, without the brand. */
+export type ActorFields = Readonly<{
   userId: UserId;
   username: Username;
   displayName: DisplayName;
@@ -22,6 +28,15 @@ export type Actor = Readonly<{
   canSelfFund: boolean;
   mustChangePassword: boolean;
 }>;
+
+/**
+ * The signed-in player performing an action. Only active players can be actors, and only
+ * `toActor` makes one (lint forbids `as Actor` elsewhere, outside tests).
+ */
+export type Actor = ActorFields & { readonly [actorBrand]: true };
+
+/** An actor the admin guard has checked. Admin reads and admin capabilities take this type. */
+export type AdminActor = Actor & { readonly [adminBrand]: true };
 
 export function newPlayer(input: {
   userId: UserId;
@@ -43,7 +58,7 @@ export function isActive(player: Player): boolean {
 }
 
 export function toActor(player: Player): Actor {
-  return {
+  const fields: ActorFields = {
     userId: player.userId,
     username: player.username,
     displayName: player.displayName,
@@ -51,4 +66,10 @@ export function toActor(player: Player): Actor {
     canSelfFund: player.canSelfFund,
     mustChangePassword: player.mustChangePassword,
   };
+  return fields as Actor;
+}
+
+/** The actor as an `AdminActor`, or null when the player isn't an admin. */
+export function asAdmin(actor: Actor): AdminActor | null {
+  return actor.isAdmin ? (actor as AdminActor) : null;
 }

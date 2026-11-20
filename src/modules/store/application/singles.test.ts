@@ -1,3 +1,4 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
@@ -6,7 +7,7 @@ import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes
 import { inMemoryItemRepository, inMemoryProductCatalog } from "@/modules/inventory/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
-import { Cents, err, UserId } from "@/shared/kernel";
+import { Cents, err } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import {
   inMemoryMarketPrices,
@@ -20,14 +21,7 @@ import { makeStore } from "./make-store";
 // Buying and selling singles (design doc 07), against in-memory wallet, collection and store.
 
 function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 const jack = actor("jack");

@@ -1,10 +1,11 @@
 // The catalog use cases against real Postgres, with recorded fixtures instead of the network.
+import { testActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { loadConfig } from "@/shared/config";
 import { createDatabase, makeDrizzleUnitOfWork } from "@/shared/db";
-import { err, UserId } from "@/shared/kernel";
+import { err } from "@/shared/kernel";
 import { manualClock } from "@/shared/kernel/testing";
 import { makeCatalog } from "../application/make-catalog";
 import type { MtgjsonGateway } from "../application/ports";
@@ -18,14 +19,11 @@ import { fixtureWpnGateway, memoryArtworkStore } from "./wpn";
 const { db, close } = createDatabase(loadConfig().databaseUrl);
 afterAll(close);
 
-const admin: Actor = {
-  userId: UserId.of("admin"),
-  username: "admin" as Actor["username"],
+const admin = testActor({
+  name: "admin",
   displayName: "Admin" as Actor["displayName"],
   isAdmin: true,
-  canSelfFund: false,
-  mustChangePassword: false,
-};
+});
 
 let clock: ReturnType<typeof manualClock>;
 let mtgjson: ReturnType<typeof fixtureMtgjsonGateway>;

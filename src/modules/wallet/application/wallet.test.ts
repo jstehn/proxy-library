@@ -1,3 +1,4 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { Cents, err, UserId } from "@/shared/kernel";
@@ -12,15 +13,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
 
 function actor(id: string, options: Partial<Actor> = {}): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-    ...options,
-  };
+  return testActor({ name: id, ...options });
 }
 
 const admin = actor("admin", { isAdmin: true });

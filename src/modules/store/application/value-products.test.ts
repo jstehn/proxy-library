@@ -1,5 +1,5 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
@@ -13,7 +13,7 @@ import { expectedPackValue } from "@/modules/packs";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
-import { Cents, UserId } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import {
   inMemoryMarketPrices,
@@ -30,14 +30,7 @@ import { makeStore } from "./make-store";
 // booster, products and decks.
 
 const now = new Date("2026-11-07T04:30:00Z");
-const jack: Actor = {
-  userId: UserId.of("jack"),
-  username: "jack" as Actor["username"],
-  displayName: "jack" as Actor["displayName"],
-  isAdmin: false,
-  canSelfFund: false,
-  mustChangePassword: false,
-};
+const jack = testActor({ name: "jack" });
 
 const PACK_VALUE = expectedPackValue(SAMPLE_BOOSTER, (id) => SAMPLE_FACTS.get(id));
 const price = (id: string, finish: "nonfoil" | "foil") =>

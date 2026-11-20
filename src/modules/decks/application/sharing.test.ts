@@ -1,7 +1,7 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
-import { UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { DeckId } from "../domain/deck";
 import { CommentId } from "../domain/sharing";
@@ -9,14 +9,7 @@ import { inMemoryDeckSharing } from "../testing/fakes";
 import { makeDeckSharing } from "./sharing";
 
 function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 const jack = actor("jack");

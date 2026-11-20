@@ -1,4 +1,5 @@
 // The real wallet use cases against real Postgres: database rules and concurrency.
+import { testActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
@@ -29,14 +30,11 @@ const wallet = makeWallet({
   clock,
 });
 
-const admin: Actor = {
-  userId: UserId.of("admin"),
-  username: "admin" as Actor["username"],
+const admin = testActor({
+  name: "admin",
   displayName: "Admin" as Actor["displayName"],
   isAdmin: true,
-  canSelfFund: false,
-  mustChangePassword: false,
-};
+});
 const jack = UserId.of("jack");
 
 async function createPlayer(id: string) {

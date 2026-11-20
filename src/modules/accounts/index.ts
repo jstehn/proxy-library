@@ -54,7 +54,7 @@ export {
   type InviteStatus,
 } from "./domain/invite";
 export { PASSWORD_MIN_LENGTH } from "./domain/credentials";
-export type { Actor, Player } from "./domain/player";
+export type { Actor, AdminActor, Player } from "./domain/player";
 export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
 export { listAccessTokens } from "./queries/access-tokens";
 export type { InviteListItem, PlayerListItem } from "./queries/admin";
