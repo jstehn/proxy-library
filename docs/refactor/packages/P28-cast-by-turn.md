@@ -7,6 +7,11 @@
 
 ## Why
 
+**What it's for (owner, tududi comment on this task, 2026-11-20):** a **probability simulator**
+for LLMs and tools: "what is the probability that I can cast X by turn Y?", estimated the usual
+way, by bootstrapping (many simulated shuffles of the deck, counting how often X is castable by
+turn Y). The answer is a probability, not a verdict and not a score.
+
 The owner answered **D3**: remove the interactive goldfish (P24 did), and **keep the server-side
 simulations that answer "can I cast X by turn Y?", with many runs**: the opening-hand and
 cast-on-curve simulations behind `draw_sample` and the scorecard. The old plug-in structure existed
@@ -36,9 +41,16 @@ commit is named in P24's handoff. Read it for ideas, but write the registry fres
 ## Steps
 
 1. **Design note** (short, in `docs/design/` or an ADR addendum):
-   - The question the tool answers: "can I cast card X (or any of these) by turn Y, on the play or
-     draw, in N runs?" The answer: a rate, and the typical reasons it fails (no colour, too few
-     lands, missing ramp).
+   - The question the tool answers: **"what is the probability that I can cast card X (or any of
+     these) by turn Y, on the play or on the draw?"** It's estimated by bootstrapping: shuffle the
+     deck N times (seeded), deal the opening hand (with the deck's mulligan rule), draw a card each
+     turn, play a land a turn and use the mana effects in scope, and count the runs where X is
+     castable by turn Y.
+   - The answer: the **probability** (for example 0.83), the **number of runs**, a **margin of
+     error** (for example a 95% interval: with 2,000 runs about ±2 points), and the most common
+     reasons a run failed (no source of a colour, too few lands, X not drawn). Where an exact answer
+     exists (just "have I drawn X by turn Y", or a land count), check the simulation against the
+     hypergeometric formula `draws.ts` already has, in a test.
    - Where runs happen: **server-side**, with an injected `Rng` and `Clock`. Pick the run count
      (for example 2,000) and a time budget; say how a long run is kept off the request thread
      (chunk it, or run it in the worker) if it needs to be.
@@ -56,8 +68,8 @@ commit is named in P24's handoff. Read it for ideas, but write the registry fres
    effect. The first test is Dark Ritual: with it in hand, a 3-mana spell is castable on turn 1.
    Wire it into `simulateCastOnCurve` and `simulateOpeningHands`, and delete whatever hard-coded
    ramp logic the registry replaces **in the same commit**.
-5. **"By turn Y" input.** `draw_sample` (and the capability behind it) accepts a card or list and a
-   turn, and returns the rate over many runs. Keep the tool answer compact (owner answer D5: few
+5. **"By turn Y" input.** `draw_sample` (and the capability behind it) accepts a card or list, a
+   turn, and play or draw, and returns the probability, the run count and the margin of error. Keep the tool answer compact (owner answer D5: few
    tokens, no scores or ranks; a rate of "castable in 83% of runs" is a measurement, not a score).
    Update the tool description, `cookbook.ts` and the tool tests.
 6. **Split every function over 100 lines** in the list above into named steps in the same file or a
