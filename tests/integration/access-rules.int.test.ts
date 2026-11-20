@@ -279,10 +279,13 @@ describe("store (R72 to R82)", () => {
   });
 
   it("R82: search shows enabled sets only", async () => {
-    const all = await storeQueries.search(db, {});
+    // An empty search lists sets, not products (by design), so search for the set by name.
+    const all = await storeQueries.search(db, { query: "Bloomburrow" });
     expect(all.products.length).toBeGreaterThan(0);
     await db.execute(sql`update card_sets set is_enabled = false where code = 'BLB'`);
-    expect((await storeQueries.search(db, {})).products).toEqual([]);
+    const hidden = await storeQueries.search(db, { query: "Bloomburrow" });
+    expect(hidden.products).toEqual([]);
+    expect(hidden.sets).toEqual([]);
     await db.execute(sql`update card_sets set is_enabled = true where code = 'BLB'`);
   });
 });
