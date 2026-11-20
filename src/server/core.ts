@@ -294,6 +294,7 @@ export function buildCore(config: Config) {
       social,
       trades,
       realCollection,
+      store,
       previews: drizzleChangePreviewRepository(db),
       services: {
         deckSharing,
@@ -301,7 +302,6 @@ export function buildCore(config: Config) {
         proxySheet,
         seeds,
         drafts,
-        store,
         accounts,
         catalog,
         resetPlayer,

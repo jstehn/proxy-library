@@ -38,7 +38,8 @@ import type { Wallet } from "@/modules/wallet";
 import { wireWalletCapabilities } from "@/modules/wallet/wiring";
 import type { RealCollection } from "@/modules/real-collection";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
-import type { makeStore } from "@/modules/store";
+import type { Store } from "@/modules/store";
+import { wireStoreCapabilities } from "@/modules/store/wiring";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
 import type { makeYoutube } from "@/modules/youtube";
@@ -55,6 +56,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  store: Store;
   realCollection: RealCollection;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Wishlist;
@@ -72,7 +74,6 @@ type CapabilityDependencies = Readonly<{
     proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
     drafts: ReturnType<typeof makeDrafts>;
-    store: ReturnType<typeof makeStore>;
     accounts: ReturnType<typeof makeAccounts>;
     catalog: ReturnType<typeof makeCatalog>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
@@ -112,6 +113,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireWalletCapabilities(dependencies),
     ...wireSocialCapabilities(dependencies),
     ...wireTradeCapabilities(dependencies),
+    ...wireStoreCapabilities(dependencies),
     ...wireRealCollectionCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
