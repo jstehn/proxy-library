@@ -7,8 +7,8 @@ import { WishForShortForm } from "../../wishlist/wish-forms";
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
 
 export default async function CardsToGetPage() {
-  const { actor, capabilities } = await readPage();
-  const toGet = await capabilities.deckReads.cardsToGet(actor.userId);
+  const { actor, reads } = await readPage();
+  const toGet = await reads.decks.cardsToGet(actor);
   const copies = toGet.cards.reduce((sum, card) => sum + card.missing, 0);
   const unpriced = toGet.cards.filter((card) => card.priceCents === null).length;
   return (

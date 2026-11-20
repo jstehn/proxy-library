@@ -17,8 +17,8 @@ const OptimizeInput = z.object({
 /** Whole-deck Simulated Annealing optimizer preview (design doc 55). */
 export const optimizeDeckAction = action(
   OptimizeInput,
-  async ({ actor, capabilities }, input): Promise<OptimizeResult | null> =>
-    capabilities.deckReads.optimize(actor.userId, input.deckId, input.pool),
+  async ({ actor, reads }, input): Promise<OptimizeResult | null> =>
+    reads.decks.optimize(actor, input.deckId, input.pool),
 );
 
 const SwapInput = z.object({

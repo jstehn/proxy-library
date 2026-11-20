@@ -29,8 +29,8 @@ const CardInDeckInput = z.object({ deckId: DeckIdInput, oracleId: z.string().min
 /** Your other decks holding a card, for the selected-card panel (task 42). */
 export const otherDecksAction = action(
   CardInDeckInput,
-  async ({ actor, capabilities }, input): Promise<OtherDeckUse[]> =>
-    capabilities.deckReads.otherDecksHolding(actor.userId, input.deckId, input.oracleId),
+  async ({ actor, reads }, input): Promise<OtherDeckUse[]> =>
+    reads.decks.otherDecksHolding(actor, input.deckId, input.oracleId),
 );
 
 const PrintingsInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });
@@ -38,8 +38,8 @@ const PrintingsInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid
 /** Every printing of a card, for the printing picker (design doc 24). */
 export const printingsAction = action(
   PrintingsInput,
-  async ({ actor, capabilities }, input): Promise<PrintingOption[] | null> =>
-    capabilities.deckReads.printingsOf(actor.userId, input.deckId, input.oracleId),
+  async ({ actor, reads }, input): Promise<PrintingOption[] | null> =>
+    reads.decks.printingsOf(actor, input.deckId, input.oracleId),
 );
 
 const SimilarInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid() });
@@ -47,8 +47,8 @@ const SimilarInput = z.object({ deckId: DeckIdInput, oracleId: z.string().uuid()
 /** Cards like the selected one, for this deck. */
 export const similarAction = action(
   SimilarInput,
-  async ({ actor, capabilities }, input): Promise<SuggestionList | null> =>
-    capabilities.deckReads.similar(actor.userId, input.deckId, input.oracleId),
+  async ({ actor, reads }, input): Promise<SuggestionList | null> =>
+    reads.decks.similar(actor, input.deckId, input.oracleId),
 );
 
 const TakeInput = z.object({

@@ -1,6 +1,6 @@
 import type { Actor } from "@/modules/accounts";
 import { printingCards } from "@/modules/catalog";
-import { withDb, type DbExecutor } from "@/shared/db";
+import type { DbExecutor } from "@/shared/db";
 import { ok, type Clock, type UserId } from "@/shared/kernel";
 import { makeSwapCards, makeTakeFromDeck } from "./application/deck-builder-moves";
 import { makeDeckCombos } from "./application/deck-combos";
@@ -25,36 +25,14 @@ import { budgetReplacements } from "./queries/budget-replacements";
 import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./queries/card-facts";
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
-import {
-  decksUsing,
-  addDeckSource,
-  deckView,
-  decksFor,
-  listDeckSources,
-  otherDecksHolding,
-} from "./queries/decks";
+import { addDeckSource, deckView, decksFor, listDeckSources } from "./queries/decks";
 import { manaBasePlan } from "./queries/mana-base";
-import { browseCollection, type BrowseInput } from "./queries/browse";
-import { draftForDeck } from "./queries/draft-deck";
-import { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
-import { cardPrintings } from "./queries/printings";
-import { compareDeckSnapshot, listDeckSnapshots } from "./queries/snapshots";
-import { commanderDetails, commandersICanBuild } from "./queries/commanders";
-import { deckChangePreview, deckListPreview } from "./queries/preview";
+import { deckChangePreview } from "./queries/preview";
 import { searchForDeck } from "./queries/search-for-deck";
 import { semanticSearchForDeck } from "./queries/semantic-search";
-import { budgetList, deckSuggestions, similarCards } from "./queries/suggestions";
-import { publicDeckScorecard } from "./queries/scorecard";
-import {
-  cardsToGetFor,
-  deckComments,
-  deckForViewer,
-  deckViewForViewer,
-  publicDeckByToken,
-  sharedDecks,
-} from "./queries/sharing";
-import { deckTokenLines, tokenArtOptions } from "./queries/tokens";
-import type { TokenMaker } from "./domain/token-proxies";
+import { similarCards } from "./queries/suggestions";
+import { deckViewForViewer } from "./queries/sharing";
+import { deckTokenLines } from "./queries/tokens";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
 // composition root (src/server/capabilities.ts) calls this once and spreads the result.
@@ -153,45 +131,6 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       setEntry: (actor, input) =>
         decks.setEntry(actor, { ...input, deckId: DeckId.of(input.deckId) }),
     }),
-    // The builder's reads: each answers one question, as the query already does.
-    deckReads: {
-      deckView: readDeck,
-      decksUsing: withDb(db, decksUsing),
-      deckForViewer: withDb(db, deckForViewer),
-      comments: withDb(db, deckComments),
-      decksFor: withDb(db, decksFor),
-      sharedDecks: withDb(db, sharedDecks),
-      cardsToGet: withDb(db, cardsToGetFor),
-      commanderDetails: withDb(db, commanderDetails),
-      commandersICanBuild: withDb(db, commandersICanBuild),
-      publicDeck: withDb(db, publicDeckByToken),
-      publicScorecard: withDb(db, publicDeckScorecard),
-      tokenArtOptions: withDb(db, tokenArtOptions),
-      listPreview: withDb(db, deckListPreview),
-      tokenLines: (deckId: number, makers: readonly TokenMaker[]) =>
-        deckTokenLines(db, deckId, makers),
-      browse: (userId: UserId, input: BrowseInput) => browseCollection(db, userId, input),
-      printingsOf: (userId: UserId, deckId: number, oracleId: string) =>
-        cardPrintings(db, userId, deckId, oracleId),
-      otherDecksHolding: (userId: UserId, deckId: number, oracleId: string) =>
-        otherDecksHolding(db, userId, deckId, oracleId),
-      suggestions: (userId: UserId, deckId: number) => deckSuggestions(db, userId, deckId),
-      optimize: async (userId: UserId, deckId: number, pool: OptimizeDeckPool) =>
-        (await optimizeDeckForView(db, userId, deckId, { pool }))?.result ?? null,
-      draft: (userId: UserId, deckId: number, options: { includeStore?: "fill-gaps" | "none" }) =>
-        draftForDeck(db, userId, deckId, options),
-      similar: (userId: UserId, deckId: number, oracleId: string) =>
-        similarCards(db, userId, deckId, oracleId),
-      budgetList: (userId: UserId, deckId: number, budgetCents: number) =>
-        budgetList(db, userId, deckId, budgetCents),
-      snapshots: (userId: UserId, deckId: number) => listDeckSnapshots(db, userId, deckId),
-      compareSnapshots: (
-        userId: UserId,
-        deckId: number,
-        beforeSnapshotId: number,
-        afterSnapshotId?: number,
-      ) => compareDeckSnapshot(db, userId, deckId, beforeSnapshotId, afterSnapshotId),
-    },
     deckFacts: makeDeckFacts({ audit: (view) => auditDeckView(db, view) }),
     deckSignals: makeDeckSignals({
       signalCards: (userId, deckId) => deckSignalCards(db, userId, deckId),

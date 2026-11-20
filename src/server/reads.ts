@@ -2,6 +2,7 @@ import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { activityQueries } from "@/modules/activity";
 import { catalogQueries } from "@/modules/catalog";
 import { collectionQueries } from "@/modules/collection";
+import { deckPublicQueries, deckQueries } from "@/modules/decks";
 import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
@@ -27,6 +28,7 @@ export function buildReads(db: DbExecutor) {
     activity: bindDb(db, activityQueries),
     catalog: bindDb(db, catalogQueries),
     collection: bindDb(db, collectionQueries),
+    decks: { ...bindDb(db, deckQueries), ...publicReads.decks },
     drafts: bindDb(db, draftQueries),
     inventory: bindDb(db, inventoryQueries),
     packs: bindDb(db, packsQueries),
@@ -48,6 +50,7 @@ export type Reads = ReturnType<typeof buildReads>;
 export function buildPublicReads(db: DbExecutor) {
   return {
     accounts: bindPublicDb(db, accountPublicQueries),
+    decks: bindPublicDb(db, deckPublicQueries),
   };
 }
 export type PublicReads = ReturnType<typeof buildPublicReads>;

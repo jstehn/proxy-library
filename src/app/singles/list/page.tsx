@@ -12,7 +12,7 @@ const MAX_LIST_TEXT = 20_000;
 // the cards that deck is short of; from a budget list ("?list=…", design doc 20), as that list.
 
 export default async function BuyListPage(props: PageProps<"/singles/list">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { wallet } = capabilities;
   const searchParams = await props.searchParams;
   const deckId = Number(typeof searchParams.deck === "string" ? searchParams.deck : NaN);
@@ -20,7 +20,7 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
   let startingText = "";
   let deckName: string | null = null;
   if (Number.isSafeInteger(deckId) && deckId > 0) {
-    const view = await capabilities.deckReads.deckView(actor.userId, deckId);
+    const view = await reads.decks.deckView(actor, deckId);
     if (view !== null) {
       deckName = view.deck.name;
       const owned = (oracleId: string) =>

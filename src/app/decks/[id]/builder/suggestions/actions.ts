@@ -9,8 +9,8 @@ import { DeckIdInput } from "../action-helpers";
 /** Cards for this deck and for each role it's short of (design doc 20). */
 export const suggestionsAction = action(
   DeckIdInput,
-  async ({ actor, capabilities }, deckId): Promise<DeckSuggestions | null> =>
-    capabilities.deckReads.suggestions(actor.userId, deckId),
+  async ({ actor, reads }, deckId): Promise<DeckSuggestions | null> =>
+    reads.decks.suggestions(actor, deckId),
 );
 
 /** The most a budget list may spend: $1,000. */
@@ -23,6 +23,6 @@ const BudgetInput = z.object({
 /** Store cards for this deck within a budget. */
 export const budgetAction = action(
   BudgetInput,
-  async ({ actor, capabilities }, input): Promise<BudgetList | null> =>
-    capabilities.deckReads.budgetList(actor.userId, input.deckId, input.budgetCents),
+  async ({ actor, reads }, input): Promise<BudgetList | null> =>
+    reads.decks.budgetList(actor, input.deckId, input.budgetCents),
 );

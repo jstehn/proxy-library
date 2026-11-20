@@ -10,8 +10,8 @@ import { rejected } from "../answer";
 // The builder's snapshots (design doc 41).
 
 /** Lists saved snapshots for a deck, newest first (design doc 41). */
-export const listSnapshotsAction = action(DeckIdInput, async ({ actor, capabilities }, deckId) => {
-  const snapshots = await capabilities.deckReads.snapshots(actor.userId, deckId);
+export const listSnapshotsAction = action(DeckIdInput, async ({ actor, reads }, deckId) => {
+  const snapshots = await reads.decks.snapshots(actor, deckId);
   return snapshots === null ? err(rejected(NOT_YOURS)) : ok(snapshots);
 });
 
@@ -23,13 +23,13 @@ const SaveSnapshotInput = z.object({
 /** Saves a snapshot of the deck's current entries (design doc 41). */
 export const saveSnapshotAction = action(
   SaveSnapshotInput,
-  async ({ actor, capabilities }, input) => {
+  async ({ actor, capabilities, reads }, input) => {
     const result = await capabilities.deckEdits.saveSnapshot(actor, {
       deckId: DeckId.of(input.deckId),
       label: input.label,
     });
     if (!result.ok) return err(rejected(describeDeckError(result.error)));
-    const snapshots = await capabilities.deckReads.snapshots(actor.userId, input.deckId);
+    const snapshots = await reads.decks.snapshots(actor, input.deckId);
     return ok({ snapshotId: result.value, snapshots: snapshots ?? [] });
   },
 );
@@ -43,9 +43,9 @@ const CompareSnapshotInput = z.object({
 /** Compares a saved snapshot against the live deck or another snapshot (design doc 41). */
 export const compareSnapshotAction = action(
   CompareSnapshotInput,
-  async ({ actor, capabilities }, input) => {
-    const comparison = await capabilities.deckReads.compareSnapshots(
-      actor.userId,
+  async ({ actor, reads }, input) => {
+    const comparison = await reads.decks.compareSnapshots(
+      actor,
       input.deckId,
       input.beforeSnapshotId,
       input.afterSnapshotId ?? undefined,
@@ -76,13 +76,13 @@ export const restoreSnapshotAction = action(SnapshotMutationInput, async (contex
 /** Deletes a saved snapshot without changing the deck (design doc 41). */
 export const deleteSnapshotAction = action(
   SnapshotMutationInput,
-  async ({ actor, capabilities }, input) => {
+  async ({ actor, capabilities, reads }, input) => {
     const result = await capabilities.deckEdits.deleteSnapshot(actor, {
       deckId: DeckId.of(input.deckId),
       snapshotId: SnapshotId.of(input.snapshotId),
     });
     if (!result.ok) return err(rejected(describeDeckError(result.error)));
-    const snapshots = await capabilities.deckReads.snapshots(actor.userId, input.deckId);
+    const snapshots = await reads.decks.snapshots(actor, input.deckId);
     return snapshots === null ? err(rejected(NOT_YOURS)) : ok(snapshots);
   },
 );

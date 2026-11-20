@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { Actor } from "@/modules/accounts";
 import { deckProblems } from "@/modules/decks";
 import {
   WishId,
@@ -18,10 +19,9 @@ import {
   FinishOrCheapestSchema,
   FinishSchema,
   type Result,
-  type UserId,
   assertNever,
 } from "@/shared/kernel";
-import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the
@@ -181,16 +181,14 @@ export async function wishForShortCardsAction(
   _previous: WishState,
   formData: FormData,
 ): Promise<WishState> {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const rawDeckId = formData.get("deckId");
   let needs: CardNeed[];
   if (rawDeckId === null) {
-    needs = await allDecksNeed(capabilities, actor.userId);
+    needs = await allDecksNeed(reads, actor);
   } else {
     const deckId = DeckIdForm.safeParse(rawDeckId);
-    const forDeck = deckId.success
-      ? await deckNeeds(capabilities, actor.userId, deckId.data)
-      : null;
+    const forDeck = deckId.success ? await deckNeeds(reads, actor, deckId.data) : null;
     if (forDeck === null) return { message: "That deck is gone.", tone: "error" };
     needs = forDeck;
   }
@@ -204,8 +202,8 @@ export async function wishForShortCardsAction(
 }
 
 /** Each card your decks are short of, at the copies the hungriest deck uses (design doc 21). */
-async function allDecksNeed(capabilities: Capabilities, userId: UserId): Promise<CardNeed[]> {
-  const toGet = await capabilities.deckReads.cardsToGet(userId);
+async function allDecksNeed(reads: Reads, actor: Actor): Promise<CardNeed[]> {
+  const toGet = await reads.decks.cardsToGet(actor);
   return toGet.cards.map((card) => ({ oracleId: card.oracleId, quantity: card.needed }));
 }
 
@@ -213,12 +211,8 @@ async function allDecksNeed(capabilities: Capabilities, userId: UserId): Promise
  * The cards one deck is short of, as game copies: a wish counts only those, so the real copies
  * a deck may use (design doc 16) come off what it needs. Null when it isn't your deck.
  */
-async function deckNeeds(
-  capabilities: Capabilities,
-  userId: UserId,
-  deckId: number,
-): Promise<CardNeed[] | null> {
-  const view = await capabilities.deckReads.deckView(userId, deckId);
+async function deckNeeds(reads: Reads, actor: Actor, deckId: number): Promise<CardNeed[] | null> {
+  const view = await reads.decks.deckView(actor, deckId);
   if (view === null) return null;
   const lineOf = (oracleId: string) => view.lines.find((line) => line.oracleId === oracleId);
   const problems = deckProblems(

@@ -19,8 +19,8 @@ import {
   deckTokenLines,
   makeDecks,
   makeProxySheets,
+  deckQueries,
   makeTokenChoices,
-  tokenArtOptions,
   type DeckId,
   type TokenLine,
   type TokenMaker,
@@ -142,7 +142,7 @@ describe("token proxies", () => {
   it("lists every art of a token, newest first", async () => {
     const deck = await deckOf(["Carrot Cake"]);
     const [rabbit] = await deck.tokens();
-    const arts = await tokenArtOptions(db, rabbit.oracleId);
+    const arts = await deckQueries.tokenArtOptions(db, rabbit.oracleId);
     expect(arts.map((art) => art.setCode)).toEqual(["tfdn", "tblb", "tclb"]);
     expect(arts.every((art) => art.setName.length > 0)).toBe(true);
   });

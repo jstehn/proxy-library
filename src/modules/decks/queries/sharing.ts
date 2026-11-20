@@ -1,16 +1,11 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { latestPriceRows } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import { FORMATS, type Format } from "../domain/deck";
-import {
-  canViewDeck,
-  cardsToGet,
-  isValidPublicToken,
-  VISIBILITIES,
-  type Visibility,
-} from "../domain/sharing";
+import { cardsToGet, isValidPublicToken, VISIBILITIES, type Visibility } from "../domain/sharing";
 import type { DeckView } from "../domain/deck-view";
 import { deckView } from "./decks";
 
@@ -29,12 +24,17 @@ export type ViewedDeck = Readonly<{
   yourCopies: Readonly<Record<string, number>>;
 }>;
 
-/** The deck if this player may see it (invariant 1), else null. */
+/**
+ * The deck if the actor may see it (invariant 1), else null. The rule is in the SQL (design doc
+ * 67, F6): its owner, or anyone while it is shared. `canViewDeck` is the same rule in code, for
+ * the capabilities, and a test checks that the two agree.
+ */
 export async function deckForViewer(
   db: DbExecutor,
-  viewerId: UserId,
+  actor: Actor,
   deckId: number,
 ): Promise<ViewedDeck | null> {
+  const viewerId = actor.userId;
   const [row] = (
     await db.execute<{
       owner_id: string;
@@ -44,13 +44,12 @@ export async function deckForViewer(
     }>(sql`
       select d.owner_id, u.name as owner_name, d.visibility, d.public_token
         from decks d join auth_users u on u.id = d.owner_id
-       where d.id = ${deckId}
+       where d.id = ${deckId} and (d.owner_id = ${viewerId} or d.visibility = 'shared')
     `)
   ).rows;
   if (row === undefined) return null;
   const visibility = z.enum(VISIBILITIES).parse(row.visibility);
   const ownerId = UserId.of(row.owner_id);
-  if (!canViewDeck(viewerId, { ownerId, visibility })) return null;
   const view = await deckView(db, ownerId, deckId);
   if (view === null) return null;
   const isOwner = ownerId === viewerId;
@@ -100,7 +99,7 @@ export type PublicDeck = Readonly<{
 }>;
 
 /** A deck opened via its unguessable `/d/[token]` public link (design doc 47), or null. */
-export async function publicDeckByToken(db: DbExecutor, token: string): Promise<PublicDeck | null> {
+export async function publicDeck(db: DbExecutor, token: string): Promise<PublicDeck | null> {
   if (!isValidPublicToken(token)) return null;
   const [row] = (
     await db.execute<{ id: number; owner_id: string; owner_name: string }>(sql`
@@ -124,8 +123,15 @@ export type CommentView = Readonly<{
   at: string;
 }>;
 
-/** A deck's comments, oldest first. The caller has already checked the viewer may see the deck. */
-export async function deckComments(db: DbExecutor, deckId: number): Promise<CommentView[]> {
+/**
+ * A deck's comments, oldest first, to a player who may see the deck: its owner, or anyone while
+ * it is shared. A private deck's comments give an empty list to everyone else (design doc 67, F2).
+ */
+export async function deckComments(
+  db: DbExecutor,
+  actor: Actor,
+  deckId: number,
+): Promise<CommentView[]> {
   const rows = await db.execute<{
     id: number;
     author_id: string;
@@ -135,8 +141,10 @@ export async function deckComments(db: DbExecutor, deckId: number): Promise<Comm
     deleted_at: Date | null;
   }>(sql`
     select c.id, c.author_id, u.name as author_name, c.body, c.created_at, c.deleted_at
-      from deck_comments c join auth_users u on u.id = c.author_id
-     where c.deck_id = ${deckId}
+      from deck_comments c
+      join auth_users u on u.id = c.author_id
+      join decks d on d.id = c.deck_id
+     where c.deck_id = ${deckId} and (d.owner_id = ${actor.userId} or d.visibility = 'shared')
      order by c.created_at, c.id
   `);
   return rows.rows.map((row) => ({

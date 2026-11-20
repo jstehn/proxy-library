@@ -27,7 +27,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
   const printingIds = result.rows.map((row) => row.printingId);
   const [cards, inDecks] = await Promise.all([
     capabilities.printingDetails(printingIds),
-    capabilities.deckReads.decksUsing(actor.userId, printingIds),
+    reads.decks.decksUsing(actor, printingIds),
   ]);
 
   return (

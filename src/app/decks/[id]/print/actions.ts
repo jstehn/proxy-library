@@ -13,10 +13,10 @@ const TokenArtsInput = z.object({ tokenOracleId: z.string().min(1) });
 export async function tokenArtsAction(
   input: z.input<typeof TokenArtsInput>,
 ): Promise<TokenArt[] | null> {
-  const { capabilities } = await readPage();
+  const { reads } = await readPage();
   const parsed = TokenArtsInput.safeParse(input);
   if (!parsed.success) return null;
-  return capabilities.deckReads.tokenArtOptions(parsed.data.tokenOracleId);
+  return reads.decks.tokenArtOptions(parsed.data.tokenOracleId);
 }
 
 const ChooseTokenInput = z.object({

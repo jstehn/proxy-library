@@ -6,13 +6,11 @@ import { activityQueries } from "@/modules/activity";
 import {
   cardsToGetFor,
   CommentId,
-  deckComments,
-  deckForViewer,
+  deckPublicQueries,
+  deckQueries,
   decksFor,
   makeDeckSharing,
   makeDecks,
-  publicDeckByToken,
-  sharedDecks,
   type DeckId,
 } from "@/modules/decks";
 import { makeResetPlayer } from "@/modules/reset";
@@ -63,18 +61,18 @@ describe("sharing a deck", () => {
     await give("jack", "Banishing Light", 1);
     await give("sam", "Banishing Light", 3);
 
-    expect(await deckForViewer(db, sam.userId, deckId)).toBeNull();
-    expect((await deckForViewer(db, jack.userId, deckId))?.isOwner).toBe(true);
+    expect(await deckQueries.deckForViewer(db, sam, deckId)).toBeNull();
+    expect((await deckQueries.deckForViewer(db, jack, deckId))?.isOwner).toBe(true);
 
     await sharing.setVisibility(jack, { deckId, visibility: "shared" });
-    const seen = await deckForViewer(db, sam.userId, deckId);
+    const seen = await deckQueries.deckForViewer(db, sam, deckId);
     expect(seen).toMatchObject({ isOwner: false, ownerName: "jack", visibility: "shared" });
     // The owner's copies in the lines; the viewer's in yourCopies.
     const light = seen?.view.lines.find((line) => line.name === "Banishing Light");
     expect(light?.owned).toBe(1);
     expect(light && seen?.yourCopies[light.oracleId]).toBe(3);
 
-    expect(await sharedDecks(db)).toMatchObject([
+    expect(await deckQueries.sharedDecks(db)).toMatchObject([
       { name: "Lights", ownerName: "jack", cards: 14, comments: 0 },
     ]);
     expect((await decksFor(db, jack.userId))[0].visibility).toBe("shared");
@@ -116,15 +114,21 @@ describe("comments", () => {
       deckName: "Lights",
     });
     expect(
-      (await deckComments(db, deckId)).map((comment) => [comment.authorName, comment.body]),
+      (await deckQueries.deckComments(db, jack, deckId)).map((comment) => [
+        comment.authorName,
+        comment.body,
+      ]),
     ).toEqual([
       ["sam", "Needs more removal"],
       ["jack", "Agreed"],
     ]);
 
     expect((await sharing.deleteComment(admin, first.value)).ok).toBe(true);
-    expect((await deckComments(db, deckId))[0]).toMatchObject({ authorName: "sam", body: null });
-    expect((await sharedDecks(db))[0].comments).toBe(1);
+    expect((await deckQueries.deckComments(db, jack, deckId))[0]).toMatchObject({
+      authorName: "sam",
+      body: null,
+    });
+    expect((await deckQueries.sharedDecks(db))[0].comments).toBe(1);
     expect(await sharing.deleteComment(sam, CommentId.of(9999))).toEqual({
       ok: false,
       error: { kind: "CommentNotFound" },
@@ -178,9 +182,9 @@ describe("resetting a player (invariant 7)", () => {
 
     expect((await resetPlayer(admin, jack.userId)).ok).toBe(true);
     expect(await count("deck_comments", `deck_id = ${jacksDeck}`)).toBe(0);
-    expect((await deckComments(db, samsDeck.value)).map((comment) => comment.body)).toEqual([
-      "On Sam's deck",
-    ]);
+    expect(
+      (await deckQueries.deckComments(db, sam, samsDeck.value)).map((comment) => comment.body),
+    ).toEqual(["On Sam's deck"]);
     const feed = await activityQueries.feed(db, jack);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "jack")).toBe(false);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "sam")).toBe(true);
@@ -202,20 +206,20 @@ describe("public deck links (design doc 47)", () => {
     expect(enabled.ok).toBe(true);
     if (!enabled.ok) return;
 
-    const loaded = await publicDeckByToken(db, enabled.value);
+    const loaded = await deckPublicQueries.publicDeck(db, enabled.value);
     expect(loaded?.ownerName).toBe("jack");
     expect(loaded?.view.deck.name).toBe("Public Lights");
-    expect(await sharedDecks(db)).toEqual([]);
+    expect(await deckQueries.sharedDecks(db)).toEqual([]);
 
     const rotated = await sharing.rotatePublicLink(jack, { deckId });
     expect(rotated.ok).toBe(true);
     if (!rotated.ok) return;
     expect(rotated.value).not.toBe(enabled.value);
-    expect(await publicDeckByToken(db, enabled.value)).toBeNull();
-    expect((await publicDeckByToken(db, rotated.value))?.view.deck.id).toBe(deckId);
+    expect(await deckPublicQueries.publicDeck(db, enabled.value)).toBeNull();
+    expect((await deckPublicQueries.publicDeck(db, rotated.value))?.view.deck.id).toBe(deckId);
 
     await sharing.revokePublicLink(jack, { deckId });
-    expect(await publicDeckByToken(db, rotated.value)).toBeNull();
+    expect(await deckPublicQueries.publicDeck(db, rotated.value)).toBeNull();
   });
 
   it("copies a shared or public deck into the viewer's own decks (design doc 48)", async () => {
@@ -226,7 +230,7 @@ describe("public deck links (design doc 47)", () => {
     expect(copied.ok).toBe(true);
     if (!copied.ok) return;
 
-    const samsView = await deckForViewer(db, sam.userId, copied.value);
+    const samsView = await deckQueries.deckForViewer(db, sam, copied.value);
     expect(samsView?.isOwner).toBe(true);
     expect(samsView?.view.deck.name).toBe("Shared Lights (copy)");
     // deckView lists lines by mana value, then name.

@@ -146,14 +146,10 @@ export { commanderDetails, commandersICanBuild } from "./queries/commanders";
 export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "./domain/commanders";
 export type { CommanderCoverage, CommanderPlan } from "./domain/commanders";
 export type { LandReason, LandTargetReason, ManaBasePlan, PlannedLand } from "./domain/mana-base";
-export {
-  cardsToGetFor,
-  deckComments,
-  deckForViewer,
-  publicDeckByToken,
-  sharedDecks,
-  type CommentView,
-} from "./queries/sharing";
+export { canViewDeck } from "./domain/sharing";
+export { cardsToGetFor, type CommentView } from "./queries/sharing";
+export * as deckQueries from "./queries";
+export * as deckPublicQueries from "./queries/public";
 export { checkOwnedCards, findCard } from "./queries/card-facts";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
 export { type SynergyQuery } from "./domain/search-for-deck";
@@ -168,7 +164,7 @@ export {
   type ProxyOptions,
 } from "./domain/proxy-sheet";
 export { makeTokenChoices, type ChooseTokenInput } from "./application/token-choices";
-export { deckTokenLines, tokenArtOptions } from "./queries/tokens";
+export { deckTokenLines } from "./queries/tokens";
 export {
   filterTokenChecklist,
   summarizeTokenChecklist,

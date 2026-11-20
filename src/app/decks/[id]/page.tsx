@@ -25,18 +25,18 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
   const deckId = Number(id);
   if (!Number.isSafeInteger(deckId) || deckId <= 0) notFound();
   const searchParams = await props.searchParams;
 
   // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
-  const viewed = await capabilities.deckReads.deckForViewer(actor.userId, deckId);
+  const viewed = await reads.decks.deckForViewer(actor, deckId);
   if (viewed === null) notFound();
   const { view } = viewed;
   const { deck } = view;
-  const comments = await capabilities.deckReads.comments(deckId);
+  const comments = await reads.decks.deckComments(actor, deckId);
   const commentSection = (
     <DeckComments
       deckId={deck.id}
