@@ -46,6 +46,9 @@ export type StatsLine = DeckCount &
     signals?: SignalIO;
   }>;
 
+/** A deck line as the profile reads it: the statistics' line, plus its keyword abilities. */
+export type ProfileLine = StatsLine & Readonly<{ keywords?: readonly string[] }>;
+
 export type ManaSource = ManaSymbol;
 
 /** The types shown, in the order players usually list them. */

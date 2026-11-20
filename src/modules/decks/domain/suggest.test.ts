@@ -10,10 +10,10 @@ import {
   scoreLike,
   type CandidateCard,
   type DeckFingerprint,
-  type ProfileLine,
   type Scored,
 } from "./suggest";
 import { emptyRatingProfile } from "./rate";
+import type { ProfileLine } from "./stats";
 import { featuresOfText } from "../testing/deck-view";
 
 const candidate = (name: string, overrides: Partial<CandidateCard> = {}): CandidateCard => ({

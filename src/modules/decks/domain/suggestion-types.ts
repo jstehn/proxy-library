@@ -3,8 +3,8 @@ import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
 import { type Bracket, type BracketLine } from "./brackets";
 import { type Format } from "./deck";
 import type { CardRating } from "./rate";
-import type { EdhrecSignal } from "./stats";
-import { type ProfileLine, type Scored } from "./suggest";
+import type { EdhrecSignal, ProfileLine } from "./stats";
+import { type Scored } from "./suggest";
 import type { BrowseCard } from "./browse-card";
 
 // The shapes of deck suggestions (design doc 20, section 9).

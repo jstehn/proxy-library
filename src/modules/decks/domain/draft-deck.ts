@@ -9,14 +9,13 @@ import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
 import { FORMAT_RULES, formatRules } from "./format-rules";
-import { deckStats, isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { deckStats, isLand, TARGETED_TAGS, type ProfileLine, type TargetedTag } from "./stats";
 import {
   deckProfile,
   scoreForDeck,
   scoreForRole,
   type CandidateCard,
   type DeckFingerprint,
-  type ProfileLine,
   type Reason,
 } from "./suggest";
 import { strength, type RoleGap } from "./rate";
