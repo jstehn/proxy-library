@@ -4,41 +4,13 @@ import { redirect } from "next/navigation";
 import { PrintingId } from "@/modules/catalog";
 import {
   TradeId,
-  type AcceptTradeError,
-  type CounterTradeError,
-  type Shortfall,
+  describeDecideTradeError,
+  describeProposeTradeError,
   type TradeItem,
 } from "@/modules/trades";
-import { assertNever, Cents, UserId } from "@/shared/kernel";
+import { Cents, UserId } from "@/shared/kernel";
 import { draftHref, readDraft, type Draft } from "./draft";
 import { readPage } from "@/server/page-instance";
-
-function describeShortfall(shortfall: Shortfall): string {
-  const who = shortfall.side === "proposer" ? "The proposer" : "The recipient";
-  if (shortfall.what === "cards") {
-    return `${who} has ${shortfall.owned} of a card the trade needs ${shortfall.needed} of.`;
-  }
-  return `${who} has ${Cents.format(shortfall.balance)}, and the trade needs ${Cents.format(shortfall.needed)}.`;
-}
-
-function proposeMessage(error: CounterTradeError): string {
-  switch (error.kind) {
-    case "CannotTradeWithYourself":
-      return "You can't trade with yourself.";
-    case "PlayerNotFound":
-      return "That player can't trade right now.";
-    case "OfferInvalid":
-      return `The offer isn't valid: ${error.reason}.`;
-    case "OfferNotPossible":
-      return describeShortfall(error.shortfall);
-    case "TradeNotFound":
-      return "That trade isn't waiting for you.";
-    case "AlreadyDecided":
-      return `That trade was already ${error.status}.`;
-    default:
-      return assertNever(error);
-  }
-}
 
 /** The draft's items, from the proposer's point of view (you are the proposer). */
 function itemsOf(draft: Draft): TradeItem[] | null {
@@ -91,23 +63,10 @@ export async function proposeTradeAction(formData: FormData): Promise<void> {
           items: items ?? [],
           message,
         });
-  if (!result.ok) back(proposeMessage(result.error));
+  if (!result.ok) back(describeProposeTradeError(result.error));
   revalidatePath("/trades");
   revalidatePath("/", "layout"); // the badge
   redirect(`/trades/${result.ok ? result.value : ""}`);
-}
-
-function acceptMessage(error: AcceptTradeError): string {
-  switch (error.kind) {
-    case "TradeNotFound":
-      return "That trade isn't yours to decide.";
-    case "AlreadyDecided":
-      return `That trade was already ${error.status}.`;
-    case "NoLongerPossible":
-      return `This trade can't happen any more. ${describeShortfall(error.shortfall)} Nothing was moved; decline it or counter.`;
-    default:
-      return assertNever(error);
-  }
 }
 
 /** Accept, decline or cancel. */
@@ -126,6 +85,8 @@ export async function decideTradeAction(formData: FormData): Promise<void> {
   revalidatePath(`/trades/${tradeId}`);
   revalidatePath("/", "layout"); // the badge and the balance
   if (!result.ok)
-    redirect(`/trades/${tradeId}?error=${encodeURIComponent(acceptMessage(result.error))}`);
+    redirect(
+      `/trades/${tradeId}?error=${encodeURIComponent(describeDecideTradeError(result.error))}`,
+    );
   redirect(`/trades/${tradeId}`);
 }

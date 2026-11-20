@@ -7,6 +7,7 @@ export type {
   TradesDependencies,
   TradesServices,
 } from "./application/ports";
+export { describeDecideTradeError, describeProposeTradeError } from "./application/describe-error";
 export { closeOpenTrades } from "./application/close-open-trades";
 export {
   makeTrades,
