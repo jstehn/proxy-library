@@ -5,6 +5,8 @@ export type CardText = Readonly<{
   oracleId: string;
   faces: ReadonlyArray<Pick<CardFace, "typeLine" | "text">>;
   producedMana: readonly string[];
+  /** Scryfall's keyword list for the card ("Cycling", "Blitz"), not read from the text. */
+  keywords: readonly string[];
 }>;
 
 /** Whether and how much mana a card adds when tapped (moved unchanged from decks/domain/mana.ts). */
@@ -26,6 +28,8 @@ export type CardFeatureFields = Readonly<{
   entersTapped: EntersTapped;
   /** The card gives an opponent something (cards, life, mana, a creature): a drawback on a land. */
   helpsOpponents: boolean;
+  /** The `is:` land cycles the card belongs to ("shockland", …); empty when it is not a land. */
+  landCycles: readonly string[];
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

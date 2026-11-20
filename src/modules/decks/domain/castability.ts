@@ -20,7 +20,8 @@ export type CastabilityLine = DeckCount &
   Readonly<{
     manaCost?: string | null;
     producedMana?: readonly string[];
-    text?: string;
+    /** Scryfall's keyword list ("Blitz" makes the blitz cost reducers apply). */
+    keywords?: readonly string[];
     power?: string | number | null;
     /** What the card does when tapped for mana: the catalog's card features (design doc 66). */
     tapMana: TapMana;
@@ -191,7 +192,7 @@ export function simulateCastOnCurve(
       const effMv = effectiveManaValue(
         line.manaValue,
         {
-          oracleText: line.text,
+          isBlitz: line.keywords?.includes("Blitz"),
           typeLine: line.typeLine,
           manaCost: line.manaCost,
           power: line.power,

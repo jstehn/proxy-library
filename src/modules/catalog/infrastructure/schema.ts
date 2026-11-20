@@ -411,9 +411,14 @@ export const cardFeatures = pgTable(
     oracleId: text("oracle_id").primaryKey(),
     features: jsonb("features").notNull(),
     featuresVersion: integer("features_version").notNull(),
+    // Copied from `features` for `is:shockland` and the other land cycles (design doc 66, question 9).
+    landCycles: text("land_cycles").array().notNull().default([]),
     updatedAt: timestamptz("updated_at").notNull(),
   },
-  (table) => [index("card_features_version_idx").on(table.featuresVersion)],
+  (table) => [
+    index("card_features_version_idx").on(table.featuresVersion),
+    index("card_features_land_cycles_idx").using("gin", table.landCycles),
+  ],
 );
 
 /** Official MTG Comprehensive Rules with pgvector embeddings (design doc 60). */

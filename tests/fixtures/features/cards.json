@@ -2,12 +2,22 @@
   {
     "name": "Sol Ring",
     "producedMana": ["C"],
-    "faces": [{ "typeLine": "Artifact", "text": "{T}: Add {C}{C}." }]
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "{T}: Add {C}{C}."
+      }
+    ]
   },
   {
     "name": "Llanowar Elves",
     "producedMana": ["G"],
-    "faces": [{ "typeLine": "Creature — Elf Druid", "text": "{T}: Add {G}." }]
+    "faces": [
+      {
+        "typeLine": "Creature — Elf Druid",
+        "text": "{T}: Add {G}."
+      }
+    ]
   },
   {
     "name": "Arcane Signet",
@@ -22,7 +32,12 @@
   {
     "name": "Birds of Paradise",
     "producedMana": ["W", "U", "B", "R", "G"],
-    "faces": [{ "typeLine": "Creature — Bird", "text": "Flying\n{T}: Add one mana of any color." }]
+    "faces": [
+      {
+        "typeLine": "Creature — Bird",
+        "text": "Flying\n{T}: Add one mana of any color."
+      }
+    ]
   },
   {
     "name": "Mind Stone",
@@ -37,24 +52,42 @@
   {
     "name": "Dark Ritual",
     "producedMana": ["B"],
-    "faces": [{ "typeLine": "Instant", "text": "Add {B}{B}{B}." }]
+    "faces": [
+      {
+        "typeLine": "Instant",
+        "text": "Add {B}{B}{B}."
+      }
+    ]
   },
   {
     "name": "Wrath of God",
     "producedMana": [],
     "faces": [
-      { "typeLine": "Sorcery", "text": "Destroy all creatures. They can't be regenerated." }
+      {
+        "typeLine": "Sorcery",
+        "text": "Destroy all creatures. They can't be regenerated."
+      }
     ]
   },
   {
     "name": "Forest",
     "producedMana": ["G"],
-    "faces": [{ "typeLine": "Basic Land — Forest", "text": "({T}: Add {G}.)" }]
+    "faces": [
+      {
+        "typeLine": "Basic Land — Forest",
+        "text": "({T}: Add {G}.)"
+      }
+    ]
   },
   {
     "name": "Wastes",
     "producedMana": ["C"],
-    "faces": [{ "typeLine": "Basic Land", "text": "({T}: Add {C}.)" }]
+    "faces": [
+      {
+        "typeLine": "Basic Land",
+        "text": "({T}: Add {C}.)"
+      }
+    ]
   },
   {
     "name": "Command Tower",
@@ -129,7 +162,12 @@
   {
     "name": "Reliquary Tower",
     "producedMana": ["C"],
-    "faces": [{ "typeLine": "Land", "text": "You have no maximum hand size.\n{T}: Add {C}." }]
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "You have no maximum hand size.\n{T}: Add {C}."
+      }
+    ]
   },
   {
     "name": "Overgrown Tomb",
@@ -149,15 +187,24 @@
         "typeLine": "Instant",
         "text": "Put any number of cards from your hand on the bottom of your library, then draw that many cards plus one."
       },
-      { "typeLine": "Land", "text": "Valakut Stoneforge enters tapped.\n{T}: Add {R}." }
+      {
+        "typeLine": "Land",
+        "text": "Valakut Stoneforge enters tapped.\n{T}: Add {R}."
+      }
     ]
   },
   {
     "name": "Bala Ged Recovery // Bala Ged Sanctuary",
     "producedMana": ["G"],
     "faces": [
-      { "typeLine": "Sorcery", "text": "Return target card from your graveyard to your hand." },
-      { "typeLine": "Land", "text": "Bala Ged Sanctuary enters tapped.\n{T}: Add {G}." }
+      {
+        "typeLine": "Sorcery",
+        "text": "Return target card from your graveyard to your hand."
+      },
+      {
+        "typeLine": "Land",
+        "text": "Bala Ged Sanctuary enters tapped.\n{T}: Add {G}."
+      }
     ]
   },
   {
@@ -168,7 +215,10 @@
         "typeLine": "Creature — Human Wizard",
         "text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform Delver of Secrets."
       },
-      { "typeLine": "Creature — Human Insect", "text": "Flying" }
+      {
+        "typeLine": "Creature — Human Insect",
+        "text": "Flying"
+      }
     ]
   },
   {
@@ -235,7 +285,10 @@
     "name": "Gaea's Cradle",
     "producedMana": ["G"],
     "faces": [
-      { "typeLine": "Legendary Land", "text": "{T}: Add {G} for each creature you control." }
+      {
+        "typeLine": "Legendary Land",
+        "text": "{T}: Add {G} for each creature you control."
+      }
     ]
   },
   {
@@ -265,6 +318,163 @@
       {
         "typeLine": "Land",
         "text": "{T}: Add one mana of any color.\nWhen Forbidden Orchard becomes tapped, target opponent creates a 1/1 colorless Spirit creature token."
+      }
+    ]
+  },
+  {
+    "name": "Volcanic Island",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land — Island Mountain",
+        "text": "({T}: Add {U} or {R}.)"
+      }
+    ]
+  },
+  {
+    "name": "Steam Vents",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land — Island Mountain",
+        "text": "({T}: Add {U} or {R}.)\nAs Steam Vents enters, you may pay 2 life. If you don't, it enters tapped."
+      }
+    ]
+  },
+  {
+    "name": "Scalding Tarn",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}, Pay 1 life, Sacrifice Scalding Tarn: Search your library for an Island or Mountain card, put it onto the battlefield, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Sulfur Falls",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "This land enters tapped unless you control an Island or a Mountain.\n{T}: Add {U} or {R}."
+      }
+    ]
+  },
+  {
+    "name": "Spirebluff Canal",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {U} or {R}."
+      }
+    ]
+  },
+  {
+    "name": "Stormcarved Coast",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {U} or {R}."
+      }
+    ]
+  },
+  {
+    "name": "Shivan Reef",
+    "producedMana": ["C", "U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add {C}.\n{T}: Add {U} or {R}. Shivan Reef deals 1 damage to you."
+      }
+    ]
+  },
+  {
+    "name": "Izzet Boilerworks",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Izzet Boilerworks enters tapped.\nWhen Izzet Boilerworks enters, return a land you control to its owner's hand.\n{T}: Add {U}{R}."
+      }
+    ]
+  },
+  {
+    "name": "Temple of Epiphany",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Temple of Epiphany enters tapped.\nWhen Temple of Epiphany enters, scry 1.\n{T}: Add {U} or {R}."
+      }
+    ]
+  },
+  {
+    "name": "Swiftwater Cliffs",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Swiftwater Cliffs enters tapped.\nWhen Swiftwater Cliffs enters, you gain 1 life.\n{T}: Add {U} or {R}."
+      }
+    ]
+  },
+  {
+    "name": "Ketria Triome",
+    "producedMana": ["G", "U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land — Forest Island Mountain",
+        "text": "({T}: Add {G}, {U}, or {R}.)\nKetria Triome enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)"
+      }
+    ],
+    "keywords": ["Cycling"]
+  },
+  {
+    "name": "Canyon Slough",
+    "producedMana": ["B", "R"],
+    "faces": [
+      {
+        "typeLine": "Land — Swamp Mountain",
+        "text": "({T}: Add {B} or {R}.)\nCanyon Slough enters tapped.\nCycling {2} ({2}, Discard this card: Draw a card.)"
+      }
+    ],
+    "keywords": ["Cycling"]
+  },
+  {
+    "name": "Raging Ravine",
+    "producedMana": ["R", "G"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Raging Ravine enters tapped.\n{T}: Add {R} or {G}.\n{2}{R}{G}: Until end of turn, Raging Ravine becomes a 3/3 red and green Elemental creature with \"Whenever this creature attacks, put a +1/+1 counter on it.\" It's still a land."
+      }
+    ]
+  },
+  {
+    "name": "Riverglide Pathway // Lavaglide Pathway",
+    "producedMana": ["U", "R"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add {U}."
+      },
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add {R}."
+      }
+    ]
+  },
+  {
+    "name": "Tenacious Underdog",
+    "producedMana": [],
+    "keywords": ["Blitz"],
+    "faces": [
+      {
+        "typeLine": "Creature — Human Warlock",
+        "text": "Blitz—{2}{B}{B}, Pay 2 life. (If you cast this spell for its blitz cost, it gains haste and \"When this creature dies, draw a card.\" Sacrifice it at the beginning of the next end step.)\nYou may cast Tenacious Underdog from your graveyard using its blitz ability."
       }
     ]
   }

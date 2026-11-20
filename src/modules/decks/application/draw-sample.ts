@@ -149,7 +149,7 @@ function mustCastOption(
     {
       typeLine: line.typeLine,
       manaCost: line.manaCost,
-      oracleText: line.text,
+      isBlitz: line.keywords.includes("Blitz"),
       isCommander: line.board === "commander",
     },
     commanderOnlyProfile(profile ?? undefined, commanderNames),

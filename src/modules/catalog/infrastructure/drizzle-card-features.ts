@@ -18,6 +18,7 @@ export function drizzleCardFeatureStore(db: DbExecutor): CardFeatureStore {
             oracleId: row.oracleId,
             features: row.features,
             featuresVersion: row.features.featuresVersion,
+            landCycles: [...row.features.landCycles],
             updatedAt,
           })),
         )
@@ -26,6 +27,7 @@ export function drizzleCardFeatureStore(db: DbExecutor): CardFeatureStore {
           set: {
             features: sql`excluded.features`,
             featuresVersion: sql`excluded.features_version`,
+            landCycles: sql`excluded.land_cycles`,
             updatedAt: sql`excluded.updated_at`,
           },
         });

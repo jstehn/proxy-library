@@ -358,6 +358,13 @@
       "when": 1795154353644,
       "tag": "0050_card_features",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1795199103561,
+      "tag": "0051_land_cycles",
+      "breakpoints": true
     }
   ]
 }

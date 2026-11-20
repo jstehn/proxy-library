@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { catalogQueries } from "@/modules/catalog";
-import { actor, close, db, loadFixtureCatalog, resetPlayers } from "./harness";
+import { actor, close, db, fixtureCatalog, loadFixtureCatalog, resetPlayers } from "./harness";
 
 afterAll(close);
 
@@ -36,6 +36,7 @@ async function add(card: TestCard): Promise<void> {
   const faces = [
     {
       name: card.name.split(" // ")[0],
+      typeLine: card.typeLine.split(" // ")[0],
       text: card.text,
       power: card.power ?? null,
       toughness: card.toughness ?? null,
@@ -43,7 +44,16 @@ async function add(card: TestCard): Promise<void> {
       defense: null,
     },
     ...(card.backFace
-      ? [{ ...card.backFace, power: null, toughness: null, loyalty: null, defense: null }]
+      ? [
+          {
+            ...card.backFace,
+            typeLine: card.typeLine.split(" // ")[1],
+            power: null,
+            toughness: null,
+            loyalty: null,
+            defense: null,
+          },
+        ]
       : []),
   ];
   await db.execute(sql`
@@ -257,6 +267,7 @@ beforeAll(async () => {
     insert into card_sets (code, name, release_date, type, keyrune_code, is_enabled)
     values ('TST', 'Search test', '2024-01-01', 'expansion', 'tst', true)`);
   for (const card of [...LANDS, ...SPELLS]) await add(card);
+  await fixtureCatalog().featuresPass(); // stores the land cycles that `is:` reads
 });
 
 describe("land cycles (rule 17)", () => {

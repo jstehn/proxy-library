@@ -17,7 +17,7 @@ import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
-import { manaFeatures, withFeatures, type ManaFeatures } from "./card-features";
+import { cardFeaturesOf, withFeatures, type FeaturesOf } from "./card-features";
 import { type SuggestionContext } from "../domain/suggestion-types";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
@@ -58,7 +58,7 @@ function playableLand(format: string, colorLimit: readonly string[] | null): SQL
     and p.type_line !~ '^Basic\\y.*\\yLand\\y' and ${identity} and ${legal}`;
 }
 
-function toCandidate(featuresOf: (oracleId: string) => ManaFeatures, row: LandRow): LandCandidate {
+function toCandidate(featuresOf: FeaturesOf, row: LandRow): LandCandidate {
   const { entersTapped, helpsOpponents } = featuresOf(row.oracle_id);
   return {
     oracleId: row.oracle_id,
@@ -173,7 +173,7 @@ export async function landPoolsForDeck(
 
   const ownedRows = owned.rows.filter(withinTarget);
   const storeRows = store.rows.filter(withinTarget);
-  const featuresOf = await manaFeatures(
+  const featuresOf = await cardFeaturesOf(
     db,
     [...ownedRows, ...basics.rows, ...storeRows].map((row) => row.oracle_id),
   );
@@ -237,7 +237,7 @@ export async function manaBasePlan(
     manaValue: line.manaValue,
     manaCost: line.manaCost ?? null,
     producedMana: line.producedMana ?? [],
-    text: line.text ?? "",
+    keywords: line.keywords ?? [],
   }));
   const afterLines = [
     ...beforeLines,
