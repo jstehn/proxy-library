@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
-import { MAX_LIST_LINES, type BuyListError, type ListQuote } from "@/modules/store";
+import { MAX_LIST_LINES, describeBuyListError, type ListQuote } from "@/modules/store";
 import { Cents, FinishSchema } from "@/shared/kernel";
 import { readPage } from "@/server/page-instance";
 
@@ -64,7 +64,7 @@ export async function buyListAction(input: z.input<typeof BuyInput>): Promise<Bu
   if (!result.ok) {
     return {
       ok: false,
-      message: buyListMessage(result.error),
+      message: describeBuyListError(result.error),
       pricesChanged: result.error.kind === "PricesChanged",
     };
   }
@@ -74,21 +74,4 @@ export async function buyListAction(input: z.input<typeof BuyInput>): Promise<Bu
     ok: true,
     message: `Bought ${cards} ${cards === 1 ? "card" : "cards"} for ${Cents.format(total)}. They're in your collection.`,
   };
-}
-
-function buyListMessage(error: BuyListError): string {
-  switch (error.kind) {
-    case "ListEmpty":
-      return "There's nothing to buy in this list.";
-    case "ListTooLong":
-      return `At most ${error.max} lines at once.`;
-    case "QuantityInvalid":
-      return `Each line can buy 1 to ${error.max} copies.`;
-    case "LineNotForSale":
-      return `Line ${error.line + 1} can't be bought any more. Nothing was bought.`;
-    case "PricesChanged":
-      return `Prices changed since you looked: it's now ${Cents.format(error.total)}. Nothing was bought; check the new total and buy again.`;
-    case "InsufficientFunds":
-      return `That's ${Cents.format(error.required)}, and you have ${Cents.format(error.balance)}. Nothing was bought.`;
-  }
 }
