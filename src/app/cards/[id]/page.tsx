@@ -37,8 +37,8 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
     await Promise.all([
       capabilities.catalogReads.priceHistory(id),
       capabilities.collectionReads.ownedCopies(actor.userId, id),
-      capabilities.storeReads.singleHistory(actor.userId, id),
-      capabilities.storeReads.buylistRate(),
+      reads.store.singleHistory(actor, id),
+      reads.store.buylistRate(),
       capabilities.deckReads.decksUsing(actor.userId, [id]),
       capabilities.realCollectionReads.copiesOf(actor.userId, id),
       capabilities.realCollectionReads.printingsOfSameCard(id),

@@ -3,6 +3,7 @@ import { CardTile } from "@/app/_components/card-tile";
 import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
 import { type OpenedCard, type OpeningView } from "@/modules/inventory";
 import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
@@ -115,7 +116,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(capabilities, packs, cards, themes)}>
+        <PackOpener packs={await openerPacks(capabilities, reads, packs, cards, themes)}>
           {results}
         </PackOpener>
       ) : (
@@ -131,6 +132,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
  */
 async function openerPacks(
   capabilities: Capabilities,
+  reads: Reads,
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
   themes: ReadonlyMap<number, string>,
@@ -141,7 +143,7 @@ async function openerPacks(
       setCodes.map(async (code) => {
         const [set, page] = await Promise.all([
           capabilities.catalogReads.findSet(code),
-          capabilities.storeReads.page(code),
+          reads.store.page(code),
         ]);
         return [code, { set, featured: page?.set.featured ?? null }] as const;
       }),

@@ -63,11 +63,11 @@ function DraftRow(props: { draft: DraftSummary; canJoin: boolean }) {
 }
 
 export default async function DraftsPage(props: PageProps<"/drafts">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const [overview, boosters, prices] = await Promise.all([
     capabilities.draftReads.overview(actor.userId),
     capabilities.draftReads.boosters(),
-    capabilities.storeReads.packMsrps(),
+    reads.store.packMsrps(),
   ]);
   const error = (await props.searchParams).error;
   const seatedSomewhere = overview.open.some((draft) => draft.youAreSeated);

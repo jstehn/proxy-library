@@ -23,21 +23,7 @@ export {
   type QuoteLine,
   type QuoteOptions,
 } from "./domain/shopping-list";
-export { quoteShoppingList } from "./queries/shopping-list";
-export {
-  currentBuylistRate,
-  currentPricingMode,
-  msrpsBelowResale,
-  singleHistory,
-  type SingleHistoryRow,
-  kindPrices,
-  packMsrp,
-  packMsrps,
-  packPrice,
-  productPrices,
-  storePage,
-  storeSearch,
-  type ProductForSale,
-  type StorePage,
-} from "./queries/store";
+export type { SingleHistoryRow, ProductForSale, StorePage } from "./queries/store";
+export { packMsrp } from "./queries/pack-msrp";
+export * as storeQueries from "./queries";
 export { describeBuySealedError } from "./application/describe-error";

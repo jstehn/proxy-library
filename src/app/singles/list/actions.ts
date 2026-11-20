@@ -20,11 +20,11 @@ const QuoteInput = z.object({
 export async function quoteListAction(
   input: z.input<typeof QuoteInput>,
 ): Promise<ListQuote | null> {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const parsed = QuoteInput.safeParse(input);
   if (!parsed.success) return null;
   const { text, preference, onlyMissing, chosen } = parsed.data;
-  return capabilities.storeReads.quoteShoppingList(actor.userId, text, {
+  return reads.store.quoteShoppingList(actor, text, {
     preference,
     onlyMissing,
     chosen: Object.fromEntries(Object.entries(chosen).map(([line, id]) => [Number(line), id])),

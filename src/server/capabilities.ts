@@ -1,7 +1,6 @@
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
-import { wireStoreCapabilities } from "@/modules/store/wiring";
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
@@ -111,7 +110,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireCollectionCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireDraftCapabilities({ db }),
-    ...wireStoreCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
       clock,

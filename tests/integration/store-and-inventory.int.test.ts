@@ -1,5 +1,6 @@
 // Buying and opening sealed product against real Postgres (design doc 06, section 12), with the
 // catalog loaded from recorded fixtures (no network).
+import { testAdminActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SealedProductId } from "@/modules/catalog";
@@ -7,8 +8,7 @@ import { makeInventory, type Item } from "@/modules/inventory";
 import {
   makeStore,
   PRICING_MODES,
-  productPrices,
-  storePage,
+  storeQueries,
   storePrice,
   type PricingMode,
 } from "@/modules/store";
@@ -129,7 +129,7 @@ describe("opening", () => {
 
 describe("official photos, MSRPs and details from WPN (design doc 13)", () => {
   it("shows the photos and WPN's details; a case keeps its generated art", async () => {
-    const page = await storePage(db, "BLB");
+    const page = await storeQueries.page(db, "BLB");
     const product = (name: string) => page?.products.find((p) => p.name === name);
     expect(page?.set.keyArtId).toMatch(/^[A-Za-z0-9]+-[a-f0-9]{12}$/);
     expect(product("Bloomburrow Play Booster Pack")?.photoIds).toHaveLength(1);
@@ -143,7 +143,7 @@ describe("official photos, MSRPs and details from WPN (design doc 13)", () => {
     await db.execute(
       sql`update wpn_products set msrp_cents = 599 where name = 'Bloomburrow Play Booster'`,
     );
-    const shown = (await storePage(db, "BLB"))?.products.find(
+    const shown = (await storeQueries.page(db, "BLB"))?.products.find(
       (p) => p.name === "Bloomburrow Play Booster Pack",
     )?.msrp;
     expect(shown).toBe(599); // not the kind's $5.49
@@ -172,7 +172,7 @@ describe("the resale floor (design doc 27)", () => {
     const floor = Math.ceil((Number(row.value_cents) * 5000) / 10_000);
     expect(floor).toBeGreaterThan(549);
 
-    const shown = (await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK);
+    const shown = (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK);
     expect(shown).toMatchObject({ msrp: floor, listPrice: 549 });
     await buy(PLAY_PACK);
     expect(await balance("jack")).toBe(5000 - floor);
@@ -199,16 +199,19 @@ describe("the resale floor (design doc 27)", () => {
         join card_sets s on s.code = sp.set_code and s.is_enabled
        where sp.is_listed and jsonb_array_length(sp.contents) > 0`);
     const priceList = drizzlePriceList(db);
-    const pages = new Map<string, Awaited<ReturnType<typeof storePage>>>();
+    const pages = new Map<string, Awaited<ReturnType<typeof storeQueries.page>>>();
     let raised = 0;
     for (const row of listings.rows) {
-      if (!pages.has(row.set_code)) pages.set(row.set_code, await storePage(db, row.set_code));
+      if (!pages.has(row.set_code))
+        pages.set(row.set_code, await storeQueries.page(db, row.set_code));
       const listing = await priceList.listing(SealedProductId.of(row.id));
       if (listing === null) throw new Error(`no listing for ${row.id}`);
       const expected = storePrice({ ...listing, buylistRateBps: 5000, pricingMode });
       const shown = pages.get(row.set_code)?.products.find((p) => p.id === row.id);
       expect(shown?.msrp ?? null).toBe(expected?.price ?? null);
-      const adminRow = (await productPrices(db, row.set_code)).find((p) => p.id === row.id);
+      const adminRow = (await storeQueries.productPrices(db, testAdminActor(), row.set_code)).find(
+        (p) => p.id === row.id,
+      );
       expect(adminRow?.storePrice ?? null).toBe(expected?.price ?? null);
       if (expected?.isRaised) raised++;
     }
@@ -220,7 +223,7 @@ describe("the resale floor (design doc 27)", () => {
       sql`update wpn_products set msrp_cents = 599 where name = 'Bloomburrow Play Booster'`,
     );
     const shown = async () =>
-      (await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp;
+      (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp;
     expect(await shown()).toBe(599); // the default, MSRP pricing
     await buy(PLAY_PACK);
     expect(await balance("jack")).toBe(5000 - 599);
@@ -239,18 +242,26 @@ describe("the resale floor (design doc 27)", () => {
 
   it("is gone when the store stops buying, and an admin's own price is never raised", async () => {
     await store.setProductPrice(admin, { productId: PLAY_PACK, price: Cents.of(100) });
-    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp).toBe(100);
+    expect(
+      (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp,
+    ).toBe(100);
     await db.execute(sql`delete from msrp_overrides`);
     await db.execute(sql`update store_settings set buylist_rate_bps = 0 where id = 1`);
-    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp).toBe(549);
+    expect(
+      (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)?.msrp,
+    ).toBe(549);
   });
 
   it("keeps kind-priced products off sale until they're valued in value-based pricing, and values them again", async () => {
     await db.execute(sql`update store_settings set pricing_mode = 'value' where id = 1`);
     await db.execute(sql`delete from product_values`);
-    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)).toBeUndefined();
+    expect(
+      (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK),
+    ).toBeUndefined();
     expect(await store.valueProductsIfStale()).toMatchObject({ partial: 0 });
-    expect((await storePage(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK)).toBeDefined();
+    expect(
+      (await storeQueries.page(db, "BLB"))?.products.find((p) => p.id === PLAY_PACK),
+    ).toBeDefined();
     expect(await store.valueProductsIfStale()).toBeNull();
   });
 });

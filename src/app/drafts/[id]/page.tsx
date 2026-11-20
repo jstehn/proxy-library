@@ -178,7 +178,7 @@ async function loreSources(
   const [items, options, prices] = await Promise.all([
     reads.inventory.unopenedItems(actor),
     capabilities.draftReads.boosterOptions(),
-    capabilities.storeReads.packMsrps(),
+    reads.store.packMsrps(),
   ]);
   return {
     inventory: items

@@ -9,13 +9,13 @@ import { categoryLabel, productLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
 
 export default async function StorePage(props: PageProps<"/store">) {
-  const { capabilities } = await readPage();
+  const { capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const query = typeof searchParams.q === "string" ? searchParams.q : "";
   const category = typeof searchParams.category === "string" ? searchParams.category : "";
   const isSearching = query.trim() !== "" || category.trim() !== "";
 
-  const result = await capabilities.storeReads.search({ query, category });
+  const result = await reads.store.search({ query, category });
   const commanders = await capabilities.printingDetails(
     result.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])),
   );

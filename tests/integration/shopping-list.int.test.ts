@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId } from "@/modules/catalog";
 import { deckProblems, deckView, makeDecks, shortList } from "@/modules/decks";
-import { makeStore, quoteShoppingList, type QuoteOptions } from "@/modules/store";
+import { makeStore, storeQueries, type QuoteOptions } from "@/modules/store";
 import { Cents, err } from "@/shared/kernel";
 import {
   actor,
@@ -26,7 +26,7 @@ const jack = actor("jack");
 const store = makeStore({ unitOfWork, clock });
 const DEFAULTS: QuoteOptions = { preference: "cheapest", onlyMissing: true, chosen: {} };
 const quote = (text: string, options: Partial<QuoteOptions> = {}) =>
-  quoteShoppingList(db, jack.userId, text, { ...DEFAULTS, ...options });
+  storeQueries.quoteShoppingList(db, jack, text, { ...DEFAULTS, ...options });
 
 describe("quoting a list", () => {
   it("picks the cheapest printing for sale, or a named one, with the menu of others", async () => {
