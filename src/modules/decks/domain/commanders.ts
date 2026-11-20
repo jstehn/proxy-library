@@ -188,8 +188,8 @@ function onColor(candidate: CommanderCandidate, pool: readonly PreparedCard[]): 
 }
 
 /**
- * Whether a card shares a theme, tribe or keyword with the plan: `deckFit(card, plan).points > 0`
- * (every weight is positive), without building the reasons. A test checks the two agree.
+ * Whether a card shares a theme, tribe or keyword with the plan: `fitReasons(card, plan)` is not empty
+ * (once the plan has no role gaps), without building the reasons.
  */
 export function sharesPlan(entry: PreparedCard, plan: DeckFingerprint): boolean {
   const { card } = entry;
