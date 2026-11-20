@@ -100,7 +100,7 @@ export async function removeRealProductAction(formData: FormData): Promise<void>
 
 /** Makes a deck (real cards on) from each precon a real product holds (rule 11). */
 async function makeDecks(
-  { actor, capabilities }: PageContext,
+  { actor, capabilities }: Pick<PageContext, "actor" | "capabilities">,
   decks: readonly ProductDeck[],
 ): Promise<{ made: Array<{ id: number; name: string }>; failed: string[] }> {
   const made: Array<{ id: number; name: string }> = [];

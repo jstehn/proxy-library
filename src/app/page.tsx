@@ -22,8 +22,8 @@ const sections = [
 
 export default async function Home() {
   // Runs on the server: a Server Component, the default in the App Router.
-  const { actor, capabilities } = await readPage();
-  const recent = await capabilities.activityReads.feed(5);
+  const { actor, reads } = await readPage();
+  const recent = await reads.activity.feed(actor, { limit: 5 });
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">

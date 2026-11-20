@@ -33,6 +33,7 @@ const context = (scopes: Scope[] = ["read", "decks:write", "wishlist:write"]): T
   scopes,
   allows: (scope) => allows(scopes, scope),
   capabilities: core.capabilities,
+  reads: core.reads,
 });
 
 async function connect(scopes?: Scope[]): Promise<Client> {

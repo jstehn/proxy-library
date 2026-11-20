@@ -3,6 +3,7 @@
 // hands them to the functions that need them. Each phase adds its module's services here.
 import { randomBytes, randomUUID } from "node:crypto";
 import { buildCapabilities } from "./capabilities";
+import { buildPublicReads, buildReads } from "./reads";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -279,6 +280,8 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
+    reads: buildReads(db),
+    publicReads: buildPublicReads(),
     capabilities: buildCapabilities({
       db,
       clock,

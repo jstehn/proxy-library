@@ -34,6 +34,7 @@ const context: ToolContext = {
   scopes: ["read", "decks:write", "wishlist:write"],
   allows: () => true,
   capabilities: core.capabilities,
+  reads: core.reads,
 };
 
 /** Ids, fingerprints and timestamps vary between runs: replace them with placeholders. */

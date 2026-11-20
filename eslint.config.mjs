@@ -200,6 +200,8 @@ const policies = [
     cardSearch,
     cardSearchSql, // searches run as SQL in queries (ADR 0017)
   ),
+  // A query takes the `Actor` (design doc 67): another module's public API, for its types only.
+  { from: layer("queries"), allow: { to: publicApi, dependency: { kind: "type" } } },
   from(
     layer("testing"),
     el("kernel"),

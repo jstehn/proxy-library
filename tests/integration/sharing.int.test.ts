@@ -2,7 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { activityFeed } from "@/modules/activity";
+import { activityQueries } from "@/modules/activity";
 import {
   cardsToGetFor,
   CommentId,
@@ -78,7 +78,7 @@ describe("sharing a deck", () => {
       { name: "Lights", ownerName: "jack", cards: 14, comments: 0 },
     ]);
     expect((await decksFor(db, jack.userId))[0].visibility).toBe("shared");
-    const feed = await activityFeed(db);
+    const feed = await activityQueries.feed(db, jack);
     expect(feed[0]).toMatchObject({ kind: "deckShared", actor: "jack", deckName: "Lights" });
   });
 
@@ -87,7 +87,7 @@ describe("sharing a deck", () => {
     await sharing.setVisibility(jack, { deckId, visibility: "shared" });
     await sharing.postComment(sam, { deckId, body: "Nice" });
     const aboutLights = async () =>
-      (await activityFeed(db)).filter(
+      (await activityQueries.feed(db, jack)).filter(
         (item) =>
           (item.kind === "deckShared" || item.kind === "deckComment") && item.deckId === deckId,
       );
@@ -109,7 +109,7 @@ describe("comments", () => {
     await sharing.postComment(jack, { deckId, body: "Agreed" });
     if (!first.ok) throw new Error(first.error.kind);
 
-    expect((await activityFeed(db))[0]).toMatchObject({
+    expect((await activityQueries.feed(db, jack))[0]).toMatchObject({
       kind: "deckComment",
       actor: "sam",
       other: "jack",
@@ -181,7 +181,7 @@ describe("resetting a player (invariant 7)", () => {
     expect((await deckComments(db, samsDeck.value)).map((comment) => comment.body)).toEqual([
       "On Sam's deck",
     ]);
-    const feed = await activityFeed(db);
+    const feed = await activityQueries.feed(db, jack);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "jack")).toBe(false);
     expect(feed.some((item) => item.kind === "deckShared" && item.actor === "sam")).toBe(true);
     // Sam's comment on Jack's deleted deck would link nowhere, so it's gone from the feed too;
