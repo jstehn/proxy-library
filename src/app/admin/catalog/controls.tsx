@@ -3,14 +3,10 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import type { AdminSetRow } from "@/modules/catalog";
 import { Alert, SubmitButton } from "@/ui/form";
-import {
-  enableStandardSetsAction,
-  requestSyncAction,
-  setSetEnabledAction,
-  type CatalogActionState,
-} from "./actions";
+import { enableStandardSetsAction, requestSyncAction, setSetEnabledAction } from "./actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: CatalogActionState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 export function SyncButtons() {
   const [state, formAction] = useActionState(requestSyncAction, initialState);
