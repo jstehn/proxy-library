@@ -7,6 +7,7 @@
 // text for the recurring-phrase search.
 import { hasTypeWord, plainText, type SignalKind, type Theme } from "@/shared/kernel";
 import type { CardText, Recognizer, SignalFact } from "../types";
+import { grantedKeywords } from "./grants";
 
 const r = (source: string) => new RegExp(source, "i");
 
@@ -377,7 +378,16 @@ export const signals: Recognizer<"signals"> = {
 function themesOf(card: CardText, direction: "makes" | "uses"): Theme[] {
   const typeLine = typeLineOf(card);
   const texts = plainFacesOf(card);
-  return MAKES_USES_RULES.filter((rule) => {
+  // Haste: a card that grants it makes it, a creature with haste or blitz of its own uses it.
+  const hasteTheme: Theme[] =
+    direction === "makes"
+      ? grantedKeywords(card).includes("Haste")
+        ? ["haste"]
+        : []
+      : card.keywords.some((k) => k === "Haste" || k === "Blitz")
+        ? ["haste"]
+        : [];
+  const found = MAKES_USES_RULES.filter((rule) => {
     const byCard = direction === "makes" ? rule.makesCard : rule.usesCard;
     const patterns = direction === "makes" ? rule.makesPatterns : rule.usesPatterns;
     return (
@@ -385,6 +395,7 @@ function themesOf(card: CardText, direction: "makes" | "uses"): Theme[] {
       texts.some((text) => patterns.some((pattern) => pattern.test(text)))
     );
   }).map((rule) => rule.theme);
+  return [...found, ...hasteTheme];
 }
 
 export const signalIO: Recognizer<"signalIO"> = {

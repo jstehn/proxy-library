@@ -1,4 +1,5 @@
 import { bracketFlags } from "./recognizers/bracket-flags";
+import { grants } from "./recognizers/grants";
 import { faces, signalIO, signals } from "./recognizers/signals";
 import { roleTags } from "./recognizers/role-tags";
 import { tapMana } from "./recognizers/tap-mana";
@@ -16,6 +17,7 @@ export const RECOGNIZERS: readonly AnyRecognizer[] = [
   signals, // P13
   signalIO, // P13
   faces, // P13
+  grants, // P13
 ];
 
 /** What a card does, worked out from its text. Pure: the same card always gives the same answer. */

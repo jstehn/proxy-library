@@ -37,6 +37,8 @@ export type CardFeatureFields = Readonly<{
   bracketFlags: readonly Exclude<BracketFlag, "gameChanger">[];
   /** What the card's text mentions, for the deck-level counting in decks (design doc 28). */
   signals: readonly SignalFact[];
+  /** Keyword abilities the card gives to other cards ("creatures you control have haste"). */
+  grants: readonly string[];
   /** The themes the card makes and uses: a Treasure maker makes treasures, a payoff uses them. */
   signalIO: SignalIO;
   /** Each face's rules text without reminder text and with the card's own names as "~". */

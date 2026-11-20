@@ -39,12 +39,14 @@ export const THEMES = [
   "stax",
   "poison",
   "vehicles",
+  "haste",
 ] as const;
 /** Something a deck builds around. */
 export type Theme = (typeof THEMES)[number];
 
 /** How the builder names each theme. */
 export const THEME_LABELS: Readonly<Record<Theme, string>> = {
+  haste: "Haste",
   counters: "+1/+1 counters",
   tokens: "Tokens",
   "creature-tokens": "Creature tokens",

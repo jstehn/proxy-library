@@ -22,6 +22,14 @@ const leaderThemes = (example: ReturnType<typeof card>) =>
 describe("leaderThemes: what a commander builds around", () => {
   const leaders: ReadonlyArray<readonly [string, ReturnType<typeof card>, readonly Theme[]]> = [
     [
+      "Goblin Chieftain",
+      card(
+        "Creature — Goblin",
+        "Haste\nOther Goblin creatures you control get +1/+1 and have haste.",
+      ),
+      ["haste"],
+    ],
+    [
       "Atraxa, Praetors' Voice",
       card(
         "Legendary Creature — Phyrexian Angel Horror",
@@ -265,7 +273,7 @@ describe("cardThemes: what a card plays into", () => {
     [
       "Swiftfoot Boots",
       card("Artifact — Equipment", "Equipped creature has hexproof and haste.\nEquip {1}"),
-      ["artifacts", "equipment"],
+      ["artifacts", "equipment", "haste"],
     ],
     [
       "Ajani's Pridemate",

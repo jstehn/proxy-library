@@ -5,6 +5,7 @@
 // Moved from shared/card-search/tags.ts.
 import { hasTypeWord, plainText, type Theme } from "@/shared/kernel";
 import type { CardText, Recognizer } from "../types";
+import { grantedKeywords } from "./grants";
 
 type ThemeRule = Readonly<{
   theme: Theme;
@@ -388,16 +389,27 @@ function themesWhere(
   );
 }
 
+/** Haste: a card that gives it (the enablers), or a creature that has it or blitz (the users). */
+export const hasHaste = (card: CardText) =>
+  grantedKeywords(card).includes("Haste") ||
+  card.keywords.some((k) => k === "Haste" || k === "Blitz");
+
 /** The themes a card plays into. */
 export const themes: Recognizer<"themes"> = {
   id: "themes",
   field: "themes",
-  recognize: (card) => themesWhere(card, (row, typeLine, text) => row.fits(typeLine, text)),
+  recognize: (card) => [
+    ...themesWhere(card, (row, typeLine, text) => row.fits(typeLine, text)),
+    ...(hasHaste(card) ? (["haste"] as const) : []),
+  ],
 };
 
 /** The themes a commander builds around (read from its text). */
 export const leaderThemes: Recognizer<"leaderThemes"> = {
   id: "leader-themes",
   field: "leaderThemes",
-  recognize: (card) => themesWhere(card, (row, _typeLine, text) => matchesAny(row.leads, text)),
+  recognize: (card) => [
+    ...themesWhere(card, (row, _typeLine, text) => matchesAny(row.leads, text)),
+    ...(grantedKeywords(card).includes("Haste") ? (["haste"] as const) : []),
+  ],
 };
