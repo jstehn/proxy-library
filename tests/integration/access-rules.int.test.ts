@@ -25,6 +25,15 @@ import { collectionQueries } from "@/modules/collection";
 import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
 import { realCollectionQueries } from "@/modules/real-collection";
 import { catalogQueries } from "@/modules/catalog";
+import { randomBytes } from "node:crypto";
+import {
+  canViewDeck,
+  DeckId,
+  deckPublicQueries,
+  deckQueries,
+  makeDeckSharing,
+  makeDecks,
+} from "@/modules/decks";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -736,6 +745,170 @@ describe("catalog (R6 to R17)", () => {
   });
 });
 
+describe("decks (R21 to R44, F2, F3, F6)", () => {
+  const decks = makeDecks({ unitOfWork, clock });
+  const sharing = makeDeckSharing({
+    unitOfWork,
+    clock,
+    tokens: { newPublicToken: () => randomBytes(16).toString("base64url") },
+  });
+
+  async function jacksDeck(name = "Lights"): Promise<number> {
+    const created = await decks.createDeck(jack, { name, format: "casual" });
+    if (!created.ok) throw new Error(created.error.kind);
+    await decks.importList(jack, { deckId: created.value, text: "4 Banishing Light\n10 Plains" });
+    return created.value;
+  }
+  async function banishingLight(): Promise<string> {
+    const rows = await db.execute<{ id: string }>(sql`
+      select id from printings where name = 'Banishing Light' order by collector_number limit 1
+    `);
+    return rows.rows[0].id;
+  }
+
+  it("R21: deckView of another player's deck gives null", async () => {
+    const deckId = await jacksDeck();
+    expect((await deckQueries.deckView(db, jack, deckId))?.deck.name).toBe("Lights");
+    expect(await deckQueries.deckView(db, sam, deckId)).toBeNull();
+  });
+
+  it("R22: decksUsing counts only the actor's decks", async () => {
+    const deckId = await jacksDeck();
+    const printingId = await banishingLight();
+    expect((await deckQueries.decksUsing(db, jack, [printingId])).get(printingId)?.[0]?.id).toBe(
+      deckId,
+    );
+    expect((await deckQueries.decksUsing(db, sam, [printingId])).get(printingId)).toBeUndefined();
+  });
+
+  it("R23 and F6: deckForViewer follows canViewDeck: the owner, or anyone while shared", async () => {
+    const deckId = await jacksDeck();
+    for (const visibility of ["private", "shared"] as const) {
+      await sharing.setVisibility(jack, { deckId: DeckId.of(deckId), visibility });
+      for (const viewer of [jack, sam]) {
+        const seen = (await deckQueries.deckForViewer(db, viewer, deckId)) !== null;
+        const allowed = canViewDeck(viewer.userId, { ownerId: jack.userId, visibility });
+        expect(seen, `${viewer.userId} sees a ${visibility} deck`).toBe(allowed);
+      }
+    }
+    expect(await deckQueries.deckForViewer(db, eve, 987654)).toBeNull();
+  });
+
+  it("R24 and F2: deckComments of a private deck give an empty list to everyone else", async () => {
+    const deckId = DeckId.of(await jacksDeck());
+    await sharing.setVisibility(jack, { deckId, visibility: "shared" });
+    await sharing.postComment(sam, { deckId, body: "Needs more removal" });
+    expect(await deckQueries.deckComments(db, sam, deckId)).toHaveLength(1);
+    expect(await deckQueries.deckComments(db, eve, deckId)).toHaveLength(1);
+    await sharing.setVisibility(jack, { deckId, visibility: "private" });
+    expect(await deckQueries.deckComments(db, jack, deckId)).toHaveLength(1);
+    expect(await deckQueries.deckComments(db, sam, deckId)).toEqual([]);
+    expect(await deckQueries.deckComments(db, eve, deckId)).toEqual([]);
+  });
+
+  it("R25: decksFor lists only the actor's decks", async () => {
+    await jacksDeck();
+    expect(await deckQueries.decksFor(db, jack)).toHaveLength(1);
+    expect(await deckQueries.decksFor(db, sam)).toEqual([]);
+  });
+
+  it("R26: sharedDecks lists only decks with visibility shared", async () => {
+    const deckId = DeckId.of(await jacksDeck());
+    expect(await deckQueries.sharedDecks(db)).toEqual([]);
+    await sharing.setVisibility(jack, { deckId, visibility: "shared" });
+    expect((await deckQueries.sharedDecks(db)).map((deck) => deck.id)).toEqual([deckId]);
+  });
+
+  it("R27: cardsToGet is built from the actor's decks only", async () => {
+    await jacksDeck();
+    expect((await deckQueries.cardsToGet(db, jack)).cards.length).toBeGreaterThan(0);
+    expect((await deckQueries.cardsToGet(db, sam)).cards).toEqual([]);
+  });
+
+  it("R28 and R29: commander reads use the actor's own cards", async () => {
+    const [legend] = (
+      await db.execute<{ id: string; oracle_id: string }>(sql`
+        select p.id, p.oracle_id from printings p
+         where p.set_code = 'BLB' and p.type_line like 'Legendary Creature%'
+         order by p.collector_number limit 1
+      `)
+    ).rows;
+    await db.execute(sql`
+      insert into collection_cards (user_id, printing_id, finish, quantity)
+      values ('jack', ${legend.id}, 'nonfoil', 1)
+    `);
+    const mine = await deckQueries.commanderDetails(db, jack, legend.oracle_id);
+    const theirs = await deckQueries.commanderDetails(db, sam, legend.oracle_id);
+    expect(mine?.coverage.commander.ownedCopies).toBe(1);
+    expect(theirs?.coverage.commander.ownedCopies ?? 0).toBe(0);
+    const ranked = await deckQueries.commandersICanBuild(db, jack);
+    expect(ranked.some((entry) => entry.commander.oracleId === legend.oracle_id)).toBe(true);
+    expect(await deckQueries.commandersICanBuild(db, sam)).toEqual([]);
+  });
+
+  it("R30, R31 and R34: the public reads need the link token; a wrong or revoked one gives nothing", async () => {
+    const deckId = DeckId.of(await jacksDeck());
+    const enabled = await sharing.enablePublicLink(jack, { deckId });
+    if (!enabled.ok) throw new Error(enabled.error.kind);
+    const visitor = bindPublicDb(db, deckPublicQueries);
+    const makers = [] as const;
+
+    expect((await visitor.publicDeck(enabled.value))?.view.deck.id).toBe(deckId);
+    expect((await visitor.publicScorecard(enabled.value))?.ownerName).toBe("jack");
+    expect(await visitor.publicDeckTokens(enabled.value, makers)).toEqual([]);
+    for (const wrong of ["not-a-token", "A".repeat(22)]) {
+      expect(await visitor.publicDeck(wrong)).toBeNull();
+      expect(await visitor.publicScorecard(wrong)).toBeNull();
+      expect(await visitor.publicDeckTokens(wrong, makers)).toEqual([]);
+    }
+    await sharing.revokePublicLink(jack, { deckId });
+    expect(await visitor.publicDeck(enabled.value)).toBeNull();
+    // @ts-expect-error a visitor's reads take a token, never a deck number
+    void visitor.publicDeckTokens(deckId, makers);
+  });
+
+  it("R32: tokenArtOptions is catalog data, the same for every player", async () => {
+    expect(await deckQueries.tokenArtOptions(db, "no-such-token")).toEqual([]);
+  });
+
+  it("R33 and R35 to R44: another player's deck gives null, empty or an error", async () => {
+    const deckId = await jacksDeck();
+    const [oracle] = (
+      await db.execute<{ oracle_id: string }>(sql`
+        select oracle_id from printings where name = 'Banishing Light' limit 1
+      `)
+    ).rows;
+    expect(await deckQueries.listPreview(db, sam, deckId, "1 Plains", "x")).toEqual({
+      ok: false,
+      error: { kind: "DeckNotFound" },
+    });
+    expect(
+      await deckQueries.browse(db, sam, {
+        deckId,
+        source: "mine",
+        search: "",
+        colors: null,
+        includeColorless: true,
+        onlyLegal: false,
+        sort: "name",
+        page: 1,
+      }),
+    ).toBeNull();
+    expect(await deckQueries.printingsOf(db, sam, deckId, oracle.oracle_id)).toEqual([]);
+    expect(await deckQueries.otherDecksHolding(db, sam, deckId, oracle.oracle_id)).toEqual([]);
+    expect(await deckQueries.suggestions(db, sam, deckId)).toBeNull();
+    expect(await deckQueries.optimize(db, sam, deckId, "owned")).toBeNull();
+    expect(await deckQueries.draft(db, sam, deckId)).toBeNull();
+    expect(await deckQueries.similar(db, sam, deckId, oracle.oracle_id)).toBeNull();
+    expect(await deckQueries.budgetList(db, sam, deckId, 1000)).toBeNull();
+    expect(await deckQueries.snapshots(db, sam, deckId)).toBeNull();
+    expect(await deckQueries.compareSnapshots(db, sam, deckId, 1)).toBeNull();
+    // The owner is not refused by the same reads.
+    expect(await deckQueries.snapshots(db, jack, deckId)).toEqual([]);
+    expect(await deckQueries.printingsOf(db, jack, deckId, oracle.oracle_id)).not.toEqual([]);
+  });
+});
+
 describe("visitors", () => {
   it("no read that takes a player can be bound into PublicReads", () => {
     // @ts-expect-error wallet reads take an Actor, so a visitor's reads refuse them
@@ -748,6 +921,8 @@ describe("visitors", () => {
     bindPublicDb(db, realCollectionQueries);
     // @ts-expect-error nor the catalog search, which counts what the player owns
     bindPublicDb(db, catalogQueries);
+    // @ts-expect-error nor the deck reads of a player
+    bindPublicDb(db, deckQueries);
     // @ts-expect-error nor the activity feed
     bindPublicDb(db, activityQueries);
   });
