@@ -28,7 +28,8 @@ import type { Inventory } from "@/modules/inventory";
 import type { Packs } from "@/modules/packs";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
-import { draftQueries, type makeDrafts } from "@/modules/drafts";
+import { draftQueries, type Drafts } from "@/modules/drafts";
+import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import type { makeResetPlayer } from "@/modules/reset";
 import { socialQueries, type Social } from "@/modules/social";
 import { wireSocialCapabilities } from "@/modules/social/wiring";
@@ -56,6 +57,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  drafts: Drafts;
   store: Store;
   realCollection: RealCollection;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
@@ -73,7 +75,6 @@ type CapabilityDependencies = Readonly<{
     chooseToken: ReturnType<typeof makeTokenChoices>;
     proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
-    drafts: ReturnType<typeof makeDrafts>;
     accounts: ReturnType<typeof makeAccounts>;
     catalog: ReturnType<typeof makeCatalog>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
@@ -113,6 +114,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireWalletCapabilities(dependencies),
     ...wireSocialCapabilities(dependencies),
     ...wireTradeCapabilities(dependencies),
+    ...wireDraftCapabilities(dependencies),
     ...wireStoreCapabilities(dependencies),
     ...wireRealCollectionCapabilities(dependencies),
     ...dependencies.services,
