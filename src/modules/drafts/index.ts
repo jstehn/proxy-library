@@ -16,6 +16,7 @@ export {
   type RemoveBotError,
   type StartDraftError,
 } from "./application/drafts";
+export { describeDraftError, type DraftError } from "./application/describe-error";
 export type { DraftsServices } from "./application/ports";
 export { removeFromLobbies } from "./application/remove-from-lobbies";
 
