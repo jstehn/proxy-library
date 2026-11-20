@@ -6,12 +6,14 @@ import {
   isEarlyPlay,
   isEarlyRamp,
   playOpening,
-  type KeepPolicy,
 } from "./opening-hand/hand";
 import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
 
 // Monte Carlo London-mulligan opening hand simulator (design doc 56):
 // pure and deterministic via injected Rng (ADR 0008).
+
+/** After this many mulligans a hand is kept, keepable or not. */
+const MAX_MULLIGANS = 2;
 
 export type MustCastByOption = Readonly<{
   cardName: string;
@@ -26,11 +28,7 @@ export type MustCastByOption = Readonly<{
 export type SimulateHandsOptions = Readonly<{
   rng: Rng;
   trials?: number;
-  /** What a keepable hand looks like (Commander's by default). */
-  policy?: KeepPolicy;
   freeMulligan?: boolean;
-  maxMulligans?: number;
-  onTheDraw?: boolean;
   mustCastBy?: MustCastByOption;
 }>;
 
@@ -138,8 +136,6 @@ export function simulateOpeningHands(
 ): GoldfishReport {
   const trials = Math.max(1, Math.min(5000, options.trials ?? 1000));
   const freeMulligan = options.freeMulligan ?? true;
-  const maxMulligans = Math.max(0, Math.min(4, options.maxMulligans ?? 2));
-  const onTheDraw = options.onTheDraw ?? false;
 
   if (cards.length < OPENING_HAND) {
     return {
@@ -153,7 +149,7 @@ export function simulateOpeningHands(
       turn3LandDropPct: 0,
       manaScrewPct: 0,
       manaFloodPct: 0,
-      keptByMulligan: Array.from({ length: maxMulligans + 1 }, () => 0),
+      keptByMulligan: Array.from({ length: MAX_MULLIGANS + 1 }, () => 0),
       sampleHands: [],
     };
   }
@@ -167,7 +163,7 @@ export function simulateOpeningHands(
   let manaScrewCount = 0;
   let manaFloodCount = 0;
   let mustCastCount = 0;
-  const keptByMulligan = Array.from({ length: maxMulligans + 1 }, () => 0);
+  const keptByMulligan = Array.from({ length: MAX_MULLIGANS + 1 }, () => 0);
   const sampleHands: SampleHand[] = [];
 
   for (let t = 0; t < trials; t++) {
@@ -177,9 +173,9 @@ export function simulateOpeningHands(
       mulligans: mulligansUsed,
       keptClean,
     } = playOpening(cards, options.rng, {
-      policy: options.policy ?? COMMANDER_KEEP,
+      policy: COMMANDER_KEEP,
       freeMulligan,
-      maxMulligans,
+      maxMulligans: MAX_MULLIGANS,
     });
 
     if (keptClean) keepableCount += 1;
@@ -194,13 +190,10 @@ export function simulateOpeningHands(
     if (finalHand.some(isEarlyPlay)) earlyPlayCount += 1;
     if (finalHand.some(isEarlyRamp)) earlyRampCount += 1;
 
-    const drawnByT3 = restOfLibrary.slice(0, drawsByTurn(3, onTheDraw));
+    const drawnByT3 = restOfLibrary.slice(0, drawsByTurn(3, false));
     const totalLandsByT3 = lands + drawnByT3.filter((c) => c.isLand).length;
     if (totalLandsByT3 >= 3) turn3LandCount += 1;
-    if (
-      options.mustCastBy &&
-      canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, onTheDraw)
-    ) {
+    if (options.mustCastBy && canCastByTurn(finalHand, restOfLibrary, options.mustCastBy, false)) {
       mustCastCount += 1;
     }
 

@@ -196,17 +196,7 @@ describe("engines, pinned", () => {
     ).toMatchSnapshot();
   });
 
-  it("opening hands: other keep rules, on the draw, with and without a free mulligan", () => {
-    expect(
-      simulateOpeningHands(cards, {
-        rng: seededRng("a"),
-        ...BASE,
-        policy: { minLands: 3, maxLands: 5, requireEarlyPlay: false },
-        freeMulligan: false,
-        maxMulligans: 3,
-        onTheDraw: true,
-      }),
-    ).toMatchSnapshot();
+  it("opening hands: a short deck", () => {
     expect(
       simulateOpeningHands(cards.slice(0, 70), { rng: seededRng("b"), ...BASE }),
     ).toMatchSnapshot();

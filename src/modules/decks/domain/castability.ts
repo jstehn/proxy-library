@@ -4,7 +4,6 @@ import {
   type ManaSymbol,
   type Rng,
   randomInt,
-  seededRng,
   cardTypes,
   type CardFacts,
   type CardIdentity,
@@ -89,10 +88,10 @@ function toPoolColors(producedMana: readonly string[]): ManaSymbol[] {
  */
 export function simulateCastOnCurve(
   lines: readonly CastabilityLine[],
-  options: Readonly<{ rng?: Rng; trials?: number; profile?: DeckPlan | null }> = {},
+  options: Readonly<{ rng: Rng; trials?: number; profile?: DeckPlan | null }>,
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
-  const rng = options.rng ?? seededRng("cast-on-curve");
+  const { rng } = options;
 
   const library: SimCard[] = [];
   const spells: SpellSpec[] = [];
