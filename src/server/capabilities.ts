@@ -32,6 +32,7 @@ import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import { draftQueries, type Drafts } from "@/modules/drafts";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import type { makeResetPlayer } from "@/modules/reset";
+import { wireResetCapabilities } from "@/modules/reset/wiring";
 import { socialQueries, type Social } from "@/modules/social";
 import { wireSocialCapabilities } from "@/modules/social/wiring";
 import { tradeQueries, type Trades } from "@/modules/trades";
@@ -58,6 +59,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  resetPlayer: ReturnType<typeof makeResetPlayer>;
   deckSharing: DeckSharing;
   chooseToken: ReturnType<typeof makeTokenChoices>;
   proxySheet: ReturnType<typeof makeProxySheets>;
@@ -78,7 +80,6 @@ type CapabilityDependencies = Readonly<{
   /** The services that change things: the capabilities pass them through for the adapters. */
   services: Readonly<{
     seeds: Readonly<{ newSeed(): string }>;
-    resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
   }>;
   newPreviewId: () => string;
@@ -118,6 +119,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireWalletCapabilities(dependencies),
     ...wireSocialCapabilities(dependencies),
     ...wireTradeCapabilities(dependencies),
+    ...wireResetCapabilities(dependencies),
     ...wireCatalogCapabilities(dependencies),
     ...wireDraftCapabilities(dependencies),
     ...wireStoreCapabilities(dependencies),
