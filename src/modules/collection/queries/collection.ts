@@ -8,6 +8,7 @@ import {
   type CollectionRow,
   type CopiesSource,
   type OwnedPrintingCopy,
+  emptyCollectionPage,
   readCollectionExport,
   readCollectionPage,
   readCopiesOf,
@@ -59,12 +60,7 @@ export async function pageOfPartner(
      where user_id = ${partnerId} and disabled_at is null and user_id <> ${actor.userId}
   `);
   if (partner.rows.length === 0) {
-    return {
-      rows: [],
-      totals: { different: 0, copies: 0, valueCents: 0 },
-      pageCount: 1,
-      notes: [],
-    };
+    return emptyCollectionPage();
   }
   return readCollectionPage(db, partnerId, GAME_COPIES, filter);
 }

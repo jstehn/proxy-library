@@ -27,7 +27,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
 
   const [profile, sharedReal] = await Promise.all([
     reads.social.playerProfile(actor, id),
-    capabilities.realCollectionReads.shared(),
+    reads.realCollection.shared(),
   ]);
 
   if (profile === null) notFound();

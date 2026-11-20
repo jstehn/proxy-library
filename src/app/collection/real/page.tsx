@@ -22,17 +22,17 @@ const button =
   "rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900";
 
 export default async function RealCollectionPage(props: PageProps<"/collection/real">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const { values, page, filter, isFiltered } = readCollectionQuery(searchParams);
   const message = typeof searchParams.message === "string" ? searchParams.message : null;
 
   const [result, sets, products, isShared, shared] = await Promise.all([
-    capabilities.realCollectionReads.page(actor.userId, filter),
-    capabilities.realCollectionReads.sets(actor.userId),
-    capabilities.realCollectionReads.productsOf(actor.userId),
-    capabilities.realCollectionReads.isShared(actor.userId),
-    capabilities.realCollectionReads.shared(),
+    reads.realCollection.page(actor, actor.userId, filter),
+    reads.realCollection.sets(actor, actor.userId),
+    reads.realCollection.productsOf(actor, actor.userId),
+    reads.realCollection.isShared(actor),
+    reads.realCollection.shared(),
   ]);
   const others = shared.filter((player) => player.userId !== actor.userId);
   const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));

@@ -4,6 +4,6 @@ import { downloadCollection } from "../collection-download";
 export function GET(request: Request): Promise<Response> {
   return downloadCollection(request, {
     fileName: "collection",
-    rowsOf: (_capabilities, reads, actor) => reads.collection.exportRows(actor),
+    rowsOf: (reads, actor) => reads.collection.exportRows(actor),
   });
 }

@@ -40,8 +40,8 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
       reads.store.singleHistory(actor, id),
       reads.store.buylistRate(),
       capabilities.deckReads.decksUsing(actor.userId, [id]),
-      capabilities.realCollectionReads.copiesOf(actor.userId, id),
-      capabilities.realCollectionReads.printingsOfSameCard(id),
+      reads.realCollection.copiesOf(actor, id),
+      reads.realCollection.printingsOfSameCard(id),
       reads.wishlist.forCard(actor, id),
     ]);
   const searchParams = await props.searchParams;

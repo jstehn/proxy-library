@@ -27,8 +27,8 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   );
   if (page === null) notFound();
   const { set } = page;
-  const ownedForReal = await capabilities.realCollectionReads.productCounts(
-    actor.userId,
+  const ownedForReal = await reads.realCollection.productCounts(
+    actor,
     page.products.map((product) => product.id),
   );
 

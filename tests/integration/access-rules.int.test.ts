@@ -23,6 +23,7 @@ import { randomSeed } from "@/shared/runtime";
 import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { collectionQueries } from "@/modules/collection";
 import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
+import { realCollectionQueries } from "@/modules/real-collection";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -577,6 +578,104 @@ describe("collection (R18 to R20, F5)", () => {
   });
 });
 
+describe("real collection (R56 to R65, F1)", () => {
+  const everything = { sections: "none", sort: "name", page: 1 } as const;
+
+  async function jackOwnsRealCards(): Promise<PrintingId> {
+    const [first, second] = await twoCards();
+    await db.execute(sql`
+      insert into real_cards (user_id, printing_id, finish, quantity, added_at, updated_at)
+      values ('jack', ${first}, 'nonfoil', 2, now(), now()), ('jack', ${second}, 'nonfoil', 1, now(), now())
+    `);
+    await db.execute(sql`
+      insert into real_products (user_id, product_id, added_at) values ('jack', ${PLAY_PACK}, now())
+    `);
+    return first;
+  }
+  async function jackShares(isShared: boolean): Promise<void> {
+    await db.execute(sql`
+      insert into real_collection_settings (user_id, is_shared, updated_at)
+      values ('jack', ${isShared}, now())
+      on conflict (user_id) do update set is_shared = ${isShared}
+    `);
+  }
+
+  it("R56: page is the owner's own, or another player's only while they share it", async () => {
+    await jackOwnsRealCards();
+    const own = await realCollectionQueries.page(db, jack, jack.userId, everything);
+    expect(own.totals.copies).toBe(3);
+    expect((await realCollectionQueries.page(db, sam, jack.userId, everything)).rows).toEqual([]);
+    await jackShares(true);
+    expect((await realCollectionQueries.page(db, sam, jack.userId, everything)).totals.copies).toBe(
+      3,
+    );
+    await jackShares(false);
+    expect((await realCollectionQueries.page(db, sam, jack.userId, everything)).rows).toEqual([]);
+  });
+
+  it("R57: sets follows the same sharing rule as page", async () => {
+    await jackOwnsRealCards();
+    expect(
+      (await realCollectionQueries.sets(db, jack, jack.userId)).map((set) => set.code),
+    ).toEqual(["BLB"]);
+    expect(await realCollectionQueries.sets(db, sam, jack.userId)).toEqual([]);
+    await jackShares(true);
+    expect(await realCollectionQueries.sets(db, sam, jack.userId)).toHaveLength(1);
+  });
+
+  it("R58: productsOf follows the same sharing rule as page", async () => {
+    await jackOwnsRealCards();
+    expect(await realCollectionQueries.productsOf(db, jack, jack.userId)).toHaveLength(1);
+    expect(await realCollectionQueries.productsOf(db, sam, jack.userId)).toEqual([]);
+    await jackShares(true);
+    expect(await realCollectionQueries.productsOf(db, sam, jack.userId)).toHaveLength(1);
+  });
+
+  it("R59: isShared is the actor's own setting", async () => {
+    await jackShares(true);
+    expect(await realCollectionQueries.isShared(db, jack)).toBe(true);
+    expect(await realCollectionQueries.isShared(db, sam)).toBe(false);
+  });
+
+  it("R60: shared lists only players with sharing on", async () => {
+    expect(await realCollectionQueries.shared(db)).toEqual([]);
+    await jackShares(true);
+    expect((await realCollectionQueries.shared(db)).map((entry) => entry.userId)).toEqual(["jack"]);
+  });
+
+  it("R61 and R62: printing choices are catalog data, the same for every player", async () => {
+    const first = await jackOwnsRealCards();
+    const [oracleId] = (
+      await db.execute<{ oracle_id: string }>(
+        sql`select oracle_id from printings where id = ${first}`,
+      )
+    ).rows;
+    const choices = await realCollectionQueries.printingChoices(db, [oracleId.oracle_id]);
+    expect(choices.get(oracleId.oracle_id)?.length).toBeGreaterThan(0);
+    expect((await realCollectionQueries.printingsOfSameCard(db, first)).length).toBeGreaterThan(0);
+  });
+
+  it("R63: copiesOf counts only the actor's copies", async () => {
+    const first = await jackOwnsRealCards();
+    expect(await realCollectionQueries.copiesOf(db, jack, first)).toEqual({ nonfoil: 2 });
+    expect(await realCollectionQueries.copiesOf(db, sam, first)).toEqual({});
+  });
+
+  it("R64: exportRows lists only the actor's rows", async () => {
+    await jackOwnsRealCards();
+    expect(await realCollectionQueries.exportRows(db, jack)).toHaveLength(2);
+    expect(await realCollectionQueries.exportRows(db, sam)).toEqual([]);
+  });
+
+  it("R65: productCounts counts only the actor's products", async () => {
+    await jackOwnsRealCards();
+    expect((await realCollectionQueries.productCounts(db, jack, [PLAY_PACK])).get(PLAY_PACK)).toBe(
+      1,
+    );
+    expect((await realCollectionQueries.productCounts(db, sam, [PLAY_PACK])).size).toBe(0);
+  });
+});
+
 describe("visitors", () => {
   it("no read that takes a player can be bound into PublicReads", () => {
     // @ts-expect-error wallet reads take an Actor, so a visitor's reads refuse them
@@ -585,6 +684,8 @@ describe("visitors", () => {
     bindPublicDb(db, accountQueries);
     // @ts-expect-error nor the collection reads
     bindPublicDb(db, collectionQueries);
+    // @ts-expect-error nor the real collection reads
+    bindPublicDb(db, realCollectionQueries);
     // @ts-expect-error nor the activity feed
     bindPublicDb(db, activityQueries);
   });

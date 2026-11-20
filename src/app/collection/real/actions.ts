@@ -190,7 +190,7 @@ export type PreviewAnswer =
 export async function previewImportAction(
   input: z.input<typeof PreviewInput>,
 ): Promise<PreviewAnswer> {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const parsed = PreviewInput.safeParse(input);
   if (!parsed.success)
     return { ok: false, message: "That's too much to import at once (5 MB at most)." };
@@ -207,9 +207,7 @@ export async function previewImportAction(
   const oracleIds = result.value.lines.flatMap((line) =>
     line.kind === "Matched" ? [line.oracleId] : [],
   );
-  const printings = Object.fromEntries(
-    await capabilities.realCollectionReads.printingChoices(oracleIds),
-  );
+  const printings = Object.fromEntries(await reads.realCollection.printingChoices(oracleIds));
   return { ok: true, preview: result.value, printings };
 }
 

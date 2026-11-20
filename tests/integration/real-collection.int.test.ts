@@ -7,11 +7,9 @@ import { browseCollection, decksFor, deckView, makeDecks } from "@/modules/decks
 import { makeResetPlayer } from "@/modules/reset";
 import { makeStore } from "@/modules/store";
 import {
-  isRealCollectionShared,
   makeRealCollection,
   matchedCopies,
-  realCollectionPage,
-  realProductsOf,
+  realCollectionQueries,
 } from "@/modules/real-collection";
 import {
   actor,
@@ -134,16 +132,16 @@ describe("the repository", () => {
 
   it("shows the real collection with its value, and a sharing switch that's off by default", async () => {
     await importText(fixture("ours.csv"));
-    const page = await realCollectionPage(db, jack.userId, {
+    const page = await realCollectionQueries.page(db, jack, jack.userId, {
       sections: "none",
       sort: "name",
       page: 1,
     });
     expect(page.totals).toMatchObject({ different: 2, copies: 3 });
     expect(page.totals.valueCents).toBeGreaterThan(0);
-    expect(await isRealCollectionShared(db, jack.userId)).toBe(false);
+    expect(await realCollectionQueries.isShared(db, jack)).toBe(false);
     await realCollection.setRealSharing(jack, true);
-    expect(await isRealCollectionShared(db, jack.userId)).toBe(true);
+    expect(await realCollectionQueries.isShared(db, jack)).toBe(true);
   });
 });
 
@@ -162,14 +160,14 @@ describe("real products", () => {
     expect(added.value.cards.decks.map((deck) => deck.name)).toContain("Hare Raising");
     const copies = await count("real_cards", "user_id = 'jack'");
     expect(copies).toBeGreaterThan(0);
-    expect(await realProductsOf(db, jack.userId)).toHaveLength(1);
+    expect(await realCollectionQueries.productsOf(db, jack, jack.userId)).toHaveLength(1);
 
     await realCollection.removeRealProduct(jack, {
       realProductId: added.value.realProductId,
       removeCards: true,
     });
     expect(await count("real_cards", "user_id = 'jack'")).toBe(0);
-    expect(await realProductsOf(db, jack.userId)).toEqual([]);
+    expect(await realCollectionQueries.productsOf(db, jack, jack.userId)).toEqual([]);
   });
 });
 

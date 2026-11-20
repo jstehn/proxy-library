@@ -4,6 +4,7 @@ import { collectionQueries } from "@/modules/collection";
 import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
+import { realCollectionQueries } from "@/modules/real-collection";
 import { tradeQueries } from "@/modules/trades";
 import { socialQueries } from "@/modules/social";
 import { wishlistQueries } from "@/modules/wishlist";
@@ -27,6 +28,7 @@ export function buildReads(db: DbExecutor) {
     drafts: bindDb(db, draftQueries),
     inventory: bindDb(db, inventoryQueries),
     packs: bindDb(db, packsQueries),
+    realCollection: bindDb(db, realCollectionQueries),
     social: bindDb(db, socialQueries),
     store: bindDb(db, storeQueries),
     trades: bindDb(db, tradeQueries),

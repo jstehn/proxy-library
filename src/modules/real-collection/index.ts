@@ -13,19 +13,10 @@ export { MAX_REAL_QUANTITY } from "./domain/copies";
 export type { MatchedLine, UnmatchedReason } from "./domain/match";
 export type { ProductDeck } from "./domain/product-cards";
 
-export {
-  isRealCollectionShared,
-  printingChoices,
-  printingsOfSameCard,
-  realCollectionPage,
-  realOwnedByOracle,
-  realExportRows,
-  realPrintingIds,
-  realCollectionSets,
-  realProductCounts,
-  realProductsOf,
-  sharedRealCollections,
-  type PrintingChoice,
-  type RealCollectionPage,
-  type RealCollectionRow,
+export type {
+  PrintingChoice,
+  RealCollectionPage,
+  RealCollectionRow,
 } from "./queries/real-collection";
+export { realPrintingIds } from "./queries/printing-ids";
+export * as realCollectionQueries from "./queries";

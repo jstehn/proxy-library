@@ -5,7 +5,7 @@
   "ignoreDependencies": ["mana-font"],
   "ignoreExportsUsedInFile": true,
   "ignoreIssues": {
-    "src/modules/{accounts,activity,collection,drafts,inventory,packs,social,store,trades,wallet,wishlist}/queries/*.ts": [
+    "src/modules/{accounts,activity,collection,drafts,real-collection,inventory,packs,social,store,trades,wallet,wishlist}/queries/*.ts": [
       "exports"
     ],
     "src/shared/db/bind-db.ts": ["exports"]
