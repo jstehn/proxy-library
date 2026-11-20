@@ -67,7 +67,9 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
         })
         .from(cardSets)
         .leftJoin(printings, eq(printings.setCode, cardSets.code))
-        .groupBy(cardSets.code);
+        .groupBy(cardSets.code)
+        // A fixed order (oldest first), so sets import in the same order on every database.
+        .orderBy(cardSets.releaseDate, cardSets.code);
       return rows.map((row): SetState => ({
         ...row,
         code: SetCode.of(row.code),

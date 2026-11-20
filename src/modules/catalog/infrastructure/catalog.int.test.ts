@@ -82,7 +82,7 @@ describe("the first sync", () => {
     expect(summary.enabledByDefault).toEqual(["BLB", "BLC", "FDN"]);
     expect(summary.enabledAsCompanions).toEqual([]);
     expect(summary.importedSupportingSets).toEqual(["SPG"]);
-    expect(summary.importedSets).toEqual(["BLB", "FDN", "BLC"]); // FDN's fixture is empty
+    expect(summary.importedSets).toEqual(["BLB", "BLC", "FDN"]); // FDN's fixture is empty
     // Design doc 16: every other paper set's printings, for real collections.
     expect(summary.importedReferenceSets).toEqual(["PBLB"]);
     expect(summary.failedSets).toEqual([]);
@@ -219,7 +219,7 @@ describe("running again", () => {
     await catalog.runSync("prices");
     expect(mtgjson.downloads).toEqual([]);
     await catalog.runSync("full");
-    expect(mtgjson.downloads).toEqual(["BLB", "SPG", "FDN", "BLC"]);
+    expect(mtgjson.downloads).toEqual(["BLB", "SPG", "BLC", "FDN"]);
   });
 });
 
@@ -266,7 +266,7 @@ describe("rule 5: nothing may refer to a missing card", () => {
   it("leaves out (and reports) what refers to a supporting set that isn't available", async () => {
     const withoutSpg = fixtureMtgjsonGateway({ hideSets: ["SPG"] });
     const summary = await buildCatalog(withoutSpg).runSync("prices");
-    expect(summary.importedSets).toEqual(["BLB", "FDN", "BLC"]);
+    expect(summary.importedSets).toEqual(["BLB", "BLC", "FDN"]);
     expect(summary.leftOut[0]).toBe("BLB: booster play: sheet specialGuest has 2 unknown card(s)");
     expect(await countRows("booster_configs")).toBe(0);
     expect(await countRows("sealed_products")).toBe(1); // only the starter kit remains
@@ -286,7 +286,7 @@ describe("the sync queue", () => {
     const runs = await db.execute<{ status: string; imported: string }>(
       sql`select status, summary->>'importedSets' as imported from sync_runs`,
     );
-    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB", "FDN", "BLC"]' }]);
+    expect(runs.rows).toEqual([{ status: "succeeded", imported: '["BLB", "BLC", "FDN"]' }]);
   });
 
   it("marks a run left 'running' by a crash as failed", async () => {
