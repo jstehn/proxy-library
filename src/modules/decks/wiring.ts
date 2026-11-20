@@ -26,6 +26,7 @@ import { DeckId } from "./domain/deck";
 import { auditDeckView } from "./queries/audit";
 import { budgetReplacements } from "./queries/budget-replacements";
 import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./queries/card-facts";
+import { withFeatures } from "./queries/card-features";
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
 import { addDeckSource, deckView, decksFor, listDeckSources } from "./queries/decks";
@@ -111,7 +112,14 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       profile: readPlan,
       ownedChecks,
     }),
-    drawSample: makeDrawSample({ deckView: readDeck, profile: readPlan, clock }),
+    drawSample: makeDrawSample({
+      deckView: async (userId, deckId) => {
+        const view = await readDeck(userId, deckId);
+        return view && { ...view, lines: await withFeatures(db, view.lines) };
+      },
+      profile: readPlan,
+      clock,
+    }),
     startDeck: makeStartDeck(decks),
     deckPlanEdits: makeDeckPlanEdits({
       clock,

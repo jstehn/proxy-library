@@ -234,6 +234,7 @@ export function DeckBuilder(props: {
             />
           )}
           <StatsPanel
+            deckId={deckId}
             lines={deck.lines}
             format={format}
             highlighted={state.highlightedRole}

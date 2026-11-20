@@ -124,4 +124,51 @@ feature, like P13's haste theme), and a by-eye check goes in `deferred-checks.md
 
 ## Handoff
 
-(empty)
+**Branch** `refactor/P28-cast-by-turn`. Design note: `docs/design/68-cast-by-turn.md`.
+
+**Production lines: NOT net <= 0.** Baseline on `refactor/main` after P27 was 75,009; the branch is
+75,355 (+346): the simulator and registry +217 (against what the package deleted), the UI slice
++120, `creatureTypes` +9. The package's -250 to -450 was written before P24 and P15 removed the
+other engines; the old simulators were already smaller than the plan assumed. Owner to approve the
+growth or cut; the UI slice (a feature) is reported apart.
+
+- **Options removed** (first commit): `SimulateHandsOptions.policy`, `maxMulligans`, `onTheDraw`
+  (callers never set them; the keep rule and the cap are constants), `simulateCastOnCurve`'s default
+  `rng`, and the 0..7 style clamps. Their test scaffolding (the "other keep rules" pin) went.
+- **One simulator** `decks/domain/cast-by-turn.ts` (`simulateCasting`) on `playOpening`. Deleted:
+  `canCastByTurn` and `mustCastBy`/`MustCastByOption`/`mustCastByPct` (goldfish), the whole
+  partial-shuffle body, `SimSource`/`SimCard` and the per-spell loops of `simulateCastOnCurve`
+  (castability, which now maps lines to cards and targets and reads the curve at the spell's turn).
+- **Registry** `decks/domain/cast-effects.ts`: `CAST_EFFECTS` (ritual, reducer, tapMana), `CARD_EFFECTS`
+  by name (Dark Ritual, Seething Song, Foundry Inspector, Etherium Sculptor, Goblin Electromancer).
+  The hard-coded "ramp tag" logic is replaced by the `tapMana` effect from the card features.
+- **`draw_sample`**: input `cast` (names or "commander"), `onTheDraw`, `lastTurn`, `trials` (default
+  2,000, max 5,000); `mustCastCard`/`mustCastTurn` and `odds.mustCastBy` are gone. Output: `cast`
+  with runs, marginPct, side, cards, one `T<n>` line per turn, median turns and misses. The
+  capability also has `castCurves` (used by the builder's action). Its reader now carries the card
+  features (`withFeatures`) so ramp and tapped lands are real.
+- **UI slice**: `builder/cast-curve/{actions,cast-bars,cast-curve}`: the commander's chart in the
+  stats panel (loads on open), the selected card's behind "When can I cast this?". Unit test for the
+  data mapping; by-eye checks are in `deferred-checks.md` ("Left by P28").
+- **Pinned differences** (`engines-pinned.test.ts`, re-recorded): the old two simulators were
+  different models, so numbers moved. Cast on curve: average 0.636 to 0.670; per spell -2 to +3
+  points, Obliterator 6.5% to 4.8%, Twobrid Tutor 25.5% to 23.3%, Henzie 65.5% to 62.8%. Castable
+  by a turn on the old goldfish model: Giant T4 55.0 to 52.0, Henzie T5 68.8 to 65.8, Henzie 3 mana
+  T3 94.0 to 94.0, Wurm T6 32.3 to 27.8. `draw_sample` Henzie T5 68 to 64, Giant T4 57.3 to 55.
+  Causes: a full shuffle and the same RNG stream per run (no partial shuffle); lands that enter
+  tapped (conditional ones only as the first land); a land chosen for the target's missing colour;
+  a ramp spell cast only with spare mana; Cultivate-type ramp (no mana of its own) no longer counts
+  as a source; draw_sample's ramp now comes from the card features, not the role tag.
+- **Exact formula**: `cast-by-turn.test.ts` checks the simulated "drawn by turn Y" curve (4 copies
+  in 60 cards, 4,000 runs) against `hypergeometricAtLeast` within 3 points on turns 1 to 6.
+- **Function lengths** (closing brace minus start): `simulateOpeningHands` 88, `simulateCastOnCurve`
+  52 (both under 100). **Not split, with the reason:** `draftDeck` 489, `playtestCard` 196,
+  `applyChoices` 168, `recordDraft` 139 (splits add lines against a net the package could not
+  meet, and each shares many local accumulators; owner to say if wanted); `suggestSwaps` 113,
+  `computeRatingFeatures` 111, `fitLogisticWeights` 103, `scoreDeck` 82 are P27's files (left).
+- **creatureTypes**: one in `@/shared/kernel` (`card-types.ts`), counting Kindred and Tribal on the
+  front face; the decks (`suggest.ts`) and drafts (`abilities.ts`) copies are gone. Difference: draft
+  notes (Paliano Vanguard) now give a Kindred card's types. Test moved to `card-types.test.ts`.
+- **Integration files run** (private DB `tcg_p28_test`, dropped): llm-tools, mana-base, decks,
+  drafts, suggestions, commanders: green. `pnpm check`: all green except `sizes` (the +346 above);
+  knip baseline lowered 382 to 380.

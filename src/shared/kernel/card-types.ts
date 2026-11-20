@@ -41,6 +41,17 @@ export const isLand = (typeLine: string) => cardTypes(typeLine).isLand;
 export const isBasicLand = (typeLine: string) => cardTypes(typeLine).isBasic;
 export const isCreature = (typeLine: string) => cardTypes(typeLine).isCreature;
 
+/**
+ * The creature types on the front face: "Creature — Elf Druid" and "Kindred Instant — Elf" both
+ * give their Elf; a card with no creature type, or with one only on its back face, gives none.
+ */
+export function creatureTypes(typeLine: string): string[] {
+  const [front = []] = cardTypes(typeLine).faces;
+  const dash = front.indexOf("—");
+  const hasCreatureType = ["Creature", "Kindred", "Tribal"].some((word) => front.includes(word));
+  return dash >= 0 && hasCreatureType ? front.slice(dash + 1) : [];
+}
+
 // Any other type word ("Legendary", "Artifact", "Planeswalker", "Kindred"): the one place that
 // reads a type line for a word. Words are matched whole and with their letter case.
 

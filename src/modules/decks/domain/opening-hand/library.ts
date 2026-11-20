@@ -1,4 +1,5 @@
-import type { CardFacts, CardIdentity, Tag } from "@/shared/kernel";
+import { cardTypes, type CardFacts, type CardIdentity, type Tag } from "@/shared/kernel";
+import type { EntersTapped, TapMana } from "@/modules/catalog";
 import type { DeckCount } from "../boards";
 import { isLand } from "../stats";
 
@@ -10,6 +11,9 @@ export type DrawLine = DeckCount &
     manaValue?: number;
     roles?: readonly Tag[];
     producedMana?: readonly string[];
+    /** What the card does when tapped for mana, and whether a land enters tapped (card features). */
+    tapMana?: TapMana;
+    entersTapped?: EntersTapped;
   }>;
 
 /** One copy of a card in the library. */
@@ -24,6 +28,8 @@ export type LibraryCard = Readonly<{
   tags: readonly Tag[];
   /** Colors of mana it makes once in play ("C" for colorless); empty for most spells. */
   producedMana?: readonly string[];
+  tapMana?: TapMana;
+  entersTapped?: EntersTapped;
 }>;
 
 export const OPENING_HAND = 7;
@@ -49,6 +55,15 @@ export function library(lines: readonly DrawLine[]): LibraryCard[] {
         ...(line.producedMana !== undefined && line.producedMana.length > 0
           ? { producedMana: line.producedMana }
           : {}),
+        ...(line.tapMana !== undefined ? { tapMana: line.tapMana } : {}),
+        ...entersTappedOf(line),
       }));
     });
+}
+
+/** A land on the back face of a double-faced card is played turned over, so it enters tapped. */
+function entersTappedOf(line: DrawLine): { entersTapped?: EntersTapped } {
+  const types = cardTypes(line.typeLine);
+  if (types.isLand && !types.isLandOnFront) return { entersTapped: "always" };
+  return line.entersTapped !== undefined ? { entersTapped: line.entersTapped } : {};
 }

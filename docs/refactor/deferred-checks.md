@@ -124,3 +124,16 @@ tests/integration/card-search.int.test.ts`, plus whatever covers the card page's
 - [x] **Done 2026-11-19 (merge of P16 and P17, e2e database):** all six downloads answer with the right file names and headers (Moxfield CSV, text list, full CSV with first and last acquired). **Download all three formats from `/api/export/collection` and `/api/export/real` (P17):**
       file names (`collection*.csv/.txt`, `real-collection*.csv/.txt`), and the first and last acquired
       dates (game: first and last arrival; real: when added, when changed).
+
+## Left by P28 (cast by turn: the chart and the tool)
+
+- [ ] **Look at the "Castable by turn" chart in the deck builder (P28), in dark mode and at phone
+      width.** Open a Commander deck's builder: the stats panel, below the mana curve, should load a
+      10-bar chart ("Castable by turn (2,000 simulated games on the play, ±2.2 points)") with the
+      median turn and the usual misses. Bars climb with the turn; labels don't overlap at 375px;
+      "Run again" gives the same numbers (seeded). A deck with no commander shows no chart.
+- [ ] **Select a card in the builder and press "When can I cast this?" (P28).** Same chart inside the
+      card view; it loads only on the press, and selecting another card resets it to the button. Try a
+      land, a 1-drop and a 7-drop: the chances should look sensible (a 7-drop low until turn 6 to 8).
+- [ ] **Ask the `draw_sample` tool for `cast: ["commander"]` on a real deck (P28)** and read the
+      table: one `T<n>` line per turn, the median turn and the misses line.

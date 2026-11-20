@@ -2,7 +2,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   budgetPicks,
-  creatureTypes,
   deckProfile,
   plural,
   rank,
@@ -45,13 +44,7 @@ const line = (overrides: Partial<ProfileLine>): ProfileLine => {
 
 const EMPTY: DeckFingerprint = emptyRatingProfile("commander");
 
-describe("creature types and plurals", () => {
-  it("reads the front face's creature types only", () => {
-    expect(creatureTypes("Legendary Creature — Elf Warrior")).toEqual(["Elf", "Warrior"]);
-    expect(creatureTypes("Kindred Instant — Elf")).toEqual(["Elf"]);
-    expect(creatureTypes("Artifact — Equipment")).toEqual([]);
-    expect(creatureTypes("Instant // Creature — Elf")).toEqual([]);
-  });
+describe("plurals", () => {
   it("makes the plurals rules text uses", () => {
     expect(["Elf", "Rabbit", "Mouse", "Fox", "Ally"].map(plural)).toEqual([
       "Elves",

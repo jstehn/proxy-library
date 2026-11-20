@@ -1,4 +1,4 @@
-import { hasTypeWord, manaCurve, type Tag, type Theme } from "@/shared/kernel";
+import { creatureTypes, hasTypeWord, manaCurve, type Tag, type Theme } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -68,14 +68,6 @@ const THEME_SHARE = 0.1;
 const TRIBE_MINIMUM = 5;
 /** …and at least this share of the creatures. */
 const TRIBE_SHARE = 1 / 3;
-
-/** The creature types on a card's front face: "Creature — Elf Druid" gives ["Elf", "Druid"]. */
-export function creatureTypes(typeLine: string): string[] {
-  const front = typeLine.split(" // ")[0];
-  const [types, subtypes] = front.split(" — ");
-  if (subtypes === undefined || !hasTypeWord(types, ["Creature", "Kindred", "Tribal"])) return [];
-  return subtypes.split(" ").filter((word) => word.length > 0);
-}
 
 /** Creature types whose plural doesn't follow the usual endings ("Mice" matter in Bloomburrow). */
 const IRREGULAR_PLURALS: Readonly<Record<string, string>> = {

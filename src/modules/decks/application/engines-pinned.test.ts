@@ -7,9 +7,11 @@ import type { Deck } from "../domain/deck";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import { simulateCastOnCurve, type CastabilityLine } from "../domain/castability";
 import { openingHandOdds } from "../domain/draws";
-import { dealHand as startHand, nextHand } from "../domain/opening-hand/hand";
+import { COMMANDER_KEEP, dealHand as startHand, nextHand } from "../domain/opening-hand/hand";
 import { library } from "../domain/opening-hand/library";
 import { simulateOpeningHands } from "../domain/goldfish";
+import { simulateCasting } from "../domain/cast-by-turn";
+import type { Pip } from "../domain/mana-payment";
 
 // Characterization of the opening-hand and payment engines (P15): seeded runs on one reference
 // deck, recorded before the engines were merged. A difference here is a change in behaviour.
@@ -166,23 +168,22 @@ function lines(): DeckLine[] {
 
 const NO_TAP: TapMana = { isSource: false, amount: 0, requiresFiveLands: false };
 
+/** What the catalog's card features say about a line: lands and mana rocks tap for mana. */
+function tapOf(line: DeckLine): Pick<CastabilityLine, "tapMana" | "entersTapped"> {
+  const isLand = line.typeLine.includes("Land");
+  const isRock = !isLand && line.roles.includes("ramp") && line.producedMana.length > 0;
+  return {
+    tapMana: isLand || isRock ? { isSource: true, amount: 1, requiresFiveLands: false } : NO_TAP,
+    entersTapped: line.name === "Woodland Cemetery" ? "sometimes" : "never",
+  };
+}
+
+function featuredLines() {
+  return lines().map((line) => ({ ...line, ...tapOf(line) }));
+}
+
 function castLines(): CastabilityLine[] {
-  return lines().map((line): CastabilityLine => {
-    const isLand = line.typeLine.includes("Land");
-    const isRock = !isLand && line.roles.includes("ramp") && line.producedMana.length > 0;
-    return {
-      oracleId: line.oracleId,
-      name: line.name,
-      board: line.board,
-      quantity: line.quantity,
-      typeLine: line.typeLine,
-      manaValue: line.manaValue,
-      manaCost: line.manaCost,
-      producedMana: line.producedMana,
-      tapMana: isLand || isRock ? { isSource: true, amount: 1, requiresFiveLands: false } : NO_TAP,
-      entersTapped: line.name === "Woodland Cemetery" ? "sometimes" : "never",
-    };
-  });
+  return featuredLines();
 }
 
 const BASE = { trials: 600 };
@@ -196,41 +197,37 @@ describe("engines, pinned", () => {
     ).toMatchSnapshot();
   });
 
-  it("opening hands: other keep rules, on the draw, with and without a free mulligan", () => {
-    expect(
-      simulateOpeningHands(cards, {
-        rng: seededRng("a"),
-        ...BASE,
-        policy: { minLands: 3, maxLands: 5, requireEarlyPlay: false },
-        freeMulligan: false,
-        maxMulligans: 3,
-        onTheDraw: true,
-      }),
-    ).toMatchSnapshot();
+  it("opening hands: a short deck", () => {
     expect(
       simulateOpeningHands(cards.slice(0, 70), { rng: seededRng("b"), ...BASE }),
     ).toMatchSnapshot();
   });
 
-  it("opening hands: castable by a turn (library card, commander, colourless)", () => {
-    const run = (mustCastBy: Parameters<typeof simulateOpeningHands>[1]["mustCastBy"]) =>
-      simulateOpeningHands(cards, { rng: seededRng("m"), ...BASE, freeMulligan: true, mustCastBy });
-    expect(
-      run({ cardName: "Giant", manaValue: 4, turn: 4, pips: [["B"], ["G"]] }),
-    ).toMatchSnapshot();
-    expect(
-      run({
-        cardName: "Henzie",
-        manaValue: 5,
-        turn: 5,
-        inLibrary: false,
-        pips: [["B"], ["G"]],
-      }),
-    ).toMatchSnapshot();
-    expect(run({ cardName: "Henzie", manaValue: 3, turn: 3, inLibrary: false })).toMatchSnapshot();
-    expect(
-      run({ cardName: "Wurm", manaValue: 6, turn: 6, pips: [["G"], ["G"]] }),
-    ).toMatchSnapshot();
+  it("castable by a turn (library card, commander, colourless): the cast simulator", () => {
+    const castCards = library(featuredLines());
+    const rule = { policy: COMMANDER_KEEP, freeMulligan: true, maxMulligans: 2 };
+    const target = (name: string, manaValue: number, pips: Pip[], mustDraw: boolean) => ({
+      name,
+      typeLine: "Creature",
+      manaValue,
+      pips,
+      mustDraw,
+    });
+    const run = (cast: ReturnType<typeof target>, lastTurn: number) =>
+      simulateCasting(castCards, [cast], {
+        rng: seededRng("m"),
+        runs: 600,
+        onTheDraw: false,
+        lastTurn,
+        rule,
+      }).curves[0];
+    const curves = [
+      run(target("Giant", 4, [["B"], ["G"]], true), 4),
+      run(target("Henzie", 5, [["B"], ["G"]], false), 5),
+      run(target("Henzie", 3, [], false), 3),
+      run(target("Wurm", 6, [["G"], ["G"]], true), 6),
+    ];
+    expect(curves.map((curve) => curve.byTurn.at(-1))).toMatchSnapshot();
   });
 
   it("odds table", () => {
@@ -266,7 +263,7 @@ describe("engines, pinned", () => {
   it("draw_sample", async () => {
     const view = {
       deck: { id: 7, format: "commander" } as unknown as Deck,
-      lines: lines(),
+      lines: featuredLines(),
       rules: {},
     } satisfies DeckView;
     const { drawSample } = makeDrawSample({
@@ -283,7 +280,8 @@ describe("engines, pinned", () => {
         hands: 1,
         drawNext: 2,
         trials: 400,
-        mustCastTurn: 5,
+        cast: ["commander"],
+        lastTurn: 5,
         seed: "s",
       }),
       await drawSample({
@@ -292,11 +290,43 @@ describe("engines, pinned", () => {
         hands: 1,
         drawNext: 2,
         trials: 400,
-        mustCastCard: "Giant",
-        mustCastTurn: 4,
+        cast: ["Giant"],
+        lastTurn: 4,
         seed: "s",
       }),
     ];
     expect(results).toMatchSnapshot();
+  });
+
+  it("draw_sample answers 'castable by turn Y' for the commander, one chance per turn", async () => {
+    const view = {
+      deck: { id: 7, format: "commander" } as unknown as Deck,
+      lines: featuredLines(),
+      rules: {},
+    };
+    const { castCurves } = makeDrawSample({
+      deckView: async () => view,
+      profile: async () => null,
+      clock: { now: () => new Date("2026-01-01T00:00:00Z") },
+    });
+    const request = {
+      userId: "u" as unknown as UserId,
+      deckId: 7,
+      cards: ["commander", "Giant"],
+      onTheDraw: false,
+      lastTurn: 6,
+      runs: 300,
+      seed: "s",
+    };
+    const result = await castCurves(request);
+    expect(result).toEqual(await castCurves(request));
+    if (!result.ok) throw new Error("expected a report");
+    const [henzie, giant] = result.value.cards;
+    expect(result.value).toMatchObject({ runs: 300, onTheDraw: false });
+    expect(henzie.byTurnPct).toHaveLength(6);
+    expect(henzie.byTurnPct[5]).toBeGreaterThan(henzie.byTurnPct[2]);
+    expect(giant.card).toBe("Giant");
+    const missing = await castCurves({ ...request, cards: ["Nonexistent"] });
+    expect(missing).toMatchObject({ ok: false, error: { kind: "CastCardNotInDeck" } });
   });
 });

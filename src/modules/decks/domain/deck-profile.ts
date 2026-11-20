@@ -302,7 +302,7 @@ export function declaredComboFor(
 
 /**
  * Filters a deck profile's `costReducers` to only reducers whose `cardName` matches one of the
- * deck's commanders (e.g. for opening-hand `mustCastBy` checks where 1-ofs in the 99 are not
+ * deck's commanders (e.g. for the cast simulator where 1-ofs in the 99 are not
  * guaranteed to be on the battlefield).
  */
 export function commanderOnlyProfile(

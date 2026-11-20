@@ -8,6 +8,7 @@ import { type BracketFlag, Cents } from "@/shared/kernel";
 import { TAG_LABELS } from "@/app/decks/labels";
 import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-panel";
 import { ownedWords } from "../derive";
+import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
@@ -214,6 +215,7 @@ export function SelectedCard(props: {
           </p>
         )
       )}
+      <CastCurve key={selection.oracleId} deckId={props.deckId} card={selection.name} />
       <div className="flex flex-col gap-1 text-sm">
         {props.similar === null ? (
           <button
