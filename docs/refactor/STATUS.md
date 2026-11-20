@@ -54,7 +54,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P27   | [One scorer; no scores or ranks in tools](packages/P27-one-scorer.md)                    | P13, P14, P24, P26            | P15                | done                                                                    |
 | P28   | ["Can I cast X by turn Y?": simulator and effect registry](packages/P28-cast-by-turn.md) | P15, P24                      | P27                | done                                                                    |
 |       | **Wave 5: structure** · milestone 3                                                      |                               |                    |                                                                         |
-| P29   | [Untangle the import cycles](packages/P29-untangle-cycles.md)                            | P15, P27, P28                 | none               | free                                                                    |
+| P29   | [Untangle the import cycles](packages/P29-untangle-cycles.md)                            | P15, P27, P28                 | none               | in progress (agent)                                                     |
 | P18   | [Split `decks` into subfolders](packages/P18-split-decks.md)                             | P29, decision 4               | none               | free (decision 4 answered; ADR 0028 needs the owner)                    |
 | P30   | [Merge the collections; split `catalog`](packages/P30-collections-and-catalog.md)        | P18, P29                      | none               | free (folder names need the owner)                                      |
 |       | **Wave 6: what a professional sees** · final milestone                                   |                               |                    |                                                                         |
@@ -65,7 +65,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P21   | [Naming sweep, README fact check, trimmed `CLAUDE.md`](packages/P21-naming-docs.md)      | P18, P20, P30, P33            | P22, P34           | free                                                                    |
 | P22   | [Design docs into `docs/modules/`; citation check](packages/P22-design-docs.md)          | P18, P30                      | P20, P21, P31–P34  | free                                                                    |
 | P34   | [Repo polish: CI, licence, contributing, README](packages/P34-repo-polish.md)            | P23 (its CLAUDE.md step: P21) | P20, P22, P32, P33 | free (several answers needed from the owner)                            |
-| P35   | [Sign-in and connector OAuth through Authentik (a feature)](packages/P35-authentik.md)   | P25                           | waves 5 and 6      | in progress (agent: design doc 69, both options weighed)                |
+| P35   | [Sign-in and connector OAuth through Authentik (a feature)](packages/P35-authentik.md)   | P25                           | waves 5 and 6      | in progress (agent: app side; doc 69 accepted, option A)                |
 
 ```mermaid
 flowchart LR
