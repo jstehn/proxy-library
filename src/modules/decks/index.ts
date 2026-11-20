@@ -136,7 +136,6 @@ export {
 } from "./domain/suggestion-types";
 export { embedSimForCards } from "./queries/embeddings";
 export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
-export { deckCombosView } from "./queries/deck-combos";
 
 export type { Reason } from "./domain/suggest";
 export { manaBasePlan } from "./queries/mana-base";
@@ -190,7 +189,6 @@ export {
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
 export { library, openingHandOdds, type LibraryCard, type TestHand } from "./domain/draws";
 
-export { deckUpgradeRoadmap } from "./queries/upgrade-roadmap";
 export { makeGoldfishSessions } from "./application/goldfish-sessions";
 
 export {
