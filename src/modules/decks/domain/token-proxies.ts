@@ -1,3 +1,4 @@
+import { hasTypeWord } from "@/shared/kernel";
 import { isCounted, isPlayed, type Board } from "./boards";
 import type { PrintedCard, PrintedFace } from "./playtest-card";
 import { cardsToPrint, type ProxyCard, type ProxyLine, type ProxyOptions } from "./proxy-sheet";
@@ -235,12 +236,11 @@ export type TokenChecklistItem = Readonly<{
   art: TokenArt;
 }>;
 
-/** Classifies a token printing by its front type line (case-insensitive word match). */
+/** Classifies a token printing by its front type line (whole words, as Scryfall writes them). */
 export function tokenKind(art: TokenArt): TokenKind {
   const typeLine = art.faces[0]?.typeLine ?? "";
-  if (/\bemblem\b/i.test(typeLine)) return "emblem";
-  if (/\btoken\b/i.test(typeLine)) return "token";
-  return "helper";
+  if (hasTypeWord(typeLine, ["Emblem"])) return "emblem";
+  return hasTypeWord(typeLine, ["Token"]) ? "token" : "helper";
 }
 
 /** Combined non-empty rules text across the token's faces, separated by ` // `, or "". */
