@@ -28,7 +28,7 @@ const FINISH_COLORS: Record<Finish, string> = {
 };
 
 export default async function CardPage(props: PageProps<"/cards/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
   const detail = await capabilities.catalogReads.printingDetail(id);
   if (detail === null) notFound();
@@ -42,7 +42,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
       capabilities.deckReads.decksUsing(actor.userId, [id]),
       capabilities.realCollectionReads.copiesOf(actor.userId, id),
       capabilities.realCollectionReads.printingsOfSameCard(id),
-      capabilities.wishlistReads.forCard(actor.userId, id),
+      reads.wishlist.forCard(actor, id),
     ]);
   const searchParams = await props.searchParams;
   const realError = typeof searchParams.realError === "string" ? searchParams.realError : null;

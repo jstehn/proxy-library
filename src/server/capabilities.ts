@@ -31,7 +31,7 @@ import {
   type PreviewRepository,
 } from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
-import { wishesAtTarget, wishesForCard, type Wishlist } from "@/modules/wishlist";
+import { wishesForCardOf, wishlistQueries, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
@@ -128,7 +128,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
         dependencies.services.wallet.refreshWallet(userId),
         tradeQueries.waitingForYou(db, actor),
-        wishesAtTarget(db, userId),
+        wishlistQueries.atTarget(db, actor),
         activeDraftOf(db, userId),
         socialQueries.incomingRequestCount(db, actor),
       ]);
@@ -153,7 +153,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       realCopies: (userId, oracleId) => realOwnedByOracle(db, userId, oracleId),
       decksUsing: async (userId, printingId) =>
         (await decksUsing(db, userId, [printingId])).get(printingId) ?? [],
-      wishes: (userId, printingId) => wishesForCard(db, userId, printingId),
+      wishes: (userId, printingId) => wishesForCardOf(db, userId, printingId),
       storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
     }),
     searchCatalog: makeSearchCatalog({

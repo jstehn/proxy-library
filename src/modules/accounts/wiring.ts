@@ -1,7 +1,7 @@
 import { collectionPage } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
 import { nextPayday, walletQueries } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
+import { wishlistAnswersOf } from "@/modules/wishlist";
 import { withDb, type DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
 import { listAccessTokens } from "./queries/access-tokens";
@@ -49,7 +49,7 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
         };
       },
       deckCount: async (userId) => (await decksFor(db, userId)).length,
-      wishCount: async (userId) => (await wishlistAnswers(db, userId)).wishes.length,
+      wishCount: async (userId) => (await wishlistAnswersOf(db, userId)).wishes.length,
     }),
   };
 }

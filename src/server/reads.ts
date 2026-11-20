@@ -3,6 +3,7 @@ import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
 import { tradeQueries } from "@/modules/trades";
 import { socialQueries } from "@/modules/social";
+import { wishlistQueries } from "@/modules/wishlist";
 import { walletQueries } from "@/modules/wallet";
 import { bindDb, type DbExecutor } from "@/shared/db";
 
@@ -20,6 +21,7 @@ export function buildReads(db: DbExecutor) {
     social: bindDb(db, socialQueries),
     trades: bindDb(db, tradeQueries),
     wallet: bindDb(db, walletQueries),
+    wishlist: bindDb(db, wishlistQueries),
   };
 }
 export type Reads = ReturnType<typeof buildReads>;

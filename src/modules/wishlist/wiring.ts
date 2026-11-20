@@ -1,18 +1,10 @@
 import { nextPayday, walletQueries } from "@/modules/wallet";
-import { withDb, type DbExecutor } from "@/shared/db";
+import type { DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
 import { makeAddWishes, makeRemoveWishes, makeWishlistView } from "./application/wishlist-tools";
 import type { Wishlist } from "./application/make-wishlist";
 import { WishId } from "./domain/wish";
-import {
-  isWishlistShared,
-  sharedWishlistFor,
-  sharedWishlists,
-  wishedPrintings,
-  wishesAtTarget,
-  wishesForCard,
-  wishlistAnswers,
-} from "./queries/wishlist";
+import { wishlistAnswersOf } from "./queries/of-user";
 
 // The wishlist's capabilities (ADR 0026). `findCard` comes from the decks module's card lookup,
 // which the composition root passes in.
@@ -28,17 +20,8 @@ type WishlistWiringDependencies = Readonly<{
 export function wireWishlistCapabilities(dependencies: WishlistWiringDependencies) {
   const { db, clock, wallet, wishlist, findCard } = dependencies;
   return {
-    wishlistReads: {
-      forCard: withDb(db, wishesForCard),
-      isShared: withDb(db, isWishlistShared),
-      sharedFor: withDb(db, sharedWishlistFor),
-      shared: withDb(db, sharedWishlists),
-      wished: withDb(db, wishedPrintings),
-      atTarget: withDb(db, wishesAtTarget),
-      answers: withDb(db, wishlistAnswers),
-    },
     wishlistView: makeWishlistView({
-      answers: (userId) => wishlistAnswers(db, userId),
+      answers: (userId) => wishlistAnswersOf(db, userId),
       outlook: async (userId) => {
         const [balance, settings] = await Promise.all([
           wallet.refreshWallet(userId),

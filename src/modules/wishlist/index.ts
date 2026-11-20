@@ -30,13 +30,7 @@ export {
   type WishDetails,
   type WishTarget,
 } from "./domain/wish";
-export {
-  isWishlistShared,
-  sharedWishlistFor,
-  sharedWishlists,
-  wishedPrintings,
-  wishesAtTarget,
-  wishesForCard,
-  wishlistAnswers,
-  type SharedWishLine,
-} from "./queries/wishlist";
+export type { SharedWishLine } from "./queries/wishlist";
+export * as wishlistQueries from "./queries";
+// Reads that take a player's id, for capabilities in other modules that already hold it.
+export { wishesForCardOf, wishlistAnswersOf } from "./queries/of-user";

@@ -5,11 +5,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Cents, err } from "@/shared/kernel";
 import {
   makeWishlist,
-  wishedPrintings,
-  wishesAtTarget,
-  wishesForCard,
   wishLines,
-  wishlistAnswers,
+  wishlistQueries,
   type WalletOutlook,
   type WishDetails,
   type WishRequest,
@@ -62,7 +59,7 @@ describe("the Wishlist page's answers", () => {
     const wish = await add({ kind: "anyPrinting", printingId: borderless, finish: "nonfoil" });
     expect(wish.savedPrice).toBe(982);
 
-    const [line] = wishLines(await wishlistAnswers(db, jack.userId), outlook(500));
+    const [line] = wishLines(await wishlistQueries.answers(db, jack), outlook(500));
     expect(line.offer?.collectorNumber).toBe("9");
     expect(line.options.map((option) => option.collectorNumber)).toEqual(["9", "295"]);
     expect(line.status).toEqual({ kind: "shortBy", shortfall: 482, paydays: null });
@@ -86,14 +83,14 @@ describe("the Wishlist page's answers", () => {
       },
     );
 
-    expect((await wishesForCard(db, jack.userId, regular)).map((wish) => wish.target.kind)).toEqual(
-      ["exactPrinting", "anyPrinting"],
-    );
-    expect(await wishedPrintings(db, jack.userId, [regular, borderless])).toEqual(
+    expect(
+      (await wishlistQueries.forCard(db, jack, regular)).map((wish) => wish.target.kind),
+    ).toEqual(["exactPrinting", "anyPrinting"]);
+    expect(await wishlistQueries.wished(db, jack, [regular, borderless])).toEqual(
       new Set([regular, borderless]),
     );
-    expect(await wishedPrintings(db, bob.userId, [regular])).toEqual(new Set());
-    expect(await wishesAtTarget(db, jack.userId)).toBe(1); // $14.20 ≤ $15; $9.82 > $5
+    expect(await wishlistQueries.wished(db, bob, [regular])).toEqual(new Set());
+    expect(await wishlistQueries.atTarget(db, jack)).toBe(1); // $14.20 ≤ $15; $9.82 > $5
   });
 });
 
@@ -168,7 +165,7 @@ describe("wishing for many cards at once (task 71)", () => {
       ok: true,
       value: { added: 1, raised: 0, unchanged: 0, skipped: 0 },
     });
-    const [wish] = await wishesForCard(db, jack.userId, regular);
+    const [wish] = await wishlistQueries.forCard(db, jack, regular);
     expect(wish).toMatchObject({
       target: { kind: "anyPrinting", finish: "cheapest" },
       quantity: 2,
@@ -181,6 +178,6 @@ describe("wishing for many cards at once (task 71)", () => {
     expect(await wishlist.wishForCards(jack, [{ oracleId: "not-a-card", quantity: 1 }])).toEqual(
       err({ kind: "CardNotFound" }),
     );
-    expect((await wishesForCard(db, jack.userId, regular))[0].quantity).toBe(3);
+    expect((await wishlistQueries.forCard(db, jack, regular))[0].quantity).toBe(3);
   });
 });

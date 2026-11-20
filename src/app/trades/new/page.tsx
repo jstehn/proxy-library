@@ -140,7 +140,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
   const [mine, theirs, partnerWishlist] = await Promise.all([
     search(actor.userId, draft.mine),
     search(partner.userId, draft.theirs),
-    capabilities.wishlistReads.sharedFor(actor.userId, UserId.of(partner.userId)),
+    reads.wishlist.sharedFor(actor, UserId.of(partner.userId)),
   ]);
   const cards = await capabilities.printingDetails([
     ...mine.rows.map((row) => row.printingId),
