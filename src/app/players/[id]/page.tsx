@@ -22,11 +22,11 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default async function PlayerProfilePage(props: PageProps<"/players/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
 
   const [profile, sharedReal] = await Promise.all([
-    capabilities.socialReads.playerProfile(actor.userId, id),
+    reads.social.playerProfile(actor, id),
     capabilities.realCollectionReads.shared(),
   ]);
 

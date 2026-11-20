@@ -1,4 +1,3 @@
-import { wireSocialCapabilities } from "@/modules/social/wiring";
 import { wireTradeCapabilities } from "@/modules/trades/wiring";
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
@@ -35,12 +34,12 @@ import {
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
 import { wishesAtTarget, wishesForCard, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
-import type { makeAccounts } from "@/modules/accounts";
+import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
 import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
 import type { makePacks } from "@/modules/packs";
 import type { makeResetPlayer } from "@/modules/reset";
-import { incomingRequestCount, type makeSocial } from "@/modules/social";
+import { socialQueries, type makeSocial } from "@/modules/social";
 import { tradesWaitingForYou, type makeTrades } from "@/modules/trades";
 import type { makeWallet } from "@/modules/wallet";
 import type { makeWishlist } from "@/modules/wishlist";
@@ -111,7 +110,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     ...wireCatalogCapabilities({ db }),
     ...wireCollectionCapabilities({ db }),
-    ...wireSocialCapabilities({ db }),
     ...wireTradeCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireDraftCapabilities({ db }),
@@ -127,13 +125,14 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
-    headerSummary: async (userId: UserId) => {
+    headerSummary: async (actor: Actor) => {
+      const userId = actor.userId;
       const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
         dependencies.services.wallet.refreshWallet(userId),
         tradesWaitingForYou(db, userId),
         wishesAtTarget(db, userId),
         activeDraftOf(db, userId),
-        incomingRequestCount(db, userId),
+        socialQueries.incomingRequestCount(db, actor),
       ]);
       return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
     },

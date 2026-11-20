@@ -23,7 +23,7 @@ const MAIN_LINKS = [
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
 export async function SiteHeader() {
   const { actor, capabilities } = await readPage({ allowVisitors: true });
-  const summary = actor === null ? null : await capabilities.headerSummary(actor.userId);
+  const summary = actor === null ? null : await capabilities.headerSummary(actor);
   const balance = summary?.balance ?? null;
   const waitingTrades = summary?.waitingTrades ?? 0;
   const wishesOnTarget = summary?.wishesOnTarget ?? 0;
