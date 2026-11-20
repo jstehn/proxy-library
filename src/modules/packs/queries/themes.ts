@@ -14,7 +14,7 @@ export type OpenedPackKey = Readonly<{
 }>;
 
 /** Each Jumpstart pack's theme ("Angels"), by item id. Other packs aren't in the map. */
-export async function packThemes(
+export async function themes(
   db: DbExecutor,
   packs: readonly OpenedPackKey[],
 ): Promise<Map<number, string>> {

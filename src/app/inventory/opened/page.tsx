@@ -23,7 +23,7 @@ function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
 }
 
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const raw = searchParams.items;
   const animate = searchParams.animate === "1";
@@ -40,7 +40,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
-  const themes = await capabilities.packReads.themes(packs);
+  const themes = await reads.packs.themes(packs);
   const total = Cents.sum(
     openings.flatMap((opening) =>
       opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),

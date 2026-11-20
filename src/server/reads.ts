@@ -1,4 +1,5 @@
 import { activityQueries } from "@/modules/activity";
+import { packsQueries } from "@/modules/packs";
 import { bindDb, type DbExecutor } from "@/shared/db";
 
 // `reads` (design doc 67, ADR 0026 addendum): each module's query functions with the database
@@ -10,6 +11,7 @@ import { bindDb, type DbExecutor } from "@/shared/db";
 export function buildReads(db: DbExecutor) {
   return {
     activity: bindDb(db, activityQueries),
+    packs: bindDb(db, packsQueries),
   };
 }
 export type Reads = ReturnType<typeof buildReads>;

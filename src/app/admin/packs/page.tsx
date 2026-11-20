@@ -49,10 +49,10 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function PackLabPage(props: PageProps<"/admin/packs">) {
-  const { actor, capabilities } = await readPage({ admin: true });
+  const { actor, capabilities, reads } = await readPage({ admin: true });
   const searchParams = await props.searchParams;
   const { packs } = capabilities;
-  const choices = await capabilities.packReads.availableBoosters();
+  const choices = await reads.packs.availableBoosters();
 
   // "BLB/play" → set BLB, booster type "play".
   const booster = firstValue(searchParams.booster) ?? "";
