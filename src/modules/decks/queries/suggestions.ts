@@ -11,13 +11,12 @@ import {
 } from "./suggestion-sql";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, textArray } from "@/shared/db";
-import { type Tag, type UserId } from "@/shared/kernel";
+import { creatureTypes, type Tag, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/deck";
 import { copyLimitFor } from "../domain/rules";
 import {
   budgetPicks,
-  creatureTypes,
   deckProfile,
   rank,
   scoreForDeck,

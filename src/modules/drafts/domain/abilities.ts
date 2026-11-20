@@ -109,12 +109,5 @@ export function guessedRight(note: Extract<Note, { kind: "guess" }>): boolean {
   return note.guess.trim().toLowerCase() === note.actual.trim().toLowerCase();
 }
 
-/** "Creature — Human Knight" → ["Human", "Knight"] (Paliano Vanguard notes creature types). */
-export function creatureTypes(typeLine: string): string[] {
-  const [front = []] = cardTypes(typeLine).faces;
-  const dash = front.indexOf("—");
-  return dash >= 0 && front.includes("Creature") ? front.slice(dash + 1) : [];
-}
-
 export { isCreature as isCreatureLine } from "@/shared/kernel";
 export const isConspiracyLine = (typeLine: string) => hasTypeWord(typeLine, ["Conspiracy"]);

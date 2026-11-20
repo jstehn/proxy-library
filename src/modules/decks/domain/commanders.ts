@@ -1,5 +1,4 @@
 import {
-  creatureTypes,
   deckProfile,
   rank,
   scoreForDeck,
@@ -7,6 +6,7 @@ import {
   type DeckFingerprint,
   type Scored,
 } from "./suggest";
+import { creatureTypes } from "@/shared/kernel";
 import { strength } from "./rate";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";

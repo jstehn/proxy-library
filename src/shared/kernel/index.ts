@@ -29,7 +29,14 @@ export {
   type Tag,
   type Theme,
 } from "./card-vocabulary";
-export { cardTypes, hasTypeWord, isBasicLand, isCreature, isLand } from "./card-types";
+export {
+  cardTypes,
+  creatureTypes,
+  hasTypeWord,
+  isBasicLand,
+  isCreature,
+  isLand,
+} from "./card-types";
 export {
   CURVE_LAST_SLOT,
   CURVE_SLOTS,

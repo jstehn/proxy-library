@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardTypes, hasTypeWord } from "./card-types";
+import { cardTypes, creatureTypes, hasTypeWord } from "./card-types";
 
 describe("hasTypeWord", () => {
   it("finds a whole word on any face", () => {
@@ -74,5 +74,15 @@ describe("cardTypes", () => {
       ["Instant"],
       ["Land", "—", "Forest"],
     ]);
+  });
+});
+
+describe("creatureTypes", () => {
+  it("reads the front face's creature types, counting Kindred and Tribal", () => {
+    expect(creatureTypes("Legendary Creature — Elf Warrior")).toEqual(["Elf", "Warrior"]);
+    expect(creatureTypes("Kindred Instant — Elf")).toEqual(["Elf"]);
+    expect(creatureTypes("Tribal Sorcery — Goblin")).toEqual(["Goblin"]);
+    expect(creatureTypes("Artifact — Equipment")).toEqual([]);
+    expect(creatureTypes("Instant // Creature — Elf")).toEqual([]);
   });
 });
