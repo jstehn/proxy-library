@@ -78,4 +78,39 @@ src`). Delete the old definition.
 
 ## Handoff
 
-(empty)
+**Branch** `refactor/P15-opening-hands`; commits: the pin test, then the two engines.
+**Package net: -77 production lines** (75,422 to 75,345; the plan's -650 to -1,150 was written before
+P24 deleted the trainer, the interactive goldfish and `sim-pipeline.ts`, which were two of four hand
+engines and one of three payment engines, and before P12 to P14 removed `spendMana`/`addMana`).
+
+- **Hand engine** `decks/domain/opening-hand/{library,hand}.ts`: `playOpening(cards, rng, rule)` deals,
+  mulligans, bottoms by `KeepPolicy` (`COMMANDER_KEEP`) and returns the kept `Opening` (`hand`, `library`
+  top first, `mulligans`, `keptClean`); `drawsByTurn(turn, onTheDraw)` says how many of `library` are drawn by a
+  turn. The test hand uses the same `dealHand`, `bottomCard`, `drawCard` (`nextHand` is the reducer). One
+  `isEarlyPlay`/`isEarlyRamp`/`isKeepable`/`chooseBottom`. `draws.ts` keeps only the exact odds.
+- **Payment engine** `decks/domain/mana-payment.ts`: `parseCost` (built on `costSymbols`),
+  `firstUnpaidPip`/`canPay` (bipartite matching). Deleted: `mana.ts` (with its `ManaColor`, pool, parser),
+  goldfish's `canPayColors`, castability's `missingPip`/`buildPipOptions`, draw-sample's own shuffle,
+  the `colorPips` regex in `stats.ts`.
+- **Pinned** (`application/engines-pinned.test.ts`, seeded snapshots recorded before the change): scorecard
+  hand run, other keep rules, mustCastBy x4, odds table, cast on curve, test-hand sequence, `draw_sample` x3.
+  **All still match: no difference on the reference deck.**
+- **Differences by design (not visible on the reference deck; owner to decide):**
+  1. A commander's cost is now `parseCost(...).pips` (hybrid pays with either colour, `{C}` needs a colourless
+     source) instead of `colorPips` (a hybrid pip counted for both colours, `{C}` ignored).
+  2. Castability: an unpayable `{C}` pip used to count as cast; now it counts as not cast (no bottleneck colour).
+  3. Castability: pips are matched exactly (augmenting paths) instead of greedily, so a spell the greedy loop
+     wrongly failed can now count.
+  4. `SimulateHandsOptions`: `policy?: KeepPolicy` replaces `minLands/maxLands/requireEarlyPlay`; the 0..7 clamps
+     went (no caller could reach them).
+  5. A bottomed card now goes to the bottom of the library (it was dropped from it); matters only if a run
+     draws the whole library.
+  6. `openingHandOdds` early ramp: a card without a mana value no longer counts as early (it did, as 0).
+  7. `colorPips` (stats) no longer counts the half-mana symbols `{HW}`/`{HR}`.
+- **Not done, and why:** `creatureTypes` (drafts and decks, different rules: Kindred) stays twice, because
+  decks' copy is in `suggest.ts` (P27's file); a kernel copy plus both deletions is a follow-up after P27.
+  `manaSymbols` in `card-search/parse.ts` reads a search query for SQL, not a printed cost: left.
+  `simulateCastOnCurve` keeps its own partial shuffle (no mulligan): moving it to `shuffled` would change
+  every seeded number; P28 rebuilds it on `playOpening`. `canCastByTurn` (goldfish) and
+  `simulateCastOnCurve` remain two simulators for P28 to merge.
+- **Integration files run** (private DB `tcg_p15_test`, dropped): llm-tools, mana-base, decks: green.
