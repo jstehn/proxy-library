@@ -1,7 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["scripts/*.ts", "worker/index.ts!"],
-  "ignore": ["public/sw.js", "**/testing/**", "tests/**"],
+  "ignore": ["public/sw.js", "**/testing/**", "tests/**", "src/server/form-action*.ts"],
   "ignoreDependencies": ["mana-font"],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "ignoreIssues": {
+    "src/modules/{activity,inventory,packs,social,store,trades,wallet,wishlist}/queries/*.ts": [
+      "exports"
+    ],
+    "src/shared/db/bind-db.ts": ["exports"]
+  }
 }

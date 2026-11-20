@@ -128,4 +128,59 @@ where missing), every `src/app/**/page.tsx` and `actions.ts`, `eslint.config.mjs
 
 ## Handoff
 
-(empty)
+### Part 1 (framework and the first eight modules; branch `refactor/P25a-read-layer`)
+
+**Done.**
+
+- `Actor` and `AdminActor` are branded (`accounts/domain/player.ts`). `toActor` and `asAdmin` are the
+  only makers. `asAdmin` is a method of the accounts service, called only by `server/session.ts`.
+  `testActor()` / `testAdminActor()` (`accounts/testing/actors.ts`) replace the 16 test literals.
+  Lint bans `as Actor` / `as AdminActor` outside tests, `testing/` and `player.ts`
+  (`FORGED_ACTOR` in `eslint.config.mjs`).
+- `bindDb` and `bindPublicDb` (`shared/db/bind-db.ts`) with the `Refusing` type check (a first
+  parameter of `UserId` fails to compile; a visitor read also refuses `Actor`).
+  `src/server/reads.ts`: `buildReads`, `buildPublicReads` (empty: no moved module has a token read),
+  `Reads`, `PublicReads`. `readPage()` and `action()` hand over `reads`; `readPage({ admin: true })`
+  returns an `AdminActor`; `readPage({ allowVisitors: true })` is a union that narrows on `actor`
+  even when destructured (type test in `page.test.ts`). `readTool(request)` in
+  `server/read-tool.ts`; `ToolContext` is now `ToolRequest`.
+- `formAction` (`server/form-action.ts`, `form-action-instance.ts`): list fields by `getAll`,
+  `checkbox()`, `blankAsUndefined()`, session check, `{ admin: true }`, `FormState`, tests with
+  fakes. **Not migrated.** A `FormRunner` is not assignable to `<form action>`'s
+  `(formData) => void | Promise<void>` (it returns `Promise<FormState>`), so forms use
+  `useActionState`, or a form that always redirects needs a small wrapper.
+- Moved, one commit each, `*Reads` bundle deleted in the same commit: activity, packs, inventory,
+  wallet, social, trades, wishlist, store. Files deleted: `activity|packs|inventory|wallet|social|trades|store/wiring.ts`
+  (wishlist's `wiring.ts` stays: it holds `wishlistView`, `addWishes`, `removeWishes`).
+- `/api/artwork` returns 401 without a real session (F10). `/api/images` stays public.
+- `tests/integration/access-rules.int.test.ts`: R5, R51-R55, R66-R97 (written, not run).
+
+**Convention for part 2.** A module's `queries/index.ts` is `export * from "./file"` for each file
+of public reads, and the module `index.ts` has `export * as <module>Queries from "./queries"`.
+`export *` (not `export { x as y }`) is what makes Go to Definition on `reads.m.q` land on the SQL
+function. So the function's own name is the read's name (`feed`, `history`, `view`). Helpers that must
+not become reads live in a file `queries/index.ts` does not list (`for-sale.ts`, `of-user.ts`,
+`pack-msrp.ts`). Admin reads take `AdminActor` as the second parameter (unused: the type is the rule).
+
+**Numbers.** Production code lines 74,789 to 74,895 (+106): the framework is added first and part 2
+removes the services, `withDb`, `deckEdits`, the other six bundles and the form parsing. The sizes
+baseline was NOT lowered, and `pnpm check` fails on `sizes` until the owner approves this growth or
+part 2 lands. Knip: 457 to 428 (the baseline is lowered). To get there `knip.json` ignores
+`form-action*.ts`, the eight moved modules' `queries/*.ts` exports (knip can't follow
+`Object.entries(namespace)`) and `bind-db.ts` exports; see removal-list.md.
+
+**Left for part 2.**
+
+- Modules: drafts, accounts, catalog, collection, real-collection, decks. Six bundles remain
+  (`grep -rn "Reads:" src/modules/*/wiring.ts`). Move them, then delete `withDb`/`WithoutDb`.
+- Fill `PublicReads` (accounts.hasAnyPlayers, decks.publicDeck, publicScorecard,
+  publicDeckTokens(token)) with `bindPublicDb`; delete the knip ignore for it.
+- Replace `wishlist/queries/of-user.ts` once `getAccountOverview`, `wishlistView` and `lookUpCards`
+  take an `Actor` (F7); the same for `refreshWallet`, `deckOverview`, `checkOwnedCards`.
+- `trades/new/page.tsx` still calls `collection.page(partner.userId, ...)` (F5): make it
+  `collection.pageOfPartner(actor, partnerId)`.
+- The 17 services, `capabilities.ts` at or under 120 lines, `describe-error` files, migrating the
+  27+ form files to `formAction`, the final lint rules (no `@/shared/db` or `queries/` in
+  `src/app`), the `NoPlainUserId`-style check for the remaining modules (already enforced by
+  `bindDb` when a module is added to `buildReads`).
+- Drafts page `loreSources` now takes `reads` and `actor`; keep it that way.
