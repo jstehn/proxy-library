@@ -32,7 +32,8 @@ import { draftQueries, type makeDrafts } from "@/modules/drafts";
 import type { makeResetPlayer } from "@/modules/reset";
 import { socialQueries, type makeSocial } from "@/modules/social";
 import { tradeQueries, type makeTrades } from "@/modules/trades";
-import type { makeWallet } from "@/modules/wallet";
+import type { Wallet } from "@/modules/wallet";
+import { wireWalletCapabilities } from "@/modules/wallet/wiring";
 import type { makeWishlist } from "@/modules/wishlist";
 import type { makeRealCollection } from "@/modules/real-collection";
 import type { makeStore } from "@/modules/store";
@@ -40,7 +41,7 @@ import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
 import type { makeYoutube } from "@/modules/youtube";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock } from "@/shared/kernel";
+import type { Clock } from "@/shared/kernel";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
@@ -49,7 +50,7 @@ import type { Cents, Clock } from "@/shared/kernel";
 type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
-  wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
+  wallet: Wallet;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
   outsideData: OutsideDataService;
@@ -69,7 +70,6 @@ type CapabilityDependencies = Readonly<{
     realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
     accounts: ReturnType<typeof makeAccounts>;
-    wallet: ReturnType<typeof makeWallet>;
     social: ReturnType<typeof makeSocial>;
     trades: ReturnType<typeof makeTrades>;
     wishlist: ReturnType<typeof makeWishlist>;
@@ -108,12 +108,13 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireAccountCapabilities({ db, clock, wallet }),
     ...wirePackCapabilities(dependencies),
     ...wireInventoryCapabilities(dependencies),
+    ...wireWalletCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
     headerSummary: async (actor: Actor) => {
       const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
-        dependencies.services.wallet.refreshWallet(actor),
+        wallet.refreshWallet(actor),
         tradeQueries.waitingForYou(db, actor),
         wishlistQueries.atTarget(db, actor),
         draftQueries.activeDraftOf(db, actor),

@@ -7,7 +7,7 @@ export default async function AdminPlayersPage() {
   const { wallet } = capabilities;
 
   // Pay due allowances (and open new wallets) first, so the balances shown are current.
-  await wallet.refreshAllWallets();
+  await wallet.refreshAllWallets(admin);
   const [players, money] = await Promise.all([
     reads.accounts.listPlayers(admin),
     reads.wallet.playerMoney(admin),

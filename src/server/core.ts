@@ -301,7 +301,6 @@ export function buildCore(config: Config) {
         realCollection,
         store,
         accounts,
-        wallet,
         social,
         trades,
         wishlist,
