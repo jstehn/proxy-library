@@ -100,19 +100,18 @@ export {
   type DeckToCheck,
 } from "./domain/rules";
 export {
-  EARLY_RAMP_MAX_MV,
-  library,
-  nextHand,
   openingHandOdds,
-  startHand,
-  type DrawLine,
   type LandDropOdds,
-  type LibraryCard,
   type OddsRow,
   type OpeningHandOdds,
-  type TestHand,
-  type TestHandEvent,
 } from "./domain/draws";
+export { dealHand, nextHand, type HandState, type TestHandEvent } from "./domain/opening-hand/hand";
+export {
+  EARLY_RAMP_MAX_MV,
+  library,
+  type DrawLine,
+  type LibraryCard,
+} from "./domain/opening-hand/library";
 export { type GoldfishReport, type SampleHand, type SimulateHandsOptions } from "./domain/goldfish";
 export { plural, type Reason } from "./domain/suggest";
 export {

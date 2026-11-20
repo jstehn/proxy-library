@@ -1,129 +1,9 @@
-import { type CardFacts, type CardIdentity, type Rng, shuffled, type Tag } from "@/shared/kernel";
-import type { DeckCount } from "./boards";
-import { isLand } from "./stats";
+import type { Tag } from "@/shared/kernel";
+import { drawsByTurn, isEarlyRamp } from "./opening-hand/hand";
+import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
 
-// The draw simulator (design doc 19, section 3.4): test hands, London mulligans and the exact
-// odds of drawing what the deck needs. Pure: the browser passes in an Rng seeded by the server
-// (ADR 0008's implementation note), so nothing here decides anything that matters.
-
-/** What the simulator needs from a deck line. */
-export type DrawLine = DeckCount &
-  CardIdentity &
-  Pick<CardFacts, "name" | "typeLine"> &
-  Readonly<{
-    manaValue?: number;
-    roles?: readonly Tag[];
-    producedMana?: readonly string[];
-  }>;
-
-/** One copy of a card in the library. */
-export type LibraryCard = Readonly<{
-  /** Tells copies apart: "oracleId#2". */
-  key: string;
-  oracleId: string;
-  name: string;
-  printingId: string;
-  isLand: boolean;
-  manaValue?: number;
-  tags: readonly Tag[];
-  /** Colors of mana it makes once in play ("C" for colorless); empty for most spells. */
-  producedMana?: readonly string[];
-}>;
-
-export const OPENING_HAND = 7;
-
-/** Maximum mana value of a non-land ramp spell counted as castable by turn 3 (design doc 43). */
-export const EARLY_RAMP_MAX_MV = 3;
-
-/** The cards you draw from: one entry per copy in the main deck. Commanders start in the
- * command zone, and the sideboard stays out (invariant 5). */
-export function library(lines: readonly DrawLine[]): LibraryCard[] {
-  return lines
-    .filter((line) => line.board === "main")
-    .flatMap((line) => {
-      const tags = line.roles ?? [];
-      return Array.from({ length: line.quantity }, (_, copy) => ({
-        key: `${line.oracleId}#${copy + 1}`,
-        oracleId: line.oracleId,
-        name: line.name,
-        printingId: line.printingId,
-        isLand: isLand(line.typeLine),
-        ...(line.manaValue !== undefined ? { manaValue: line.manaValue } : {}),
-        tags,
-        ...(line.producedMana !== undefined && line.producedMana.length > 0
-          ? { producedMana: line.producedMana }
-          : {}),
-      }));
-    });
-}
-
-/** A test game: the library (top first), the hand, and where the mulligan stands. */
-export type TestHand = Readonly<{
-  library: readonly LibraryCard[];
-  hand: readonly LibraryCard[];
-  /** Mulligans taken this game. */
-  mulligans: number;
-  /** Cards still to put on the bottom (London mulligan). 0 once the hand is settled. */
-  toBottom: number;
-  /** Draw steps taken: 0 until the first "draw". */
-  turn: number;
-  /** Whether the first mulligan is free (Commander's multiplayer rule, CR 103.5c). */
-  freeMulligan: boolean;
-}>;
-
-export type TestHandEvent =
-  | Readonly<{ kind: "newHand"; rng: Rng }>
-  | Readonly<{ kind: "mulligan"; rng: Rng }>
-  | Readonly<{ kind: "bottom"; key: string }>
-  | Readonly<{ kind: "draw" }>;
-
-/** Shuffles the cards and deals an opening hand. */
-export function startHand(
-  cards: readonly LibraryCard[],
-  rng: Rng,
-  freeMulligan: boolean,
-  mulligans = 0,
-): TestHand {
-  const deck = shuffled(rng, cards);
-  return {
-    library: deck.slice(OPENING_HAND),
-    hand: deck.slice(0, OPENING_HAND),
-    mulligans,
-    toBottom: Math.max(0, mulligans - (freeMulligan ? 1 : 0)),
-    turn: 0,
-    freeMulligan,
-  };
-}
-
-/** The next state of a test game (section 7's table). Events that don't apply change nothing. */
-export function nextHand(state: TestHand, event: TestHandEvent): TestHand {
-  switch (event.kind) {
-    case "newHand":
-      return startHand(everyCard(state), event.rng, state.freeMulligan);
-    case "mulligan":
-      if (state.turn > 0 || state.toBottom > 0) return state;
-      return startHand(everyCard(state), event.rng, state.freeMulligan, state.mulligans + 1);
-    case "bottom": {
-      const card = state.hand.find((candidate) => candidate.key === event.key);
-      if (state.toBottom === 0 || card === undefined) return state;
-      return {
-        ...state,
-        hand: state.hand.filter((candidate) => candidate !== card),
-        library: [...state.library, card],
-        toBottom: state.toBottom - 1,
-      };
-    }
-    case "draw": {
-      const [top, ...rest] = state.library;
-      if (state.toBottom > 0 || top === undefined) return state;
-      return { ...state, hand: [...state.hand, top], library: rest, turn: state.turn + 1 };
-    }
-  }
-}
-
-function everyCard(state: TestHand): LibraryCard[] {
-  return [...state.hand, ...state.library];
-}
+// The exact odds of drawing what the deck needs (design doc 19, section 3.4): the hypergeometric
+// distribution, no dice. Dealing and mulligans live in `opening-hand/`.
 
 /** ln(n!) for n = 0…size, built once per call: sums of logs stay exact enough and never overflow. */
 function logFactorials(size: number): number[] {
@@ -198,7 +78,7 @@ export type OpeningHandOdds = Readonly<{
 
 /** Cards seen by a turn: the opening hand, one per draw step, and one more on the draw. */
 function cardsSeen(turn: number, onTheDraw: boolean): number {
-  return OPENING_HAND + Math.max(1, turn) - 1 + (onTheDraw ? 1 : 0);
+  return OPENING_HAND + drawsByTurn(turn, onTheDraw);
 }
 
 /**
@@ -254,10 +134,7 @@ export function openingHandOdds(
   const freeMulligan = options.freeMulligan ?? false;
   const lands = cards.filter((card) => card.isLand).length;
   const ramp = cards.filter((card) => card.tags.includes("ramp")).length;
-  const earlyRamp = cards.filter(
-    (card) =>
-      !card.isLand && card.tags.includes("ramp") && (card.manaValue ?? 0) <= EARLY_RAMP_MAX_MV,
-  ).length;
+  const earlyRamp = cards.filter(isEarlyRamp).length;
   const atLeast = (successes: number, draws: number, count: number) =>
     hypergeometricAtLeast(population, successes, draws, count);
 
