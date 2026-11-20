@@ -16,11 +16,13 @@ import { makeStore, storeQueries, type QuoteOptions } from "@/modules/store";
 import { makeTrades, tradeQueries, type TradeItem } from "@/modules/trades";
 import { makeWallet, walletQueries } from "@/modules/wallet";
 import { makeWishlist, wishlistQueries } from "@/modules/wishlist";
-import { SealedProductId } from "@/modules/catalog";
+import { SealedProductId, SetCode } from "@/modules/catalog";
 import { bindPublicDb } from "@/shared/db";
-import { Cents } from "@/shared/kernel";
+import { Cents, UserId } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
 import { accountPublicQueries, accountQueries } from "@/modules/accounts";
+import { collectionQueries } from "@/modules/collection";
+import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -37,6 +39,7 @@ const inventory = makeInventory({ unitOfWork, clock, seeds: { newSeed: randomSee
 const trades = makeTrades({ unitOfWork, clock });
 const wallet = makeWallet({ unitOfWork, clock });
 const wishlist = makeWishlist({ unitOfWork, clock });
+const drafts = makeDrafts({ unitOfWork, clock, seeds: { newSeed: randomSeed } });
 
 beforeEach(async () => {
   await db.execute(sql`truncate trades, trade_items, activity_events cascade`);
@@ -470,12 +473,118 @@ describe("accounts (R1 to R4)", () => {
   });
 });
 
+describe("drafts (R45 to R50)", () => {
+  async function jackHostsWithSam(): Promise<DraftId> {
+    const created = await drafts.createDraft(jack, {
+      setCode: SetCode.of("BLB"),
+      boosterType: "play",
+      maxSeats: 2,
+      secondsPerPick: 90,
+    });
+    if (!created.ok) throw new Error(created.error.kind);
+    expect((await drafts.joinDraft(sam, created.value)).ok).toBe(true);
+    return created.value;
+  }
+
+  it("R45: boosters is catalog data, the same for every player", async () => {
+    const boosters = await draftQueries.boosters(db);
+    expect(boosters.some((option) => option.setCode === "BLB")).toBe(true);
+  });
+
+  it("R46: boosterOptions is catalog data, the same for every player", async () => {
+    expect((await draftQueries.boosterOptions(db)).length).toBeGreaterThan(0);
+  });
+
+  it("R47: overview marks only the actor's own seat; finished lists only the actor's drafts", async () => {
+    await jackHostsWithSam();
+    const mine = await draftQueries.overview(db, jack);
+    expect(mine.open.map((draft) => draft.youAreSeated)).toEqual([true]);
+    const strangers = await draftQueries.overview(db, eve);
+    expect(strangers.open.map((draft) => draft.youAreSeated)).toEqual([false]);
+    await db.execute(sql`update drafts set status = 'finished', finished_at = now()`);
+    expect((await draftQueries.overview(db, jack)).finished).toHaveLength(1);
+    expect((await draftQueries.overview(db, eve)).finished).toEqual([]);
+  });
+
+  it("R48: view shows the lobby to any player, but only a seated player has a seat of their own", async () => {
+    const draftId = await jackHostsWithSam();
+    const seenByEve = await draftQueries.view(db, eve, draftId, new Date());
+    expect(seenByEve?.seats).toHaveLength(2);
+    expect(seenByEve?.you).toBeNull();
+    const seenBySam = await draftQueries.view(db, sam, draftId, new Date());
+    expect(seenBySam?.you).not.toBeNull();
+    expect(await draftQueries.view(db, eve, 987654, new Date())).toBeNull();
+  });
+
+  it("R49: activeDraftOf is the actor's own seat only", async () => {
+    const draftId = await jackHostsWithSam();
+    expect((await draftQueries.activeDraftOf(db, jack))?.id).toBe(draftId);
+    expect((await draftQueries.activeDraftOf(db, sam))?.id).toBe(draftId);
+    expect(await draftQueries.activeDraftOf(db, eve)).toBeNull();
+  });
+
+  it("R50: version follows the same rule as view: any signed-in player, nothing for an unknown draft", async () => {
+    const draftId = await jackHostsWithSam();
+    expect(await draftQueries.version(db, eve, draftId)).not.toBeNull();
+    expect(await draftQueries.version(db, eve, 987654)).toBeNull();
+  });
+});
+
+describe("collection (R18 to R20, F5)", () => {
+  async function jackOwnsTwo(): Promise<[PrintingId, PrintingId]> {
+    const [first, second] = await twoCards();
+    await db.execute(sql`
+      insert into collection_cards (user_id, printing_id, finish, quantity)
+      values ('jack', ${first}, 'nonfoil', 2), ('jack', ${second}, 'nonfoil', 1)
+    `);
+    return [first, second];
+  }
+  const everything = { sections: "none", sort: "name", page: 1 } as const;
+
+  it("R18: page lists only the actor's copies", async () => {
+    await jackOwnsTwo();
+    expect((await collectionQueries.page(db, jack, everything)).totals.copies).toBe(3);
+    expect((await collectionQueries.page(db, sam, everything)).rows).toEqual([]);
+  });
+
+  it("R19: ownedCopies counts only the actor's copies", async () => {
+    const [first] = await jackOwnsTwo();
+    expect(await collectionQueries.ownedCopies(db, jack, first)).toEqual({ nonfoil: 2 });
+    expect(await collectionQueries.ownedCopies(db, sam, first)).toEqual({});
+  });
+
+  it("R20: exportRows lists only the actor's rows", async () => {
+    await jackOwnsTwo();
+    expect(await collectionQueries.exportRows(db, jack)).toHaveLength(2);
+    expect(await collectionQueries.exportRows(db, sam)).toEqual([]);
+  });
+
+  it("F5: pageOfPartner shows an active partner's collection to another player, not yours, not a disabled player's", async () => {
+    await jackOwnsTwo();
+    const seenBySam = await collectionQueries.pageOfPartner(db, sam, jack.userId, everything);
+    expect(seenBySam.totals.copies).toBe(3);
+    // Asking for your own collection through the partner read gives nothing (use `page`).
+    expect((await collectionQueries.pageOfPartner(db, jack, jack.userId, everything)).rows).toEqual(
+      [],
+    );
+    await db.execute(sql`update players set disabled_at = now() where user_id = 'jack'`);
+    expect((await collectionQueries.pageOfPartner(db, sam, jack.userId, everything)).rows).toEqual(
+      [],
+    );
+    expect(
+      (await collectionQueries.pageOfPartner(db, sam, UserId.of("nobody"), everything)).rows,
+    ).toEqual([]);
+  });
+});
+
 describe("visitors", () => {
   it("no read that takes a player can be bound into PublicReads", () => {
     // @ts-expect-error wallet reads take an Actor, so a visitor's reads refuse them
     bindPublicDb(db, walletQueries);
     // @ts-expect-error nor the account reads of a player
     bindPublicDb(db, accountQueries);
+    // @ts-expect-error nor the collection reads
+    bindPublicDb(db, collectionQueries);
     // @ts-expect-error nor the activity feed
     bindPublicDb(db, activityQueries);
   });

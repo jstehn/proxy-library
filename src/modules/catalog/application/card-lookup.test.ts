@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { UserId } from "@/shared/kernel";
+import { testActor } from "@/modules/accounts/testing/actors";
 import { makeCardLookup, type CardLookupReaders } from "./card-lookup";
 
-const userId = UserId.of("1");
+const actor = testActor();
 const card = {
   oracleId: "o1",
   printingId: "p1",
@@ -43,7 +43,7 @@ function readers(overrides: Partial<CardLookupReaders> = {}): CardLookupReaders 
 
 describe("lookUpCards", () => {
   it("says which names weren't found and keeps the order asked", async () => {
-    const result = await makeCardLookup(readers())({ userId, queries: ["Nope", "Sol Ring"] });
+    const result = await makeCardLookup(readers())(actor, { queries: ["Nope", "Sol Ring"] });
     expect(result.ok && result.value.map((entry) => [entry.query, entry.found])).toEqual([
       ["Nope", false],
       ["Sol Ring", true],
@@ -51,7 +51,7 @@ describe("lookUpCards", () => {
   });
 
   it("totals game and real copies and lists each printing with its source", async () => {
-    const result = await makeCardLookup(readers())({ userId, queries: ["Sol Ring"] });
+    const result = await makeCardLookup(readers())(actor, { queries: ["Sol Ring"] });
     const [entry] = result.ok ? result.value : [];
     expect(entry?.found && entry.owned).toMatchObject({ total: 3, game: 2, real: 1 });
     expect(entry?.found && entry.owned.printings.map((copy) => copy.source)).toEqual([
@@ -61,7 +61,7 @@ describe("lookUpCards", () => {
   });
 
   it("summarises a price trend: first, latest, low and high", async () => {
-    const result = await makeCardLookup(readers())({ userId, queries: ["Sol Ring"] });
+    const result = await makeCardLookup(readers())(actor, { queries: ["Sol Ring"] });
     const [entry] = result.ok ? result.value : [];
     expect(entry?.found && entry.priceTrend[0]).toEqual({
       finish: "nonfoil",
@@ -73,8 +73,7 @@ describe("lookUpCards", () => {
   });
 
   it("copes with a card that has no price history", async () => {
-    const result = await makeCardLookup(readers({ history: async () => ({ foil: [] }) }))({
-      userId,
+    const result = await makeCardLookup(readers({ history: async () => ({ foil: [] }) }))(actor, {
       queries: ["Sol Ring"],
     });
     const [entry] = result.ok ? result.value : [];

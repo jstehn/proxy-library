@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { UserId } from "@/shared/kernel";
+import { testActor } from "@/modules/accounts/testing/actors";
 import {
   makeSearchCatalog,
   type CollectionAnswer,
   type SearchCatalogReaders,
 } from "./search-catalog";
 
-const userId = UserId.of("1");
+const actor = testActor();
 const answer = (printingId: string, quantity: number, price: number | null): CollectionAnswer => ({
   rows: [{ printingId, finish: "nonfoil", quantity, price }],
   notes: [],
@@ -36,7 +36,7 @@ function readers(overrides: Partial<SearchCatalogReaders> = {}): SearchCatalogRe
   };
 }
 const ask = (where: "owned" | "game" | "real" | "store") =>
-  makeSearchCatalog(readers())({ userId, search: "x", where, page: 1, oneRowPerCard: true });
+  makeSearchCatalog(readers())(actor, { search: "x", where, page: 1, oneRowPerCard: true });
 
 describe("searchCatalog", () => {
   it("puts game and real copies together, by name, and says which is which", async () => {

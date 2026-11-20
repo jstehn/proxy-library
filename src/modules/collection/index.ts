@@ -6,12 +6,5 @@ export { receiveCards } from "./application/receive-cards";
 export type { CardGain } from "./domain/cards";
 export type { NotEnoughCopies } from "./domain/errors";
 export { COLLECTION_EXPORTERS, type ExportRow } from "./domain/export";
-export {
-  collectionPage,
-  exportRows,
-  ownedByOracle,
-  ownedCopies,
-  type CollectionFilter,
-  type CollectionPage,
-  type CollectionRow,
-} from "./queries/collection";
+export type { CollectionFilter, CollectionPage, CollectionRow } from "./queries/collection";
+export * as collectionQueries from "./queries";

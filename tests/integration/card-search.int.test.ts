@@ -3,7 +3,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { searchPrintings } from "@/modules/catalog";
-import { collectionPage } from "@/modules/collection";
+import { collectionQueries } from "@/modules/collection";
 import { browseCollection, makeDecks } from "@/modules/decks";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
@@ -128,7 +128,7 @@ describe("the same search on every page", () => {
     if (!created.ok) throw new Error(created.error.kind);
 
     const collection = (search: string) =>
-      collectionPage(db, jack.userId, { search, sections: "none", sort: "name", page: 1 });
+      collectionQueries.page(db, jack, { search, sections: "none", sort: "name", page: 1 });
     const builder = async (search: string) =>
       (
         await browseCollection(db, jack.userId, {

@@ -1,11 +1,5 @@
-import {
-  ok,
-  type Finish,
-  type Result,
-  type UserId,
-  type CardFacts,
-  type CardIdentity,
-} from "@/shared/kernel";
+import type { Actor } from "@/modules/accounts";
+import { ok, type Finish, type Result, type CardFacts, type CardIdentity } from "@/shared/kernel";
 
 // Looking cards up by name or id for a player: the card itself, its price trend and store
 // printings, and what the player has of it (audit S1: the get_cards tool and any page that
@@ -44,15 +38,15 @@ export type CardLookupReaders = Readonly<{
     setName: string;
   } | null>;
   history(printingId: string): Promise<Partial<Record<string, readonly PricePointOf[]>>>;
-  ownedOfPrinting(userId: UserId, printingId: string): Promise<Partial<Record<Finish, number>>>;
-  gameCopies(userId: UserId, oracleId: string): Promise<readonly CopyOfPrinting[]>;
-  realCopies(userId: UserId, oracleId: string): Promise<readonly CopyOfPrinting[]>;
+  ownedOfPrinting(actor: Actor, printingId: string): Promise<Partial<Record<Finish, number>>>;
+  gameCopies(actor: Actor, oracleId: string): Promise<readonly CopyOfPrinting[]>;
+  realCopies(actor: Actor, oracleId: string): Promise<readonly CopyOfPrinting[]>;
   decksUsing(
-    userId: UserId,
+    actor: Actor,
     printingId: string,
   ): Promise<readonly { id: number; name: string; quantity: number }[]>;
-  wishes(userId: UserId, printingId: string): Promise<readonly { id: unknown; quantity: number }[]>;
-  storePrintings(userId: UserId, name: string): Promise<readonly StorePrintingOf[]>;
+  wishes(actor: Actor, printingId: string): Promise<readonly { id: unknown; quantity: number }[]>;
+  storePrintings(actor: Actor, name: string): Promise<readonly StorePrintingOf[]>;
 }>;
 
 export type CardLookup =
@@ -85,19 +79,19 @@ export type CardLookup =
     }>;
 
 export function makeCardLookup(readers: CardLookupReaders) {
-  async function lookUpOne(userId: UserId, query: string): Promise<CardLookup> {
+  async function lookUpOne(actor: Actor, query: string): Promise<CardLookup> {
     const card = await readers.find(query);
     if (card === null) return { query, found: false };
     const [detail, history, ownedOfThisPrinting, game, real, decksUsing, wishes, printingsForSale] =
       await Promise.all([
         readers.detail(card.printingId),
         readers.history(card.printingId),
-        readers.ownedOfPrinting(userId, card.printingId),
-        readers.gameCopies(userId, card.oracleId),
-        readers.realCopies(userId, card.oracleId),
-        readers.decksUsing(userId, card.printingId),
-        readers.wishes(userId, card.printingId),
-        readers.storePrintings(userId, card.name),
+        readers.ownedOfPrinting(actor, card.printingId),
+        readers.gameCopies(actor, card.oracleId),
+        readers.realCopies(actor, card.oracleId),
+        readers.decksUsing(actor, card.printingId),
+        readers.wishes(actor, card.printingId),
+        readers.storePrintings(actor, card.name),
       ]);
     const sum = (copies: readonly CopyOfPrinting[]) =>
       copies.reduce((total, copy) => total + copy.quantity, 0);
@@ -136,9 +130,10 @@ export function makeCardLookup(readers: CardLookupReaders) {
   }
 
   async function lookUpCards(
-    request: Readonly<{ userId: UserId; queries: readonly string[] }>,
+    actor: Actor,
+    request: Readonly<{ queries: readonly string[] }>,
   ): Promise<Result<CardLookup[], never>> {
-    return ok(await Promise.all(request.queries.map((query) => lookUpOne(request.userId, query))));
+    return ok(await Promise.all(request.queries.map((query) => lookUpOne(actor, query))));
   }
   return lookUpCards;
 }

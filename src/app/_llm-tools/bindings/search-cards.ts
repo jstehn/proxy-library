@@ -163,8 +163,7 @@ export const searchCardsBinding = defineBinding({
         message: "Provide `search` (or `deckId` + `queries`).",
       });
     }
-    const result = await capabilities.searchCatalog({
-      userId,
+    const result = await capabilities.searchCatalog(actor, {
       search: input.search,
       where:
         input.where === "owned" || input.where === "game" || input.where === "real"

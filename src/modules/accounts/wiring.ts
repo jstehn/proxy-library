@@ -1,4 +1,4 @@
-import { collectionPage } from "@/modules/collection";
+import { collectionQueries } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
 import { nextPayday, walletQueries } from "@/modules/wallet";
 import { wishlistQueries } from "@/modules/wishlist";
@@ -34,7 +34,7 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
         };
       },
       collectionTotals: async (actor) => {
-        const page = await collectionPage(db, actor.userId, {
+        const page = await collectionQueries.page(db, actor, {
           sections: "none",
           sort: "name",
           page: 1,

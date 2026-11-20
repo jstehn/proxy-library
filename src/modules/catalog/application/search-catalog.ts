@@ -1,4 +1,5 @@
-import { ok, type Finish, type Result, type UserId } from "@/shared/kernel";
+import type { Actor } from "@/modules/accounts";
+import { ok, type Finish, type Result } from "@/shared/kernel";
 
 // Plain card search for a player (audit S1: the search_cards tool outside a deck): their game
 // collection, their real cards, or everything the store sells. The searches are readers; this
@@ -28,10 +29,10 @@ export type PrintingFacts = Readonly<{
 }>;
 
 export type SearchCatalogReaders = Readonly<{
-  collection(userId: UserId, page: number, search: string): Promise<CollectionAnswer>;
-  realCollection(userId: UserId, page: number, search: string): Promise<CollectionAnswer>;
+  collection(actor: Actor, page: number, search: string): Promise<CollectionAnswer>;
+  realCollection(actor: Actor, page: number, search: string): Promise<CollectionAnswer>;
   store(
-    userId: UserId,
+    actor: Actor,
     search: string,
     page: number,
     oneRowPerCard: boolean,
@@ -84,7 +85,6 @@ export type CatalogSearch =
     }>;
 
 export type CatalogSearchRequest = Readonly<{
-  userId: UserId;
   search: string;
   where: "owned" | "game" | "real" | "store";
   page: number;
@@ -93,13 +93,14 @@ export type CatalogSearchRequest = Readonly<{
 
 export function makeSearchCatalog(readers: SearchCatalogReaders) {
   async function searchCatalog(
+    actor: Actor,
     request: CatalogSearchRequest,
   ): Promise<Result<CatalogSearch, never>> {
-    const { userId, search, where, page } = request;
+    const { search, where, page } = request;
     if (where !== "store") {
       const [game, real] = await Promise.all([
-        where === "real" ? null : readers.collection(userId, page, search),
-        where === "game" ? null : readers.realCollection(userId, page, search),
+        where === "real" ? null : readers.collection(actor, page, search),
+        where === "game" ? null : readers.realCollection(actor, page, search),
       ]);
       const rows = [
         ...(game?.rows.map((row) => ({ ...row, source: "game" as const })) ?? []),
@@ -132,7 +133,7 @@ export function makeSearchCatalog(readers: SearchCatalogReaders) {
         cards: named,
       });
     }
-    const found = await readers.store(userId, search, page, request.oneRowPerCard);
+    const found = await readers.store(actor, search, page, request.oneRowPerCard);
     const cards = await readers.printings(found.printingIds);
     return ok({
       kind: "store",

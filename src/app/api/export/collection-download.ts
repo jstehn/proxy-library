@@ -1,6 +1,7 @@
+import type { Actor } from "@/modules/accounts";
 import { COLLECTION_EXPORTERS, type ExportRow } from "@/modules/collection";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
-import type { UserId } from "@/shared/kernel";
 
 // The download both collection exports share (design doc 11, section 3, and doc 16, section 7):
 // ?format=moxfield | text | full. Each route says which rows and what to call the files.
@@ -20,16 +21,17 @@ export async function downloadCollection(
     fileName: string;
     rowsOf: (
       capabilities: ReadPageResult["capabilities"],
-      userId: UserId,
+      reads: Reads,
+      actor: Actor,
     ) => Promise<readonly ExportRow[]>;
   }>,
 ): Promise<Response> {
-  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  const { actor, capabilities, reads } = await readPage({ allowVisitors: true });
   if (actor === null) return new Response("Sign in first.", { status: 401 });
   const requested = new URL(request.url).searchParams.get("format");
   const format = requested === "text" || requested === "full" ? requested : "moxfield";
 
-  const rows = await source.rowsOf(capabilities, actor.userId);
+  const rows = await source.rowsOf(capabilities, reads, actor);
   return new Response(COLLECTION_EXPORTERS[format](rows), {
     headers: {
       "Content-Type": FORMATS[format].type,

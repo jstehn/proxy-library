@@ -1,4 +1,3 @@
-import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
@@ -13,11 +12,7 @@ import {
   printingDetail,
   storePrintingsOfCard,
 } from "@/modules/catalog";
-import {
-  collectionPage,
-  ownedByOracle,
-  ownedCopies as ownedOfPrinting,
-} from "@/modules/collection";
+import { collectionQueries } from "@/modules/collection";
 import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
 import {
   decksUsing,
@@ -29,7 +24,7 @@ import {
   type PreviewRepository,
 } from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
-import { wishesForCardOf, wishlistQueries, type Wishlist } from "@/modules/wishlist";
+import { wishlistQueries, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
@@ -106,7 +101,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       newPreviewId: dependencies.newPreviewId,
     }),
     ...wireCatalogCapabilities({ db }),
-    ...wireCollectionCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
@@ -143,21 +137,21 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       find: (query) => findCard(db, query),
       detail: (printingId) => printingDetail(db, printingId),
       history: (printingId) => priceHistory(db, printingId),
-      ownedOfPrinting: (userId, printingId) => ownedOfPrinting(db, userId, printingId),
-      gameCopies: (userId, oracleId) => ownedByOracle(db, userId, oracleId),
-      realCopies: (userId, oracleId) => realOwnedByOracle(db, userId, oracleId),
-      decksUsing: async (userId, printingId) =>
-        (await decksUsing(db, userId, [printingId])).get(printingId) ?? [],
-      wishes: (userId, printingId) => wishesForCardOf(db, userId, printingId),
-      storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
+      ownedOfPrinting: (actor, printingId) => collectionQueries.ownedCopies(db, actor, printingId),
+      gameCopies: (actor, oracleId) => collectionQueries.ownedByOracle(db, actor, oracleId),
+      realCopies: (actor, oracleId) => realOwnedByOracle(db, actor.userId, oracleId),
+      decksUsing: async (actor, printingId) =>
+        (await decksUsing(db, actor.userId, [printingId])).get(printingId) ?? [],
+      wishes: (actor, printingId) => wishlistQueries.forCard(db, actor, printingId),
+      storePrintings: (actor, name) => storePrintingsOfCard(db, actor.userId, name, 20),
     }),
     searchCatalog: makeSearchCatalog({
-      collection: (userId, page, search) =>
-        collectionPage(db, userId, { search, sections: "none", sort: "name", page }),
-      realCollection: (userId, page, search) =>
-        realCollectionPage(db, userId, { search, sections: "none", sort: "name", page }),
-      store: (userId, search, page, oneRowPerCard) =>
-        searchPrintings(db, { userId, search, sort: "name", page, oneRowPerCard }),
+      collection: (actor, page, search) =>
+        collectionQueries.page(db, actor, { search, sections: "none", sort: "name", page }),
+      realCollection: (actor, page, search) =>
+        realCollectionPage(db, actor.userId, { search, sections: "none", sort: "name", page }),
+      store: (actor, search, page, oneRowPerCard) =>
+        searchPrintings(db, { userId: actor.userId, search, sort: "name", page, oneRowPerCard }),
       printings: (ids) => printingCards(db, ids),
     }),
   };

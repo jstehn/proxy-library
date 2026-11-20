@@ -5,6 +5,7 @@ import { downloadCollection } from "../collection-download";
 export function GET(request: Request): Promise<Response> {
   return downloadCollection(request, {
     fileName: "real-collection",
-    rowsOf: (capabilities, userId) => capabilities.realCollectionReads.exportRows(userId),
+    rowsOf: (capabilities, _reads, actor) =>
+      capabilities.realCollectionReads.exportRows(actor.userId),
   });
 }
