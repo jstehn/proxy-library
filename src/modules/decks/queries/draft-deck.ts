@@ -1,3 +1,5 @@
+import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { featureArray } from "@/shared/card-search/sql";
 import { formatRules } from "../domain/format-rules";
 import { sql } from "drizzle-orm";
@@ -5,7 +7,6 @@ import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
 import { type Tag, type Theme } from "@/shared/kernel";
 import type { UserId } from "@/shared/kernel";
-import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
 import {
   draftDeck,
@@ -31,7 +32,8 @@ const NON_LAND = sql`split_part(p.type_line, ' // ', 1) !~ '\\yLand\\y'`;
 
 function spellColumns(format: string) {
   return sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags, p.produced_mana, p.is_game_changer,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+    ${featureArray("bracket_flags")} as bracket_flags, p.produced_mana, p.is_game_changer,
     coalesce((p.legalities->>${format}) = 'restricted', false) as is_restricted,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
 }
@@ -45,6 +47,7 @@ type SpellRow = {
   rarity: string;
   keywords: string[];
   role_tags: Tag[];
+  bracket_flags: BracketFlag[];
   theme_tags: Theme[];
   produced_mana: string[] | null;
   is_game_changer: boolean;
@@ -158,14 +161,7 @@ export async function draftForDeck(
   const withinTarget = (row: SpellRow): boolean => {
     const target = context.targetBracket;
     if (target === null) return true;
-    const { flags } = bracketLine({
-      name: row.name,
-      quantity: 1,
-      board: "main",
-      typeLine: row.type_line,
-      text: row.face_text,
-      isGameChanger: row.is_game_changer,
-    });
+    const flags = bracketFlagsOf(row.is_game_changer, row.bracket_flags);
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 

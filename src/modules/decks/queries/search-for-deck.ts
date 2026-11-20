@@ -3,8 +3,8 @@ import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candid
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { type Tag, type Theme } from "@/shared/kernel";
-import { parseSearch, type BracketFlag } from "@/shared/card-search";
+import { type BracketFlag, type Tag, type Theme } from "@/shared/kernel";
+import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
 import { bracketLine, flagsOverTarget, type Bracket } from "../domain/brackets";
 import type { Format } from "../domain/deck";
@@ -68,7 +68,7 @@ function withinTarget(flags: readonly BracketFlag[]): SQL {
       textFlags.map((flag) => sql`${flag}`),
       sql`, `,
     );
-    conditions.push(sql`not (p.bracket_flags && array[${array}]::text[])`);
+    conditions.push(sql`not (${featureArray("bracket_flags")} && array[${array}]::text[])`);
   }
   return conditions.length === 0 ? sql`true` : sql.join(conditions, sql` and `);
 }

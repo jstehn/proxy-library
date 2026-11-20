@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { BRACKET_FLAGS, bracketFlags, type BracketFacts, type BracketFlag } from "./brackets";
+import { BRACKET_FLAGS, type BracketFlag } from "@/shared/kernel";
+import { bracketFlags as recognizer } from "./bracket-flags";
+
+type BracketFacts = Readonly<{ typeLine: string; text: string; isGameChanger: boolean }>;
+
+/** A card's flags as a deck line shows them: Scryfall's Game Changer flag, then the text flags. */
+const bracketFlags = (card: BracketFacts): BracketFlag[] => [
+  ...(card.isGameChanger ? (["gameChanger"] as const) : []),
+  ...recognizer.recognize({
+    oracleId: "test",
+    producedMana: [],
+    faces: [{ typeLine: card.typeLine, text: card.text }],
+  }),
+];
 
 // Real Oracle text, quoted (design doc 31, invariant 5): matches and near-misses for each rule.
 type Example = Readonly<{ name: string } & BracketFacts>;

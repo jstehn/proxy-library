@@ -363,47 +363,6 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       }
     },
 
-    async printingsToTag(version, limit) {
-      const rows = await db.execute<{
-        id: string;
-        type_line: string;
-        text: string;
-        produced_mana: string[];
-      }>(sql`
-        select p.id, p.type_line, p.produced_mana,
-               coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '')
-                 as text
-          from printings p
-         where p.features_version < ${version}
-         order by p.id
-         limit ${limit}
-      `);
-      return rows.rows.map((row) => ({
-        id: PrintingId.of(row.id),
-        typeLine: row.type_line,
-        text: row.text,
-        producedMana: row.produced_mana,
-      }));
-    },
-
-    async saveCardFeatures(features, version) {
-      if (features.length === 0) return;
-      // One statement for the whole batch: the rows travel as JSON and become a table.
-      const rows = JSON.stringify(
-        features.map((card) => ({
-          id: card.id,
-          bracket_flags: card.bracketFlags,
-        })),
-      );
-      await db.execute(sql`
-        update printings p
-           set bracket_flags = v.bracket_flags, features_version = ${version}
-          from jsonb_to_recordset(${rows}::jsonb)
-               as v(id text, bracket_flags text[])
-         where p.id = v.id
-      `);
-    },
-
     async imageSource(printingId) {
       const [row] = await db
         .select({ scryfallId: printings.scryfallId, imageUris: printings.imageUris })

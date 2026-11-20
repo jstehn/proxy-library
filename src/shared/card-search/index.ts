@@ -38,12 +38,3 @@ export {
   type ListSection,
   type ParsedList,
 } from "./list";
-export {
-  BRACKET_FLAGS,
-  bracketFlags,
-  textBracketFlags,
-  type BracketFacts,
-  type BracketFlag,
-} from "./brackets";
-export { type TagFacts } from "./tags";
-export { CARD_FEATURES_VERSION } from "./tags";

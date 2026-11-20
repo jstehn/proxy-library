@@ -102,17 +102,6 @@ export type CardExtras = Readonly<{
 /** "This printing makes that token printing", from the printing's Scryfall `all_parts`. */
 export type TokenLink = Readonly<{ printingId: PrintingId; tokenId: string }>;
 
-/** What the tag pass reads from a printing (design doc 20, section 8). */
-export type TaggablePrinting = Pick<CardFacts, "typeLine" | "text" | "producedMana"> &
-  Readonly<{ id: PrintingId }>;
-
-/** A printing's bracket flags, as the tag pass works them out. */
-export type PrintingTags = Readonly<{
-  id: PrintingId;
-  /** Text bracket flags only (land denial, extra turns); Game Changers have their own column. */
-  bracketFlags: readonly string[];
-}>;
-
 export interface CatalogRepository {
   /** Adds new sets and updates names and dates of known ones. Never removes a set. */
   saveSetList(sets: readonly CardSetInfo[]): Promise<void>;
@@ -137,10 +126,6 @@ export interface CatalogRepository {
    * listed are removed; links to tokens not in `tokens` are skipped.
    */
   replaceTokens(tokens: readonly TokenPrinting[], links: readonly TokenLink[]): Promise<void>;
-  /** Up to `limit` printings whose stored features are older than `version`. */
-  printingsToTag(version: number, limit: number): Promise<TaggablePrinting[]>;
-  /** Stores features worked out at `version`. */
-  saveCardFeatures(features: readonly PrintingTags[], version: number): Promise<void>;
   imageSource(printingId: PrintingId): Promise<ImageSource | null>;
 }
 

@@ -43,7 +43,7 @@ export type SearchContext = Readonly<{
  * the features pass has worked the card out.
  */
 export function featureArray(
-  column: "role_tags" | "theme_tags" | "leader_themes",
+  column: "role_tags" | "theme_tags" | "leader_themes" | "bracket_flags",
   printing = "p",
 ): SQL {
   return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
@@ -541,9 +541,9 @@ function isCondition(value: string, context: SearchContext): SQL {
     case "gc":
       return sql`p.is_game_changer`;
     case "landdenial":
-      return sql`'landDenial' = any(p.bracket_flags)`;
+      return sql`'landDenial' = any(${featureArray("bracket_flags")})`;
     case "extraturn":
-      return sql`'extraTurn' = any(p.bracket_flags)`;
+      return sql`'extraTurn' = any(${featureArray("bracket_flags")})`;
     default:
       return landCycle(value) ?? sql`false`; // the parser refuses other values
   }

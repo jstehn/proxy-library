@@ -1,4 +1,4 @@
-import { bracketFlags, type BracketFlag } from "@/shared/card-search";
+import { type BracketFlag } from "@/shared/kernel";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -36,6 +36,7 @@ export type CutLine = ProfileLine &
     keywords: readonly string[];
     rarity: string;
     isGameChanger: boolean;
+    bracketFlags: readonly BracketFlag[];
     /** Copies counted as owned in this deck. */
     owned: number;
     /** Community EDHREC stats under this deck's commander (design doc 45). */
@@ -207,7 +208,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         });
       }
 
-      const flags = bracketFlags(line).filter((flag) => overFlags.includes(flag));
+      const flags = line.bracketFlags.filter((flag) => overFlags.includes(flag));
       if (context.targetBracket !== null && flags.length > 0) {
         score += weights.overBracket;
         reasons.push({ kind: "overBracket", target: context.targetBracket, flags });

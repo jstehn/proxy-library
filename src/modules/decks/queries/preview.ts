@@ -1,3 +1,5 @@
+import { bracketFlagsOf } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import { type DbExecutor, latestPrice } from "@/shared/db";
@@ -56,6 +58,7 @@ export function lineToPreview(line: DeckLine, rules: CardRules): PreviewLine {
     priceCents: line.priceCents,
     text: line.text,
     isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
     owned: line.owned,
     rules,
     keywords: line.keywords,
@@ -83,6 +86,7 @@ export async function loadCardsForPreview(
     mana_cost: string | null;
     produced_mana: string[] | null;
     role_tags: Tag[];
+    bracket_flags: BracketFlag[];
     theme_tags: Theme[];
     price_cents: number | null;
     is_basic_land: boolean;
@@ -102,6 +106,7 @@ export async function loadCardsForPreview(
     select w.oracle_id,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
            ${featureArray("role_tags", "shown")} as role_tags,
+           ${featureArray("bracket_flags", "shown")} as bracket_flags,
            ${featureArray("theme_tags", "shown")} as theme_tags,
            shown.rarity, shown.edhrec_rank,
            (select array_agg(distinct keyword) from printings kp cross join unnest(kp.keywords) as keyword
@@ -172,6 +177,7 @@ export async function loadCardsForPreview(
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       text: row.face_text,
       isGameChanger: row.is_game_changer,
+      bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
       owned: row.owned,
       rules,
       keywords: row.keywords ?? [],

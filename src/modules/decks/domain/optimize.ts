@@ -1,3 +1,4 @@
+import type { BracketFlag } from "@/shared/kernel";
 import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -20,6 +21,7 @@ export type OptimizerCard = StatsLine &
     themes: readonly Theme[];
     rarity: string;
     isGameChanger?: boolean;
+    bracketFlags: readonly BracketFlag[];
     edhrec?: RatingEdhrecSignal | null;
     edhrecRank?: number | null;
     preconCount?: number | null;
@@ -266,9 +268,7 @@ export function scoreDeck(cards: readonly OptimizerCard[], context: ScoreDeckCon
       name: c.name,
       quantity: c.quantity,
       board: c.board,
-      typeLine: c.typeLine,
-      text: c.text ?? "",
-      isGameChanger: c.isGameChanger ?? false,
+      bracketFlags: c.bracketFlags,
     }),
   );
   const bracketEst = estimateBracket(context.format, bracketLines);

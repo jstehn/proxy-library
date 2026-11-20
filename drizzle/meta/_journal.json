@@ -372,6 +372,13 @@
       "when": 1795199345725,
       "tag": "0052_card_features_theme_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795199995693,
+      "tag": "0053_card_features_bracket_flags",
+      "breakpoints": true
     }
   ]
 }

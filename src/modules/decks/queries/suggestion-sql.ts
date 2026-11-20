@@ -1,3 +1,5 @@
+import { bracketFlagsOf } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { featureArray } from "@/shared/card-search/sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, latestPrice, textArray } from "@/shared/db";
@@ -49,6 +51,7 @@ export type CandidateRow = {
   rarity: string;
   keywords: string[];
   role_tags: Tag[];
+  bracket_flags: BracketFlag[];
   theme_tags: Theme[];
   color_identity: string[];
   legality: string | null;
@@ -92,7 +95,8 @@ function edhrecCte(commanderOracleIds: string[]): SQL {
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
 export function candidateColumns(context: SuggestionContext): SQL {
   return sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags, p.color_identity,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+    ${featureArray("bracket_flags")} as bracket_flags, p.color_identity,
     p.legalities->>${context.format} as legality,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
     exists (select 1 from jsonb_array_elements(p.faces) f
@@ -232,6 +236,7 @@ export function toCard(
     producedMana: row.produced_mana ?? [],
     text: row.face_text,
     isGameChanger: row.is_game_changer,
+    bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
     setCode: row.set_code,
     collectorNumber: row.collector_number,
     finish: FinishSchema.parse(row.finish),

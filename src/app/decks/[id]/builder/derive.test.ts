@@ -30,6 +30,7 @@ const gridCard = (name: string, card: Partial<CardRules> = {}): BrowseCard => ({
   rules: rules(name, card),
   roles: [],
   themes: [],
+  bracketFlags: [],
   producedMana: [],
   text: card.text ?? "",
   setCode: "tst",

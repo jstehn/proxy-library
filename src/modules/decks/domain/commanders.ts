@@ -10,8 +10,14 @@ import {
 } from "./suggest";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
-import { type CardFacts, type CardIdentity, COLORS, type ManaColor } from "@/shared/kernel";
-import { type Tag, type Theme } from "@/shared/kernel";
+import {
+  type CardFacts,
+  type CardIdentity,
+  COLORS,
+  type ManaColor,
+  type Tag,
+  type Theme,
+} from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.

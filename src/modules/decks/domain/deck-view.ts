@@ -1,3 +1,4 @@
+import type { BracketFlag } from "@/shared/kernel";
 import type { Finish, CardFacts, CardIdentity, Tag, Theme } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
@@ -40,6 +41,8 @@ export type DeckLine = DeckCount &
     printedStats?: string | null;
     /** On Wizards' Game Changer list (design doc 31). */
     isGameChanger: boolean;
+    /** Why it may count against a bracket: Game Changer, land denial, extra turns (design doc 31). */
+    bracketFlags: readonly BracketFlag[];
     /** Latest market price of one copy in its finish, in cents, if known. */
     priceCents: number | null;
     setCode: string;

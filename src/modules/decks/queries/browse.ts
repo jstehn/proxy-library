@@ -1,11 +1,19 @@
+import { bracketFlagsOf } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { formatRules } from "../domain/format-rules";
 import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import { ColorSchema, FinishSchema, type ManaColor, type UserId } from "@/shared/kernel";
-import { type Tag, type Theme } from "@/shared/kernel";
+import {
+  ColorSchema,
+  FinishSchema,
+  type ManaColor,
+  type Tag,
+  type Theme,
+  type UserId,
+} from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
 import { parseSearch } from "@/shared/card-search";
 import { featureArray, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
@@ -217,6 +225,7 @@ export async function browseCollection(
     is_basic_land: boolean;
     produced_mana: string[] | null;
     role_tags: Tag[];
+    bracket_flags: BracketFlag[];
     theme_tags: Theme[];
     set_code: string;
     collector_number: string;
@@ -255,7 +264,7 @@ export async function browseCollection(
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
            p.produced_mana, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
-           p.is_game_changer, p.set_code, p.collector_number, shown.finish,
+           ${featureArray("bracket_flags")} as bracket_flags, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
            ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
       from candidates card join printings p on p.id = card.printing_id
@@ -295,14 +304,15 @@ export async function browseCollection(
         hasPowerToughness: row.has_power_toughness,
       },
       producedMana: row.produced_mana ?? [],
-      roles: row.role_tags,
-      themes: row.theme_tags,
-      text: row.face_text,
       isGameChanger: row.is_game_changer,
+      bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
       setCode: row.set_code,
       collectorNumber: row.collector_number,
       finish: FinishSchema.parse(row.finish),
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
+      text: row.face_text,
+      roles: row.role_tags,
+      themes: row.theme_tags,
     })),
     total,
     pageCount: Math.max(1, Math.ceil(total / BROWSE_PAGE_SIZE)),

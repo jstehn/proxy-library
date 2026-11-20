@@ -17,7 +17,15 @@ export {
 export { COLORS, COLOR_COMBINATIONS, MANA_SYMBOLS, colorCombination } from "./colors";
 export type { ColorCombination, ManaColor, ManaSymbol } from "./colors";
 export { plainText } from "./plain-text";
-export { TAGS, THEME_LABELS, THEMES, type Tag, type Theme } from "./card-vocabulary";
+export {
+  BRACKET_FLAGS,
+  TAGS,
+  THEME_LABELS,
+  THEMES,
+  type BracketFlag,
+  type Tag,
+  type Theme,
+} from "./card-vocabulary";
 export { cardTypes, hasTypeWord, isBasicLand, isCreature, isLand } from "./card-types";
 export {
   CURVE_LAST_SLOT,

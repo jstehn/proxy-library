@@ -1,4 +1,4 @@
-import type { Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag, Tag, Theme } from "@/shared/kernel";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */
@@ -27,6 +27,8 @@ export type CardFeatureFields = Readonly<{
   themes: readonly Theme[];
   /** What deck a commander with this text leads, in `THEMES` order. */
   leaderThemes: readonly Theme[];
+  /** Land denial and extra turns, from the text (Game Changers are Scryfall's own list). */
+  bracketFlags: readonly Exclude<BracketFlag, "gameChanger">[];
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

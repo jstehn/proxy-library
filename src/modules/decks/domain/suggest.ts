@@ -1,5 +1,11 @@
-import { type CardFacts, type CardIdentity, hasTypeWord, manaCurve } from "@/shared/kernel";
-import { type Tag, type Theme } from "@/shared/kernel";
+import {
+  type CardFacts,
+  type CardIdentity,
+  hasTypeWord,
+  manaCurve,
+  type Tag,
+  type Theme,
+} from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {

@@ -13,6 +13,7 @@ import { PrintingId, SetCode } from "../domain/types";
 import { fakeImageFetcher, inMemoryImageStore } from "../testing/fakes";
 import { drizzleCatalogRepository, drizzleSyncRunRepository } from "./drizzle-repositories";
 import { drizzleArtworkRepository } from "./drizzle-artwork";
+import { drizzleCardFeatureStore } from "./drizzle-card-features";
 import { fixtureMtgjsonGateway, fixtureScryfallGateway } from "./fixture-gateways";
 import { fixtureWpnGateway, memoryArtworkStore } from "./wpn";
 
@@ -39,6 +40,7 @@ function buildCatalog(gateway: MtgjsonGateway = mtgjson, ownedForReal: string[] 
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
       artwork: drizzleArtworkRepository(transaction),
+      cardFeatures: drizzleCardFeatureStore(transaction),
     })),
     mtgjson: gateway,
     scryfall: fixtureScryfallGateway(),
@@ -60,7 +62,7 @@ async function countRows(table: string): Promise<number> {
 
 beforeEach(async () => {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, card_features cascade`,
   );
   clock = manualClock("2026-09-27T12:00:00Z");
   mtgjson = fixtureMtgjsonGateway();
@@ -112,10 +114,10 @@ describe("the first sync", () => {
     ]);
   });
 
-  it("tags every printing's roles and themes once per rules version (design doc 20)", async () => {
+  it("stores every oracle card's role tags and themes with its features (design doc 66)", async () => {
     const catalog = buildCatalog();
     const summary = await catalog.runSync("prices");
-    expect(summary.taggedPrintings).toBe(33);
+    expect(summary.featuresComputed).toBeGreaterThan(0);
 
     const banishingLight = await db.execute<{ role_tags: string[]; theme_tags: string[] }>(sql`
       select f.role_tags, f.theme_tags from printings p join card_features f on f.oracle_id = p.oracle_id
@@ -125,35 +127,35 @@ describe("the first sync", () => {
       role_tags: ["removal"],
       theme_tags: ["enchantments"],
     });
-    const stale = await db.execute<{ stale: number }>(sql`
-      select count(*)::int as stale from printings where features_version = 0
-    `);
-    expect(stale.rows[0].stale).toBe(0);
 
-    // Nothing to do until the rules change; then everything is tagged again.
-    expect(await catalog.tagPass()).toBe(0);
-    await db.execute(sql`update printings set features_version = 0, bracket_flags = '{}'`);
-    expect(await catalog.tagPass()).toBe(33);
+    // Nothing to do until the recognizers change; then everything is worked out again.
+    expect(await catalog.featuresPass()).toBe(0);
   });
 
   it("stores bracket flags from text, and Game Changers from every Scryfall pass (design doc 31)", async () => {
     const catalog = buildCatalog();
     await catalog.runSync("prices");
     const flagged = await db.execute<{ flagged: number }>(sql`
-      select count(*)::int as flagged from printings
-       where is_game_changer or cardinality(bracket_flags) > 0
+      select (select count(*) from printings where is_game_changer)::int
+           + (select count(*) from card_features where cardinality(bracket_flags) > 0)::int
+             as flagged
     `);
     expect(flagged.rows[0].flagged).toBe(0); // no Bloomburrow card counts against a bracket
 
-    // Text flags come from the tag pass: give one printing Armageddon's text and tag it again.
+    // Text flags come from the features pass: give one printing Armageddon's text and work it out again.
     await db.execute(sql`
       update printings
-         set faces = jsonb_set(faces, '{0,text}', '"Destroy all lands."'), features_version = 0
+         set faces = jsonb_set(faces, '{0,text}', '"Destroy all lands."')
        where name = 'Agate Assault'
     `);
-    expect(await catalog.tagPass()).toBeGreaterThan(0);
+    await db.execute(sql`
+      update card_features set features_version = 0
+       where oracle_id = (select oracle_id from printings where name = 'Agate Assault' limit 1)
+    `);
+    expect(await catalog.featuresPass()).toBeGreaterThan(0);
     const armageddon = await db.execute<{ bracket_flags: string[] }>(sql`
-      select bracket_flags from printings where name = 'Agate Assault' limit 1
+      select f.bracket_flags from printings p join card_features f on f.oracle_id = p.oracle_id
+       where p.name = 'Agate Assault' limit 1
     `);
     expect(armageddon.rows[0].bracket_flags).toEqual(["landDenial"]);
 

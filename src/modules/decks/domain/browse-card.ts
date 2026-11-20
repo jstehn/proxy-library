@@ -1,3 +1,4 @@
+import type { BracketFlag } from "@/shared/kernel";
 import type { Finish, CardFacts, CardIdentity, Tag, Theme } from "@/shared/kernel";
 import type { CardRules } from "./rules";
 
@@ -32,6 +33,7 @@ export type BrowseCard = CardIdentity &
     text: string;
     /** On Wizards' Game Changer list (design doc 31). */
     isGameChanger: boolean;
+    bracketFlags: readonly BracketFlag[];
     setCode: string;
     collectorNumber: string;
     finish: Finish;

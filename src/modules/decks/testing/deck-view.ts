@@ -1,6 +1,7 @@
 import { extractFeatures } from "@/modules/catalog";
 import { type Tag, UserId } from "@/shared/kernel";
 import { DeckId } from "../domain/deck";
+import { bracketFlagsOf } from "../domain/brackets";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
 
@@ -26,6 +27,7 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     roles: [],
     themes: [],
     leaderThemes: [],
+    bracketFlags: [],
     text: "",
     isGameChanger: false,
     priceCents: 25,
@@ -47,6 +49,7 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     roles: overrides.roles ?? text.roles,
     themes: overrides.themes ?? text.themes,
     leaderThemes: overrides.leaderThemes ?? text.leaderThemes,
+    bracketFlags: overrides.bracketFlags ?? text.bracketFlags,
   };
 }
 
@@ -58,6 +61,7 @@ export function featuresOfText(card: {
   typeLine: string;
   text?: string;
   producedMana?: readonly string[];
+  isGameChanger?: boolean;
 }) {
   const features = extractFeatures({
     oracleId: "test",
@@ -68,6 +72,7 @@ export function featuresOfText(card: {
     roles: features.roleTags,
     themes: features.themes,
     leaderThemes: features.leaderThemes,
+    bracketFlags: bracketFlagsOf(card.isGameChanger ?? false, features.bracketFlags),
   };
 }
 

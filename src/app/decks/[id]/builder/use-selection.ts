@@ -1,7 +1,6 @@
 import type { Dispatch } from "react";
 import type { BrowseCard, DeckLine, Format, OtherDeckUse, SuggestionCard } from "@/modules/decks";
 import { copyLimitFor } from "@/modules/decks/client";
-import { bracketFlags } from "@/shared/card-search";
 import { valueOr } from "./answer";
 import { copiesOnBoards, type BuilderAction, type BuilderState } from "./builder-state";
 import type { BuilderDeck } from "./builder-deck";
@@ -77,7 +76,7 @@ export function useSelection(
         misfit: card.misfit,
         priceCents: card.priceCents,
         tags: card.roles,
-        bracketFlags: bracketFlags(card),
+        bracketFlags: card.bracketFlags,
         copyLimit: copyLimitFor(format, card.rules),
       },
       card,
@@ -98,7 +97,7 @@ export function useSelection(
         misfit: null,
         priceCents: line.priceCents,
         tags: line.roles,
-        bracketFlags: bracketFlags(line),
+        bracketFlags: line.bracketFlags,
         copyLimit: copyLimitFor(format, deck.rules[line.oracleId]),
       },
       null,

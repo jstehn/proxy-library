@@ -49,15 +49,6 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
   },
 
   /**
-   * `pnpm worker tag-cards`: work out the role tags and themes of every printing whose stored ones
-   * are missing or out of date (design doc 20). Every sync does this too; this runs it alone.
-   */
-  async "tag-cards"(container) {
-    const tagged = await container.catalog.tagPass();
-    console.log(`${tagged} printings tagged`);
-  },
-
-  /**
    * `pnpm worker embed-cards [limit]`: compute and store frozen text embeddings for oracle cards
    * missing or with an outdated `(model, textVersion)` in `card_embeddings` (design doc 53).
    */

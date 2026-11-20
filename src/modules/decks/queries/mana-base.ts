@@ -1,9 +1,10 @@
+import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { featureArray } from "@/shared/card-search/sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
-import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
 import { simulateCastOnCurve } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
@@ -37,6 +38,7 @@ type LandRow = {
   is_basic_land: boolean;
   is_game_changer: boolean;
   role_tags: Tag[];
+  bracket_flags: BracketFlag[];
   theme_tags: Theme[];
   owned: number;
   also_in: string[] | null;
@@ -47,7 +49,8 @@ type LandRow = {
 const LAND_COLUMNS = sql`p.oracle_id, p.name, p.type_line,
   coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
   p.produced_mana, p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land, p.is_game_changer,
-  ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags`;
+  ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+  ${featureArray("bracket_flags")} as bracket_flags`;
 
 /** A printing `p` whose front face is a land, isn't basic, and may be in this deck. */
 function playableLand(format: string, colorLimit: readonly string[] | null): SQL {
@@ -156,14 +159,7 @@ export async function landPoolsForDeck(
   const withinTarget = (row: LandRow) => {
     const target = context.targetBracket;
     if (target === null) return true;
-    const { flags } = bracketLine({
-      name: row.name,
-      quantity: 1,
-      board: "main",
-      typeLine: row.type_line,
-      text: row.face_text,
-      isGameChanger: row.is_game_changer,
-    });
+    const flags = bracketFlagsOf(row.is_game_changer, row.bracket_flags);
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 

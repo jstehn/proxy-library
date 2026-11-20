@@ -41,6 +41,7 @@ export type PreviewLine = StatsLine &
     rules: CardRules;
     keywords?: readonly string[];
     rarity?: string;
+    isGameChanger: boolean;
     edhrecRank?: number | null;
     edhrec?: EdhrecSignal | null;
   }>;

@@ -77,6 +77,7 @@ function previewLineToOptimizerCard(
     rarity: line.rarity ?? "common",
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
     edhrec: edhrecSignal ?? line.edhrec ?? null,
     edhrecRank: line.edhrecRank ?? null,
     board: line.board,

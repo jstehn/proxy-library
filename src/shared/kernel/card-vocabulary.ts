@@ -78,3 +78,7 @@ export const THEME_LABELS: Readonly<Record<Theme, string>> = {
   poison: "Poison and infect",
   vehicles: "Vehicles and mounts",
 };
+
+export const BRACKET_FLAGS = ["gameChanger", "landDenial", "extraTurn"] as const;
+/** A reason a card counts against a bracket. A card can have several, or none. */
+export type BracketFlag = (typeof BRACKET_FLAGS)[number];

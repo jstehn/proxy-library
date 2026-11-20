@@ -1,3 +1,5 @@
+import { bracketFlagsOf, isBracket } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -13,7 +15,6 @@ import {
   type Deck,
   type Format,
 } from "../domain/deck";
-import { isBracket } from "../domain/brackets";
 import type { DeckLine, DeckSource, DeckView, OtherDeckUse } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
 import type { EdhrecSignal } from "../domain/suggest";
@@ -177,6 +178,7 @@ export async function deckView(
     mana_cost: string | null;
     produced_mana: string[] | null;
     role_tags: Tag[];
+    bracket_flags: BracketFlag[];
     theme_tags: Theme[];
     leader_themes: Theme[];
     price_cents: number | null;
@@ -203,6 +205,7 @@ export async function deckView(
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
            ${featureArray("role_tags", "shown")} as role_tags,
+           ${featureArray("bracket_flags", "shown")} as bracket_flags,
            ${featureArray("theme_tags", "shown")} as theme_tags,
            ${featureArray("leader_themes", "shown")} as leader_themes,
            ${latestPrice(
@@ -307,6 +310,7 @@ export async function deckView(
       faceTexts: row.face_texts ?? [],
       printedStats: row.printed_stats,
       isGameChanger: row.is_game_changer,
+      bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
       setCode: row.set_code,
       collectorNumber: row.collector_number,

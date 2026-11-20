@@ -66,6 +66,7 @@ export function provisionalLine(
     leaderThemes: [],
     text: card.text,
     isGameChanger: card.isGameChanger,
+    bracketFlags: card.bracketFlags,
     priceCents: card.priceCents,
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,

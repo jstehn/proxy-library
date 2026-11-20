@@ -1,3 +1,4 @@
+import { bracketFlags } from "./recognizers/bracket-flags";
 import { roleTags } from "./recognizers/role-tags";
 import { tapMana } from "./recognizers/tap-mana";
 import { leaderThemes, themes } from "./recognizers/themes";
@@ -5,7 +6,13 @@ import type { AnyRecognizer, CardFeatureFields, CardFeatures, CardText } from ".
 import { FEATURES_VERSION } from "./version";
 
 /** Every recognizer, in the order they run. P12 to P14 add theirs here. */
-export const RECOGNIZERS: readonly AnyRecognizer[] = [tapMana, roleTags, themes, leaderThemes];
+export const RECOGNIZERS: readonly AnyRecognizer[] = [
+  tapMana, // P11
+  roleTags, // P13
+  themes, // P13
+  leaderThemes, // P13
+  bracketFlags, // P13
+];
 
 /** What a card does, worked out from its text. Pure: the same card always gives the same answer. */
 export function extractFeatures(card: CardText): CardFeatures {

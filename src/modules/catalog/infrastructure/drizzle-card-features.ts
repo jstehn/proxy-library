@@ -21,6 +21,7 @@ export function drizzleCardFeatureStore(db: DbExecutor): CardFeatureStore {
             roleTags: [...row.features.roleTags],
             themeTags: [...row.features.themes],
             leaderThemes: [...row.features.leaderThemes],
+            bracketFlags: [...row.features.bracketFlags],
             updatedAt,
           })),
         )
@@ -32,6 +33,7 @@ export function drizzleCardFeatureStore(db: DbExecutor): CardFeatureStore {
             roleTags: sql`excluded.role_tags`,
             themeTags: sql`excluded.theme_tags`,
             leaderThemes: sql`excluded.leader_themes`,
+            bracketFlags: sql`excluded.bracket_flags`,
             updatedAt: sql`excluded.updated_at`,
           },
         });

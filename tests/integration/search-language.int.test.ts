@@ -52,15 +52,18 @@ async function add(card: TestCard): Promise<void> {
                            colors, color_identity, mana_cost, mana_value, type_line, layout,
                            finishes, border_color, frame_version, frame_effects, promo_types,
                            is_full_art, variant_label, faces, legalities, keywords,
-                           bracket_flags, is_game_changer)
+                           is_game_changer)
     values (${randomUUID()}, 'TST', ${String(number)}, ${card.name}, ${oracleId},
             ${randomUUID()}, 'common', '{}', '{}', ${card.manaCost ?? null},
             ${card.manaValue ?? 0}, ${card.typeLine}, ${card.layout ?? "normal"},
             '{nonfoil}', 'black', '2015', '{}', '{}', false, '', ${JSON.stringify(faces)}::jsonb,
             ${JSON.stringify(card.legalities ?? {})}::jsonb,
-            ${toArray(card.keywords)},
-            ${toArray(card.bracketFlags)}, ${card.isGameChanger ?? false})`);
-  await storeFeatureArrays(oracleId, { roleTags: card.roleTags, themeTags: card.themeTags });
+            ${toArray(card.keywords)}, ${card.isGameChanger ?? false})`);
+  await storeFeatureArrays(oracleId, {
+    roleTags: card.roleTags,
+    themeTags: card.themeTags,
+    bracketFlags: card.bracketFlags,
+  });
 }
 
 function toArray(values: readonly string[] = []) {

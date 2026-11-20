@@ -26,7 +26,12 @@ function line(
     typeLine,
     manaCost: overrides.manaCost ?? "{1}{G}",
     producedMana: overrides.producedMana ?? [],
-    ...featuresOfText({ typeLine, text, producedMana: overrides.producedMana }),
+    ...featuresOfText({
+      typeLine,
+      text,
+      producedMana: overrides.producedMana,
+      isGameChanger: overrides.isGameChanger,
+    }),
     priceCents: overrides.priceCents ?? 100,
     text,
     isGameChanger: overrides.isGameChanger ?? false,
