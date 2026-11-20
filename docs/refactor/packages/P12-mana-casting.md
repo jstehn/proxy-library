@@ -75,4 +75,12 @@ before each slice. Line numbers are from `refactor/main` at `cc8f0f7`.
 
 ## Handoff
 
-(empty)
+**Status: not merged; no slice on the package branch.** Slices 1 to 3 had nothing left to do, and slice 4 would grow production code by 42 lines.
+
+- **Slice 1 (taps for mana):** already done by P11 (`tap-mana`). Nothing to do.
+- **Slices 2 and 3 (doublers, mana from spells, cost reducers):** nothing left. `mana.ts` is 70 lines and has no oracle-text code: P11 deleted the doublers. `castability.ts` and `mana.ts` hold 0 regexes over card text. Cost reducers are declared in the deck plan (`deck-profile.ts effectiveManaValue`), not parsed from text, so no recognizer reads them. The only text read left in the deck-profile cost code is the `blitz` scope in `deck-profile.ts` (a keyword; it needs the keywords feature, which is P14's).
+- **Slice 5 (cost parsers):** no parsing of oracle-text costs exists. The printed-cost parsers belong to P15.
+- **Slice 4 (enters tapped, tapped-source facts):** built on `refactor/P12.4-enters-tapped-wip` (commit ebe2d60, green: tsc, lint, `src/modules/decks/domain` and `catalog/domain/features` unit tests, `tests/integration/mana-base.int.test.ts`). Two recognizers: `enters-tapped` (replaces `tapped()` in `mana-base.ts` and its call in `castability.ts`) and `helps-opponents` (the last card-text regex in `mana-base.ts`). `mana-base.ts` leaves `NOT_YET_RECOGNIZED`; regex baseline 128 to 124; `FEATURES_VERSION` 1 to 2 (needs a backfill). A2 over the 32 fixture cards (two added: Glacial Fortress, Forbidden Orchard): 0 differences. **Net production lines: +42** (75,382 to 75,424): the recognizers, the feature fields, and the loading of features for land candidates cost about 60; the deleted `tapped()`, its type and the regex are about 18. Not merged, per the rule that a slice's net must be at most 0.
+- **Why it cannot reach 0 alone:** the P12 code that was supposed to fund it (doublers, tap-mana callers) went in P11. The savings in the audit's estimate (-250 to -500) are not in these files any more.
+- **Needs the owner:** approve +42 for slice 4 (the `sizes` baseline will not rise by itself), or fold it into P14's keyword and land-type work so one change pays for it.
+- **Lint note:** the rule's exemption for the one file allowed to call the catalog is named in `eslint.config.mjs` (`tap-mana.ts`); the WIP branch renames the file to `queries/card-features.ts` and updates the exemption.
