@@ -3,7 +3,7 @@ import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { rateCard } from "../domain/rate";
-import { deckProfile, toRatingProfile } from "../domain/suggest";
+import { deckProfile } from "../domain/suggest";
 import { cheapestOfCards } from "./candidate-pool";
 import {
   candidateColumns,
@@ -18,7 +18,6 @@ import { type SuggestionCard } from "../domain/suggestion-types";
 export type SemanticSearchPick = Readonly<{
   card: SuggestionCard;
   similarityPct: number;
-  rating: number;
   score: number;
 }>;
 
@@ -140,13 +139,12 @@ export async function semanticSearchForDeck(
   );
 
   const profile = deckProfile(context.lines, context.format);
-  const rProfile = toRatingProfile(profile);
 
   const scorePicks = (pool: SuggestionCard[]): SemanticSearchPick[] =>
     pool
       .map((card) => {
         const sim = simById.get(card.oracleId) ?? 0;
-        const rating = rateCard(card, rProfile, {
+        const rating = rateCard(card, profile, {
           targetBracket: context.targetBracket,
           maxCardPriceCents: options.maxPriceCents,
         });
@@ -160,7 +158,6 @@ export async function semanticSearchForDeck(
         return {
           card,
           similarityPct: Math.round(Math.max(0, Math.min(1, sim)) * 100),
-          rating: rating.rating,
           score,
         };
       })

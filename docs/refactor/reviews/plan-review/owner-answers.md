@@ -92,3 +92,8 @@ sources exactly, a bottomed card goes to the bottom of the library, a ramp card 
 isn't early ramp, and half-mana symbols don't count as colour pips. **Creature types:** one
 function, counting Kindred everywhere (the drafter's copy ignored it). Done in P28, after P27 frees
 `suggest.ts`.
+
+**P27 (2026-11-20): accepted.** The before/after lists look good. Ideas for later (cut-specific
+weights, the builder's rating badge in words, similarity in words) are in `docs/future-ideas.md`
+and tududi's inbox. **A "castable by turn" UI element** for the commander and any selected card
+joins P28 (it shows the simulator's distribution).

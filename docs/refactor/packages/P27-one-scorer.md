@@ -102,4 +102,80 @@ opening-hand engines (P15, P28).
 
 ## Handoff
 
-(empty)
+**Branch** `refactor/P27-one-scorer`. Commits: the before lists; "suggestions, roles, similar cards,
+cuts and draft-a-deck all use rateCard" (-335 production lines); "the MCP tools show no scores,
+ratings or ranks" (-1); the after lists, baselines and this handoff.
+
+**Lines:** production code 75,422 to 75,086 (-336). The size and knip (383 to 382) baselines are
+lowered; the clone and regex baselines didn't move.
+
+**The one scorer.** `rateCard` (`rate.ts`) now orders suggestions for the deck, per role, "cards
+like this one", budget picks, cuts, the swap panel's candidates, draft-a-deck and the optimizer.
+One table, `RATING_WEIGHTS` plus the two tier overrides, one line per weight, marked fitted from
+data (`scripts/fit-rating-weights.ts`, last fitted 2026-11-13; only the two caps and the two
+penalties are set by hand). A cut, a role list and "like this one" differ in their **inputs** (the
+deck's profile with this card's role as the only gap, a deck made of one card, an `overBracket`
+flag), never in the weight table.
+
+**Deleted:** `WEIGHTS`, `deckFit`'s points, `edhrecFit`'s points, `scoreForRole`'s and
+`scoreLike`'s own sums, `Scored.score` and the score fallbacks in `queries/suggestions.ts`;
+`CUT_WEIGHTS`, `CUT_WEIGHTS_BY_TIER`, `CutWeights` and `RankedCut.keepScore`; **all three**
+`toRatingProfile` copies (suggest, optimize, and an inline copy in `cuts-panel.tsx`): `DeckFingerprint`
+is now the `RatingProfile`, so no conversion is needed (the grep finds none, not one); `RoleGap`
+(now `RoleGap` in `rate.ts` only), `RatingEdhrecSignal`, `CandidateCard`'s copy of
+`RatingCandidate`, the duplicate `strength` and `RARITY_STRENGTH` (`strength` moved into `rate.ts`
+and the quality prior's fallback uses it); `penalizeGameChanger` (never passed outside tests; now
+`overBracket` on the candidate); the two hand-copied `rateCard` inputs in `optimize.ts`.
+**Kept, because:** `optimize.scoreDeck` already is `rateCard` per card plus the deck-level terms
+(roles, curve, colors, cohesion, bracket, budget); the audit, scorecard and snapshots use those
+terms, so it stays. `rank()` and `Scored` stay: they order by `rating.logit`.
+
+**Tools.** `find_replacements`, `search_cards` (semantic) and `get_deck` (facts) no longer carry
+`rating`, `ratingParts`, `similarityPct`, `heuristicScore`, ids (`oracleId`, `printingId`) or a zero
+`hiddenOverTarget`; `why` is three reasons at most, and the text-similarity percentage reads
+"Reads like the deck". Descriptions and the cookbook say "ideas to consider, not recommendations".
+Response sizes (characters of JSON, fixture catalog, no embeddings):
+
+| call                                                 | before | after   |
+| ---------------------------------------------------- | ------ | ------- |
+| find_replacements `{card, deckId}`                   | 1120   | 574     |
+| find_replacements `{card, deckId, includeText, 20}`  | 2302   | 1756    |
+| find_replacements `{deckId}` (budget, nothing found) | 62     | 62      |
+| search_cards syntax `{deckId, search}`               | 552    | 553 \*  |
+| search_cards semantic `{deckId, query}` (no results) | 94     | 73      |
+| search_cards signals                                 | 48     | 48      |
+| get_deck `{deckId}`                                  | 1134   | 1135 \* |
+| get_deck `{include: [facts, signals], text}`         | 7910   | 7603    |
+| get_deck `{view: full, include: [facts]}`            | 5673   | 5366    |
+
+\* the deck id is two digits wide in the second run; nothing else changed. A suggestion entry fell
+from about 280 to about 135 characters. The fixture catalog is small: a real deck's list is longer.
+
+**Before and after lists:** `docs/refactor/reviews/p27-before-after.md`. The lists in the first
+commit used more random numbers; the final file replaces them with the same decks, hand-set EDHREC
+numbers for well-known cards (so Grizzly Bears isn't "popular") and seeded numbers for the rest,
+run on the old code in a separate checkout of `refactor/main`.
+
+**Tests:** unit tests for the touched files, `suggest.test.ts`, `swaps.test.ts`, and the new
+`present/replacements.test.ts` (no score, rating, rank or similarity in the answer). Integration
+(private database `tcg_p27_test`, one file at a time): suggestions, draft-deck, commanders,
+embeddings, decks, deck-previews, sharing and `llm-tools.int.test.ts`. Not run (told not to): e2e.
+
+**Open questions for the owner**
+
+1. **The builder's suggestions panel still shows a bare number** (`suggestions-panel.tsx`: a grey
+   badge with the 0-100 rating, and a tooltip listing its parts). Left alone, as instructed. The
+   cuts panel shows none.
+2. **Cuts and role need.** The fitted weight for "the deck is short of this role" is small, so ramp
+   spells can appear in the cut list while the deck is short of ramp (the "cutting it would leave a
+   gap" reason still shows). Not tuned by hand. A fix, if wanted, is a re-fit with a cut-specific
+   profile (count minus this card).
+3. **`similarityPct` is gone from the tools too** (a score by another name); the ordering still
+   uses it. Say if you want it back as words ("close", "loosely").
+4. `rules-lookup` describes its excerpts as "Top-ranked". That is a search result, not a card
+   rank; left as it was.
+5. `get_deck`'s `facts` and `mana_plan` still carry percentages from simulations
+   (`averageCastOnCurvePct`, `castOnCurvePct`). They are measurements, not scores; P15 and P28 own
+   that code.
+6. `toRatingProfile` is gone (zero definitions): "one definition" in Done when is met by there being
+   no conversion at all.

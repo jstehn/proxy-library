@@ -151,7 +151,11 @@ export function SuggestionRow(props: {
   suggestion: Suggestion;
   onSelect: (card: SuggestionCard) => void;
 }) {
-  const { card, reasons, rating, ratingParts } = props.suggestion;
+  const {
+    card,
+    reasons,
+    rating: { rating, parts: ratingParts },
+  } = props.suggestion;
   const reasonWords = reasons.map(reasonText).join(" · ");
   const partsTitle = ratingParts
     .map((p) => `${p.label} (${p.contribution >= 0 ? "+" : ""}${p.contribution.toFixed(2)})`)

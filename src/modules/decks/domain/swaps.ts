@@ -96,7 +96,7 @@ export function suggestSwaps(
 
     for (const candidate of eligibleAdds) {
       if (usedAddIds.has(candidate.card.oracleId)) continue;
-      const addRating = candidate.rating?.rating ?? Math.round(candidate.score * 10);
+      const addRating = candidate.rating.rating;
       const ratingDelta = addRating - meta.rating;
       if (ratingDelta <= 0 && !fixesProblem) continue;
 
@@ -122,7 +122,7 @@ export function suggestSwaps(
 
     if (!bestAdd) continue;
 
-    const addRating = bestAdd.rating?.rating ?? Math.round(bestAdd.score * 10);
+    const addRating = bestAdd.rating.rating;
     const netGain = bestRatingDelta + (fixesProblem ? PROBLEM_FIX_BONUS : 0);
 
     const reasons: SwapReason[] = [];
@@ -161,8 +161,7 @@ export function suggestSwaps(
     .sort(
       (a, b) =>
         b.netGain - a.netGain ||
-        b.add.score - a.add.score ||
-        a.cut.keepScore - b.cut.keepScore ||
+        b.add.rating.logit - a.add.rating.logit ||
         a.cut.oracleId.localeCompare(b.cut.oracleId) ||
         a.add.card.oracleId.localeCompare(b.add.card.oracleId),
     )

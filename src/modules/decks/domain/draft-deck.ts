@@ -14,14 +14,12 @@ import {
   deckProfile,
   scoreForDeck,
   scoreForRole,
-  strength,
-  WEIGHTS,
   type CandidateCard,
   type DeckFingerprint,
   type ProfileLine,
   type Reason,
-  type RoleGap,
 } from "./suggest";
+import { strength, type RoleGap } from "./rate";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first,
 // then optional store gap-fill, plus lands from planManaBase (design docs 37 & 44). Pure: queries
@@ -217,7 +215,7 @@ function compareOwnedFit(
 }
 
 /**
- * Store picks prefer higher fit points first, then lower price among cards of equal fit, then
+ * Store picks prefer the card that fits in more ways (reasons) first, then the lower price, then
  * card strength, then name.
  */
 function compareStoreFit(
@@ -461,10 +459,9 @@ export function draftDeck(input: DraftInput): DeckDraft {
     const currentLines = [...playedLines, ...drafted.map((entry) => entry.line)];
     const computed = deckProfile(currentLines, input.format);
     return {
+      ...computed,
       themes: mergeThemes(computed.themes, seedThemes),
-      tribes: computed.tribes,
       gaps: buildGaps(roleCounts, targets),
-      keywords: computed.keywords,
     };
   };
 
@@ -495,7 +492,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
           : [
               {
                 card: candidate,
-                score: scored.score + openGapCount(candidate) * 0.1,
+                score: scored.rating.logit + openGapCount(candidate) * 0.1,
                 reasons: scored.reasons,
               },
             ];
@@ -532,12 +529,12 @@ export function draftDeck(input: DraftInput): DeckDraft {
         .flatMap((candidate) => {
           const scored = scoreForRole(candidate, targetRole, profileSnapshot);
           if (scored === null) return [];
-          const points = Math.round(scored.score - WEIGHTS.strength * strength(candidate));
+          const points = scored.reasons.length;
           return [
             {
               card: candidate,
               points,
-              score: scored.score,
+              score: scored.rating.logit,
               reasons: scored.reasons,
             },
           ];
@@ -564,7 +561,7 @@ export function draftDeck(input: DraftInput): DeckDraft {
         const scored = scoreForDeck(candidate, planProfile);
         return scored === null
           ? []
-          : [{ card: candidate, score: scored.score, reasons: scored.reasons }];
+          : [{ card: candidate, score: scored.rating.logit, reasons: scored.reasons }];
       })
       .sort(compareOwnedFit);
 
@@ -595,12 +592,12 @@ export function draftDeck(input: DraftInput): DeckDraft {
       .flatMap((candidate) => {
         const scored = scoreForDeck(candidate, planProfile);
         if (scored === null) return [];
-        const points = Math.round(scored.score - WEIGHTS.strength * strength(candidate));
+        const points = scored.reasons.length;
         return [
           {
             card: candidate,
             points,
-            score: scored.score,
+            score: scored.rating.logit,
             reasons: scored.reasons,
           },
         ];

@@ -8,7 +8,7 @@ import {
   type BracketSource,
   type BracketWarning,
 } from "./brackets";
-import type { EdhrecSignal } from "./suggest";
+import type { EdhrecSignal } from "./rate";
 import { isPlayed } from "./boards";
 import { BOARDS, type Board, type Format } from "./deck";
 import { formatRules } from "./format-rules";

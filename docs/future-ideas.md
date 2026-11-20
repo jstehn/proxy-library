@@ -129,3 +129,25 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Kick a player from a lobby** (with a refund).
 - **A pick-by-pick replay** of a finished draft: every pick, pack and seed is already stored.
 - **Limited ratings** (a ratings table per set) to replace rarity and price in `cardStrength`.
+
+## Deck advice and card features (noticed during the refactor, 2026-11-20)
+
+- **Weights fitted for cuts.** P27 made one scorer (`rateCard`) serve suggestions, cuts and
+  draft-a-deck with one table fitted by `scripts/fit-rating-weights.ts`. The fitted weight for
+  "fills a role the deck needs" is small, so a ramp spell (Rampant Growth) can be offered as a cut
+  while the deck is short of ramp; the "would leave a gap" reason still shows. Option: fit a
+  second set of weights on cut data (what players actually cut) and pass it to `rateCard` as a
+  preset.
+- **The builder's 0–100 rating badge.** The MCP tools no longer show scores or ranks (owner,
+  2026-11-19: they're idea generators, not authorities), but `suggestions-panel.tsx` still shows a
+  rating. Option: show the top reasons in words instead, like the tools.
+- **Similarity in words.** P27 dropped `similarityPct` from tool output. If "how alike" is useful,
+  say it in words ("same role and mana value") rather than a percentage.
+- **Reminder text in the tap-mana recognizer.** It reads printed text including reminder text, so a
+  card that makes Powerstone tokens counts as a mana source (kept in P11 to match old behaviour).
+  Fixing it is a recognizer change plus a `FEATURES_VERSION` bump and a backfill.
+- **A "French vanilla" recognizer** (creatures whose only abilities are keywords) was dropped from
+  P14 until a feature needs it, for example the drafter treating them as simple bodies.
+- **Unused tables.** `goldfish_sessions`, `card_packages` and `card_package_entries` stayed when P24
+  removed their features. A migration can drop them once the owner is sure the features won't
+  return.
