@@ -18,8 +18,9 @@ import { makeWallet, walletQueries } from "@/modules/wallet";
 import { makeWishlist, wishlistQueries } from "@/modules/wishlist";
 import { SealedProductId } from "@/modules/catalog";
 import { bindPublicDb } from "@/shared/db";
-import { Cents, UserId } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
+import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -340,7 +341,7 @@ describe("wallet (R87 to R90)", () => {
   });
 
   it("R88: playerMoney is for an admin; a plain player doesn't compile", async () => {
-    await wallet.refreshWallet(UserId.of("jack"));
+    await wallet.refreshWallet(jack);
     const everyone = await walletQueries.playerMoney(db, admin);
     expect(everyone.map((row) => row.userId)).toContain("jack");
     // @ts-expect-error a plain player is not an AdminActor
@@ -348,8 +349,8 @@ describe("wallet (R87 to R90)", () => {
   });
 
   it("R89: history lists only the actor's ledger", async () => {
-    await wallet.refreshWallet(UserId.of("jack"));
-    await wallet.refreshWallet(UserId.of("sam"));
+    await wallet.refreshWallet(jack);
+    await wallet.refreshWallet(sam);
     const mine = await walletQueries.history(db, jack);
     expect(mine).toHaveLength(1);
     expect(mine[0].kind).toBe("starting_grant");
@@ -357,7 +358,7 @@ describe("wallet (R87 to R90)", () => {
   });
 
   it("R90: summary has only the actor's totals", async () => {
-    await wallet.refreshWallet(UserId.of("jack"));
+    await wallet.refreshWallet(jack);
     expect((await walletQueries.summary(db, jack)).balance).toBe(5000);
     expect((await walletQueries.summary(db, sam)).balance).toBe(0);
   });
@@ -431,10 +432,50 @@ describe("wishlist (R91 to R97)", () => {
   });
 });
 
+describe("accounts (R1 to R4)", () => {
+  async function giveToken(userId: string, name: string): Promise<void> {
+    await db.execute(sql`
+      insert into access_tokens (user_id, name, prefix, token_hash, scopes, created_at)
+      values (${userId}, ${name}, 'pl_x', ${`hash-${userId}-${name}`}, array['read'], now())
+    `);
+  }
+
+  it("R1: hasAnyPlayers gives a boolean to a visitor, through PublicReads", async () => {
+    const visitorReads = bindPublicDb(db, accountPublicQueries);
+    expect(await visitorReads.hasAnyPlayers()).toBe(true);
+    await db.execute(sql`truncate invites, players, auth_users cascade`);
+    expect(await visitorReads.hasAnyPlayers()).toBe(false);
+  });
+
+  it("R2: listAccessTokens lists only the actor's tokens", async () => {
+    await giveToken("jack", "jack's laptop");
+    await giveToken("sam", "sam's phone");
+    expect((await accountQueries.listAccessTokens(db, jack)).map((token) => token.name)).toEqual([
+      "jack's laptop",
+    ]);
+    expect(await accountQueries.listAccessTokens(db, eve)).toEqual([]);
+  });
+
+  it("R3: listInvites is for an admin; a plain player doesn't compile", async () => {
+    expect(await accountQueries.listInvites(db, admin, new Date())).toEqual([]);
+    // @ts-expect-error a plain player is not an AdminActor
+    void accountQueries.listInvites(db, jack, new Date());
+  });
+
+  it("R4: listPlayers is for an admin; a plain player doesn't compile", async () => {
+    const everyone = await accountQueries.listPlayers(db, admin);
+    expect(everyone.map((player) => player.userId).sort()).toEqual(["admin", "eve", "jack", "sam"]);
+    // @ts-expect-error a plain player is not an AdminActor
+    void accountQueries.listPlayers(db, jack);
+  });
+});
+
 describe("visitors", () => {
   it("no read that takes a player can be bound into PublicReads", () => {
     // @ts-expect-error wallet reads take an Actor, so a visitor's reads refuse them
     bindPublicDb(db, walletQueries);
+    // @ts-expect-error nor the account reads of a player
+    bindPublicDb(db, accountQueries);
     // @ts-expect-error nor the activity feed
     bindPublicDb(db, activityQueries);
   });

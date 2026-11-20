@@ -32,7 +32,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
   const [answers, balance, settings, isShared, shared] = await Promise.all([
     reads.wishlist.answers(actor),
     // Also pays any allowance that has come due, as the header does (design doc 03).
-    wallet.refreshWallet(actor.userId),
+    wallet.refreshWallet(actor),
     reads.wallet.economySettings(),
     reads.wishlist.isShared(actor),
     reads.wishlist.shared(),

@@ -47,7 +47,7 @@ import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { makeReddit } from "@/modules/reddit";
 import type { makeYoutube } from "@/modules/youtube";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
+import type { Cents, Clock } from "@/shared/kernel";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
@@ -56,7 +56,7 @@ import type { Cents, Clock, UserId } from "@/shared/kernel";
 type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
-  wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
   outsideData: OutsideDataService;
@@ -120,9 +120,8 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
     headerSummary: async (actor: Actor) => {
-      const userId = actor.userId;
       const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
-        dependencies.services.wallet.refreshWallet(userId),
+        dependencies.services.wallet.refreshWallet(actor),
         tradeQueries.waitingForYou(db, actor),
         wishlistQueries.atTarget(db, actor),
         draftQueries.activeDraftOf(db, actor),

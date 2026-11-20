@@ -1,11 +1,10 @@
 import { collectionPage } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
 import { nextPayday, walletQueries } from "@/modules/wallet";
-import { wishlistAnswersOf } from "@/modules/wishlist";
-import { withDb, type DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
-import { listAccessTokens } from "./queries/access-tokens";
-import { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
+import { wishlistQueries } from "@/modules/wishlist";
+import type { DbExecutor } from "@/shared/db";
+import type { Cents, Clock } from "@/shared/kernel";
+import type { Actor } from "./domain/player";
 import { makeGetAccountOverview } from "./application/get-account-overview";
 
 // The accounts module's capabilities (ADR 0026): the account overview reads the balance, the
@@ -14,20 +13,14 @@ import { makeGetAccountOverview } from "./application/get-account-overview";
 type AccountWiringDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
-  wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
 }>;
 
 export function wireAccountCapabilities(dependencies: AccountWiringDependencies) {
   const { db, clock, wallet } = dependencies;
   return {
-    accountReads: {
-      hasAnyPlayers: withDb(db, hasAnyPlayers),
-      listAccessTokens: withDb(db, listAccessTokens),
-      listInvites: withDb(db, listInvites),
-      listPlayers: withDb(db, listPlayers),
-    },
     getAccountOverview: makeGetAccountOverview({
-      refreshBalance: (userId) => wallet.refreshWallet(userId),
+      refreshBalance: (actor) => wallet.refreshWallet(actor),
       allowance: async () => {
         const settings = await walletQueries.economySettings(db);
         if (settings.allowance <= 0) return null;
@@ -40,16 +33,20 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
           ),
         };
       },
-      collectionTotals: async (userId) => {
-        const page = await collectionPage(db, userId, { sections: "none", sort: "name", page: 1 });
+      collectionTotals: async (actor) => {
+        const page = await collectionPage(db, actor.userId, {
+          sections: "none",
+          sort: "name",
+          page: 1,
+        });
         return {
           differentCards: page.totals.different,
           copies: page.totals.copies,
           valueCents: page.totals.valueCents,
         };
       },
-      deckCount: async (userId) => (await decksFor(db, userId)).length,
-      wishCount: async (userId) => (await wishlistAnswersOf(db, userId)).wishes.length,
+      deckCount: async (actor) => (await decksFor(db, actor.userId)).length,
+      wishCount: async (actor) => (await wishlistQueries.answers(db, actor)).wishes.length,
     }),
   };
 }

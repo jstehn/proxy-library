@@ -33,23 +33,23 @@ const kinds = (userId: UserId) => setup.services.wallets.entriesFor(userId).map(
 
 describe("refreshWallet: opening, starting grant and allowances", () => {
   it("opens a new wallet with the starting grant, exactly once (rule 7)", async () => {
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000);
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000);
+    expect(await wallet.refreshWallet(jack)).toBe(5000);
+    expect(await wallet.refreshWallet(jack)).toBe(5000);
     expect(kinds(jack.userId)).toEqual(["starting_grant"]);
   });
 
   it("pays nothing until the first payday after the wallet opened (rule 8)", async () => {
-    await wallet.refreshWallet(jack.userId);
+    await wallet.refreshWallet(jack);
     clock.advanceBy(4 * DAY); // Sunday
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000);
+    expect(await wallet.refreshWallet(jack)).toBe(5000);
     clock.advanceBy(1 * DAY); // Monday 10:00, past the 00:00 payday
-    expect(await wallet.refreshWallet(jack.userId)).toBe(7000);
+    expect(await wallet.refreshWallet(jack)).toBe(7000);
   });
 
   it("pays every missed payday once, each dated to its own payday (rule 6)", async () => {
-    await wallet.refreshWallet(jack.userId);
+    await wallet.refreshWallet(jack);
     clock.advanceBy(3 * WEEK);
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000 + 3 * 2000);
+    expect(await wallet.refreshWallet(jack)).toBe(5000 + 3 * 2000);
 
     const allowances = setup.services.wallets
       .entriesFor(jack.userId)
@@ -62,7 +62,7 @@ describe("refreshWallet: opening, starting grant and allowances", () => {
     ]);
 
     // Refreshing again straight away pays nothing more.
-    expect(await wallet.refreshWallet(jack.userId)).toBe(11_000);
+    expect(await wallet.refreshWallet(jack)).toBe(11_000);
   });
 
   it("opens and brings up to date every player's wallet", async () => {
@@ -80,7 +80,7 @@ describe("grantMoney and correctBalance", () => {
       note: "Won Friday's draft",
     });
     expect(result.ok && result.value.note).toBe("Won Friday's draft");
-    expect(await wallet.refreshWallet(jack.userId)).toBe(7500);
+    expect(await wallet.refreshWallet(jack)).toBe(7500);
   });
 
   it("requires a note, a sensible amount, and an existing player", async () => {
@@ -98,7 +98,7 @@ describe("grantMoney and correctBalance", () => {
   });
 
   it("takes money away, but never below $0 (rule 3)", async () => {
-    await wallet.refreshWallet(jack.userId); // $50 starting grant
+    await wallet.refreshWallet(jack); // $50 starting grant
     const tooMuch = await wallet.correctBalance(admin, {
       userId: jack.userId,
       amount: Cents.of(5001),
@@ -112,11 +112,11 @@ describe("grantMoney and correctBalance", () => {
       note: "undo mistaken grant",
     });
     expect(fine.ok && fine.value.amount).toBe(-5000);
-    expect(await wallet.refreshWallet(jack.userId)).toBe(0);
+    expect(await wallet.refreshWallet(jack)).toBe(0);
   });
 
   it("counts allowances that are due before checking the balance", async () => {
-    await wallet.refreshWallet(jack.userId);
+    await wallet.refreshWallet(jack);
     clock.advanceBy(WEEK); // one $20 allowance is now due but not yet paid
     const result = await wallet.correctBalance(admin, {
       userId: jack.userId,
@@ -153,7 +153,7 @@ describe("addOwnFunds (rule 11)", () => {
 
 describe("updateEconomySettings (rule 9)", () => {
   it("pays everyone under the old settings first, then applies the new ones", async () => {
-    await wallet.refreshWallet(jack.userId);
+    await wallet.refreshWallet(jack);
     clock.advanceBy(WEEK); // one $20 payday has passed
 
     const updated = await wallet.updateEconomySettings(admin, {
@@ -161,10 +161,10 @@ describe("updateEconomySettings (rule 9)", () => {
       allowance: Cents.of(3000),
     });
     expect(updated.ok).toBe(true);
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000 + 2000); // old amount
+    expect(await wallet.refreshWallet(jack)).toBe(5000 + 2000); // old amount
 
     clock.advanceBy(WEEK);
-    expect(await wallet.refreshWallet(jack.userId)).toBe(5000 + 2000 + 3000); // new amount
+    expect(await wallet.refreshWallet(jack)).toBe(5000 + 2000 + 3000); // new amount
   });
 
   it("is admin-only, and rejects invalid settings", async () => {

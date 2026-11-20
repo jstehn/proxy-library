@@ -37,7 +37,7 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
       ? searchParams.list.slice(0, MAX_LIST_TEXT).split("\n").slice(0, MAX_LIST_LINES).join("\n")
       : null;
   if (givenList !== null && startingText === "") startingText = givenList;
-  const balance = await wallet.refreshWallet(actor.userId);
+  const balance = await wallet.refreshWallet(actor);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">

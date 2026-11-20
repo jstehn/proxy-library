@@ -5,9 +5,9 @@ import { CreateInviteForm } from "./create-invite-form";
 import { readPage } from "@/server/page-instance";
 
 export default async function AdminInvitesPage() {
-  const { capabilities } = await readPage({ admin: true });
+  const { actor: admin, capabilities, reads } = await readPage({ admin: true });
 
-  const invites = await capabilities.accountReads.listInvites(capabilities.now());
+  const invites = await reads.accounts.listInvites(admin, capabilities.now());
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">

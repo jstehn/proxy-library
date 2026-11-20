@@ -1,4 +1,5 @@
-import { ok, type Result, type UserId } from "@/shared/kernel";
+import { ok, type Result } from "@/shared/kernel";
+import type { Actor } from "../domain/player";
 
 /** What a player has, in whole numbers (money in integer cents). */
 export type AccountOverview = Readonly<{
@@ -12,28 +13,25 @@ export type AccountOverview = Readonly<{
 
 export type GetAccountOverviewDependencies = Readonly<{
   /** Brings the wallet up to date (a due allowance is paid) and returns the balance. */
-  refreshBalance(userId: UserId): Promise<number>;
+  refreshBalance(actor: Actor): Promise<number>;
   /** The allowance, or null when it is off, with the next payday. */
   allowance(): Promise<Readonly<{ amountCents: number; everyDays: number; next: Date }> | null>;
   collectionTotals(
-    userId: UserId,
+    actor: Actor,
   ): Promise<Readonly<{ differentCards: number; copies: number; valueCents: number }>>;
-  deckCount(userId: UserId): Promise<number>;
-  wishCount(userId: UserId): Promise<number>;
+  deckCount(actor: Actor): Promise<number>;
+  wishCount(actor: Actor): Promise<number>;
 }>;
 
 /** Capability: the player's balance, allowance and totals. These readers belong to other modules, so the composition root passes them in as ports. */
 export function makeGetAccountOverview(dependencies: GetAccountOverviewDependencies) {
-  async function getAccountOverview(
-    actor: Readonly<{ userId: UserId }>,
-  ): Promise<Result<AccountOverview, never>> {
-    const userId = actor.userId;
+  async function getAccountOverview(actor: Actor): Promise<Result<AccountOverview, never>> {
     const [balanceCents, allowance, collection, decks, wishes] = await Promise.all([
-      dependencies.refreshBalance(userId),
+      dependencies.refreshBalance(actor),
       dependencies.allowance(),
-      dependencies.collectionTotals(userId),
-      dependencies.deckCount(userId),
-      dependencies.wishCount(userId),
+      dependencies.collectionTotals(actor),
+      dependencies.deckCount(actor),
+      dependencies.wishCount(actor),
     ]);
     return ok({ balanceCents, allowance, collection, decks, wishes });
   }

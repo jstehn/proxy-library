@@ -5,12 +5,12 @@ import { readPage } from "@/server/page-instance";
 import { RegisterForm } from "./register-form";
 
 export default async function RegisterPage(props: PageProps<"/register">) {
-  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  const { actor, reads } = await readPage({ allowVisitors: true });
   if (actor !== null) redirect("/");
 
   const searchParams = await props.searchParams;
   const invite = typeof searchParams.invite === "string" ? searchParams.invite : "";
-  const isFirstPlayer = !(await capabilities.accountReads.hasAnyPlayers());
+  const isFirstPlayer = !(await reads.accounts.hasAnyPlayers());
 
   return (
     <>

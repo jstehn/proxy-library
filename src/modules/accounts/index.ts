@@ -55,8 +55,8 @@ export {
 } from "./domain/invite";
 export { PASSWORD_MIN_LENGTH } from "./domain/credentials";
 export type { Actor, AdminActor, Player } from "./domain/player";
-export { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
-export { listAccessTokens } from "./queries/access-tokens";
+export * as accountQueries from "./queries";
+export * as accountPublicQueries from "./queries/public";
 export type { InviteListItem, PlayerListItem } from "./queries/admin";
 export {
   describeChangeOwnPasswordError,

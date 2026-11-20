@@ -281,7 +281,7 @@ export function buildCore(config: Config) {
     reddit,
     textEmbedder,
     reads: buildReads(db),
-    publicReads: buildPublicReads(),
+    publicReads: buildPublicReads(db),
     capabilities: buildCapabilities({
       db,
       clock,

@@ -1,5 +1,5 @@
 import type { Actor } from "@/modules/accounts";
-import { Cents, ok, type Finish, type Result, type UserId } from "@/shared/kernel";
+import { Cents, ok, type Finish, type Result } from "@/shared/kernel";
 import { totals, wishLines, type WishLine, type WishlistAnswers } from "../domain/lines";
 import type { FinishPreference, WishDetails, WishId as WishIdOf } from "../domain/wish";
 import type { AddedWish, AddWishError, AddWishInput, WishRequest } from "./manage-wishes";
@@ -8,9 +8,9 @@ import type { AddedWish, AddWishError, AddWishInput, WishRequest } from "./manag
 // now, adding wishes by card name, removing them by id. Buying stays in the web app.
 
 export type WishlistViewReaders = Readonly<{
-  answers(userId: UserId): Promise<WishlistAnswers>;
+  answers(actor: Actor): Promise<WishlistAnswers>;
   /** The balance (brought up to date) and when and how much the allowance pays. */
-  outlook(userId: UserId): Promise<
+  outlook(actor: Actor): Promise<
     Readonly<{
       balance: Cents;
       allowance: Cents;
@@ -28,13 +28,8 @@ export type WishlistView = Readonly<{
 }>;
 
 export function makeWishlistView(readers: WishlistViewReaders) {
-  async function wishlistView(
-    request: Readonly<{ userId: UserId }>,
-  ): Promise<Result<WishlistView, never>> {
-    const [answers, outlook] = await Promise.all([
-      readers.answers(request.userId),
-      readers.outlook(request.userId),
-    ]);
+  async function wishlistView(actor: Actor): Promise<Result<WishlistView, never>> {
+    const [answers, outlook] = await Promise.all([readers.answers(actor), readers.outlook(actor)]);
     const lines = wishLines(answers, outlook);
     return ok({ balance: outlook.balance, totalForMissing: totals(lines).all, lines });
   }

@@ -10,7 +10,7 @@ export default async function WalletPage() {
   const { wallet } = capabilities;
 
   // Pay anything that's due first, so the page shows an up-to-date balance.
-  await wallet.refreshWallet(actor.userId);
+  await wallet.refreshWallet(actor);
   const [summary, history, settings] = await Promise.all([
     reads.wallet.summary(actor),
     reads.wallet.history(actor),

@@ -1,3 +1,4 @@
+import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { activityQueries } from "@/modules/activity";
 import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
@@ -7,7 +8,7 @@ import { socialQueries } from "@/modules/social";
 import { wishlistQueries } from "@/modules/wishlist";
 import { storeQueries } from "@/modules/store";
 import { walletQueries } from "@/modules/wallet";
-import { bindDb, type DbExecutor } from "@/shared/db";
+import { bindDb, bindPublicDb, type DbExecutor } from "@/shared/db";
 
 // `reads` (design doc 67, ADR 0026 addendum): each module's query functions with the database
 // filled in. Pages, actions and tool endpoints call `reads.<module>.<query>(actor, ...)`; a read
@@ -16,7 +17,10 @@ import { bindDb, type DbExecutor } from "@/shared/db";
 
 /** Every module's reads, bound to one database. Built once, in `core.ts`. */
 export function buildReads(db: DbExecutor) {
+  const publicReads = buildPublicReads(db);
   return {
+    // A signed-in player also reaches the visitor reads (the shared-deck page serves both).
+    accounts: { ...bindDb(db, accountQueries), ...publicReads.accounts },
     activity: bindDb(db, activityQueries),
     drafts: bindDb(db, draftQueries),
     inventory: bindDb(db, inventoryQueries),
@@ -35,7 +39,9 @@ export type Reads = ReturnType<typeof buildReads>;
  * link) or nothing at all. A read that takes a player doesn't compile here, so a visitor's page
  * can't reach one.
  */
-export function buildPublicReads() {
-  return {};
+export function buildPublicReads(db: DbExecutor) {
+  return {
+    accounts: bindPublicDb(db, accountPublicQueries),
+  };
 }
 export type PublicReads = ReturnType<typeof buildPublicReads>;

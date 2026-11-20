@@ -1,6 +1,7 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "@/shared/db";
+import type { AdminActor } from "../domain/player";
 import { inviteStatus, type InviteStatus } from "../domain/invite";
 import { authUsers, invites, players } from "../infrastructure/schema";
 
@@ -16,7 +17,9 @@ export type PlayerListItem = Readonly<{
   joinedAt: string; // ISO date, so it can be passed to client components
 }>;
 
-export async function listPlayers(db: DbExecutor): Promise<PlayerListItem[]> {
+/** Every player, for the admin page (kind A: the `AdminActor` is the access rule). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+export async function listPlayers(db: DbExecutor, admin: AdminActor): Promise<PlayerListItem[]> {
   const rows = await db
     .select({
       userId: players.userId,
@@ -50,7 +53,12 @@ export type InviteListItem = Readonly<{
   usedBy: string | null;
 }>;
 
-export async function listInvites(db: DbExecutor, now: Date): Promise<InviteListItem[]> {
+/** Every invite, for the admin page (kind A). */
+export async function listInvites(
+  db: DbExecutor,
+  admin: AdminActor,
+  now: Date,
+): Promise<InviteListItem[]> {
   const creator = alias(authUsers, "creator");
   const user = alias(authUsers, "invitee");
 
@@ -73,10 +81,4 @@ export async function listInvites(db: DbExecutor, now: Date): Promise<InviteList
     expiresAt: row.invite.expiresAt.toISOString(),
     usedBy: row.usedBy,
   }));
-}
-
-/** Whether anyone has registered yet (the register page hides the invite field if not). */
-export async function hasAnyPlayers(db: DbExecutor): Promise<boolean> {
-  const [row] = await db.select({ total: count() }).from(players);
-  return row.total > 0;
 }

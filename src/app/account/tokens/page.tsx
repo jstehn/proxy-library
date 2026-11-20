@@ -14,9 +14,9 @@ const SCOPE_WORDS: Readonly<Record<string, string>> = {
 };
 
 export default async function TokensPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
-  const tokens = await capabilities.accountReads.listAccessTokens(actor.userId);
+  const tokens = await reads.accounts.listAccessTokens(actor);
   const mcpUrl = new URL("/api/mcp", capabilities.appUrl).toString();
   const openApiUrl = new URL("/api/tools/openapi.json", capabilities.appUrl).toString();
 
