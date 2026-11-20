@@ -62,4 +62,34 @@ leftover: the `blitz` keyword read in `deck-profile.ts` moves onto the keywords 
 
 ## Handoff
 
-(empty)
+**Branch** `refactor/P14-lands-drafts` (P12's `enters-tapped` slice merged first; commits P14.1 to P14.4).
+**Package net: +35 production lines against `refactor/main`** (75,382 to 75,417; P12's +42 less 7): the
+package does **not** reach net <= 0, so the `pnpm sizes` ratchet fails and `pnpm check` is red on
+`sizes` only. Needs the owner (approve +35) or more deletions from another package.
+
+- **P14.1 land cycles (-7 vs the P12 tip).** Recognizer `land-cycles` fills `landCycles` (15 cycles;
+  `basic` stays a type-line test in SQL). `CardText` now carries Scryfall's `keywords` (for `cycleland`).
+  Migration `0051_land_cycles.sql`: `card_features.land_cycles text[]` plus a GIN index; `is:shockland`
+  and the others are `land_cycles @>` on `card_features`. Deleted `landCycle`, `landSaying` and their
+  constants in `sql.ts` (the audit's "matchers in decks/domain/{mana-base,stats,rules}" do not exist:
+  the cycles were Postgres regexes). Also: the `blitz` scope reads Scryfall's keyword list (deck lines
+  already carry `keywords`), so `CastabilityLine.text` and a regex went. `deck-profile.ts` left
+  `NOT_YET_RECOGNIZED`.
+- **P14.2 tokens (0).** No token-making recognizer: doc 66 question 7 keeps Scryfall's links for what to
+  print, and `token-choices.ts` has no text copy. `tokenKind` reads type-line words with `hasTypeWord`
+  instead of two regexes; `token-proxies.ts` left the list.
+- **P14.3 draft abilities (0).** `DRAFT_ABILITIES` already existed; `timers.ts` now asks it (extraCard
+  with `then: "intoPack"`) instead of comparing the name "Cogwork Librarian". `creatureTypes` lost its regex.
+- **P14.4 lint (0 production lines).** `cards/card-name-literal` (`eslint-rules/card-name-literal.mjs`):
+  no `name === "<literal>"` in catalog, decks and drafts `domain/`.
+- **`FEATURES_VERSION` 3** (2 -> 3: `landCycles`, `CardText.keywords`). Run migration 0051, then
+  `pnpm worker sync features`; until then `is:shockland` and friends find nothing.
+- **Regex baseline 124 -> 120.** Production lines 75,424 (P12 tip) -> 75,417.
+- **A2:** the 15 land-cycle expectations of `search-language.int.test.ts` pass unchanged (old SQL
+  answers) and 19 fixture cards are in the recognizer's table. Not run over the 33,479 dev cards.
+  Differences to decide: (1) `blitz` now needs the keyword, so a card that only mentions "blitz" in
+  its text (granting it) no longer counts; (2) `pathway` is `Land // Land` type line without the
+  `modal_dfc` layout check; (3) `tokenKind` is case-sensitive (Scryfall always capitalizes).
+- **Integration files run** (against a private DB `tcg_p14_test`; the shared `tcg_test` was already
+  migrated by P13): search-language, mana-base, card-features, draft-deck, drafts, token-proxies,
+  decks, card-search: all green.
