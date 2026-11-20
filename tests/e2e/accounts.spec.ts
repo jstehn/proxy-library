@@ -844,10 +844,13 @@ async function pickFirstCard(page: Page): Promise<boolean> {
   if (!(await pack.isVisible())) return false;
   const before = await pickHeading(page);
   await pack.getByRole("button").first().dblclick();
-  // The last pick doesn't change the heading: the page shows the finished text instead.
+  // The last pick doesn't change the heading: the page shows the finished text instead. Finishing
+  // a draft builds every player's deck, which can take longer than the default 5 seconds.
   const finished = page.getByText(/Your \d+ cards are in your collection/);
   await expect
-    .poll(async () => (await finished.isVisible()) || (await pickHeading(page)) !== before)
+    .poll(async () => (await finished.isVisible()) || (await pickHeading(page)) !== before, {
+      timeout: 20_000,
+    })
     .toBe(true);
   return true;
 }
