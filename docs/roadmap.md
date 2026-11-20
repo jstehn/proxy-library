@@ -78,7 +78,7 @@ Inside-out order (domain → UI) means every layer is tested before anything dep
 | 54  | Semantic search & role-aware swaps     | `semantic_search_for_deck` (hybrid RRF over `card_embeddings` + deck filters), role/effect-preserving `suggestSwaps`, `find_combos_for_deck`                                           | ✅ Done |
 | 55  | Whole-deck optimizer                   | pure `scoreDeck` objective, Simulated Annealing / Tabu `optimizeDeck` with injected `Rng`, `optimize_deck` MCP tool + Builder preview                                                  | ✅ Done |
 | 56  | LLM diagnostic & goldfish tools        | `audit_deck` one-shot health report, `simulate_opening_hands` Monte Carlo London-mulligan simulator                                                                                    | ✅ Done |
-| 57  | Calibrated weights & iteration tools   | logistic-regression weights per `PowerTier` in `eval-ratings.ts`, `upgrade_roadmap` tiered swaps, `diff_deck` snapshot comparison                                                      | ✅ Done |
+| 57  | Calibrated weights & iteration tools   | logistic-regression weights per `PowerTier` in `fit-rating-weights.ts` (was `eval-ratings.ts`), `upgrade_roadmap` tiered swaps, `diff_deck` snapshot comparison                        | ✅ Done |
 | 61  | MCP commander awareness & primers      | compact `get_deck` paged by whole groups (bytes, not characters), deck profile read by tools, goldfish refusals as data, color matching                                                | ✅ Done |
 
 ### Why this order (changed from the original plan)

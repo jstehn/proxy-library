@@ -100,6 +100,7 @@ export const RATING_BIAS = -1.2;
 
 export const EMBED_SIM_BASELINE = 0.55;
 
+// The weights were fitted from data by `scripts/fit-rating-weights.ts`.
 export const RATING_WEIGHTS = {
   synergy: 0.35,
   synergyCap: 2.2,
