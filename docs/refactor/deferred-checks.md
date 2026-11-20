@@ -127,7 +127,7 @@ tests/integration/card-search.int.test.ts`, plus whatever covers the card page's
 
 ## Left by P28 (cast by turn: the chart and the tool)
 
-- [ ] **Look at the "Castable by turn" chart in the deck builder (P28), in dark mode and at phone
+- [x] **Done 2026-11-20 (e2e database, a 59-card Commander deck, dark at phone width): the commander chart loads below the mana curve (0, 0, 0, 89 … 100; median turn 4), labels fit at 375px; a selected card's "When can I cast this?" shows its own chart (Brightblade Stoat: 60% by turn 2, misses "not drawn 16%"); no horizontal scroll.** **Look at the "Castable by turn" chart in the deck builder (P28), in dark mode and at phone
       width.** Open a Commander deck's builder: the stats panel, below the mana curve, should load a
       10-bar chart ("Castable by turn (2,000 simulated games on the play, ±2.2 points)") with the
       median turn and the usual misses. Bars climb with the turn; labels don't overlap at 375px;
