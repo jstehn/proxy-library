@@ -1,7 +1,7 @@
 import type { Actor } from "@/modules/accounts";
 import { nextPayday, walletQueries } from "@/modules/wallet";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock } from "@/shared/kernel";
+import { pick, type Cents, type Clock } from "@/shared/kernel";
 import { makeAddWishes, makeRemoveWishes, makeWishlistView } from "./application/wishlist-tools";
 import type { Wishlist } from "./application/make-wishlist";
 import { WishId } from "./domain/wish";
@@ -14,13 +14,22 @@ type WishlistWiringDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
   wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
-  wishlist: Pick<Wishlist, "addWish" | "removeWish">;
+  wishlist: Wishlist;
   findCard: Parameters<typeof makeAddWishes>[0]["findCard"];
 }>;
 
 export function wireWishlistCapabilities(dependencies: WishlistWiringDependencies) {
   const { db, clock, wallet, wishlist, findCard } = dependencies;
   return {
+    wishlist: pick(
+      wishlist,
+      "addWish",
+      "removeWish",
+      "updateWish",
+      "buyWish",
+      "setSharing",
+      "wishForCards",
+    ),
     wishlistView: makeWishlistView({
       answers: (actor) => answers(db, actor),
       outlook: async (actor) => {

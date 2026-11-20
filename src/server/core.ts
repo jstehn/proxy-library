@@ -303,7 +303,6 @@ export function buildCore(config: Config) {
         realCollection,
         store,
         accounts,
-        wishlist,
         catalog,
         resetPlayer,
         appUrl: config.appUrl,

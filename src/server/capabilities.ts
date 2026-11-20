@@ -36,7 +36,6 @@ import { tradeQueries, type Trades } from "@/modules/trades";
 import { wireTradeCapabilities } from "@/modules/trades/wiring";
 import type { Wallet } from "@/modules/wallet";
 import { wireWalletCapabilities } from "@/modules/wallet/wiring";
-import type { makeWishlist } from "@/modules/wishlist";
 import type { makeRealCollection } from "@/modules/real-collection";
 import type { makeStore } from "@/modules/store";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
@@ -56,7 +55,7 @@ type CapabilityDependencies = Readonly<{
   social: Social;
   trades: Trades;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
-  wishlist: Pick<Wishlist, "addWish" | "removeWish">;
+  wishlist: Wishlist;
   outsideData: OutsideDataService;
   youtube: ReturnType<typeof makeYoutube>;
   reddit: ReturnType<typeof makeReddit>;
@@ -74,7 +73,6 @@ type CapabilityDependencies = Readonly<{
     realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
     accounts: ReturnType<typeof makeAccounts>;
-    wishlist: ReturnType<typeof makeWishlist>;
     catalog: ReturnType<typeof makeCatalog>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
