@@ -1,5 +1,5 @@
 // Shared mana cost parsing, pool arithmetic, and tap-mana production extraction.
-// Used across goldfish-session, castability, and deck-profile so mana rules live in one place.
+// Used across castability, and deck-profile so mana rules live in one place.
 
 import { isLand } from "@/shared/kernel";
 
