@@ -45,7 +45,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P25   | [The read layer, secure by construction](packages/P25-read-layer.md)                     | P23, P24                      | P26                | done                                                 |
 | P26   | [Shared card and row types](packages/P26-shared-types.md)                                | P23                           | P24, P25           | done                                                 |
 |       | **Wave 3b: card features, by ability**                                                   |                               |                    |                                                      |
-| P11   | [Card features: model and store](packages/P11-card-features.md)                          | P25, P26, decision 3          | none               | in progress (agent)                                  |
+| P11   | [Card features: model and store](packages/P11-card-features.md)                          | P25, P26, decision 3          | none               | done                                                 |
 | P12   | [Mana and casting, by ability](packages/P12-mana-casting.md)                             | P11                           | P13, P14           | free                                                 |
 | P13   | [Tags, themes and signals, by ability](packages/P13-tags-signals.md)                     | P11                           | P12, P14           | free                                                 |
 | P14   | [Lands, tokens and draft cards, by ability](packages/P14-lands-drafts.md)                | P11                           | P12, P13           | free                                                 |
@@ -107,6 +107,7 @@ state".
 | After P23 (new count) | 77,318 production code lines; test support 2,345; tests 32,905                                                          | —          | 19          | —              | 25 (near: 229) | 4 (2 files, allowed)             |
 | After P24 and P26     | 74,789 production code lines                                                                                            | —          | —           | —              | —              | knip 457                         |
 | After P25             | 75,151 production code lines (baseline raised once, owner approved)                                                     | —          | —           | —              | 21             | knip 391                         |
+| After P11             | 75,382 production code lines (P11's approved exception, +231)                                                           | —          | —           | —              | 21             | knip 391; card-text regexes 128  |
 | **Target**            | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**       | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)
