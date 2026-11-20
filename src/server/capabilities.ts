@@ -30,7 +30,8 @@ import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
 import { draftQueries, type makeDrafts } from "@/modules/drafts";
 import type { makeResetPlayer } from "@/modules/reset";
-import { socialQueries, type makeSocial } from "@/modules/social";
+import { socialQueries, type Social } from "@/modules/social";
+import { wireSocialCapabilities } from "@/modules/social/wiring";
 import { tradeQueries, type makeTrades } from "@/modules/trades";
 import type { Wallet } from "@/modules/wallet";
 import { wireWalletCapabilities } from "@/modules/wallet/wiring";
@@ -51,6 +52,7 @@ type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
   wallet: Wallet;
+  social: Social;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Pick<Wishlist, "addWish" | "removeWish">;
   outsideData: OutsideDataService;
@@ -70,7 +72,6 @@ type CapabilityDependencies = Readonly<{
     realCollection: ReturnType<typeof makeRealCollection>;
     store: ReturnType<typeof makeStore>;
     accounts: ReturnType<typeof makeAccounts>;
-    social: ReturnType<typeof makeSocial>;
     trades: ReturnType<typeof makeTrades>;
     wishlist: ReturnType<typeof makeWishlist>;
     catalog: ReturnType<typeof makeCatalog>;
@@ -109,6 +110,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wirePackCapabilities(dependencies),
     ...wireInventoryCapabilities(dependencies),
     ...wireWalletCapabilities(dependencies),
+    ...wireSocialCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
