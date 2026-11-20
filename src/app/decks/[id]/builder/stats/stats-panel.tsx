@@ -14,6 +14,7 @@ import {
 } from "@/modules/decks/client";
 import { ManaText } from "@/ui/mana";
 import { TAG_LABELS } from "@/app/decks/labels";
+import { CastCurve } from "../cast-curve/cast-curve";
 
 // Live deck statistics (design doc 14, section 2.5): recomputed in the browser from the deck in
 // hand, so they change the moment a card goes in or out.
@@ -28,6 +29,8 @@ const COLOR_BAR: Record<ManaSource, string> = {
 };
 
 export function StatsPanel(props: {
+  /** Where the cast-by-turn chart asks; left out on the shared (read-only) page, which has none. */
+  deckId?: number;
   lines: readonly DeckLine[];
   format: string;
   /** The role whose cards the deck list highlights, if any. */
@@ -126,6 +129,10 @@ export function StatsPanel(props: {
           </span>
         </p>
       </div>
+
+      {props.deckId !== undefined && props.lines.some((line) => line.board === "commander") && (
+        <CastCurve deckId={props.deckId} card="commander" auto />
+      )}
 
       {neededColors.length > 0 && (
         <div className="flex flex-col gap-1">
