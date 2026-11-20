@@ -186,8 +186,6 @@ export async function budgetReplacements(
         return [
           {
             card,
-            similarityPct: pick.similarityPct,
-            rating: pick.rating.rating,
             savedCents: pick.savedCents,
             matchedRoles,
           },

@@ -18,7 +18,6 @@ import { type SuggestionCard } from "../domain/suggestion-types";
 export type SemanticSearchPick = Readonly<{
   card: SuggestionCard;
   similarityPct: number;
-  rating: number;
   score: number;
 }>;
 
@@ -159,7 +158,6 @@ export async function semanticSearchForDeck(
         return {
           card,
           similarityPct: Math.round(Math.max(0, Math.min(1, sim)) * 100),
-          rating: rating.rating,
           score,
         };
       })

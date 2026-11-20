@@ -66,8 +66,6 @@ export type Wanted = Readonly<{
 
 export type BudgetReplacementPick = Readonly<{
   card: SuggestionCard;
-  similarityPct: number;
-  rating: number;
   savedCents: number;
   matchedRoles: readonly Tag[];
 }>;

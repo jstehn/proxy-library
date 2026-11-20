@@ -478,7 +478,7 @@ describe("the maybeboard and disabled cut suggestions", () => {
     const audit = deckWithFacts.facts;
     expect(audit).not.toHaveProperty("topCuts");
     expect(audit).not.toHaveProperty("score");
-    expect(audit.heuristicScore).toBeDefined();
+    expect(audit).not.toHaveProperty("heuristicScore");
     expect(audit.legality).toBeDefined();
     expect(audit.mana).toBeDefined();
     expect(audit.ownership).toBeDefined();
