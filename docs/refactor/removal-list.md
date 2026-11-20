@@ -54,3 +54,5 @@ is still open. Mirrored in tududi (task "Removal register").
 - **Tools already removed on purpose:** the 27 unregistered LLM tools (decision 5 in STATUS). The
   card-package tools have no equivalent in the builder either: the card-packages feature is now
   deleted by **P24**, so P20's "check whether the feature is dead" row is closed.
+
+| 20 action files still reading `formData.get` by hand (P25 Part 2c, "Kept as they were") | `src/app/**/actions.ts` | P32, step 9 |

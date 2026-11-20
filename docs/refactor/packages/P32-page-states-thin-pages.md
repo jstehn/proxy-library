@@ -67,8 +67,23 @@ New `src/app/{error,not-found,loading}.tsx` and one set per big section (`decks`
    `src/ui/<area>/`; `src/ui` holds presentational building blocks only (no logic). Move
    `ui/opening/machine.ts`, `sounds.ts` and `ui/collection/options.ts` next to their one user.
    Lint: a component file over 300 lines in `src/app` warns (the 500-line benchmark stays the gate).
-9. Run `pnpm check`, `pnpm test:e2e`. Screenshot the root error and not-found pages in dark mode and
-   at phone width. `pnpm sizes --update`.
+9. **Every action written one way (from P25, owner decision 2026-11-19).** P25 moved 10 forms onto
+   `formAction`; 20 action files still read `formData.get` by hand
+   (`grep -rl "formData.get" src/app`). The list and why each couldn't move is in
+   `P25-read-layer.md`, Handoff, Part 2c, "Kept as they were". Add what they need, then move them
+   one area per commit, deleting the hand-written parsing in the same commit:
+   - a redirecting variant (`formRedirect(schema, handler)`) for the plain `<form action>` forms that
+     redirect with `?error=` or `?message=` (drafts, decks, commanders, trades, inventory open,
+     admin store and photos, the real collection, wishlist remove and sharing), keeping what an
+     unreadable form does today;
+   - an `allowPasswordChangePending` option for change password;
+   - discriminated-union schemas and per-field messages for the wishlist forms;
+   - a void variant for the silent forms (friends, revoke token or invite, set enabled).
+     Forms with their own client state (sign-in, register, tokens, temporary passwords, invite links,
+     profile, edit as text, OAuth approve) use `formAction` with `useActionState`. Every form keeps its
+     messages, colours and redirects; check each by eye.
+10. Run `pnpm check`, `pnpm test:e2e`. Screenshot the root error and not-found pages in dark mode and
+    at phone width. `pnpm sizes --update`.
 
 ## What not to do
 
@@ -85,6 +100,7 @@ New `src/app/{error,not-found,loading}.tsx` and one set per big section (`decks`
   `src/app/drafts/[id]/page.tsx` is off the oversize allowlist.
 - `grep -rn "revalidatePath(\"" src/app | grep -v paths.ts` finds nothing.
 - `grep -rn "commanderCardsAction" src` finds nothing.
+- `grep -rl "formData.get" src/app` finds only `src/server/form-action*.ts` (or nothing).
 - `pnpm check` and `pnpm test:e2e` are green. The handoff has screenshots checked and the net lines.
 
 ## Handoff
