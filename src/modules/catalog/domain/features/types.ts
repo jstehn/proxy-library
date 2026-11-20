@@ -17,9 +17,15 @@ export type TapMana = Readonly<{
   requiresFiveLands: boolean;
 }>;
 
+/** Whether a land enters the battlefield tapped: always, only sometimes ("unless …"), or never. */
+export type EntersTapped = "never" | "sometimes" | "always";
+
 /** Every feature a recognizer fills, by field name. Each field has exactly one recognizer. */
 export type CardFeatureFields = Readonly<{
   tapMana: TapMana;
+  entersTapped: EntersTapped;
+  /** The card gives an opponent something (cards, life, mana, a creature): a drawback on a land. */
+  helpsOpponents: boolean;
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

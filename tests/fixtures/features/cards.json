@@ -247,5 +247,25 @@
         "text": "Colorless creatures you control get +2/+2.\nWhenever you tap a permanent for {C}, add an additional {C}.\nWhenever you cast a colorless spell, you gain 2 life."
       }
     ]
+  },
+  {
+    "name": "Glacial Fortress",
+    "producedMana": ["W", "U"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Glacial Fortress enters tapped unless you control a Plains or an Island.\n{T}: Add {W} or {U}."
+      }
+    ]
+  },
+  {
+    "name": "Forbidden Orchard",
+    "producedMana": ["W", "U", "B", "R", "G"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add one mana of any color.\nWhen Forbidden Orchard becomes tapped, target opponent creates a 1/1 colorless Spirit creature token."
+      }
+    ]
   }
 ]
