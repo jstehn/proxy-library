@@ -67,7 +67,9 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
         })
         .from(cardSets)
         .leftJoin(printings, eq(printings.setCode, cardSets.code))
-        .groupBy(cardSets.code);
+        .groupBy(cardSets.code)
+        // A fixed order (oldest first), so sets import in the same order on every database.
+        .orderBy(cardSets.releaseDate, cardSets.code);
       return rows.map((row): SetState => ({
         ...row,
         code: SetCode.of(row.code),
@@ -361,50 +363,6 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       for (const batch of chunks([...unique.values()])) {
         await db.insert(printingTokens).values(batch);
       }
-    },
-
-    async printingsToTag(version, limit) {
-      const rows = await db.execute<{
-        id: string;
-        type_line: string;
-        text: string;
-        produced_mana: string[];
-      }>(sql`
-        select p.id, p.type_line, p.produced_mana,
-               coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '')
-                 as text
-          from printings p
-         where p.features_version < ${version}
-         order by p.id
-         limit ${limit}
-      `);
-      return rows.rows.map((row) => ({
-        id: PrintingId.of(row.id),
-        typeLine: row.type_line,
-        text: row.text,
-        producedMana: row.produced_mana,
-      }));
-    },
-
-    async saveCardFeatures(features, version) {
-      if (features.length === 0) return;
-      // One statement for the whole batch: the rows travel as JSON and become a table.
-      const rows = JSON.stringify(
-        features.map((card) => ({
-          id: card.id,
-          role_tags: card.roleTags,
-          theme_tags: card.themeTags,
-          bracket_flags: card.bracketFlags,
-        })),
-      );
-      await db.execute(sql`
-        update printings p
-           set role_tags = v.role_tags, theme_tags = v.theme_tags,
-               bracket_flags = v.bracket_flags, features_version = ${version}
-          from jsonb_to_recordset(${rows}::jsonb)
-               as v(id text, role_tags text[], theme_tags text[], bracket_flags text[])
-         where p.id = v.id
-      `);
     },
 
     async imageSource(printingId) {

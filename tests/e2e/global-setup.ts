@@ -9,6 +9,7 @@ import {
   diskArtworkStore,
   diskImageStore,
   drizzleArtworkRepository,
+  drizzleCardFeatureStore,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   fixtureMtgjsonGateway,
@@ -47,6 +48,8 @@ export default async function globalSetup() {
         catalog: drizzleCatalogRepository(transaction),
         syncRuns: drizzleSyncRunRepository(transaction),
         artwork: drizzleArtworkRepository(transaction),
+        // The sync's step 5c stores card features (design doc 66): themes, tags and land cycles.
+        cardFeatures: drizzleCardFeatureStore(transaction),
       })),
       mtgjson: fixtureMtgjsonGateway(),
       scryfall: fixtureScryfallGateway(),

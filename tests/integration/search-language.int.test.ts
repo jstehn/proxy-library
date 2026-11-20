@@ -5,7 +5,15 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { catalogQueries } from "@/modules/catalog";
-import { actor, close, db, fixtureCatalog, loadFixtureCatalog, resetPlayers } from "./harness";
+import {
+  actor,
+  close,
+  db,
+  fixtureCatalog,
+  loadFixtureCatalog,
+  resetPlayers,
+  storeFeatureArrays,
+} from "./harness";
 
 afterAll(close);
 
@@ -33,6 +41,7 @@ let number = 0;
 
 async function add(card: TestCard): Promise<void> {
   number++;
+  const oracleId = randomUUID();
   const faces = [
     {
       name: card.name.split(" // ")[0],
@@ -60,15 +69,19 @@ async function add(card: TestCard): Promise<void> {
     insert into printings (id, set_code, collector_number, name, oracle_id, scryfall_id, rarity,
                            colors, color_identity, mana_cost, mana_value, type_line, layout,
                            finishes, border_color, frame_version, frame_effects, promo_types,
-                           is_full_art, variant_label, faces, legalities, keywords, role_tags,
-                           theme_tags, bracket_flags, is_game_changer)
-    values (${randomUUID()}, 'TST', ${String(number)}, ${card.name}, ${randomUUID()},
+                           is_full_art, variant_label, faces, legalities, keywords,
+                           is_game_changer)
+    values (${randomUUID()}, 'TST', ${String(number)}, ${card.name}, ${oracleId},
             ${randomUUID()}, 'common', '{}', '{}', ${card.manaCost ?? null},
             ${card.manaValue ?? 0}, ${card.typeLine}, ${card.layout ?? "normal"},
             '{nonfoil}', 'black', '2015', '{}', '{}', false, '', ${JSON.stringify(faces)}::jsonb,
             ${JSON.stringify(card.legalities ?? {})}::jsonb,
-            ${toArray(card.keywords)}, ${toArray(card.roleTags)}, ${toArray(card.themeTags)},
-            ${toArray(card.bracketFlags)}, ${card.isGameChanger ?? false})`);
+            ${toArray(card.keywords)}, ${card.isGameChanger ?? false})`);
+  await storeFeatureArrays(oracleId, {
+    roleTags: card.roleTags,
+    themeTags: card.themeTags,
+    bracketFlags: card.bracketFlags,
+  });
 }
 
 function toArray(values: readonly string[] = []) {

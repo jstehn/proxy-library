@@ -14,8 +14,13 @@ import type {
   SwapReason,
 } from "@/modules/decks";
 import { BRACKET_NAMES, plural } from "@/modules/decks/client";
-import { THEME_LABELS, type BracketFlag, type Tag } from "@/shared/card-search";
-import { assertNever, curveSlotLabel } from "@/shared/kernel";
+import {
+  assertNever,
+  type BracketFlag,
+  curveSlotLabel,
+  type Tag,
+  THEME_LABELS,
+} from "@/shared/kernel";
 
 export const FORMAT_LABELS: Record<Format, string> = {
   casual: "Casual (no rules)",

@@ -126,7 +126,6 @@ export {
   type BracketFinding,
   type BracketLine,
   type BracketRule,
-  type BracketSource,
   type BracketWarning,
   type DeckCombo,
 } from "./domain/brackets";

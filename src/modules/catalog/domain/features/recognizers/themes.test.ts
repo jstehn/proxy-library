@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { cardThemes, leaderThemes, THEME_LABELS, THEMES, type Theme } from "./tags";
+import { THEME_LABELS, THEMES, type Theme } from "@/shared/kernel";
+import { leaderThemes as leaderThemesRecognizer, themes as themesRecognizer } from "./themes";
 
 // Themes (design docs 20 and 38), with quoted Oracle text: what a commander leads, and what a
 // card fits, including the token and politics umbrella/sub-theme hierarchies.
 const card = (typeLine: string, text: string) => ({ typeLine, text });
 
+/** The recognizers' answers for one single-faced card. */
+const textOf = (example: ReturnType<typeof card>) => ({
+  oracleId: "test",
+  producedMana: [],
+  keywords: [],
+  manaValue: 0,
+  faces: [{ name: "Test", ...example }],
+});
+const cardThemes = (example: ReturnType<typeof card>) =>
+  themesRecognizer.recognize(textOf(example));
+const leaderThemes = (example: ReturnType<typeof card>) =>
+  leaderThemesRecognizer.recognize(textOf(example));
+
 describe("leaderThemes: what a commander builds around", () => {
   const leaders: ReadonlyArray<readonly [string, ReturnType<typeof card>, readonly Theme[]]> = [
+    [
+      "Goblin Chieftain",
+      card(
+        "Creature — Goblin",
+        "Haste\nOther Goblin creatures you control get +1/+1 and have haste.",
+      ),
+      ["haste"],
+    ],
     [
       "Atraxa, Praetors' Voice",
       card(
@@ -251,7 +273,7 @@ describe("cardThemes: what a card plays into", () => {
     [
       "Swiftfoot Boots",
       card("Artifact — Equipment", "Equipped creature has hexproof and haste.\nEquip {1}"),
-      ["artifacts", "equipment"],
+      ["artifacts", "equipment", "haste"],
     ],
     [
       "Ajani's Pridemate",

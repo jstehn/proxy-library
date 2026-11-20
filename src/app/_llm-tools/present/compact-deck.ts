@@ -3,7 +3,7 @@
 // need. Pages by whole groups so a page never splits a heading unless one heading alone is too
 // big. Pure: no database, no clock.
 
-import { hasTypeWord, isLand, isCreature, type CardFacts } from "@/shared/kernel";
+import { hasTypeWord, isLand, isCreature, plainText, type CardFacts } from "@/shared/kernel";
 import type { DeckCount } from "@/modules/decks/client";
 
 /** The facts about one deck line that the compact view shows. */
@@ -73,27 +73,15 @@ export function shortenOracleText(
   text: string,
   faceTexts?: readonly string[],
 ): string {
-  const fullFaceNames = name.split(" // ").map((face) => face.trim());
-  // Legends' text uses the part before the comma ("When Ojer Kaslem dies"), so that goes too.
-  const shortNames = fullFaceNames.flatMap((face) => {
-    const beforeComma = face.split(",")[0]?.trim() ?? "";
-    return face.includes(",") && beforeComma.length >= 3 ? [beforeComma] : [];
-  });
-  const faceNames = [...fullFaceNames, ...shortNames];
+  const faceNames = name.split(" // ").map((face) => face.trim());
   const faces = faceTexts !== undefined && faceTexts.length > 0 ? faceTexts : [text];
-  const shortened = faces.map((faceText) => {
-    let result = faceText;
-    // Longest names first, so "Ojer Kaslem, Deepest Growth" goes before a shorter face name.
-    for (const faceName of [...faceNames].sort((a, b) => b.length - a.length)) {
-      if (faceName !== "") result = result.split(faceName).join("~");
-    }
-    return result
-      .replace(/\s*\([^()]*\)/g, "")
+  const shortened = faces.map((faceText) =>
+    plainText(faceText, faceNames)
       .split(/\n+/)
       .map((ability) => ability.trim())
       .filter((ability) => ability !== "")
-      .join(" • ");
-  });
+      .join(" • "),
+  );
   return shortened.filter((faceText) => faceText !== "").join(" // ");
 }
 

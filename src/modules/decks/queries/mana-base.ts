@@ -1,9 +1,10 @@
+import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
+import { featureArray } from "@/shared/card-search/sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import { COLORS, type UserId, seededRng } from "@/shared/kernel";
-import { bracketLine, fitsTarget } from "../domain/brackets";
+import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/boards";
 import { simulateCastOnCurve } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
@@ -36,8 +37,9 @@ type LandRow = {
   produced_mana: string[] | null;
   is_basic_land: boolean;
   is_game_changer: boolean;
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  bracket_flags: BracketFlag[];
+  theme_tags: Theme[];
   owned: number;
   also_in: string[] | null;
   price_cents: number | null;
@@ -47,7 +49,8 @@ type LandRow = {
 const LAND_COLUMNS = sql`p.oracle_id, p.name, p.type_line,
   coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
   p.produced_mana, p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land, p.is_game_changer,
-  p.role_tags, p.theme_tags`;
+  ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+  ${featureArray("bracket_flags")} as bracket_flags`;
 
 /** A printing `p` whose front face is a land, isn't basic, and may be in this deck. */
 function playableLand(format: string, colorLimit: readonly string[] | null): SQL {
@@ -71,10 +74,8 @@ function toCandidate(featuresOf: FeaturesOf, row: LandRow): LandCandidate {
     ownedCopies: Number(row.owned),
     alsoIn: row.also_in ?? [],
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roles: row.role_tags,
+    themes: row.theme_tags,
   };
 }
 
@@ -132,8 +133,8 @@ export async function landPoolsForDeck(
       select p.oracle_id,
              (select count(*) from unnest(p.produced_mana) as made
                where made = any(${textArray(deckColors)})) >= ${colorsWanted} as colors_fit,
-             coalesce(p.role_tags && ${textArray(deckRoles)}, false) as role_fit,
-             coalesce(p.theme_tags && ${textArray(themes)}, false) as theme_fit
+             coalesce(${featureArray("role_tags")} && ${textArray(deckRoles)}, false) as role_fit,
+             coalesce(${featureArray("theme_tags")} && ${textArray(themes)}, false) as theme_fit
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
        where ${playable} and ${notOwned(userId, context.usesRealCards)}
     ),
@@ -160,14 +161,7 @@ export async function landPoolsForDeck(
   const withinTarget = (row: LandRow) => {
     const target = context.targetBracket;
     if (target === null) return true;
-    const { flags } = bracketLine({
-      name: row.name,
-      quantity: 1,
-      board: "main",
-      typeLine: row.type_line,
-      text: row.face_text,
-      isGameChanger: row.is_game_changer,
-    });
+    const flags = bracketFlagsOf(row.is_game_changer, row.bracket_flags);
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 

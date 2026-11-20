@@ -1,9 +1,3 @@
-import {
-  CARD_FEATURES_VERSION,
-  cardTags,
-  cardThemes,
-  textBracketFlags,
-} from "@/shared/card-search";
 import { ok } from "@/shared/kernel";
 import {
   isNightlySyncDue,
@@ -66,8 +60,6 @@ export type SyncSummary = {
   pricedPrintings: number;
   /** Token printings stored by the bulk-file pass (design doc 25). */
   tokenPrintings?: number;
-  /** Printings whose role tags and themes were worked out (design doc 20). */
-  taggedPrintings?: number;
   /** Oracle cards whose card features were worked out (design doc 66). */
   featuresComputed?: number;
   priceSnapshots: number;
@@ -112,7 +104,6 @@ export function makeSync(dependencies: CatalogDependencies) {
       failedSets: [],
       skippedDigital: { printings: 0, boosterTypes: [], products: [], decks: [] },
       pricedPrintings: 0,
-      taggedPrintings: 0,
       priceSnapshots: 0,
       artwork: emptyArtworkSummary(),
       durationMs: 0,
@@ -186,10 +177,6 @@ export function makeSync(dependencies: CatalogDependencies) {
 
     // 5. Today's prices for sold sets and real copies; images and legalities for every printing.
     await pricePass(bulkFile.path, summary);
-
-    // 5b. Role tags and themes for printings that are new or tagged by older rules. After the
-    // prices, because ramp reads the mana a card makes (design doc 20, section 8).
-    summary.taggedPrintings = await tagPass();
 
     // 5c. Card features for oracle cards that are new or worked out by older recognizers. After
     // the Scryfall pass, because the recognizers read the mana a card produces (design doc 66).
@@ -329,27 +316,6 @@ export function makeSync(dependencies: CatalogDependencies) {
     summary.tokenPrintings = tokens.length;
   }
 
-  /** Works out and stores every out-of-date printing's features, a batch at a time. */
-  async function tagPass(): Promise<number> {
-    let tagged = 0;
-    for (;;) {
-      const batch = await inTransaction(({ catalog }) =>
-        catalog.printingsToTag(CARD_FEATURES_VERSION, BATCH_SIZE),
-      );
-      if (batch.length === 0) return tagged;
-      const features = batch.map((printing) => ({
-        id: printing.id,
-        roleTags: cardTags(printing),
-        themeTags: cardThemes(printing),
-        bracketFlags: textBracketFlags(printing),
-      }));
-      await inTransaction(({ catalog }) =>
-        catalog.saveCardFeatures(features, CARD_FEATURES_VERSION),
-      );
-      tagged += batch.length;
-    }
-  }
-
   /** The worker's main step: run the oldest queued sync, if any. Returns what happened. */
   async function runNextQueuedSync(): Promise<{
     run: SyncRun;
@@ -417,7 +383,6 @@ export function makeSync(dependencies: CatalogDependencies) {
     recoverInterruptedRuns,
     queueNightlyIfDue,
     queueSync,
-    tagPass,
     featuresPass,
   };
 }

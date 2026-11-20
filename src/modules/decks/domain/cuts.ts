@@ -1,4 +1,4 @@
-import { bracketFlags, cardTags, cardThemes, type BracketFlag } from "@/shared/card-search";
+import { THEME_LABELS, type BracketFlag } from "@/shared/kernel";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -19,7 +19,7 @@ import {
   powerTierForBracket,
   type PowerTier,
 } from "./rate";
-import { cardSignalIO, SIGNAL_LABELS, synergyMatches } from "./signals";
+import { NO_SIGNALS, synergyMatches } from "./signals";
 
 // Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
 // each with the reasons for its score. The same local rules as suggestions (design doc 20) judge
@@ -36,6 +36,7 @@ export type CutLine = ProfileLine &
     keywords: readonly string[];
     rarity: string;
     isGameChanger: boolean;
+    bracketFlags: readonly BracketFlag[];
     /** Copies counted as owned in this deck. */
     owned: number;
     /** Community EDHREC stats under this deck's commander (design doc 45). */
@@ -143,7 +144,6 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       const reasons: CutReason[] = [];
       let score = 0;
 
-      const facts = { typeLine: line.typeLine, text: line.text, producedMana: line.producedMana };
       const fit = deckFit(
         {
           oracleId: line.oracleId,
@@ -152,7 +152,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
           manaValue: line.manaValue,
           keywords: line.keywords,
           roles: [], // judged below, against the role targets
-          themes: cardThemes(facts),
+          themes: line.themes ?? [],
           rarity: line.rarity,
           priceCents: line.priceCents ?? null,
           pool: "owned",
@@ -160,21 +160,13 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         fitProfile,
       );
       const synergy = profile.signals
-        ? synergyMatches(
-            cardSignalIO({
-              name: line.name,
-              typeLine: line.typeLine,
-              text: line.text,
-              manaValue: line.manaValue,
-            }),
-            profile.signals,
-          )
+        ? synergyMatches(line.signals ?? NO_SIGNALS, profile.signals)
         : { total: 0, matches: [] };
       const allFitReasons = [...fit.reasons];
       if (synergy.total > 0 && synergy.matches.length > 0) {
         const top = synergy.matches
           .slice(0, 2)
-          .map((m) => `${SIGNAL_LABELS[m.tag]} ×${m.deckWeight}`)
+          .map((m) => `${THEME_LABELS[m.tag]} ×${m.deckWeight}`)
           .join(", ");
         allFitReasons.push({ kind: "synergy", label: `matches ${top}` });
       }
@@ -185,7 +177,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       score += totalFitPoints;
 
       if (targets !== null) {
-        const roles = cardTags(facts);
+        const roles = line.roles ?? [];
         for (const tag of TARGETED_TAGS.filter((one) => roles.includes(one))) {
           const count = stats.tags[tag];
           const target = targets[tag];
@@ -208,7 +200,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
         });
       }
 
-      const flags = bracketFlags(line).filter((flag) => overFlags.includes(flag));
+      const flags = line.bracketFlags.filter((flag) => overFlags.includes(flag));
       if (context.targetBracket !== null && flags.length > 0) {
         score += weights.overBracket;
         reasons.push({ kind: "overBracket", target: context.targetBracket, flags });

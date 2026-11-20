@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Board } from "./deck";
 import { previewChanges, type PreviewLine } from "./preview";
 import type { CardRules } from "./rules";
+import { featuresOfText } from "../testing/deck-view";
 
 function makeCard(
   oracleId: string,
@@ -24,6 +25,12 @@ function makeCard(
     typeLine,
     manaCost: overrides.manaCost ?? "{1}{G}",
     producedMana: overrides.producedMana ?? [],
+    ...featuresOfText({
+      typeLine,
+      text,
+      producedMana: overrides.producedMana,
+      isGameChanger: overrides.isGameChanger,
+    }),
     priceCents: overrides.priceCents ?? 100,
     text,
     isGameChanger: overrides.isGameChanger ?? false,

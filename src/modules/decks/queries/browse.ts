@@ -1,13 +1,23 @@
+import type { SignalIO } from "@/shared/kernel";
+import { bracketFlagsOf } from "../domain/brackets";
+import type { BracketFlag } from "@/shared/kernel";
 import { formatRules } from "../domain/format-rules";
 import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import { ColorSchema, FinishSchema, type ManaColor, type UserId } from "@/shared/kernel";
+import {
+  ColorSchema,
+  FinishSchema,
+  type ManaColor,
+  type Tag,
+  type Theme,
+  type UserId,
+} from "@/shared/kernel";
 import { FORMATS } from "../domain/deck";
 import { parseSearch } from "@/shared/card-search";
-import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { featureArray, signalIO, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 import { legalInFormat, ownedPerCard } from "./candidate-pool";
 import { STANDARD_FIRST } from "./owned";
 
@@ -215,6 +225,10 @@ export async function browseCollection(
     has_power_toughness: boolean;
     is_basic_land: boolean;
     produced_mana: string[] | null;
+    role_tags: Tag[];
+    bracket_flags: BracketFlag[];
+    signals: SignalIO;
+    theme_tags: Theme[];
     set_code: string;
     collector_number: string;
     finish: string;
@@ -251,7 +265,8 @@ export async function browseCollection(
            exists (select 1 from jsonb_array_elements(p.faces) f
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
-           p.produced_mana, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
+           p.produced_mana, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
+           ${featureArray("bracket_flags")} as bracket_flags, ${signalIO()} as signals, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
            ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
       from candidates card join printings p on p.id = card.printing_id
@@ -291,12 +306,16 @@ export async function browseCollection(
         hasPowerToughness: row.has_power_toughness,
       },
       producedMana: row.produced_mana ?? [],
-      text: row.face_text,
       isGameChanger: row.is_game_changer,
+      bracketFlags: bracketFlagsOf(row.is_game_changer, row.bracket_flags),
       setCode: row.set_code,
       collectorNumber: row.collector_number,
       finish: FinishSchema.parse(row.finish),
       priceCents: row.price_cents === null ? null : Number(row.price_cents),
+      text: row.face_text,
+      roles: row.role_tags,
+      themes: row.theme_tags,
+      signals: row.signals,
     })),
     total,
     pageCount: Math.max(1, Math.ceil(total / BROWSE_PAGE_SIZE)),

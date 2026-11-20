@@ -1,5 +1,4 @@
-import { cardTags, TAGS, type Tag } from "@/shared/card-search";
-import { assertNever } from "@/shared/kernel";
+import { assertNever, type Tag, TAGS } from "@/shared/kernel";
 import {
   bracketLine,
   bracketWarning,
@@ -42,6 +41,7 @@ export type PreviewLine = StatsLine &
     rules: CardRules;
     keywords?: readonly string[];
     rarity?: string;
+    isGameChanger: boolean;
     edhrecRank?: number | null;
     edhrec?: EdhrecSignal | null;
   }>;
@@ -174,12 +174,8 @@ function cardsBehindRoleChanges(
   for (const [oracleId, delta] of played) {
     if (delta === 0) continue;
     const line = lines.find((candidate) => candidate.oracleId === oracleId);
-    if (line === undefined || line.text === undefined) continue;
-    const tags = cardTags({
-      typeLine: line.typeLine,
-      text: line.text,
-      producedMana: line.producedMana ?? [],
-    });
+    if (line === undefined) continue;
+    const tags = line.roles ?? [];
     const target = delta > 0 ? added : removed;
     const label = `${line.name} (${delta > 0 ? "+" : ""}${delta})`;
     for (const tag of tags) target.set(tag, [...(target.get(tag) ?? []), label]);

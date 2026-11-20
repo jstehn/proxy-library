@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
+import { featuresOfText } from "../testing/deck-view";
 import { optimizeDeck, scoreDeck, type OptimizerCard } from "./optimize";
 
 function makeCard(
   overrides: Partial<OptimizerCard> & { oracleId: string; name: string },
 ): OptimizerCard {
-  return {
+  const card = {
     typeLine: "Creature — Elf",
     manaValue: 2,
     manaCost: "{1}{G}",
@@ -16,9 +17,13 @@ function makeCard(
     themes: [],
     rarity: "common",
     priceCents: 100,
-    board: "main",
+    board: "main" as const,
     quantity: 1,
     ...overrides,
+  };
+  return {
+    bracketFlags: featuresOfText({ ...card, typeLine: card.typeLine }).bracketFlags,
+    ...card,
   };
 }
 

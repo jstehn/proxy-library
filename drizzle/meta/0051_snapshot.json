@@ -1,5 +1,5 @@
 {
-  "id": "12f3b838-3b17-4855-a83b-2a487350dbf6",
+  "id": "bb4e139f-799e-4f94-9d5c-3daf4a4e936a",
   "prevId": "0d808285-6b80-4d04-8d65-b051fa205a38",
   "version": "7",
   "dialect": "postgresql",
@@ -1031,12 +1031,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "land_cycles": {
-          "name": "land_cycles",
+        "role_tags": {
+          "name": "role_tags",
           "type": "text[]",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{}'"
+          "default": "'{}'::text[]"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1061,11 +1061,11 @@
           "method": "btree",
           "with": {}
         },
-        "card_features_land_cycles_idx": {
-          "name": "card_features_land_cycles_idx",
+        "card_features_role_tags_idx": {
+          "name": "card_features_role_tags_idx",
           "columns": [
             {
-              "expression": "land_cycles",
+              "expression": "role_tags",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1785,13 +1785,6 @@
           "notNull": true,
           "default": "'{}'::text[]"
         },
-        "role_tags": {
-          "name": "role_tags",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::text[]"
-        },
         "theme_tags": {
           "name": "theme_tags",
           "type": "text[]",
@@ -1869,21 +1862,6 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
-          "with": {}
-        },
-        "printings_role_tags_idx": {
-          "name": "printings_role_tags_idx",
-          "columns": [
-            {
-              "expression": "role_tags",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
           "with": {}
         },
         "printings_theme_tags_idx": {

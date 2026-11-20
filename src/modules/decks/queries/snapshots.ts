@@ -1,5 +1,4 @@
 import { formatRules } from "../domain/format-rules";
-import { cardTags, cardThemes } from "@/shared/card-search";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
@@ -64,11 +63,6 @@ function previewLineToOptimizerCard(
       quantity: line.quantity,
     };
   }
-  const facts = {
-    typeLine: line.typeLine,
-    text: line.text,
-    producedMana: line.producedMana,
-  };
   return {
     oracleId: line.oracleId,
     name: line.name,
@@ -78,11 +72,13 @@ function previewLineToOptimizerCard(
     text: line.text,
     producedMana: line.producedMana,
     keywords: line.keywords ?? [],
-    roles: cardTags(facts),
-    themes: cardThemes(facts),
+    roles: line.roles ?? [],
+    themes: line.themes ?? [],
+    signals: line.signals,
     rarity: line.rarity ?? "common",
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
     edhrec: edhrecSignal ?? line.edhrec ?? null,
     edhrecRank: line.edhrecRank ?? null,
     board: line.board,

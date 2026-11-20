@@ -302,6 +302,59 @@
     ]
   },
   {
+    "name": "Lightning Greaves",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Artifact — Equipment",
+        "text": "Equipped creature has haste and shroud.\nWhenever Lightning Greaves enters or attacks, you may attach it to target creature you control.\nEquip {0}"
+      }
+    ]
+  },
+  {
+    "name": "Goblin Chieftain",
+    "producedMana": [],
+    "keywords": ["Haste"],
+    "faces": [
+      {
+        "typeLine": "Creature — Goblin",
+        "text": "Haste\nOther Goblin creatures you control get +1/+1 and have haste."
+      }
+    ]
+  },
+  {
+    "name": "Tenacious Underdog",
+    "producedMana": [],
+    "keywords": ["Blitz"],
+    "faces": [
+      {
+        "typeLine": "Creature — Human Warrior",
+        "text": "Blitz—{2}{B}{B}, Pay 2 life. (If you cast this spell for its blitz cost, it gains haste and \"When this creature dies, draw a card.\" Sacrifice it at the beginning of the next end step.)\nYou may cast Tenacious Underdog from your graveyard using its blitz ability."
+      }
+    ]
+  },
+  {
+    "name": "Threaten",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Untap target creature and gain control of it until end of turn. That creature gains haste until end of turn."
+      }
+    ]
+  },
+  {
+    "name": "Stormbreath Dragon",
+    "producedMana": [],
+    "keywords": ["Flying", "Haste", "Protection"],
+    "faces": [
+      {
+        "typeLine": "Creature — Dragon",
+        "text": "Flying, haste, protection from white\nWhen Stormbreath Dragon enters, it has haste until end of turn."
+      }
+    ]
+  },
+  {
     "name": "Glacial Fortress",
     "producedMana": ["W", "U"],
     "faces": [
@@ -464,17 +517,6 @@
       {
         "typeLine": "Land",
         "text": "{T}: Add {R}."
-      }
-    ]
-  },
-  {
-    "name": "Tenacious Underdog",
-    "producedMana": [],
-    "keywords": ["Blitz"],
-    "faces": [
-      {
-        "typeLine": "Creature — Human Warlock",
-        "text": "Blitz—{2}{B}{B}, Pay 2 life. (If you cast this spell for its blitz cost, it gains haste and \"When this creature dies, draw a card.\" Sacrifice it at the beginning of the next end step.)\nYou may cast Tenacious Underdog from your graveyard using its blitz ability."
       }
     ]
   }

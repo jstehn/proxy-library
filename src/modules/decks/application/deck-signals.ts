@@ -1,6 +1,6 @@
-import { cardSignals, type SignalCard } from "@/shared/card-search";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import type { DeckNotFound } from "../domain/errors";
+import { countSignals, type SignalCard } from "../domain/signals";
 
 // What a deck keeps doing (recurring mechanics, tokens, creature types, themes), with a follow-up
 // search for each, from the deck's commander and main-deck cards.
@@ -12,7 +12,7 @@ export type DeckSignalReaders = Readonly<{
 
 export type DeckSignals = Readonly<{
   cardCount: number;
-  signals: ReturnType<typeof cardSignals>;
+  signals: ReturnType<typeof countSignals>;
 }>;
 
 export type SearchSignalReaders = Readonly<{
@@ -34,7 +34,7 @@ export function makeSearchSignals(readers: SearchSignalReaders) {
     return ok({
       cardCount: cards.length,
       notes,
-      signals: cardSignals(cards, { minimumCards: request.minimumCards }),
+      signals: countSignals(cards, { minimumCards: request.minimumCards }),
     });
   }
   return searchSignals;
@@ -48,7 +48,7 @@ export function makeDeckSignals(readers: DeckSignalReaders) {
     if (cards === null) return err({ kind: "DeckNotFound" });
     return ok({
       cardCount: cards.length,
-      signals: cardSignals(cards, { minimumCards: request.minimumCards }),
+      signals: countSignals(cards, { minimumCards: request.minimumCards }),
     });
   }
   return deckSignals;

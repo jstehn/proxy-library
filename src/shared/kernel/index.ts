@@ -16,6 +16,19 @@ export {
 } from "./schemas";
 export { COLORS, COLOR_COMBINATIONS, MANA_SYMBOLS, colorCombination } from "./colors";
 export type { ColorCombination, ManaColor, ManaSymbol } from "./colors";
+export { plainText } from "./plain-text";
+export {
+  BRACKET_FLAGS,
+  SIGNAL_KINDS,
+  TAGS,
+  THEME_LABELS,
+  THEMES,
+  type BracketFlag,
+  type SignalIO,
+  type SignalKind,
+  type Tag,
+  type Theme,
+} from "./card-vocabulary";
 export { cardTypes, hasTypeWord, isBasicLand, isCreature, isLand } from "./card-types";
 export {
   CURVE_LAST_SLOT,

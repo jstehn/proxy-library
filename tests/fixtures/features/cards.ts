@@ -8,12 +8,19 @@ export type FixtureCard = Readonly<{
   name: string;
   producedMana: readonly string[];
   keywords: readonly string[];
-  faces: ReadonlyArray<Readonly<{ typeLine: string; text: string }>>;
+  manaValue: number;
+  faces: ReadonlyArray<Readonly<{ name: string; typeLine: string; text: string }>>;
 }>;
 
 /** Every fixture card. */
 export function allFixtureCards(): readonly FixtureCard[] {
-  return fixtureFile.map((card) => ({ keywords: [], ...card, oracleId: card.name }));
+  return fixtureFile.map((card) => ({
+    keywords: [],
+    manaValue: 0,
+    ...card,
+    oracleId: card.name,
+    faces: card.faces.map((face) => ({ name: card.name, ...face })),
+  }));
 }
 
 /** One fixture card by name. */

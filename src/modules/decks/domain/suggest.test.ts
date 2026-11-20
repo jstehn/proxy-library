@@ -14,6 +14,7 @@ import {
   type ProfileLine,
   type Scored,
 } from "./suggest";
+import { featuresOfText } from "../testing/deck-view";
 
 const candidate = (name: string, overrides: Partial<CandidateCard> = {}): CandidateCard => ({
   oracleId: name,
@@ -29,14 +30,17 @@ const candidate = (name: string, overrides: Partial<CandidateCard> = {}): Candid
   ...overrides,
 });
 
-const line = (overrides: Partial<ProfileLine>): ProfileLine => ({
-  quantity: 1,
-  manaValue: 2,
-  typeLine: "Creature — Elf",
-  board: "main",
-  text: "",
-  ...overrides,
-});
+const line = (overrides: Partial<ProfileLine>): ProfileLine => {
+  const card = {
+    quantity: 1,
+    manaValue: 2,
+    typeLine: "Creature — Elf",
+    board: "main" as const,
+    text: "",
+    ...overrides,
+  };
+  return { ...featuresOfText(card), ...card };
+};
 
 const EMPTY: DeckFingerprint = { themes: [], tribes: [], gaps: [], keywords: [] };
 

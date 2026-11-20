@@ -1,4 +1,3 @@
-import { cardTags, cardThemes } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
@@ -27,11 +26,6 @@ export type OptimizeDeckViewResult = Readonly<{
 }>;
 
 export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
-  const facts = {
-    typeLine: line.typeLine,
-    text: line.text,
-    producedMana: line.producedMana,
-  };
   return {
     oracleId: line.oracleId,
     name: line.name,
@@ -41,11 +35,14 @@ export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
     text: line.text,
     producedMana: line.producedMana,
     keywords: line.keywords,
-    roles: cardTags(facts),
-    themes: cardThemes(facts),
+    roles: line.roles,
+    themes: line.themes,
+    signals: line.signals,
+    leaderThemes: line.leaderThemes,
     rarity: line.rarity,
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
     edhrec: line.edhrec,
     edhrecRank: line.edhrecRank,
     board: line.board,
@@ -66,9 +63,11 @@ export function suggestionToOptimizerCard(s: Suggestion): OptimizerCard {
     keywords: c.keywords,
     roles: c.roles,
     themes: c.themes,
+    signals: c.signals,
     rarity: c.rarity,
     priceCents: c.priceCents,
     isGameChanger: c.isGameChanger,
+    bracketFlags: c.bracketFlags,
     edhrec: c.edhrec,
     edhrecRank: c.edhrecRank,
     embedSim: c.embedSim,

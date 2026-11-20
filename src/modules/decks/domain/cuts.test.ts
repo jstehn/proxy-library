@@ -1,23 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { rankCuts, type CutLine, type CutReason } from "./cuts";
+import { featuresOfText } from "../testing/deck-view";
 
 // Cards to cut (design doc 32, section 3 and invariants 4-5).
 
-const line = (name: string, overrides: Partial<CutLine> = {}): CutLine => ({
-  oracleId: name,
-  name,
-  board: "main",
-  quantity: 1,
-  owned: 1,
-  manaValue: 2,
-  typeLine: "Creature — Bear",
-  text: "",
-  keywords: [],
-  rarity: "common",
-  priceCents: 10,
-  isGameChanger: false,
-  ...overrides,
-});
+const line = (name: string, overrides: Partial<CutLine> = {}): CutLine => {
+  const card = {
+    oracleId: name,
+    name,
+    board: "main" as const,
+    quantity: 1,
+    owned: 1,
+    manaValue: 2,
+    typeLine: "Creature — Bear",
+    text: "",
+    keywords: [],
+    rarity: "common",
+    priceCents: 10,
+    isGameChanger: false,
+    ...overrides,
+  };
+  return { ...featuresOfText(card), ...card };
+};
 
 /** A token commander: "tokens" becomes a theme of the deck. */
 const commander = line("Rhys the Exiled Token Lord", {

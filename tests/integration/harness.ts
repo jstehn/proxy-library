@@ -108,6 +108,33 @@ export async function loadFixtureCatalog(): Promise<void> {
   await makeStore({ unitOfWork, clock }).valueProducts();
 }
 
+/**
+ * What the features pass stores for a card a test inserted by hand: the arrays the SQL filters
+ * read (`role_tags`, `theme_tags`, `bracket_flags`; `leader_themes` for commanders).
+ */
+export async function storeFeatureArrays(
+  oracleId: string,
+  arrays: Readonly<{
+    roleTags?: readonly string[];
+    themeTags?: readonly string[];
+    leaderThemes?: readonly string[];
+    bracketFlags?: readonly string[];
+  }>,
+): Promise<void> {
+  const roleTags = `{${(arrays.roleTags ?? []).join(",")}}`;
+  const themeTags = `{${(arrays.themeTags ?? []).join(",")}}`;
+  const leaderThemes = `{${(arrays.leaderThemes ?? []).join(",")}}`;
+  const bracketFlags = `{${(arrays.bracketFlags ?? []).join(",")}}`;
+  await db.execute(sql`
+    insert into card_features (oracle_id, features, features_version, role_tags, theme_tags,
+                               leader_themes, bracket_flags, updated_at)
+    values (${oracleId}, '{}'::jsonb, 0, ${roleTags}::text[], ${themeTags}::text[],
+            ${leaderThemes}::text[], ${bracketFlags}::text[], now())
+    on conflict (oracle_id) do update
+      set role_tags = excluded.role_tags, theme_tags = excluded.theme_tags,
+          leader_themes = excluded.leader_themes, bracket_flags = excluded.bracket_flags`);
+}
+
 /** The catalog service over the recorded fixtures (no network). */
 export function fixtureCatalog() {
   return makeCatalog({

@@ -9,7 +9,8 @@ type TextRow = {
   oracle_id: string;
   produced_mana: string[];
   keywords: string[];
-  faces: Array<{ typeLine?: string; text?: string }>;
+  mana_value: number;
+  faces: Array<{ name?: string; typeLine?: string; text?: string }>;
 };
 
 /**
@@ -18,7 +19,7 @@ type TextRow = {
  */
 function oneTextPerCard(filter: SQL) {
   return sql`
-    select distinct on (p.oracle_id) p.oracle_id, p.produced_mana, p.keywords, p.faces
+    select distinct on (p.oracle_id) p.oracle_id, p.produced_mana, p.keywords, p.mana_value, p.faces
       from printings p
      where ${filter}
      order by p.oracle_id, (p.layout = 'reversible_card'), p.id`;
@@ -29,7 +30,9 @@ function toCardText(row: TextRow): CardText {
     oracleId: row.oracle_id,
     producedMana: row.produced_mana,
     keywords: row.keywords,
+    manaValue: Number(row.mana_value),
     faces: (row.faces ?? []).map((face) => ({
+      name: face.name ?? "",
       typeLine: face.typeLine ?? "",
       text: face.text ?? "",
     })),

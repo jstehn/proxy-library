@@ -1,4 +1,5 @@
-import type { Finish, CardFacts, CardIdentity } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/kernel";
+import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
 import type { DeckPlan } from "./deck-profile";
@@ -29,12 +30,21 @@ export type DeckLine = DeckCount &
     pinned?: boolean;
     /** Colors of mana it can make, for the deck statistics. */
     producedMana: string[];
+    /** What job the card does in a deck (the catalog's card features). */
+    roles: readonly Tag[];
+    /** What deck the card plays into, and what deck it leads as a commander (card features). */
+    themes: readonly Theme[];
+    leaderThemes: readonly Theme[];
     /** Rules text face by face (front first), for showing double-faced cards as "front // back". */
     faceTexts?: readonly string[];
     /** The front face's printed stats: "6/5", "Loyalty 4" or "Defense 5"; null when it has none. */
     printedStats?: string | null;
     /** On Wizards' Game Changer list (design doc 31). */
     isGameChanger: boolean;
+    /** Why it may count against a bracket: Game Changer, land denial, extra turns (design doc 31). */
+    bracketFlags: readonly BracketFlag[];
+    /** The themes it makes and uses (card features). */
+    signals: SignalIO;
     /** Latest market price of one copy in its finish, in cents, if known. */
     priceCents: number | null;
     setCode: string;

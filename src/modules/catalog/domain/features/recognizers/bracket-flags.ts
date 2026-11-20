@@ -1,15 +1,10 @@
 // Bracket flags (design doc 31, section 3.1): what about a card matters to Wizards' Commander
-// Brackets. Game Changers come from Scryfall's own list (stored on the printing); land denial and
-// extra turns are read from the rules text, like role tags (design doc 19). Heuristics: they
-// explain an estimate, they never decide whether a deck is allowed.
-import type { TagFacts } from "./tags";
-
-export const BRACKET_FLAGS = ["gameChanger", "landDenial", "extraTurn"] as const;
-/** A reason a card counts against a bracket. A card can have several, or none. */
-export type BracketFlag = (typeof BRACKET_FLAGS)[number];
-
-/** What the flag rules read: a card's text, plus Scryfall's Game Changer flag. */
-export type BracketFacts = TagFacts & Readonly<{ isGameChanger: boolean }>;
+// Brackets. Land denial and extra turns are read from the rules text; Game Changers come from
+// Scryfall's own list, stored on the printing (Wizards changes the list, and the nightly Scryfall
+// pass keeps it current), so they are not a feature of the card's text. Heuristics: they explain an
+// estimate, they never decide whether a deck is allowed. Moved from shared/card-search/brackets.ts.
+import { plainText, type BracketFlag } from "@/shared/kernel";
+import type { Recognizer } from "../types";
 
 const rule = (source: string) => new RegExp(source, "i");
 
@@ -45,24 +40,14 @@ const BRACKET_TEXT_RULES: readonly BracketTextRule[] = [
   },
 ];
 
-/** Rules text without reminder text, as the tag rules read it. */
-function withoutReminders(text: string): string {
-  return text.replace(/\([^)]*\)/g, "");
-}
-
-/** Text flags only: land denial and extra turns, in BRACKET_FLAGS order. Stored per printing. */
-export function textBracketFlags(card: TagFacts): BracketFlag[] {
-  const text = withoutReminders(card.text);
-  return BRACKET_TEXT_RULES.filter((row) => row.patterns.some((pattern) => pattern.test(text))).map(
-    (row) => row.flag,
-  );
-}
-
-/**
- * Every bracket flag a card has, in BRACKET_FLAGS order. Game Changer status isn't stored with
- * the text flags: Wizards changes the list, and the nightly Scryfall pass keeps it current.
- */
-export function bracketFlags(card: BracketFacts): BracketFlag[] {
-  const fromText = textBracketFlags(card);
-  return card.isGameChanger ? ["gameChanger", ...fromText] : fromText;
-}
+/** Text flags only: land denial and extra turns, in BRACKET_FLAGS order. */
+export const bracketFlags: Recognizer<"bracketFlags"> = {
+  id: "bracket-flags",
+  field: "bracketFlags",
+  recognize(card) {
+    const texts = card.faces.map((face) => plainText(face.text));
+    return BRACKET_TEXT_RULES.filter((row) =>
+      texts.some((text) => row.patterns.some((pattern) => pattern.test(text))),
+    ).map((row) => row.flag);
+  },
+};

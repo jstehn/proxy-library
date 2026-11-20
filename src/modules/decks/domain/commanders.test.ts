@@ -11,24 +11,28 @@ import {
   type PoolCard,
 } from "./commanders";
 import { type ManaColor } from "@/shared/kernel";
+import { featuresOfText } from "../testing/deck-view";
 
 const commander = (
   name: string,
   overrides: Partial<CommanderCandidate> = {},
-): CommanderCandidate => ({
-  oracleId: name,
-  printingId: name,
-  name,
-  typeLine: "Legendary Creature — Human",
-  text: "",
-  colorIdentity: ["G"],
-  keywords: [],
-  isGameChanger: false,
-  ownedCopies: 1,
-  priceCents: null,
-  leads: [],
-  ...overrides,
-});
+): CommanderCandidate => {
+  const candidate = {
+    oracleId: name,
+    printingId: name,
+    name,
+    typeLine: "Legendary Creature — Human",
+    text: "",
+    colorIdentity: ["G" as const],
+    keywords: [],
+    isGameChanger: false,
+    ownedCopies: 1,
+    priceCents: null,
+    leads: [],
+    ...overrides,
+  };
+  return { leaderThemes: featuresOfText(candidate).leaderThemes, ...candidate };
+};
 
 const card = (name: string, overrides: Partial<PoolCard> = {}): PoolCard => ({
   oracleId: name,

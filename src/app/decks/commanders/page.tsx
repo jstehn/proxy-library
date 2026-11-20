@@ -6,8 +6,8 @@ import {
   type CommanderSort,
 } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
-import { canonicalTheme, THEME_LABELS, THEMES, type Theme } from "@/shared/card-search";
-import { COLORS, Cents, type ManaColor } from "@/shared/kernel";
+import { canonicalTheme } from "@/shared/card-search";
+import { Cents, COLORS, type ManaColor, type Theme, THEME_LABELS, THEMES } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { planText, TAG_LABELS } from "../labels";
