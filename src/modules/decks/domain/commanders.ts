@@ -195,9 +195,6 @@ export function sharesPlan(entry: PreparedCard, plan: DeckFingerprint): boolean 
   );
 }
 
-/** For tests: a pool card as the ranking prepares it. */
-export const preparedForTest = (card: PoolCard): PreparedCard => prepare([card])[0];
-
 /**
  * Bounded popularity bonus (0 to 25 points) from Scryfall's EDHREC rank (design doc 39, 3.1).
  * Rank <= 10 gives 25; rank 1,000 gives ~10.7; rank >= 31,623 or null gives 0.
