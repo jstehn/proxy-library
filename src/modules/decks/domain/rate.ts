@@ -13,7 +13,7 @@ import type { Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
 import { deckSignalProfile, NO_SIGNALS, synergyMatches, type DeckSignalProfile } from "./signals";
-import type { TargetedTag } from "./stats";
+import type { EdhrecSignal, TargetedTag } from "./stats";
 
 // Unified 0–100 Card Rating (design doc 46, #53/#55/#56/#59):
 // combines produces/consumes synergy, theme/tribe/keyword fit, EDHREC community stats,
@@ -42,13 +42,6 @@ export type CardRating = Readonly<{
   rating: number;
   logit: number;
   parts: readonly RatingPart[];
-}>;
-
-/** Community Commander statistics for a card under this deck's commander (design doc 45). */
-export type EdhrecSignal = Readonly<{
-  inclusionRate: number;
-  synergy: number;
-  totalDecks?: number;
 }>;
 
 /** A role the deck is short of: `count` cards do it, and its format wants `target`. */

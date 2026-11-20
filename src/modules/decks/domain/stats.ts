@@ -19,6 +19,13 @@ import { costSymbols } from "./mana-symbols";
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
 // exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.
 
+/** Community Commander statistics for a card under this deck's commander (design doc 45). */
+export type EdhrecSignal = Readonly<{
+  inclusionRate: number;
+  synergy: number;
+  totalDecks?: number;
+}>;
+
 export type StatsLine = DeckCount &
   Pick<CardFacts, "manaValue" | "typeLine"> &
   Readonly<{

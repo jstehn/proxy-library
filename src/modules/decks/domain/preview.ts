@@ -8,7 +8,6 @@ import {
   type BracketSource,
   type BracketWarning,
 } from "./brackets";
-import type { EdhrecSignal } from "./rate";
 import { isPlayed } from "./boards";
 import { BOARDS, type Board, type Format } from "./deck";
 import { formatRules } from "./format-rules";
@@ -19,6 +18,7 @@ import {
   type DeckStats,
   type StatsLine,
   type TargetedTag,
+  type EdhrecSignal,
 } from "./stats";
 
 // Dry-run deck preview (design doc 40, section 3): computes before/after stats, roles, problems,

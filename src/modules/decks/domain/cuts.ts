@@ -3,8 +3,8 @@ import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
-import { type EdhrecSignal, rateCard } from "./rate";
-import { deckStats, isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
+import { rateCard } from "./rate";
+import { deckStats, isLand, TARGETED_TAGS, type EdhrecSignal, type TargetedTag } from "./stats";
 import {
   deckProfile,
   edhrecReason,

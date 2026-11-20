@@ -7,14 +7,13 @@ import {
   RATING_WEIGHTS,
   rateCard,
   type CardRating,
-  type EdhrecSignal,
   type RatingCandidate,
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
 import { formatRules } from "./format-rules";
 import { deckSignalProfile } from "./signals";
-import { deckStats, isLand, TARGETED_TAGS, type StatsLine } from "./stats";
+import { deckStats, isLand, TARGETED_TAGS, type EdhrecSignal, type StatsLine } from "./stats";
 
 // Deck suggestions (design doc 20, section 3.2): what a deck is about, and how well a card fits
 // it. Pure: the queries fetch candidates, this decides their order and says why. The order always
