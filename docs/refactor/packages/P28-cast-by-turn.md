@@ -91,6 +91,11 @@ commit is named in P24's handoff. Read it for ideas, but write the registry fres
    change behaviour; the P27 snapshot tests still pass.
 7. Run `pnpm check` and `pnpm test:int`, then `pnpm sizes --update`.
 
+**Also (owner, 2026-11-20):** merge the two `creatureTypes` (`decks/domain/suggest.ts` and the
+drafts copy) into one that counts Kindred cards everywhere, deleting the other in the same commit.
+P15's handoff names both. And merge P15's two cast simulators (`canCastByTurn`,
+`simulateCastOnCurve`) into the one simulator this package builds on `playOpening`.
+
 ## What not to do
 
 - Don't recreate an interactive session or a stateful simulator. Runs are stateless and seeded.

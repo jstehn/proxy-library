@@ -85,3 +85,10 @@ P20's step 6 does the move.
   `grants` recognizer and a `haste` theme (makes: grants haste; uses: haste or blitz creatures), so
   `theme:haste` and the deck tools find them. `o:` and `kw:` searches work as before.
 - The "French vanilla" recognizer (doc 66 section 7) is dropped until a feature needs it.
+
+**P15's differences (2026-11-20): accepted, as recommended.** Hybrid pips pay with either colour,
+`{C}` needs a colourless source (and an unpayable one means not castable), pips are matched to
+sources exactly, a bottomed card goes to the bottom of the library, a ramp card with no mana value
+isn't early ramp, and half-mana symbols don't count as colour pips. **Creature types:** one
+function, counting Kindred everywhere (the drafter's copy ignored it). Done in P28, after P27 frees
+`suggest.ts`.
