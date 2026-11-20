@@ -1,9 +1,10 @@
 "use client";
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
-import { resetLibraryAction, type ResetActionState } from "./reset-actions";
+import { resetLibraryAction } from "./reset-actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: ResetActionState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 /**
  * Empties a player's library. Hidden behind "Reset library…" and a typed confirmation, because
