@@ -164,6 +164,8 @@ compared with them. They're a guide, not a gate: a deliberate change is fine, bu
 
 ### Which tests to run, and when
 
+Run the slow suites at low priority so the desktop stays responsive: `nice -n 19 pnpm test:int` and `nice -n 19 pnpm test:e2e` (2026-11-19: a full end-to-end run on a busy machine reached a load of 36 and crashed the Claude app). Under heavy load, end-to-end tests time out at random; rerun on a quiet machine before calling a failure real.
+
 Tests get run over and over in this refactor, so the slow and outside ones are opt-in: run them
 only when your package works on what they cover.
 
