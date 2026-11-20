@@ -1,3 +1,4 @@
+import type { CardFeatures, CardText } from "../domain/features/types";
 import type { ImageSize } from "../domain/images";
 import type { Clock, UnitOfWork, UserId, CardFacts, CardIdentity } from "@/shared/kernel";
 import type {
@@ -106,7 +107,7 @@ export type TaggablePrinting = Pick<CardFacts, "typeLine" | "text" | "producedMa
   Readonly<{ id: PrintingId }>;
 
 /** A printing's role tags and themes, as the tag pass works them out. */
-export type CardFeatures = Readonly<{
+export type PrintingTags = Readonly<{
   id: PrintingId;
   roleTags: readonly string[];
   themeTags: readonly string[];
@@ -141,7 +142,7 @@ export interface CatalogRepository {
   /** Up to `limit` printings whose stored features are older than `version`. */
   printingsToTag(version: number, limit: number): Promise<TaggablePrinting[]>;
   /** Stores features worked out at `version`. */
-  saveCardFeatures(features: readonly CardFeatures[], version: number): Promise<void>;
+  saveCardFeatures(features: readonly PrintingTags[], version: number): Promise<void>;
   imageSource(printingId: PrintingId): Promise<ImageSource | null>;
 }
 
@@ -307,6 +308,15 @@ export interface ComprehensiveRulesRepository {
   replaceAll(rows: readonly ComprehensiveRuleRow[], syncedAt: Date): Promise<void>;
 }
 
+/** What the recognizers made of one oracle card (design doc 66, section 6). */
+export type CardFeaturesRow = Readonly<{ oracleId: string; features: CardFeatures }>;
+
+export interface CardFeatureStore {
+  /** Up to `limit` oracle cards with no row at `version` (none, or an older one), their text. */
+  textsToCompute(version: number, limit: number): Promise<CardText[]>;
+  save(rows: readonly CardFeaturesRow[], updatedAt: Date): Promise<void>;
+}
+
 export type CatalogServices = {
   catalog: CatalogRepository;
   syncRuns: SyncRunRepository;
@@ -314,6 +324,7 @@ export type CatalogServices = {
   edhrec?: EdhrecRepository;
   spellbook?: SpellbookRepository;
   embeddings?: EmbeddingRepository;
+  cardFeatures?: CardFeatureStore;
   comprehensiveRules?: ComprehensiveRulesRepository;
 };
 

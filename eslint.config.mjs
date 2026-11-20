@@ -189,6 +189,9 @@ const policies = [
     // Design doc 26: what's for sale and what you own of a wished card are one SQL definition,
     // shared by the Wishlist page and the wishlist's use cases, so "cheapest" means the same.
     layer("queries", { sameModule: true, file: "for-sale.ts" }),
+    // Design doc 66: which printing's text the recognizers read is one SQL definition, shared by
+    // the `cardFeatures` read and the features pass, so a stored row equals a computed one.
+    layer("queries", { sameModule: true, file: "card-texts.ts" }),
   ),
   from(
     layer("queries"),

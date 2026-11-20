@@ -351,6 +351,13 @@
       "when": 1795073191843,
       "tag": "0049_deck_change_previews",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795154353644,
+      "tag": "0050_card_features",
+      "breakpoints": true
     }
   ]
 }
