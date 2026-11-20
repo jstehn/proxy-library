@@ -9,4 +9,3 @@ export * from "./prices";
 export { textArray } from "./text-array";
 export * from "./offers";
 export { bindDb, bindPublicDb, type BoundQueries } from "./bind-db";
-export { withDb, type WithoutDb } from "./with-db";

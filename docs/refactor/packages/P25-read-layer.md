@@ -184,3 +184,68 @@ part 2 lands. Knip: 457 to 428 (the baseline is lowered). To get there `knip.jso
   `src/app`), the `NoPlainUserId`-style check for the remaining modules (already enforced by
   `bindDb` when a module is added to `buildReads`).
 - Drafts page `loreSources` now takes `reads` and `actor`; keep it that way.
+
+### Part 2b (the other six modules; same branch, commits `P25b:`)
+
+**Done.**
+
+- Moved, with the module's `*Reads` bundle deleted in the same commit: drafts, accounts,
+  collection, real-collection, catalog, decks. `reads` now has all 14 modules' reads
+  (`src/server/reads.ts`). `withDb` and `WithoutDb` are deleted. `drafts`, `collection` and the
+  accounts/catalog/real-collection `wiring.ts` files are gone (`catalog/wiring.ts` too:
+  `printingDetails` moved into `capabilities.ts`); `accounts/wiring.ts`, `decks/wiring.ts` and
+  `wishlist/wiring.ts` stay for their non-read capabilities.
+- `PublicReads` is filled with `bindPublicDb`: `accounts.hasAnyPlayers`, `decks.publicDeck`,
+  `decks.publicScorecard`, `decks.publicDeckTokens(token, makers)`. `Reads` also contains them
+  (a signed-in player opens `/d/[token]` too), so `reads.decks.publicDeck` works for both sides of
+  the `readPage({ allowVisitors: true })` union.
+- Security fixes (what another player sees, and any change to it):
+  - **F1** `realCollection.page`, `sets` and `productsOf` take `(actor, ownerId)` and check
+    "yours, or the owner shares" in SQL. Before: the page checked. After: same visible result.
+  - **F2** `decks.deckComments(actor, deckId)` joins `decks`: a private deck's comments are `[]`
+    to everyone but the owner. Before: the page checked first. Same visible result.
+  - **F3** `decks.publicDeckTokens(token, makers)` finds the deck by its link token; a wrong or
+    revoked token gives no tokens. Before: any deck number worked (not reachable).
+  - **F4** drafts stay visible to every signed-in player; `drafts.version(actor, draftId)` takes
+    the `Actor` (the same rule as `view`). No change for players.
+  - **F5** `collection.pageOfPartner(actor, partnerId)` is the one named way to read another
+    player's game collection (the owner's choice). It gives an empty page for yourself, a disabled
+    player or an unknown id; the trade builder showed exactly the active partners before.
+  - **F6** `deckForViewer` and the deck page's non-owner overview test visibility in SQL
+    (`owner or visibility = 'shared'`); `canViewDeck` stays for the capabilities and the
+    access-rules test checks that both agree. The `social` and `wishlist` ones were done in part 1.
+  - **F7** `refreshWallet`, `getAccountOverview`, `wishlistView`, `lookUpCards`, `searchCatalog`,
+    `deckOverview` and `checkOwnedCards` take an `Actor`. `deckOverview(actor, { deckId, asViewer })`:
+    the shared-deck page passes `asViewer: true` (own deck, or a shared one, checked in SQL);
+    tools never do. `wishlist/queries/of-user.ts` is deleted.
+  - **F8** `catalog.searchPrintings(actor, search)`: the `own` counts come from the actor, not
+    from a field of the input.
+- Every read has a row in `tests/integration/access-rules.int.test.ts` (R1-R4, R6-R50 and R56-R65
+  new; 79 tests in the file; the run was green on this machine for that one file).
+
+**Shapes worth knowing.**
+
+- `decks/queries/reads.ts` holds the 17 player reads as thin `(db, actor, ...)` wrappers over
+  queries that still take a `userId`: the capabilities in the same module call those with the
+  actor's id (design doc 67, section 7B), and about 60 integration test call sites use them. P18
+  (the decks split) can fold the wrapper and the query into one. `decks/queries/index.ts` lists the
+  other reads by name, not `export *`, because `sharing.ts` and `tokens.ts` also hold
+  userId-based helpers. Whether "Go to definition" passes through a named re-export is **not
+  checked**.
+- `catalog` helpers that are not reads (`printing-cards.ts`, `pack-key.ts`, `rules.ts`,
+  `store-printings.ts`) sit outside `queries/index.ts`; so does `real-collection`'s
+  `printing-ids.ts`. `collection.ownedByOracle` and `realCollection.ownedByOracle` are public P
+  reads (they take the actor) rather than the "internal" reads of section 7B.
+- R7: `catalog.findSet` does not hide a disabled set (the opened-pack page names such sets), so the
+  doc's R7 rule "a disabled set is hidden" is not what the code does; the test pins what it does.
+- `/api/export/*` takes `rowsOf(reads, actor)`.
+
+**Numbers.** Production code 74,895 (end of part 1) to 74,868, which is 79 over the baseline
+(74,789); the baseline was not lowered because it is not below. Knip 428 to 396 (baseline lowered);
+the `bind-db.ts` knip ignore is gone. Clone baseline 25 to 22 (lowered).
+
+**Left for part 2c.** The 17 services in `capabilities.services` and the `deckEdits` pass-through,
+`capabilities.ts` at or under 120 lines, the `describe-error` files, migrating the form files to
+`formAction`, the final lint rules (no `@/shared/db` or `queries/` in `src/app`). `printingDetails`
+and `headerSummary` still live in `capabilities.ts`. Pages still read `capabilities.printingDetails`
+(14 call sites) beside `reads`.
