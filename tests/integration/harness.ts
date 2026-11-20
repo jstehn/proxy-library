@@ -8,6 +8,7 @@ import { makeCatalog } from "@/modules/catalog";
 import { makeStore } from "@/modules/store";
 import {
   drizzleArtworkRepository,
+  drizzleCardFeatureStore,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   fixtureMtgjsonGateway,
@@ -100,14 +101,22 @@ export const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
 /** A fresh catalog from the recorded fixtures: Bloomburrow, enabled as a Standard set. */
 export async function loadFixtureCatalog(): Promise<void> {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, token_printings cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, token_printings, card_features cascade`,
   );
-  const catalog = makeCatalog({
+  await fixtureCatalog().runSync("prices");
+  // Kind-priced products are for sale only once valued (design doc 27, decision 3).
+  await makeStore({ unitOfWork, clock }).valueProducts();
+}
+
+/** The catalog service over the recorded fixtures (no network). */
+export function fixtureCatalog() {
+  return makeCatalog({
     extraPricedPrintings: { printingIds: async () => [] },
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
       artwork: drizzleArtworkRepository(transaction),
+      cardFeatures: drizzleCardFeatureStore(transaction),
     })),
     mtgjson: fixtureMtgjsonGateway(),
     scryfall: fixtureScryfallGateway(),
@@ -118,9 +127,6 @@ export async function loadFixtureCatalog(): Promise<void> {
     clock,
     syncTime: { hour: 4, minute: 0 },
   });
-  await catalog.runSync("prices");
-  // Kind-priced products are for sale only once valued (design doc 27, decision 3).
-  await makeStore({ unitOfWork, clock }).valueProducts();
 }
 
 /**
