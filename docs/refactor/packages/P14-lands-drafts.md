@@ -33,6 +33,13 @@ the mana files (P12) and the tag files (P13).
 
 ## Steps
 
+**Start from P12's slice 4** (project manager, 2026-11-20). P12 found its other slices already done
+by P11. Its one real slice, the `enters-tapped` and `helps-opponents` recognizers, is built on
+branch `refactor/P12.4-enters-tapped-wip` (commit ebe2d60: A2 compare 0 differences over 32 fixture
+cards, `FEATURES_VERSION` 2, net +42 lines). It shares the land-feature loading this package
+needs, so merge that branch first and make the combined package end at net ≤ 0. Also take P12's
+leftover: the `blitz` keyword read in `deck-profile.ts` moves onto the keywords feature.
+
 1. For each slice, as in P12: branch, recognizer with fixtures from the current tests, switch every
    caller, **delete the old code in the same commit**, lower the regex baseline, check the net.
 2. Slice 3: add `DRAFT_ABILITIES` (`{ "Cogwork Librarian": { kind: "extraCard" } }`) and read it in
