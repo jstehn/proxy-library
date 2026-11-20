@@ -295,6 +295,7 @@ export function buildCore(config: Config) {
       trades,
       realCollection,
       store,
+      catalog,
       drafts,
       previews: drizzleChangePreviewRepository(db),
       services: {
@@ -303,7 +304,6 @@ export function buildCore(config: Config) {
         proxySheet,
         seeds,
         accounts,
-        catalog,
         resetPlayer,
         appUrl: config.appUrl,
       },

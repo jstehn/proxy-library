@@ -27,7 +27,8 @@ import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
 import type { Inventory } from "@/modules/inventory";
 import type { Packs } from "@/modules/packs";
 import type { Actor, makeAccounts } from "@/modules/accounts";
-import type { makeCatalog } from "@/modules/catalog";
+import type { Catalog } from "@/modules/catalog";
+import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import { draftQueries, type Drafts } from "@/modules/drafts";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import type { makeResetPlayer } from "@/modules/reset";
@@ -57,6 +58,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  catalog: Catalog;
   drafts: Drafts;
   store: Store;
   realCollection: RealCollection;
@@ -76,7 +78,6 @@ type CapabilityDependencies = Readonly<{
     proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
     accounts: ReturnType<typeof makeAccounts>;
-    catalog: ReturnType<typeof makeCatalog>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
   }>;
@@ -114,6 +115,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireWalletCapabilities(dependencies),
     ...wireSocialCapabilities(dependencies),
     ...wireTradeCapabilities(dependencies),
+    ...wireCatalogCapabilities(dependencies),
     ...wireDraftCapabilities(dependencies),
     ...wireStoreCapabilities(dependencies),
     ...wireRealCollectionCapabilities(dependencies),
@@ -131,8 +133,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
     },
     now: () => clock.now(),
-    /** Card details for printings, for the selected-card panel and previews. */
-    printingDetails: (printingIds: readonly string[]) => printingCards(db, printingIds),
     youtube: dependencies.youtube,
     reddit: dependencies.reddit,
     // These read across modules (the game's collection, the real one, the store, the decks and
