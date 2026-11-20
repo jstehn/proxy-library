@@ -1,6 +1,1 @@
 decks/advice -> decks/core -> decks/advice
-decks/core -> decks/play -> decks/core
-decks -> decks/advice -> decks
-decks -> decks/advice -> decks/core -> decks
-decks -> decks/advice -> decks/core -> decks/play -> decks
-decks -> decks/proxies -> decks

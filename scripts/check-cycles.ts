@@ -10,7 +10,7 @@
 //
 // `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside decks, the
 // areas P18 will split it into. It counts every import, `import type` too, and the `wiring.ts`
-// files, and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
+// files (but not test files), and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
 // cycle fails; `--update` only removes entries from the baseline.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -88,7 +88,10 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, dirname(configPath));
   // Next.js's generated route types aren't ours to fix.
-  const files = parsed.fileNames.filter((file) => !/[\\/]\.next[^\\/]*[\\/]/.test(file));
+  const files = parsed.fileNames.filter(
+    (file) =>
+      !/[\\/]\.next[^\\/]*[\\/]/.test(file) && !(includeTypes && /\.test\.tsx?$/.test(file)),
+  );
   const ourFiles = new Set(files);
 
   const graph = new Map<string, string[]>();
@@ -112,19 +115,13 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
 
 const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
 
-/** The files of `decks/domain` by area (the split P18 makes); other files of decks stay "decks". */
+/**
+ * The files of `decks/domain` by area. `mana-symbols`, `mana-payment` and `deck-profile` are core:
+ * the deck's stats and view read them, and the play files read core, never the other way round.
+ * (The split P18 makes; files not listed are core, and other files of decks stay "decks".)
+ */
 const DECKS_AREAS: Readonly<Record<string, readonly string[]>> = {
-  play: [
-    "goldfish",
-    "draws",
-    "mana-payment",
-    "mana-symbols",
-    "castability",
-    "cast-by-turn",
-    "cast-effects",
-    "deck-profile",
-    "opening-hand/",
-  ],
+  play: ["goldfish", "draws", "castability", "cast-by-turn", "cast-effects", "opening-hand/"],
   proxies: ["proxy-sheet", "playtest-card", "token-proxies", "proxy-progress"],
   advice: [
     "rate",
