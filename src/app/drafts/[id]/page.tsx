@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Actor } from "@/modules/accounts";
 import { type PrintingCard } from "@/modules/catalog";
 import {
   DraftId,
@@ -11,7 +12,8 @@ import {
 } from "@/modules/drafts";
 import { readPage } from "@/server/page-instance";
 import type { Capabilities } from "@/server/capabilities";
-import { Cents, curveSlotLabel, type UserId } from "@/shared/kernel";
+import type { Reads } from "@/server/reads";
+import { Cents, curveSlotLabel } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "../../_components/card-tile";
@@ -81,7 +83,7 @@ function printingIdsIn(seen: DraftSeen): string[] {
 }
 
 export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const draftId = Number((await props.params).id);
   if (!Number.isSafeInteger(draftId) || draftId <= 0) notFound();
   const now = capabilities.now();
@@ -130,7 +132,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
           seen={seen}
           names={names}
           serverNow={now.toISOString()}
-          lore={await loreSources(capabilities, seen, actor.userId)}
+          lore={await loreSources(capabilities, reads, seen, actor)}
         />
       )}
       {view.status === "dealing" && seen.deal !== null && (
@@ -164,8 +166,9 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
  */
 async function loreSources(
   capabilities: Capabilities,
+  reads: Reads,
   seen: DraftSeen,
-  userId: UserId,
+  actor: Actor,
 ): Promise<LoreSources | null> {
   const you = seen.you;
   if (you === null) return null;
@@ -173,7 +176,7 @@ async function loreSources(
   const cards = await capabilities.printingDetails(candidates.map((card) => card.printingId));
   if (![...cards.values()].some((card) => card.name === "Lore Seeker")) return null;
   const [items, options, prices] = await Promise.all([
-    capabilities.inventoryReads.unopenedItems(userId),
+    reads.inventory.unopenedItems(actor),
     capabilities.draftReads.boosterOptions(),
     capabilities.storeReads.packMsrps(),
   ]);

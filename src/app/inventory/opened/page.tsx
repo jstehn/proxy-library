@@ -34,7 +34,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     .slice(0, MAX_SHOWN);
 
   const openings = (
-    await Promise.all(ids.map((id) => capabilities.inventoryReads.openingView(actor.userId, id)))
+    await Promise.all(ids.map((id) => reads.inventory.openingView(actor, id)))
   ).filter((opening): opening is OpeningView => opening !== null);
   const cards = await capabilities.printingDetails(
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),

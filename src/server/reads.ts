@@ -1,4 +1,5 @@
 import { activityQueries } from "@/modules/activity";
+import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
 import { bindDb, type DbExecutor } from "@/shared/db";
 
@@ -11,6 +12,7 @@ import { bindDb, type DbExecutor } from "@/shared/db";
 export function buildReads(db: DbExecutor) {
   return {
     activity: bindDb(db, activityQueries),
+    inventory: bindDb(db, inventoryQueries),
     packs: bindDb(db, packsQueries),
   };
 }

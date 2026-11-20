@@ -24,10 +24,10 @@ function errorMessage(kind: string | string[] | undefined): string | null {
 }
 
 export default async function InventoryPage(props: PageProps<"/inventory">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const [groups, recent] = await Promise.all([
-    capabilities.inventoryReads.unopenedItems(actor.userId),
-    capabilities.inventoryReads.recentOpenings(actor.userId),
+    reads.inventory.unopenedItems(actor),
+    reads.inventory.recentOpenings(actor),
   ]);
   const error = errorMessage((await props.searchParams).error);
   const photos = await photosFor(capabilities, groups);
