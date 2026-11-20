@@ -224,22 +224,24 @@ them. That is how today's `mana_production` extractor works.
 
 ## 6. Ports
 
-One new port in `catalog/application/ports.ts`, part of the catalog's capabilities (ADR 0026):
+One new port in `catalog/application/ports.ts`, part of the catalog's use cases (as built in P11):
 
 ```ts
-export interface CardFeaturesStore {
-  /** Rows at the current version for these oracle ids; missing or old ones are not returned. */
-  find(oracleIds: readonly OracleId[]): Promise<ReadonlyMap<OracleId, CardFeatures>>;
-  /** Oracle cards with no row or an old one: their text, a batch at a time. */
-  textsToCompute(version: number, limit: number): Promise<readonly CardText[]>;
-  save(rows: readonly { oracleId: OracleId; features: CardFeatures }[]): Promise<void>;
+export interface CardFeatureStore {
+  /** Up to `limit` oracle cards with no row at `version` (none, or an older one), their text. */
+  textsToCompute(version: number, limit: number): Promise<CardText[]>;
+  save(rows: readonly CardFeaturesRow[], updatedAt: Date): Promise<void>;
 }
 ```
 
-`catalog.cardFeatures(oracleIds)` (a capability, `catalog/application/card-features.ts`) calls
-`find`; for ids it did not get back it computes from the faces, saves, and returns them
-(**lazy repair**). Decks, drafts and the LLM tools get features through this one function. No
-module reads the table directly.
+The store only **writes** (the features pass). Consumers **read** through one catalog read,
+`catalogQueries.cardFeatures(db, oracleIds)` (`catalog/queries/card-features.ts`, also
+`reads.catalog.cardFeatures`): it returns the stored rows at the current version and, for ids it
+did not get back, works the features out from the card's text on the spot (**lazy repair**,
+without writing: a read does not write; the pass stores them). A decks read reaches it through
+`decks/queries/tap-mana.ts`, the one file the lint rule lets call the catalog for a value.
+Which printing's text is read is one SQL definition, `catalog/queries/card-texts.ts`, shared by
+the read and the pass so a stored row equals a computed one.
 
 ## 7. How each consumer moves
 
@@ -276,22 +278,18 @@ callers, delete the old function and its tests (playbook A4).
 oracle_id        text primary key
 features         jsonb not null           -- the whole CardFeatures
 features_version integer not null
-role_tags        text[] not null default '{}'   -- GIN index, copied from features for SQL
-theme_tags       text[] not null default '{}'   -- GIN index
-bracket_flags    text[] not null default '{}'   -- GIN index
 updated_at       timestamptz not null
 index on features_version
 ```
 
-The three arrays exist because the search language, suggestions and the mana base planner filter
-with `role_tags && array[…]` (ADR 0019). They are written in the same statement as `features`
-and are never read by TypeScript. Until P13 they stay empty here and the existing
-`printings.role_tags`, `theme_tags`, `bracket_flags` and `features_version` columns keep working
-unchanged, written by the old tag pass. **P13 moves the SQL to the new arrays (a join on
-`oracle_id`) and drops the printings columns in one migration.** Question 1 asks whether to
-store per oracle card (proposed) or keep ADR 0019's per-printing shape.
+P11 stores no copied arrays: the search language, suggestions and the mana base planner filter
+with `role_tags && array[…]` (ADR 0019) on the `printings` columns, which keep working unchanged,
+written by the old tag pass. **P13 adds the three GIN arrays (`role_tags`, `theme_tags`,
+`bracket_flags`) to `card_features` with its recognizers, moves the SQL to them (a join on
+`oracle_id`) and drops the printings columns in one migration**: an array with no writer would be
+an empty promise (invariant 7).
 
-**Migration** `0050_card_features.sql`: creates the table and indexes; no data change.
+**Migration** `0050_card_features.sql`: creates the table and its index; no data change.
 
 **Backfill.** `pnpm worker sync features` runs a **features pass**: select oracle cards with no
 row or `features_version < FEATURES_VERSION`, in batches of 500; run `extractFeatures`; save.
@@ -350,18 +348,21 @@ match:
 
 ```ts
 it.each([
-  {
-    card: "Sol Ring",
-    expected: [{ cost: "tap", symbols: ["C", "C"], anyColor: false, condition: null }],
-  },
-  { card: "Llanowar Elves", expected: [/* tap, G */] },
+  { card: "Sol Ring", expected: { isSource: true, amount: 2, requiresFiveLands: false } },
+  { card: "Llanowar Elves", expected: { isSource: true, amount: 1, requiresFiveLands: false } },
 ])("tap-mana reads $card", ({ card, expected }) => {
-  expect(tapMana.recognize(fixture(card), {})).toEqual(expected);
+  expect(tapMana.recognize(fixtureCard(card))).toEqual(expected);
 });
-it.each(["Dark Ritual", "Wrath of God"])("tap-mana ignores %s", (card) => {
-  /* … */
+it.each(["Wrath of God", "Cultivate"])("tap-mana ignores %s", (card) => {
+  expect(tapMana.recognize(fixtureCard(card)).isSource).toBe(false);
 });
 ```
+
+`fixtureCard` is in `tests/fixtures/features/cards.ts` (the data is `cards.json` beside it). A new
+recognizer: add its cards to `cards.json`, write `recognizers/<id>.test.ts` like
+`tap-mana.test.ts`, register it in `registry.ts`, add its field to `CardFeatureFields`, and raise
+`FEATURES_VERSION`. The consumer it replaces moves to the stored feature in the same commit, and
+the old function and its tests are deleted.
 
 The fixture file is real Oracle data (name, faces, keywords, produced mana) from Scryfall's
 oracle cards: about 120 cards chosen across the abilities, plus the cards today's tests already

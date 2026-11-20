@@ -69,3 +69,7 @@ Regenerate with `scripts/fixtures/make-catalog-fixtures.py` (needs freshly downl
 player pasted it on 2026-11-03, grouped under category headings with counts ("Commander (1)",
 "Lands (36)", "Ramp & Mana Fixers (9)"), the way Archidekt and Moxfield export by category
 (design doc 23).
+
+`features/cards.json` is real Oracle text (printed faces, type lines and Scryfall's produced mana) for
+29 cards, written out by hand from the cards' Oracle entries (2026-11-19), for the card feature recognizers
+(design doc 66). `features/cards.ts` loads it. Each recognizer adds its cards.
