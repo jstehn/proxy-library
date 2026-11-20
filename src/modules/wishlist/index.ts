@@ -3,6 +3,11 @@
 export { makeWishlist, type Wishlist } from "./application/make-wishlist";
 export { type AddWishesReport, type WishlistView } from "./application/wishlist-tools";
 export type { BuyWishError } from "./application/buy-wish";
+export {
+  describeAddWishError,
+  describeBuyWishError,
+  describeUpdateWishError,
+} from "./application/describe-error";
 export type { WishedForCards } from "./application/wish-for-cards";
 export type { CardNeed } from "./domain/card-wishes";
 export {
