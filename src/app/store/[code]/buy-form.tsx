@@ -2,9 +2,10 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
-import { buySealedAction, type BuyState } from "../actions";
+import { buySealedAction } from "../actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: BuyState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 const QUANTITIES = [1, 2, 3, 4, 6, 9, 12, 24];
 
 export function BuyForm(props: { productId: string; productName: string }) {
