@@ -46,7 +46,8 @@ import { wireStoreCapabilities } from "@/modules/store/wiring";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import type { RedditService } from "@/modules/reddit";
 import { wireRedditCapabilities } from "@/modules/reddit/wiring";
-import type { makeYoutube } from "@/modules/youtube";
+import type { YoutubeService } from "@/modules/youtube";
+import { wireYoutubeCapabilities } from "@/modules/youtube/wiring";
 import type { DbExecutor } from "@/shared/db";
 import type { Clock } from "@/shared/kernel";
 
@@ -72,7 +73,7 @@ type CapabilityDependencies = Readonly<{
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   wishlist: Wishlist;
   outsideData: OutsideDataService;
-  youtube: ReturnType<typeof makeYoutube>;
+  youtube: YoutubeService;
   reddit: RedditService;
   decks: Decks;
   previews: PreviewRepository;
@@ -139,7 +140,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
     },
     now: () => clock.now(),
-    youtube: dependencies.youtube,
+    ...wireYoutubeCapabilities(dependencies),
     ...wireRedditCapabilities(dependencies),
     // These read across modules (the game's collection, the real one, the store, the decks and
     // the wishlist), so they are joined here rather than in one module's wiring.
