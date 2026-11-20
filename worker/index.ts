@@ -18,8 +18,16 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
     console.log(applied ? "migrations applied" : "no migrations to apply yet");
   },
 
-  /** `pnpm worker sync [prices|full]`: run a catalog sync now and print what it did. */
+  /**
+   * `pnpm worker sync [prices|full]`: run a catalog sync now and print what it did.
+   * `pnpm worker sync features` only works out the card features that are missing or out of date.
+   */
   async sync(container) {
+    if (process.argv[3] === "features") {
+      const computed = await container.catalog.featuresPass();
+      console.log(`${computed} oracle cards' features worked out`);
+      return;
+    }
     const kind = process.argv[3] === "full" ? "full" : "prices";
     const { catalog } = container;
     await catalog.recoverInterruptedRuns();

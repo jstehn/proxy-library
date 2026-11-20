@@ -21,6 +21,7 @@ import {
   referenceSetsToImport,
 } from "../domain/rules";
 import type { PriceSnapshot, SetCode, SetImport, TokenPrinting } from "../domain/types";
+import { makeFeaturesPass } from "./card-features";
 import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
 import { makeEdhrecSync, type EdhrecSyncSummary } from "./edhrec";
 import { makeSpellbookSync, type SpellbookSyncSummary } from "./spellbook";
@@ -67,6 +68,8 @@ export type SyncSummary = {
   tokenPrintings?: number;
   /** Printings whose role tags and themes were worked out (design doc 20). */
   taggedPrintings?: number;
+  /** Oracle cards whose card features were worked out (design doc 66). */
+  featuresComputed?: number;
   priceSnapshots: number;
   /** Official product photos, key art, MSRPs and details from WPN (design doc 13). */
   artwork: ArtworkSummary;
@@ -90,6 +93,7 @@ export function makeSync(dependencies: CatalogDependencies) {
   const artworkPass = makeArtworkPass(dependencies, inTransaction);
   const { syncEdhrec } = makeEdhrecSync(dependencies);
   const { syncSpellbookCombos } = makeSpellbookSync(dependencies);
+  const { featuresPass } = makeFeaturesPass(dependencies);
 
   async function runSync(kind: SyncKind): Promise<SyncSummary> {
     const startedAt = clock.now().getTime();
@@ -186,6 +190,10 @@ export function makeSync(dependencies: CatalogDependencies) {
     // 5b. Role tags and themes for printings that are new or tagged by older rules. After the
     // prices, because ramp reads the mana a card makes (design doc 20, section 8).
     summary.taggedPrintings = await tagPass();
+
+    // 5c. Card features for oracle cards that are new or worked out by older recognizers. After
+    // the Scryfall pass, because the recognizers read the mana a card produces (design doc 66).
+    summary.featuresComputed = await featuresPass();
 
     // 6. Official product photos, key art, MSRPs and details from WPN. Never fails the sync.
     try {
@@ -410,6 +418,7 @@ export function makeSync(dependencies: CatalogDependencies) {
     queueNightlyIfDue,
     queueSync,
     tagPass,
+    featuresPass,
   };
 }
 

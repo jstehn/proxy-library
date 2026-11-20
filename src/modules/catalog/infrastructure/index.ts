@@ -1,5 +1,6 @@
 // Real implementations of the catalog ports. Only composition roots import this file.
 export { drizzleArtworkRepository } from "./drizzle-artwork";
+export { drizzleCardFeatureStore } from "./drizzle-card-features";
 export { drizzleEdhrecRepository } from "./drizzle-edhrec";
 export { drizzleEmbeddingRepository } from "./drizzle-embeddings";
 export { drizzleComprehensiveRulesRepository } from "./drizzle-rules";

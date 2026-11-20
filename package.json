@@ -10,6 +10,7 @@
     "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "lint:cycles": "tsx scripts/check-cycles.ts",
     "sizes": "tsx scripts/sizes.ts",
+    "regex-count": "tsx scripts/regex-count.ts",
     "knip": "knip",
     "knip:production": "knip --production",
     "hooks:install": "scripts/install-hooks.sh",

@@ -1,0 +1,251 @@
+[
+  {
+    "name": "Sol Ring",
+    "producedMana": ["C"],
+    "faces": [{ "typeLine": "Artifact", "text": "{T}: Add {C}{C}." }]
+  },
+  {
+    "name": "Llanowar Elves",
+    "producedMana": ["G"],
+    "faces": [{ "typeLine": "Creature — Elf Druid", "text": "{T}: Add {G}." }]
+  },
+  {
+    "name": "Arcane Signet",
+    "producedMana": ["W", "U", "B", "R", "G"],
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "{T}: Add one mana of any color in your commander's color identity."
+      }
+    ]
+  },
+  {
+    "name": "Birds of Paradise",
+    "producedMana": ["W", "U", "B", "R", "G"],
+    "faces": [{ "typeLine": "Creature — Bird", "text": "Flying\n{T}: Add one mana of any color." }]
+  },
+  {
+    "name": "Mind Stone",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "{T}: Add {C}.\n{1}, {T}, Sacrifice this artifact: Draw a card."
+      }
+    ]
+  },
+  {
+    "name": "Dark Ritual",
+    "producedMana": ["B"],
+    "faces": [{ "typeLine": "Instant", "text": "Add {B}{B}{B}." }]
+  },
+  {
+    "name": "Wrath of God",
+    "producedMana": [],
+    "faces": [
+      { "typeLine": "Sorcery", "text": "Destroy all creatures. They can't be regenerated." }
+    ]
+  },
+  {
+    "name": "Forest",
+    "producedMana": ["G"],
+    "faces": [{ "typeLine": "Basic Land — Forest", "text": "({T}: Add {G}.)" }]
+  },
+  {
+    "name": "Wastes",
+    "producedMana": ["C"],
+    "faces": [{ "typeLine": "Basic Land", "text": "({T}: Add {C}.)" }]
+  },
+  {
+    "name": "Command Tower",
+    "producedMana": ["W", "U", "B", "R", "G"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add one mana of any color in your commander's color identity."
+      }
+    ]
+  },
+  {
+    "name": "Temple of the False God",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add {C}{C}. Activate only if you control five or more lands."
+      }
+    ]
+  },
+  {
+    "name": "Urza's Mine",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Land — Urza's Mine",
+        "text": "{T}: Add {C}. If you control an Urza's Power-Plant and an Urza's Tower, add {C}{C} instead."
+      }
+    ]
+  },
+  {
+    "name": "Urza's Tower",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Land — Urza's Tower",
+        "text": "{T}: Add {C}. If you control an Urza's Mine and an Urza's Power-Plant, add {C}{C}{C} instead."
+      }
+    ]
+  },
+  {
+    "name": "Shrine of the Forsaken Gods",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}: Add {C}.\n{T}: Add {C}{C}. Spend this mana only to cast colorless spells. Activate only if you control seven or more lands."
+      }
+    ]
+  },
+  {
+    "name": "Azorius Chancery",
+    "producedMana": ["W", "U"],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "Azorius Chancery enters tapped.\nWhen Azorius Chancery enters, return a land you control to its owner's hand.\n{T}: Add {W}{U}."
+      }
+    ]
+  },
+  {
+    "name": "Fabled Passage",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}, Sacrifice Fabled Passage: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land."
+      }
+    ]
+  },
+  {
+    "name": "Reliquary Tower",
+    "producedMana": ["C"],
+    "faces": [{ "typeLine": "Land", "text": "You have no maximum hand size.\n{T}: Add {C}." }]
+  },
+  {
+    "name": "Overgrown Tomb",
+    "producedMana": ["B", "G"],
+    "faces": [
+      {
+        "typeLine": "Land — Swamp Forest",
+        "text": "({T}: Add {B} or {G}.)\nAs Overgrown Tomb enters, you may pay 2 life. If you don't, it enters tapped."
+      }
+    ]
+  },
+  {
+    "name": "Valakut Awakening // Valakut Stoneforge",
+    "producedMana": ["R"],
+    "faces": [
+      {
+        "typeLine": "Instant",
+        "text": "Put any number of cards from your hand on the bottom of your library, then draw that many cards plus one."
+      },
+      { "typeLine": "Land", "text": "Valakut Stoneforge enters tapped.\n{T}: Add {R}." }
+    ]
+  },
+  {
+    "name": "Bala Ged Recovery // Bala Ged Sanctuary",
+    "producedMana": ["G"],
+    "faces": [
+      { "typeLine": "Sorcery", "text": "Return target card from your graveyard to your hand." },
+      { "typeLine": "Land", "text": "Bala Ged Sanctuary enters tapped.\n{T}: Add {G}." }
+    ]
+  },
+  {
+    "name": "Delver of Secrets // Insectile Aberration",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Creature — Human Wizard",
+        "text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform Delver of Secrets."
+      },
+      { "typeLine": "Creature — Human Insect", "text": "Flying" }
+    ]
+  },
+  {
+    "name": "Powerstone Shard",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "{T}: Add {C} for each artifact named Powerstone Shard or Powerstone Token you control. This mana can't be spent to cause nonartifact spells."
+      }
+    ]
+  },
+  {
+    "name": "Cityscape Leveler",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Artifact Creature — Construct",
+        "text": "When you cast this spell, destroy up to one target nonland permanent. Its controller creates a tapped Powerstone token.\n(It's an artifact with \"{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.\")"
+      }
+    ]
+  },
+  {
+    "name": "Cultivate",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Gilded Goose",
+    "producedMana": ["W", "U", "B", "R", "G"],
+    "faces": [
+      {
+        "typeLine": "Creature — Bird",
+        "text": "Flash\nFlying\nWhen Gilded Goose enters, create a Food token.\n{1}{G}, {T}: Create a Food token.\n{T}, Sacrifice a Food: Add one mana of any color."
+      }
+    ]
+  },
+  {
+    "name": "Mana Vault",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "Mana Vault doesn't untap during your untap step.\nAt the beginning of your upkeep, you may pay {4}. If you do, untap Mana Vault.\nAt the beginning of your draw step, if Mana Vault is tapped, it deals 1 damage to you.\n{T}: Add {C}{C}{C}."
+      }
+    ]
+  },
+  {
+    "name": "Grim Monolith",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Artifact",
+        "text": "Grim Monolith doesn't untap during your untap step.\n{T}: Add {C}{C}{C}.\n{4}: Untap Grim Monolith."
+      }
+    ]
+  },
+  {
+    "name": "Gaea's Cradle",
+    "producedMana": ["G"],
+    "faces": [
+      { "typeLine": "Legendary Land", "text": "{T}: Add {G} for each creature you control." }
+    ]
+  },
+  {
+    "name": "Forsaken Monument",
+    "producedMana": ["C"],
+    "faces": [
+      {
+        "typeLine": "Legendary Artifact",
+        "text": "Colorless creatures you control get +2/+2.\nWhenever you tap a permanent for {C}, add an additional {C}.\nWhenever you cast a colorless spell, you gain 2 life."
+      }
+    ]
+  }
+]

@@ -22,6 +22,7 @@ import { combosForDeck } from "./combos";
 import type { DeckView } from "../domain/deck-view";
 import { deckView } from "./decks";
 import { lineToOptimizerCard } from "./optimize";
+import { withTapMana } from "./tap-mana";
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,
@@ -123,7 +124,7 @@ export async function auditDeckView(db: DbExecutor, view: DeckView): Promise<Dec
     freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
   });
 
-  const castability = simulateCastOnCurve(view.lines, {
+  const castability = simulateCastOnCurve(await withTapMana(db, view.lines), {
     rng: seededRng(`audit-mana-${view.deck.id}`),
     trials: 400,
     profile: deckProfile,

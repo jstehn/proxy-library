@@ -400,6 +400,22 @@ export const cardEmbeddings = pgTable(
   ],
 );
 
+/**
+ * What each oracle card does, worked out from its text by the recognizers (design doc 66, ADR 0027).
+ * One row per oracle card. `features` is the whole `CardFeatures`; rows below the current
+ * `FEATURES_VERSION` are worked out again by the sync or `pnpm worker sync features`.
+ */
+export const cardFeatures = pgTable(
+  "card_features",
+  {
+    oracleId: text("oracle_id").primaryKey(),
+    features: jsonb("features").notNull(),
+    featuresVersion: integer("features_version").notNull(),
+    updatedAt: timestamptz("updated_at").notNull(),
+  },
+  (table) => [index("card_features_version_idx").on(table.featuresVersion)],
+);
+
 /** Official MTG Comprehensive Rules with pgvector embeddings (design doc 60). */
 export const comprehensiveRules = pgTable(
   "comprehensive_rules",

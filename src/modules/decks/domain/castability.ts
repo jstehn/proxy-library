@@ -9,9 +9,10 @@ import {
   type CardFacts,
   type CardIdentity,
 } from "@/shared/kernel";
+import type { TapMana } from "@/modules/catalog";
 import { isPlayed, type DeckCount } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
-import { extractTapManaProduction, hasTapManaAbility, parseManaCost, totalMana } from "./mana";
+import { parseManaCost } from "./mana";
 import { tapped } from "./mana-base";
 
 export type CastabilityLine = DeckCount &
@@ -22,6 +23,8 @@ export type CastabilityLine = DeckCount &
     producedMana?: readonly string[];
     text?: string;
     power?: string | number | null;
+    /** What the card does when tapped for mana: the catalog's card features (design doc 66). */
+    tapMana: TapMana;
   }>;
 
 export type CardCastability = Readonly<{
@@ -158,17 +161,9 @@ export function simulateCastOnCurve(
 
     if (line.board === "main") {
       const produces = toPoolColors(line.producedMana ?? []);
-      const tapPool = extractTapManaProduction({
-        typeLine: line.typeLine,
-        text: line.text,
-        producedMana: line.producedMana,
-        isLand: land || mdfcLand,
-      });
-      const manaProduced = Math.max(1, totalMana(tapPool));
-      const requiresFiveLands = /activate only if you control five or more lands/i.test(
-        line.text ?? "",
-      );
-      const isManaSource = !land && !mdfcLand && line.manaValue <= 4 && hasTapManaAbility(line);
+      const manaProduced = Math.max(1, line.tapMana.amount);
+      const { requiresFiveLands } = line.tapMana;
+      const isManaSource = !land && !mdfcLand && line.manaValue <= 4 && line.tapMana.isSource;
       const card: SimCard =
         land || mdfcLand
           ? {

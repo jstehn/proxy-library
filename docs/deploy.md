@@ -30,6 +30,9 @@ downloads Scryfall's card data (about 80 MB) and MTGJSON's files for the current
 ## Every day
 
 - **Nightly sync** at `SYNC_TIME` (default 04:00, in `TZ`): new prices, and new sets you enabled.
+- **Card features** (what each card does, ADR 0027) are filled in by the nightly sync. After an
+  update that raises the features version, the next sync recomputes them, or run
+  `pnpm worker sync features` now.
 - **Card images** are fetched from Scryfall the first time someone views a card, then served from
   the `images` volume.
 - **Updating the app:** `git pull && docker compose up -d --build`. Migrations run automatically

@@ -2,10 +2,18 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import boundaries from "eslint-plugin-boundaries";
+import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
 const SOURCE = ["src/**/*.{ts,tsx}", "worker/**/*.ts"];
+// The folders that hold card rules (design doc 66): the regex-count ratchet watches the same ones.
+const CARD_RULE_FOLDERS = [
+  "src/modules/decks/domain",
+  "src/shared/card-search",
+  "src/modules/drafts/domain",
+  "src/modules/catalog/domain",
+];
 const TESTS = ["**/*.test.ts", "**/*.int.test.ts", "**/*.remote.test.ts", "**/*.contract.ts"];
 
 // --- Elements: what kind of architectural unit each file belongs to --------------------
@@ -189,6 +197,9 @@ const policies = [
     // Design doc 26: what's for sale and what you own of a wished card are one SQL definition,
     // shared by the Wishlist page and the wishlist's use cases, so "cheapest" means the same.
     layer("queries", { sameModule: true, file: "for-sale.ts" }),
+    // Design doc 66: which printing's text the recognizers read is one SQL definition, shared by
+    // the `cardFeatures` read and the features pass, so a stored row equals a computed one.
+    layer("queries", { sameModule: true, file: "card-texts.ts" }),
   ),
   from(
     layer("queries"),
@@ -202,6 +213,9 @@ const policies = [
   ),
   // A query takes the `Actor` (design doc 67): another module's public API, for its types only.
   { from: layer("queries"), allow: { to: publicApi, dependency: { kind: "type" } } },
+  // Design doc 66: the one decks read that calls the catalog for card features (a value, so the
+  // lazy repair of a missing row stays in the catalog).
+  { from: layer("queries", { file: "tap-mana.ts" }), allow: { to: publicApi } },
   from(
     layer("testing"),
     el("kernel"),
@@ -573,6 +587,21 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
     },
+  },
+
+  // One regex, one place (design doc 66): card text is read by recognizers only. The files in
+  // NOT_YET_RECOGNIZED are the ones P12 to P14 still have to move; the list only shrinks.
+  {
+    files: CARD_RULE_FOLDERS.map((folder) => `${folder}/**/*.ts`),
+    ignores: [
+      ...TESTS,
+      "src/modules/catalog/domain/features/recognizers/**",
+      // Parse the sets list, EDHREC pages and the rules book: not card text.
+      "src/modules/catalog/domain/{comprehensive-rules,edhrec,wpn}.ts",
+      ...NOT_YET_RECOGNIZED,
+    ],
+    plugins: { cards: { rules: { "oracle-text-regex": oracleTextRegex } } },
+    rules: { "cards/oracle-text-regex": "error" },
   },
 
   globalIgnores([

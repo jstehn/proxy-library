@@ -105,4 +105,12 @@ section 1 and the "How each consumer moves" table), new `src/modules/catalog/dom
 
 ## Handoff
 
-(empty)
+**Branch** `refactor/P11-build` (design doc 66 and ADR 0027 merged first, then re-scoped).
+
+- **Decision 3 finding:** features are read in 23 files including deck building: computed at sync (step 5c of every sync) and stored; a read that finds no row or an old one works the card out on the spot without writing (lazy repair, but read-only: a query does not write).
+- **First recognizer: `tap-mana`**, not role tags. Role tags have 16+ callers in 12 files, some in the browser (builder, cuts panel); tap-mana had one consumer (`simulateCastOnCurve`, reached by two reads: `audit` and `mana-base`). Deleted from `decks/domain/mana.ts`: `hasTapManaAbility`, `extractTapManaProduction`, `applyManaDoublers` (its Urza, doubler and "five lands with a board" branches were dead: no caller ever passed a battlefield), `totalMana`, `ManaSourceFacts`, `BASIC_LAND_MANA`; and the inline five-lands regex in `castability.ts`. No old tests existed for them; the recognizer has a fixture table. No allowlist or removal-list rows named them.
+- **A2:** old functions vs `extractFeatures` over the 29 fixture cards (`tests/fixtures/features/cards.json`): 0 differences (isSource, amount, requiresFiveLands). Not run over the 33,479 dev cards (not allowed here). Known quirk kept on purpose: the recognizer reads printed text including reminder text, as the old code did (a Powerstone maker counts as a mana source); fixing it is a version bump.
+- **Deviations from doc 66:** no `plainText`/reminder stripping/name substitution in P11 (no recognizer needs it, and P13 deletes the five existing copies; shipping one now would be a sixth beside them); no `keywords` on `CardText`; `card_features` has no GIN arrays until P13 writes them; the store port only writes (`textsToCompute`, `save`), reads go through `catalogQueries.cardFeatures`; no golden/version test yet (one recognizer; add it with P12). The old `CardFeatures` type in `ports.ts` was renamed `PrintingTags`.
+- **Regex ratchet:** `pnpm regex-count` counts every regex literal and `new RegExp(` in production files of `decks/domain`, `shared/card-search`, `drafts/domain`, `catalog/domain` (not recognizers, tests, or three catalog files that parse sets/EDHREC/rules, not card text). Baseline **128**. `NOT_YET_RECOGNIZED` (12 files) is in `eslint-rules/oracle-text-regex.mjs`.
+- **Lines:** production code 75,151 -> 75,382 (+231; below the +300..+600 estimate). The swap itself (recognizer + `withTapMana` + callers - deletions) is about -45.
+- **Needs:** run migration 0050, then `pnpm worker sync features` on the dev DB and record its time; owner approves the baseline (`pnpm sizes --update` will not raise it).
