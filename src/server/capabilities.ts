@@ -44,7 +44,7 @@ import { wireSiteCapabilities } from "./site";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
-// file hands each one the services it needs and joins the results.
+// file hands each one what it needs and joins the results.
 
 type CapabilityDependencies = Readonly<{
   db: DbExecutor;
