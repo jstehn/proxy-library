@@ -1,5 +1,6 @@
 import { COLOR_COMBINATIONS, type ManaColor } from "@/shared/kernel";
-import { TAGS, THEMES, type Tag, type Theme } from "./tags";
+import { THEMES, type Theme } from "./tags";
+import { TAGS, type Tag } from "@/shared/kernel";
 
 // The card search language (design docs 14 and 15), modeled on Scryfall's and used by every card
 // search box. Pure: text in, a tree of conditions out, plus notes about anything it couldn't

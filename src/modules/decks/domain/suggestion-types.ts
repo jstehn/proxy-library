@@ -1,4 +1,5 @@
-import { type Tag, type Theme } from "@/shared/card-search";
+import { type Tag } from "@/shared/kernel";
+import { type Theme } from "@/shared/card-search";
 import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
 import { type Bracket, type BracketLine } from "./brackets";
 import { type Format } from "./deck";
@@ -13,7 +14,6 @@ export type SuggestionCard = BrowseCard &
   Readonly<{
     pool: "owned" | "store";
     keywords: string[];
-    roles: Tag[];
     themes: Theme[];
     rarity: string;
     edhrecRank?: number | null;

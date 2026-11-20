@@ -2,7 +2,8 @@ import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { ColorSchema, FinishSchema, UserId } from "@/shared/kernel";
+import { featureArray } from "@/shared/card-search/sql";
+import { ColorSchema, FinishSchema, type Tag, UserId } from "@/shared/kernel";
 import {
   BOARDS,
   DeckId,
@@ -175,6 +176,7 @@ export async function deckView(
     mana_value: number;
     mana_cost: string | null;
     produced_mana: string[] | null;
+    role_tags: Tag[];
     price_cents: number | null;
     set_code: string;
     collector_number: string;
@@ -198,6 +200,7 @@ export async function deckView(
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
+           ${featureArray("role_tags", "shown")} as role_tags,
            ${latestPrice(
              "shown.id",
              `coalesce(e.finish, owned_finish.finish,
@@ -293,6 +296,7 @@ export async function deckView(
       manaValue: Number(row.mana_value),
       manaCost: row.mana_cost,
       producedMana: row.produced_mana ?? [],
+      roles: row.role_tags,
       text: row.face_text,
       faceTexts: row.face_texts ?? [],
       printedStats: row.printed_stats,

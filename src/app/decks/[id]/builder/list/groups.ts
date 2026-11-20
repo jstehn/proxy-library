@@ -1,7 +1,6 @@
 import type { DeckLine } from "@/modules/decks";
 import { mainType, TYPE_ORDER } from "@/modules/decks/client";
-import { cardTags, TAGS, type Tag } from "@/shared/card-search";
-import { isLand } from "@/shared/kernel";
+import { isLand, TAGS } from "@/shared/kernel";
 import { TAG_LABELS } from "@/app/decks/labels";
 
 // How the deck list groups a deck's lines (design doc 14, section 2.4): by type, by the deck's own
@@ -15,11 +14,6 @@ export type Group = Readonly<{
   /** The deck's own heading this group is (design doc 34), for its ↑ ↓ and Rename buttons. */
   heading?: string;
 }>;
-
-/** A line's roles, read from its rules text. */
-export function tagsOf(line: DeckLine): Tag[] {
-  return cardTags({ typeLine: line.typeLine, text: line.text, producedMana: line.producedMana });
-}
 
 const sortedByCost = (group: readonly DeckLine[]) =>
   [...group].sort((a, b) => a.manaValue - b.manaValue || a.name.localeCompare(b.name));
@@ -44,10 +38,10 @@ export function groupsByRole(lines: readonly DeckLine[]): Group[] {
   const main = lines.filter((line) => line.board === "main");
   const groups: Group[] = TAGS.map((tag) => ({
     title: TAG_LABELS[tag],
-    lines: sortedByCost(main.filter((line) => tagsOf(line).includes(tag))),
+    lines: sortedByCost(main.filter((line) => line.roles.includes(tag))),
   }));
-  const lands = main.filter((line) => isLand(line.typeLine) && tagsOf(line).length === 0);
-  const other = main.filter((line) => !isLand(line.typeLine) && tagsOf(line).length === 0);
+  const lands = main.filter((line) => isLand(line.typeLine) && line.roles.length === 0);
+  const other = main.filter((line) => !isLand(line.typeLine) && line.roles.length === 0);
   groups.push(
     { title: "Other", lines: sortedByCost(other) },
     { title: "Lands", lines: sortedByCost(lands) },

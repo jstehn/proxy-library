@@ -1,4 +1,4 @@
-import { bracketFlags, cardTags, cardThemes, type BracketFlag } from "@/shared/card-search";
+import { bracketFlags, cardThemes, type BracketFlag } from "@/shared/card-search";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -185,7 +185,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       score += totalFitPoints;
 
       if (targets !== null) {
-        const roles = cardTags(facts);
+        const roles = line.roles ?? [];
         for (const tag of TARGETED_TAGS.filter((one) => roles.includes(one))) {
           const count = stats.tags[tag];
           const target = targets[tag];

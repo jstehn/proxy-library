@@ -20,7 +20,7 @@ import {
   suggestSwaps,
   type SwapCutMeta,
 } from "@/modules/decks/client";
-import { cardTags, cardThemes } from "@/shared/card-search";
+import { cardThemes } from "@/shared/card-search";
 import { cutReasonText, swapReasonText } from "@/app/decks/labels";
 import { suggestionsAction } from "../suggestions/actions";
 import { valueOr } from "../answer";
@@ -99,7 +99,7 @@ export function CutsPanel(props: {
           manaValue: line.manaValue,
           text: line.text,
           keywords: line.keywords,
-          roles: cardTags(facts),
+          roles: line.roles,
           themes: cardThemes(facts),
           rarity: line.rarity,
           priceCents: line.priceCents,

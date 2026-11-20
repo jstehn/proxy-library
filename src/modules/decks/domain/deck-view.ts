@@ -1,4 +1,4 @@
-import type { Finish, CardFacts, CardIdentity } from "@/shared/kernel";
+import type { Finish, CardFacts, CardIdentity, Tag } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
 import type { DeckPlan } from "./deck-profile";
@@ -29,6 +29,8 @@ export type DeckLine = DeckCount &
     pinned?: boolean;
     /** Colors of mana it can make, for the deck statistics. */
     producedMana: string[];
+    /** What job the card does in a deck (the catalog's card features). */
+    roles: readonly Tag[];
     /** Rules text face by face (front first), for showing double-faced cards as "front // back". */
     faceTexts?: readonly string[];
     /** The front face's printed stats: "6/5", "Loyalty 4" or "Defense 5"; null when it has none. */

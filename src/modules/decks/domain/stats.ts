@@ -1,14 +1,15 @@
-import { cardTags, TAGS, type Tag } from "@/shared/card-search";
 import {
+  type CardFacts,
   COLORS,
   CURVE_SLOTS,
   curveSlot,
+  hasTypeWord,
+  isCreature,
+  isLand,
   type ManaColor,
   type ManaSymbol,
-  isLand,
-  isCreature,
-  hasTypeWord,
-  type CardFacts,
+  type Tag,
+  TAGS,
 } from "@/shared/kernel";
 import { isCounted, isPlayed, type DeckCount } from "./boards";
 
@@ -24,8 +25,10 @@ export type StatsLine = DeckCount &
     producedMana?: readonly string[];
     /** Market price of one copy, in cents, if known. */
     priceCents?: number | null;
-    /** Rules text of every face, for role tags (design doc 19). Missing: no tags. */
+    /** Rules text of every face, for themes (design doc 20). */
     text?: string;
+    /** What job the card does in a deck (the catalog's card features). Missing: no tags. */
+    roles?: readonly Tag[];
   }>;
 
 export type ManaSource = ManaSymbol;
@@ -115,14 +118,7 @@ export function deckStats(lines: readonly StatsLine[]): DeckStats {
     const type = mainType(line.typeLine);
     types[type] = (types[type] ?? 0) + line.quantity;
     const produced = line.producedMana ?? [];
-    if (line.text !== undefined) {
-      for (const tag of cardTags({
-        typeLine: line.typeLine,
-        text: line.text,
-        producedMana: produced,
-      }))
-        tags[tag] += line.quantity;
-    }
+    for (const tag of line.roles ?? []) tags[tag] += line.quantity;
     for (const color of produced) {
       if (color in sources) sources[color as ManaSource] += line.quantity;
     }

@@ -3,15 +3,9 @@ import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candid
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import {
-  parseSearch,
-  TAGS,
-  THEMES,
-  type BracketFlag,
-  type Tag,
-  type Theme,
-} from "@/shared/card-search";
-import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { TAGS, type Tag } from "@/shared/kernel";
+import { parseSearch, THEMES, type BracketFlag, type Theme } from "@/shared/card-search";
+import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
 import { bracketLine, flagsOverTarget, type Bracket } from "../domain/brackets";
 import type { Format } from "../domain/deck";
 import {
@@ -112,7 +106,7 @@ type Row = {
 };
 
 const CARD_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
-  p.type_line, p.role_tags, p.theme_tags, p.is_game_changer,
+  p.type_line, ${featureArray("role_tags")} as role_tags, p.theme_tags, p.is_game_changer,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
 /** Your cards matching a search, as your most special copy of each. */

@@ -1,12 +1,14 @@
-import { UserId } from "@/shared/kernel";
+import { extractFeatures } from "@/modules/catalog";
+import { type Tag, UserId } from "@/shared/kernel";
 import { DeckId } from "../domain/deck";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
 
 // A deck as the readers return it, for tests of what is built on top of `deckView`.
 
+/** A deck line; its role tags come from its text and mana unless the test names them. */
 export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine {
-  return {
+  const line: DeckLine = {
     oracleId: `oracle-${name}`,
     board: "main",
     quantity: 1,
@@ -21,6 +23,7 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     manaValue: 2,
     manaCost: "{1}{G}",
     producedMana: [],
+    roles: [],
     text: "",
     isGameChanger: false,
     priceCents: 25,
@@ -36,6 +39,22 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     free: 1,
     ...overrides,
   };
+  return { ...line, roles: overrides.roles ?? roleTagsOf(line) };
+}
+
+/** What the catalog's recognizer says a card's text does (tests build lines from text). */
+export function roleTagsOf(card: {
+  typeLine: string;
+  text?: string;
+  producedMana?: readonly string[];
+}): Tag[] {
+  return [
+    ...extractFeatures({
+      oracleId: "test",
+      producedMana: card.producedMana ?? [],
+      faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
+    }).roleTags,
+  ];
 }
 
 export function aRules(name: string, overrides: Partial<CardRules> = {}): CardRules {

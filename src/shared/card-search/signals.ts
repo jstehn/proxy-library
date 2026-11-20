@@ -5,7 +5,8 @@
 // Pure: the deck builder may use it in the browser later.
 
 import { hasTypeWord, plainText, type CardFacts } from "@/shared/kernel";
-import type { Tag, Theme } from "./tags";
+import type { Tag } from "@/shared/kernel";
+import type { Theme } from "./tags";
 
 /** What the signal rules read about one card. */
 export type SignalCard = Pick<CardFacts, "name" | "typeLine" | "text"> &

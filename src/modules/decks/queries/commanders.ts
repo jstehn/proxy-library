@@ -1,7 +1,8 @@
+import { featureArray } from "@/shared/card-search/sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, cheapestPrice, textArray } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import { COLORS, type ManaColor, type UserId } from "@/shared/kernel";
+import { THEMES, type Theme } from "@/shared/card-search";
+import { COLORS, type ManaColor, type Tag, TAGS, type UserId } from "@/shared/kernel";
 import {
   coverageDetails,
   missingCost,
@@ -86,14 +87,14 @@ type CandidateRow = {
   leads: string[] | null;
 };
 
-const POOL_COLUMNS = sql`p.oracle_id, p.name, p.type_line, p.mana_value, p.keywords, p.role_tags,
+const POOL_COLUMNS = sql`p.oracle_id, p.name, p.type_line, p.mana_value, p.keywords, ${featureArray("role_tags")} as role_tags,
   p.theme_tags, p.color_identity, p.rarity`;
 
 const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
   p.type_line, ${FACE_TEXT} as face_text,
   exists (select 1 from jsonb_array_elements(p.faces) f
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
-  p.color_identity, p.keywords, p.rarity, p.role_tags, p.is_game_changer, p.edhrec_rank`;
+  p.color_identity, p.keywords, p.rarity, ${featureArray("role_tags")} as role_tags, p.is_game_changer, p.edhrec_rank`;
 
 const colorsOf = (values: readonly string[]): ManaColor[] =>
   values.filter((value): value is ManaColor => (COLORS as readonly string[]).includes(value));
@@ -258,7 +259,7 @@ async function storeFillers(
     sql`p.color_identity <@ ${textArray(commander.colorIdentity)} and ${COMMANDER_LEGAL}
         and split_part(p.type_line, ' // ', 1) !~ '\\mLand\\M'
         and p.oracle_id <> ${commander.oracleId}
-        and (p.role_tags && ${textArray(TARGETED_TAGS)} or p.theme_tags && ${textArray(plan.themes)}
+        and (${featureArray("role_tags")} && ${textArray(TARGETED_TAGS)} or p.theme_tags && ${textArray(plan.themes)}
              or p.keywords && ${textArray(plan.keywords)} or ${tribeMatch})`,
   );
   const rows = await db.execute<PoolRow>(sql`

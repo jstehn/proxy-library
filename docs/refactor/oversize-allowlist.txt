@@ -17,4 +17,3 @@ src/modules/store/queries/store.ts  # pre-refactor, owned by P20
 src/shared/card-search/parse.ts  # pre-refactor, owned by P13
 src/shared/card-search/signals.ts  # pre-refactor, owned by P13
 src/shared/card-search/sql.ts  # pre-refactor, owned by P03
-src/shared/card-search/tags.ts  # pre-refactor, owned by P13

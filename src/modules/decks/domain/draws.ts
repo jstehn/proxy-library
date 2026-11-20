@@ -1,5 +1,4 @@
-import { cardTags, type Tag } from "@/shared/card-search";
-import { shuffled, type Rng, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import { type CardFacts, type CardIdentity, type Rng, shuffled, type Tag } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import { isLand } from "./stats";
 
@@ -13,7 +12,7 @@ export type DrawLine = DeckCount &
   Pick<CardFacts, "name" | "typeLine"> &
   Readonly<{
     manaValue?: number;
-    text?: string;
+    roles?: readonly Tag[];
     producedMana?: readonly string[];
   }>;
 
@@ -42,11 +41,7 @@ export function library(lines: readonly DrawLine[]): LibraryCard[] {
   return lines
     .filter((line) => line.board === "main")
     .flatMap((line) => {
-      const tags = cardTags({
-        typeLine: line.typeLine,
-        text: line.text ?? "",
-        producedMana: line.producedMana,
-      });
+      const tags = line.roles ?? [];
       return Array.from({ length: line.quantity }, (_, copy) => ({
         key: `${line.oracleId}#${copy + 1}`,
         oracleId: line.oracleId,

@@ -118,7 +118,8 @@ describe("the first sync", () => {
     expect(summary.taggedPrintings).toBe(33);
 
     const banishingLight = await db.execute<{ role_tags: string[]; theme_tags: string[] }>(sql`
-      select role_tags, theme_tags from printings where name = 'Banishing Light' limit 1
+      select f.role_tags, p.theme_tags from printings p join card_features f on f.oracle_id = p.oracle_id
+       where p.name = 'Banishing Light' limit 1
     `);
     expect(banishingLight.rows[0]).toEqual({
       role_tags: ["removal"],
@@ -131,12 +132,12 @@ describe("the first sync", () => {
 
     // Nothing to do until the rules change; then everything is tagged again.
     expect(await catalog.tagPass()).toBe(0);
-    await db.execute(sql`update printings set features_version = 0, role_tags = '{}'`);
+    await db.execute(sql`update printings set features_version = 0, theme_tags = '{}'`);
     expect(await catalog.tagPass()).toBe(33);
-    const again = await db.execute<{ role_tags: string[] }>(sql`
-      select role_tags from printings where name = 'Banishing Light' limit 1
+    const again = await db.execute<{ theme_tags: string[] }>(sql`
+      select theme_tags from printings where name = 'Banishing Light' limit 1
     `);
-    expect(again.rows[0].role_tags).toEqual(["removal"]);
+    expect(again.rows[0].theme_tags).toEqual(["enchantments"]);
   });
 
   it("stores bracket flags from text, and Game Changers from every Scryfall pass (design doc 31)", async () => {

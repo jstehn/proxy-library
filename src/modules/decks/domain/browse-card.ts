@@ -1,4 +1,4 @@
-import type { Finish, CardFacts, CardIdentity } from "@/shared/kernel";
+import type { Finish, CardFacts, CardIdentity, Tag } from "@/shared/kernel";
 import type { CardRules } from "./rules";
 
 // A card as the builder's grid and the suggestions show it (design doc 19).
@@ -27,6 +27,7 @@ export type BrowseCard = CardIdentity &
     rules: CardRules;
     /** The rest of a provisional deck line, shown until the server answers. */
     producedMana: string[];
+    roles: readonly Tag[];
     text: string;
     /** On Wizards' Game Changer list (design doc 31). */
     isGameChanger: boolean;

@@ -1,11 +1,13 @@
 // Composable MTG effect primitives extracted from Oracle text and structured card facts.
 // Open-Closed: new mechanics are added as EffectExtractor entries without modifying role/theme rules.
 
-import { plainText, type CardFacts } from "@/shared/kernel";
+import { plainText } from "@/shared/kernel";
 
-/** Minimal card facts read by effect extractors and tag/bracket rules. */
-export type TagFacts = Pick<CardFacts, "typeLine" | "text"> &
-  Partial<Pick<CardFacts, "producedMana">>;
+/** What the extractors read: one face's text, and the mana Scryfall says the card makes. */
+export type EffectFacts = Readonly<{
+  text: string;
+  producedMana: readonly string[];
+}>;
 
 export type EffectSubject =
   | "creature"
@@ -72,7 +74,7 @@ export type EffectPrimitive =
 
 export interface EffectExtractor {
   readonly id: string;
-  extract(card: TagFacts, cleanText: string): readonly EffectPrimitive[];
+  extract(card: EffectFacts, cleanText: string): readonly EffectPrimitive[];
 }
 
 const PERMANENT_TYPE = String.raw`(creature|artifact|enchantment|planeswalker|permanent|battle)s?\b`;
@@ -99,8 +101,8 @@ function parseSubject(raw: string | undefined): EffectSubject {
 const manaProductionExtractor: EffectExtractor = {
   id: "mana_production",
   extract(card, text) {
-    if ((card.producedMana ?? []).length > 0) {
-      return [{ kind: "mana_production", colors: card.producedMana ?? [] }];
+    if (card.producedMana.length > 0) {
+      return [{ kind: "mana_production", colors: card.producedMana }];
     }
     if (
       /whenever enchanted [^.]*is tapped for mana, its controller adds an additional/i.test(text) ||
@@ -393,7 +395,7 @@ const protectionExtractor: EffectExtractor = {
   },
 };
 
-export const DEFAULT_EFFECT_EXTRACTORS: readonly EffectExtractor[] = [
+const EXTRACTORS: readonly EffectExtractor[] = [
   manaProductionExtractor,
   librarySearchExtractor,
   landDropExtractor,
@@ -410,15 +412,8 @@ export const DEFAULT_EFFECT_EXTRACTORS: readonly EffectExtractor[] = [
   protectionExtractor,
 ];
 
-/** Extract all composable effect primitives for a card using the provided extractor registry. */
-export function extractEffects(
-  card: TagFacts,
-  extractors: readonly EffectExtractor[] = DEFAULT_EFFECT_EXTRACTORS,
-): EffectPrimitive[] {
-  const cleanText = plainText(card.text);
-  const effects: EffectPrimitive[] = [];
-  for (const extractor of extractors) {
-    effects.push(...extractor.extract(card, cleanText));
-  }
-  return effects;
+/** Every effect primitive one face's text has (reminder text left out). */
+export function extractEffects(face: EffectFacts): EffectPrimitive[] {
+  const cleanText = plainText(face.text);
+  return EXTRACTORS.flatMap((extractor) => extractor.extract(face, cleanText));
 }

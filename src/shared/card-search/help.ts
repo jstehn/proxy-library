@@ -1,5 +1,6 @@
 import { BORDERS, FRAME_VERSIONS, IS_VALUES, MAX_PATTERN_LENGTH } from "./parse";
-import { TAGS, THEMES } from "./tags";
+import { TAGS } from "@/shared/kernel";
+import { THEMES } from "./tags";
 
 // Every keyword the card search understands (design docs 14, 15 and 28), modeled on Scryfall's
 // syntax guide. The Search help page shows it, and the LLM tools serve it as text

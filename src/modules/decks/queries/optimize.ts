@@ -1,4 +1,4 @@
-import { cardTags, cardThemes } from "@/shared/card-search";
+import { cardThemes } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
@@ -27,11 +27,6 @@ export type OptimizeDeckViewResult = Readonly<{
 }>;
 
 export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
-  const facts = {
-    typeLine: line.typeLine,
-    text: line.text,
-    producedMana: line.producedMana,
-  };
   return {
     oracleId: line.oracleId,
     name: line.name,
@@ -41,8 +36,8 @@ export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
     text: line.text,
     producedMana: line.producedMana,
     keywords: line.keywords,
-    roles: cardTags(facts),
-    themes: cardThemes(facts),
+    roles: line.roles,
+    themes: cardThemes(line),
     rarity: line.rarity,
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,

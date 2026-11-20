@@ -45,20 +45,12 @@ export {
   type BracketFacts,
   type BracketFlag,
 } from "./brackets";
-export {
-  type EffectExtractor,
-  type EffectPrimitive,
-  type EffectSubject,
-  type TagFacts,
-} from "./primitives";
+export { type TagFacts } from "./tags";
 export {
   CARD_FEATURES_VERSION,
-  cardTags,
   cardThemes,
   leaderThemes,
-  TAGS,
   THEME_LABELS,
   THEMES,
-  type Tag,
   type Theme,
 } from "./tags";

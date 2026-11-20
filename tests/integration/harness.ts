@@ -108,6 +108,21 @@ export async function loadFixtureCatalog(): Promise<void> {
   await makeStore({ unitOfWork, clock }).valueProducts();
 }
 
+/**
+ * What the features pass stores for a card a test inserted by hand: the arrays the SQL filters
+ * read (`role_tags`; `theme_tags` and `bracket_flags` when their recognizers arrive).
+ */
+export async function storeFeatureArrays(
+  oracleId: string,
+  arrays: Readonly<{ roleTags?: readonly string[] }>,
+): Promise<void> {
+  const roleTags = `{${(arrays.roleTags ?? []).join(",")}}`;
+  await db.execute(sql`
+    insert into card_features (oracle_id, features, features_version, role_tags, updated_at)
+    values (${oracleId}, '{}'::jsonb, 0, ${roleTags}::text[], now())
+    on conflict (oracle_id) do update set role_tags = excluded.role_tags`);
+}
+
 /** The catalog service over the recorded fixtures (no network). */
 export function fixtureCatalog() {
   return makeCatalog({

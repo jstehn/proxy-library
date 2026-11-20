@@ -106,10 +106,9 @@ export type TokenLink = Readonly<{ printingId: PrintingId; tokenId: string }>;
 export type TaggablePrinting = Pick<CardFacts, "typeLine" | "text" | "producedMana"> &
   Readonly<{ id: PrintingId }>;
 
-/** A printing's role tags and themes, as the tag pass works them out. */
+/** A printing's themes and bracket flags, as the tag pass works them out. */
 export type PrintingTags = Readonly<{
   id: PrintingId;
-  roleTags: readonly string[];
   themeTags: readonly string[];
   /** Text bracket flags only (land denial, extra turns); Game Changers have their own column. */
   bracketFlags: readonly string[];

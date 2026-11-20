@@ -1,5 +1,5 @@
 import { formatRules } from "../domain/format-rules";
-import { cardTags, cardThemes } from "@/shared/card-search";
+import { cardThemes } from "@/shared/card-search";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
@@ -78,7 +78,7 @@ function previewLineToOptimizerCard(
     text: line.text,
     producedMana: line.producedMana,
     keywords: line.keywords ?? [],
-    roles: cardTags(facts),
+    roles: line.roles ?? [],
     themes: cardThemes(facts),
     rarity: line.rarity ?? "common",
     priceCents: line.priceCents,

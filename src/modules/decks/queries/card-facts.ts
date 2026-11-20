@@ -2,15 +2,9 @@ import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
-import {
-  parseSearch,
-  TAGS,
-  THEMES,
-  type SignalCard,
-  type Tag,
-  type Theme,
-} from "@/shared/card-search";
-import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { TAGS, type Tag } from "@/shared/kernel";
+import { parseSearch, THEMES, type SignalCard, type Theme } from "@/shared/card-search";
+import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
 import { ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Card facts for the LLM tools (design doc 28): finding a card by the name a person (or a model)
@@ -81,7 +75,7 @@ type SignalRow = {
   theme_tags: string[];
 };
 
-const SIGNAL_COLUMNS = sql`p.name, p.type_line, p.keywords, p.role_tags, p.theme_tags,
+const SIGNAL_COLUMNS = sql`p.name, p.type_line, p.keywords, ${featureArray("role_tags")} as role_tags, p.theme_tags,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
 function toSignalCard(row: SignalRow): SignalCard {

@@ -1,5 +1,5 @@
-import { cardTags, type Tag, type Theme } from "@/shared/card-search";
-import { curveSlot, manaCurve, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import { type Theme } from "@/shared/card-search";
+import { type CardFacts, type CardIdentity, curveSlot, manaCurve } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
@@ -723,16 +723,8 @@ export function draftDeck(input: DraftInput): DeckDraft {
   };
 
   for (const entry of finalEntries) {
-    const tags = new Set<Tag>([
-      ...entry.candidate.roles,
-      ...cardTags({
-        typeLine: entry.candidate.typeLine,
-        text: entry.candidate.text,
-        producedMana: entry.candidate.producedMana,
-      }),
-    ]);
     for (const tag of TARGETED_TAGS) {
-      if (!tags.has(tag)) continue;
+      if (!entry.candidate.roles.includes(tag)) continue;
       if (entry.spell.pool === "owned") {
         ownedAddedByRole[tag] += entry.spell.quantity;
       } else {

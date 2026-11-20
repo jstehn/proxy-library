@@ -38,6 +38,7 @@ const gridCard = (name: string): BrowseCard => ({
   misfit: null,
   rules: rules(name),
   producedMana: [],
+  roles: [],
   text: "",
   setCode: "tst",
   collectorNumber: "1",

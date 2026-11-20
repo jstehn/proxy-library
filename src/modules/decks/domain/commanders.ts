@@ -1,4 +1,4 @@
-import type { Tag, Theme } from "@/shared/card-search";
+import type { Theme } from "@/shared/card-search";
 import {
   creatureTypes,
   deckProfile,
@@ -11,7 +11,13 @@ import {
 } from "./suggest";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
-import { COLORS, type ManaColor, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import {
+  type CardFacts,
+  type CardIdentity,
+  COLORS,
+  type ManaColor,
+  type Tag,
+} from "@/shared/kernel";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.

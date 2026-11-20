@@ -73,12 +73,8 @@ export const printings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    // Role tags and themes read from the rules text (design docs 19 and 20), stored by the sync's
-    // tag pass so suggestions can filter by them; worked out again when the rules' version grows.
-    roleTags: text("role_tags")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    // Themes read from the rules text (design doc 20), stored by the sync's tag pass so
+    // suggestions can filter by them; worked out again when the rules' version grows.
     themeTags: text("theme_tags")
       .array()
       .notNull()
@@ -100,7 +96,6 @@ export const printings = pgTable(
   (table) => [
     index("printings_set_number_idx").on(table.setCode, table.collectorNumber),
     index("printings_oracle_idx").on(table.oracleId),
-    index("printings_role_tags_idx").using("gin", table.roleTags),
     index("printings_theme_tags_idx").using("gin", table.themeTags),
     index("printings_bracket_flags_idx").using("gin", table.bracketFlags),
     index("printings_game_changer_idx")
@@ -411,9 +406,18 @@ export const cardFeatures = pgTable(
     oracleId: text("oracle_id").primaryKey(),
     features: jsonb("features").notNull(),
     featuresVersion: integer("features_version").notNull(),
+    // Copies of the features the search and the suggestions filter on (ADR 0019); `features` is the
+    // whole answer. Written by the features pass in the same row.
+    roleTags: text("role_tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamptz("updated_at").notNull(),
   },
-  (table) => [index("card_features_version_idx").on(table.featuresVersion)],
+  (table) => [
+    index("card_features_version_idx").on(table.featuresVersion),
+    index("card_features_role_tags_idx").using("gin", table.roleTags),
+  ],
 );
 
 /** Official MTG Comprehensive Rules with pgvector embeddings (design doc 60). */

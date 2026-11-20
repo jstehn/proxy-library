@@ -37,6 +37,15 @@ export type SearchContext = Readonly<{
 }>;
 
 /** Store: the printing is sold in foil or etched. */
+/**
+ * A card's stored feature array (the catalog's `card_features`, design doc 66): `role_tags`, and as
+ * their recognizers arrive `theme_tags` and `bracket_flags`. By the printing's alias; empty until
+ * the features pass has worked the card out.
+ */
+export function featureArray(column: "role_tags", printing = "p"): SQL {
+  return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
+}
+
 export const FOIL_IN_CATALOG = sql`p.finishes && array['foil', 'etched']::text[]`;
 
 /** Collection: the copy in this row is foil or etched (`column` is its finish). */
@@ -166,7 +175,7 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "fullOracle":
       return textTerm(oracleCondition(term, { withReminders: true }), comparison);
     case "tag":
-      return textTerm(sql`${value.toLowerCase()} = any(p.role_tags)`, comparison);
+      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("role_tags")})`, comparison);
     case "theme":
       return textTerm(sql`${value.toLowerCase()} = any(p.theme_tags)`, comparison);
     case "banned":

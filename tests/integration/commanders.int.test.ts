@@ -4,7 +4,16 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { commanderDetails, commandersICanBuild, makeDecks } from "@/modules/decks";
-import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  storeFeatureArrays,
+  unitOfWork,
+} from "./harness";
 
 afterAll(close);
 
@@ -35,12 +44,13 @@ async function addCard(card: TestCard): Promise<void> {
     insert into printings (id, set_code, collector_number, name, oracle_id, scryfall_id, rarity,
                            colors, color_identity, mana_value, type_line, layout, finishes,
                            border_color, frame_version, frame_effects, promo_types, is_full_art,
-                           variant_label, faces, legalities, role_tags, edhrec_rank)
+                           variant_label, faces, legalities, edhrec_rank)
     values (${id}, 'BLB', ${`${collectorNumber}`}, ${card.name}, ${oracleId}, ${randomUUID()},
             'rare', ${textArray(card.identity)}, ${textArray(card.identity)}, 3, ${card.typeLine},
             'normal', '{nonfoil}', 'black', '2015', '{}', '{}', false, '',
             ${JSON.stringify(faces)}::jsonb, '{"commander": "legal"}'::jsonb,
-            ${textArray(card.roles ?? [])}, ${card.edhrecRank ?? null})`);
+            ${card.edhrecRank ?? null})`);
+  await storeFeatureArrays(oracleId, { roleTags: card.roles });
   if (card.priceCents !== undefined) {
     await db.execute(sql`
       insert into price_snapshots (printing_id, finish, day, usd_cents)

@@ -1,6 +1,6 @@
 "use client";
 import type { DeckLine } from "@/modules/decks";
-import { COLORS, curveSlotLabel } from "@/shared/kernel";
+import { COLORS, curveSlotLabel, type Tag, TAGS } from "@/shared/kernel";
 import {
   deckStats,
   EARLY_RAMP_MAX_MV,
@@ -12,7 +12,6 @@ import {
   TYPE_ORDER,
   type ManaSource,
 } from "@/modules/decks/client";
-import { TAGS, type Tag } from "@/shared/card-search";
 import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { TAG_LABELS } from "@/app/decks/labels";

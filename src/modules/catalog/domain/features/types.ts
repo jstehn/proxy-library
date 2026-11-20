@@ -1,3 +1,4 @@
+import type { Tag } from "@/shared/kernel";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */
@@ -20,6 +21,8 @@ export type TapMana = Readonly<{
 /** Every feature a recognizer fills, by field name. Each field has exactly one recognizer. */
 export type CardFeatureFields = Readonly<{
   tapMana: TapMana;
+  /** What job the card does in a deck (ramp, draw, removal, …), in `TAGS` order. */
+  roleTags: readonly Tag[];
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

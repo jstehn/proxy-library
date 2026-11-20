@@ -1,3 +1,4 @@
+import { type Tag } from "@/shared/kernel";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Board,
@@ -8,7 +9,6 @@ import type {
   OtherDeckUse,
   SuggestionList,
 } from "@/modules/decks";
-import type { Tag } from "@/shared/card-search";
 import type { BuilderDeck } from "./builder-deck";
 import { provisionalLine } from "./derive";
 import type { Selection } from "./selection/selection";

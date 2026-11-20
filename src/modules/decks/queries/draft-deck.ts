@@ -1,8 +1,10 @@
+import { featureArray } from "@/shared/card-search/sql";
 import { formatRules } from "../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
+import { TAGS, type Tag } from "@/shared/kernel";
+import { THEMES, type Theme } from "@/shared/card-search";
 import type { UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
@@ -30,7 +32,7 @@ const NON_LAND = sql`split_part(p.type_line, ' // ', 1) !~ '\\yLand\\y'`;
 
 function spellColumns(format: string) {
   return sql`p.oracle_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, p.role_tags, p.theme_tags, p.produced_mana, p.is_game_changer,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, p.theme_tags, p.produced_mana, p.is_game_changer,
     coalesce((p.legalities->>${format}) = 'restricted', false) as is_restricted,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text`;
 }
@@ -121,7 +123,7 @@ export async function draftForDeck(
       : db.execute<SpellRow>(sql`
           with matching as (
             select distinct on (p.oracle_id) p.oracle_id,
-                   ((p.role_tags && ${textArray(wantedRoles)})::int
+                   ((${featureArray("role_tags")} && ${textArray(wantedRoles)})::int
                     + (p.theme_tags && ${textArray(wantedThemes)})::int
                     + (p.keywords && ${textArray(profile.keywords)})::int
                     + ${

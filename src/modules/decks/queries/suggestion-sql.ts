@@ -1,8 +1,9 @@
+import { featureArray } from "@/shared/card-search/sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, textArray } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
-import { ColorSchema, FinishSchema, type UserId } from "@/shared/kernel";
+import { THEMES, type Theme } from "@/shared/card-search";
+import { ColorSchema, FinishSchema, type Tag, TAGS, type UserId } from "@/shared/kernel";
 
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import type { SuggestionCard, SuggestionContext, Wanted } from "../domain/suggestion-types";
@@ -34,7 +35,7 @@ export function tribePattern(tribes: readonly string[]): string | null {
 /** How many kinds of thing a printing shares with what's wanted: SQL's rough first cut. */
 function sharedCount(want: Wanted): SQL {
   const tribes = tribePattern(want.tribes);
-  return sql`((p.role_tags && ${textArray(want.roles)})::int
+  return sql`((${featureArray("role_tags")} && ${textArray(want.roles)})::int
             + (p.theme_tags && ${textArray(want.themes)})::int
             + (p.keywords && ${textArray(want.keywords)})::int
             + ${tribes === null ? sql`0` : sql`(split_part(p.type_line, ' // ', 1) ~ ${tribes} or 'Changeling' = any(p.keywords))::int`})`;
@@ -93,7 +94,7 @@ function edhrecCte(commanderOracleIds: string[]): SQL {
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
 export function candidateColumns(context: SuggestionContext): SQL {
   return sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, p.role_tags, p.theme_tags, p.color_identity,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, p.theme_tags, p.color_identity,
     p.legalities->>${context.format} as legality,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
     exists (select 1 from jsonb_array_elements(p.faces) f

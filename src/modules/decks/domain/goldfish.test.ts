@@ -26,7 +26,7 @@ function buildLibrary(landsCount: number, rampCount: number, fillerCount: number
       quantity: rampCount,
       typeLine: "Creature — Elf Druid",
       manaValue: 1,
-      text: "{T}: Add {G}.",
+      roles: ["ramp"],
       producedMana: ["G"],
     });
   }
@@ -39,7 +39,6 @@ function buildLibrary(landsCount: number, rampCount: number, fillerCount: number
       quantity: fillerCount,
       typeLine: "Creature — Giant",
       manaValue: 4,
-      text: "",
     });
   }
   return library(lines);
