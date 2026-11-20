@@ -44,7 +44,8 @@ import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring
 import type { Store } from "@/modules/store";
 import { wireStoreCapabilities } from "@/modules/store/wiring";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
-import type { makeReddit } from "@/modules/reddit";
+import type { RedditService } from "@/modules/reddit";
+import { wireRedditCapabilities } from "@/modules/reddit/wiring";
 import type { makeYoutube } from "@/modules/youtube";
 import type { DbExecutor } from "@/shared/db";
 import type { Clock } from "@/shared/kernel";
@@ -72,7 +73,7 @@ type CapabilityDependencies = Readonly<{
   wishlist: Wishlist;
   outsideData: OutsideDataService;
   youtube: ReturnType<typeof makeYoutube>;
-  reddit: ReturnType<typeof makeReddit>;
+  reddit: RedditService;
   decks: Decks;
   previews: PreviewRepository;
   packs: Packs;
@@ -139,7 +140,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     },
     now: () => clock.now(),
     youtube: dependencies.youtube,
-    reddit: dependencies.reddit,
+    ...wireRedditCapabilities(dependencies),
     // These read across modules (the game's collection, the real one, the store, the decks and
     // the wishlist), so they are joined here rather than in one module's wiring.
     rulesLookup: makeRulesLookup({
