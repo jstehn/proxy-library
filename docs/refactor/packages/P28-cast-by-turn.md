@@ -96,6 +96,13 @@ drafts copy) into one that counts Kindred cards everywhere, deleting the other i
 P15's handoff names both. And merge P15's two cast simulators (`canCastByTurn`,
 `simulateCastOnCurve`) into the one simulator this package builds on `playOpening`.
 
+**A UI element (owner, 2026-11-20):** the builder shows the same distribution. The commander's
+"castable by turn" curve (turns 1 to 10, cumulative, plus the median turn) goes in the stats panel
+beside the mana curve. A selected card shows the same small chart on demand ("When can I cast
+this?"). It reads through the one capability the tool uses, via a builder action, and is labelled
+as a measurement ("2,000 simulated games"), not a score. Its lines are reported separately (a
+feature, like P13's haste theme), and a by-eye check goes in `deferred-checks.md`.
+
 ## What not to do
 
 - Don't recreate an interactive session or a stateful simulator. Runs are stateless and seeded.
