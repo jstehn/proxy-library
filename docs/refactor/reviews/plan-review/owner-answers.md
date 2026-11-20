@@ -73,3 +73,15 @@ These answers shape the revised plan. Questions without an answer yet are listed
 - **Dark mode:** follows the system setting only; no toggle.
 
 **The revised plan was approved on 2026-11-19.**
+
+**Test layout (2026-11-19): as recommended.** A test lives with the module it covers, unit or
+integration; `tests/` keeps only end-to-end specs, journeys across modules, fixtures and setup.
+P20's step 6 does the move.
+
+**P14's questions (2026-11-20):**
+
+- Merge P14 after P13 and accept the small net growth that remains (P12's +42 less P14's −7).
+- `blitz` in the deck profile reads Scryfall's keywords: accepted. To find enablers, P13 adds a
+  `grants` recognizer and a `haste` theme (makes: grants haste; uses: haste or blitz creatures), so
+  `theme:haste` and the deck tools find them. `o:` and `kw:` searches work as before.
+- The "French vanilla" recognizer (doc 66 section 7) is dropped until a feature needs it.
