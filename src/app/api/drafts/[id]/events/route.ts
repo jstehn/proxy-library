@@ -9,14 +9,14 @@ import { readPage } from "@/server/page-instance";
 const HEARTBEAT_MILLISECONDS = 15_000;
 
 export async function GET(request: Request, context: RouteContext<"/api/drafts/[id]/events">) {
-  const { actor, capabilities } = await readPage({ allowVisitors: true });
+  const { actor, capabilities, reads } = await readPage({ allowVisitors: true });
   if (actor === null) return new Response("Sign in first", { status: 401 });
   const raw = Number((await context.params).id);
   if (!Number.isSafeInteger(raw) || raw <= 0) return new Response("Not found", { status: 404 });
   const draftId = DraftId.of(raw);
 
   const { drafts } = capabilities;
-  const version = await capabilities.draftReads.version(draftId);
+  const version = await reads.drafts.version(actor, draftId);
   if (version === null) return new Response("Not found", { status: 404 });
 
   const encoder = new TextEncoder();

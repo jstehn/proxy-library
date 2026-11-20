@@ -1,4 +1,5 @@
 import { activityQueries } from "@/modules/activity";
+import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
 import { tradeQueries } from "@/modules/trades";
@@ -17,6 +18,7 @@ import { bindDb, type DbExecutor } from "@/shared/db";
 export function buildReads(db: DbExecutor) {
   return {
     activity: bindDb(db, activityQueries),
+    drafts: bindDb(db, draftQueries),
     inventory: bindDb(db, inventoryQueries),
     packs: bindDb(db, packsQueries),
     social: bindDb(db, socialQueries),

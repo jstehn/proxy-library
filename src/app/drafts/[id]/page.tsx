@@ -48,7 +48,7 @@ import {
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
 
 // One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
-// Deal Broker stage and the finished pool. Names, deadlines and presence come from `draftView`;
+// Deal Broker stage and the finished pool. Names, deadlines and presence come from `reads.drafts.view`;
 // everything about cards comes from `drafts.view`, which returns only what this player may see
 // (design doc 18, section 4). LiveUpdates reloads both whenever the draft changes.
 
@@ -88,7 +88,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
   if (!Number.isSafeInteger(draftId) || draftId <= 0) notFound();
   const now = capabilities.now();
   const [view, seen] = await Promise.all([
-    capabilities.draftReads.view(draftId, actor.userId, now),
+    reads.drafts.view(actor, draftId, now),
     capabilities.drafts.view(actor, DraftId.of(draftId)),
   ]);
   if (view === null || seen === null) notFound();
@@ -177,7 +177,7 @@ async function loreSources(
   if (![...cards.values()].some((card) => card.name === "Lore Seeker")) return null;
   const [items, options, prices] = await Promise.all([
     reads.inventory.unopenedItems(actor),
-    capabilities.draftReads.boosterOptions(),
+    reads.drafts.boosterOptions(),
     reads.store.packMsrps(),
   ]);
   return {

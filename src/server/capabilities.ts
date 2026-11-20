@@ -1,5 +1,4 @@
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
-import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
@@ -34,7 +33,7 @@ import { wishesForCardOf, wishlistQueries, type Wishlist } from "@/modules/wishl
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
-import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
+import { draftQueries, type makeDrafts } from "@/modules/drafts";
 import type { makePacks } from "@/modules/packs";
 import type { makeResetPlayer } from "@/modules/reset";
 import { socialQueries, type makeSocial } from "@/modules/social";
@@ -109,7 +108,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireCatalogCapabilities({ db }),
     ...wireCollectionCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
-    ...wireDraftCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
       clock,
@@ -127,7 +125,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
         dependencies.services.wallet.refreshWallet(userId),
         tradeQueries.waitingForYou(db, actor),
         wishlistQueries.atTarget(db, actor),
-        activeDraftOf(db, userId),
+        draftQueries.activeDraftOf(db, actor),
         socialQueries.incomingRequestCount(db, actor),
       ]);
       return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
