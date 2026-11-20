@@ -3,11 +3,11 @@ import {
   deckProfile,
   rank,
   scoreForDeck,
-  strength,
   type CandidateCard,
   type DeckFingerprint,
   type Scored,
 } from "./suggest";
+import { strength } from "./rate";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import {

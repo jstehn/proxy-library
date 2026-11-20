@@ -2,8 +2,8 @@ import { type Tag, type Theme } from "@/shared/kernel";
 import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
 import { type Bracket, type BracketLine } from "./brackets";
 import { type Format } from "./deck";
-import type { RatingPart } from "./rate";
-import { type EdhrecSignal, type ProfileLine, type Scored } from "./suggest";
+import type { CardRating, EdhrecSignal } from "./rate";
+import { type ProfileLine, type Scored } from "./suggest";
 import type { BrowseCard } from "./browse-card";
 
 // The shapes of deck suggestions (design doc 20, section 9).
@@ -22,8 +22,7 @@ export type SuggestionCard = BrowseCard &
 export type Suggestion = Readonly<{
   card: SuggestionCard;
   reasons: Scored["reasons"];
-  rating: number;
-  ratingParts: readonly RatingPart[];
+  rating: CardRating;
 }>;
 
 /** One list of suggestions: cards you own first, then cards in the store. */

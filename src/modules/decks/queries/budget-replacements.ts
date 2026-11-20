@@ -12,7 +12,7 @@ import { hasTypeWord, type Tag, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/deck";
 import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
-import { deckProfile, toRatingProfile } from "../domain/suggest";
+import { deckProfile } from "../domain/suggest";
 import { rankBudgetReplacements } from "../domain/replacements";
 import { isLand } from "../domain/stats";
 import { cheapestOfCards } from "./candidate-pool";
@@ -56,7 +56,6 @@ export async function budgetReplacements(
   const limitCards = options.limitCards ?? 5;
 
   const profile = deckProfile(context.lines, context.format);
-  const rProfile = toRatingProfile(profile);
 
   // Determine target expensive non-land cards in the deck
   const targetIds = options.oracleId
@@ -174,7 +173,7 @@ export async function budgetReplacements(
       return rankBudgetReplacements(
         { priceCents: targetPriceCents },
         pool.map((card) => ({ card, similarity: simById.get(card.oracleId) ?? 0 })),
-        rProfile,
+        profile,
         {
           targetBracket: context.targetBracket,
           maxPriceCents: effectiveMaxPrice,

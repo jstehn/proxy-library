@@ -9,7 +9,7 @@ import { BOARDS, DeckId, FORMATS, type Format } from "../domain/deck";
 import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimize";
 import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
-import type { EdhrecSignal } from "../domain/suggest";
+import type { EdhrecSignal } from "../domain/rate";
 import { decks, deckSnapshots } from "../infrastructure/schema";
 import type { DeckLine } from "../domain/deck-view";
 import { deckView, loadEdhrecSignals } from "./decks";

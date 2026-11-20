@@ -44,19 +44,23 @@ export type CardRating = Readonly<{
   parts: readonly RatingPart[];
 }>;
 
-export type RatingEdhrecSignal = Readonly<{
+/** Community Commander statistics for a card under this deck's commander (design doc 45). */
+export type EdhrecSignal = Readonly<{
   inclusionRate: number;
   synergy: number;
   totalDecks?: number;
 }>;
 
-export type RatingRoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
+/** A role the deck is short of: `count` cards do it, and its format wants `target`. */
+export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
 
+/** What a deck is about: worked out from its lines (`deckProfile`), never stored. */
 export type RatingProfile = Readonly<{
   format: Format;
   themes: readonly Theme[];
+  /** Creature types the deck cares about, singular: "Elf". */
   tribes: readonly string[];
-  gaps: readonly RatingRoleGap[];
+  gaps: readonly RoleGap[];
   keywords: readonly string[];
   signals: DeckSignalProfile;
   averageManaValue: number;
@@ -73,10 +77,11 @@ export type RatingCandidate = Pick<CardIdentity, "oracleId"> &
     themes: readonly Theme[];
     rarity: string;
     priceCents: number | null;
-    edhrec?: RatingEdhrecSignal | null;
+    edhrec?: EdhrecSignal | null;
     edhrecRank?: number | null;
     preconCount?: number | null;
-    isGameChanger?: boolean;
+    /** The card takes the deck over the bracket its owner aims for (cuts say so, design doc 31). */
+    overBracket?: boolean;
     /** Names of cards already in the deck that form a two-card combo with this candidate. */
     comboPartners?: readonly string[] | null;
     /** Mean cosine similarity to top-5 most similar deck cards, in [0, 1] (design doc 53). */
@@ -85,7 +90,6 @@ export type RatingCandidate = Pick<CardIdentity, "oracleId"> &
 
 export type RatingOptions = Readonly<{
   maxCardPriceCents?: number | null;
-  penalizeGameChanger?: boolean;
   targetBracket?: Bracket | null;
   weightsOverride?: RatingWeights;
 }>;
@@ -101,23 +105,48 @@ export const RATING_BIAS = -1.2;
 
 export const EMBED_SIM_BASELINE = 0.55;
 
-// The weights were fitted from data by `scripts/fit-rating-weights.ts`.
+/**
+ * THE weight table: the one scorer (`rateCard`) judges a card for suggestions, cuts, "cards like
+ * this one" and draft-a-deck with these numbers. They are FITTED FROM DATA, not tuned by hand:
+ * `scripts/fit-rating-weights.ts` runs a class-balanced logistic regression (`fitLogisticWeights`)
+ * per power tier, on cards held out of real Commander precon decklists (positives) against cards
+ * that aren't in the deck (negatives), and prints the numbers pasted here (last fitted
+ * 2026-11-13). Only the four the data can't show (the two caps and the two penalties) are set by
+ * hand. This table is the "upgraded" tier; the other two tiers below override the fitted ones.
+ * If a result looks wrong, fit again or tell the owner; don't edit one number.
+ */
 export const RATING_WEIGHTS = {
+  /** Per point of produces/consumes synergy with what the deck does (signals.ts). */
   synergy: 0.35,
+  /** Most synergy can add (set by hand). */
   synergyCap: 2.2,
+  /** Per theme of the deck the card plays into. */
   theme: 0.6,
+  /** Per tribe of the deck the card belongs to (or a changeling). */
   tribe: 0.689,
+  /** Per keyword the commander has and the card shares. */
   keyword: 0.229,
+  /** Most keywords counted (set by hand). */
   keywordCap: 2,
+  /** Per unit of text similarity to the deck above `EMBED_SIM_BASELINE`. */
   embedSim: 7.227,
+  /** Per unit of how short the deck is of a role the card does. */
   roleNeed: 0.643,
+  /** Per unit of EDHREC log-lift (how much likelier it is under this commander). */
   edhrecLift: 0.95,
+  /** Per unit of EDHREC inclusion rate under this commander. */
   edhrecInclusion: 1.2,
+  /** Per two-card combo with a card in the deck (at most two). */
   combo: 1.0,
+  /** Per unit of the card's general quality (EDHREC rank, precons; rarity and price if unknown). */
   quality: 0.834,
+  /** Expensive card in a deck whose curve is already high. */
   topHeavyPenalty: -0.395,
+  /** Card of a mana value whose slot of the curve is already full. */
   saturatedSlotPenalty: -0.416,
+  /** Over the player's price cap (set by hand). */
   pricePenalty: -0.9,
+  /** Takes the deck over its target bracket (set by hand). */
   bracketPenalty: -1.4,
 } as const;
 
@@ -172,6 +201,16 @@ const RARITY_PRIOR: Readonly<Record<string, number>> = {
   mythic: 0.8,
 };
 
+/**
+ * How strong a card is on its own, about 0–1.6, from rarity and price: the quality prior's
+ * fallback, and a tie-break where nothing better is known.
+ */
+export function strength(card: Pick<RatingCandidate, "rarity" | "priceCents">): number {
+  const price = card.priceCents ?? 0;
+  // log10 squeezes prices: $1 adds a little, $10 adds 0.8, $100 no more than $10.
+  return (RARITY_PRIOR[card.rarity] ?? 0.3) + 0.8 * Math.min(1, Math.log10(1 + price / 100));
+}
+
 /** Global card quality prior in [0, 1] from edhrec_rank + precon frequency (fallback: rarity/price). */
 export function qualityPrior(
   card: Pick<RatingCandidate, "edhrecRank" | "preconCount" | "rarity" | "priceCents">,
@@ -188,10 +227,7 @@ export function qualityPrior(
     if (hasRank && hasPrecon) return 0.75 * rankScore + 0.25 * preconScore;
     return hasRank ? rankScore : preconScore;
   }
-  const price = card.priceCents ?? 0;
-  const fallback =
-    (RARITY_PRIOR[card.rarity] ?? 0.3) + 0.8 * Math.min(1, Math.log10(1 + price / 100));
-  return Math.max(0, Math.min(1, fallback / 1.6));
+  return strength(card) / 1.6;
 }
 
 const LIFT_EPS = 0.005;
@@ -220,7 +256,7 @@ export type RatingFeatureVector = Readonly<{
   topHeavy: number;
   saturatedSlot: number;
   overPriceCap: number;
-  gameChanger: number;
+  overBracket: number;
 }>;
 
 type ComputedRatingFeatures = Readonly<{
@@ -317,7 +353,7 @@ function computeRatingFeatures(
       ? 1
       : 0;
 
-  const gameChanger = options.penalizeGameChanger && card.isGameChanger ? 1 : 0;
+  const overBracket = card.overBracket ? 1 : 0;
 
   return {
     features: {
@@ -334,7 +370,7 @@ function computeRatingFeatures(
       topHeavy,
       saturatedSlot,
       overPriceCap,
-      gameChanger,
+      overBracket,
     },
     synergyMatches: synergyMatchList,
     fitLabels,
@@ -480,11 +516,11 @@ export function rateCard(
   }
 
   // 8. Optional bracket penalty (#56)
-  if (features.gameChanger > 0) {
+  if (features.overBracket > 0) {
     parts.push({
       kind: "bracketPenalty",
       contribution: weights.bracketPenalty,
-      label: "Game Changer",
+      label: "over your target bracket",
     });
   }
 

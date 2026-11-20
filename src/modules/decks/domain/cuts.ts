@@ -1,30 +1,25 @@
-import { THEME_LABELS, type BracketFlag } from "@/shared/kernel";
+import { type BracketFlag } from "@/shared/kernel";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";
+import { type EdhrecSignal, rateCard } from "./rate";
 import { deckStats, isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import {
-  deckFit,
   deckProfile,
-  strength,
-  type EdhrecSignal,
+  edhrecReason,
+  fitReasons,
+  type CandidateCard,
+  type EdhrecReason,
   type ProfileLine,
   type Reason,
 } from "./suggest";
-import {
-  EMBED_SIM_BASELINE,
-  edhrecLogLift,
-  qualityPrior,
-  powerTierForBracket,
-  type PowerTier,
-} from "./rate";
-import { NO_SIGNALS, synergyMatches } from "./signals";
 
-// Cards to cut (design doc 32, section 3): the deck's weakest main-deck cards, weakest first,
-// each with the reasons for its score. The same local rules as suggestions (design doc 20) judge
-// how well a card fits; roles, the curve, the target bracket and ownership adjust it. Pure: the
-// builder runs it in the browser and `rank_cuts` on the server.
+// Cards to cut (design doc 32, section 3): the deck's main-deck cards that help it least, in that
+// order, each with the reasons. They're judged by `rateCard`, the same scorer that orders
+// suggestions, so "how much does this card help this deck?" has one answer; roles, the curve and
+// the target bracket reach it as its inputs. Pure: the builder runs it in the browser and
+// `rank_cuts` on the server.
 
 /** A deck line as the cut ranking reads it. */
 export type CutLine = ProfileLine &
@@ -47,14 +42,14 @@ export type CutLine = ProfileLine &
     embedSim?: number | null;
   }>;
 
-/** Why a card scores as it does; the builder and `rank_cuts` put these into words. */
+/** Why a card is listed as it is; the builder and `rank_cuts` put these into words. */
 export type CutReason =
   /** Fits none of the deck's themes, tribes or commander keywords. */
   | Readonly<{ kind: "noFit" }>
   /** What it does fit (design doc 20's reasons): why to keep it. */
   | Readonly<{ kind: "fits"; reasons: readonly Reason[] }>
   /** Popular or high-synergy with this commander on EDHREC (design doc 45). */
-  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number; lift?: number }>
+  | EdhrecReason
   /** The deck has more of this role than its target needs. */
   | Readonly<{ kind: "surplusRole"; tag: TargetedTag; count: number; target: number }>
   /** The deck has no more of this role than it needs: cutting it would leave a gap. */
@@ -71,65 +66,25 @@ export type CutReason =
 export type RankedCut = Readonly<{
   oracleId: string;
   name: string;
-  /** How much the card earns its place: lower is a better cut. */
-  keepScore: number;
   reasons: readonly CutReason[];
 }>;
 
 export type CutContext = Readonly<{ format: Format; targetBracket: Bracket | null }>;
 
-/** The points each part of the keep score is worth (section 3's table), in one place to tune. */
-const CUT_WEIGHTS = {
-  neededRole: 3,
-  surplusRole: -1,
-  /** A role counts as surplus only this far over its target. */
-  surplusMargin: 2,
-  /** Points lost per mana above 4, at most `topHeavyMost`. */
-  topHeavyPerMana: -1,
-  topHeavyMost: -3,
-  topHeavyFrom: 5,
-  overBracket: -5,
-  notOwned: -1,
-  strength: 0.5,
-  edhrecSynergy: 2,
-  edhrecInclusion: 1.5,
-  embedSim: 8,
-} as const;
-
-export type CutWeights = { readonly [K in keyof typeof CUT_WEIGHTS]: number };
-
-const CUT_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, CutWeights>> = {
-  casual: {
-    ...CUT_WEIGHTS,
-    topHeavyPerMana: -0.5,
-    topHeavyMost: -1.5,
-    strength: 0.3,
-    edhrecInclusion: 1.0,
-  },
-  upgraded: CUT_WEIGHTS,
-  optimized: {
-    ...CUT_WEIGHTS,
-    topHeavyPerMana: -1.5,
-    topHeavyMost: -4.5,
-    strength: 0.8,
-    edhrecSynergy: 2.5,
-    edhrecInclusion: 2.0,
-  },
-};
-
-function cutWeightsForBracket(targetBracket: Bracket | null): CutWeights {
-  return CUT_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
-}
+/** A role counts as surplus only this far over its target. */
+const SURPLUS_MARGIN = 2;
+/** The mana value from which a card is "top heavy" in a deck whose curve is high. */
+const TOP_HEAVY_FROM = 5;
+/** A card with this much EDHREC inclusion is a staple, even if it fits no theme. */
+const STAPLE_INCLUSION = 0.25;
 
 /**
- * The deck's cut candidates, weakest first: main-deck cards that aren't lands (invariant 4).
- * Equal scores sort by name, then oracle id (invariant 5).
+ * The deck's cut candidates, the card that helps the deck least first: main-deck cards that
+ * aren't lands (invariant 4). Equal ratings put the cards you don't own first, then sort by name,
+ * then oracle id (invariant 5).
  */
 export function rankCuts(lines: readonly CutLine[], context: CutContext): RankedCut[] {
-  const weights = cutWeightsForBracket(context.targetBracket);
   const profile = deckProfile(lines, context.format);
-  // Roles are judged below, against the targets; the fit is only themes, tribes and keywords.
-  const fitProfile = { ...profile, gaps: [] };
   const stats = deckStats(lines);
   const targets = formatRules(context.format).roleTargets;
   const overFlags =
@@ -140,115 +95,65 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
 
   const candidates = lines.filter((line) => line.board === "main" && !isLand(line.typeLine));
   return candidates
-    .map((line): RankedCut => {
+    .map((line) => {
+      const flags = line.bracketFlags.filter((flag) => overFlags.includes(flag));
+      const overBracket = context.targetBracket !== null && flags.length > 0;
+      const card: CandidateCard = {
+        ...line,
+        roles: line.roles ?? [],
+        themes: line.themes ?? [],
+        priceCents: line.priceCents ?? null,
+        overBracket,
+        pool: "owned",
+      };
+      const rating = rateCard(card, profile, { targetBracket: context.targetBracket });
       const reasons: CutReason[] = [];
-      let score = 0;
 
-      const fit = deckFit(
-        {
-          oracleId: line.oracleId,
-          name: line.name,
-          typeLine: line.typeLine,
-          manaValue: line.manaValue,
-          keywords: line.keywords,
-          roles: [], // judged below, against the role targets
-          themes: line.themes ?? [],
-          rarity: line.rarity,
-          priceCents: line.priceCents ?? null,
-          pool: "owned",
-        },
-        fitProfile,
-      );
-      const synergy = profile.signals
-        ? synergyMatches(line.signals ?? NO_SIGNALS, profile.signals)
-        : { total: 0, matches: [] };
-      const allFitReasons = [...fit.reasons];
-      if (synergy.total > 0 && synergy.matches.length > 0) {
-        const top = synergy.matches
-          .slice(0, 2)
-          .map((m) => `${THEME_LABELS[m.tag]} ×${m.deckWeight}`)
-          .join(", ");
-        allFitReasons.push({ kind: "synergy", label: `matches ${top}` });
-      }
-      const totalFitPoints = fit.points + Math.min(3, synergy.total * 0.75);
-      const isStaple = Boolean(line.edhrec && line.edhrec.inclusionRate >= 0.25);
-      if (totalFitPoints === 0 && !isStaple) reasons.push({ kind: "noFit" });
-      else if (totalFitPoints > 0) reasons.push({ kind: "fits", reasons: allFitReasons });
-      score += totalFitPoints;
+      // Roles are judged below, against the targets; the fit is themes, tribes and keywords.
+      const fit = fitReasons(card, { ...profile, gaps: [] });
+      const synergy = rating.parts.find((part) => part.kind === "synergy");
+      if (synergy) fit.push({ kind: "synergy", label: synergy.label });
+      if (fit.length > 0) reasons.push({ kind: "fits", reasons: fit });
+      else if ((line.edhrec?.inclusionRate ?? 0) < STAPLE_INCLUSION)
+        reasons.push({ kind: "noFit" });
 
       if (targets !== null) {
-        const roles = line.roles ?? [];
-        for (const tag of TARGETED_TAGS.filter((one) => roles.includes(one))) {
+        for (const tag of TARGETED_TAGS.filter((one) => (line.roles ?? []).includes(one))) {
           const count = stats.tags[tag];
           const target = targets[tag];
-          if (count <= target) {
-            score += weights.neededRole;
-            reasons.push({ kind: "neededRole", tag, count, target });
-          } else if (count > target + weights.surplusMargin) {
-            score += weights.surplusRole;
+          if (count <= target) reasons.push({ kind: "neededRole", tag, count, target });
+          else if (count > target + SURPLUS_MARGIN) {
             reasons.push({ kind: "surplusRole", tag, count, target });
           }
         }
       }
 
-      if (isHigh && line.manaValue >= weights.topHeavyFrom) {
-        score += Math.max(weights.topHeavyMost, weights.topHeavyPerMana * (line.manaValue - 4));
-        reasons.push({
-          kind: "topHeavy",
-          manaValue: line.manaValue,
-          average: Math.round(stats.averageManaValue * 100) / 100,
-        });
+      if (isHigh && line.manaValue >= TOP_HEAVY_FROM) {
+        const average = Math.round(stats.averageManaValue * 100) / 100;
+        reasons.push({ kind: "topHeavy", manaValue: line.manaValue, average });
       }
-
-      const flags = line.bracketFlags.filter((flag) => overFlags.includes(flag));
-      if (context.targetBracket !== null && flags.length > 0) {
-        score += weights.overBracket;
+      if (context.targetBracket !== null && overBracket) {
         reasons.push({ kind: "overBracket", target: context.targetBracket, flags });
       }
-
-      if (line.owned < line.quantity) {
-        score += weights.notOwned;
-        reasons.push({ kind: "notOwned", short: line.quantity - line.owned });
-      }
-
-      if (line.edhrec && (line.edhrec.synergy >= 0.15 || line.edhrec.inclusionRate >= 0.25)) {
-        const lift = Math.max(
-          0,
-          Math.min(2, edhrecLogLift(line.edhrec.inclusionRate, line.edhrec.synergy)),
-        );
-        score +=
-          weights.edhrecSynergy * lift +
-          weights.edhrecInclusion * Math.max(0, line.edhrec.inclusionRate);
-        reasons.push({
-          kind: "edhrec",
-          inclusionPct: Math.round(line.edhrec.inclusionRate * 100),
-          synergyPct: Math.round(line.edhrec.synergy * 100),
-          lift: Math.round(lift * 100) / 100,
-        });
-      }
-
-      if (line.embedSim != null && line.embedSim > EMBED_SIM_BASELINE) {
-        score += weights.embedSim * (line.embedSim - EMBED_SIM_BASELINE);
+      const short = Math.max(0, line.quantity - line.owned);
+      if (short > 0) reasons.push({ kind: "notOwned", short });
+      const edhrec = edhrecReason(line.edhrec, 0.15, STAPLE_INCLUSION);
+      if (edhrec !== null) reasons.push(edhrec);
+      if (line.embedSim != null && rating.parts.some((part) => part.kind === "embedSim")) {
         reasons.push({ kind: "embedSim", similarityPct: Math.round(line.embedSim * 100) });
       }
-
-      const hasRichPrior = line.edhrecRank != null || (line.preconCount ?? 0) > 0;
-      score += hasRichPrior
-        ? weights.strength *
-          5.0 *
-          qualityPrior({
-            edhrecRank: line.edhrecRank,
-            preconCount: line.preconCount,
-            rarity: line.rarity,
-            priceCents: line.priceCents ?? null,
-          })
-        : weights.strength * strength({ rarity: line.rarity, priceCents: line.priceCents ?? null });
-      return { oracleId: line.oracleId, name: line.name, keepScore: score, reasons };
+      return {
+        cut: { oracleId: line.oracleId, name: line.name, reasons },
+        logit: rating.logit,
+        short,
+      };
     })
     .sort(
       (a, b) =>
-        a.keepScore - b.keepScore ||
-        a.name.localeCompare(b.name) ||
-        a.oracleId.localeCompare(b.oracleId),
-    );
+        a.logit - b.logit ||
+        b.short - a.short ||
+        a.cut.name.localeCompare(b.cut.name) ||
+        a.cut.oracleId.localeCompare(b.cut.oracleId),
+    )
+    .map((entry) => entry.cut);
 }

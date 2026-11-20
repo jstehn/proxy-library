@@ -151,10 +151,7 @@ function best(
     .flatMap((scored) => {
       const card = byId.get(scored.card.oracleId);
       if (card === undefined) return [];
-      const rating =
-        scored.rating?.rating ??
-        Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp(-scored.score)))));
-      return [{ card, reasons: scored.reasons, rating, ratingParts: scored.rating?.parts ?? [] }];
+      return [{ card, reasons: scored.reasons, rating: scored.rating }];
     });
 }
 
@@ -238,7 +235,8 @@ export async function deckSuggestions(
     hiddenOverTarget: countScoring(over, forDeckScore),
   };
   const forRoles = profile.gaps.map((gap) => {
-    const forRoleScore = (card: CandidateCard) => scoreForRole(card, gap.tag, profile);
+    const forRoleScore = (card: CandidateCard) =>
+      scoreForRole(card, gap.tag, profile, { targetBracket: context.targetBracket });
     return {
       ...gap,
       owned: best(owned.kept, forRoleScore, 6),
@@ -300,19 +298,9 @@ export async function similarCards(
       storeRows.rows.map((row) => toCard(row, "store", withoutTarget)),
       withoutTarget,
     );
-    const embedLikeScore = (card: CandidateCard): Scored | null => {
-      const sim = simById.get(card.oracleId) ?? 0;
-      const base = scoreLike(card, target);
-      const reasons: Scored["reasons"][number][] = [
-        ...(base?.reasons ?? []),
-        { kind: "embedSim", similarityPct: Math.round(sim * 100) },
-      ];
-      return {
-        card,
-        score: sim * 10 + (base?.score ?? 0) * 0.25,
-        reasons,
-      };
-    };
+    // The card's text similarity to the target is one more input of the one scorer.
+    const embedLikeScore = (card: CandidateCard) =>
+      scoreLike({ ...card, embedSim: simById.get(card.oracleId) ?? 0 }, target);
     return {
       owned: best(owned.kept, embedLikeScore, 6),
       store: best(store.kept, embedLikeScore, 6),
@@ -390,11 +378,7 @@ export async function budgetList(
   );
   const picks = budgetPicks(scored, budgetCents, BUDGET_LIST_MAXIMUM).flatMap((pick) => {
     const card = byId.get(pick.card.oracleId);
-    if (card === undefined) return [];
-    const rating =
-      pick.rating?.rating ??
-      Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp(-pick.score)))));
-    return [{ card, reasons: pick.reasons, rating, ratingParts: pick.rating?.parts ?? [] }];
+    return card === undefined ? [] : [{ card, reasons: pick.reasons, rating: pick.rating }];
   });
   return {
     picks,

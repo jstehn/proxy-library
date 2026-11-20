@@ -14,6 +14,7 @@ import {
   type ProfileLine,
   type Scored,
 } from "./suggest";
+import { emptyRatingProfile } from "./rate";
 import { featuresOfText } from "../testing/deck-view";
 
 const candidate = (name: string, overrides: Partial<CandidateCard> = {}): CandidateCard => ({
@@ -42,7 +43,7 @@ const line = (overrides: Partial<ProfileLine>): ProfileLine => {
   return { ...featuresOfText(card), ...card };
 };
 
-const EMPTY: DeckFingerprint = { themes: [], tribes: [], gaps: [], keywords: [] };
+const EMPTY: DeckFingerprint = emptyRatingProfile("commander");
 
 describe("creature types and plurals", () => {
   it("reads the front face's creature types only", () => {
@@ -129,6 +130,7 @@ describe("deckProfile", () => {
 
 describe("scoring", () => {
   const profile: DeckFingerprint = {
+    ...EMPTY,
     themes: ["counters"],
     tribes: ["Elf"],
     gaps: [{ tag: "removal", count: 2, target: 8 }],
@@ -147,9 +149,8 @@ describe("scoring", () => {
       { kind: "keyword", keyword: "Trample" },
     ]);
     // Calibrated 0-100 rating from theme + tribe + role gap + keyword + quality prior.
-    expect(scored?.rating?.rating).toBeGreaterThanOrEqual(70);
-    expect(scored?.rating?.rating).toBeLessThanOrEqual(100);
-    expect(scored?.score).toBeGreaterThan(70);
+    expect(scored?.rating.rating).toBeGreaterThanOrEqual(70);
+    expect(scored?.rating.rating).toBeLessThanOrEqual(100);
   });
 
   it("never suggests a card for strength alone, and counts changelings in every tribe", () => {
@@ -190,7 +191,7 @@ describe("scoring", () => {
     };
     const both = scoreForRole(candidate("Both", { roles: ["removal", "draw"] }), "removal", short);
     const one = scoreForRole(candidate("One", { roles: ["removal"] }), "removal", short);
-    expect(both?.score).toBeCloseTo(one?.score ?? 0);
+    expect(both?.rating.logit).toBeCloseTo(one?.rating.logit ?? 0);
     expect(both?.reasons).toEqual([{ kind: "role", tag: "removal", count: 0, target: 8 }]);
   });
 
@@ -208,9 +209,10 @@ describe("scoring", () => {
   });
 
   it("ranks by score, owned first at a tie, then by name", () => {
-    const a = { card: candidate("B store"), score: 3, reasons: [] };
-    const b = { card: candidate("C owned", { pool: "owned" }), score: 3, reasons: [] };
-    const c = { card: candidate("A best"), score: 5, reasons: [] };
+    const rated = (logit: number) => ({ rating: 50, logit, parts: [] });
+    const a = { card: candidate("B store"), rating: rated(3), reasons: [] };
+    const b = { card: candidate("C owned", { pool: "owned" }), rating: rated(3), reasons: [] };
+    const c = { card: candidate("A best"), rating: rated(5), reasons: [] };
     expect(rank([a, null, b, c]).map((entry) => entry.card.name)).toEqual([
       "A best",
       "C owned",
@@ -227,7 +229,7 @@ describe("budgetPicks (invariant 5)", () => {
     pool: "owned" | "store" = "store",
   ): Scored => ({
     card: candidate(name, { priceCents, pool }),
-    score,
+    rating: { rating: score, logit: score, parts: [] },
     reasons: [],
   });
 
