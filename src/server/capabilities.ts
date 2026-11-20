@@ -58,6 +58,9 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  deckSharing: DeckSharing;
+  chooseToken: ReturnType<typeof makeTokenChoices>;
+  proxySheet: ReturnType<typeof makeProxySheets>;
   accounts: Accounts;
   catalog: Catalog;
   drafts: Drafts;
@@ -74,9 +77,6 @@ type CapabilityDependencies = Readonly<{
   inventory: Inventory;
   /** The services that change things: the capabilities pass them through for the adapters. */
   services: Readonly<{
-    deckSharing: DeckSharing;
-    chooseToken: ReturnType<typeof makeTokenChoices>;
-    proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
@@ -99,6 +99,9 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
           outsideData.fetchSpellbookCombos(mainCards, commanders),
       },
       decks: dependencies.decks,
+      deckSharing: dependencies.deckSharing,
+      chooseToken: dependencies.chooseToken,
+      proxySheet: dependencies.proxySheet,
       previews: dependencies.previews,
       newPreviewId: dependencies.newPreviewId,
     }),

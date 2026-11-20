@@ -1,7 +1,7 @@
 import type { Actor } from "@/modules/accounts";
 import { printingCards } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
-import { ok, type Clock, type UserId } from "@/shared/kernel";
+import { ok, pick, type Clock, type UserId } from "@/shared/kernel";
 import { makeSwapCards, makeTakeFromDeck } from "./application/deck-builder-moves";
 import { makeDeckCombos } from "./application/deck-combos";
 import { makeEdhrecResearch } from "./application/deck-edhrec";
@@ -19,6 +19,9 @@ import { makeFindReplacements } from "./application/find-replacements";
 import { makeListDecks } from "./application/list-decks";
 import type { Decks } from "./application/make-decks";
 import type { PreviewRepository } from "./application/ports";
+import type { makeProxySheets } from "./application/proxy-sheets";
+import type { DeckSharing } from "./application/sharing";
+import type { makeTokenChoices } from "./application/token-choices";
 import { DeckId } from "./domain/deck";
 import { auditDeckView } from "./queries/audit";
 import { budgetReplacements } from "./queries/budget-replacements";
@@ -49,12 +52,16 @@ export type DeckWiringDependencies = Readonly<{
     fetchSpellbookCombos: CombosReader;
   }>;
   decks: Decks;
+  deckSharing: DeckSharing;
+  chooseToken: ReturnType<typeof makeTokenChoices>;
+  proxySheet: ReturnType<typeof makeProxySheets>;
   previews: PreviewRepository;
   newPreviewId: () => string;
 }>;
 
 export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
   const { db, clock, textEmbedder, outsideData, decks, previews, newPreviewId } = dependencies;
+  const { deckSharing, chooseToken, proxySheet } = dependencies;
 
   // The readers several capabilities share, each written once.
   const readDeck = (userId: UserId, deckId: number) => deckView(db, userId, deckId);
@@ -114,8 +121,40 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
         updateDeckPrimer(db, userId, deckId, input, now),
       addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
     }),
-    // The deck-changing commands, as the decks module's use cases (each checks its own rules).
-    deckEdits: decks,
+    // The deck-changing commands the builder and the tools use (each checks its own rules).
+    deckEdits: pick(
+      decks,
+      "createDeck",
+      "createDeckFromCards",
+      "copyDeck",
+      "deleteDeck",
+      "updateDeck",
+      "addCards",
+      "setEntry",
+      "setEntryDetails",
+      "setEntryNote",
+      "setEntryHeading",
+      "moveEntry",
+      "importList",
+      "replaceList",
+      "choosePrinting",
+      "renameHeading",
+      "orderHeadings",
+      "saveSnapshot",
+      "restoreSnapshot",
+      "deleteSnapshot",
+    ),
+    deckSharing: pick(
+      deckSharing,
+      "setVisibility",
+      "enablePublicLink",
+      "rotatePublicLink",
+      "revokePublicLink",
+      "postComment",
+      "deleteComment",
+    ),
+    chooseToken,
+    proxySheet,
     proxyDeck: makeProxyDeck({
       deckView: readDeck,
       printingCards: (printingIds) => printingCards(db, printingIds),
