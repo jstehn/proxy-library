@@ -36,20 +36,13 @@ import {
   makeOutsideData,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import {
-  makeDecks,
-  makeDeckSharing,
-  makeGoldfishSessions,
-  makeProxySheets,
-  makeTokenChoices,
-} from "@/modules/decks";
+import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
 import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
   drizzleDeckTokenRepository,
   drizzleChangePreviewRepository,
-  drizzleGoldfishSessionRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
 import { makeDrafts } from "@/modules/drafts";
@@ -149,7 +142,6 @@ export function buildCore(config: Config) {
       cards: drizzleCardLookup(transaction),
       deckTokens: drizzleDeckTokenRepository(transaction),
       deckSharing: drizzleDeckSharing(transaction),
-      goldfishSessions: drizzleGoldfishSessionRepository(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
@@ -219,11 +211,6 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
-  const goldfishSessions = makeGoldfishSessions({
-    unitOfWork,
-    clock,
-    newSessionId: randomUUID,
-  });
   const deckSharing = makeDeckSharing({
     unitOfWork,
     clock,
@@ -280,7 +267,6 @@ export function buildCore(config: Config) {
     store,
     decks,
     deckSharing,
-    goldfishSessions,
     chooseToken,
     proxySheet,
     trades,

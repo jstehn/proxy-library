@@ -2,7 +2,6 @@ import type { ActivityServices } from "@/modules/activity";
 import type { PrintingId } from "@/modules/catalog";
 import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
 import type { Board, Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
-import type { GoldfishState } from "../domain/goldfish-session";
 import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
@@ -164,37 +163,6 @@ export type DeckSharingDependencies = {
   unitOfWork: UnitOfWork<DeckSharingServices>;
   clock: Clock;
   tokens: Readonly<{ newPublicToken(): string }>;
-};
-
-export type GoldfishSessionRecord = Readonly<{
-  id: string;
-  userId: UserId;
-  deckId: DeckId;
-  state: GoldfishState;
-  updatedAt: Date;
-  expiresAt: Date;
-}>;
-
-export interface GoldfishSessionRepository {
-  create(record: GoldfishSessionRecord): Promise<void>;
-  findById(id: string, userId: UserId, now: Date): Promise<GoldfishSessionRecord | null>;
-  save(
-    id: string,
-    userId: UserId,
-    state: GoldfishState,
-    updatedAt: Date,
-    expiresAt: Date,
-  ): Promise<void>;
-  pruneExpired(now: Date): Promise<number>;
-  enforceUserCap(userId: UserId, maxSessions: number): Promise<number>;
-}
-
-export type GoldfishSessionsServices = { goldfishSessions: GoldfishSessionRepository };
-
-export type GoldfishSessionsDependencies = {
-  unitOfWork: UnitOfWork<GoldfishSessionsServices>;
-  clock: Clock;
-  newSessionId: () => string;
 };
 
 /** One change of a stored preview, resolved to the card's oracle id (design doc 40). */

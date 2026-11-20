@@ -19,7 +19,6 @@ import { players } from "../../accounts/infrastructure/schema";
 import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
 import type { ChangeToSave } from "../application/ports";
 import type { DeckPlan } from "../domain/deck-profile";
-import type { GoldfishState } from "../domain/goldfish-session";
 import { timestamptz } from "@/shared/db";
 
 export const decks = pgTable(
@@ -257,7 +256,10 @@ export const cardPackageEntries = pgTable(
   ],
 );
 
-/** Ephemeral interactive goldfish sessions with 24h sliding TTL (design doc 60). */
+/**
+ * Orphaned: the interactive goldfish (design doc 60) was removed in P24. Nothing reads or writes
+ * this table. Dropping it is the owner's call (docs/refactor/removal-list.md).
+ */
 export const goldfishSessions = pgTable(
   "goldfish_sessions",
   {
@@ -268,7 +270,7 @@ export const goldfishSessions = pgTable(
     deckId: bigint("deck_id", { mode: "number" })
       .notNull()
       .references(() => decks.id, { onDelete: "cascade" }),
-    state: jsonb("state").$type<GoldfishState>().notNull(),
+    state: jsonb("state").$type<unknown>().notNull(),
     updatedAt: timestamptz("updated_at").notNull(),
     expiresAt: timestamptz("expires_at").notNull(),
   },

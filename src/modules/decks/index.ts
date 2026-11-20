@@ -189,8 +189,6 @@ export {
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
 export { library, openingHandOdds, type LibraryCard, type TestHand } from "./domain/draws";
 
-export { makeGoldfishSessions } from "./application/goldfish-sessions";
-
 export {
   isKeyCard,
   resolveDeckProfileTargets,
