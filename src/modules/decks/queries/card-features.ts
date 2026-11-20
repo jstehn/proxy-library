@@ -23,13 +23,13 @@ export async function cardFeaturesOf(
 export async function withFeatures<Line extends { oracleId: string }>(
   db: DbExecutor,
   lines: readonly Line[],
-): Promise<Array<Line & Pick<CardFeatures, "tapMana" | "entersTapped">>> {
+): Promise<Array<Line & Pick<CardFeatures, "tapMana" | "entersTapped" | "landFetch">>> {
   const featuresOf = await cardFeaturesOf(
     db,
     lines.map((line) => line.oracleId),
   );
   return lines.map((line) => {
-    const { tapMana, entersTapped } = featuresOf(line.oracleId);
-    return { ...line, tapMana, entersTapped };
+    const { tapMana, entersTapped, landFetch } = featuresOf(line.oracleId);
+    return { ...line, tapMana, entersTapped, landFetch };
   });
 }

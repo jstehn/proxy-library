@@ -4,8 +4,9 @@ import {
   cardTypes,
   type CardFacts,
   type CardIdentity,
+  type Tag,
 } from "@/shared/kernel";
-import type { EntersTapped, TapMana } from "@/modules/catalog";
+import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
 import { isPlayed, type DeckCount } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
 import { simulateCasting } from "./cast-by-turn";
@@ -26,6 +27,9 @@ export type CastabilityLine = DeckCount &
     tapMana: TapMana;
     /** Whether a land enters tapped: from the card features too. */
     entersTapped: EntersTapped;
+    /** The card's role tags and land fetch (card features): a ramp spell can fetch a land. */
+    roles?: readonly Tag[];
+    landFetch?: CardFeatures["landFetch"];
   }>;
 
 export type CardCastability = Readonly<{
@@ -73,7 +77,7 @@ export function simulateCastOnCurve(
   options: Readonly<{ rng: Rng; trials?: number; profile?: DeckPlan | null }>,
 ): CastabilitySummary {
   const trials = Math.max(1, Math.min(2000, Math.round(options.trials ?? 500)));
-  const cards = library(lines.map((line) => ({ ...line, printingId: line.oracleId, roles: [] })));
+  const cards = library(lines.map((line) => ({ ...line, printingId: line.oracleId })));
   const spells = spellsOf(lines, options.profile);
   if (spells.length === 0 || cards.length === 0) {
     return { trials, averageCastOnCurvePct: 1, struggling: [], spells: [] };

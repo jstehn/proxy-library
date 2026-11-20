@@ -519,5 +519,75 @@
         "text": "{T}: Add {R}."
       }
     ]
+  },
+  {
+    "name": "Rampant Growth",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Three Visits",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Search your library for a Forest card, put that card onto the battlefield, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Kodama's Reach",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery — Arcane",
+        "text": "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Farseek",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Nature's Lore",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Sorcery",
+        "text": "Search your library for a Forest card, put that card onto the battlefield, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Sakura-Tribe Elder",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Creature — Snake Shaman",
+        "text": "Sacrifice Sakura-Tribe Elder: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+      }
+    ]
+  },
+  {
+    "name": "Evolving Wilds",
+    "producedMana": [],
+    "faces": [
+      {
+        "typeLine": "Land",
+        "text": "{T}, Sacrifice Evolving Wilds: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
+      }
+    ]
   }
 ]

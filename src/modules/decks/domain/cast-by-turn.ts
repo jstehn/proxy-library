@@ -3,6 +3,8 @@ import {
   castRitual,
   colorsOf,
   effectOf,
+  CAST_EFFECTS,
+  type LandInPlay,
   producedBy,
   totalDiscount,
   type CardEffect,
@@ -106,7 +108,7 @@ function curveOf(name: string, tally: Tally, runs: number): CastCurve {
   return { name, byTurn, medianTurn: median === -1 ? null : median + 1, misses };
 }
 
-type PlayedLand = Readonly<{ card: LibraryCard; tappedNow: boolean }>;
+type PlayedLand = Readonly<{ card: LandInPlay; tappedNow: boolean }>;
 
 /** Plays one game for one target; the first turn it is castable, or why it was not. */
 function playTarget(
@@ -126,6 +128,8 @@ function playTarget(
     const drawnBefore = turn === 1 ? 0 : drawsByTurn(turn - 1, options.onTheDraw);
     hand.push(...opening.library.slice(drawnBefore, drawsByTurn(turn, options.onTheDraw)));
 
+    // Lands untap, the fetched tapped ones included, before the turn's land drop.
+    lands.forEach((played, index) => (lands[index] = { ...played, tappedNow: false }));
     const land = takeLand(hand, lands, target.pips);
     if (land !== undefined) lands.push({ card: land, tappedNow: entersTapped(land, lands.length) });
     const landCount = lands.length;
@@ -135,13 +139,13 @@ function playTarget(
         .flatMap((played) => landMana(played.card, landCount)),
       ...permanents,
     ];
-    lands.forEach((played, index) => (lands[index] = { ...played, tappedNow: false }));
 
     const discount = totalDiscount(reducers, target);
     if ((!target.mustDraw || holdsTarget()) && canCast(target, mana, discount, hand)) {
       return { turn };
     }
-    if (turn < lastTurn) castAhead(hand, mana.length, permanents, reducers);
+    if (turn < lastTurn)
+      castAhead(hand, mana.length, { permanents, reducers, lands, pips: target.pips });
   }
 
   return {
@@ -182,15 +186,21 @@ function canCast(
   return false;
 }
 
+/** What cast-ahead cards add to: mana from permanents, cost reducers, and lands in play. */
+type InPlay = Readonly<{
+  permanents: ManaSource[];
+  reducers: CardEffect[];
+  lands: PlayedLand[];
+  pips: readonly Pip[];
+}>;
+
 /** Casts ramp and cost reducers from hand with the mana to spare; they work from next turn. */
-function castAhead(
-  hand: LibraryCard[],
-  manaToSpare: number,
-  permanents: ManaSource[],
-  reducers: CardEffect[],
-): void {
+function castAhead(hand: LibraryCard[], manaToSpare: number, inPlay: InPlay): void {
   const candidates = hand
-    .filter((card) => !card.isLand && ["tapMana", "reducer"].includes(effectOf(card)?.kind ?? ""))
+    .filter(
+      (card) =>
+        !card.isLand && ["tapMana", "reducer", "landFetch"].includes(effectOf(card)?.kind ?? ""),
+    )
     .sort((a, b) => (a.manaValue ?? 99) - (b.manaValue ?? 99));
   let budget = manaToSpare;
   for (const card of candidates) {
@@ -199,9 +209,20 @@ function castAhead(
     budget -= cost;
     hand.splice(hand.indexOf(card), 1);
     const effect = effectOf(card);
-    if (effect?.kind === "reducer") reducers.push(effect);
-    else if (effect !== undefined) permanents.push(...producedBy(effect));
+    if (effect === undefined) continue;
+    if (effect.kind === "landFetch") {
+      const card = CAST_EFFECTS.landFetch.fetches?.(effect, missingPips(inPlay.lands, inPlay.pips));
+      if (card !== undefined) inPlay.lands.push({ card, tappedNow: effect.entersTapped });
+    } else if (effect.kind === "reducer") inPlay.reducers.push(effect);
+    else inPlay.permanents.push(...producedBy(effect));
   }
+}
+
+/** The pips of the target no land in play makes a colour for yet. */
+function missingPips(inPlay: readonly PlayedLand[], pips: readonly Pip[]): Pip[] {
+  return pips.filter(
+    (pip) => !inPlay.some((played) => pip.some((color) => colorsOf(played.card).includes(color))),
+  );
 }
 
 /**
@@ -213,9 +234,9 @@ function takeLand(
   inPlay: readonly PlayedLand[],
   pips: readonly Pip[],
 ): LibraryCard | undefined {
+  const missing = missingPips(inPlay, pips);
   const makes = (card: LibraryCard, pip: Pip) =>
     pip.some((color) => colorsOf(card).includes(color));
-  const missing = pips.filter((pip) => !inPlay.some((played) => makes(played.card, pip)));
   const untappedRank = { never: 2, sometimes: 1, always: 0 } as const;
   const score = (card: LibraryCard) =>
     missing.filter((pip) => makes(card, pip)).length * 4 +
@@ -235,7 +256,7 @@ function entersTapped(card: LibraryCard, landsInPlay: number): boolean {
 }
 
 /** What a land in play taps for; a land that needs five lands makes nothing before the fifth. */
-function landMana(card: LibraryCard, landCount: number): ManaSource[] {
+function landMana(card: LandInPlay, landCount: number): ManaSource[] {
   const needsFive = card.tapMana?.requiresFiveLands === true;
   if (needsFive && landCount < 5) return [];
   const amount = needsFive ? 2 : Math.max(1, card.tapMana?.amount ?? 1);

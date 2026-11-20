@@ -2,7 +2,7 @@
 
 exports[`engines, pinned > cast on curve 1`] = `
 {
-  "averageCastOnCurvePct": 0.67,
+  "averageCastOnCurvePct": 0.678,
   "spells": [
     {
       "bottleneckColor": null,
@@ -30,7 +30,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": "G",
-      "castOnCurvePct": 0.525,
+      "castOnCurvePct": 0.56,
       "manaCost": "{4}{G}{G}",
       "manaValue": 6,
       "name": "Wurm",
@@ -38,7 +38,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": "B",
-      "castOnCurvePct": 0.628,
+      "castOnCurvePct": 0.655,
       "manaCost": "{3}{B}{G}",
       "manaValue": 5,
       "name": "Henzie",
@@ -46,7 +46,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": null,
-      "castOnCurvePct": 0.638,
+      "castOnCurvePct": 0.665,
       "manaCost": "{4}{G}",
       "manaValue": 5,
       "name": "Worldspine Wurm",
@@ -54,7 +54,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": "B",
-      "castOnCurvePct": 0.75,
+      "castOnCurvePct": 0.78,
       "manaCost": "{2}{B}{G}",
       "manaValue": 4,
       "name": "Giant",
@@ -152,7 +152,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": "G",
-      "castOnCurvePct": 0.525,
+      "castOnCurvePct": 0.56,
       "manaCost": "{4}{G}{G}",
       "manaValue": 6,
       "name": "Wurm",
@@ -160,7 +160,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": "B",
-      "castOnCurvePct": 0.628,
+      "castOnCurvePct": 0.655,
       "manaCost": "{3}{B}{G}",
       "manaValue": 5,
       "name": "Henzie",
@@ -168,7 +168,7 @@ exports[`engines, pinned > cast on curve 1`] = `
     },
     {
       "bottleneckColor": null,
-      "castOnCurvePct": 0.638,
+      "castOnCurvePct": 0.665,
       "manaCost": "{4}{G}",
       "manaValue": 5,
       "name": "Worldspine Wurm",
@@ -181,10 +181,10 @@ exports[`engines, pinned > cast on curve 1`] = `
 
 exports[`engines, pinned > castable by a turn (library card, commander, colourless): the cast simulator 1`] = `
 [
-  0.52,
-  0.658,
+  0.55,
+  0.688,
   0.94,
-  0.278,
+  0.307,
 ]
 `;
 
@@ -381,13 +381,13 @@ exports[`engines, pinned > draw_sample 1`] = `
             "byTurnPct": [
               0,
               0,
-              1,
-              17,
-              64,
+              2,
+              25,
+              68,
             ],
             "card": "Henzie",
             "medianTurn": 5,
-            "misses": "too little mana 36%",
+            "misses": "too little mana 32%",
           },
         ],
         "marginPct": 4.9,
@@ -466,11 +466,11 @@ exports[`engines, pinned > draw_sample 1`] = `
               0,
               0,
               12,
-              55,
+              57,
             ],
             "card": "Giant",
             "medianTurn": 4,
-            "misses": "not drawn 26%, too little mana 17%, no B source 2%",
+            "misses": "not drawn 26%, too little mana 15%, no B source 2%",
           },
         ],
         "marginPct": 4.9,

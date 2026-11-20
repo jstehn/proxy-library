@@ -1,4 +1,4 @@
-import { cardTypes, hasTypeWord } from "@/shared/kernel";
+import { hasTypeWord } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 
 // Cards that do something during the draft (design doc 18, section 3), as data: the pick engine

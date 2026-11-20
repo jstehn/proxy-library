@@ -1,6 +1,7 @@
 import { entersTapped } from "./recognizers/enters-tapped";
 import { helpsOpponents } from "./recognizers/helps-opponents";
 import { landCycles } from "./recognizers/land-cycles";
+import { landFetch } from "./recognizers/land-fetch";
 import { bracketFlags } from "./recognizers/bracket-flags";
 import { grants } from "./recognizers/grants";
 import { faces, signalIO, signals } from "./recognizers/signals";
@@ -24,6 +25,7 @@ export const RECOGNIZERS: readonly AnyRecognizer[] = [
   entersTapped, // P14
   helpsOpponents, // P14
   landCycles, // P14
+  landFetch, // P28b
 ];
 
 /** What a card does, worked out from its text. Pure: the same card always gives the same answer. */

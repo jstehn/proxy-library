@@ -172,3 +172,35 @@ growth or cut; the UI slice (a feature) is reported apart.
 - **Integration files run** (private DB `tcg_p28_test`, dropped): llm-tools, mana-base, decks,
   drafts, suggestions, commanders: green. `pnpm check`: all green except `sizes` (the +346 above);
   knip baseline lowered 382 to 380.
+
+## P28b: the land-fetch effect
+
+Branch `refactor/P28b-land-fetch`. A fourth effect kind, `landFetch`: a ramp spell that puts a land
+onto the battlefield (Rampant Growth, Cultivate, Kodama's Reach, Three Visits, Farseek, Nature's
+Lore). When it is cast ahead, the run gets a land: a basic of the first colour the target still
+lacks that the card allows, else its first colour.
+
+- **From the features, no name list.** New catalog feature `landFetch` (`{ entersTapped, colors }`
+  or null), recognizer `recognizers/land-fetch.ts` (the regex stays in the recognizers: the
+  regex-count ratchet is unchanged at 96). `effectOf` gives the effect to a non-land card with the
+  `ramp` role tag and a `landFetch`. "Tapped" and the fetchable basic types (Forest, "a basic
+  land", Plains/Island/Swamp/Mountain) are read from the text. An activated fetch (Sakura-Tribe
+  Elder, Evolving Wilds) is not one.
+- **`FEATURES_VERSION` 7 to 8**: stored rows lack `landFetch` until the next sync or
+  `pnpm worker sync features` recomputes them (a backfill is needed; until then the simulator treats
+  those cards as before). No migration (the column is JSON). There is no old function to compare
+  against, so no A2 compare: the fixture file gained 7 cards (5 fetchers, 2 that must not match).
+- **Tapped is recorded, not felt.** A fetched land enters tapped where the card says, and lands
+  untap at the start of the next turn (the untap moved from after the mana count to the top of the
+  turn, same result). Because a ramp spell is cast with spare mana at the end of a turn, the tapped
+  land is always untapped by the time it is next used, so tapped and untapped fetchers behave the
+  same here. The library is not thinned by the fetched land.
+- **Castability** lines now carry `roles` and `landFetch`, so the scorecard and mana base see the
+  effect too (they passed `roles: []` before).
+- **Pinned (Cultivate now fetches in the reference deck, `engines-pinned.test.ts`):** cast on curve
+  average 0.670 to 0.678; Wurm 52.5 to 56.0, Henzie 62.8 to 65.5, Worldspine Wurm 63.8 to 66.5,
+  Giant 75.0 to 78.0. Castable by a turn: Giant T4 52.0 to 55.0, Henzie T5 65.8 to 68.8, Henzie 3
+  mana T3 94.0 (same), Wurm T6 27.8 to 30.7. `draw_sample`: Henzie T5 64 to 68 (T3 1 to 2, T4 17 to
+  25), Giant T4 55 to 57.
+- Also fixed the two P28 lint warnings (unused `hasTypeWord` in `suggest.ts`, unused `cardTypes` in
+  `abilities.ts`); a third (`_seen` in `drafts.int.test.ts`) is not P28's.

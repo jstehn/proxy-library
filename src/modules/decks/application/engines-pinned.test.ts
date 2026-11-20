@@ -169,12 +169,15 @@ function lines(): DeckLine[] {
 const NO_TAP: TapMana = { isSource: false, amount: 0, requiresFiveLands: false };
 
 /** What the catalog's card features say about a line: lands and mana rocks tap for mana. */
-function tapOf(line: DeckLine): Pick<CastabilityLine, "tapMana" | "entersTapped"> {
+function tapOf(line: DeckLine): Pick<CastabilityLine, "tapMana" | "entersTapped" | "landFetch"> {
   const isLand = line.typeLine.includes("Land");
   const isRock = !isLand && line.roles.includes("ramp") && line.producedMana.length > 0;
   return {
     tapMana: isLand || isRock ? { isSource: true, amount: 1, requiresFiveLands: false } : NO_TAP,
     entersTapped: line.name === "Woodland Cemetery" ? "sometimes" : "never",
+    // Cultivate: any basic land, onto the battlefield tapped (P28b).
+    landFetch:
+      line.name === "Cultivate" ? { entersTapped: true, colors: ["W", "U", "B", "R", "G"] } : null,
   };
 }
 

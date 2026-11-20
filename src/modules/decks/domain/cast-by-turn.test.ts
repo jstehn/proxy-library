@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { seededRng } from "@/shared/kernel";
+import { seededRng, type ManaSymbol } from "@/shared/kernel";
 import { simulateCasting, type CastOptions, type CastTarget } from "./cast-by-turn";
-import { totalDiscount, type CardEffect } from "./cast-effects";
+import { effectOf, totalDiscount, type CardEffect } from "./cast-effects";
 import { hypergeometricAtLeast } from "./draws";
 import { COMMANDER_KEEP } from "./opening-hand/hand";
 import { library, type DrawLine } from "./opening-hand/library";
@@ -139,6 +139,47 @@ describe("the cast simulator", () => {
     curve.byTurn.forEach((chance, index) => {
       const cardsSeen = 7 + index; // seven in hand, one more each turn after the first
       expect(Math.abs(chance - hypergeometricAtLeast(60, 4, cardsSeen, 1))).toBeLessThan(0.03);
+    });
+  });
+
+  const withoutFetch = (line: DrawLine): DrawLine => ({ ...line, landFetch: null });
+
+  describe("a spell that puts a land onto the battlefield", () => {
+    const ANY_BASIC = ["W", "U", "B", "R", "G"] as const;
+    const fetcher = (
+      name: string,
+      manaValue: number,
+      entersTapped: boolean,
+      colors: readonly ManaSymbol[] = ANY_BASIC,
+    ) => card(name, 1, { manaValue, roles: ["ramp"], landFetch: { entersTapped, colors } });
+    const fourDrop = target({ manaValue: 4, pips: [["G"]] });
+
+    it("Rampant Growth on turn 2 makes a four-drop castable on turn 3", () => {
+      const forests = (count: number) => land("Forest", count, "G");
+      const withGrowth = [forests(3), fetcher("Rampant Growth", 2, true), card("Filler", 3)];
+      const without = [forests(3), card("Filler", 4)];
+      expect(firstTurn(withGrowth, fourDrop)).toBe(3);
+      expect(firstTurn(without, fourDrop)).toBeNull();
+    });
+
+    it("fetches the colour the target is missing", () => {
+      const needsBlack = target({ manaValue: 4, pips: [["G"], ["B"]] });
+      const lines = [land("Forest", 4, "G"), fetcher("Cultivate", 3, true), card("Filler", 2)];
+      expect(firstTurn(lines, needsBlack)).toBe(4);
+      expect(firstTurn(lines.map(withoutFetch), needsBlack)).toBeNull();
+    });
+
+    it("is read from the card's features: Cultivate enters tapped, Three Visits does not", () => {
+      const effect = (line: DrawLine) => effectOf(library([line])[0]);
+      expect(effect(fetcher("Cultivate", 3, true))).toMatchObject({ entersTapped: true });
+      expect(effect(fetcher("Three Visits", 2, false, ["G"]))).toEqual({
+        kind: "landFetch",
+        entersTapped: false,
+        colors: ["G"],
+      });
+      // Without the ramp tag, or on a land, the fetch is ignored.
+      expect(effect({ ...fetcher("Tutor", 2, false), roles: [] })).toBeUndefined();
+      expect(effect({ ...fetcher("Evolving Wilds", 0, true), typeLine: "Land" })).toBeUndefined();
     });
   });
 });
