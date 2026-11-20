@@ -22,7 +22,7 @@ A self-hosted web app for a Magic: The Gathering playgroup—combining a virtual
 
 - **Playgroup economy & sealed store** — Weekly play-money allowance tracked in an append-only ledger, sealed product priced at official MSRP, and pack opening with realistic odds from real booster recipes, animations, foils, and synthesized sound.
 - **Collection, singles & trading** — Track owned cards at exact printing × finish granularity (plus a separate tracker for your real physical collection), buy and sell singles at market price, manage a wishlist, and trade cards and money with other players.
-- **Deck builder & analysis** — Build decks from your virtual collection, your real collection, or the entire Magic catalog. Includes a Scryfall-style search language, Commander legality & bracket checks, role tags, reusable card packages, hypergeometric draw odds, a keep-or-mulligan trainer, synergy/budget suggestions, and a whole-deck optimizer.
+- **Deck builder & analysis** — Build decks from your virtual collection, your real collection, or the entire Magic catalog. Includes a Scryfall-style search language, Commander legality & bracket checks, role tags, hypergeometric draw odds, synergy/budget suggestions, and a whole-deck optimizer.
 - **Proxy PDFs** — Generate print-ready proxy sheets (including double-faced cards, tokens, and playtest proxies) with cutting guides.
 - **Live drafts** — Draft together in real time (including Conspiracy drafts) with bot seats and Server-Sent Events.
 - **Social & sharing** — Share decks and scorecards with the playgroup (or via public links), comment on decks, and browse an activity feed of notable pulls and trades. Installable as a PWA on mobile.
