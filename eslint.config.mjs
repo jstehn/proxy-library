@@ -215,7 +215,7 @@ const policies = [
   { from: layer("queries"), allow: { to: publicApi, dependency: { kind: "type" } } },
   // Design doc 66: the one decks read that calls the catalog for card features (a value, so the
   // lazy repair of a missing row stays in the catalog).
-  { from: layer("queries", { file: "tap-mana.ts" }), allow: { to: publicApi } },
+  { from: layer("queries", { file: "card-features.ts" }), allow: { to: publicApi } },
   from(
     layer("testing"),
     el("kernel"),

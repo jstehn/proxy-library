@@ -17,7 +17,7 @@ import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
-import { withTapMana } from "./tap-mana";
+import { manaFeatures, withFeatures, type ManaFeatures } from "./card-features";
 import { type SuggestionContext } from "../domain/suggestion-types";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
@@ -58,12 +58,14 @@ function playableLand(format: string, colorLimit: readonly string[] | null): SQL
     and p.type_line !~ '^Basic\\y.*\\yLand\\y' and ${identity} and ${legal}`;
 }
 
-function toCandidate(row: LandRow): LandCandidate {
+function toCandidate(featuresOf: (oracleId: string) => ManaFeatures, row: LandRow): LandCandidate {
+  const { entersTapped, helpsOpponents } = featuresOf(row.oracle_id);
   return {
     oracleId: row.oracle_id,
     name: row.name,
     typeLine: row.type_line,
-    text: row.face_text,
+    entersTapped,
+    helpsOpponents,
     producedMana: row.produced_mana ?? [],
     isBasicLand: row.is_basic_land,
     ownedCopies: Number(row.owned),
@@ -169,10 +171,16 @@ export async function landPoolsForDeck(
     return fitsTarget(context.bracketLines, { name: row.name, flags }, target);
   };
 
+  const ownedRows = owned.rows.filter(withinTarget);
+  const storeRows = store.rows.filter(withinTarget);
+  const featuresOf = await manaFeatures(
+    db,
+    [...ownedRows, ...basics.rows, ...storeRows].map((row) => row.oracle_id),
+  );
   return {
-    owned: owned.rows.filter(withinTarget).map(toCandidate),
-    basics: basics.rows.map(toCandidate),
-    store: store.rows.filter(withinTarget).map(toCandidate),
+    owned: ownedRows.map((row) => toCandidate(featuresOf, row)),
+    basics: basics.rows.map((row) => toCandidate(featuresOf, row)),
+    store: storeRows.map((row) => toCandidate(featuresOf, row)),
   };
 }
 
@@ -242,12 +250,11 @@ export async function manaBasePlan(
       manaValue: 0,
       manaCost: null,
       producedMana: added.card.producedMana,
-      text: added.card.text,
     })),
   ];
 
   // One read of the card features for the deck's cards and the lands the plan adds.
-  const withTap = await withTapMana(db, afterLines);
+  const withTap = await withFeatures(db, afterLines);
   const before = simulateCastOnCurve(withTap.slice(0, beforeLines.length), {
     rng: seededRng(`mana-base-${deckId}`),
     trials: 400,

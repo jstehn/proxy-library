@@ -1,3 +1,4 @@
+import type { EntersTapped } from "@/modules/catalog";
 import type { CastabilitySummary } from "./castability";
 import type { Tag, Theme } from "@/shared/card-search";
 import type { Format } from "./deck";
@@ -12,7 +13,7 @@ import { COLORS, type ManaColor, type CardFacts, type CardIdentity } from "@/sha
 
 /** A land the plan may add: one you own, a basic, or one from the store. */
 export type LandCandidate = Pick<CardIdentity, "oracleId"> &
-  Pick<CardFacts, "name" | "typeLine" | "text" | "producedMana"> &
+  Pick<CardFacts, "name" | "typeLine" | "producedMana"> &
   Readonly<{
     isBasicLand: boolean;
     /** Copies you own. Decks share cards, so other decks using it don't lower this. */
@@ -23,10 +24,10 @@ export type LandCandidate = Pick<CardIdentity, "oracleId"> &
     priceCents: number | null;
     roles: readonly Tag[];
     themes: readonly Theme[];
+    /** From the card features (design doc 66). */
+    entersTapped: EntersTapped;
+    helpsOpponents: boolean;
   }>;
-
-/** Whether a land enters the battlefield tapped: always, only sometimes ("unless …"), or never. */
-export type Tapped = "never" | "sometimes" | "always";
 
 /** Why the land target moved away from the format's usual count. */
 export type LandTargetReason =
@@ -58,7 +59,7 @@ export type LandReason =
 export type PlannedLand = Readonly<{
   card: LandCandidate;
   quantity: number;
-  tapped: Tapped;
+  tapped: EntersTapped;
   reasons: readonly LandReason[];
 }>;
 
@@ -186,22 +187,13 @@ function heaviestCosts(lines: readonly ProfileLine[]): Record<ManaColor, number>
   return heaviest;
 }
 
-const ENTERS_TAPPED = /enters( the battlefield)? tapped/i;
-
-/** Whether a land enters tapped, from its rules text (the search language's patterns). */
-export function tapped(text: string): Tapped {
-  const sentence = text.split(/(?<=\.)\s+|\n/).find((part) => ENTERS_TAPPED.test(part));
-  if (sentence === undefined) return "never";
-  return /\bunless\b|\bif\b|you may pay/i.test(sentence) ? "sometimes" : "always";
-}
-
 /** The plan's running state while it fills: what each color still needs. */
 type Gaps = Map<ManaColor, number>;
 
 type Scored = Readonly<{
   card: LandCandidate;
   score: number;
-  tapped: Tapped;
+  tapped: EntersTapped;
   reasons: LandReason[];
 }>;
 
@@ -274,11 +266,7 @@ function scoreLand(
   }
   if (fixes.length > 0) reasons.push({ kind: "fixes", colors: fixes });
 
-  if (
-    /\b(?:target|an|each)\s+opponent\b[^.]*(?:creates?|draws?|gains?|puts?|adds?|searches?)/i.test(
-      card.text,
-    )
-  ) {
+  if (card.helpsOpponents) {
     score += LAND_WEIGHTS.helpsOpponent;
     reasons.push({ kind: "drawback", note: "Helps opponents" });
   }
@@ -290,8 +278,8 @@ function scoreLand(
     reasons.push({ kind: "utility", roles, themes });
   }
 
-  const enters = tapped(card.text);
-  // Tapped-ness only matters for a land worth playing at all.
+  const enters = card.entersTapped;
+  // EntersTapped-ness only matters for a land worth playing at all.
   if (score > 0) {
     if (enters === "always") score += LAND_WEIGHTS.alwaysTapped;
     if (enters === "sometimes") score += LAND_WEIGHTS.sometimesTapped;
@@ -300,7 +288,7 @@ function scoreLand(
   return { card, score, tapped: enters, reasons };
 }
 
-const TAPPED_ORDER: Readonly<Record<Tapped, number>> = { never: 0, sometimes: 1, always: 2 };
+const TAPPED_ORDER: Readonly<Record<EntersTapped, number>> = { never: 0, sometimes: 1, always: 2 };
 
 /** Best first: score, then untapped, then name (so the plan is the same every time). */
 function byScore(first: Scored, second: Scored): number {
