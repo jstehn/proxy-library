@@ -91,7 +91,7 @@ export {
   type BudgetReplacementOptions,
   type ReplacementCandidate,
 } from "./domain/replacements";
-export { BOARDS, isCounted, type Board, type DeckCount } from "./domain/boards";
+export { BOARDS, isCounted, type DeckCount } from "./domain/boards";
 export {
   copyLimitFor,
   deckProblems,
