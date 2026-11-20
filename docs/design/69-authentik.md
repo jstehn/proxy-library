@@ -1,7 +1,7 @@
 # Design: Sign-in and connector OAuth through Authentik
 
 - **Phase:** Refactor package P35 (a feature; the owner's inbox item of 2026-11-20)
-- **Status:** Proposed (awaiting the owner's approval)
+- **Status:** Accepted (owner, 2026-11-20): every open question answered with the recommendation (section 13); option A for connectors.
 - **Related ADRs:** 0012 (Better Auth, identity only; this doc proposes ADR 0028 to amend its "no routes mounted" rule), 0023 (process), 0026 (capabilities)
 - **Related design docs:** 28 (access tokens, `pl_…`), 30 (the app's own OAuth server), 67 (`Actor`, `readTool`)
 - **Lesson:** deferred (the refactor defers lessons); topics when written: the OIDC code flow with PKCE, verifying a JWT against a JWKS
@@ -489,6 +489,8 @@ and `.env.example` document them. The same lines go into `docker-compose.yml`.
 Net lines: sign-in about +450 source and +350 tests; A about +400 and +300 more; B about -500 net.
 
 ## 13. Open questions
+
+**Answered by the owner, 2026-11-20: the recommendation for all eleven.** Passwords stay alongside Authentik; linking from the Account page or by an admin-set verified email; Authentik sign-in still needs an invite; admin stays the existing flag; **option A** for connectors; the redirect-URI cap rises to 20, exact match only; no refresh tokens until the registration log shows a need; trust Authentik's verified email for linking; no back-channel logout for now; ADR 0028 mounts the one callback route.
 
 1. **Sign-in alongside passwords or instead?** (a) alongside, (b) instead, (c) instead in production
    only. **Recommend (a)**: the fallback, development, e2e and the first admin all need passwords.
