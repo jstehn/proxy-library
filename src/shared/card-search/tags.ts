@@ -1,7 +1,7 @@
 // Role tags (design doc 19, section 3): the job a card does in a deck, composed from effect
 // primitives (./primitives). Rules as data: one row per tag, matching structured EffectPrimitives
 // instead of card-shaped one-off regexes.
-import { cardTypes } from "@/shared/kernel";
+import { cardTypes, hasTypeWord } from "@/shared/kernel";
 import {
   extractEffects,
   withoutReminders,
@@ -165,7 +165,8 @@ type ThemeRule = Readonly<{
 
 const matchesAny = (patterns: readonly RegExp[], text: string) =>
   patterns.some((pattern) => pattern.test(text));
-const firstFace = (card: TagFacts) => card.typeLine.split(" // ")[0];
+const frontFaceHas = (card: TagFacts, typeWords: readonly string[]) =>
+  hasTypeWord(card.typeLine, typeWords, true);
 
 const COUNTERS = [rule(String.raw`\+1/\+1 counters?\b`), rule(String.raw`\bproliferate\b`)];
 const LIFEGAIN = [rule(String.raw`\byou gain [^.]*\blife\b`), rule(String.raw`\blifelink\b`)];
@@ -359,25 +360,25 @@ const THEME_RULES: readonly ThemeRule[] = [
     label: "Artifact tokens",
     leads: ARTIFACT_TOKENS,
     fits: (card, text) =>
-      matchesAny(ARTIFACT_TOKENS, text) || /\b(Treasure|Food|Clue)\b/.test(firstFace(card)),
+      matchesAny(ARTIFACT_TOKENS, text) || frontFaceHas(card, ["Treasure", "Food", "Clue"]),
   },
   {
     theme: "treasures",
     label: "Treasures",
     leads: TREASURES,
-    fits: (card, text) => matchesAny(TREASURES, text) || /\bTreasure\b/.test(firstFace(card)),
+    fits: (card, text) => matchesAny(TREASURES, text) || frontFaceHas(card, ["Treasure"]),
   },
   {
     theme: "food",
     label: "Food",
     leads: FOOD,
-    fits: (card, text) => matchesAny(FOOD, text) || /\bFood\b/.test(firstFace(card)),
+    fits: (card, text) => matchesAny(FOOD, text) || frontFaceHas(card, ["Food"]),
   },
   {
     theme: "clues",
     label: "Clues",
     leads: CLUES,
-    fits: (card, text) => matchesAny(CLUES, text) || /\bClue\b/.test(firstFace(card)),
+    fits: (card, text) => matchesAny(CLUES, text) || frontFaceHas(card, ["Clue"]),
   },
   {
     theme: "sacrifice",
@@ -403,13 +404,13 @@ const THEME_RULES: readonly ThemeRule[] = [
     theme: "artifacts",
     label: "Artifacts",
     leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\bartifacts?\b`)],
-    fits: (card) => /\bArtifact\b/.test(firstFace(card)),
+    fits: (card) => frontFaceHas(card, ["Artifact"]),
   },
   {
     theme: "enchantments",
     label: "Enchantments",
     leads: [rule(String.raw`\b(whenever|for each|number of) [^.]*\benchantments?\b`)],
-    fits: (card) => /\bEnchantment\b/.test(firstFace(card)),
+    fits: (card) => frontFaceHas(card, ["Enchantment"]),
   },
   {
     theme: "lifegain",
@@ -424,7 +425,7 @@ const THEME_RULES: readonly ThemeRule[] = [
       rule(String.raw`\b(instant (or|and) sorcery|noncreature) spells?\b`),
       rule(String.raw`\b(magecraft|prowess)\b`),
     ],
-    fits: (card) => /\b(Instant|Sorcery)\b/.test(firstFace(card)),
+    fits: (card) => frontFaceHas(card, ["Instant", "Sorcery"]),
   },
   {
     theme: "landfall",
@@ -445,7 +446,7 @@ const THEME_RULES: readonly ThemeRule[] = [
       rule(String.raw`\b(equipped|enchanted|modified) creatures?\b`),
       rule(String.raw`\b(equipment|auras?)\b`),
     ],
-    fits: (card) => /\b(Equipment|Aura)\b/.test(firstFace(card)),
+    fits: (card) => frontFaceHas(card, ["Equipment", "Aura"]),
   },
   {
     theme: "politics",
@@ -512,7 +513,7 @@ const THEME_RULES: readonly ThemeRule[] = [
     label: "Planeswalkers",
     leads: PLANESWALKERS_LEADS,
     fits: (card, text) =>
-      /\bPlaneswalker\b/.test(firstFace(card)) || matchesAny(PLANESWALKERS_LEADS, text),
+      frontFaceHas(card, ["Planeswalker"]) || matchesAny(PLANESWALKERS_LEADS, text),
   },
   {
     theme: "legends",
@@ -549,7 +550,7 @@ const THEME_RULES: readonly ThemeRule[] = [
     label: "Vehicles and mounts",
     leads: VEHICLES,
     fits: (card, text) =>
-      matchesAny(VEHICLES, text) || /\b(Vehicle|Mount|Spacecraft|Pilot)\b/.test(firstFace(card)),
+      matchesAny(VEHICLES, text) || frontFaceHas(card, ["Vehicle", "Mount", "Spacecraft", "Pilot"]),
   },
 ];
 

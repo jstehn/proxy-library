@@ -7,6 +7,7 @@ import {
   type ManaSymbol,
   isLand,
   isCreature,
+  hasTypeWord,
 } from "@/shared/kernel";
 import { isCounted, isPlayed, type Board } from "./boards";
 
@@ -71,7 +72,7 @@ export type DeckStats = Readonly<{
 
 /** The first matching type, in TYPE_ORDER ("Artifact Creature" is a Creature). */
 export function mainType(typeLine: string): string {
-  return TYPE_ORDER.find((type) => new RegExp(`\\b${type}\\b`).test(typeLine)) ?? "Other";
+  return TYPE_ORDER.find((type) => hasTypeWord(typeLine, [type])) ?? "Other";
 }
 
 // A card with a land on either face is a land (STATUS decision 1); the rule is in the kernel.

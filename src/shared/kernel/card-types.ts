@@ -40,3 +40,17 @@ export function cardTypes(typeLine: string): CardTypes {
 export const isLand = (typeLine: string) => cardTypes(typeLine).isLand;
 export const isBasicLand = (typeLine: string) => cardTypes(typeLine).isBasic;
 export const isCreature = (typeLine: string) => cardTypes(typeLine).isCreature;
+
+// Any other type word ("Legendary", "Artifact", "Planeswalker", "Kindred"): the one place that
+// reads a type line for a word. Words are matched whole and with their letter case.
+
+/** Whether a face has one of these words: any face, or only the front face (`frontOnly`). */
+export function hasTypeWord(
+  typeLine: string,
+  words: readonly string[],
+  frontOnly = false,
+): boolean {
+  const { faces } = cardTypes(typeLine);
+  const searched = frontOnly ? faces.slice(0, 1) : faces;
+  return searched.some((face) => words.some((word) => face.includes(word)));
+}

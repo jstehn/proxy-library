@@ -1,4 +1,4 @@
-import { isCreature } from "@/shared/kernel";
+import { hasTypeWord, isCreature } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 import { isCounted, isPlayed } from "./boards";
 import { FORMATS, type Deck, type DeckEntry, type Format } from "./deck";
@@ -55,17 +55,19 @@ function isUnlimited(card: Pick<CardRules, "isBasicLand" | "text">): boolean {
 export function canBeCommander(
   card: Pick<CardRules, "typeLine" | "text" | "hasPowerToughness">,
 ): boolean {
-  const isLegendary = /\bLegendary\b/.test(card.typeLine);
+  const isLegendary = hasTypeWord(card.typeLine, ["Legendary"]);
   return (
     (isLegendary && isCreature(card.typeLine)) ||
-    (isLegendary && /\b(Vehicle|Spacecraft)\b/.test(card.typeLine) && card.hasPowerToughness) ||
+    (isLegendary &&
+      hasTypeWord(card.typeLine, ["Vehicle", "Spacecraft"]) &&
+      card.hasPowerToughness) ||
     /can be your commander/i.test(card.text)
   );
 }
 
 /** A Background can be the second commander, beside one that says "Choose a Background". */
 function isBackground(card: Pick<CardRules, "typeLine">): boolean {
-  return /\bLegendary\b/.test(card.typeLine) && /\bBackground\b/.test(card.typeLine);
+  return hasTypeWord(card.typeLine, ["Legendary"]) && hasTypeWord(card.typeLine, ["Background"]);
 }
 
 /** The names of the commanders that may not lead this deck (an empty list means all may). */
@@ -110,7 +112,7 @@ function isTheDoctor(card: PairCard): boolean {
   const front = card.typeLine.split(" // ")[0];
   const [types, subtypes = ""] = front.split("—").map((part) => part.trim());
   return (
-    /\bLegendary\b/.test(types) &&
+    hasTypeWord(types, ["Legendary"]) &&
     isCreature(types) &&
     subtypes.split(/\s+/).join(" ") === "Time Lord Doctor"
   );

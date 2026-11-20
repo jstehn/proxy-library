@@ -1,5 +1,5 @@
 import { cardThemes, leaderThemes, type Tag, type Theme } from "@/shared/card-search";
-import { manaCurve } from "@/shared/kernel";
+import { hasTypeWord, manaCurve } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -122,7 +122,7 @@ const TRIBE_SHARE = 1 / 3;
 export function creatureTypes(typeLine: string): string[] {
   const front = typeLine.split(" // ")[0];
   const [types, subtypes] = front.split(" — ");
-  if (subtypes === undefined || !/\b(Creature|Kindred|Tribal)\b/.test(types)) return [];
+  if (subtypes === undefined || !hasTypeWord(types, ["Creature", "Kindred", "Tribal"])) return [];
   return subtypes.split(" ").filter((word) => word.length > 0);
 }
 

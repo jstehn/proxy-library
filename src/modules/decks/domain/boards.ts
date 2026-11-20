@@ -18,3 +18,6 @@ export function isCounted(board: Board): board is CountedBoard {
 export function isPlayed(board: Board): boolean {
   return board === "main" || board === "commander";
 }
+
+/** How many copies of a card a deck line holds, and on which board. */
+export type DeckCount = Readonly<{ quantity: number; board: Board }>;
