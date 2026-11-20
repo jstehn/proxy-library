@@ -1,7 +1,7 @@
 # Design: The read layer, secure by construction
 
 - **Phase:** Refactor package P25 (design doc 65, owner answer 3)
-- **Status:** Proposed (awaiting the owner's approval)
+- **Status:** Accepted (owner, 2026-11-19): every open question answered with the recommendation (section 12).
 - **Related ADRs:** 0006 (reads are query functions), 0009 (module boundaries), 0026 (capabilities; addendum "Reads"), 0023 (process)
 - **Lesson:** no (the refactor defers lessons)
 
@@ -394,6 +394,8 @@ What I checked and found fine: every `deckView`-based decks query filters `owner
 - Run `test:int` and e2e at the end of P25, as the package says (not during this step).
 
 ## 12. Open questions
+
+**Answered by the owner, 2026-11-19: the recommendation for all ten** (bindDb; the actor passed explicitly; game collections a named shared read; a real session check on artwork, card images stay public; drafts visible to all players, draftVersion too; visibility in SQL with a test that the domain function agrees; one FormState; PublicReads for visitors; writes in queries/ move in P18; Actor stays in accounts).
 
 1. **`bindDb` or plain functions?** Options: A `bindDb` (recommended), B plain, C factories.
    Recommend A, with the activity-module click-through check and B as the fallback (section 4).

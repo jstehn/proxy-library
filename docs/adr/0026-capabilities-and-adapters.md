@@ -77,7 +77,7 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
 - 2026-11-19: P09b to P09d moved every page, route and action onto `readPage()`, `action()` and
   `readCapabilities()`; the list of files not yet moved is gone.
 
-## Reads (design doc 67, proposed)
+## Reads (design doc 67, accepted 2026-11-19)
 
 Proposed in P25; takes effect when the owner approves doc 67. It changes decision 1: reads are not
 capabilities.
