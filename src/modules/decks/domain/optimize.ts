@@ -1,5 +1,4 @@
-import { COLORS, randomInt, type Rng, type Tag } from "@/shared/kernel";
-import { type Theme } from "@/shared/card-search";
+import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
 import { rateCard, type RatingEdhrecSignal, type RatingProfile } from "./rate";

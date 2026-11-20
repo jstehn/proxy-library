@@ -14,7 +14,7 @@ import {
   type ProfileLine,
   type Scored,
 } from "./suggest";
-import { roleTagsOf } from "../testing/deck-view";
+import { featuresOfText } from "../testing/deck-view";
 
 const candidate = (name: string, overrides: Partial<CandidateCard> = {}): CandidateCard => ({
   oracleId: name,
@@ -39,7 +39,7 @@ const line = (overrides: Partial<ProfileLine>): ProfileLine => {
     text: "",
     ...overrides,
   };
-  return { roles: roleTagsOf(card), ...card };
+  return { ...featuresOfText(card), ...card };
 };
 
 const EMPTY: DeckFingerprint = { themes: [], tribes: [], gaps: [], keywords: [] };

@@ -1,9 +1,7 @@
 import { featureArray } from "@/shared/card-search/sql";
 import { sql, type SQL } from "drizzle-orm";
-import { type DbExecutor, textArray } from "@/shared/db";
-import { latestPrice } from "@/shared/db";
-import { THEMES, type Theme } from "@/shared/card-search";
-import { ColorSchema, FinishSchema, type Tag, TAGS, type UserId } from "@/shared/kernel";
+import { type DbExecutor, latestPrice, textArray } from "@/shared/db";
+import { ColorSchema, FinishSchema, type Tag, type Theme, type UserId } from "@/shared/kernel";
 
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import type { SuggestionCard, SuggestionContext, Wanted } from "../domain/suggestion-types";
@@ -36,7 +34,7 @@ export function tribePattern(tribes: readonly string[]): string | null {
 function sharedCount(want: Wanted): SQL {
   const tribes = tribePattern(want.tribes);
   return sql`((${featureArray("role_tags")} && ${textArray(want.roles)})::int
-            + (p.theme_tags && ${textArray(want.themes)})::int
+            + (${featureArray("theme_tags")} && ${textArray(want.themes)})::int
             + (p.keywords && ${textArray(want.keywords)})::int
             + ${tribes === null ? sql`0` : sql`(split_part(p.type_line, ' // ', 1) ~ ${tribes} or 'Changeling' = any(p.keywords))::int`})`;
 }
@@ -50,8 +48,8 @@ export type CandidateRow = {
   type_line: string;
   rarity: string;
   keywords: string[];
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  theme_tags: Theme[];
   color_identity: string[];
   legality: string | null;
   face_text: string;
@@ -94,7 +92,7 @@ function edhrecCte(commanderOracleIds: string[]): SQL {
 /** The columns a candidate row needs, from a printing `p` (its card) and a finish `finish`. */
 export function candidateColumns(context: SuggestionContext): SQL {
   return sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
-    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, p.theme_tags, p.color_identity,
+    p.rarity, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags, p.color_identity,
     p.legalities->>${context.format} as legality,
     coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
     exists (select 1 from jsonb_array_elements(p.faces) f
@@ -240,10 +238,8 @@ export function toCard(
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
     pool,
     keywords: row.keywords,
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roles: row.role_tags,
+    themes: row.theme_tags,
     rarity: row.rarity,
     edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
     ...(row.edhrec_inclusion !== null && row.edhrec_synergy !== null

@@ -392,16 +392,14 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
       const rows = JSON.stringify(
         features.map((card) => ({
           id: card.id,
-          theme_tags: card.themeTags,
           bracket_flags: card.bracketFlags,
         })),
       );
       await db.execute(sql`
         update printings p
-           set theme_tags = v.theme_tags, bracket_flags = v.bracket_flags,
-               features_version = ${version}
+           set bracket_flags = v.bracket_flags, features_version = ${version}
           from jsonb_to_recordset(${rows}::jsonb)
-               as v(id text, theme_tags text[], bracket_flags text[])
+               as v(id text, bracket_flags text[])
          where p.id = v.id
       `);
     },

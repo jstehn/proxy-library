@@ -42,7 +42,10 @@ export type SearchContext = Readonly<{
  * their recognizers arrive `theme_tags` and `bracket_flags`. By the printing's alias; empty until
  * the features pass has worked the card out.
  */
-export function featureArray(column: "role_tags", printing = "p"): SQL {
+export function featureArray(
+  column: "role_tags" | "theme_tags" | "leader_themes",
+  printing = "p",
+): SQL {
   return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
 }
 
@@ -177,7 +180,7 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "tag":
       return textTerm(sql`${value.toLowerCase()} = any(${featureArray("role_tags")})`, comparison);
     case "theme":
-      return textTerm(sql`${value.toLowerCase()} = any(p.theme_tags)`, comparison);
+      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("theme_tags")})`, comparison);
     case "banned":
     case "restricted":
       return textTerm(sql`p.legalities->>${value.toLowerCase()} = ${term.field}`, comparison);

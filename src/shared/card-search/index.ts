@@ -46,11 +46,4 @@ export {
   type BracketFlag,
 } from "./brackets";
 export { type TagFacts } from "./tags";
-export {
-  CARD_FEATURES_VERSION,
-  cardThemes,
-  leaderThemes,
-  THEME_LABELS,
-  THEMES,
-  type Theme,
-} from "./tags";
+export { CARD_FEATURES_VERSION } from "./tags";

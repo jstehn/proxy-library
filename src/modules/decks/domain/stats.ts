@@ -10,6 +10,7 @@ import {
   type ManaSymbol,
   type Tag,
   TAGS,
+  type Theme,
 } from "@/shared/kernel";
 import { isCounted, isPlayed, type DeckCount } from "./boards";
 
@@ -29,6 +30,9 @@ export type StatsLine = DeckCount &
     text?: string;
     /** What job the card does in a deck (the catalog's card features). Missing: no tags. */
     roles?: readonly Tag[];
+    /** What deck the card plays into, and what deck it leads as a commander (card features). */
+    themes?: readonly Theme[];
+    leaderThemes?: readonly Theme[];
   }>;
 
 export type ManaSource = ManaSymbol;

@@ -2,8 +2,7 @@ import { featureArray } from "@/shared/card-search/sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
-import { THEMES, type Theme } from "@/shared/card-search";
-import { COLORS, seededRng, type Tag, TAGS, type UserId } from "@/shared/kernel";
+import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
 import { simulateCastOnCurve } from "../domain/castability";
@@ -37,8 +36,8 @@ type LandRow = {
   produced_mana: string[] | null;
   is_basic_land: boolean;
   is_game_changer: boolean;
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  theme_tags: Theme[];
   owned: number;
   also_in: string[] | null;
   price_cents: number | null;
@@ -48,7 +47,7 @@ type LandRow = {
 const LAND_COLUMNS = sql`p.oracle_id, p.name, p.type_line,
   coalesce((select string_agg(f->>'text', ' ') from jsonb_array_elements(p.faces) f), '') as face_text,
   p.produced_mana, p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land, p.is_game_changer,
-  ${featureArray("role_tags")} as role_tags, p.theme_tags`;
+  ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags`;
 
 /** A printing `p` whose front face is a land, isn't basic, and may be in this deck. */
 function playableLand(format: string, colorLimit: readonly string[] | null): SQL {
@@ -70,10 +69,8 @@ function toCandidate(row: LandRow): LandCandidate {
     ownedCopies: Number(row.owned),
     alsoIn: row.also_in ?? [],
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roles: row.role_tags,
+    themes: row.theme_tags,
   };
 }
 
@@ -132,7 +129,7 @@ export async function landPoolsForDeck(
              (select count(*) from unnest(p.produced_mana) as made
                where made = any(${textArray(deckColors)})) >= ${colorsWanted} as colors_fit,
              coalesce(${featureArray("role_tags")} && ${textArray(deckRoles)}, false) as role_fit,
-             coalesce(p.theme_tags && ${textArray(themes)}, false) as theme_fit
+             coalesce(${featureArray("theme_tags")} && ${textArray(themes)}, false) as theme_fit
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
        where ${playable} and ${notOwned(userId, context.usesRealCards)}
     ),

@@ -4,7 +4,7 @@ import type { Board } from "./deck";
 import { compareDeckStates, type PreviewLine } from "./preview";
 import type { CardRules } from "./rules";
 import { checkSnapshotLabel, MAX_SNAPSHOT_LABEL_LENGTH } from "./snapshots";
-import { roleTagsOf } from "../testing/deck-view";
+import { featuresOfText } from "../testing/deck-view";
 
 function line(
   oracleId: string,
@@ -26,7 +26,7 @@ function line(
     typeLine,
     manaCost: overrides.manaCost ?? "{1}{G}",
     producedMana: overrides.producedMana ?? [],
-    roles: roleTagsOf({ typeLine, text, producedMana: overrides.producedMana }),
+    ...featuresOfText({ typeLine, text, producedMana: overrides.producedMana }),
     priceCents: overrides.priceCents ?? 100,
     text,
     isGameChanger: overrides.isGameChanger ?? false,

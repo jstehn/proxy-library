@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rankCuts, type CutLine, type CutReason } from "./cuts";
-import { roleTagsOf } from "../testing/deck-view";
+import { featuresOfText } from "../testing/deck-view";
 
 // Cards to cut (design doc 32, section 3 and invariants 4-5).
 
@@ -20,7 +20,7 @@ const line = (name: string, overrides: Partial<CutLine> = {}): CutLine => {
     isGameChanger: false,
     ...overrides,
   };
-  return { roles: roleTagsOf(card), ...card };
+  return { ...featuresOfText(card), ...card };
 };
 
 /** A token commander: "tokens" becomes a theme of the deck. */

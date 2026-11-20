@@ -24,6 +24,8 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     manaCost: "{1}{G}",
     producedMana: [],
     roles: [],
+    themes: [],
+    leaderThemes: [],
     text: "",
     isGameChanger: false,
     priceCents: 25,
@@ -39,23 +41,39 @@ export function aLine(name: string, overrides: Partial<DeckLine> = {}): DeckLine
     free: 1,
     ...overrides,
   };
-  return { ...line, roles: overrides.roles ?? roleTagsOf(line) };
+  const text = featuresOfText(line);
+  return {
+    ...line,
+    roles: overrides.roles ?? text.roles,
+    themes: overrides.themes ?? text.themes,
+    leaderThemes: overrides.leaderThemes ?? text.leaderThemes,
+  };
 }
 
-/** What the catalog's recognizer says a card's text does (tests build lines from text). */
-export function roleTagsOf(card: {
+/**
+ * What the catalog's recognizers say a card's text does, named as a line carries it (tests build
+ * lines from text). Spread it under what a test names itself.
+ */
+export function featuresOfText(card: {
   typeLine: string;
   text?: string;
   producedMana?: readonly string[];
-}): Tag[] {
-  return [
-    ...extractFeatures({
-      oracleId: "test",
-      producedMana: card.producedMana ?? [],
-      faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
-    }).roleTags,
-  ];
+}) {
+  const features = extractFeatures({
+    oracleId: "test",
+    producedMana: card.producedMana ?? [],
+    faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
+  });
+  return {
+    roles: features.roleTags,
+    themes: features.themes,
+    leaderThemes: features.leaderThemes,
+  };
 }
+
+export const roleTagsOf = (card: Parameters<typeof featuresOfText>[0]): Tag[] => [
+  ...featuresOfText(card).roles,
+];
 
 export function aRules(name: string, overrides: Partial<CardRules> = {}): CardRules {
   return {

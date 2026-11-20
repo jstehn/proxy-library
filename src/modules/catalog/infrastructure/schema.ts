@@ -73,12 +73,6 @@ export const printings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    // Themes read from the rules text (design doc 20), stored by the sync's tag pass so
-    // suggestions can filter by them; worked out again when the rules' version grows.
-    themeTags: text("theme_tags")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
     // Land denial and extra turns read from the rules text (design doc 31), stored by the tag
     // pass for `is:landdenial` / `is:extraturn` searches.
     bracketFlags: text("bracket_flags")
@@ -96,7 +90,6 @@ export const printings = pgTable(
   (table) => [
     index("printings_set_number_idx").on(table.setCode, table.collectorNumber),
     index("printings_oracle_idx").on(table.oracleId),
-    index("printings_theme_tags_idx").using("gin", table.themeTags),
     index("printings_bracket_flags_idx").using("gin", table.bracketFlags),
     index("printings_game_changer_idx")
       .on(table.isGameChanger)
@@ -412,11 +405,20 @@ export const cardFeatures = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    themeTags: text("theme_tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    leaderThemes: text("leader_themes")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamptz("updated_at").notNull(),
   },
   (table) => [
     index("card_features_version_idx").on(table.featuresVersion),
     index("card_features_role_tags_idx").using("gin", table.roleTags),
+    index("card_features_theme_tags_idx").using("gin", table.themeTags),
   ],
 );
 

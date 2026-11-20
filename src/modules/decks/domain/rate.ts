@@ -1,4 +1,3 @@
-import type { Theme } from "@/shared/card-search";
 import {
   type CardFacts,
   type CardIdentity,
@@ -6,6 +5,7 @@ import {
   curveSlot,
   curveSlotLabel,
   type Tag,
+  type Theme,
 } from "@/shared/kernel";
 import type { Bracket } from "./brackets";
 import type { Format } from "./deck";

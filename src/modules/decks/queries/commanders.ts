@@ -1,8 +1,7 @@
 import { featureArray } from "@/shared/card-search/sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, cheapestPrice, textArray } from "@/shared/db";
-import { THEMES, type Theme } from "@/shared/card-search";
-import { COLORS, type ManaColor, type Tag, TAGS, type UserId } from "@/shared/kernel";
+import { COLORS, type ManaColor, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import {
   coverageDetails,
   missingCost,
@@ -60,8 +59,8 @@ type PoolRow = {
   type_line: string;
   mana_value: number;
   keywords: string[];
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  theme_tags: Theme[];
   color_identity: string[];
   rarity: string;
   price_cents: number | null;
@@ -79,7 +78,8 @@ type CandidateRow = {
   color_identity: string[];
   keywords: string[];
   rarity: string;
-  role_tags: string[];
+  role_tags: Tag[];
+  leader_themes: Theme[];
   is_game_changer: boolean;
   edhrec_rank: number | null;
   owned: number;
@@ -88,13 +88,14 @@ type CandidateRow = {
 };
 
 const POOL_COLUMNS = sql`p.oracle_id, p.name, p.type_line, p.mana_value, p.keywords, ${featureArray("role_tags")} as role_tags,
-  p.theme_tags, p.color_identity, p.rarity`;
+  ${featureArray("theme_tags")} as theme_tags, p.color_identity, p.rarity`;
 
 const CANDIDATE_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
   p.type_line, ${FACE_TEXT} as face_text,
   exists (select 1 from jsonb_array_elements(p.faces) f
            where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
-  p.color_identity, p.keywords, p.rarity, ${featureArray("role_tags")} as role_tags, p.is_game_changer, p.edhrec_rank`;
+  p.color_identity, p.keywords, p.rarity, ${featureArray("role_tags")} as role_tags, ${featureArray("leader_themes")} as leader_themes,
+  p.is_game_changer, p.edhrec_rank`;
 
 const colorsOf = (values: readonly string[]): ManaColor[] =>
   values.filter((value): value is ManaColor => (COLORS as readonly string[]).includes(value));
@@ -106,10 +107,8 @@ function toPoolCard(row: PoolRow, pool: "owned" | "store"): PoolCard {
     typeLine: row.type_line,
     manaValue: Number(row.mana_value),
     keywords: row.keywords,
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roles: row.role_tags,
+    themes: row.theme_tags,
     rarity: row.rarity,
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
     pool,
@@ -129,7 +128,8 @@ function toCandidate(row: CandidateRow): CommanderCandidate {
     colorIdentity: colorsOf(row.color_identity),
     keywords: row.keywords,
     rarity: row.rarity,
-    roles: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
+    roles: row.role_tags,
+    leaderThemes: row.leader_themes,
     isGameChanger: row.is_game_changer,
     edhrecRank: row.edhrec_rank === null ? null : Number(row.edhrec_rank),
     ownedCopies: Number(row.owned),
@@ -259,7 +259,7 @@ async function storeFillers(
     sql`p.color_identity <@ ${textArray(commander.colorIdentity)} and ${COMMANDER_LEGAL}
         and split_part(p.type_line, ' // ', 1) !~ '\\mLand\\M'
         and p.oracle_id <> ${commander.oracleId}
-        and (${featureArray("role_tags")} && ${textArray(TARGETED_TAGS)} or p.theme_tags && ${textArray(plan.themes)}
+        and (${featureArray("role_tags")} && ${textArray(TARGETED_TAGS)} or ${featureArray("theme_tags")} && ${textArray(plan.themes)}
              or p.keywords && ${textArray(plan.keywords)} or ${tribeMatch})`,
   );
   const rows = await db.execute<PoolRow>(sql`

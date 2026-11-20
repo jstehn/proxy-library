@@ -29,6 +29,7 @@ const gridCard = (name: string, card: Partial<CardRules> = {}): BrowseCard => ({
   misfit: null,
   rules: rules(name, card),
   roles: [],
+  themes: [],
   producedMana: [],
   text: card.text ?? "",
   setCode: "tst",

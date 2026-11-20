@@ -1,6 +1,5 @@
 import pg from "pg";
-import { type Tag } from "@/shared/kernel";
-import type { Theme } from "@/shared/card-search";
+import { type Tag, type Theme } from "@/shared/kernel";
 import type { Bracket } from "@/modules/decks/domain/brackets";
 import {
   emptyRatingProfile,
@@ -91,7 +90,8 @@ async function main() {
       `SELECT DISTINCT ON (oracle_id)
          id, oracle_id, name, type_line, mana_value, rarity,
          keywords, produced_mana, coalesce((select role_tags from card_features f where f.oracle_id = printings.oracle_id), '{}') AS role_tags,
-         theme_tags, is_game_changer, edhrec_rank, faces
+         coalesce((select theme_tags from card_features f where f.oracle_id = printings.oracle_id), '{}') AS theme_tags,
+         is_game_changer, edhrec_rank, faces
        FROM printings
        WHERE type_line NOT ILIKE '%Land%'
        ORDER BY oracle_id, id
@@ -115,7 +115,8 @@ async function main() {
       const { rows: cardRows } = await pool.query<PrintingRow>(
         `SELECT id, oracle_id, name, type_line, mana_value, rarity,
                 keywords, produced_mana, coalesce((select role_tags from card_features f where f.oracle_id = printings.oracle_id), '{}') AS role_tags,
-                theme_tags, is_game_changer, edhrec_rank, faces
+                coalesce((select theme_tags from card_features f where f.oracle_id = printings.oracle_id), '{}') AS theme_tags,
+                is_game_changer, edhrec_rank, faces
          FROM printings
          WHERE id = ANY($1::text[])`,
         [ids],

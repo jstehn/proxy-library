@@ -39,6 +39,7 @@ const gridCard = (name: string): BrowseCard => ({
   rules: rules(name),
   producedMana: [],
   roles: [],
+  themes: [],
   text: "",
   setCode: "tst",
   collectorNumber: "1",

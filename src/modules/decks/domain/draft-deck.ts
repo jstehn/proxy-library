@@ -1,5 +1,5 @@
-import { type Theme } from "@/shared/card-search";
 import { type CardFacts, type CardIdentity, curveSlot, manaCurve } from "@/shared/kernel";
+import { type Theme } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";

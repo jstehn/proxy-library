@@ -1,11 +1,5 @@
-import { cardThemes, leaderThemes, type Theme } from "@/shared/card-search";
-import {
-  type CardFacts,
-  type CardIdentity,
-  hasTypeWord,
-  manaCurve,
-  type Tag,
-} from "@/shared/kernel";
+import { type CardFacts, type CardIdentity, hasTypeWord, manaCurve } from "@/shared/kernel";
+import { type Tag, type Theme } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
@@ -164,19 +158,14 @@ function namesType(text: string, type: string): boolean {
 export function deckProfile(lines: readonly ProfileLine[], format: Format): DeckFingerprint {
   const commanders = lines.filter((line) => line.board === "commander");
   const main = lines.filter((line) => line.board === "main");
-  const facts = (line: ProfileLine) => ({
-    typeLine: line.typeLine,
-    text: line.text ?? "",
-    producedMana: line.producedMana,
-  });
 
   // Themes: what the commanders lead, and what much of the deck already does.
-  const themes = new Set<Theme>(commanders.flatMap((line) => leaderThemes(facts(line))));
+  const themes = new Set<Theme>(commanders.flatMap((line) => line.leaderThemes ?? []));
   const spells = main.filter((line) => !isLand(line.typeLine));
   const spellCount = spells.reduce((sum, line) => sum + line.quantity, 0);
   const fitting = new Map<Theme, number>();
   for (const line of spells) {
-    for (const theme of cardThemes(facts(line))) {
+    for (const theme of line.themes ?? []) {
       fitting.set(theme, (fitting.get(theme) ?? 0) + line.quantity);
     }
   }

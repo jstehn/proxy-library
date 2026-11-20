@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { extractFeatures } from "@/modules/catalog";
 import { commanderDetails, commandersICanBuild, makeDecks } from "@/modules/decks";
 import {
   actor,
@@ -50,7 +51,12 @@ async function addCard(card: TestCard): Promise<void> {
             'normal', '{nonfoil}', 'black', '2015', '{}', '{}', false, '',
             ${JSON.stringify(faces)}::jsonb, '{"commander": "legal"}'::jsonb,
             ${card.edhrecRank ?? null})`);
-  await storeFeatureArrays(oracleId, { roleTags: card.roles });
+  const leaderThemes = extractFeatures({
+    oracleId,
+    producedMana: [],
+    faces: [{ typeLine: card.typeLine, text: card.text ?? "" }],
+  }).leaderThemes;
+  await storeFeatureArrays(oracleId, { roleTags: card.roles, leaderThemes });
   if (card.priceCents !== undefined) {
     await db.execute(sql`
       insert into price_snapshots (printing_id, finish, day, usd_cents)

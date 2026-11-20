@@ -1,4 +1,3 @@
-import { cardThemes } from "@/shared/card-search";
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
@@ -37,7 +36,8 @@ export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
     producedMana: line.producedMana,
     keywords: line.keywords,
     roles: line.roles,
-    themes: cardThemes(line),
+    themes: line.themes,
+    leaderThemes: line.leaderThemes,
     rarity: line.rarity,
     priceCents: line.priceCents,
     isGameChanger: line.isGameChanger,

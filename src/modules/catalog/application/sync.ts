@@ -1,4 +1,4 @@
-import { CARD_FEATURES_VERSION, cardThemes, textBracketFlags } from "@/shared/card-search";
+import { CARD_FEATURES_VERSION, textBracketFlags } from "@/shared/card-search";
 import { ok } from "@/shared/kernel";
 import {
   isNightlySyncDue,
@@ -334,7 +334,6 @@ export function makeSync(dependencies: CatalogDependencies) {
       if (batch.length === 0) return tagged;
       const features = batch.map((printing) => ({
         id: printing.id,
-        themeTags: cardThemes(printing),
         bracketFlags: textBracketFlags(printing),
       }));
       await inTransaction(({ catalog }) =>

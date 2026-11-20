@@ -1,4 +1,4 @@
-import type { Finish, CardFacts, CardIdentity, Tag } from "@/shared/kernel";
+import type { Finish, CardFacts, CardIdentity, Tag, Theme } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
 import type { DeckPlan } from "./deck-profile";
@@ -31,6 +31,9 @@ export type DeckLine = DeckCount &
     producedMana: string[];
     /** What job the card does in a deck (the catalog's card features). */
     roles: readonly Tag[];
+    /** What deck the card plays into, and what deck it leads as a commander (card features). */
+    themes: readonly Theme[];
+    leaderThemes: readonly Theme[];
     /** Rules text face by face (front first), for showing double-faced cards as "front // back". */
     faceTexts?: readonly string[];
     /** The front face's printed stats: "6/5", "Loyalty 4" or "Defense 5"; null when it has none. */

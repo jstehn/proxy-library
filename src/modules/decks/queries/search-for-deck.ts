@@ -3,8 +3,8 @@ import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candid
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { TAGS, type Tag } from "@/shared/kernel";
-import { parseSearch, THEMES, type BracketFlag, type Theme } from "@/shared/card-search";
+import { type Tag, type Theme } from "@/shared/kernel";
+import { parseSearch, type BracketFlag } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
 import { bracketLine, flagsOverTarget, type Bracket } from "../domain/brackets";
 import type { Format } from "../domain/deck";
@@ -97,8 +97,8 @@ type Row = {
   mana_value: number;
   type_line: string;
   face_text: string;
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  theme_tags: Theme[];
   is_game_changer: boolean;
   owned: number;
   price_cents: number | null;
@@ -106,7 +106,7 @@ type Row = {
 };
 
 const CARD_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value,
-  p.type_line, ${featureArray("role_tags")} as role_tags, p.theme_tags, p.is_game_changer,
+  p.type_line, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags, p.is_game_changer,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
 /** Your cards matching a search, as your most special copy of each. */
@@ -170,10 +170,8 @@ function toFound(row: Row): FoundCard {
     manaValue: Number(row.mana_value),
     typeLine: row.type_line,
     text: row.face_text,
-    roleTags: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roleTags: row.role_tags,
+    themes: row.theme_tags,
     isGameChanger: row.is_game_changer,
     owned: Number(row.owned),
     priceCents: row.price_cents === null ? null : Number(row.price_cents),

@@ -1,4 +1,4 @@
-import { bracketFlags, cardThemes, type BracketFlag } from "@/shared/card-search";
+import { bracketFlags, type BracketFlag } from "@/shared/card-search";
 import type { Board } from "./boards";
 import { bracketLine, flagsOverTarget, type Bracket } from "./brackets";
 import type { Format } from "./deck";
@@ -143,7 +143,6 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
       const reasons: CutReason[] = [];
       let score = 0;
 
-      const facts = { typeLine: line.typeLine, text: line.text, producedMana: line.producedMana };
       const fit = deckFit(
         {
           oracleId: line.oracleId,
@@ -152,7 +151,7 @@ export function rankCuts(lines: readonly CutLine[], context: CutContext): Ranked
           manaValue: line.manaValue,
           keywords: line.keywords,
           roles: [], // judged below, against the role targets
-          themes: cardThemes(facts),
+          themes: line.themes ?? [],
           rarity: line.rarity,
           priceCents: line.priceCents ?? null,
           pool: "owned",

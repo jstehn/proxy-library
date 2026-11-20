@@ -114,13 +114,23 @@ export async function loadFixtureCatalog(): Promise<void> {
  */
 export async function storeFeatureArrays(
   oracleId: string,
-  arrays: Readonly<{ roleTags?: readonly string[] }>,
+  arrays: Readonly<{
+    roleTags?: readonly string[];
+    themeTags?: readonly string[];
+    leaderThemes?: readonly string[];
+  }>,
 ): Promise<void> {
   const roleTags = `{${(arrays.roleTags ?? []).join(",")}}`;
+  const themeTags = `{${(arrays.themeTags ?? []).join(",")}}`;
+  const leaderThemes = `{${(arrays.leaderThemes ?? []).join(",")}}`;
   await db.execute(sql`
-    insert into card_features (oracle_id, features, features_version, role_tags, updated_at)
-    values (${oracleId}, '{}'::jsonb, 0, ${roleTags}::text[], now())
-    on conflict (oracle_id) do update set role_tags = excluded.role_tags`);
+    insert into card_features (oracle_id, features, features_version, role_tags, theme_tags,
+                               leader_themes, updated_at)
+    values (${oracleId}, '{}'::jsonb, 0, ${roleTags}::text[], ${themeTags}::text[],
+            ${leaderThemes}::text[], now())
+    on conflict (oracle_id) do update
+      set role_tags = excluded.role_tags, theme_tags = excluded.theme_tags,
+          leader_themes = excluded.leader_themes`);
 }
 
 /** The catalog service over the recorded fixtures (no network). */

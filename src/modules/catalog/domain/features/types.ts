@@ -1,4 +1,4 @@
-import type { Tag } from "@/shared/kernel";
+import type { Tag, Theme } from "@/shared/kernel";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */
@@ -23,6 +23,10 @@ export type CardFeatureFields = Readonly<{
   tapMana: TapMana;
   /** What job the card does in a deck (ramp, draw, removal, …), in `TAGS` order. */
   roleTags: readonly Tag[];
+  /** What deck the card plays into (counters, tokens, …), in `THEMES` order. */
+  themes: readonly Theme[];
+  /** What deck a commander with this text leads, in `THEMES` order. */
+  leaderThemes: readonly Theme[];
 }>;
 
 export type CardFeatures = Readonly<{ featuresVersion: number }> & CardFeatureFields;

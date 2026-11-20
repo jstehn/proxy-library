@@ -20,7 +20,6 @@ import {
   suggestSwaps,
   type SwapCutMeta,
 } from "@/modules/decks/client";
-import { cardThemes } from "@/shared/card-search";
 import { cutReasonText, swapReasonText } from "@/app/decks/labels";
 import { suggestionsAction } from "../suggestions/actions";
 import { valueOr } from "../answer";
@@ -90,7 +89,6 @@ export function CutsPanel(props: {
     for (const line of lines) {
       existingOracleIds.add(line.oracleId);
       if (line.board !== "main" || isLand(line.typeLine) || cutMeta.has(line.oracleId)) continue;
-      const facts = { typeLine: line.typeLine, text: line.text, producedMana: line.producedMana };
       const r = rateCard(
         {
           oracleId: line.oracleId,
@@ -100,7 +98,7 @@ export function CutsPanel(props: {
           text: line.text,
           keywords: line.keywords,
           roles: line.roles,
-          themes: cardThemes(facts),
+          themes: line.themes,
           rarity: line.rarity,
           priceCents: line.priceCents,
           isGameChanger: line.isGameChanger,

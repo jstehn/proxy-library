@@ -2,8 +2,8 @@ import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
-import { TAGS, type Tag } from "@/shared/kernel";
-import { parseSearch, THEMES, type SignalCard, type Theme } from "@/shared/card-search";
+import { type Tag, type Theme } from "@/shared/kernel";
+import { parseSearch, type SignalCard } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
 import { ownedCopies, STANDARD_FIRST } from "./owned";
 
@@ -71,11 +71,11 @@ type SignalRow = {
   type_line: string;
   face_text: string;
   keywords: string[];
-  role_tags: string[];
-  theme_tags: string[];
+  role_tags: Tag[];
+  theme_tags: Theme[];
 };
 
-const SIGNAL_COLUMNS = sql`p.name, p.type_line, p.keywords, ${featureArray("role_tags")} as role_tags, p.theme_tags,
+const SIGNAL_COLUMNS = sql`p.name, p.type_line, p.keywords, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
 function toSignalCard(row: SignalRow): SignalCard {
@@ -84,10 +84,8 @@ function toSignalCard(row: SignalRow): SignalCard {
     typeLine: row.type_line,
     text: row.face_text,
     keywords: row.keywords,
-    roleTags: row.role_tags.filter((tag): tag is Tag => (TAGS as readonly string[]).includes(tag)),
-    themes: row.theme_tags.filter((theme): theme is Theme =>
-      (THEMES as readonly string[]).includes(theme),
-    ),
+    roleTags: row.role_tags,
+    themes: row.theme_tags,
   };
 }
 

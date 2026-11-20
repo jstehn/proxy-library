@@ -6,7 +6,7 @@
 
 import { hasTypeWord, plainText, type CardFacts } from "@/shared/kernel";
 import type { Tag } from "@/shared/kernel";
-import type { Theme } from "./tags";
+import type { Theme } from "@/shared/kernel";
 
 /** What the signal rules read about one card. */
 export type SignalCard = Pick<CardFacts, "name" | "typeLine" | "text"> &

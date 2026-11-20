@@ -67,5 +67,4 @@ export const NOT_YET_RECOGNIZED = [
   "src/shared/card-search/parse.ts",
   "src/shared/card-search/signals.ts",
   "src/shared/card-search/sql.ts",
-  "src/shared/card-search/tags.ts",
 ];
