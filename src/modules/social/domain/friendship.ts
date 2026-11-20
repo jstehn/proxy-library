@@ -12,17 +12,6 @@ export type Friendship = Readonly<{
 
 export type ViewerRelation = "self" | "friend" | "pending_outgoing" | "pending_incoming" | "none";
 
-export function viewerRelation(
-  viewerId: UserId,
-  targetId: UserId,
-  friendship: Friendship | null,
-): ViewerRelation {
-  if (viewerId === targetId) return "self";
-  if (friendship === null) return "none";
-  if (friendship.status === "accepted") return "friend";
-  return friendship.requesterId === viewerId ? "pending_outgoing" : "pending_incoming";
-}
-
 export function newFriendRequest(input: {
   requesterId: UserId;
   addresseeId: UserId;

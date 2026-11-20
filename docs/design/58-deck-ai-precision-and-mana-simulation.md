@@ -116,5 +116,5 @@ export type CardCastability = Readonly<{
 
 ## 7. Decisions (resolved 2026-11-13)
 
-1. **`edhrecLift` replaces `edhrecSynergy`/`edhrecNegative`:** Replace both in `rate.ts` and re-calibrate `RATING_WEIGHTS_BY_TIER` via `scripts/eval-ratings.ts --calibrate` so there is one clean, symmetric lift signal alongside `edhrecInclusion` with no conflicting weights.
+1. **`edhrecLift` replaces `edhrecSynergy`/`edhrecNegative`:** Replace both in `rate.ts` and re-calibrate `RATING_WEIGHTS_BY_TIER` via `scripts/fit-rating-weights.ts` so there is one clean, symmetric lift signal alongside `edhrecInclusion` with no conflicting weights.
 2. **Before/after castability in `plan_mana_base`:** Run `simulateCastOnCurve` both before and after the proposed land additions so the player sees the exact castability improvement for bottlenecked spells.

@@ -250,18 +250,6 @@ export function hypergeometricAtLeast2Groups(
   return Math.max(0, Math.min(1, chance));
 }
 
-/** Exact hypergeometric probability of drawing at least `atLeast` of `successes` by `turn`. */
-export function chanceByTurn(
-  population: number,
-  successes: number,
-  turn: number,
-  onTheDraw: boolean,
-  atLeast = 1,
-): number {
-  if (population <= 0) return atLeast <= 0 ? 1 : 0;
-  return hypergeometricAtLeast(population, successes, cardsSeen(turn, onTheDraw), atLeast);
-}
-
 /** Full opening-hand, land-drop (turns 1–5), turn-3 ramp, and role odds (design doc 43). */
 export function openingHandOdds(
   cards: readonly LibraryCard[],

@@ -19,8 +19,8 @@ commands=(
   "pnpm exec vitest run --project unit"
   "pnpm --silent sizes"
   "pnpm --silent clones"
-  # A report, not a gate yet (P24 makes it one): always succeeds and prints the finding count.
-  "pnpm --silent knip:production 2>&1 | awk '/\\([0-9]+\\)\$/ { gsub(/[^0-9]/, \"\", \$NF); total += \$NF } END { print total + 0 \" findings\" }'"
+  # A ratchet, like `sizes`: the finding count may fall, but not rise above the baseline.
+  "scripts/knip-ratchet.sh"
 )
 
 process_ids=()
@@ -33,7 +33,7 @@ failed=0
 for index in "${!names[@]}"; do
   if wait "${process_ids[$index]}"; then
     if [ "${names[$index]}" = knip ]; then
-      echo "✓ knip (report): $(cat "$output_dir/knip") (not a gate yet)"
+      echo "✓ knip: $(cat "$output_dir/knip")"
     else
       echo "✓ ${names[$index]}"
     fi

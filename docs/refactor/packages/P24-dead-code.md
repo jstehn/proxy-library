@@ -132,4 +132,39 @@ packages\|interactive goldfish" docs README.md CLAUDE.md`) and fix only statemen
 
 ## Handoff
 
-(empty)
+**Sizes.** Production code lines 77,318 to 74,794 (-2,524); baseline lowered. `git diff --shortstat
+refactor/main` over src, worker, scripts, tests: 47 files, +240 / -5,178 (tests included).
+
+**Commits (branch `refactor/P24-dead-code`):** dead features; test-only functions; rating script and
+`eval.ts`; goldfish service/wiring; goldfish engine, pipeline and types; knip ratchet and docs.
+
+**Files deleted (22), file lines:** `goldfish-session.ts` 794, `goldfish-session.test.ts` 536,
+`engine-stress.test.ts` 858 (all of it imported the goldfish), `sim-pipeline.ts` 779,
+`goldfish-types.ts` 89, `goldfish-sessions.ts` 121 and `.test.ts` 154,
+`drizzle-goldfish-sessions.ts` 71, `mulligan-trainer.ts` 118 and `.test.ts` 75, `packages.ts` 110 and
+`.test.ts` 59, `queries/packages.ts` 18, `upgrade-roadmap.ts` 158 and `.test.ts` 114,
+`queries/upgrade-roadmap.ts` 114, `queries/deck-combos.ts` 101, `eval.ts` 96 and `eval.test.ts` 166,
+`friendship.test.ts` 22 (only tested `viewerRelation`), `catalog/client.ts` 3.
+`scripts/eval-ratings.ts` (304) became `scripts/fit-rating-weights.ts` (the fit only, always runs).
+Test-only functions deleted with their tests: `exportWithTags`, `primerSections`, `preparedForTest`
+(and the `sharesPlan` equivalence test that used it), `msrpFor` (its property tests now compute the
+same expression inline), `viewerRelation`, `defaultProfile`, `chanceByTurn`; plus the unused `spendMana`
+and `addMana` in `mana.ts`.
+
+**Kept.** `deckOdds`: `openingHandOdds` (stats panel, test hand, `get_deck`) calls it for `roles`.
+`actFor`, `TtlCache`, the fixture gateways (as the package says).
+
+**Not done: knip does not exit 0.** `knip --production` went 766 to 457 findings (24 unused files
+became 0 by ignoring test-support directories; 147 exports, 310 types remain). What remains is mostly
+`index.ts` re-exports and types that only integration tests use (e.g. `auditDeck`, `deckStats`,
+`storePage`). Deleting them is not on the package's list and overlaps P26 (types), so I did not.
+`pnpm check` gates knip as a ratchet (`scripts/knip-ratchet.sh`, `knip-baseline.txt` = 457), like
+`sizes`. The PM or owner decides whether to cut the rest.
+
+**For P28.** The last commit with `sim-pipeline.ts` is `156a971`. `FormatRuleSet.commandZoneTaxPerCast`
+is now read only by `format-rules.test.ts`.
+
+**Tables left behind (no migration written):** `goldfish_sessions` (schema kept, state typed
+`unknown`), `card_packages`, `card_package_entries`. Removal-list rows added.
+
+**Verify.** `draw_sample`, scorecard and deck facts output unchanged (I did not run `test:int`).

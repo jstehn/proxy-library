@@ -139,14 +139,6 @@ export {
   MAX_SNAPSHOTS_PER_DECK,
 } from "./domain/snapshots";
 export {
-  type BuildUpgradeRoadmapInput,
-  type UpgradeCandidate,
-  type UpgradeCut,
-  type UpgradeRoadmap,
-  type UpgradeSwap,
-  type UpgradeTierPlan,
-} from "./domain/upgrade-roadmap";
-export {
   EMPTY_DECK_PROFILE,
   type AvoidCard,
   type DeckPlan,

@@ -1,5 +1,5 @@
 // Shared mana cost parsing, pool arithmetic, and tap-mana production extraction.
-// Used across goldfish-session, castability, and deck-profile so mana rules live in one place.
+// Used across castability and deck-profile so mana rules live in one place.
 
 import { isLand } from "@/shared/kernel";
 
@@ -76,57 +76,6 @@ export function countMinimumPips(manaCost: string | null | undefined): number {
   let total = parsed.hybridPips.length;
   for (const c of Object.values(parsed.pips)) total += c;
   return total;
-}
-
-/** Deduct `cost` from `pool`, returning the remaining pool or `null` if insufficient. */
-export function spendMana(
-  pool: ManaPool,
-  cost: ParsedManaCost,
-  opts: Readonly<{ allowPhyrexianLife?: boolean }> = {},
-): ManaPool | null {
-  const allowPhyrexianLife = opts.allowPhyrexianLife ?? true;
-  const next: ManaPool = { ...pool };
-  const colors: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
-  for (const c of colors) {
-    if (next[c] < cost.pips[c]) return null;
-    next[c] -= cost.pips[c];
-  }
-
-  // Pay hybrid pips from whichever matching color currently has the highest surplus
-  for (const options of cost.hybridPips) {
-    const best = [...options].filter((c) => next[c] > 0).sort((a, b) => next[b] - next[a])[0];
-    if (!best) return null;
-    next[best] -= 1;
-  }
-
-  // Pay Phyrexian pips with mana if not paying life; otherwise pay life (0 mana)
-  if (!allowPhyrexianLife) {
-    for (const c of cost.phyrexianPips) {
-      if (next[c] < 1) return null;
-      next[c] -= 1;
-    }
-  }
-
-  let rem = cost.generic;
-  // Spend colorless first, then colored mana
-  for (const c of ["C", "W", "U", "B", "R", "G"] as const) {
-    if (rem <= 0) break;
-    const take = Math.min(next[c], rem);
-    next[c] -= take;
-    rem -= take;
-  }
-  return rem === 0 ? next : null;
-}
-
-export function addMana(pool: ManaPool, delta: ManaPool): ManaPool {
-  return {
-    W: pool.W + delta.W,
-    U: pool.U + delta.U,
-    B: pool.B + delta.B,
-    R: pool.R + delta.R,
-    G: pool.G + delta.G,
-    C: pool.C + delta.C,
-  };
 }
 
 export type ManaSourceFacts = Readonly<{

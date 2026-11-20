@@ -191,12 +191,6 @@ const commands: Record<string, (container: WorkerContainer) => Promise<void>> = 
           } catch (error) {
             console.error("comprehensive rules sync failed:", error);
           }
-          try {
-            const pruned = await container.goldfishSessions.pruneExpired();
-            if (pruned > 0) console.log(`pruned ${pruned} expired goldfish session(s)`);
-          } catch (error) {
-            console.error("goldfish session prune failed:", error);
-          }
         }
         // New prices (or a first start): value sealed products for the resale floor (design
         // doc 27). Kind-priced products aren't for sale until this has run once.

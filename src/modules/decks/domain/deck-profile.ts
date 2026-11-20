@@ -284,11 +284,6 @@ export function patchPrimerSection(
     .trim();
 }
 
-/** The primer's "## Section" headings in order, so a tool can patch one by name. */
-export function primerSections(primer: string | null | undefined): string[] {
-  return [...(primer ?? "").matchAll(/^##\s+(.+)$/gm)].map((match) => (match[1] ?? "").trim());
-}
-
 /**
  * The deck profile's declared combo that names this combo, or null: one that mentions the
  * Commander Spellbook id, or every piece by name (case-insensitive), e.g. "Avacyn + Viscera Seer

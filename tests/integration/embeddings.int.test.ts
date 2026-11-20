@@ -6,8 +6,6 @@ import {
   auditDeck,
   budgetReplacements,
   compareDeckSnapshot,
-  deckCombosView,
-  deckUpgradeRoadmap,
   embedSimForCards,
   makeDecks,
   optimizeDeckForView,
@@ -158,18 +156,6 @@ describe("card embeddings & budget replacements", () => {
     );
     expect(excludedByType?.store.some((s) => s.card.oracleId === banishing.oracle_id)).toBe(false);
 
-    // 6. deckCombosView returns complete & 1-card-away combos from spellbook_two_card_combos
-    await db.execute(sql`
-      insert into spellbook_two_card_combos (id, oracle_id_a, oracle_id_b, card_name_a, card_name_b, produces, forces_bracket, synced_at)
-      values ('test-combo-1', ${caretaker.oracle_id}, ${banishing.oracle_id}, ${"Caretaker's Talent"}, ${"Banishing Light"}, '["Infinite value"]'::jsonb, 3, now())
-      on conflict (id) do nothing
-    `);
-    const combos = await deckCombosView(db, jack.userId, created.value);
-    expect(combos).not.toBeNull();
-    expect(
-      combos?.oneCardAway.store.some((entry) => entry.card.oracleId === banishing.oracle_id),
-    ).toBe(true);
-
     // 7. optimizeDeckForView runs Simulated Annealing without mutating the deck
     const optimized = await optimizeDeckForView(db, jack.userId, created.value, {
       pool: "store",
@@ -192,11 +178,7 @@ describe("card embeddings & budget replacements", () => {
     expect(audit?.roles.length).toBeGreaterThan(0);
     expect(audit?.findings.length).toBeGreaterThan(0);
 
-    // 9. deckUpgradeRoadmap and compareDeckSnapshot (with scoreDelta)
-    const roadmap = await deckUpgradeRoadmap(db, jack.userId, created.value);
-    expect(roadmap).not.toBeNull();
-    expect(roadmap?.roadmap.tiers).toHaveLength(3);
-
+    // 9. compareDeckSnapshot (with scoreDelta)
     const snap = await decks.saveSnapshot(jack, { deckId: created.value, label: "Before diff" });
     expect(snap.ok).toBe(true);
     if (snap.ok) {

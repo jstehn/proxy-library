@@ -2,7 +2,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { seededRng, shuffled } from "@/shared/kernel";
 import {
-  chanceByTurn,
   deckOdds,
   hypergeometricAtLeast,
   hypergeometricAtLeast2Groups,
@@ -287,9 +286,7 @@ describe("openingHandOdds and joint probabilities (design doc 43)", () => {
     );
   });
 
-  it("computes chanceByTurn and returns null for an empty library", () => {
+  it("returns null for an empty library", () => {
     expect(openingHandOdds([])).toBeNull();
-    expect(chanceByTurn(60, 4, 1, false, 1)).toBeCloseTo(hypergeometricAtLeast(60, 4, 7, 1), 9);
-    expect(chanceByTurn(60, 4, 3, true, 1)).toBeCloseTo(hypergeometricAtLeast(60, 4, 10, 1), 9);
   });
 });

@@ -5,7 +5,6 @@ import {
   checkPrice,
   checkQuantity,
   kindPriceApplies,
-  msrpFor,
   PRICING_MODES,
   productKind,
   resaleFloor,
@@ -17,16 +16,6 @@ describe("pricing", () => {
   it("names a product's kind by category and subtype", () => {
     expect(productKind("booster_box", "play")).toBe("booster_box/play");
     expect(productKind("bundle", null)).toBe("bundle/default");
-  });
-
-  it("uses the product's own override, then Wizards' official MSRP, then its kind's price", () => {
-    const five = Cents.of(500);
-    const six = Cents.of(600);
-    const seven = Cents.of(700);
-    expect(msrpFor({ override: six, officialMsrp: seven, kindPrice: five })).toBe(six);
-    expect(msrpFor({ override: null, officialMsrp: seven, kindPrice: five })).toBe(seven);
-    expect(msrpFor({ override: null, officialMsrp: null, kindPrice: five })).toBe(five);
-    expect(msrpFor({ override: null, officialMsrp: null, kindPrice: null })).toBeNull();
   });
 
   it("never sells a case, display or set at its kind's price (several for the price of one)", () => {
@@ -158,7 +147,7 @@ describe("storePrice (design doc 27, in value-based pricing)", () => {
     fc.assert(
       fc.property(inputs, (input) => {
         const result = storePrice({ ...input, pricingMode: "msrp" });
-        const listPrice = msrpFor(input);
+        const listPrice = input.override ?? input.officialMsrp ?? input.kindPrice;
         if (listPrice === null) return result === null;
         return result?.price === listPrice && result.listPrice === listPrice && !result.isRaised;
       }),
@@ -169,7 +158,7 @@ describe("storePrice (design doc 27, in value-based pricing)", () => {
     fc.assert(
       fc.property(inputs, (input) => {
         const result = storePrice(input);
-        const listPrice = msrpFor(input);
+        const listPrice = input.override ?? input.officialMsrp ?? input.kindPrice;
         if (listPrice === null) return result === null;
         return result === null || (result.price >= listPrice && result.listPrice === listPrice);
       }),

@@ -21,20 +21,6 @@ export type PlayerProfile = Readonly<{
   updatedAt: Date;
 }>;
 
-export function defaultProfile(userId: UserId, now: Date): PlayerProfile {
-  return {
-    userId,
-    bio: "",
-    favoriteColors: [],
-    favoriteFormats: [],
-    showcaseDeckId: null,
-    showcasePrintingIds: [],
-    statsVisibility: "everyone",
-    wishlistVisibility: "friends",
-    updatedAt: now,
-  };
-}
-
 export type BioError = { kind: "BioTooLong"; max: number; actual: number };
 
 export function checkBio(raw: string): Result<string, BioError> {
