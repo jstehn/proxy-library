@@ -70,6 +70,24 @@ carry (P33), and `src/ui/{opening,collection}` logic (it is moved in P32).
 7. Run `pnpm check`, then `pnpm test:e2e` (selectors may use text and roles, so most should
    still pass). `pnpm sizes --update`.
 
+**A feature in this package (owner, 2026-11-20): the card view on phones.** One `CardView`
+building block replaces the card detail views (`app/_components/card-preview.tsx`, the builder's
+`selection/selected-card.tsx` and `selection-sheet.tsx`, the card page's top section where it
+fits):
+
+- On a phone, tapping a card opens it **large, image only, text hidden** by default, so the card
+  can be seen clearly.
+- A toggle switches between **image**, **text** (the Oracle text, type line and so on) and
+  **both** (the image above the text). Remember the choice per device (localStorage, guarded by
+  try/catch; it falls back to "image" on a phone and today's layout on a desktop).
+- Desktop keeps today's layout unless the owner asks otherwise.
+- Keyboard and screen-reader friendly: the toggle is a labelled group of buttons, and the text
+  stays available to screen readers when hidden visually only if that matches today's behaviour
+  (check it).
+- This changes how a page looks, so it's the one exception to "don't change layout" below. Its
+  lines are reported separately (a feature). Add a by-eye check (dark mode, phone width, all three
+  modes) to `deferred-checks.md`.
+
 ## What not to do
 
 - Don't change layout or behaviour. A migration that changes how a page looks is a bug.

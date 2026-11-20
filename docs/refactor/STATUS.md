@@ -52,7 +52,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 |       | **Wave 4: one engine per job** · milestone 2                                             |                               |                    |                                                                         |
 | P15   | [One opening-hand and one mana-payment engine](packages/P15-opening-hands.md)            | P12, P13, P14                 | P27                | done                                                                    |
 | P27   | [One scorer; no scores or ranks in tools](packages/P27-one-scorer.md)                    | P13, P14, P24, P26            | P15                | done                                                                    |
-| P28   | ["Can I cast X by turn Y?": simulator and effect registry](packages/P28-cast-by-turn.md) | P15, P24                      | P27                | in progress (agent)                                                     |
+| P28   | ["Can I cast X by turn Y?": simulator and effect registry](packages/P28-cast-by-turn.md) | P15, P24                      | P27                | merged; land-fetch effect in progress (agent)                           |
 |       | **Wave 5: structure** · milestone 3                                                      |                               |                    |                                                                         |
 | P29   | [Untangle the import cycles](packages/P29-untangle-cycles.md)                            | P15, P27, P28                 | none               | free                                                                    |
 | P18   | [Split `decks` into subfolders](packages/P18-split-decks.md)                             | P29, decision 4               | none               | free (decision 4 answered; ADR 0028 needs the owner)                    |
@@ -110,6 +110,7 @@ state".
 | After P11              | 75,382 production code lines (P11's approved exception, +231)                                                           | —          | —           | —              | 21             | knip 391; card-text regexes 128  |
 | After P12–P14 (wave 3) | 75,422 production code lines (P14 +37, owner accepted)                                                                  | —          | 14          | —              | —              | knip 383; card-text regexes 99   |
 | After P15 and P27      | 75,009 production code lines                                                                                            | —          | —           | —              | —              | knip 382; card-text regexes 96   |
+| After P28              | 75,355 production code lines (owner accepted +346)                                                                      | —          | —           | —              | —              | knip 380                         |
 | **Target**             | **≤ 75,000 code lines (stretch ≤ 72,000), test support counted separately** (plan review, replaces decision 6's 73,000) | —          | **0**       | **≤ 12**       | **≤ 20**       | **one per file, via `action()`** |
 
 ## Milestones (`refactor/main` → `main`, user approves)

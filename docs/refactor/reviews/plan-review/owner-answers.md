@@ -97,3 +97,8 @@ function, counting Kindred everywhere (the drafter's copy ignored it). Done in P
 weights, the builder's rating badge in words, similarity in words) are in `docs/future-ideas.md`
 and tududi's inbox. **A "castable by turn" UI element** for the commander and any selected card
 joins P28 (it shows the simulator's distribution).
+
+**P28 (2026-11-20): accepted at +346**, plus a fourth simulator effect, "puts a land onto the
+battlefield" (Cultivate, Rampant Growth), as a follow-up. **Phone card view:** tapping a card on a
+phone shows it large, image only; a toggle offers image, text, or both (image above text). Joins
+P31 as its `CardView` block.
