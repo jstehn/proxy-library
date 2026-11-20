@@ -1,10 +1,11 @@
 "use client";
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
-import { startOverAction, type StartOverState } from "./actions";
+import { startOverAction } from "./actions";
 import { CONFIRMATION_WORD } from "./confirmation";
+import type { FormState } from "@/server/form-action";
 
-const initialState: StartOverState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 /** Resets the player's own account, behind a typed confirmation (it can't be undone). */
 export function StartOverForm() {
