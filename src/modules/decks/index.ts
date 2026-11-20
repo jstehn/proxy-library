@@ -183,7 +183,8 @@ export {
   type SnapshotComparison,
 } from "./queries/snapshots";
 export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
-export { library, openingHandOdds, type LibraryCard, type TestHand } from "./domain/draws";
+export { openingHandOdds } from "./domain/draws";
+export { library, type LibraryCard } from "./domain/opening-hand/library";
 
 export {
   isKeyCard,

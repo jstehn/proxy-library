@@ -9,9 +9,9 @@ import {
   nextHand,
   formatRules,
   openingHandOdds,
-  startHand,
+  dealHand,
   type LibraryCard,
-  type TestHand,
+  type HandState,
 } from "@/modules/decks/client";
 import { seededRng } from "@/shared/kernel";
 
@@ -34,13 +34,13 @@ export function TestHandPanel(props: {
   const freeFirstMulligan = formatRules(props.format).freeFirstMulligan;
   const [freeMulligan, setFreeMulligan] = useState(freeFirstMulligan);
   const [onTheDraw, setOnTheDraw] = useState(false);
-  const [hand, setHand] = useState<TestHand>(() =>
-    startHand(cards, seededRng(`${props.seed}:start`), freeFirstMulligan),
+  const [hand, setHand] = useState<HandState>(() =>
+    dealHand(cards, seededRng(`${props.seed}:start`), freeFirstMulligan),
   );
 
   /** A fresh hand from the deck as it is now (cards may have changed since the last one). */
   function newHand(free = freeMulligan) {
-    setHand(startHand(cards, nextRng(), free));
+    setHand(dealHand(cards, nextRng(), free));
   }
   function mulligan() {
     setHand((current) => nextHand(current, { kind: "mulligan", rng: nextRng() }));

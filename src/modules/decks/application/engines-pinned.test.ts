@@ -6,7 +6,9 @@ import { aLine } from "../testing/deck-view";
 import type { Deck } from "../domain/deck";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 import { simulateCastOnCurve, type CastabilityLine } from "../domain/castability";
-import { library, nextHand, openingHandOdds, startHand } from "../domain/draws";
+import { openingHandOdds } from "../domain/draws";
+import { dealHand as startHand, nextHand } from "../domain/opening-hand/hand";
+import { library } from "../domain/opening-hand/library";
 import { simulateOpeningHands } from "../domain/goldfish";
 
 // Characterization of the opening-hand and payment engines (P15): seeded runs on one reference
@@ -199,9 +201,7 @@ describe("engines, pinned", () => {
       simulateOpeningHands(cards, {
         rng: seededRng("a"),
         ...BASE,
-        minLands: 3,
-        maxLands: 5,
-        requireEarlyPlay: false,
+        policy: { minLands: 3, maxLands: 5, requireEarlyPlay: false },
         freeMulligan: false,
         maxMulligans: 3,
         onTheDraw: true,
@@ -216,7 +216,7 @@ describe("engines, pinned", () => {
     const run = (mustCastBy: Parameters<typeof simulateOpeningHands>[1]["mustCastBy"]) =>
       simulateOpeningHands(cards, { rng: seededRng("m"), ...BASE, freeMulligan: true, mustCastBy });
     expect(
-      run({ cardName: "Giant", manaValue: 4, turn: 4, colorPips: { B: 1, G: 1 } }),
+      run({ cardName: "Giant", manaValue: 4, turn: 4, pips: [["B"], ["G"]] }),
     ).toMatchSnapshot();
     expect(
       run({
@@ -224,11 +224,13 @@ describe("engines, pinned", () => {
         manaValue: 5,
         turn: 5,
         inLibrary: false,
-        colorPips: { B: 1, G: 1 },
+        pips: [["B"], ["G"]],
       }),
     ).toMatchSnapshot();
     expect(run({ cardName: "Henzie", manaValue: 3, turn: 3, inLibrary: false })).toMatchSnapshot();
-    expect(run({ cardName: "Wurm", manaValue: 6, turn: 6, colorPips: { G: 2 } })).toMatchSnapshot();
+    expect(
+      run({ cardName: "Wurm", manaValue: 6, turn: 6, pips: [["G"], ["G"]] }),
+    ).toMatchSnapshot();
   });
 
   it("odds table", () => {

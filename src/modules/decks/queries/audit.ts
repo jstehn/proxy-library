@@ -11,7 +11,7 @@ import {
 import { simulateCastOnCurve } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
-import { library } from "../domain/draws";
+import { library } from "../domain/opening-hand/library";
 import { simulateOpeningHands } from "../domain/goldfish";
 import { scoreDeck } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";

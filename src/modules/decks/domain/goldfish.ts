@@ -1,5 +1,14 @@
-import { COLORS, type Rng, shuffled } from "@/shared/kernel";
-import { EARLY_RAMP_MAX_MV, OPENING_HAND, type LibraryCard } from "./draws";
+import { COLORS, type Rng } from "@/shared/kernel";
+import { firstUnpaidPip, type Pip } from "./mana-payment";
+import {
+  COMMANDER_KEEP,
+  drawsByTurn,
+  isEarlyPlay,
+  isEarlyRamp,
+  playOpening,
+  type KeepPolicy,
+} from "./opening-hand/hand";
+import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
 
 // Monte Carlo London-mulligan opening hand simulator (design doc 56):
 // pure and deterministic via injected Rng (ADR 0008).
@@ -10,16 +19,15 @@ export type MustCastByOption = Readonly<{
   turn: number;
   /** True if the card must be drawn from the library; false if in the command zone. */
   inLibrary?: boolean;
-  /** Colored pips in its cost ({B}{R}{G} → B 1, R 1, G 1); left out counts only the total. */
-  colorPips?: Readonly<Partial<Record<"W" | "U" | "B" | "R" | "G", number>>>;
+  /** The colored pips of its cost (`parseCost(manaCost).pips`); left out counts only the total. */
+  pips?: readonly Pip[];
 }>;
 
 export type SimulateHandsOptions = Readonly<{
   rng: Rng;
   trials?: number;
-  minLands?: number;
-  maxLands?: number;
-  requireEarlyPlay?: boolean;
+  /** What a keepable hand looks like (Commander's by default). */
+  policy?: KeepPolicy;
   freeMulligan?: boolean;
   maxMulligans?: number;
   onTheDraw?: boolean;
@@ -57,96 +65,6 @@ function pct(count: number, total: number): number {
   return total === 0 ? 0 : round1((count / total) * 100);
 }
 
-function isEarlyPlay(card: LibraryCard): boolean {
-  return !card.isLand && (card.manaValue ?? 99) <= EARLY_RAMP_MAX_MV;
-}
-
-function isEarlyRamp(card: LibraryCard): boolean {
-  return isEarlyPlay(card) && card.tags.includes("ramp");
-}
-
-function isKeepable(
-  hand: readonly LibraryCard[],
-  minLands: number,
-  maxLands: number,
-  requireEarlyPlay: boolean,
-): boolean {
-  const lands = hand.filter((c) => c.isLand).length;
-  if (lands < minLands || lands > maxLands) return false;
-  if (requireEarlyPlay && !hand.some(isEarlyPlay)) return false;
-  return true;
-}
-
-/**
- * London mulligan bottoming: remove `toBottom` cards while trying to keep land count
- * inside `[minLands, maxLands]` and preserving low-MV early plays.
- */
-function bottomCards(
-  hand: readonly LibraryCard[],
-  toBottom: number,
-  minLands: number,
-  maxLands: number,
-): LibraryCard[] {
-  if (toBottom <= 0) return [...hand];
-  const remaining = [...hand];
-  for (let b = 0; b < toBottom && remaining.length > 0; b++) {
-    const landCount = remaining.filter((c) => c.isLand).length;
-    let dropIdx = -1;
-    if (landCount > maxLands) {
-      dropIdx = remaining.findIndex((c) => c.isLand);
-    }
-    if (dropIdx === -1) {
-      // Drop highest-MV non-land card if we have enough lands (or if any non-land exists).
-      let highestMv = -1;
-      for (let i = 0; i < remaining.length; i++) {
-        if (remaining[i].isLand) continue;
-        const mv = remaining[i].manaValue ?? 0;
-        if (mv > highestMv) {
-          highestMv = mv;
-          dropIdx = i;
-        }
-      }
-      if (dropIdx === -1 || (landCount > minLands && remaining.every((c) => c.isLand))) {
-        dropIdx = 0;
-      }
-    }
-    remaining.splice(dropIdx, 1);
-  }
-  return remaining;
-}
-
-/**
- * Can these mana sources pay these colored pips, one source per pip? A small bipartite
- * matching (augmenting paths): a commander has at most a handful of pips.
- */
-export function canPayColors(
-  pips: readonly string[],
-  sources: readonly (readonly string[])[],
-): boolean {
-  if (pips.length > sources.length) return false;
-  const sourceForPip: number[] = pips.map(() => -1);
-  const pipForSource: number[] = sources.map(() => -1);
-  function assign(pip: number, seen: boolean[]): boolean {
-    for (let source = 0; source < sources.length; source++) {
-      if (seen[source] || !(sources[source] ?? []).includes(pips[pip] ?? "")) continue;
-      seen[source] = true;
-      const holder = pipForSource[source] ?? -1;
-      if (holder === -1 || assign(holder, seen)) {
-        pipForSource[source] = pip;
-        sourceForPip[pip] = source;
-        return true;
-      }
-    }
-    return false;
-  }
-  return pips.every((_, pip) =>
-    assign(
-      pip,
-      sources.map(() => false),
-    ),
-  );
-}
-
 /** The colors a card adds once in play: its own, or any color for land-fetching ramp. */
 function sourceColors(card: LibraryCard): readonly string[] {
   return card.producedMana !== undefined && card.producedMana.length > 0
@@ -164,10 +82,9 @@ function canCastByTurn(
   let drawIdx = 0;
   const sources: (readonly string[])[] = [];
   const targetLower = mustCast.cardName.trim().toLowerCase();
-  const pips = Object.entries(mustCast.colorPips ?? {}).flatMap(([color, count]) =>
-    Array.from({ length: count ?? 0 }, () => color),
-  );
-  const canPay = () => sources.length >= mustCast.manaValue && canPayColors(pips, sources);
+  const pips = mustCast.pips ?? [];
+  const canPay = () =>
+    sources.length >= mustCast.manaValue && firstUnpaidPip(pips, sources) === null;
 
   for (let turn = 1; turn <= mustCast.turn; turn++) {
     if ((turn > 1 || onTheDraw) && drawIdx < restOfLibrary.length) {
@@ -179,7 +96,7 @@ function canCastByTurn(
     handPool.forEach((card, index) => {
       if (!card.isLand) return;
       const colors = card.producedMana ?? [];
-      const score = pips.filter((pip) => colors.includes(pip)).length;
+      const score = pips.filter((pip) => pip.some((color) => colors.includes(color))).length;
       if (score > bestScore) {
         bestScore = score;
         bestLand = index;
@@ -220,9 +137,6 @@ export function simulateOpeningHands(
   options: SimulateHandsOptions,
 ): GoldfishReport {
   const trials = Math.max(1, Math.min(5000, options.trials ?? 1000));
-  const minLands = Math.max(0, Math.min(7, options.minLands ?? 2));
-  const maxLands = Math.max(minLands, Math.min(7, options.maxLands ?? 4));
-  const requireEarlyPlay = options.requireEarlyPlay ?? true;
   const freeMulligan = options.freeMulligan ?? true;
   const maxMulligans = Math.max(0, Math.min(4, options.maxMulligans ?? 2));
   const onTheDraw = options.onTheDraw ?? false;
@@ -256,35 +170,17 @@ export function simulateOpeningHands(
   const keptByMulligan = Array.from({ length: maxMulligans + 1 }, () => 0);
   const sampleHands: SampleHand[] = [];
 
-  // By turn 3: draw 2 cards on the play (T2, T3), 3 cards on the draw (T1, T2, T3).
-  const drawsByTurn3 = onTheDraw ? 3 : 2;
-
   for (let t = 0; t < trials; t++) {
-    let finalHand: LibraryCard[] = [];
-    let restOfLibrary: LibraryCard[] = [];
-    let mulligansUsed = 0;
-    let keptClean = false;
-
-    for (let m = 0; m <= maxMulligans; m++) {
-      const deck = shuffled(options.rng, cards);
-      const seven = deck.slice(0, OPENING_HAND);
-      const rest = deck.slice(OPENING_HAND);
-      const toBottom = Math.max(0, m - (freeMulligan ? 1 : 0));
-      const candidate = bottomCards(seven, toBottom, minLands, maxLands);
-
-      if (isKeepable(candidate, minLands, maxLands, requireEarlyPlay)) {
-        finalHand = candidate;
-        restOfLibrary = rest;
-        mulligansUsed = m;
-        keptClean = true;
-        break;
-      }
-      if (m === maxMulligans) {
-        finalHand = candidate;
-        restOfLibrary = rest;
-        mulligansUsed = m;
-      }
-    }
+    const {
+      hand: finalHand,
+      library: restOfLibrary,
+      mulligans: mulligansUsed,
+      keptClean,
+    } = playOpening(cards, options.rng, {
+      policy: options.policy ?? COMMANDER_KEEP,
+      freeMulligan,
+      maxMulligans,
+    });
 
     if (keptClean) keepableCount += 1;
     keptByMulligan[mulligansUsed] += 1;
@@ -298,7 +194,7 @@ export function simulateOpeningHands(
     if (finalHand.some(isEarlyPlay)) earlyPlayCount += 1;
     if (finalHand.some(isEarlyRamp)) earlyRampCount += 1;
 
-    const drawnByT3 = restOfLibrary.slice(0, drawsByTurn3);
+    const drawnByT3 = restOfLibrary.slice(0, drawsByTurn(3, onTheDraw));
     const totalLandsByT3 = lands + drawnByT3.filter((c) => c.isLand).length;
     if (totalLandsByT3 >= 3) turn3LandCount += 1;
     if (

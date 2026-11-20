@@ -5,13 +5,10 @@ import {
   deckOdds,
   hypergeometricAtLeast,
   hypergeometricAtLeast2Groups,
-  library,
-  nextHand,
   openingHandOdds,
-  startHand,
-  type DrawLine,
-  type LibraryCard,
 } from "./draws";
+import { dealHand as startHand, nextHand } from "./opening-hand/hand";
+import { library, type DrawLine, type LibraryCard } from "./opening-hand/library";
 import { roleTagsOf } from "../testing/deck-view";
 
 /** A deck line; its roles come from the text it is given, as the catalog's recognizer reads it. */

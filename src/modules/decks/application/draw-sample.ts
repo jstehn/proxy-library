@@ -8,10 +8,11 @@ import {
   type UserId,
   type CardFacts,
 } from "@/shared/kernel";
-import { colorPips } from "../domain/stats";
 import { commanderOnlyProfile, effectiveManaValue, type DeckPlan } from "../domain/deck-profile";
 import type { DeckView } from "../domain/deck-view";
-import { library } from "../domain/draws";
+import { parseCost } from "../domain/mana-payment";
+import { dealHand } from "../domain/opening-hand/hand";
+import { library, OPENING_HAND } from "../domain/opening-hand/library";
 import type { DeckNotFound } from "../domain/errors";
 import { simulateOpeningHands, type MustCastByOption } from "../domain/goldfish";
 
@@ -56,8 +57,6 @@ export type DrawSample = Readonly<{
 
 export type DeckTooSmall = Readonly<{ kind: "DeckTooSmall"; minimum: number }>;
 
-const HAND_SIZE = 7;
-
 export function makeDrawSample(readers: DrawSampleReaders) {
   async function drawSample(
     request: DrawSampleRequest,
@@ -70,7 +69,7 @@ export function makeDrawSample(readers: DrawSampleReaders) {
     if (view === null) return err({ kind: "DeckNotFound" });
 
     const cards = library(view.lines);
-    if (cards.length < HAND_SIZE) return err({ kind: "DeckTooSmall", minimum: HAND_SIZE });
+    if (cards.length < OPENING_HAND) return err({ kind: "DeckTooSmall", minimum: OPENING_HAND });
 
     const lineByOracle = new Map(view.lines.map((line) => [line.oracleId, line]));
     const rng = seededRng(request.seed ?? `${deckId}:${readers.clock.now().getTime()}`);
@@ -79,16 +78,13 @@ export function makeDrawSample(readers: DrawSampleReaders) {
       return { name: card.name, manaCost: line?.manaCost ?? "", typeLine: line?.typeLine ?? "" };
     };
 
+    const freeMulligan = formatRules(view.deck.format).freeFirstMulligan;
     const samples: { hand: SampleCard[]; nextDraws: SampleCard[] }[] = [];
     for (let handNumber = 0; handNumber < request.hands; handNumber++) {
-      const shuffled = [...cards];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(rng.next() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
+      const dealt = dealHand(cards, rng, freeMulligan);
       samples.push({
-        hand: shuffled.slice(0, HAND_SIZE).map(compact),
-        nextDraws: shuffled.slice(HAND_SIZE, HAND_SIZE + request.drawNext).map(compact),
+        hand: dealt.hand.map(compact),
+        nextDraws: dealt.library.slice(0, request.drawNext).map(compact),
       });
     }
 
@@ -96,11 +92,7 @@ export function makeDrawSample(readers: DrawSampleReaders) {
     const sim = simulateOpeningHands(cards, {
       rng: seededRng(request.seed ?? `sim-${view.deck.id}`),
       trials: request.trials,
-      minLands: 2,
-      maxLands: 4,
-      requireEarlyPlay: true,
-      freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
-      onTheDraw: false,
+      freeMulligan,
       ...(mustCastBy ? { mustCastBy } : {}),
     });
 
@@ -160,6 +152,6 @@ function mustCastOption(
     manaValue,
     turn: request.mustCastTurn,
     inLibrary: line.board !== "commander",
-    colorPips: colorPips(line.manaCost),
+    pips: parseCost(line.manaCost).pips,
   };
 }

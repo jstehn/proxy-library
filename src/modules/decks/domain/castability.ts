@@ -1,7 +1,7 @@
 import {
   COLORS,
   type ManaColor,
-  type ManaSymbol as PoolManaColor,
+  type ManaSymbol,
   type Rng,
   randomInt,
   seededRng,
@@ -12,7 +12,7 @@ import {
 import type { EntersTapped, TapMana } from "@/modules/catalog";
 import { isPlayed, type DeckCount } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
-import { parseManaCost } from "./mana";
+import { firstUnpaidPip, isManaSymbol, parseCost, type Pip } from "./mana-payment";
 
 export type CastabilityLine = DeckCount &
   Pick<CardIdentity, "oracleId"> &
@@ -55,7 +55,7 @@ type SimSource = Readonly<{
   tapKind: "never" | "sometimes" | "always";
   manaProduced: number;
   requiresFiveLands: boolean;
-  colors: readonly PoolManaColor[];
+  colors: readonly ManaSymbol[];
 }>;
 
 type SimCard =
@@ -65,7 +65,7 @@ type SimCard =
       isRamp: true;
       manaValue: number;
       manaProduced: number;
-      colors: readonly PoolManaColor[];
+      colors: readonly ManaSymbol[];
     }>
   | Readonly<{ isLand: false; isRamp: false }>;
 
@@ -75,66 +75,11 @@ type SpellSpec = Readonly<{
   manaValue: number;
   manaCost: string | null;
   targetTurn: number;
-  /** Each entry is a list of acceptable colors for that pip (length 1 = strict, length 2+ = hybrid). */
-  pipOptions: ReadonlyArray<readonly PoolManaColor[]>;
+  pips: readonly Pip[];
 }>;
 
-function toPoolColors(producedMana: readonly string[]): PoolManaColor[] {
-  const valid = new Set<string>(["W", "U", "B", "R", "G", "C"]);
-  const out: PoolManaColor[] = [];
-  for (const c of producedMana) {
-    const up = c.toUpperCase();
-    if (valid.has(up)) out.push(up as PoolManaColor);
-  }
-  return out;
-}
-
-function buildPipOptions(manaCost: string | null): ReadonlyArray<readonly PoolManaColor[]> {
-  const parsed = parseManaCost(manaCost, 0);
-  const options: PoolManaColor[][] = [];
-  for (const color of ["W", "U", "B", "R", "G", "C"] as const) {
-    for (let i = 0; i < parsed.pips[color]; i++) {
-      options.push([color]);
-    }
-  }
-  for (const hybrid of parsed.hybridPips) {
-    options.push([...hybrid]);
-  }
-  // Phyrexian pips are payable with 2 life so they don't block castability on color
-  return options;
-}
-
-/**
- * Checks whether `sources` can pay `pipOptions` (strict + hybrid + colorless).
- * Returns `null` if all pips are paid, or the first missing WUBRG color pip.
- */
-function missingPip(
-  sources: readonly SimSource[],
-  pipOptions: ReadonlyArray<readonly PoolManaColor[]>,
-): ManaColor | null {
-  if (pipOptions.length === 0) return null;
-  // Prefer sources with fewer produced colors first so monocolor lands are consumed before duals.
-  const ordered = [...sources].sort((a, b) => a.colors.length - b.colors.length);
-  const used = new Array<boolean>(ordered.length).fill(false);
-
-  // Pay strict single-color pips before flexible hybrid pips
-  const sortedPips = [...pipOptions].sort((a, b) => a.length - b.length);
-  for (const choices of sortedPips) {
-    let found = -1;
-    for (let i = 0; i < ordered.length; i++) {
-      if (used[i]) continue;
-      if (choices.some((c) => ordered[i].colors.includes(c))) {
-        found = i;
-        break;
-      }
-    }
-    if (found === -1) {
-      const wubrg = choices.find((c): c is ManaColor => c !== "C");
-      return wubrg ?? null;
-    }
-    used[found] = true;
-  }
-  return null;
+function toPoolColors(producedMana: readonly string[]): ManaSymbol[] {
+  return producedMana.map((color) => color.toUpperCase()).filter(isManaSymbol);
 }
 
 /**
@@ -208,7 +153,7 @@ export function simulateCastOnCurve(
         manaValue: effMv,
         manaCost: line.manaCost ?? null,
         targetTurn: Math.max(1, Math.min(8, mv)),
-        pipOptions: buildPipOptions(line.manaCost ?? null),
+        pips: parseCost(line.manaCost).pips,
       });
     }
   }
@@ -294,11 +239,15 @@ export function simulateCastOnCurve(
 
       if (effectiveMana < spell.manaValue) continue;
 
-      const missed = missingPip([...activeLands, ...priorRamp], spell.pipOptions);
-      if (missed === null) {
+      const unpaid = firstUnpaidPip(
+        spell.pips,
+        [...activeLands, ...priorRamp].map((source) => source.colors),
+      );
+      if (unpaid === null) {
         castCounts[sIdx] += 1;
       } else {
-        colorMissCounts[missed][sIdx] += 1;
+        const missed = unpaid.find((color): color is ManaColor => color !== "C");
+        if (missed !== undefined) colorMissCounts[missed][sIdx] += 1;
       }
     }
   }

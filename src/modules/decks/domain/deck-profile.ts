@@ -1,5 +1,5 @@
 import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
-import { countMinimumPips } from "./mana";
+import { parseCost } from "./mana-payment";
 
 export const FIXED_CARD_ROLE_TAGS = [
   "ramp",
@@ -183,7 +183,7 @@ export function effectiveManaValue(
   commandCasts = 1,
   scopePredicates: Readonly<Record<string, ScopePredicate>> = DEFAULT_SCOPE_PREDICATES,
 ): number {
-  const minPips = countMinimumPips(card.manaCost);
+  const minPips = parseCost(card.manaCost).pips.length;
   if (!profile || profile.costReducers.length === 0) return Math.max(minPips, baseManaValue);
   let reduction = 0;
   for (const reducer of profile.costReducers) {
