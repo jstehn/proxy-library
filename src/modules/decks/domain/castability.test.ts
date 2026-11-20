@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
 import { EMPTY_DECK_PROFILE, type DeckPlan } from "./deck-profile";
+import type { TapMana } from "@/modules/catalog";
 import { simulateCastOnCurve, type CastabilityLine } from "./castability";
+
+// What the catalog's card features say about a card that does not tap for mana, and about a
+// plain land (design doc 66); the recognizer has its own tests.
+const NO_TAP_MANA: TapMana = { isSource: false, amount: 0, requiresFiveLands: false };
+const LAND_TAP_MANA: TapMana = { isSource: true, amount: 1, requiresFiveLands: false };
 
 function spell(name: string, manaCost: string, manaValue: number, quantity = 1): CastabilityLine {
   return {
@@ -14,6 +20,7 @@ function spell(name: string, manaCost: string, manaValue: number, quantity = 1):
     manaCost,
     producedMana: [],
     text: "",
+    tapMana: NO_TAP_MANA,
   };
 }
 
@@ -33,6 +40,7 @@ function land(
     manaCost: null,
     producedMana,
     text,
+    tapMana: LAND_TAP_MANA,
   };
 }
 
@@ -96,6 +104,7 @@ describe("simulateCastOnCurve", () => {
         manaCost: "{4}{G}{G}",
         power: "7",
         text: "Trample",
+        tapMana: NO_TAP_MANA,
       },
       {
         oracleId: "small-utility",
@@ -107,6 +116,7 @@ describe("simulateCastOnCurve", () => {
         manaCost: "{5}{U}",
         power: "2",
         text: "Flying",
+        tapMana: NO_TAP_MANA,
       },
       {
         oracleId: "big-sorcery",
@@ -117,6 +127,7 @@ describe("simulateCastOnCurve", () => {
         manaValue: 6,
         manaCost: "{4}{U}{U}",
         text: "Take two extra turns.",
+        tapMana: NO_TAP_MANA,
       },
       ...Array.from({ length: 60 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
     ];
@@ -195,6 +206,7 @@ describe("simulateCastOnCurve", () => {
         manaCost: "{10}{G}{G}",
         power: "12",
         text: "This spell costs {X} less to cast, where X is the total power of creatures you control.",
+        tapMana: NO_TAP_MANA,
       },
       ...Array.from({ length: 63 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
     ];
@@ -229,6 +241,7 @@ describe("simulateCastOnCurve", () => {
         manaCost: "{1}",
         producedMana: ["C"],
         text: "{T}: Add {C}{C}.",
+        tapMana: { isSource: true, amount: 2, requiresFiveLands: false },
       },
       {
         oracleId: "mdfc",
@@ -240,6 +253,7 @@ describe("simulateCastOnCurve", () => {
         manaCost: "{2}{G}",
         producedMana: ["G"],
         text: "Return target card from your graveyard to your hand. // Bala Ged Sanctuary enters tapped.",
+        tapMana: LAND_TAP_MANA,
       },
       spell("Ashiok, Dream Render", "{1}{U/B}{U/B}", 3),
       spell("Mutagenic Growth", "{G/P}", 1),
@@ -251,6 +265,7 @@ describe("simulateCastOnCurve", () => {
         typeLine: "Legendary Creature — Eldrazi",
         manaValue: 10,
         manaCost: "{8}{C}{C}",
+        tapMana: NO_TAP_MANA,
       },
       ...Array.from({ length: 59 }, (_, i) => spell(`Filler ${i}`, "{2}{B}", 3)),
     ];

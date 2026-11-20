@@ -5,7 +5,7 @@ import { TAGS, THEMES, type Tag, type Theme } from "@/shared/card-search";
 import { COLORS, type UserId, seededRng } from "@/shared/kernel";
 import { bracketLine, fitsTarget } from "../domain/brackets";
 import { isCounted } from "../domain/boards";
-import { simulateCastOnCurve, type CastabilityLine } from "../domain/castability";
+import { simulateCastOnCurve } from "../domain/castability";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import {
   planManaBase,
@@ -17,6 +17,7 @@ import { deckStats } from "../domain/stats";
 import { deckProfile } from "../domain/suggest";
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
+import { withTapMana } from "./tap-mana";
 import { type SuggestionContext } from "../domain/suggestion-types";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may
@@ -219,7 +220,7 @@ export async function manaBasePlan(
         : null,
   });
 
-  const beforeLines: CastabilityLine[] = context.lines.map((line) => ({
+  const beforeLines = context.lines.map((line) => ({
     oracleId: line.oracleId,
     name: nameByOracle.get(line.oracleId) ?? line.oracleId,
     board: line.board,
@@ -230,7 +231,7 @@ export async function manaBasePlan(
     producedMana: line.producedMana ?? [],
     text: line.text ?? "",
   }));
-  const afterLines: CastabilityLine[] = [
+  const afterLines = [
     ...beforeLines,
     ...plan.add.map((added) => ({
       oracleId: added.card.oracleId,
@@ -245,12 +246,14 @@ export async function manaBasePlan(
     })),
   ];
 
-  const before = simulateCastOnCurve(beforeLines, {
+  // One read of the card features for the deck's cards and the lands the plan adds.
+  const withTap = await withTapMana(db, afterLines);
+  const before = simulateCastOnCurve(withTap.slice(0, beforeLines.length), {
     rng: seededRng(`mana-base-${deckId}`),
     trials: 400,
     profile: deckPlanProfile,
   });
-  const after = simulateCastOnCurve(afterLines, {
+  const after = simulateCastOnCurve(withTap, {
     rng: seededRng(`mana-base-${deckId}`),
     trials: 400,
     profile: deckPlanProfile,

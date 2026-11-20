@@ -1,7 +1,5 @@
-// Shared mana cost parsing, pool arithmetic, and tap-mana production extraction.
+// Shared mana cost parsing and pool arithmetic. Tap-for-mana is a card feature (design doc 66).
 // Used across castability and deck-profile so mana rules live in one place.
-
-import { isLand, type CardFacts } from "@/shared/kernel";
 
 export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
 export type ManaPool = Record<ManaColor, number>;
@@ -19,13 +17,6 @@ export type ParsedManaCost = Readonly<{
 }>;
 
 const COLOR_SET = new Set<string>(["W", "U", "B", "R", "G", "C"]);
-const BASIC_LAND_MANA: Readonly<Record<string, ManaColor>> = {
-  Plains: "W",
-  Island: "U",
-  Swamp: "B",
-  Mountain: "R",
-  Forest: "G",
-};
 
 /** Parse an MTG mana cost string like `{1}{U/B}{G/P}` into strict pips, hybrid options, Phyrexian pips, and generic mana. */
 export function parseManaCost(manaCost: string | null | undefined, fallbackMv = 0): ParsedManaCost {
@@ -76,99 +67,4 @@ export function countMinimumPips(manaCost: string | null | undefined): number {
   let total = parsed.hybridPips.length;
   for (const c of Object.values(parsed.pips)) total += c;
   return total;
-}
-
-export type ManaSourceFacts = Pick<CardFacts, "typeLine"> &
-  Partial<Pick<CardFacts, "text" | "producedMana">> &
-  Readonly<{ isLand?: boolean }>;
-
-/** Whether a card has an activated tap-mana ability or structured `producedMana`. */
-export function hasTapManaAbility(card: Pick<ManaSourceFacts, "text" | "producedMana">): boolean {
-  if ((card.producedMana?.length ?? 0) > 0) return true;
-  return /\{T\}[^.]*Add\s+\{/.test(card.text ?? "");
-}
-
-/** Total mana count in a ManaPool. */
-export function totalMana(pool: ManaPool): number {
-  return pool.W + pool.U + pool.B + pool.R + pool.G + pool.C;
-}
-
-/**
- * Extract the mana added when a permanent is tapped for its primary mana ability,
- * accounting for conditional lands (Temple of the False God, Urza's Tron, Shrine of the Forsaken Gods)
- * and mana-doubler statics (e.g. Forsaken Monument) when battlefield context is provided.
- */
-export function extractTapManaProduction(
-  card: ManaSourceFacts,
-  battlefield?: ReadonlyArray<{ card: ManaSourceFacts }>,
-): ManaPool {
-  const added: ManaPool = { ...EMPTY_MANA_POOL };
-  const text = card.text ?? "";
-  const landCount = battlefield ? battlefield.filter((p) => isLand(p.card.typeLine)).length : 0;
-
-  // Conditional: Temple of the False God ("Activate only if you control five or more lands")
-  if (/activate only if you control five or more lands/i.test(text)) {
-    if (!battlefield || landCount < 5) return added;
-  }
-
-  // Conditional: Urza's Mine / Power-Plant / Tower (Tron)
-  if (/if you control an urza's/i.test(text) && battlefield) {
-    const hasMine = battlefield.some((p) => /Urza's Mine/i.test(p.card.typeLine));
-    const hasPlant = battlefield.some((p) => /Urza's Power-Plant/i.test(p.card.typeLine));
-    const hasTower = battlefield.some((p) => /Urza's Tower/i.test(p.card.typeLine));
-    if (hasMine && hasPlant && hasTower) {
-      added.C += /add \{C\}\{C\}\{C\}/i.test(text) ? 3 : 2;
-      return applyManaDoublers(added, battlefield);
-    }
-    added.C += 1;
-    return applyManaDoublers(added, battlefield);
-  }
-
-  // Conditional: Shrine of the Forsaken Gods ("seven or more lands")
-  if (/seven or more lands/i.test(text)) {
-    added.C += battlefield && landCount >= 7 ? 2 : 1;
-    return applyManaDoublers(added, battlefield);
-  }
-
-  // Standard explicit "{T}: Add {C}{C}" / "{T}: Add {B}{G}"
-  const tapAddMatch = text.match(/\{T\}[^.]*Add\s+((?:\{[WUBRGC]\})+)/i);
-  if (tapAddMatch) {
-    const syms = tapAddMatch[1].match(/\{([WUBRGC])\}/gi) ?? [];
-    for (const s of syms) {
-      const c = s.slice(1, -1).toUpperCase() as ManaColor;
-      added[c] += 1;
-    }
-    return applyManaDoublers(added, battlefield);
-  }
-
-  if (card.producedMana && card.producedMana.length > 0) {
-    const first = card.producedMana[0].toUpperCase();
-    if (COLOR_SET.has(first)) {
-      added[first as ManaColor] += 1;
-      return applyManaDoublers(added, battlefield);
-    }
-  }
-
-  if (card.isLand) {
-    for (const [subtype, color] of Object.entries(BASIC_LAND_MANA)) {
-      if (card.typeLine.includes(subtype)) {
-        added[color] += 1;
-        return applyManaDoublers(added, battlefield);
-      }
-    }
-    added.C += 1;
-  }
-  return applyManaDoublers(added, battlefield);
-}
-
-function applyManaDoublers(
-  added: ManaPool,
-  battlefield?: ReadonlyArray<{ card: ManaSourceFacts }>,
-): ManaPool {
-  if (!battlefield || added.C === 0) return added;
-  const colorlessDoublers = battlefield.filter((p) =>
-    /whenever you tap a permanent for \{C\}, add an additional \{C\}/i.test(p.card.text ?? ""),
-  ).length;
-  if (colorlessDoublers === 0) return added;
-  return { ...added, C: added.C + colorlessDoublers };
 }

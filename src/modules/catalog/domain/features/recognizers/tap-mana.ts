@@ -1,7 +1,7 @@
 import { cardTypes } from "@/shared/kernel";
 import type { CardText, Recognizer, TapMana } from "../types";
 
-// Moved unchanged from decks/domain/mana.ts (`hasTapManaAbility`, `extractTapManaProduction`).
+// Moved unchanged from the tap-mana code that lived in decks/domain/mana.ts.
 // It reads the printed text, not text without reminders, exactly as the old code did; reading
 // the plain text instead is a later change with a version bump.
 
