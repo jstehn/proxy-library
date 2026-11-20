@@ -26,7 +26,7 @@ import { wishlistQueries, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
 import type { Inventory } from "@/modules/inventory";
 import type { Packs } from "@/modules/packs";
-import type { Actor, makeAccounts } from "@/modules/accounts";
+import type { Accounts, Actor } from "@/modules/accounts";
 import type { Catalog } from "@/modules/catalog";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import { draftQueries, type Drafts } from "@/modules/drafts";
@@ -58,6 +58,7 @@ type CapabilityDependencies = Readonly<{
   wallet: Wallet;
   social: Social;
   trades: Trades;
+  accounts: Accounts;
   catalog: Catalog;
   drafts: Drafts;
   store: Store;
@@ -77,7 +78,6 @@ type CapabilityDependencies = Readonly<{
     chooseToken: ReturnType<typeof makeTokenChoices>;
     proxySheet: ReturnType<typeof makeProxySheets>;
     seeds: Readonly<{ newSeed(): string }>;
-    accounts: ReturnType<typeof makeAccounts>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
   }>;
@@ -109,7 +109,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       wishlist,
       findCard: (nameOrId) => findCard(db, nameOrId),
     }),
-    ...wireAccountCapabilities({ db, clock, wallet }),
+    ...wireAccountCapabilities(dependencies),
     ...wirePackCapabilities(dependencies),
     ...wireInventoryCapabilities(dependencies),
     ...wireWalletCapabilities(dependencies),
