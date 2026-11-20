@@ -19,12 +19,5 @@ export {
 } from "./application/trades";
 export type { Shortfall } from "./domain/errors";
 export { TradeId, type TradeItem, type TradeSide } from "./domain/trade";
-export {
-  tradesFor,
-  tradesWaitingForYou,
-  tradeView,
-  tradingPartners,
-  type TradeItemView,
-  type TradeView,
-  type TradingPartner,
-} from "./queries/trades";
+export type { TradeItemView, TradeView, TradingPartner } from "./queries/trades";
+export * as tradeQueries from "./queries";

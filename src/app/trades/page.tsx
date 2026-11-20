@@ -45,10 +45,10 @@ function TradeLine(props: {
 }
 
 export default async function TradesPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
   const [trades, shared, sharedWishes] = await Promise.all([
-    capabilities.tradeReads.tradesFor(actor.userId),
+    reads.trades.tradesFor(actor),
     capabilities.realCollectionReads.shared(),
     capabilities.wishlistReads.shared(),
   ]);

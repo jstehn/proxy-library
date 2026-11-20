@@ -49,11 +49,9 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
 const button = "rounded-md px-3 py-1.5 text-sm font-medium";
 
 export default async function TradePage(props: PageProps<"/trades/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const tradeId = Number((await props.params).id);
-  const trade = Number.isSafeInteger(tradeId)
-    ? await capabilities.tradeReads.view(actor.userId, tradeId)
-    : null;
+  const trade = Number.isSafeInteger(tradeId) ? await reads.trades.view(actor, tradeId) : null;
   if (trade === null) notFound();
   const error = (await props.searchParams).error;
   const fromProposer = trade.items.filter((item) => item.from === "proposer");

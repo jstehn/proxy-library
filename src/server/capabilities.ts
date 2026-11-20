@@ -1,4 +1,3 @@
-import { wireTradeCapabilities } from "@/modules/trades/wiring";
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
@@ -40,7 +39,7 @@ import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
 import type { makePacks } from "@/modules/packs";
 import type { makeResetPlayer } from "@/modules/reset";
 import { socialQueries, type makeSocial } from "@/modules/social";
-import { tradesWaitingForYou, type makeTrades } from "@/modules/trades";
+import { tradeQueries, type makeTrades } from "@/modules/trades";
 import type { makeWallet } from "@/modules/wallet";
 import type { makeWishlist } from "@/modules/wishlist";
 import type { makeInventory } from "@/modules/inventory";
@@ -110,7 +109,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     ...wireCatalogCapabilities({ db }),
     ...wireCollectionCapabilities({ db }),
-    ...wireTradeCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireDraftCapabilities({ db }),
     ...wireStoreCapabilities({ db }),
@@ -129,7 +127,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       const userId = actor.userId;
       const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
         dependencies.services.wallet.refreshWallet(userId),
-        tradesWaitingForYou(db, userId),
+        tradeQueries.waitingForYou(db, actor),
         wishesAtTarget(db, userId),
         activeDraftOf(db, userId),
         socialQueries.incomingRequestCount(db, actor),

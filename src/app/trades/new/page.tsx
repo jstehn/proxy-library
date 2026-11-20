@@ -96,11 +96,11 @@ function Chosen(props: {
 }
 
 export default async function NewTradePage(props: PageProps<"/trades/new">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
   const searchParams = await props.searchParams;
   const draft = readDraft(searchParams);
-  const partners = await capabilities.tradeReads.partners(actor.userId);
+  const partners = await reads.trades.partners(actor);
   const partner = partners.find((candidate) => candidate.userId === draft.withUserId) ?? null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
 
