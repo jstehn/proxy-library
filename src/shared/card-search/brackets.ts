@@ -2,6 +2,7 @@
 // Brackets. Game Changers come from Scryfall's own list (stored on the printing); land denial and
 // extra turns are read from the rules text, like role tags (design doc 19). Heuristics: they
 // explain an estimate, they never decide whether a deck is allowed.
+import { plainText } from "@/shared/kernel";
 import type { TagFacts } from "./tags";
 
 export const BRACKET_FLAGS = ["gameChanger", "landDenial", "extraTurn"] as const;
@@ -45,14 +46,9 @@ const BRACKET_TEXT_RULES: readonly BracketTextRule[] = [
   },
 ];
 
-/** Rules text without reminder text, as the tag rules read it. */
-function withoutReminders(text: string): string {
-  return text.replace(/\([^)]*\)/g, "");
-}
-
 /** Text flags only: land denial and extra turns, in BRACKET_FLAGS order. Stored per printing. */
 export function textBracketFlags(card: TagFacts): BracketFlag[] {
-  const text = withoutReminders(card.text);
+  const text = plainText(card.text);
   return BRACKET_TEXT_RULES.filter((row) => row.patterns.some((pattern) => pattern.test(text))).map(
     (row) => row.flag,
   );

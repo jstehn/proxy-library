@@ -1,4 +1,4 @@
-import { plainText } from "@/shared/card-search";
+import { plainCardText } from "@/shared/card-search";
 import { hasTypeWord, type CardFacts } from "@/shared/kernel";
 import type { DeckCount } from "./boards";
 
@@ -208,7 +208,7 @@ const SIGNAL_RULES: readonly SignalRule[] = [
 
 /** Pure produces/consumes signal extraction for a single card (reminder text stripped). */
 export function cardSignalIO(card: SignalCardInput): SignalIO {
-  const text = plainText(card);
+  const text = plainCardText(card);
   const makes: SignalTag[] = [];
   const uses: SignalTag[] = [];
   for (const rule of SIGNAL_RULES) {

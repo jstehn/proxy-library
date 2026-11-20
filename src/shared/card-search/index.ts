@@ -24,7 +24,7 @@ export {
 } from "./help";
 export {
   cardSignals,
-  plainText,
+  plainCardText,
   type Signal,
   type SignalCard,
   type SignalKind,

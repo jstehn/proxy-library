@@ -1,10 +1,9 @@
 // Role tags (design doc 19, section 3): the job a card does in a deck, composed from effect
 // primitives (./primitives). Rules as data: one row per tag, matching structured EffectPrimitives
 // instead of card-shaped one-off regexes.
-import { cardTypes, hasTypeWord } from "@/shared/kernel";
+import { cardTypes, hasTypeWord, plainText } from "@/shared/kernel";
 import {
   extractEffects,
-  withoutReminders,
   type EffectExtractor,
   type EffectPrimitive,
   type TagFacts,
@@ -102,7 +101,7 @@ const TAG_RULES: readonly TagRule[] = [
 
 /** The roles a card plays, in TAGS order. */
 export function cardTags(card: TagFacts, extractors?: readonly EffectExtractor[]): Tag[] {
-  const text = withoutReminders(card.text);
+  const text = plainText(card.text);
   // The front face: a spell with a land on its back is still tagged as the spell it is played as.
   const land = cardTypes(card.typeLine).isLandOnFront;
   const effects = extractEffects(card, extractors);
@@ -556,13 +555,13 @@ const THEME_RULES: readonly ThemeRule[] = [
 
 /** The themes a card plays into. */
 export function cardThemes(card: TagFacts): Theme[] {
-  const text = withoutReminders(card.text);
+  const text = plainText(card.text);
   return THEME_RULES.filter((row) => row.fits(card, text)).map((row) => row.theme);
 }
 
 /** The themes a commander builds around (read from its text). */
 export function leaderThemes(card: TagFacts): Theme[] {
-  const text = withoutReminders(card.text);
+  const text = plainText(card.text);
   return THEME_RULES.filter((row) => matchesAny(row.leads, text)).map((row) => row.theme);
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSearch } from "./parse";
-import { cardSignals, phrasesOf, plainText, type SignalCard } from "./signals";
+import { cardSignals, phrasesOf, plainCardText, type SignalCard } from "./signals";
 
 const card = (name: string, typeLine: string, text: string, extra: Partial<SignalCard> = {}) =>
   ({ name, typeLine, text, keywords: [], roleTags: [], themes: [], ...extra }) satisfies SignalCard;
@@ -101,7 +101,7 @@ describe("cardSignals", () => {
 describe("plainText and phrasesOf", () => {
   it("replaces the card's name and short name with ~ and drops reminder text", () => {
     expect(
-      plainText({
+      plainCardText({
         name: "Jolene, the Plunder Queen",
         text: "Put four +1/+1 counters on Jolene. (Reminder.)",
       }),

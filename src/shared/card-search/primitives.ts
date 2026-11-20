@@ -1,7 +1,7 @@
 // Composable MTG effect primitives extracted from Oracle text and structured card facts.
 // Open-Closed: new mechanics are added as EffectExtractor entries without modifying role/theme rules.
 
-import type { CardFacts } from "@/shared/kernel";
+import { plainText, type CardFacts } from "@/shared/kernel";
 
 /** Minimal card facts read by effect extractors and tag/bracket rules. */
 export type TagFacts = Pick<CardFacts, "typeLine" | "text"> &
@@ -78,11 +78,6 @@ export interface EffectExtractor {
 const PERMANENT_TYPE = String.raw`(creature|artifact|enchantment|planeswalker|permanent|battle)s?\b`;
 const LAND_WORDS = String.raw`(land|forest|plains|island|swamp|mountain|basic)`;
 const rule = (source: string) => new RegExp(source, "i");
-
-/** Rules text without reminder text: "(… draw a card …)" in a keyword's reminder doesn't count. */
-export function withoutReminders(text: string): string {
-  return text.replace(/\([^)]*\)/g, "");
-}
 
 function parseSubject(raw: string | undefined): EffectSubject {
   if (!raw) return "permanent";
@@ -420,7 +415,7 @@ export function extractEffects(
   card: TagFacts,
   extractors: readonly EffectExtractor[] = DEFAULT_EFFECT_EXTRACTORS,
 ): EffectPrimitive[] {
-  const cleanText = withoutReminders(card.text);
+  const cleanText = plainText(card.text);
   const effects: EffectPrimitive[] = [];
   for (const extractor of extractors) {
     effects.push(...extractor.extract(card, cleanText));

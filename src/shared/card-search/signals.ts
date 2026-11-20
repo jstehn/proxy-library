@@ -4,7 +4,7 @@
 // costs, recurring phrases) and leaves the judgment to whoever reads it, a player or an LLM.
 // Pure: the deck builder may use it in the browser later.
 
-import { hasTypeWord, type CardFacts } from "@/shared/kernel";
+import { hasTypeWord, plainText, type CardFacts } from "@/shared/kernel";
 import type { Tag, Theme } from "./tags";
 
 /** What the signal rules read about one card. */
@@ -58,16 +58,9 @@ type Finding = Readonly<{ kind: SignalKind; name: string; followUp: string }>;
 
 // --- Text -------------------------------------------------------------------------------
 
-/** Rules text without reminder text, with the card's own name (and short name) as "~". */
-export function plainText(card: Pick<SignalCard, "name" | "text">): string {
-  let text = card.text.replace(/\([^)]*\)/g, "");
-  for (const face of card.name.split(" // ")) {
-    const shortName = face.split(",")[0];
-    for (const name of [face, shortName]) {
-      if (name.length >= 3) text = text.split(name).join("~");
-    }
-  }
-  return text;
+/** A card's rules text, plain (the kernel's `plainText`), by its face names. */
+export function plainCardText(card: Pick<SignalCard, "name" | "text">): string {
+  return plainText(card.text, card.name.split(" // "));
 }
 
 /** Quotes a phrase for the search language, or writes it as a pattern if it has quotes. */
@@ -237,7 +230,7 @@ const CARD_TYPES: ReadonlyArray<
 
 /** Everything one card shows, each signal once. */
 function findingsFor(card: SignalCard): Finding[] {
-  const text = plainText(card);
+  const text = plainCardText(card);
   const findings: Finding[] = [
     ...counterFindings(text),
     ...tokenFindings(text),
@@ -442,7 +435,7 @@ export function cardSignals(cards: readonly SignalCard[], options: SignalOptions
       tally.cards.push(card.name);
       named.set(key, tally);
     }
-    for (const phrase of phrasesOf(plainText(card))) {
+    for (const phrase of phrasesOf(plainCardText(card))) {
       phrases.set(phrase, [...(phrases.get(phrase) ?? []), card.name]);
     }
   }
