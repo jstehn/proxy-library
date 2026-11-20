@@ -408,6 +408,11 @@ export const cardFeatures = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Copied from `features` for `is:shockland` and the other land cycles (design doc 66, question 9).
+    landCycles: text("land_cycles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamptz("updated_at").notNull(),
   },
   (table) => [
@@ -415,6 +420,7 @@ export const cardFeatures = pgTable(
     index("card_features_role_tags_idx").using("gin", table.roleTags),
     index("card_features_theme_tags_idx").using("gin", table.themeTags),
     index("card_features_bracket_flags_idx").using("gin", table.bracketFlags),
+    index("card_features_land_cycles_idx").using("gin", table.landCycles),
   ],
 );
 

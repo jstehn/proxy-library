@@ -379,6 +379,13 @@
       "when": 1795199995693,
       "tag": "0053_card_features_bracket_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795202079533,
+      "tag": "0054_land_cycles",
+      "breakpoints": true
     }
   ]
 }

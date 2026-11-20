@@ -2,11 +2,16 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import boundaries from "eslint-plugin-boundaries";
+import { cardNameLiteral } from "./eslint-rules/card-name-literal.mjs";
 import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
 const SOURCE = ["src/**/*.{ts,tsx}", "worker/**/*.ts"];
+// The two card rules (eslint-rules/), one plugin so blocks that overlap agree on it.
+const CARDS_PLUGIN = {
+  rules: { "oracle-text-regex": oracleTextRegex, "card-name-literal": cardNameLiteral },
+};
 // The folders that hold card rules (design doc 66): the regex-count ratchet watches the same ones.
 const CARD_RULE_FOLDERS = [
   "src/modules/decks/domain",
@@ -215,6 +220,7 @@ const policies = [
   { from: layer("queries"), allow: { to: publicApi, dependency: { kind: "type" } } },
   // Design doc 66: the one decks read that calls the catalog for card features (a value, so the
   // lazy repair of a missing row stays in the catalog).
+  { from: layer("queries", { file: "card-features.ts" }), allow: { to: publicApi } },
   { from: layer("queries", { file: "tap-mana.ts" }), allow: { to: publicApi } },
   // The signals read (deck_signals) reads the stored features the same way.
   { from: layer("queries", { file: "card-facts.ts" }), allow: { to: publicApi } },
@@ -602,8 +608,16 @@ export default defineConfig([
       "src/modules/catalog/domain/{comprehensive-rules,edhrec,wpn}.ts",
       ...NOT_YET_RECOGNIZED,
     ],
-    plugins: { cards: { rules: { "oracle-text-regex": oracleTextRegex } } },
+    plugins: { cards: CARDS_PLUGIN },
     rules: { "cards/oracle-text-regex": "error" },
+  },
+
+  // No card is named in domain code (P14): a rule about one card is a feature or a data table.
+  {
+    files: ["src/modules/{catalog,decks,drafts}/domain/**/*.ts"],
+    ignores: TESTS,
+    plugins: { cards: CARDS_PLUGIN },
+    rules: { "cards/card-name-literal": "error" },
   },
 
   globalIgnores([

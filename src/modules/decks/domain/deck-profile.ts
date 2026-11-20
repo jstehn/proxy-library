@@ -35,9 +35,9 @@ export type CostReducerScope = (typeof COST_REDUCER_SCOPES)[number];
 
 export type CostReducerCard = Partial<Pick<CardFacts, "typeLine" | "manaCost">> &
   Readonly<{
-    oracleText?: string;
     power?: string | number | null;
     isCommander?: boolean;
+    /** The card has the blitz keyword (Scryfall's list). */
     isBlitz?: boolean;
     fromZone?: string;
   }>;
@@ -150,8 +150,7 @@ export const DEFAULT_SCOPE_PREDICATES: Readonly<Record<CostReducerScope, ScopePr
     const p = parsePower(card.power);
     return creature && p !== null && p >= 4;
   },
-  blitz: (card) =>
-    card.isBlitz === true || (card.oracleText ? /\bblitz\b/i.test(card.oracleText) : false),
+  blitz: (card) => card.isBlitz === true,
   colorless: (card) => (card.manaCost ? !/\{[WUBRG]\}/i.test(card.manaCost) : false),
   graveyard: (card) => card.fromZone === "graveyard",
 };

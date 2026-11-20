@@ -1,5 +1,4 @@
-import type { UserId } from "@/shared/kernel";
-import { err, ok, type Result } from "@/shared/kernel";
+import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import { dealWaitsFor, passOnDeal } from "./deals";
 import {
   cardAt,
@@ -15,6 +14,7 @@ import {
 } from "./draft";
 import type { DraftNotRunning, NotAway, NothingToPick } from "./errors";
 import {
+  abilityOfCard,
   chooseColor,
   decideOnCard,
   draftStep,
@@ -173,8 +173,10 @@ export function actFor(
 
   let librarians = 0;
   const libs = faceUpWith(draft, seatNumber, "extraCard", ctx).filter((c) => {
-    const pId = cardAt(draft, c)?.printingId;
-    return pId ? ctx.cards(pId)?.name === "Cogwork Librarian" : false;
+    // The abilities table says which cards put themselves back into the pack (the Librarian).
+    const card = cardAt(draft, c);
+    const ability = card && abilityOfCard(ctx, card)?.ability;
+    return ability?.kind === "extraCard" && ability.then === "intoPack";
   });
   if (libs.length > 0 && !wholePack && !atRandom) {
     const goodCards = pack.cards.filter(

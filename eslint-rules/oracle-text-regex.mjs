@@ -58,9 +58,7 @@ export const oracleTextRegex = {
  */
 export const NOT_YET_RECOGNIZED = [
   "src/modules/catalog/domain/embedding-text.ts",
-  "src/modules/decks/domain/deck-profile.ts",
   "src/modules/decks/domain/deck.ts",
-  "src/modules/decks/domain/mana-base.ts",
   "src/modules/decks/domain/rules.ts",
   "src/modules/decks/domain/token-proxies.ts",
   "src/shared/card-search/parse.ts",

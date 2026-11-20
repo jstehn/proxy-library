@@ -5,7 +5,6 @@ import {
   landTarget,
   planManaBase,
   sourceTargets,
-  tapped,
   type LandCandidate,
   type ManaBaseInput,
   type ManaBasePlan,
@@ -28,7 +27,8 @@ const land = (name: string, overrides: Partial<LandCandidate> = {}): LandCandida
   oracleId: name,
   name,
   typeLine: "Land",
-  text: "",
+  entersTapped: "never",
+  helpsOpponents: false,
   producedMana: [],
   isBasicLand: false,
   ownedCopies: 1,
@@ -159,25 +159,11 @@ describe("sourceTargets", () => {
   });
 });
 
-describe("tapped", () => {
-  it("reads the rules text", () => {
-    expect(tapped("{T}: Add {W} or {U}.")).toBe("never");
-    expect(tapped("This land enters tapped.\n{T}: Add {W} or {U}.")).toBe("always");
-    expect(tapped("Azorius Chancery enters the battlefield tapped.")).toBe("always");
-    expect(tapped("This land enters tapped unless you control a Plains or an Island.")).toBe(
-      "sometimes",
-    );
-    expect(tapped("As this land enters, you may pay 2 life. If you don't, it enters tapped.")).toBe(
-      "sometimes",
-    );
-  });
-});
-
 describe("planManaBase", () => {
   const dual = land("Azorius Dual", { producedMana: ["W", "U"] });
   const tappedDual = land("Azorius Tapland", {
     producedMana: ["W", "U"],
-    text: "This land enters tapped.",
+    entersTapped: "always",
   });
 
   it("fills to the target with basics split by the colors' needs", () => {
@@ -279,7 +265,7 @@ describe("planManaBase invariants", () => {
         land(`${prefix} ${value.index}`, {
           producedMana: value.produced,
           ownedCopies: value.copies,
-          text: value.tapped ? "This land enters tapped." : "",
+          entersTapped: value.tapped ? "always" : "never",
           priceCents: 100,
         }),
       );

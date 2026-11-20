@@ -9,11 +9,10 @@ import {
   type CardFacts,
   type CardIdentity,
 } from "@/shared/kernel";
-import type { TapMana } from "@/modules/catalog";
+import type { EntersTapped, TapMana } from "@/modules/catalog";
 import { isPlayed, type DeckCount } from "./boards";
 import { effectiveManaValue, type DeckPlan } from "./deck-profile";
 import { parseManaCost } from "./mana";
-import { tapped } from "./mana-base";
 
 export type CastabilityLine = DeckCount &
   Pick<CardIdentity, "oracleId"> &
@@ -21,10 +20,13 @@ export type CastabilityLine = DeckCount &
   Readonly<{
     manaCost?: string | null;
     producedMana?: readonly string[];
-    text?: string;
+    /** Scryfall's keyword list ("Blitz" makes the blitz cost reducers apply). */
+    keywords?: readonly string[];
     power?: string | number | null;
     /** What the card does when tapped for mana: the catalog's card features (design doc 66). */
     tapMana: TapMana;
+    /** Whether a land enters tapped: from the card features too. */
+    entersTapped: EntersTapped;
   }>;
 
 export type CardCastability = Readonly<{
@@ -168,7 +170,7 @@ export function simulateCastOnCurve(
         land || mdfcLand
           ? {
               isLand: true,
-              tapKind: mdfcLand ? "always" : tapped(line.text ?? ""),
+              tapKind: mdfcLand ? "always" : line.entersTapped,
               manaProduced: requiresFiveLands ? 2 : manaProduced,
               requiresFiveLands,
               colors: produces.length > 0 ? produces : ["C"],
@@ -190,7 +192,7 @@ export function simulateCastOnCurve(
       const effMv = effectiveManaValue(
         line.manaValue,
         {
-          oracleText: line.text,
+          isBlitz: line.keywords?.includes("Blitz"),
           typeLine: line.typeLine,
           manaCost: line.manaCost,
           power: line.power,

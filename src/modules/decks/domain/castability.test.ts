@@ -19,17 +19,12 @@ function spell(name: string, manaCost: string, manaValue: number, quantity = 1):
     manaValue,
     manaCost,
     producedMana: [],
-    text: "",
     tapMana: NO_TAP_MANA,
+    entersTapped: "never",
   };
 }
 
-function land(
-  name: string,
-  producedMana: readonly string[],
-  quantity: number,
-  text = "",
-): CastabilityLine {
+function land(name: string, producedMana: readonly string[], quantity: number): CastabilityLine {
   return {
     oracleId: `land-${name}`,
     name,
@@ -39,8 +34,8 @@ function land(
     manaValue: 0,
     manaCost: null,
     producedMana,
-    text,
     tapMana: LAND_TAP_MANA,
+    entersTapped: "never",
   };
 }
 
@@ -103,8 +98,8 @@ describe("simulateCastOnCurve", () => {
         manaValue: 6,
         manaCost: "{4}{G}{G}",
         power: "7",
-        text: "Trample",
         tapMana: NO_TAP_MANA,
+        entersTapped: "never",
       },
       {
         oracleId: "small-utility",
@@ -115,8 +110,8 @@ describe("simulateCastOnCurve", () => {
         manaValue: 6,
         manaCost: "{5}{U}",
         power: "2",
-        text: "Flying",
         tapMana: NO_TAP_MANA,
+        entersTapped: "never",
       },
       {
         oracleId: "big-sorcery",
@@ -126,8 +121,8 @@ describe("simulateCastOnCurve", () => {
         typeLine: "Sorcery",
         manaValue: 6,
         manaCost: "{4}{U}{U}",
-        text: "Take two extra turns.",
         tapMana: NO_TAP_MANA,
+        entersTapped: "never",
       },
       ...Array.from({ length: 60 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
     ];
@@ -205,8 +200,8 @@ describe("simulateCastOnCurve", () => {
         manaValue: 12,
         manaCost: "{10}{G}{G}",
         power: "12",
-        text: "This spell costs {X} less to cast, where X is the total power of creatures you control.",
         tapMana: NO_TAP_MANA,
+        entersTapped: "never",
       },
       ...Array.from({ length: 63 }, (_, i) => spell(`Filler ${i}`, "{1}{G}", 2)),
     ];
@@ -240,8 +235,8 @@ describe("simulateCastOnCurve", () => {
         manaValue: 1,
         manaCost: "{1}",
         producedMana: ["C"],
-        text: "{T}: Add {C}{C}.",
         tapMana: { isSource: true, amount: 2, requiresFiveLands: false },
+        entersTapped: "never",
       },
       {
         oracleId: "mdfc",
@@ -252,8 +247,8 @@ describe("simulateCastOnCurve", () => {
         manaValue: 3,
         manaCost: "{2}{G}",
         producedMana: ["G"],
-        text: "Return target card from your graveyard to your hand. // Bala Ged Sanctuary enters tapped.",
         tapMana: LAND_TAP_MANA,
+        entersTapped: "never",
       },
       spell("Ashiok, Dream Render", "{1}{U/B}{U/B}", 3),
       spell("Mutagenic Growth", "{G/P}", 1),
@@ -266,6 +261,7 @@ describe("simulateCastOnCurve", () => {
         manaValue: 10,
         manaCost: "{8}{C}{C}",
         tapMana: NO_TAP_MANA,
+        entersTapped: "never",
       },
       ...Array.from({ length: 59 }, (_, i) => spell(`Filler ${i}`, "{2}{B}", 3)),
     ];

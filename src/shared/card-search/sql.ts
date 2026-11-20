@@ -400,69 +400,14 @@ function fieldComparison(
 const PLAIN_RULES_TEXT = sql`coalesce((select string_agg(regexp_replace(face->>'text', ${REMINDER}, '', 'g'), ${"\n"})
                                           from jsonb_array_elements(p.faces) face), '')`;
 
-/** How many basic land types the type line has (Plains, Island, …). */
-const BASIC_TYPE_COUNT = sql`(select count(*) from unnest(array['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']) basic(type_name)
-                               where p.type_line ~ ('\\m' || basic.type_name || '\\M'))::int`;
-
-/** A land whose rules text (no reminders) matches this pattern. */
-function landSaying(pattern: string): SQL {
-  return sql`(${hasType("Land")} and ${PLAIN_RULES_TEXT} ~* ${pattern})`;
-}
-
-const ENTERS_TAPPED = String.raw`enters( the battlefield)? tapped`;
-const BASIC_NAME = String.raw`(plains|island|swamp|mountain|forest)`;
-
-/** The common land cycles (design doc 28, section 3.6), from the type line and rules text. */
-function landCycle(value: string): SQL | null {
-  const land = hasType("Land");
-  switch (value) {
-    case "basic":
-      return sql`(${land} and ${hasType("Basic")})`;
-    case "fetchable":
-      return sql`(${land} and ${BASIC_TYPE_COUNT} >= 1)`;
-    case "dual":
-      return sql`(${land} and not ${hasType("Basic")} and ${BASIC_TYPE_COUNT} = 2
-                  and btrim(${PLAIN_RULES_TEXT}) = '')`;
-    case "shockland":
-      return sql`(${BASIC_TYPE_COUNT} = 2 and ${landSaying(String.raw`you may pay 2 life`)})`;
-    case "fetchland":
-      return landSaying(
-        String.raw`pay 1 life, sacrifice [^:]*: search your library for an? \w+ or \w+ card`,
-      );
-    case "checkland":
-      return landSaying(
-        String.raw`${ENTERS_TAPPED} unless you control an? ${BASIC_NAME} or an? ${BASIC_NAME}`,
-      );
-    case "fastland":
-      return landSaying(String.raw`${ENTERS_TAPPED} unless you control two or fewer other lands`);
-    case "slowland":
-      return landSaying(String.raw`${ENTERS_TAPPED} unless you control two or more other lands`);
-    case "painland":
-      return landSaying(
-        String.raw`\{T\}: add \{[WUBRG]\} or \{[WUBRG]\}\.[^.\n]*deals 1 damage to you`,
-      );
-    case "bounceland":
-      return landSaying(String.raw`return a land you control to its owner's hand`);
-    case "scryland":
-      return landSaying(
-        String.raw`${ENTERS_TAPPED}\.\s*when [^.]*enters( the battlefield)?, scry 1`,
-      );
-    case "gainland":
-      return landSaying(
-        String.raw`${ENTERS_TAPPED}\.\s*when [^.]*enters( the battlefield)?, you gain 1 life`,
-      );
-    case "triome":
-      return sql`(${land} and ${BASIC_TYPE_COUNT} = 3)`;
-    case "cycleland":
-      return sql`(${land} and ${BASIC_TYPE_COUNT} = 2
-                  and exists (select 1 from unnest(p.keywords) keyword where lower(keyword) = 'cycling'))`;
-    case "manland":
-      return landSaying(String.raw`becomes an? [^.]*creature`);
-    case "pathway":
-      return sql`(p.layout = 'modal_dfc' and p.type_line ~ '^Land // Land$')`;
-    default:
-      return null;
-  }
+/**
+ * The land cycles (design doc 28, section 3.6): `basic` from the type line, the rest from the
+ * `land_cycles` the catalog's land-cycles recognizer stored for the card.
+ */
+function landCycle(value: string): SQL {
+  if (value === "basic") return sql`(${hasType("Land")} and ${hasType("Basic")})`;
+  return sql`exists (select 1 from card_features f
+                      where f.oracle_id = p.oracle_id and f.land_cycles @> array[${value}]::text[])`;
 }
 
 /** Creatures whose only rules text is keyword abilities (`Flying`, `Ward {2}`, …). */
@@ -551,7 +496,7 @@ function isCondition(value: string, context: SearchContext): SQL {
     case "extraturn":
       return sql`'extraTurn' = any(${featureArray("bracket_flags")})`;
     default:
-      return landCycle(value) ?? sql`false`; // the parser refuses other values
+      return landCycle(value); // the parser refuses other values
   }
 }
 
