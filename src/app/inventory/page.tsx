@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { packKey, variantFor } from "@/modules/catalog";
-import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { type OpenItemError, type UnopenedGroup } from "@/modules/inventory";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
@@ -24,13 +24,13 @@ function errorMessage(kind: string | string[] | undefined): string | null {
 }
 
 export default async function InventoryPage(props: PageProps<"/inventory">) {
-  const { actor, capabilities, reads } = await readPage();
+  const { actor, reads } = await readPage();
   const [groups, recent] = await Promise.all([
     reads.inventory.unopenedItems(actor),
     reads.inventory.recentOpenings(actor),
   ]);
   const error = errorMessage((await props.searchParams).error);
-  const photos = await photosFor(capabilities, groups);
+  const photos = await photosFor(reads, groups);
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
@@ -132,13 +132,13 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
 
 /** Each group's official photos (by its first item's id): its product's, or a loose pack's. */
 async function photosFor(
-  capabilities: Capabilities,
+  reads: Reads,
   groups: readonly UnopenedGroup[],
 ): Promise<Map<number, string[]>> {
-  const byProduct = await capabilities.catalogReads.productPhotos(
+  const byProduct = await reads.catalog.productPhotos(
     groups.flatMap((group) => (group.productId ? [group.productId] : [])),
   );
-  const byPack = await capabilities.catalogReads.packPhotos(
+  const byPack = await reads.catalog.packPhotos(
     groups.flatMap((group) =>
       group.contentKind === "pack" && group.setCode && group.boosterType
         ? [{ setCode: group.setCode, boosterType: group.boosterType }]

@@ -24,6 +24,7 @@ import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { collectionQueries } from "@/modules/collection";
 import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
 import { realCollectionQueries } from "@/modules/real-collection";
+import { catalogQueries } from "@/modules/catalog";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
 
 afterAll(close);
@@ -676,6 +677,65 @@ describe("real collection (R56 to R65, F1)", () => {
   });
 });
 
+describe("catalog (R6 to R17)", () => {
+  it("R6: enabledSets is catalog data, the same for every player", async () => {
+    expect((await catalogQueries.enabledSets(db)).map((set) => set.code)).toContain("BLB");
+  });
+
+  it("R7: findSet finds an imported set for any player, and nothing for an unknown code", async () => {
+    // Not hidden when disabled: the opened-pack page names sets that are no longer for sale.
+    expect((await catalogQueries.findSet(db, "BLB"))?.code).toBe("BLB");
+    expect(await catalogQueries.findSet(db, "NOPE")).toBeNull();
+  });
+
+  it("R8 and R9: packPhotos and productPhotos are catalog data", async () => {
+    expect(await catalogQueries.productPhotos(db, [])).toEqual(new Map());
+    const packs = [{ setCode: "BLB", boosterType: "play" }];
+    expect(await catalogQueries.packPhotos(db, packs)).toBeInstanceOf(Map);
+  });
+
+  it("R10 to R13: the admin reads are for an admin; a plain player doesn't compile", async () => {
+    expect(await catalogQueries.photosOverview(db, admin)).toBeInstanceOf(Array);
+    expect(await catalogQueries.setPhotos(db, admin, "BLB")).not.toBeUndefined();
+    expect((await catalogQueries.listSetsForAdmin(db, admin)).length).toBeGreaterThan(0);
+    expect(await catalogQueries.recentSyncRuns(db, admin)).toBeInstanceOf(Array);
+    // @ts-expect-error a plain player is not an AdminActor
+    void catalogQueries.photosOverview(db, jack);
+    // @ts-expect-error nor for this one
+    void catalogQueries.setPhotos(db, jack, "BLB");
+    // @ts-expect-error nor for this one
+    void catalogQueries.listSetsForAdmin(db, jack);
+    // @ts-expect-error nor for this one
+    void catalogQueries.recentSyncRuns(db, jack);
+  });
+
+  it("R14: searchPrintings counts `own` for the actor, never for another player", async () => {
+    const [first] = await twoCards();
+    await db.execute(sql`
+      insert into collection_cards (user_id, printing_id, finish, quantity)
+      values ('jack', ${first}, 'nonfoil', 2)
+    `);
+    const ownedBy = async (who: typeof jack) =>
+      (
+        await catalogQueries.searchPrintings(db, who, {
+          search: "own>=1 s:blb",
+          sort: "name",
+          page: 1,
+        })
+      ).printingIds;
+    expect(await ownedBy(jack)).toEqual([first]);
+    expect(await ownedBy(sam)).toEqual([]);
+  });
+
+  it("R15 to R17: setPrintings, priceHistory and printingDetail are catalog data", async () => {
+    const [first] = await twoCards();
+    expect((await catalogQueries.setPrintings(db, "BLB")).length).toBeGreaterThan(0);
+    expect(Object.keys(await catalogQueries.priceHistory(db, first)).length).toBeGreaterThan(0);
+    expect((await catalogQueries.printingDetail(db, first))?.card.id).toBe(first);
+    expect(await catalogQueries.printingDetail(db, "no-such-printing")).toBeNull();
+  });
+});
+
 describe("visitors", () => {
   it("no read that takes a player can be bound into PublicReads", () => {
     // @ts-expect-error wallet reads take an Actor, so a visitor's reads refuse them
@@ -686,6 +746,8 @@ describe("visitors", () => {
     bindPublicDb(db, collectionQueries);
     // @ts-expect-error nor the real collection reads
     bindPublicDb(db, realCollectionQueries);
+    // @ts-expect-error nor the catalog search, which counts what the player owns
+    bindPublicDb(db, catalogQueries);
     // @ts-expect-error nor the activity feed
     bindPublicDb(db, activityQueries);
   });

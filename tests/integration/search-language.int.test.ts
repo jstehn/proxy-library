@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { searchPrintings } from "@/modules/catalog";
+import { catalogQueries } from "@/modules/catalog";
 import { actor, close, db, loadFixtureCatalog, resetPlayers } from "./harness";
 
 afterAll(close);
@@ -67,8 +67,7 @@ function toArray(values: readonly string[] = []) {
 
 /** Names found by a search in the test set, sorted. */
 async function find(search: string): Promise<string[]> {
-  const result = await searchPrintings(db, {
-    userId: jack.userId,
+  const result = await catalogQueries.searchPrintings(db, jack, {
     search: `s:tst (${search})`,
     sort: "name",
     page: 1,

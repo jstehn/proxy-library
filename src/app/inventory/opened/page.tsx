@@ -142,7 +142,7 @@ async function openerPacks(
     await Promise.all(
       setCodes.map(async (code) => {
         const [set, page] = await Promise.all([
-          capabilities.catalogReads.findSet(code),
+          reads.catalog.findSet(code),
           reads.store.page(code),
         ]);
         return [code, { set, featured: page?.set.featured ?? null }] as const;
@@ -150,7 +150,7 @@ async function openerPacks(
     ),
   );
 
-  const photos = await capabilities.catalogReads.packPhotos(
+  const photos = await reads.catalog.packPhotos(
     packs.flatMap((pack) =>
       pack.setCode && pack.boosterType
         ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]

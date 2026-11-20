@@ -32,5 +32,3 @@ export {
 } from "./domain/wish";
 export type { SharedWishLine } from "./queries/wishlist";
 export * as wishlistQueries from "./queries";
-// Reads that take a player's id, for capabilities in other modules that already hold it.
-export { wishesForCardOf, wishlistAnswersOf } from "./queries/of-user";

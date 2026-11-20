@@ -1,7 +1,7 @@
 // Buying and selling singles against real Postgres (design doc 07, section 12).
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrintingId, searchPrintings } from "@/modules/catalog";
+import { catalogQueries, PrintingId } from "@/modules/catalog";
 import { collectionQueries } from "@/modules/collection";
 import { makeStore } from "@/modules/store";
 import {
@@ -154,8 +154,7 @@ describe("collectionPage", () => {
     expect(simic.totals.different).toBe(0);
 
     // The singles store filters the same way: only Bria is exactly Blue-Red (Izzet).
-    const izzet = await searchPrintings(db, {
-      userId: jack.userId,
+    const izzet = await catalogQueries.searchPrintings(db, jack, {
       color: "UR",
       sort: "name",
       page: 1,

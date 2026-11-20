@@ -1,5 +1,6 @@
 import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { activityQueries } from "@/modules/activity";
+import { catalogQueries } from "@/modules/catalog";
 import { collectionQueries } from "@/modules/collection";
 import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
@@ -24,6 +25,7 @@ export function buildReads(db: DbExecutor) {
     // A signed-in player also reaches the visitor reads (the shared-deck page serves both).
     accounts: { ...bindDb(db, accountQueries), ...publicReads.accounts },
     activity: bindDb(db, activityQueries),
+    catalog: bindDb(db, catalogQueries),
     collection: bindDb(db, collectionQueries),
     drafts: bindDb(db, draftQueries),
     inventory: bindDb(db, inventoryQueries),

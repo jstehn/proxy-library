@@ -30,8 +30,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
   const page = pageNumber(searchParams);
 
   const [result, sets] = await Promise.all([
-    capabilities.catalogReads.searchPrintings({
-      userId: actor.userId,
+    reads.catalog.searchPrintings(actor, {
       search: searchText(values),
       setCode: values.set,
       rarity: values.rarity,
@@ -42,7 +41,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
       ),
       page,
     }),
-    capabilities.catalogReads.enabledSets(),
+    reads.catalog.enabledSets(),
   ]);
   const [cards, wished] = await Promise.all([
     capabilities.printingDetails(result.printingIds),

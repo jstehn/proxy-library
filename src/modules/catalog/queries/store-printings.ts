@@ -1,6 +1,7 @@
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
-import { printingCards, searchPrintings } from "./catalog";
+import type { Actor } from "@/modules/accounts";
+import { searchPrintings } from "./catalog";
+import { printingCards } from "./printing-cards";
 
 /** One printing of a card that the store sells, with the newest price in each finish (cents). */
 export type StorePrinting = Readonly<{
@@ -14,12 +15,11 @@ export type StorePrinting = Readonly<{
 /** The printings of a card (by exact name) found in the store, cheapest first, up to `limit`. */
 export async function storePrintingsOfCard(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   name: string,
   limit: number,
 ): Promise<StorePrinting[]> {
-  const found = await searchPrintings(db, {
-    userId,
+  const found = await searchPrintings(db, actor, {
     search: `!"${name.replace(/"/g, "")}"`,
     sort: "price",
     page: 1,

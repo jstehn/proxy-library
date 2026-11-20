@@ -1,14 +1,11 @@
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
-import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
   makeCardLookup,
   makeSearchCatalog,
   makeRulesLookup,
   lookupRules,
-  searchPrintings,
-  priceHistory,
+  catalogQueries,
   printingCards,
-  printingDetail,
   storePrintingsOfCard,
 } from "@/modules/catalog";
 import { collectionQueries } from "@/modules/collection";
@@ -99,7 +96,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       previews: dependencies.previews,
       newPreviewId: dependencies.newPreviewId,
     }),
-    ...wireCatalogCapabilities({ db }),
     ...wireWishlistCapabilities({
       db,
       clock,
@@ -122,6 +118,8 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
     },
     now: () => clock.now(),
+    /** Card details for printings, for the selected-card panel and previews. */
+    printingDetails: (printingIds: readonly string[]) => printingCards(db, printingIds),
     youtube: dependencies.youtube,
     reddit: dependencies.reddit,
     // These read across modules (the game's collection, the real one, the store, the decks and
@@ -133,15 +131,15 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     }),
     lookUpCards: makeCardLookup({
       find: (query) => findCard(db, query),
-      detail: (printingId) => printingDetail(db, printingId),
-      history: (printingId) => priceHistory(db, printingId),
+      detail: (printingId) => catalogQueries.printingDetail(db, printingId),
+      history: (printingId) => catalogQueries.priceHistory(db, printingId),
       ownedOfPrinting: (actor, printingId) => collectionQueries.ownedCopies(db, actor, printingId),
       gameCopies: (actor, oracleId) => collectionQueries.ownedByOracle(db, actor, oracleId),
       realCopies: (actor, oracleId) => realCollectionQueries.ownedByOracle(db, actor, oracleId),
       decksUsing: async (actor, printingId) =>
         (await decksUsing(db, actor.userId, [printingId])).get(printingId) ?? [],
       wishes: (actor, printingId) => wishlistQueries.forCard(db, actor, printingId),
-      storePrintings: (actor, name) => storePrintingsOfCard(db, actor.userId, name, 20),
+      storePrintings: (actor, name) => storePrintingsOfCard(db, actor, name, 20),
     }),
     searchCatalog: makeSearchCatalog({
       collection: (actor, page, search) =>
@@ -154,7 +152,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
           page,
         }),
       store: (actor, search, page, oneRowPerCard) =>
-        searchPrintings(db, { userId: actor.userId, search, sort: "name", page, oneRowPerCard }),
+        catalogQueries.searchPrintings(db, actor, { search, sort: "name", page, oneRowPerCard }),
       printings: (ids) => printingCards(db, ids),
     }),
   };

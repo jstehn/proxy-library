@@ -2,7 +2,7 @@
 // family, and the same search on the three pages that use it (store, collection, deck builder).
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { searchPrintings } from "@/modules/catalog";
+import { catalogQueries } from "@/modules/catalog";
 import { collectionQueries } from "@/modules/collection";
 import { browseCollection, makeDecks } from "@/modules/decks";
 import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
@@ -15,8 +15,7 @@ const jack = actor("jack");
 
 /** The names the singles store finds for a search, sorted (one per printing). */
 async function store(search: string): Promise<string[]> {
-  const result = await searchPrintings(db, {
-    userId: jack.userId,
+  const result = await catalogQueries.searchPrintings(db, jack, {
     search,
     sort: "name",
     page: 1,
@@ -104,8 +103,7 @@ describe("card search keywords, in the singles store", () => {
   });
 
   it("notes what it ignored, and still runs the rest", async () => {
-    const result = await searchPrintings(db, {
-      userId: jack.userId,
+    const result = await catalogQueries.searchPrintings(db, jack, {
       search: "kw:flying colour:u o:/(broken/",
       sort: "name",
       page: 1,

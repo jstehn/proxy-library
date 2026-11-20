@@ -7,17 +7,45 @@ import { printings } from "../../catalog/infrastructure/schema";
 import { countAtTarget, type WishlistAnswers } from "../domain/lines";
 import { wishFromStored, type FinishPreference, type OwnedStack, type Wish } from "../domain/wish";
 import { wishes, wishlistSettings } from "../infrastructure/schema";
-import { ownedOf } from "./for-sale";
-import { answersFor, wishesForCardOf, wishlistAnswersOf } from "./of-user";
+import { offersOf, ownedOf } from "./for-sale";
 
 type Finish = OwnedStack["finish"];
 
 // Read models for the wishlist (design doc 26, section 9). The queries gather rows; the
 // domain's `wishLines` decides what each wish would buy and what it costs.
 
+/** What a list of wishes would buy: what's for sale of them and what the player owns. */
+async function answersFor(
+  db: DbExecutor,
+  userId: UserId,
+  wished: readonly Wish[],
+): Promise<WishlistAnswers> {
+  const oracleIds = [...new Set(wished.map((wish) => wish.target.oracleId))];
+  if (oracleIds.length === 0) return { wishes: [], names: new Map(), forSale: [], owned: [] };
+  const [forSale, owned, names] = await Promise.all([
+    offersOf(db, oracleIds),
+    ownedOf(db, userId, oracleIds),
+    db.execute<{ oracle_id: string; name: string }>(sql`
+      select distinct on (oracle_id) oracle_id, name from printings
+       where oracle_id = any(${textArray(oracleIds)})
+    `),
+  ]);
+  return {
+    wishes: wished,
+    names: new Map(names.rows.map((row) => [row.oracle_id, row.name])),
+    forSale,
+    owned,
+  };
+}
+
 /** Everything the Wishlist page needs: the wishes, what's for sale of them, what you own. */
 export async function answers(db: DbExecutor, actor: Actor): Promise<WishlistAnswers> {
-  return wishlistAnswersOf(db, actor.userId);
+  const rows = await db
+    .select()
+    .from(wishes)
+    .where(eq(wishes.userId, actor.userId))
+    .orderBy(desc(wishes.createdAt));
+  return answersFor(db, actor.userId, rows.map(wishFromStored));
 }
 
 /** The header badge: wishes at or under their target price. Only wishes with a target count. */
@@ -32,7 +60,17 @@ export async function atTarget(db: DbExecutor, actor: Actor): Promise<number> {
 
 /** Your wishes for the card this printing is (any kind), for the card page. */
 export async function forCard(db: DbExecutor, actor: Actor, printingId: string): Promise<Wish[]> {
-  return wishesForCardOf(db, actor.userId, printingId);
+  const rows = await db
+    .select({ wish: wishes })
+    .from(wishes)
+    .where(
+      and(
+        eq(wishes.userId, actor.userId),
+        sql`${wishes.oracleId} = (select oracle_id from printings where id = ${printingId})`,
+      ),
+    )
+    .orderBy(wishes.createdAt);
+  return rows.map((row) => wishFromStored(row.wish));
 }
 
 /** Which of these printings are of a card on your wishlist (the ★ in the Singles grid). */

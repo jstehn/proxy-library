@@ -30,12 +30,12 @@ const FINISH_COLORS: Record<Finish, string> = {
 export default async function CardPage(props: PageProps<"/cards/[id]">) {
   const { actor, capabilities, reads } = await readPage();
   const { id } = await props.params;
-  const detail = await capabilities.catalogReads.printingDetail(id);
+  const detail = await reads.catalog.printingDetail(id);
   if (detail === null) notFound();
 
   const [history, owned, trades, rateBps, inDecks, realCopies, samePrintings, wishes] =
     await Promise.all([
-      capabilities.catalogReads.priceHistory(id),
+      reads.catalog.priceHistory(id),
       reads.collection.ownedCopies(actor, id),
       reads.store.singleHistory(actor, id),
       reads.store.buylistRate(),

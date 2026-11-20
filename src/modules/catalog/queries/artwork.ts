@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
+import type { AdminActor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
+import { packKey } from "./pack-key";
 
 // Read models for official product photos and key art (design doc 13, section 9).
 
@@ -28,9 +30,6 @@ export async function productPhotos(
       .map((row) => [row.product_id, row.photo_ids]),
   );
 }
-
-/** A booster pack by its set and type, e.g. "BLB/play". */
-export const packKey = (setCode: string, boosterType: string) => `${setCode}/${boosterType}`;
 
 /**
  * The photos of loose packs (from a box, say), keyed by `packKey`: those of the product that is
@@ -90,7 +89,11 @@ export type SetPhotosView = Readonly<{
 }>;
 
 /** Every enabled main set's WPN status, for the admin overview. */
-export async function photosOverview(db: DbExecutor): Promise<
+export async function photosOverview(
+  db: DbExecutor,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+  admin: AdminActor,
+): Promise<
   Array<{
     setCode: string;
     setName: string;
@@ -128,7 +131,11 @@ export async function photosOverview(db: DbExecutor): Promise<
 }
 
 /** One set's page and products, for the admin to check and correct. */
-export async function setPhotos(db: DbExecutor, setCode: string): Promise<SetPhotosView | null> {
+export async function setPhotos(
+  db: DbExecutor,
+  admin: AdminActor,
+  setCode: string,
+): Promise<SetPhotosView | null> {
   const code = setCode.toUpperCase();
   const [set] = (
     await db.execute<{

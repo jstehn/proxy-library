@@ -3,8 +3,8 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { readPage } from "@/server/page-instance";
 
 export default async function SetsPage() {
-  const { capabilities } = await readPage();
-  const sets = await capabilities.catalogReads.enabledSets();
+  const { reads } = await readPage();
+  const sets = await reads.catalog.enabledSets();
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">

@@ -24,25 +24,17 @@ export {
   type SealedContent,
   type SealedProduct,
 } from "./domain/types";
-export {
-  enabledSets,
-  findSet,
-  listSetsForAdmin,
-  priceHistory,
-  printingCards,
-  printingDetail,
-  recentSyncRuns,
-  searchPrintings,
-  setPrintings,
-} from "./queries/catalog";
+export { printingCards } from "./queries/printing-cards";
+export * as catalogQueries from "./queries";
 export { makeSearchCatalog } from "./application/search-catalog";
 export type { CatalogSearch } from "./application/search-catalog";
 export { makeCardLookup } from "./application/card-lookup";
 export type { CardLookup } from "./application/card-lookup";
 export { storePrintingsOfCard } from "./queries/store-printings";
-export type { AdminSetRow, PrintingCard, SyncRunRow } from "./queries/catalog";
+export type { AdminSetRow, SyncRunRow } from "./queries/catalog";
+export type { PrintingCard } from "./queries/printing-cards";
 export { variantFor } from "./domain/wpn";
-export { packKey, packPhotos, photosOverview, productPhotos, setPhotos } from "./queries/artwork";
+export { packKey } from "./queries/pack-key";
 export { lookupRules } from "./queries/rules";
 
 export type {

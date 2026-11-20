@@ -22,7 +22,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
 
   const [result, sets] = await Promise.all([
     reads.collection.page(actor, filter),
-    capabilities.catalogReads.enabledSets(),
+    reads.catalog.enabledSets(),
   ]);
   const printingIds = result.rows.map((row) => row.printingId);
   const [cards, inDecks] = await Promise.all([

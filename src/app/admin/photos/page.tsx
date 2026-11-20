@@ -12,8 +12,8 @@ const STATUS_LABELS = {
 } as const;
 
 export default async function PhotosPage() {
-  const { capabilities } = await readPage({ admin: true });
-  const sets = await capabilities.catalogReads.photosOverview();
+  const { actor: admin, reads } = await readPage({ admin: true });
+  const sets = await reads.catalog.photosOverview(admin);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">

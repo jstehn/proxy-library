@@ -40,7 +40,7 @@ function PriceForm(props: {
 }
 
 export default async function AdminStorePage(props: PageProps<"/admin/store">) {
-  const { actor: admin, capabilities, reads } = await readPage({ admin: true });
+  const { actor: admin, reads } = await readPage({ admin: true });
 
   const searchParams = await props.searchParams;
   const setCode = typeof searchParams.set === "string" ? searchParams.set.toUpperCase() : null;
@@ -51,7 +51,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
     reads.store.pricingMode(),
     reads.store.msrpsBelowResale(admin),
     reads.store.kindPrices(admin),
-    capabilities.catalogReads.enabledSets(),
+    reads.catalog.enabledSets(),
     setCode === null ? Promise.resolve([]) : reads.store.productPrices(admin, setCode),
   ]);
 
