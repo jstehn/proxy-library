@@ -1,6 +1,7 @@
 import { activityQueries } from "@/modules/activity";
 import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
+import { walletQueries } from "@/modules/wallet";
 import { bindDb, type DbExecutor } from "@/shared/db";
 
 // `reads` (design doc 67, ADR 0026 addendum): each module's query functions with the database
@@ -14,6 +15,7 @@ export function buildReads(db: DbExecutor) {
     activity: bindDb(db, activityQueries),
     inventory: bindDb(db, inventoryQueries),
     packs: bindDb(db, packsQueries),
+    wallet: bindDb(db, walletQueries),
   };
 }
 export type Reads = ReturnType<typeof buildReads>;

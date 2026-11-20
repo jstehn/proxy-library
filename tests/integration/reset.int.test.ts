@@ -1,4 +1,5 @@
 // An admin resetting a player's library, against real Postgres (design doc 12).
+import { testAdminActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId, SealedProductId } from "@/modules/catalog";
@@ -7,7 +8,7 @@ import { makeInventory } from "@/modules/inventory";
 import { makeResetPlayer } from "@/modules/reset";
 import { makeStore } from "@/modules/store";
 import { makeTrades } from "@/modules/trades";
-import { makeWallet, playerMoney, walletSummary } from "@/modules/wallet";
+import { makeWallet, walletQueries } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { Cents, UserId } from "@/shared/kernel";
 import { randomSeed } from "@/shared/runtime";
@@ -137,13 +138,15 @@ describe("resetting a player", () => {
   it("starts the money totals again from zero, keeping the whole history", async () => {
     const card = await cheapCard();
     await store.buySingle(jack, { printingId: card, finish: "nonfoil", quantity: 1 });
-    expect((await walletSummary(db, jack.userId)).spent).toBeGreaterThan(0);
+    expect((await walletQueries.summary(db, jack)).spent).toBeGreaterThan(0);
 
     expect(await resetPlayer(admin, jack.userId)).toMatchObject({ ok: true });
-    const afterReset = await walletSummary(db, jack.userId);
+    const afterReset = await walletQueries.summary(db, jack);
     expect(afterReset).toMatchObject({ balance: 5000, spent: 0, selfFunded: 0, received: 0 });
     expect(afterReset.totalsSince).not.toBeNull();
-    const adminView = (await playerMoney(db)).find((row) => row.userId === jack.userId);
+    const adminView = (await walletQueries.playerMoney(db, testAdminActor())).find(
+      (row) => row.userId === jack.userId,
+    );
     expect(adminView).toMatchObject({ spent: 0, selfFunded: 0 });
     expect(await count("ledger_entries", "user_id = 'jack' and kind = 'purchase_single'")).toBe(1);
 
@@ -154,7 +157,7 @@ describe("resetting a player", () => {
       quantity: 1,
     });
     if (!bought.ok) throw new Error(bought.error.kind);
-    expect((await walletSummary(db, jack.userId)).spent).toBe(bought.value.total);
+    expect((await walletQueries.summary(db, jack)).spent).toBe(bought.value.total);
   });
 
   it("takes extra money away with a correction", async () => {

@@ -1,6 +1,5 @@
 import { wireSocialCapabilities } from "@/modules/social/wiring";
 import { wireTradeCapabilities } from "@/modules/trades/wiring";
-import { wireWalletCapabilities } from "@/modules/wallet/wiring";
 import { wireCollectionCapabilities } from "@/modules/collection/wiring";
 import { wireDraftCapabilities } from "@/modules/drafts/wiring";
 import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
@@ -114,7 +113,6 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
     ...wireCollectionCapabilities({ db }),
     ...wireSocialCapabilities({ db }),
     ...wireTradeCapabilities({ db }),
-    ...wireWalletCapabilities({ db }),
     ...wireRealCollectionCapabilities({ db }),
     ...wireDraftCapabilities({ db }),
     ...wireStoreCapabilities({ db }),

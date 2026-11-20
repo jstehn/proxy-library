@@ -1,6 +1,6 @@
 import { collectionPage } from "@/modules/collection";
 import { decksFor } from "@/modules/decks";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
+import { nextPayday, walletQueries } from "@/modules/wallet";
 import { wishlistAnswers } from "@/modules/wishlist";
 import { withDb, type DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
@@ -29,7 +29,7 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
     getAccountOverview: makeGetAccountOverview({
       refreshBalance: (userId) => wallet.refreshWallet(userId),
       allowance: async () => {
-        const settings = await currentEconomySettings(db);
+        const settings = await walletQueries.economySettings(db);
         if (settings.allowance <= 0) return null;
         return {
           amountCents: settings.allowance,

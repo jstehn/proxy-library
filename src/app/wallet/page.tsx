@@ -6,15 +6,15 @@ import { ledgerKindLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
 
 export default async function WalletPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { wallet } = capabilities;
 
   // Pay anything that's due first, so the page shows an up-to-date balance.
   await wallet.refreshWallet(actor.userId);
   const [summary, history, settings] = await Promise.all([
-    capabilities.walletReads.summary(actor.userId),
-    capabilities.walletReads.history(actor.userId),
-    capabilities.walletReads.economySettings(),
+    reads.wallet.summary(actor),
+    reads.wallet.history(actor),
+    reads.wallet.economySettings(),
   ]);
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },

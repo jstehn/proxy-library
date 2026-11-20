@@ -1,4 +1,4 @@
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
+import { nextPayday, walletQueries } from "@/modules/wallet";
 import { withDb, type DbExecutor } from "@/shared/db";
 import type { Cents, Clock, UserId } from "@/shared/kernel";
 import { makeAddWishes, makeRemoveWishes, makeWishlistView } from "./application/wishlist-tools";
@@ -42,7 +42,7 @@ export function wireWishlistCapabilities(dependencies: WishlistWiringDependencie
       outlook: async (userId) => {
         const [balance, settings] = await Promise.all([
           wallet.refreshWallet(userId),
-          currentEconomySettings(db),
+          walletQueries.economySettings(db),
         ]);
         return {
           balance,

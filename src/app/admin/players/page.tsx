@@ -3,14 +3,14 @@ import { PlayerRow } from "./player-row";
 import { readPage } from "@/server/page-instance";
 
 export default async function AdminPlayersPage() {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
+  const { actor: admin, capabilities, reads } = await readPage({ admin: true });
   const { wallet } = capabilities;
 
   // Pay due allowances (and open new wallets) first, so the balances shown are current.
   await wallet.refreshAllWallets();
   const [players, money] = await Promise.all([
     capabilities.accountReads.listPlayers(),
-    capabilities.walletReads.playerMoney(),
+    reads.wallet.playerMoney(admin),
   ]);
   const moneyByPlayer = new Map(money.map((entry) => [entry.userId, entry]));
 

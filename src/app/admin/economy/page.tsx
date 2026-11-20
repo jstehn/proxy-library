@@ -5,9 +5,9 @@ import { EconomyForm } from "./economy-form";
 import { readPage } from "@/server/page-instance";
 
 export default async function AdminEconomyPage() {
-  const { capabilities } = await readPage({ admin: true });
+  const { capabilities, reads } = await readPage({ admin: true });
 
-  const settings = await capabilities.walletReads.economySettings();
+  const settings = await reads.wallet.economySettings();
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
     capabilities.now(),
