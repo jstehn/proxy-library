@@ -289,6 +289,7 @@ export function buildCore(config: Config) {
       wishlist,
       textEmbedder,
       decks,
+      packs,
       previews: drizzleChangePreviewRepository(db),
       services: {
         deckSharing,
@@ -305,7 +306,6 @@ export function buildCore(config: Config) {
         trades,
         wishlist,
         catalog,
-        packs,
         resetPlayer,
         appUrl: config.appUrl,
       },

@@ -1,6 +1,7 @@
 // Shared kernel: tiny, stable, pure building blocks used by every module.
 // Nothing here performs I/O. Real adapters live in shared/runtime and shared/db.
 export { assertNever } from "./assert-never";
+export { pick } from "./pick";
 export type { Brand } from "./brand";
 export type { Clock } from "./clock";
 export { UserId } from "./ids";

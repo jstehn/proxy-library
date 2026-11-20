@@ -73,3 +73,18 @@ export function toActor(player: Player): Actor {
 export function asAdmin(actor: Actor): AdminActor | null {
   return actor.isAdmin ? (actor as AdminActor) : null;
 }
+
+/** A method that takes the `Actor` first, as one that takes the `AdminActor` instead. */
+export type ForAdmin<Method> = Method extends (actor: Actor, ...rest: infer Rest) => infer Returned
+  ? (admin: AdminActor, ...rest: Rest) => Returned
+  : never;
+
+/** Some of a service's admin-only methods: like `pick`, but each takes the `AdminActor` first. */
+export function pickForAdmin<Source extends object, Key extends keyof Source>(
+  source: Source,
+  ...keys: readonly Key[]
+): { [K in Key]: ForAdmin<Source[K]> } {
+  const picked: Partial<Record<Key, unknown>> = {};
+  for (const key of keys) picked[key] = source[key];
+  return picked as { [K in Key]: ForAdmin<Source[K]> };
+}

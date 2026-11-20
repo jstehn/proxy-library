@@ -1,4 +1,5 @@
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
+import { wirePackCapabilities } from "@/modules/packs/wiring";
 import {
   makeCardLookup,
   makeSearchCatalog,
@@ -22,16 +23,16 @@ import {
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
 import { wishlistQueries, type Wishlist } from "@/modules/wishlist";
 import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
+import type { makeInventory } from "@/modules/inventory";
+import type { Packs } from "@/modules/packs";
 import type { Actor, makeAccounts } from "@/modules/accounts";
 import type { makeCatalog } from "@/modules/catalog";
 import { draftQueries, type makeDrafts } from "@/modules/drafts";
-import type { makePacks } from "@/modules/packs";
 import type { makeResetPlayer } from "@/modules/reset";
 import { socialQueries, type makeSocial } from "@/modules/social";
 import { tradeQueries, type makeTrades } from "@/modules/trades";
 import type { makeWallet } from "@/modules/wallet";
 import type { makeWishlist } from "@/modules/wishlist";
-import type { makeInventory } from "@/modules/inventory";
 import type { makeRealCollection } from "@/modules/real-collection";
 import type { makeStore } from "@/modules/store";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
@@ -55,6 +56,7 @@ type CapabilityDependencies = Readonly<{
   reddit: ReturnType<typeof makeReddit>;
   decks: Decks;
   previews: PreviewRepository;
+  packs: Packs;
   /** The services that change things: the capabilities pass them through for the adapters. */
   services: Readonly<{
     deckSharing: DeckSharing;
@@ -71,7 +73,6 @@ type CapabilityDependencies = Readonly<{
     trades: ReturnType<typeof makeTrades>;
     wishlist: ReturnType<typeof makeWishlist>;
     catalog: ReturnType<typeof makeCatalog>;
-    packs: ReturnType<typeof makePacks>;
     resetPlayer: ReturnType<typeof makeResetPlayer>;
     appUrl: string;
   }>;
@@ -104,6 +105,7 @@ export function buildCapabilities(dependencies: CapabilityDependencies) {
       findCard: (nameOrId) => findCard(db, nameOrId),
     }),
     ...wireAccountCapabilities({ db, clock, wallet }),
+    ...wirePackCapabilities(dependencies),
     ...dependencies.services,
     // The numbers in the site header, in one round trip. Showing the balance also pays any
     // allowance that has come due (design doc 03, section 5).
