@@ -483,6 +483,32 @@ export default defineConfig([
     },
   },
 
+  // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a
+  // component included, imports the database or a module's `queries/` folder.
+  {
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^@/shared/(db|card-search/sql)",
+              message:
+                "src/app never reads the database. Read through `reads` or call a capability (design doc 67).",
+            },
+            {
+              regex: "^@/modules/[^/]+/queries",
+              message:
+                "src/app never imports a module's queries/ folder. Read through `reads.<module>.<query>` (design doc 67).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Adapters stay thin (ADR 0026): tool bindings and server actions parse input, call capabilities
   // and present the answer. Logic and data access live in the modules.
   {
