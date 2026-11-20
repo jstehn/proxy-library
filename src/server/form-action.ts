@@ -93,11 +93,7 @@ function problemsAsText(error: z.ZodError): string {
 
 /** Builds `formAction` from where the actor, the capabilities and `redirect` come from (fakes in tests). */
 export function makeFormAction(sources: FormActionSources) {
-  function formAction<Schema extends z.ZodObject, Value, Failure>(
-    schema: Schema,
-    handler: (context: ActionContext, input: z.output<Schema>) => Promise<Result<Value, Failure>>,
-    options: FormActionOptions<Value, Failure>,
-  ): FormRunner;
+  // The admin form first: only an options object that says `admin: true` fits it.
   function formAction<Schema extends z.ZodObject, Value, Failure>(
     schema: Schema,
     handler: (
@@ -105,6 +101,11 @@ export function makeFormAction(sources: FormActionSources) {
       input: z.output<Schema>,
     ) => Promise<Result<Value, Failure>>,
     options: FormActionOptions<Value, Failure> & Readonly<{ admin: true }>,
+  ): FormRunner;
+  function formAction<Schema extends z.ZodObject, Value, Failure>(
+    schema: Schema,
+    handler: (context: ActionContext, input: z.output<Schema>) => Promise<Result<Value, Failure>>,
+    options: FormActionOptions<Value, Failure>,
   ): FormRunner;
   function formAction<Schema extends z.ZodObject, Value, Failure>(
     schema: Schema,

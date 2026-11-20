@@ -1,9 +1,10 @@
 "use client";
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
-import { updateEconomyAction, type EconomyFormState } from "./actions";
+import { updateEconomyAction } from "./actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: EconomyFormState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 export type EconomyFormValues = {
   allowance: string; // e.g. "20.00"

@@ -1,9 +1,10 @@
 "use client";
 import { useActionState } from "react";
 import { Alert } from "@/ui/form";
-import { moneyAction, type MoneyActionState } from "./money-actions";
+import { moneyAction } from "./money-actions";
+import type { FormState } from "@/server/form-action";
 
-const initialState: MoneyActionState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 const inputClass =
   "rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900";
