@@ -83,6 +83,12 @@ design doc (or joins a phase's design) and is removed from this list.
 
 ## Players and economy
 
+- **Authentik for SSO and OAuth2/OIDC.** Replace or complement built-in sign-in and the public-only
+  OAuth connector flow (`/api/oauth/register` only issues public clients with
+  `token_endpoint_auth_method: "none"` and no `client_secret`) with Authentik. Motivation:
+  connecting a Google OAuth client (`jack.stehn@protonmail.com` → `jack` on production) failed with
+  _"The Google redirect URL was rejected by the server. Enter your OAuth client ID and client
+  secret to connect."_
 - **Public player profiles**: history, total spent, self-funded amounts. The ledger already
   records everything needed.
 - **Config error messages** could suggest `direnv reload` when a variable is missing (declined
