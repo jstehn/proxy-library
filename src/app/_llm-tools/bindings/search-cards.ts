@@ -35,7 +35,7 @@ export const searchCardsBinding = defineBinding({
   name: "search_cards",
   title: "Search cards (catalog, deck-filtered, semantic, or signals)",
   description:
-    "Search cards in the collection or store. Pass `deckId` to auto-filter to deck colors/format/bracket and exclude cards already in the deck. Modes: 'syntax' (default, Scryfall-style `search` or `queries`), 'semantic' (natural-language `query`), or 'signals' (recurring mechanics in owned `search`).",
+    "Search cards in the collection or store. Pass `deckId` to auto-filter to deck colors/format/bracket and exclude cards already in the deck. Modes: 'syntax' (default, Scryfall-style `search` or `queries`), 'semantic' (natural-language `query`; lists ideas in the search's own order, with no scores, some of them poor fits), or 'signals' (recurring mechanics in owned `search`).",
   scope: "read",
   readOnly: true,
   input: z.object({

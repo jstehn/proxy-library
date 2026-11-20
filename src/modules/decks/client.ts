@@ -57,7 +57,6 @@ export {
   type CutContext,
   type CutLine,
   type CutReason,
-  type CutWeights,
   type RankedCut,
 } from "./domain/cuts";
 export {

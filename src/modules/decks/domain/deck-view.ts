@@ -4,7 +4,7 @@ import type { DeckCount } from "./boards";
 import type { Deck } from "./deck";
 import type { DeckPlan } from "./deck-profile";
 import type { CardRules } from "./rules";
-import type { EdhrecSignal } from "./suggest";
+import type { EdhrecSignal } from "./rate";
 
 // The deck as the builder, the tools and the audits read it (design doc 09, section 8). The query
 // that loads it is `queries/decks.ts`; the types live here so the application layer can name them.

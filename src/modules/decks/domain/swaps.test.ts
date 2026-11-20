@@ -3,16 +3,10 @@ import type { RankedCut } from "./cuts";
 import type { Scored } from "./suggest";
 import { suggestSwaps, type SwapCutMeta } from "./swaps";
 
-function makeCut(
-  oracleId: string,
-  name: string,
-  keepScore: number,
-  overBracket = false,
-): RankedCut {
+function makeCut(oracleId: string, name: string, overBracket = false): RankedCut {
   return {
     oracleId,
     name,
-    keepScore,
     reasons: overBracket
       ? [{ kind: "overBracket", target: 2, flags: ["gameChanger"] }]
       : [{ kind: "noFit" }],
@@ -39,7 +33,6 @@ function makeAdd(
       pool: "owned",
       isGameChanger: opts.isGameChanger ?? false,
     },
-    score: rating,
     reasons: [],
     rating: { rating, logit: 0, parts: [] },
   };
@@ -47,7 +40,7 @@ function makeAdd(
 
 describe("suggestSwaps", () => {
   it("pairs weakest cuts with highest-rated replacements and skips duplicates", () => {
-    const cuts = [makeCut("c1", "Weak Card", 1.0), makeCut("c2", "Okay Card", 3.0)];
+    const cuts = [makeCut("c1", "Weak Card"), makeCut("c2", "Okay Card")];
     const meta = new Map<string, SwapCutMeta>([
       ["c1", { manaValue: 6, rating: 25 }],
       ["c2", { manaValue: 3, rating: 55 }],
@@ -75,7 +68,7 @@ describe("suggestSwaps", () => {
   });
 
   it("never suggests adding a Game Changer in bracket 1-2 and prioritizes fixing overBracket cuts", () => {
-    const cuts = [makeCut("c1", "Rhystic Study", 0.5, true)];
+    const cuts = [makeCut("c1", "Rhystic Study", true)];
     const meta = new Map<string, SwapCutMeta>([["c1", { manaValue: 3, rating: 90 }]]);
     const candidates = [
       makeAdd("gc", "Another Game Changer", 95, { isGameChanger: true }),
@@ -94,7 +87,7 @@ describe("suggestSwaps", () => {
   });
 
   it("never cuts basic lands or suggests negative-gain swaps without a problem fix", () => {
-    const cuts = [makeCut("b1", "Forest", 0.1), makeCut("c1", "Good Card", 2.0)];
+    const cuts = [makeCut("b1", "Forest"), makeCut("c1", "Good Card")];
     const meta = new Map<string, SwapCutMeta>([
       ["b1", { manaValue: 0, rating: 50, isBasicLand: true }],
       ["c1", { manaValue: 2, rating: 85 }],
@@ -111,7 +104,7 @@ describe("suggestSwaps", () => {
   });
 
   it("prefers role-preserving and effect-similar replacements over slightly higher-rated unrelated cards", () => {
-    const cuts = [makeCut("c1", "Expensive Removal", 0.5)];
+    const cuts = [makeCut("c1", "Expensive Removal")];
     const meta = new Map<string, SwapCutMeta>([
       ["c1", { manaValue: 4, rating: 50, roles: ["draw"] }],
     ]);

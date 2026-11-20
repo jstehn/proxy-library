@@ -12,8 +12,6 @@ import type {
 } from "@/modules/decks";
 import {
   deckProfile,
-  deckSignalProfile,
-  deckStats,
   isLand,
   rankCuts,
   rateCard,
@@ -73,39 +71,12 @@ export function CutsPanel(props: {
   const swaps = useMemo(() => {
     if (suggestions === null || cuts.length === 0) return [];
     const profile = deckProfile(lines, format);
-    const stats = deckStats(lines);
-    const ratingProfile = {
-      format,
-      themes: profile.themes,
-      tribes: profile.tribes,
-      gaps: profile.gaps,
-      keywords: profile.keywords,
-      signals: profile.signals ?? deckSignalProfile([]),
-      averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
-      curveCounts: profile.curveCounts ?? [],
-    };
     const cutMeta = new Map<string, SwapCutMeta>();
     const existingOracleIds = new Set<string>();
     for (const line of lines) {
       existingOracleIds.add(line.oracleId);
       if (line.board !== "main" || isLand(line.typeLine) || cutMeta.has(line.oracleId)) continue;
-      const r = rateCard(
-        {
-          oracleId: line.oracleId,
-          name: line.name,
-          typeLine: line.typeLine,
-          manaValue: line.manaValue,
-          signals: line.signals,
-          keywords: line.keywords,
-          roles: line.roles,
-          themes: line.themes,
-          rarity: line.rarity,
-          priceCents: line.priceCents,
-          isGameChanger: line.isGameChanger,
-        },
-        ratingProfile,
-        { targetBracket },
-      );
+      const r = rateCard(line, profile, { targetBracket });
       cutMeta.set(line.oracleId, {
         manaValue: line.manaValue,
         rating: r.rating,
@@ -122,27 +93,8 @@ export function CutsPanel(props: {
       }
     }
     const pool = owned.size > 0 ? Array.from(owned.values()) : suggestions.forDeck.store;
-    const candidates = pool.map((s) => ({
-      card: {
-        oracleId: s.card.oracleId,
-        name: s.card.name,
-        typeLine: s.card.typeLine,
-        manaValue: s.card.manaValue,
-        keywords: s.card.keywords,
-        roles: s.card.roles,
-        themes: s.card.themes,
-        rarity: s.card.rarity,
-        priceCents: s.card.priceCents,
-        pool: s.card.pool,
-        edhrecRank: s.card.edhrecRank,
-        edhrec: s.card.edhrec,
-      },
-      score: s.rating,
-      reasons: s.reasons,
-      rating: { rating: s.rating, logit: 0, parts: s.ratingParts },
-    }));
     const neededRoles = new Set(profile.gaps.map((g) => g.tag));
-    return suggestSwaps(cuts, cutMeta, candidates, {
+    return suggestSwaps(cuts, cutMeta, pool, {
       format,
       targetBracket,
       existingOracleIds,

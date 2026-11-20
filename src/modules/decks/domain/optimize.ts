@@ -2,8 +2,8 @@ import type { BracketFlag } from "@/shared/kernel";
 import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type Bracket } from "./brackets";
 import type { Format } from "./deck";
-import { rateCard, type RatingEdhrecSignal, type RatingProfile } from "./rate";
-import { deckSignalProfile, NO_SIGNALS, synergyMatches } from "./signals";
+import { rateCard, type EdhrecSignal, type RatingProfile } from "./rate";
+import { NO_SIGNALS, synergyMatches } from "./signals";
 import { formatRules } from "./format-rules";
 import { deckStats, isLand, type StatsLine, type TargetedTag } from "./stats";
 import { deckProfile } from "./suggest";
@@ -22,7 +22,7 @@ export type OptimizerCard = StatsLine &
     rarity: string;
     isGameChanger?: boolean;
     bracketFlags: readonly BracketFlag[];
-    edhrec?: RatingEdhrecSignal | null;
+    edhrec?: EdhrecSignal | null;
     edhrecRank?: number | null;
     preconCount?: number | null;
     comboPartners?: readonly string[] | null;
@@ -114,19 +114,9 @@ function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
-function toRatingProfile(cards: readonly OptimizerCard[], format: Format): RatingProfile {
-  const profile = deckProfile(cards, format);
-  const stats = deckStats(cards);
-  return {
-    format,
-    themes: profile.themes,
-    tribes: profile.tribes,
-    gaps: profile.gaps,
-    keywords: profile.keywords,
-    signals: profile.signals ?? deckSignalProfile(cards),
-    averageManaValue: profile.averageManaValue ?? stats.averageManaValue,
-    curveCounts: profile.curveCounts ?? [],
-  };
+/** How `rateCard` rates a deck card (or a candidate) in this profile and target bracket. */
+function ratingOf(card: OptimizerCard, profile: RatingProfile, targetBracket: Bracket | null) {
+  return rateCard({ ...card, priceCents: card.priceCents ?? null }, profile, { targetBracket });
 }
 
 function computeRoleCoverage(tags: Readonly<Record<Tag, number>>, format: Format): number {
@@ -216,36 +206,14 @@ function computeSynergyCohesion(
  */
 export function scoreDeck(cards: readonly OptimizerCard[], context: ScoreDeckContext): DeckScore {
   const stats = deckStats(cards);
-  const ratingProfile = toRatingProfile(cards, context.format);
+  const ratingProfile = deckProfile(cards, context.format);
   const targetBracket = context.targetBracket ?? null;
 
   const nonLandMain = cards.filter((c) => c.board === "main" && !isLand(c.typeLine));
   let ratingSum = 0;
   let ratingCount = 0;
   for (const card of nonLandMain) {
-    const r = rateCard(
-      {
-        oracleId: card.oracleId,
-        name: card.name,
-        typeLine: card.typeLine,
-        manaValue: card.manaValue,
-        signals: card.signals,
-        keywords: card.keywords,
-        roles: card.roles,
-        themes: card.themes,
-        rarity: card.rarity,
-        priceCents: card.priceCents ?? null,
-        edhrec: card.edhrec,
-        edhrecRank: card.edhrecRank,
-        preconCount: card.preconCount,
-        isGameChanger: card.isGameChanger,
-        comboPartners: card.comboPartners,
-        embedSim: card.embedSim,
-      },
-      ratingProfile,
-      { targetBracket },
-    );
-    ratingSum += r.rating * card.quantity;
+    ratingSum += ratingOf(card, ratingProfile, targetBracket).rating * card.quantity;
     ratingCount += card.quantity;
   }
 
@@ -448,51 +416,14 @@ export function optimizeDeck(
   }
 
   const bestDeck = currentDeck.map((card, idx) => bestSwaps.get(idx) ?? card);
-  const beforeProfile = toRatingProfile(currentDeck, options.format);
-  const afterProfile = toRatingProfile(bestDeck, options.format);
+  const beforeProfile = deckProfile(currentDeck, options.format);
+  const afterProfile = deckProfile(bestDeck, options.format);
 
   const swaps: OptimizedSwap[] = [];
   for (const [slotIdx, add] of bestSwaps.entries()) {
     const cut = currentDeck[slotIdx];
-    const cutRating = rateCard(
-      {
-        oracleId: cut.oracleId,
-        name: cut.name,
-        typeLine: cut.typeLine,
-        manaValue: cut.manaValue,
-        signals: cut.signals,
-        keywords: cut.keywords,
-        roles: cut.roles,
-        themes: cut.themes,
-        rarity: cut.rarity,
-        priceCents: cut.priceCents ?? null,
-        isGameChanger: cut.isGameChanger,
-      },
-      beforeProfile,
-      { targetBracket: options.targetBracket },
-    ).rating;
-    const addRating = rateCard(
-      {
-        oracleId: add.oracleId,
-        name: add.name,
-        typeLine: add.typeLine,
-        manaValue: add.manaValue,
-        signals: add.signals,
-        keywords: add.keywords,
-        roles: add.roles,
-        themes: add.themes,
-        rarity: add.rarity,
-        priceCents: add.priceCents ?? null,
-        edhrec: add.edhrec,
-        edhrecRank: add.edhrecRank,
-        preconCount: add.preconCount,
-        isGameChanger: add.isGameChanger,
-        comboPartners: add.comboPartners,
-        embedSim: add.embedSim,
-      },
-      afterProfile,
-      { targetBracket: options.targetBracket },
-    ).rating;
+    const cutRating = ratingOf(cut, beforeProfile, options.targetBracket ?? null).rating;
+    const addRating = ratingOf(add, afterProfile, options.targetBracket ?? null).rating;
 
     swaps.push({
       cut,

@@ -8,7 +8,7 @@ export const getDeckBinding = defineBinding({
   name: "get_deck",
   title: "Get deck",
   description:
-    "Returns a compact deck view (header, profile summary, card lines, bracket, problems). Oracle text is off by default to save tokens, but you should set `includeText: true` (or `include: ['text']`) the first time you pull a deck. Pass `include` for 'facts', 'signals', 'mana_plan', 'primer', 'prices', etc.",
+    "Returns a compact deck view (header, profile summary, card lines, bracket, problems). Oracle text is off by default to save tokens, but you should set `includeText: true` (or `include: ['text']`) the first time you pull a deck. Pass `include` for 'facts', 'signals', 'mana_plan', 'primer', 'prices', etc. 'facts', 'signals' and 'mana_plan' are heuristic checks to verify, not verdicts.",
   scope: "read",
   readOnly: true,
   pagesItself: true,

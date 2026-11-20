@@ -1,81 +1,45 @@
-import {
-  type CardFacts,
-  type CardIdentity,
-  hasTypeWord,
-  manaCurve,
-  type SignalIO,
-  type Tag,
-  type Theme,
-} from "@/shared/kernel";
+import { hasTypeWord, manaCurve, type Tag, type Theme } from "@/shared/kernel";
 import { isPlayed } from "./boards";
 import type { Format } from "./deck";
 import {
   edhrecLogLift,
+  emptyRatingProfile,
+  RATING_WEIGHTS,
   rateCard,
   type CardRating,
+  type EdhrecSignal,
+  type RatingCandidate,
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
 import { formatRules } from "./format-rules";
-
-import { deckSignalProfile, type DeckSignalProfile } from "./signals";
-import {
-  deckStats,
-  isLand,
-  mainType,
-  TARGETED_TAGS,
-  type StatsLine,
-  type TargetedTag,
-} from "./stats";
+import { deckSignalProfile } from "./signals";
+import { deckStats, isLand, TARGETED_TAGS, type StatsLine } from "./stats";
 
 // Deck suggestions (design doc 20, section 3.2): what a deck is about, and how well a card fits
-// it. Pure: the queries fetch candidates, this decides their order and says why.
+// it. Pure: the queries fetch candidates, this decides their order and says why. The order always
+// comes from `rateCard` (rate.ts), the one scorer; this file adds the reasons in words.
 
 /** A deck line as the profile reads it: the statistics' line, plus its keyword abilities. */
 export type ProfileLine = StatsLine & Readonly<{ keywords?: readonly string[] }>;
 
-/** Community Commander statistics for a card under this deck's commander (design doc 45). */
-export type EdhrecSignal = Readonly<{
-  inclusionRate: number;
-  synergy: number;
-  totalDecks?: number;
-}>;
-
 /** A card that could be suggested, from your collection or the store. */
-export type CandidateCard = Pick<CardIdentity, "oracleId"> &
-  Pick<CardFacts, "name" | "typeLine" | "manaValue"> &
+export type CandidateCard = RatingCandidate &
   Readonly<{
     text?: string;
-    signals?: SignalIO;
-    keywords: readonly string[];
-    roles: readonly Tag[];
-    themes: readonly Theme[];
-    rarity: string;
-    priceCents: number | null;
     pool: "owned" | "store";
-    edhrec?: EdhrecSignal | null;
-    edhrecRank?: number | null;
-    preconCount?: number | null;
     isGameChanger?: boolean;
-    comboPartners?: readonly string[] | null;
-    embedSim?: number | null;
   }>;
 
-export type RoleGap = Readonly<{ tag: TargetedTag; count: number; target: number }>;
-
 /** What a deck is about: worked out from its lines, never stored. */
-export type DeckFingerprint = Readonly<{
-  format?: Format;
-  themes: readonly Theme[];
-  /** Creature types the deck cares about, singular: "Elf". */
-  tribes: readonly string[];
-  /** Roles below the format's target. */
-  gaps: readonly RoleGap[];
-  /** The commanders' keyword abilities. */
-  keywords: readonly string[];
-  signals?: DeckSignalProfile;
-  averageManaValue?: number;
-  curveCounts?: readonly number[];
+export type DeckFingerprint = RatingProfile;
+
+/** Popular or high-synergy with this deck's commander on EDHREC (design doc 45). */
+export type EdhrecReason = Readonly<{
+  kind: "edhrec";
+  inclusionPct: number;
+  synergyPct: number;
+  lift?: number;
 }>;
 
 /** Why a card is suggested; the builder puts these into words. */
@@ -84,36 +48,17 @@ export type Reason =
   | Readonly<{ kind: "tribe"; tribe: string }>
   | Readonly<{ kind: "role"; tag: Tag; count?: number; target?: number }>
   | Readonly<{ kind: "keyword"; keyword: string }>
-  | Readonly<{ kind: "edhrec"; inclusionPct: number; synergyPct: number; lift?: number }>
+  | EdhrecReason
   | Readonly<{ kind: "synergy"; label: string }>
   | Readonly<{ kind: "combo"; partners: readonly string[] }>
   | Readonly<{ kind: "embedSim"; similarityPct: number }>;
 
+/** A card the scorer rated, with the reasons it fits. */
 export type Scored = Readonly<{
   card: CandidateCard;
-  score: number;
   reasons: readonly Reason[];
-  rating?: CardRating;
+  rating: CardRating;
 }>;
-
-/** The points each kind of match is worth (section 3.2's table), in one place to tune. */
-export const WEIGHTS = {
-  theme: 3,
-  tribe: 3,
-  roleGap: 2,
-  commanderKeyword: 1,
-  commanderKeywordsCounted: 2,
-  roleAsked: 2,
-  likeRoleOrTheme: 3,
-  likeKeyword: 2,
-  likeKeywordsCounted: 3,
-  likeCreatureType: 2,
-  likeMainType: 1,
-  likeManaValue: 1,
-  strength: 0.5,
-  edhrecSynergy: 4,
-  edhrecInclusion: 2,
-} as const;
 
 /** A theme counts for a deck without a leader when this many non-land cards fit it… */
 const THEME_MINIMUM = 4;
@@ -229,23 +174,6 @@ export function deckProfile(lines: readonly ProfileLine[], format: Format): Deck
   };
 }
 
-const RARITY_STRENGTH: Readonly<Record<string, number>> = {
-  common: 0,
-  uncommon: 0.3,
-  rare: 0.6,
-  mythic: 0.8,
-};
-
-/**
- * How strong a card is on its own, about 0–1.6, from rarity and price (the idea of the drafts'
- * `cardStrength`): only a tie-break, never a reason to suggest a card.
- */
-export function strength(card: Pick<CandidateCard, "rarity" | "priceCents">): number {
-  const price = card.priceCents ?? 0;
-  // log10 squeezes prices: $1 adds a little, $10 adds 0.8, $100 no more than $10.
-  return (RARITY_STRENGTH[card.rarity] ?? 0.3) + 0.8 * Math.min(1, Math.log10(1 + price / 100));
-}
-
 /** A tribe counts for a card of that type, or a changeling (every type). */
 function inTribe(card: CandidateCard, tribe: string): boolean {
   return (
@@ -254,72 +182,58 @@ function inTribe(card: CandidateCard, tribe: string): boolean {
   );
 }
 
-/** Points and reasons for fitting a deck, without the strength tie-break. Cuts use it too. */
-export function deckFit(
-  card: CandidateCard,
-  profile: DeckFingerprint,
-): { points: number; reasons: Reason[] } {
+/** What a card shares with the deck's themes, tribes, short roles and commander keywords. */
+export function fitReasons(card: CandidateCard, profile: DeckFingerprint): Reason[] {
   const reasons: Reason[] = [];
-  let points = 0;
   for (const theme of profile.themes) {
-    if (!card.themes.includes(theme)) continue;
-    points += WEIGHTS.theme;
-    reasons.push({ kind: "theme", theme });
+    if (card.themes.includes(theme)) reasons.push({ kind: "theme", theme });
   }
   for (const tribe of profile.tribes) {
-    if (!inTribe(card, tribe)) continue;
-    points += WEIGHTS.tribe;
-    reasons.push({ kind: "tribe", tribe });
+    if (inTribe(card, tribe)) reasons.push({ kind: "tribe", tribe });
   }
   for (const gap of profile.gaps) {
-    if (!card.roles.includes(gap.tag)) continue;
-    points += WEIGHTS.roleGap;
-    reasons.push({ kind: "role", tag: gap.tag, count: gap.count, target: gap.target });
+    if (card.roles.includes(gap.tag)) {
+      reasons.push({ kind: "role", tag: gap.tag, count: gap.count, target: gap.target });
+    }
   }
   const shared = card.keywords.filter((keyword) => profile.keywords.includes(keyword));
-  for (const keyword of shared.slice(0, WEIGHTS.commanderKeywordsCounted)) {
-    points += WEIGHTS.commanderKeyword;
+  for (const keyword of shared.slice(0, RATING_WEIGHTS.keywordCap)) {
     reasons.push({ kind: "keyword", keyword });
   }
-  return { points, reasons };
+  return reasons;
 }
 
-const EDHREC_MIN_SYNERGY = 0.05;
-const EDHREC_MIN_INCLUSION = 0.15;
-
-function edhrecFit(
+/** The EDHREC reason, if the card is popular or high-synergy enough to be worth saying. */
+export function edhrecReason(
   edhrec: EdhrecSignal | null | undefined,
-): { points: number; reason: Reason } | null {
+  minimumSynergy: number,
+  minimumInclusion: number,
+): EdhrecReason | null {
   if (!edhrec) return null;
-  if (edhrec.synergy < EDHREC_MIN_SYNERGY && edhrec.inclusionRate < EDHREC_MIN_INCLUSION) {
-    return null;
-  }
+  if (edhrec.synergy < minimumSynergy && edhrec.inclusionRate < minimumInclusion) return null;
   const lift = Math.max(0, Math.min(2, edhrecLogLift(edhrec.inclusionRate, edhrec.synergy)));
-  const points =
-    WEIGHTS.edhrecSynergy * (lift / 2) +
-    WEIGHTS.edhrecInclusion * Math.max(0, edhrec.inclusionRate);
   return {
-    points,
-    reason: {
-      kind: "edhrec",
-      inclusionPct: Math.round(edhrec.inclusionRate * 100),
-      synergyPct: Math.round(edhrec.synergy * 100),
-      lift: Math.round(lift * 100) / 100,
-    },
+    kind: "edhrec",
+    inclusionPct: Math.round(edhrec.inclusionRate * 100),
+    synergyPct: Math.round(edhrec.synergy * 100),
+    lift: Math.round(lift * 100) / 100,
   };
 }
 
-export function toRatingProfile(profile: DeckFingerprint): RatingProfile {
-  return {
-    format: profile.format ?? "commander",
-    themes: profile.themes,
-    tribes: profile.tribes,
-    gaps: profile.gaps,
-    keywords: profile.keywords,
-    signals: profile.signals ?? deckSignalProfile([]),
-    averageManaValue: profile.averageManaValue ?? 0,
-    curveCounts: profile.curveCounts ?? [],
-  };
+/** The reasons the rating itself found: synergy, a combo, similar text. */
+function ratingReasons(card: CandidateCard, rating: CardRating): Reason[] {
+  const reasons: Reason[] = [];
+  const synergy = rating.parts.find((part) => part.kind === "synergy");
+  if (synergy) reasons.push({ kind: "synergy", label: synergy.label });
+  if (card.comboPartners && card.comboPartners.length > 0) {
+    if (rating.parts.some((part) => part.kind === "combo")) {
+      reasons.push({ kind: "combo", partners: card.comboPartners });
+    }
+  }
+  if (card.embedSim != null && rating.parts.some((part) => part.kind === "embedSim")) {
+    reasons.push({ kind: "embedSim", similarityPct: Math.round(card.embedSim * 100) });
+  }
+  return reasons;
 }
 
 /** How well a card fits a deck, or null if it shares nothing with it. */
@@ -328,33 +242,11 @@ export function scoreForDeck(
   profile: DeckFingerprint,
   options?: RatingOptions,
 ): Scored | null {
-  const { points, reasons } = deckFit(card, profile);
-  const edhrec = edhrecFit(card.edhrec);
-  const rating = rateCard(card, toRatingProfile(profile), options);
-  const synergyPart = rating.parts.find((part) => part.kind === "synergy");
-  const comboPart = rating.parts.find((part) => part.kind === "combo");
-  const embedPart = rating.parts.find((part) => part.kind === "embedSim");
-  const totalPoints =
-    points +
-    (edhrec?.points ?? 0) +
-    (synergyPart ? synergyPart.contribution : 0) +
-    (comboPart ? comboPart.contribution : 0) +
-    (embedPart ? embedPart.contribution : 0);
-  if (totalPoints <= 0) return null;
-  if (synergyPart) reasons.push({ kind: "synergy", label: synergyPart.label });
-  if (comboPart && card.comboPartners && card.comboPartners.length > 0) {
-    reasons.push({ kind: "combo", partners: card.comboPartners });
-  }
-  if (embedPart && card.embedSim != null) {
-    reasons.push({ kind: "embedSim", similarityPct: Math.round(card.embedSim * 100) });
-  }
-  if (edhrec !== null) reasons.push(edhrec.reason);
-  return {
-    card,
-    score: rating.rating + rating.logit * 0.001,
-    reasons,
-    rating,
-  };
+  const rating = rateCard(card, profile, options);
+  const reasons = [...fitReasons(card, profile), ...ratingReasons(card, rating)];
+  const edhrec = edhrecReason(card.edhrec, 0.05, 0.15);
+  if (edhrec !== null) reasons.push(edhrec);
+  return reasons.length === 0 ? null : { card, reasons, rating };
 }
 
 /**
@@ -365,54 +257,56 @@ export function scoreForRole(
   card: CandidateCard,
   tag: Tag,
   profile: DeckFingerprint,
+  options?: RatingOptions,
 ): Scored | null {
   if (!card.roles.includes(tag)) return null;
-  const fit = deckFit(card, { ...profile, gaps: [] });
   const gap = profile.gaps.find((candidate) => candidate.tag === tag);
+  const rating = rateCard(card, { ...profile, gaps: gap ? [gap] : [] }, options);
+  const fit = fitReasons(card, { ...profile, gaps: [] });
   return {
     card,
-    score: WEIGHTS.roleAsked + fit.points + WEIGHTS.strength * strength(card),
-    reasons: [{ kind: "role", tag, count: gap?.count, target: gap?.target }, ...fit.reasons],
+    reasons: [{ kind: "role", tag, count: gap?.count, target: gap?.target }, ...fit],
+    rating,
+  };
+}
+
+/** The profile of a deck made of just this card: what "cards like it" are rated against. */
+function likeProfile(target: CandidateCard): DeckFingerprint {
+  return {
+    ...emptyRatingProfile("commander"),
+    themes: target.themes,
+    tribes: creatureTypes(target.typeLine),
+    keywords: target.keywords,
+    gaps: TARGETED_TAGS.filter((tag) => target.roles.includes(tag)).map((tag) => ({
+      tag,
+      count: 0,
+      target: 1,
+    })),
+    averageManaValue: target.manaValue,
   };
 }
 
 /** How much a card is like another, or null if they share no role, theme, keyword or type. */
 export function scoreLike(card: CandidateCard, target: CandidateCard): Scored | null {
   if (card.oracleId === target.oracleId) return null;
-  const reasons: Reason[] = [];
-  let points = 0;
-  for (const tag of card.roles.filter((role) => target.roles.includes(role))) {
-    points += WEIGHTS.likeRoleOrTheme;
-    reasons.push({ kind: "role", tag });
-  }
-  for (const theme of card.themes.filter((one) => target.themes.includes(one))) {
-    points += WEIGHTS.likeRoleOrTheme;
-    reasons.push({ kind: "theme", theme });
-  }
-  const keywords = card.keywords.filter((keyword) => target.keywords.includes(keyword));
-  for (const keyword of keywords.slice(0, WEIGHTS.likeKeywordsCounted)) {
-    points += WEIGHTS.likeKeyword;
-    reasons.push({ kind: "keyword", keyword });
-  }
-  const targetTypes = creatureTypes(target.typeLine);
-  for (const type of creatureTypes(card.typeLine).filter((one) => targetTypes.includes(one))) {
-    points += WEIGHTS.likeCreatureType;
-    reasons.push({ kind: "tribe", tribe: type });
-  }
-  if (points === 0) return null;
-  // Same kind of card, at about the same cost: closer, but never a reason on its own.
-  if (mainType(card.typeLine) === mainType(target.typeLine)) points += WEIGHTS.likeMainType;
-  if (Math.abs(card.manaValue - target.manaValue) <= 1) points += WEIGHTS.likeManaValue;
-  return { card, score: points + WEIGHTS.strength * strength(card), reasons };
+  const profile = likeProfile(target);
+  const rating = rateCard(card, profile);
+  const sharedRoles = card.roles.filter((tag) => target.roles.includes(tag));
+  const reasons = [
+    ...sharedRoles.map((tag): Reason => ({ kind: "role", tag })),
+    ...fitReasons(card, { ...profile, gaps: [] }),
+    ...ratingReasons(card, rating),
+  ];
+  return reasons.length === 0 ? null : { card, reasons, rating };
 }
 
-/** Highest score first; at equal scores, cards you own first, then by name. */
+/** Best rated first; at equal ratings, cards you own first, then by name. */
 export function rank(scored: readonly (Scored | null)[]): Scored[] {
   return scored
     .filter((entry): entry is Scored => entry !== null)
     .sort(
       (a, b) =>
-        b.score - a.score ||
+        b.rating.logit - a.rating.logit ||
         Number(b.card.pool === "owned") - Number(a.card.pool === "owned") ||
         a.card.name.localeCompare(b.card.name),
     );
@@ -422,7 +316,7 @@ export function rank(scored: readonly (Scored | null)[]): Scored[] {
 const PRICE_FLOOR_CENTS = 100;
 
 /**
- * Store cards that fit, most points per dollar first, never over the budget (invariant 5).
+ * Store cards that fit, best rating per dollar first, never over the budget (invariant 5).
  * Greedy: take the best value that still fits, skip what doesn't, stop at `maxCards`.
  */
 export function budgetPicks(
@@ -431,12 +325,15 @@ export function budgetPicks(
   maxCards: number,
 ): Scored[] {
   const value = (entry: Scored) =>
-    entry.score / Math.max(PRICE_FLOOR_CENTS, entry.card.priceCents ?? 0);
+    entry.rating.rating / Math.max(PRICE_FLOOR_CENTS, entry.card.priceCents ?? 0);
   const affordable = scored.filter(
     (entry) => entry.card.pool === "store" && entry.card.priceCents !== null,
   );
   const byValue = [...affordable].sort(
-    (a, b) => value(b) - value(a) || b.score - a.score || a.card.name.localeCompare(b.card.name),
+    (a, b) =>
+      value(b) - value(a) ||
+      b.rating.logit - a.rating.logit ||
+      a.card.name.localeCompare(b.card.name),
   );
   const picks: Scored[] = [];
   const chosen = new Set<string>();
