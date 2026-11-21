@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { basicCredentials, CLIENT_AUTH_METHODS, SCOPES } from "@/modules/accounts";
-import { getContainer } from "@/server/container";
+import { getContainer } from "@/server/composition/container";
 import type { RedirectUriNotRegistered, UnknownClient } from "@/modules/accounts";
 import { assertNever } from "@/shared/kernel";
 

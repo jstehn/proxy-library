@@ -13,10 +13,10 @@ import {
   type AccessToken,
   type AccessTokenId,
   type Scope,
-} from "../domain/access-token";
-import type { TokenNameInvalid, TokenNotFound, TooManyTokens } from "../domain/errors";
-import { isActive, toActor, type Actor } from "../domain/player";
-import type { AccountsDependencies } from "./ports";
+} from "../../domain/access-token";
+import type { TokenNameInvalid, TokenNotFound, TooManyTokens } from "../../domain/errors";
+import { isActive, toActor, type Actor } from "../../domain/player";
+import type { AccountsDependencies } from "../ports";
 
 // Personal access tokens (design doc 28, section 5.1): how an LLM client acts as a player.
 

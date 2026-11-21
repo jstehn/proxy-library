@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { packKey, variantFor } from "@/modules/catalog";
-import type { Reads } from "@/server/reads";
+import type { Reads } from "@/server/composition/reads";
 import { type OpenItemError, type UnopenedGroup } from "@/modules/inventory";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";

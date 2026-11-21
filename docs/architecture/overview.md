@@ -120,7 +120,7 @@ flowchart LR
 - `application` defines the **ports** it needs (`LedgerRepo`, `Clock`, …) and depends on those
   interfaces, never on Drizzle.
 - `infrastructure` implements the ports. It's the only layer that knows about Postgres or HTTP.
-- Only the **composition root** (`src/server/container.ts`, `worker/container.ts`) imports
+- Only the **composition root** (`src/server/composition/container.ts`, `worker/container.ts`) imports
   `infrastructure` and wires it into use cases.
 
 This is enforced by lint (ADR [0009](../adr/0009-lint-enforced-boundaries.md)).

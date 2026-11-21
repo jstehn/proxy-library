@@ -4,13 +4,13 @@ import {
   type OverviewParts,
 } from "@/modules/decks";
 import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
-import { heuristicProvenance, moneyOrNull } from "../tool";
-import { compactMoneyFields, stripProvenance } from "./money";
+import { heuristicProvenance, moneyOrNull } from "../../tool";
+import { compactMoneyFields, stripProvenance } from "../money";
 
-import { compactDeckPayload } from "./get-deck-compact";
-import { fullDeckPayload } from "./get-deck-full";
-import type { GetDeckAnswer, PresentInput } from "./get-deck-input";
-export type { GetDeckAnswer, PresentInput } from "./get-deck-input";
+import { compactDeckPayload } from "./compact";
+import { fullDeckPayload } from "./full";
+import type { GetDeckAnswer, PresentInput } from "./input";
+export type { GetDeckAnswer, PresentInput } from "./input";
 
 // What get_deck says (design doc 61, section 5a); these functions only reshape what the
 // capabilities answered, and never query.

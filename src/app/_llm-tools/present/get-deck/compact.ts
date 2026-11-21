@@ -7,11 +7,11 @@ import {
   isKeyCard,
 } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
-import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
-import { groupCompactLines, pageCompactGroups } from "./compact-deck";
-import { money } from "../tool";
+import { MAX_TOOL_RESPONSE_BYTES } from "../../cap-response";
+import { groupCompactLines, pageCompactGroups } from "./compact-lines";
+import { money } from "../../tool";
 
-import { bracketView, type PresentInput } from "./get-deck-input";
+import { bracketView, type PresentInput } from "./input";
 
 // What get_deck says (design doc 61, section 5a); these functions only reshape what the
 // capabilities answered, and never query.

@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { manualClock } from "@/shared/kernel/testing";
-import { AccessTokenId, MAX_LIVE_TOKENS, tokenHash } from "../domain/access-token";
-import { toActor, type Actor } from "../domain/player";
+import { AccessTokenId, MAX_LIVE_TOKENS, tokenHash } from "../../domain/access-token";
+import { toActor, type Actor } from "../../domain/player";
 import {
   inMemoryAccountsServices,
   inMemoryAccountsUnitOfWork,
   inMemoryIdentityProvider,
   sequentialSecretGenerator,
-} from "../testing/fakes";
-import { makeAccounts } from "./make-accounts";
-import type { AccountsServices } from "./ports";
+} from "../../testing/fakes";
+import { makeAccounts } from "../make-accounts";
+import type { AccountsServices } from "../ports";
 
 // Personal access tokens (design doc 28, section 5.1), against in-memory fakes.
 

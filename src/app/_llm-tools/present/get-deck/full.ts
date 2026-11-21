@@ -10,9 +10,9 @@ import {
 } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
 import { isBasicLand } from "@/shared/mtg";
-import { money, moneyOrNull } from "../tool";
+import { money, moneyOrNull } from "../../tool";
 
-import { bracketView, type PresentInput } from "./get-deck-input";
+import { bracketView, type PresentInput } from "./input";
 
 // What get_deck says (design doc 61, section 5a); these functions only reshape what the
 // capabilities answered, and never query.

@@ -1,5 +1,5 @@
 import "server-only";
-import { getContainer } from "./container";
+import { getContainer } from "./composition/container";
 import { makeReadPage } from "./page";
 import { getCurrentActor, requireActor, requireAdminActor } from "./session";
 

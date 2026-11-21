@@ -2,7 +2,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Actor, AdminActor } from "@/modules/accounts";
-import { getContainer } from "./container";
+import { getContainer } from "./composition/container";
 
 /** What the sign-in button calls the outside provider (Authentik), or null when none is set up. */
 export function externalSignInName(): string | null {

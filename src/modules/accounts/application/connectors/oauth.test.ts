@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { manualClock } from "@/shared/kernel/testing";
-import { MAX_LIVE_TOKENS } from "../domain/access-token";
-import { toActor, type Actor } from "../domain/player";
+import { MAX_LIVE_TOKENS } from "../../domain/access-token";
+import { toActor, type Actor } from "../../domain/player";
 import {
   inMemoryAccountsServices,
   inMemoryAccountsUnitOfWork,
   inMemoryIdentityProvider,
   sequentialSecretGenerator,
-} from "../testing/fakes";
-import { makeAccounts } from "./make-accounts";
+} from "../../testing/fakes";
+import { makeAccounts } from "../make-accounts";
 import type { AuthorizationParameters } from "./oauth";
-import type { AccountsServices } from "./ports";
+import type { AccountsServices } from "../ports";
 
 // OAuth for web connectors (design doc 30, section 5), against in-memory fakes.
 

@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { testActor, testAdminActor } from "@/modules/accounts/testing/actors";
 import { err, ok } from "@/shared/kernel";
-import type { Capabilities } from "./capabilities";
+import type { Capabilities } from "./composition/capabilities";
 import {
   blankAsUndefined,
   checkbox,
@@ -10,7 +10,7 @@ import {
   type FormRunner,
   type FormState,
 } from "./form-action";
-import type { Reads } from "./reads";
+import type { Reads } from "./composition/reads";
 
 const player = testActor({ name: "jack" });
 const admin = testAdminActor();

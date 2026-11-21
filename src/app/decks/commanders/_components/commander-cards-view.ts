@@ -1,4 +1,4 @@
-import type { Reads } from "@/server/reads";
+import type { Reads } from "@/server/composition/reads";
 import { planText, reasonText, TAG_LABELS } from "../../labels";
 
 // One commander's cards as the "See the cards" panel shows them: the words are chosen here, so

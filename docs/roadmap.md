@@ -111,8 +111,8 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 3. **Config:** `shared/config/` with a Zod-parsed env and a fail-fast startup error message.
 4. **DB foundation:** Drizzle client factory, drizzle-kit config, migrations folder, `UnitOfWork`
    (Drizzle implementation + in-memory implementation, with rollback-on-err integration tests).
-5. **Composition roots:** `src/server/container.ts` (with the `globalThis` dev cache and
-   `server-only`) and `worker/container.ts`, both built on the shared wiring in `src/server/core.ts`.
+5. **Composition roots:** `src/server/composition/container.ts` (with the `globalThis` dev cache and
+   `server-only`) and `worker/container.ts`, both built on the shared wiring in `src/server/composition/core.ts`.
 6. **Lint boundaries:** `eslint-plugin-boundaries`, `import/no-cycle`, and the restricted
    globals/imports from ADR 0009, each proven by a deliberately failing fixture that is then removed.
 7. **Walking skeleton:** a `/health` route that goes through container → UoW → DB, proving the wiring.

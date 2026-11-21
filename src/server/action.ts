@@ -1,8 +1,8 @@
 import type { z } from "zod";
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Result } from "@/shared/kernel";
-import type { Capabilities } from "./capabilities";
-import type { Reads } from "./reads";
+import type { Capabilities } from "./composition/capabilities";
+import type { Reads } from "./composition/reads";
 
 // The one adapter helper (ADR 0026). A server action, a route and a tool binding all do the same
 // three things: find out who is calling, parse the input with the capability's schema, and call

@@ -7,7 +7,7 @@ export type {
   CreateAccessTokenInput,
   CreatedAccessToken,
   TokenActor,
-} from "./application/access-tokens";
+} from "./application/connectors/access-tokens";
 export type {
   ApproveError,
   AuthorizationParameters,
@@ -16,8 +16,8 @@ export type {
   IssuedToken,
   RegisterClientInput,
   TokenRequest,
-} from "./application/oauth";
-export type { CreateManualClientError } from "./application/oauth-clients";
+} from "./application/connectors/oauth";
+export type { CreateManualClientError } from "./application/connectors/oauth-clients";
 export type { RedirectUriNotRegistered, UnknownClient } from "./domain/errors";
 export { basicCredentials, CLIENT_AUTH_METHODS, type OAuthClient } from "./domain/oauth";
 export {

@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { CommentId, DeckId, FORMATS, MAX_COMMENT_LENGTH, VISIBILITIES } from "@/modules/decks";
 import type { Actor } from "@/modules/accounts";
-import type { Capabilities } from "@/server/capabilities";
+import type { Capabilities } from "@/server/composition/capabilities";
 import { checkbox } from "@/server/form-action";
 import { formRedirect } from "@/server/form-action-instance";
 import { DECKS_PATH, deckPath, revalidateDeck, revalidateDeckList } from "./paths";

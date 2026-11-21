@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { testActor, testAdminActor } from "@/modules/accounts/testing/actors";
 import { ok } from "@/shared/kernel";
-import type { Capabilities } from "./capabilities";
+import type { Capabilities } from "./composition/capabilities";
 import {
   makeFormAction,
   makeFormRedirect,
@@ -10,7 +10,7 @@ import {
   messageByField,
   type FormActionSources,
 } from "./form-action";
-import type { Reads } from "./reads";
+import type { Reads } from "./composition/reads";
 
 // The newer form helpers: `formRedirect`, `formVoid`, union schemas, `messageByField` and
 // `allowPasswordChangePending` (see form-action.test.ts for `formAction` itself).

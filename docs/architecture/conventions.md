@@ -16,10 +16,10 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   `infrastructure/schema.ts` (for foreign keys) and other modules' public `index.ts` (for shared
   types like `Actor`), and nothing else.
 - 🔒 No import cycles.
-- 🔒 The app composition root (`src/server/container.ts`) starts with `import "server-only"`, so a
+- 🔒 The app composition root (`src/server/composition/container.ts`) starts with `import "server-only"`, so a
   client component can't pull in DB code by accident. (Not in shared code: `server-only` throws
   outside Next.js, which would break the worker and tests.)
-- `src/server/core.ts` holds the wiring shared by both composition roots.
+- `src/server/composition/core.ts` holds the wiring shared by both composition roots.
 - Real adapters for kernel ports that touch the OS (`systemClock`, `randomSeed`) live in
   `src/shared/runtime/`. Only composition roots import them.
 - `src/app/` holds routes, layouts, server actions and route-specific components (`_components/`).
