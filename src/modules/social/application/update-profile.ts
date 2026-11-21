@@ -1,6 +1,7 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { DeckId, Format } from "@/modules/decks";
-import { err, ok, type ManaColor, type Result, type UserId } from "@/shared/kernel";
+import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import { type ManaColor } from "@/shared/mtg";
 import {
   checkBio,
   checkShowcaseCards,

@@ -1,4 +1,4 @@
-import { BRACKET_FLAGS, type BracketFlag } from "@/shared/kernel";
+import { BRACKET_FLAGS, type BracketFlag } from "@/shared/mtg";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {

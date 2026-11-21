@@ -1,5 +1,5 @@
 import type { PrintingId } from "@/modules/catalog";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // The real collection's vocabulary (design doc 16, section 4; ADR 0011: printing × finish).
 

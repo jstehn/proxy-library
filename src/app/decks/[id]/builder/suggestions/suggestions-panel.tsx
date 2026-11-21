@@ -8,7 +8,8 @@ import type {
   SuggestionCard,
   SuggestionList,
 } from "@/modules/decks";
-import { Cents, THEME_LABELS } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { THEME_LABELS } from "@/shared/mtg";
 import { ManaText } from "@/ui/mana";
 import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "@/app/decks/labels";

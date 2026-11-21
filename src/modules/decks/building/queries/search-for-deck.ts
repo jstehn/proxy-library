@@ -3,7 +3,7 @@ import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candid
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { type BracketFlag, type Tag, type Theme } from "@/shared/kernel";
+import { type BracketFlag, type Tag, type Theme } from "@/shared/mtg";
 import { parseSearch } from "@/shared/card-search";
 import {
   foilOwnedBy,

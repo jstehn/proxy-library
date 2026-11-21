@@ -3,7 +3,7 @@
 // need. Pages by whole groups so a page never splits a heading unless one heading alone is too
 // big. Pure: no database, no clock.
 
-import { hasTypeWord, isLand, isCreature, plainText, type CardFacts } from "@/shared/kernel";
+import { hasTypeWord, isLand, isCreature, plainText, type CardFacts } from "@/shared/mtg";
 import type { DeckCount } from "@/modules/decks/client";
 
 /** The facts about one deck line that the compact view shows. */

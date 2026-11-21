@@ -1,19 +1,13 @@
-import type { SignalIO } from "@/shared/kernel";
+import type { SignalIO } from "@/shared/mtg";
 import { bracketFlagsOf, formatRules, FORMATS } from "@/modules/decks/core/client";
-import type { BracketFlag } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
 import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import {
-  ColorSchema,
-  FinishSchema,
-  type ManaColor,
-  type Tag,
-  type Theme,
-  type UserId,
-} from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { ColorSchema, FinishSchema, type ManaColor, type Tag, type Theme } from "@/shared/mtg";
 import { parseSearch } from "@/shared/card-search";
 import {
   featureArray,

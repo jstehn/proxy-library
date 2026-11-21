@@ -9,7 +9,8 @@ import {
   type SuggestionList,
 } from "@/modules/decks";
 import { action } from "@/server/action-instance";
-import { err, FinishSchema, ok } from "@/shared/kernel";
+import { err, ok } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import { afterChange, DeckIdInput, loadDeck, NOT_YOURS } from "../action-helpers";
 import { rejected } from "../answer";
 import { revalidateDeck } from "@/app/decks/paths";

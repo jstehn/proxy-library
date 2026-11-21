@@ -1,7 +1,7 @@
 // Role tags (design doc 19, section 3): the job a card does in a deck, composed from effect
 // primitives (./effects). Rules as data: one row per tag, matching structured EffectPrimitives
 // instead of card-shaped one-off regexes. Moved from shared/card-search/tags.ts.
-import { cardTypes, type Tag } from "@/shared/kernel";
+import { cardTypes, type Tag } from "@/shared/mtg";
 import type { Recognizer } from "../types";
 import { extractEffects, type EffectPrimitive } from "./effects";
 

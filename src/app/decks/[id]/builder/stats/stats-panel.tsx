@@ -1,6 +1,7 @@
 "use client";
 import type { DeckLine } from "@/modules/decks";
-import { Cents, COLORS, curveSlotLabel, type Tag, TAGS } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { COLORS, curveSlotLabel, type Tag, TAGS } from "@/shared/mtg";
 import {
   deckStats,
   EARLY_RAMP_MAX_MV,

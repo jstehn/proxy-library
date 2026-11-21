@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { COMMANDER_SORTS, type CommanderSort } from "@/modules/decks";
-import { COLORS, type ManaColor, THEME_LABELS, THEMES } from "@/shared/kernel";
+import { COLORS, type ManaColor, THEME_LABELS, THEMES } from "@/shared/mtg";
 import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/field";
 import { ManaText } from "@/ui/mana";

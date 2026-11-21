@@ -9,7 +9,7 @@ import {
   type DeckOverview,
 } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
-import { isBasicLand } from "@/shared/kernel";
+import { isBasicLand } from "@/shared/mtg";
 import { money, moneyOrNull } from "../tool";
 
 import { bracketView, type PresentInput } from "./get-deck-input";

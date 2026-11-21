@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Input, Select } from "@/ui/field";
-import { COLOR_COMBINATIONS } from "@/shared/kernel";
+import { COLOR_COMBINATIONS } from "@/shared/mtg";
 import { Button } from "@/ui/button";
 
 // The filter bar shared by the collection and the singles store. A plain GET form: the filters

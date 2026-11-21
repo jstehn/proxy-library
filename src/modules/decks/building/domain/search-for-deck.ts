@@ -1,5 +1,5 @@
-import { type Tag, type Theme } from "@/shared/kernel";
-import type { CardFacts, CardIdentity } from "@/shared/kernel";
+import { type Tag, type Theme } from "@/shared/mtg";
+import type { CardFacts, CardIdentity } from "@/shared/mtg";
 
 // Searching for a deck with several synergy queries at once (design doc 28, section 3.3): the
 // pure half. The queries run in ../queries/search-for-deck.ts; this merges their hits into one

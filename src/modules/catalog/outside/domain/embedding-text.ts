@@ -1,5 +1,5 @@
 // Pure text preparation for card embeddings (design doc 53, #58).
-import { plainText } from "@/shared/kernel";
+import { plainText } from "@/shared/mtg";
 
 export const EMBEDDING_MODEL = "Xenova/bge-small-en-v1.5";
 export const EMBEDDING_DIMS = 384;

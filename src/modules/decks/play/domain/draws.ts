@@ -1,4 +1,4 @@
-import type { Tag } from "@/shared/kernel";
+import type { Tag } from "@/shared/mtg";
 import { drawsByTurn, isEarlyRamp } from "./opening-hand/hand";
 import { OPENING_HAND, type LibraryCard } from "./opening-hand/library";
 

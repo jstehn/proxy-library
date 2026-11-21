@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor } from "@/shared/db";
-import { ColorSchema, UserId } from "@/shared/kernel";
+import { UserId } from "@/shared/kernel";
+import { ColorSchema } from "@/shared/mtg";
 import { DeckOrigin, FORMATS, VISIBILITIES, type Format, type Visibility } from "../domain/deck";
 import type { DeckSource } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";

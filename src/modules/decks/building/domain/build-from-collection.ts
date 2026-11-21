@@ -1,10 +1,4 @@
-import {
-  type CardFacts,
-  type CardIdentity,
-  curveSlot,
-  manaCurve,
-  type Theme,
-} from "@/shared/kernel";
+import { type CardFacts, type CardIdentity, curveSlot, manaCurve, type Theme } from "@/shared/mtg";
 import {
   isPlayed,
   FORMAT_RULES,

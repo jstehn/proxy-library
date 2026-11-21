@@ -1,4 +1,5 @@
-import { assertNever, type Tag, TAGS } from "@/shared/kernel";
+import { assertNever } from "@/shared/kernel";
+import { type Tag, TAGS } from "@/shared/mtg";
 import {
   bracketLine,
   bracketWarning,

@@ -14,7 +14,8 @@ import {
 import { checkbox, messageByField } from "@/server/form-action";
 import { formAction, formRedirect, formVoid } from "@/server/form-action-instance";
 import type { Reads } from "@/server/reads";
-import { Cents, err, FinishOrCheapestSchema, FinishSchema, ok } from "@/shared/kernel";
+import { Cents, err, ok } from "@/shared/kernel";
+import { FinishOrCheapestSchema, FinishSchema } from "@/shared/mtg";
 import { boughtPath, revalidateWishlist, revalidateWishlistSharing, WISHLIST_PATH } from "./paths";
 
 // Adding, changing, removing and buying wishes (design doc 26). The card page and the

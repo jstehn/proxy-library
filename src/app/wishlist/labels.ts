@@ -1,5 +1,5 @@
 import type { Offer } from "@/modules/wishlist";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Words for the wishlist's screens, shared by the page (server) and its forms (client).
 

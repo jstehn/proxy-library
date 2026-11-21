@@ -1,10 +1,4 @@
-import {
-  SIGNAL_KINDS,
-  type SignalIO,
-  type SignalKind,
-  type Tag,
-  type Theme,
-} from "@/shared/kernel";
+import { SIGNAL_KINDS, type SignalIO, type SignalKind, type Tag, type Theme } from "@/shared/mtg";
 import type { SignalFact } from "@/modules/catalog";
 import type { DeckCount } from "@/modules/decks/core/client";
 

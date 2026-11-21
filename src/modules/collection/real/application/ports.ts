@@ -1,5 +1,6 @@
 import type { PrintingId, SealedProduct, SealedProductId, SetCode } from "@/modules/catalog";
-import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Clock, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { RealCopy, RealCopyKey } from "../domain/copies";
 import type { ImportPlan } from "../domain/import-plan";
 import type { CatalogMatches } from "../domain/match";

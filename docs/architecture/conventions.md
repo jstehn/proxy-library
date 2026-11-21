@@ -6,7 +6,7 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 
 - 🔒 Feature code lives in `src/modules/<module>/{domain,application,infrastructure,queries,testing}`.
 - 🔒 Other modules and `src/app/` import a module **only via its `index.ts`**.
-- 🔒 `domain/` imports nothing outside `shared/kernel` (no `drizzle-orm`, `next`, `react`, `zod`,
+- 🔒 `domain/` imports nothing outside `shared/kernel` and `shared/mtg` (no `drizzle-orm`, `next`, `react`, `zod`,
   or Node built-ins), except **types** from other modules' public `index.ts`, with `import type`
   only (e.g. the pack engine works on the catalog's `BoosterConfig`). Using another module's
   vocabulary is fine; running its code is not.

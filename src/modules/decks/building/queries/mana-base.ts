@@ -6,12 +6,13 @@ import {
   type DeckPlan,
   deckStats,
 } from "@/modules/decks/core/client";
-import type { BracketFlag } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
 import { featureArray } from "@/modules/catalog/cards/queries/search-sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
-import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
+import { seededRng, type UserId } from "@/shared/kernel";
+import { COLORS, type Tag, type Theme } from "@/shared/mtg";
 import { simulateCastOnCurve } from "@/modules/decks/play/client";
 import {
   planManaBase,

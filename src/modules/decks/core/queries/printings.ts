@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import { deckUsesRealCards, MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 
 // Every printing of one card, for the deck builder's printing picker (design doc 24, section 9).

@@ -112,11 +112,11 @@ flowchart LR
   application --> domain
   queries --> infra_db[shared/db]
   infrastructure --> infra_db
-  domain --> kernel[shared/kernel]
+  domain --> kernel[shared/kernel + shared/mtg]
   application --> kernel
 ```
 
-- `domain` imports only `shared/kernel`. Its code can run in a unit test without anything else.
+- `domain` imports only `shared/kernel` and `shared/mtg`. Its code can run in a unit test without anything else.
 - `application` defines the **ports** it needs (`LedgerRepo`, `Clock`, …) and depends on those
   interfaces, never on Drizzle.
 - `infrastructure` implements the ports. It's the only layer that knows about Postgres or HTTP.
@@ -174,12 +174,14 @@ it, `real` imports no game area, and lint stops it importing any module but `acc
 | Path              | Contents                                                                                                                                          |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shared/kernel/`  | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
+| `shared/mtg/`     | Magic's vocabulary: finishes, rarities and colours (with their Zod schemas), card types, the mana curve, tags and signals, plain rules text       |
 | `shared/db/`      | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
 | `shared/runtime/` | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
 | `shared/config/`  | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
 | `shared/http/`    | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
 
-The kernel is deliberately **tiny and stable**. It isn't a `utils/` dumping ground.
+The kernel is deliberately **tiny and stable**: general basics only. Magic's words live next to it in
+`shared/mtg`, which the lint rules treat as part of the kernel. It isn't a `utils/` dumping ground.
 
 ## Anatomy of a write request
 

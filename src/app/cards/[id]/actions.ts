@@ -3,7 +3,8 @@ import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { describeBuySingleError, describeSellSingleError } from "@/modules/store";
 import { formAction } from "@/server/form-action-instance";
-import { Cents, FinishSchema } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import { revalidateCardAndHeader } from "../paths";
 
 const SingleForm = z.object({

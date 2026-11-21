@@ -17,7 +17,7 @@ import {
   type DeckFingerprint,
   type Scored,
 } from "@/modules/decks/scoring/client";
-import { creatureTypes, hasTypeWord, type Tag } from "@/shared/kernel";
+import { creatureTypes, hasTypeWord, type Tag } from "@/shared/mtg";
 import {
   EMPTY_LIST,
   withinTarget,

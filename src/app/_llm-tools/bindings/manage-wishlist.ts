@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { err, FinishOrCheapestSchema, ok } from "@/shared/kernel";
+import { err, ok } from "@/shared/kernel";
+import { FinishOrCheapestSchema } from "@/shared/mtg";
 import {
   MAX_NOTE_LENGTH,
   MAX_WISH_QUANTITY,

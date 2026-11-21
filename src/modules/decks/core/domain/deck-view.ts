@@ -1,5 +1,5 @@
-import type { BracketFlag } from "@/shared/kernel";
-import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
+import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/mtg";
 import type { DeckCount } from "./boards";
 import type { Deck, Format } from "./deck";
 import type { DeckPlan } from "./deck-profile";

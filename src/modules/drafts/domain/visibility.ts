@@ -1,5 +1,5 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import { sameCard, type CardRef, type Note } from "./abilities";
 import { sneakablePacks } from "./actions";
 import {
@@ -15,7 +15,7 @@ import {
 } from "./draft";
 import { dealWaitsFor } from "./deals";
 import { abilityOfCard, dredgerSeats, faceUpWith, owedColor, type StepContext } from "./steps";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Who may see what during a draft (design doc 18, section 4; CR 905.1c and 905.2b–c), in one
 // place: a seat's own pack and pile, everyone's face-up cards and notes, and what was revealed

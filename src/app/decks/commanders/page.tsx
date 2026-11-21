@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SPELL_SLOTS } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
-import { THEME_LABELS } from "@/shared/kernel";
+import { THEME_LABELS } from "@/shared/mtg";
 import { Alert } from "@/ui/form";
 import { ManaStylesheet } from "@/ui/mana";
 import { Page } from "@/ui/page";

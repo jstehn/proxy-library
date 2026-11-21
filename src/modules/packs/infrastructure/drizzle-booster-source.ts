@@ -3,7 +3,8 @@ import { z } from "zod";
 import { type BoosterConfig, PrintingId, SetCode } from "@/modules/catalog";
 import { boosterConfigs, cardSets } from "@/modules/catalog/cards/infrastructure/schema";
 import { type DbExecutor, latestPricesByFinish } from "@/shared/db";
-import { Cents, ColorSchema, type Finish, FinishSchema, RaritySchema } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { ColorSchema, type Finish, FinishSchema, RaritySchema } from "@/shared/mtg";
 import type { BoosterKey, BoosterSource } from "../application/ports";
 import type { PrintingFacts } from "../domain/pack";
 

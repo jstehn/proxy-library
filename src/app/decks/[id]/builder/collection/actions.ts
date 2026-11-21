@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { BROWSE_SORTS, BROWSE_SOURCES, type BrowsePage } from "@/modules/decks";
 import { action } from "@/server/action-instance";
-import { ColorSchema } from "@/shared/kernel";
+import { ColorSchema } from "@/shared/mtg";
 
 // The collection grid's server side: one page of cards for this deck (ADR 0026).
 

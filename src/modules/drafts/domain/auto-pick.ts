@@ -1,12 +1,6 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import {
-  COLORS,
-  type Cents,
-  type Rarity,
-  cardTypes,
-  curveSlot,
-  type CardFacts,
-} from "@/shared/kernel";
+import { type Cents } from "@/shared/kernel";
+import { COLORS, type Rarity, cardTypes, curveSlot, type CardFacts } from "@/shared/mtg";
 
 import type { DraftCard, DraftPack } from "./draft";
 

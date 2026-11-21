@@ -1,4 +1,4 @@
-import { hasTypeWord, isLand } from "@/shared/kernel";
+import { hasTypeWord, isLand } from "@/shared/mtg";
 import type { Recognizer } from "../types";
 
 // Moved from the `is:` land cycles in shared/card-search/sql.ts (design doc 28, section 3.6),

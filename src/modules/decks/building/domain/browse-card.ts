@@ -1,5 +1,5 @@
-import type { BracketFlag } from "@/shared/kernel";
-import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
+import type { Finish, CardFacts, CardIdentity, SignalIO, Tag, Theme } from "@/shared/mtg";
 import type { CardRules } from "@/modules/decks/core/client";
 
 // A card as the builder's grid and the suggestions show it (design doc 19).

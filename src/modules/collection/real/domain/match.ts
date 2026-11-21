@@ -1,6 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { ImportLine } from "./readers";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Matching import lines to printings (design doc 16, sections 4 and 4.1). The matcher adapter
 // reads every printing the import could mean in one query; choosing among them is pure.

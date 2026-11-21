@@ -1,13 +1,5 @@
-import {
-  COLORS,
-  creatureTypes,
-  err,
-  ok,
-  randomInt,
-  shuffled,
-  type Result,
-  type Rng,
-} from "@/shared/kernel";
+import { err, ok, randomInt, shuffled, type Result, type Rng } from "@/shared/kernel";
+import { COLORS, creatureTypes } from "@/shared/mtg";
 import {
   abilityOf,
   isCreatureLine,

@@ -15,7 +15,7 @@ import { checkbox, parseForm } from "@/server/form-action";
 import { formRedirect } from "@/server/form-action-instance";
 import type { PageContext } from "@/server/page";
 import { readPage } from "@/server/page-instance";
-import { FinishSchema } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import { cardPath, revalidateCard } from "../../cards/paths";
 import {
   REAL_COLLECTION_PATH,

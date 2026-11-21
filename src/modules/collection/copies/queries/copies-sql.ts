@@ -1,7 +1,8 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import type { Finish, UserId } from "@/shared/kernel";
+import type { UserId } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 import { parseSearch } from "@/shared/card-search";
 import {
   COLLECTION_SECTIONS,

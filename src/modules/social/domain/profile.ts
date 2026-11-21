@@ -1,6 +1,7 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { DeckId, Format } from "@/modules/decks";
-import { COLORS, err, ok, type ManaColor, type Result, type UserId } from "@/shared/kernel";
+import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import { COLORS, type ManaColor } from "@/shared/mtg";
 import type { ViewerRelation } from "./friendship";
 
 export const MAX_BIO_LENGTH = 500;

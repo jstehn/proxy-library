@@ -1,5 +1,6 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { type Finish, type Rng, type UserId, shuffled } from "@/shared/kernel";
+import { type Rng, type UserId, shuffled } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { HandedOutBasic, OpenedPack } from "./draft";
 
 // Basic lands (design doc 17, rules 15 and 17). Nobody drafts a Forest: the basics are taken out

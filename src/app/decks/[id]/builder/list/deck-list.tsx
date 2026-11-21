@@ -1,6 +1,6 @@
 "use client";
 
-import { type Tag } from "@/shared/kernel";
+import { type Tag } from "@/shared/mtg";
 import { useState } from "react";
 import { CardWithPreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";

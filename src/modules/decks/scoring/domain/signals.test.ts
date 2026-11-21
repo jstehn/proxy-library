@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cardFeaturesOf } from "../../core/testing/deck-view";
-import { THEME_LABELS, type SignalIO } from "@/shared/kernel";
+import { THEME_LABELS, type SignalIO } from "@/shared/mtg";
 import type { Board } from "@/modules/decks/core/client";
 import { deckSignalProfile, synergyMatches } from "./signals";
 

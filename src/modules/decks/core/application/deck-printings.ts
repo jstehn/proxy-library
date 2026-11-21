@@ -3,7 +3,8 @@
 
 import type { Actor } from "@/modules/accounts";
 import type { PrintingId } from "@/modules/catalog";
-import { type Finish, type Result, err, ok } from "@/shared/kernel";
+import { type Result, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import {
   withPrinting,
   type ChoosePrintingError as PrintingRuleError,

@@ -11,7 +11,7 @@ import {
 } from "@/modules/drafts";
 import { formRedirect } from "@/server/form-action-instance";
 import { readPage } from "@/server/page-instance";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import { revalidateDeckList } from "../decks/paths";
 import { DRAFTS_PATH, draftPath, revalidateDraft } from "./paths";
 

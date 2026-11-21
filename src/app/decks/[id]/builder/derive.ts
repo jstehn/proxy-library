@@ -1,7 +1,7 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
 import { formatRules, problemsOfLines, type CardRules } from "@/modules/decks/client";
 import { problemText } from "@/app/decks/labels";
-import { COLORS, type ManaColor } from "@/shared/kernel";
+import { COLORS, type ManaColor } from "@/shared/mtg";
 
 // What the builder works out from the deck in hand (design doc 19, section 5.3): its problems,
 // the commanders' colors, and a provisional line for a card the server hasn't answered for yet.

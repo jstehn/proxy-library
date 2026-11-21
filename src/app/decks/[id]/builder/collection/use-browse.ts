@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { BrowseCard, BrowseSort, BrowseSource } from "@/modules/decks";
-import { COLORS, type ManaColor } from "@/shared/kernel";
+import { COLORS, type ManaColor } from "@/shared/mtg";
 import { valueOr } from "../answer";
 import { browseAction } from "./actions";
 

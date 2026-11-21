@@ -35,7 +35,7 @@ import type {
   MtgjsonSetFile,
   MtgjsonSetSummary,
 } from "./mtgjson-schema";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 
 const RARITIES: readonly Rarity[] = ["common", "uncommon", "rare", "mythic", "special", "bonus"];
 

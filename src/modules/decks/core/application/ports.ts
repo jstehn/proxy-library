@@ -1,5 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
-import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Clock, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).

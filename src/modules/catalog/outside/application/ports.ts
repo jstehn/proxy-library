@@ -1,4 +1,5 @@
-import type { Clock, UnitOfWork, CardFacts, CardIdentity } from "@/shared/kernel";
+import type { Clock, UnitOfWork } from "@/shared/kernel";
+import type { CardFacts, CardIdentity } from "@/shared/mtg";
 import type { EdhrecCommanderPage } from "../domain/edhrec";
 import type { SpellbookTwoCardCombo } from "../domain/spellbook";
 

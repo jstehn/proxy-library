@@ -5,7 +5,8 @@ import { DeckId, type Format } from "@/modules/decks";
 import { decks } from "@/modules/decks/core/infrastructure/schema";
 import { players } from "@/modules/accounts/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
-import { UserId, type ManaColor } from "@/shared/kernel";
+import { UserId } from "@/shared/kernel";
+import { type ManaColor } from "@/shared/mtg";
 import type {
   FriendshipRepository,
   PlayerLookup,

@@ -1,4 +1,4 @@
-import { creatureTypes, manaCurve, type Tag, type Theme } from "@/shared/kernel";
+import { creatureTypes, manaCurve, type Tag, type Theme } from "@/shared/mtg";
 import {
   isPlayed,
   formatRules,

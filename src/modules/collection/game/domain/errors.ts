@@ -1,5 +1,5 @@
 import type { PrintingId } from "@/modules/catalog";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Every expected failure in the collection module.
 

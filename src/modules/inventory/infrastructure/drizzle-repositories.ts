@@ -14,7 +14,8 @@ import {
   sealedProducts,
 } from "@/modules/catalog/cards/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
-import { FinishSchema, UserId, assertNever } from "@/shared/kernel";
+import { UserId, assertNever } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import type {
   DeckContents,
   ItemRepository,

@@ -1,4 +1,4 @@
-import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
+import { hasTypeWord, isCreature, type CardFacts } from "@/shared/mtg";
 import type { Color } from "@/modules/catalog";
 import { isCounted, isPlayed } from "./boards";
 import { FORMATS, type Deck, type DeckEntry, type Format } from "./deck";
