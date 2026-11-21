@@ -10,7 +10,7 @@
 //
 // `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside the split
 // modules, their areas (ADR 0029, 0030). It counts every import, `import type` too, and the `wiring.ts`
-// files (but not test files), and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
+// files (but not test files), and compares with scripts/dev/baselines/module-cycles-baseline.txt (a list of known cycles). A new
 // cycle fails; `--update` only removes entries from the baseline.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -113,7 +113,7 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
   return graph;
 }
 
-const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
+const MODULES_BASELINE_PATH = "scripts/dev/baselines/module-cycles-baseline.txt";
 
 /** The areas of the split modules (ADR 0029, 0030): folders of src/modules/<module>, each one node. */
 const AREAS: Readonly<Record<string, readonly string[]>> = {

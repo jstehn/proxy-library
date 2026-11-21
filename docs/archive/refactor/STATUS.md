@@ -1,5 +1,12 @@
 # Refactor status
 
+> **Finished and archived 2026-11-21.** Every package is done, both milestones are merged into
+> `main` and deployed (last `979ffee`). The ratchet baselines moved to `scripts/dev/baselines/`.
+> Left open, in [removal-list.md](removal-list.md): 12 `actions.ts` files still call `readPage()`
+> themselves instead of `formAction`/`formRedirect`; `printingDetails` beside `lookUpCards`'s detail;
+> and the commander-rule regexes in `decks/core/domain/rules.ts` (moving them is a card-features
+> change for the owner to decide). The other rows are ratchets that stay on purpose.
+
 > Read [README.md](README.md) first. Update this file at the start and end of every session (on
 > `refactor/main`). Statuses: **free**, **in progress (session name)**, **done**, **blocked
 > (reason)**.

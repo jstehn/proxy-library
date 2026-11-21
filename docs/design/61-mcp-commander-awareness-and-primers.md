@@ -1,7 +1,7 @@
 # Design: Proxy Library MCP Commander Awareness, Output Caps & Deck Primers
 
 - **Phase:** 61
-- **Status:** Done (lesson: [61](../../lessons/61-answers-a-model-can-read.md))
+- **Status:** Done (lesson: [61](https://github.com/jstehn/proxy-library-lessons/blob/main/61-answers-a-model-can-read.md))
 - **Superseded in part** (2026-11-20, P22): the goldfish rules (section 4 rules 1-3) were removed with the goldfish (P24); the rest is in llm-tools.md; see docs/modules/llm-tools.md
 - **Superseded in part** (2026-11-21, P36): the response cap in section 4 rule 7 is 14,000 bytes (`MAX_TOOL_RESPONSE_BYTES`), not about 40 KB; owner: whatever is smaller and more effective; see docs/modules/llm-tools.md
 - **Related ADRs:** 0007 (ACLs), 0016 (client-safe module API), 0023 (design doc sizing)

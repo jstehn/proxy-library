@@ -1,6 +1,6 @@
-// The clone ratchet (docs/refactor/README.md). `pnpm clones` finds runs of 6 normalized lines that
+// The clone ratchet (docs/archive/refactor/README.md). `pnpm clones` finds runs of 6 normalized lines that
 // appear in more than one place and fails when there are more of them than the baseline in
-// docs/refactor/clone-baseline.txt. `--update` lowers the baseline to today's count (never raises).
+// scripts/dev/baselines/clone-baseline.txt. `--update` lowers the baseline to today's count (never raises).
 //
 // Normalizing: comments, imports, string and number literals, whitespace and lines holding only
 // brackets are dropped or flattened, so two copies that differ in names of strings or numbers still
@@ -16,7 +16,7 @@ const NEAR_RUN_LENGTH = 8;
 const MINIMUM_CHARACTERS = 200;
 const NEAR_MINIMUM_CHARACTERS = 100; // flattened names make lines much shorter
 const ROOTS = ["src", "worker", "scripts"];
-const BASELINE_PATH = "docs/refactor/clone-baseline.txt";
+const BASELINE_PATH = "scripts/dev/baselines/clone-baseline.txt";
 const IGNORED_FOLDERS = new Set(["node_modules", ".next", "testing", "fixtures"]);
 
 type NormalizedLine = { text: string; lineNumber: number };

@@ -1,6 +1,6 @@
 # Deduplication playbook: where the savings come from
 
-This is the "how" behind [doc 65, section 4](../design/65-codebase-audit-and-refactor.md#4-duplication-the-same-job-written-many-times).
+This is the "how" behind [doc 65, section 4](../../design/65-codebase-audit-and-refactor.md#4-duplication-the-same-job-written-many-times).
 It ranks the duplication that's left by how much code it removes, and gives every group a recipe
 you can follow step by step. Your package file links to its section here. **Read Part A once, then
 only your group's section in Part B.**
@@ -124,7 +124,7 @@ docs' sections about files, ports and queries: they describe the layout the refa
 A starting list from the docs' titles and a keyword search (2026-11-19). If you find a doc that
 belongs to your group, add it here. P22 (2026-11-20) archived the docs whose rules are now in
 `docs/modules/`: they are in `docs/design/archive/` (same file names), and
-[`docs/design/README.md`](../design/README.md) says which page holds each one's rules.
+[`docs/design/README.md`](../../design/README.md) says which page holds each one's rules.
 
 | Group                          | Design docs (`docs/design/NN-*.md`)                                                                             |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |

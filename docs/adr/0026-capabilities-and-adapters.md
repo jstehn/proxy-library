@@ -53,7 +53,7 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
 3. For an LLM tool, add `src/app/_llm-tools/bindings/<verb-noun>.ts` with `defineBinding`, and
    add it to `bindings/index.ts`. Delete the old tool of the same name from `tools/`.
 4. For a server action, write `action(Schema, async ({ actor, capabilities }, input) => ...)`.
-5. Compare the tool's output with `docs/refactor/reference/tools/<name>.json`.
+5. Compare the tool's output with `docs/archive/refactor/reference/tools/<name>.json`.
 
 ## Consequences
 

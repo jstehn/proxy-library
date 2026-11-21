@@ -29,7 +29,7 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   `src/app/_llm-tools/bindings/`, one file per LLM tool named after it, so the folder reads as the
   tool list.
 - **Files stay under about 500 lines** (the benchmark; `pnpm sizes` lists the biggest and the
-  production-line ratchet in `docs/refactor/sizes-baseline.txt` only goes down). A longer file needs a
+  production-line ratchet in `scripts/dev/baselines/sizes-baseline.txt` only goes down). A longer file needs a
   reason in its header comment.
 - **Adapters stay thin** (ADR 0026). A server action, a page, an LLM tool binding, an API route and
   a worker command each parse input, call a capability or a `reads` query, and present the result.

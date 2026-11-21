@@ -21,7 +21,8 @@ exercise solution, commit at the end of each lesson. Lessons teach concepts; the
   says "Lesson: yes (topics)" or "Lesson: no". New cross-cutting decisions become ADRs.
 - **Task board:** the Proxy Library project in tududi (`tududi` MCP server, `.mcp.json`, key in
   `.envrc.local`). One feature in progress at a time; new ideas go to tududi's inbox. See `docs/todo.md`.
-- The refactor (doc 65) is run from `docs/refactor/README.md`.
+- The 2026 refactor (doc 65) is finished; its history is in `docs/archive/refactor/`. Its ratchets
+  stay in `scripts/dev/baselines/` (`pnpm check` runs them).
 
 ## Environment
 
