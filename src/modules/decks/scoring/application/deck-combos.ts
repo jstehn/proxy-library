@@ -1,9 +1,9 @@
 import type { SpellbookCombo, SpellbookCombosResult } from "@/modules/catalog";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import { isPlayed } from "../domain/boards";
-import { declaredComboFor, type DeckPlan } from "../domain/deck-profile";
-import type { DeckView } from "../domain/deck-view";
-import type { DeckNotFound } from "../domain/errors";
+import { isPlayed } from "@/modules/decks/core/client";
+import { declaredComboFor, type DeckPlan } from "@/modules/decks/core/client";
+import type { DeckView } from "@/modules/decks/core/client";
+import type { DeckNotFound } from "@/modules/decks/core/client";
 import type { OwnedCardCheck } from "../domain/owned-card-check";
 
 // The combos in a deck and the ones one card away, from Commander Spellbook (cached for a day).

@@ -14,7 +14,7 @@ import {
   type Theme,
 } from "@/shared/kernel";
 import { isCounted, isPlayed, type DeckCount } from "./boards";
-import { costSymbols } from "./mana-symbols";
+import { costSymbols } from "./mana";
 
 // Deck statistics for the builder: the mana curve, card types and average mana value (lesson 09,
 // exercise 5 became this), and role counts (design doc 19). Pure: lines in, numbers out.

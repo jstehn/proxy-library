@@ -1,5 +1,7 @@
 // What the other areas and the module root use of decks/building (ADR 0029).
 export * from "./client";
+export { makeDeckPlanEdits } from "./application/deck-plan-edits";
+export { makeDeckSearch } from "./application/deck-search";
 export { makeDeckManaPlan } from "./application/deck-mana-plan";
 export { makeFindReplacements, type SimilarCards } from "./application/find-replacements";
 export {

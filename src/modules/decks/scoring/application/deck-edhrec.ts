@@ -1,9 +1,9 @@
 import type { EdhrecCardItem, EdhrecCommanderData } from "@/modules/catalog";
 import { err, ok, type Result, type UserId, type CardFacts } from "@/shared/kernel";
-import { isPlayed } from "../domain/boards";
-import { isAvoidCard, type DeckPlan } from "../domain/deck-profile";
-import type { DeckView } from "../domain/deck-view";
-import type { DeckNotFound } from "../domain/errors";
+import { isPlayed } from "@/modules/decks/core/client";
+import { isAvoidCard, type DeckPlan } from "@/modules/decks/core/client";
+import type { DeckView } from "@/modules/decks/core/client";
+import type { DeckNotFound } from "@/modules/decks/core/client";
 import type { OwnedCardCheck } from "../domain/owned-card-check";
 
 // EDHREC's popularity data for a commander, and a deck compared with it. Popularity is what

@@ -44,6 +44,7 @@ export {
   commanderOnlyProfile,
   effectiveManaValue,
   isAvoidCard,
+  declaredComboFor,
   isKeyCard,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
@@ -55,7 +56,7 @@ export {
   listAndFingerprint,
   problemsOfLines,
   type BracketReport,
-} from "./domain/deck-reads";
+} from "./domain/deck-view";
 export type {
   DeckLine,
   DeckSource,
@@ -97,16 +98,9 @@ export {
   parseCost,
   type ManaSource as PaymentSource,
   type Pip,
-} from "./domain/mana-payment";
-export {
-  colorsOfCost,
-  costSymbols,
-  splitSymbols,
-  symbolArt,
-  type SymbolArt,
-} from "./domain/mana-symbols";
-export { MAX_NOTE_LENGTH, checkNote } from "./domain/notes";
-export type { OwnedCardCheck } from "./domain/owned-card-check";
+} from "./domain/mana";
+export { colorsOfCost, costSymbols, splitSymbols, symbolArt, type SymbolArt } from "./domain/mana";
+export { MAX_NOTE_LENGTH, checkNote } from "./domain/headings";
 export {
   canBeCommander,
   copyLimitFor,

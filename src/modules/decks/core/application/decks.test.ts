@@ -5,7 +5,7 @@ import { err } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
 import { fingerprint } from "../domain/list-format";
-import { MAX_NOTE_LENGTH } from "../domain/notes";
+import { MAX_NOTE_LENGTH } from "../domain/headings";
 import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "../testing/fakes";
 import { makeDecks } from "./make-decks";
 

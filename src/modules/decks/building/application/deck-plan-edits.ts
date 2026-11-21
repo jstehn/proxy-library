@@ -1,8 +1,8 @@
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Clock, type Result, type UserId } from "@/shared/kernel";
-import type { DeckPlan } from "../domain/deck-profile";
-import type { DeckSource, StoredDeckProfile } from "../domain/deck-view";
-import type { DeckNotFound } from "../domain/errors";
+import type { DeckPlan } from "@/modules/decks/core/client";
+import type { DeckSource, StoredDeckProfile } from "@/modules/decks/core/client";
+import type { DeckNotFound } from "@/modules/decks/core/client";
 
 // The parts of a deck that aren't cards: its profile (plan, key cards, avoid cards), its primer
 // and the research sources saved on it. The deck builder's plan panel and the update_deck tool

@@ -3,10 +3,6 @@ import { printingCards } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { ok, pick, type Clock, type UserId } from "@/shared/kernel";
 import {
-  makeDeckCombos,
-  makeEdhrecResearch,
-  makeDeckPlanEdits,
-  makeDeckSearch,
   makeStartDeck,
   makeListDecks,
   withFeatures,
@@ -22,6 +18,8 @@ import {
 import { deckViewForViewer } from "@/modules/decks/sharing";
 import { makeDeckFacts, makeDeckOverview } from "@/modules/decks/overview";
 import {
+  makeDeckPlanEdits,
+  makeDeckSearch,
   makeDeckManaPlan,
   budgetReplacements,
   candidatePool,
@@ -34,6 +32,8 @@ import {
 } from "@/modules/decks/building";
 import { makeProxyDeck, deckTokenLines } from "@/modules/decks/proxies";
 import {
+  makeDeckCombos,
+  makeEdhrecResearch,
   makeDeckSignals,
   makeSearchSignals,
   checkOwnedCards,

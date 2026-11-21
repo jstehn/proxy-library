@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
-import { EMPTY_DECK_PROFILE } from "../domain/deck-profile";
+import { EMPTY_DECK_PROFILE } from "@/modules/decks/core/client";
 import { makeDeckSearch } from "./deck-search";
 
 const userId = UserId.of("1");

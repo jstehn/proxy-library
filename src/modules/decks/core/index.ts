@@ -4,22 +4,8 @@ export {
   createDeckInTransaction,
   type DeckCardInput,
 } from "./application/create-deck-in-transaction";
-export {
-  makeDeckCombos,
-  type DeckCombos,
-  type SpellbookUnavailable,
-} from "./application/deck-combos";
-export {
-  makeEdhrecResearch,
-  type CommanderMissing,
-  type EdhrecDeckComparison,
-  type EdhrecNotFound,
-  type EdhrecUnavailable,
-} from "./application/deck-edhrec";
 export type { UpdateDeckError } from "./application/deck-lifecycle";
 export type { ReplaceListError, ReplaceReport } from "./application/deck-lists";
-export { makeDeckPlanEdits } from "./application/deck-plan-edits";
-export { makeDeckSearch } from "./application/deck-search";
 export { makeStartDeck, type StartedDeck } from "./application/deck-start";
 export {
   type ApplyChangesError,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PrintingId } from "@/modules/catalog";
 import { err, ok, UserId } from "@/shared/kernel";
 import { DeckId, movedEntry, replacedEntries, withEntry, type Deck } from "./deck";
-import { checkNote, MAX_NOTE_LENGTH } from "./notes";
+import { checkNote, MAX_NOTE_LENGTH } from "./headings";
 
 const sampleDeck = (): Deck => ({
   id: DeckId.of(1),

@@ -1,6 +1,6 @@
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import { withoutAvoidCards, type DeckPlan } from "../domain/deck-profile";
-import type { DeckNotFound } from "../domain/errors";
+import { withoutAvoidCards, type DeckPlan } from "@/modules/decks/core/client";
+import type { DeckNotFound } from "@/modules/decks/core/client";
 
 // Searching for cards for one deck (audit S1: search_cards with a deck): the synergy search
 // ("Treasure makers"), and the search by meaning. Both leave out the deck's "avoid" cards and say
