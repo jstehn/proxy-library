@@ -4,7 +4,7 @@ import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId, SetCode, type Color } from "@/modules/catalog";
 import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
-import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/testing/fakes";
+import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/core/testing/fakes";
 import { inMemoryItemRepository } from "@/modules/inventory/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";

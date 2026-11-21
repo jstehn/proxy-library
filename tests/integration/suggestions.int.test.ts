@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   budgetList,
+  candidatePool,
   deckSuggestions,
   deckView,
   makeDecks,
@@ -49,7 +50,7 @@ describe("deck suggestions", () => {
   });
 
   it("knows the deck: Beza leads tokens, and every role is short", async () => {
-    const suggestions = await deckSuggestions(db, jack.userId, await bezaDeck());
+    const suggestions = await deckSuggestions(candidatePool(db, jack.userId), await bezaDeck());
     expect(suggestions?.profile.themes).toEqual([
       "tokens",
       "creature-tokens",
@@ -65,7 +66,7 @@ describe("deck suggestions", () => {
   });
 
   it("suggests your own cards first, store cards only if you don't own them, all in Beza's colors", async () => {
-    const suggestions = await deckSuggestions(db, jack.userId, await bezaDeck());
+    const suggestions = await deckSuggestions(candidatePool(db, jack.userId), await bezaDeck());
     if (suggestions === null) throw new Error("Jack's deck");
     const forDeck = suggestions.forDeck;
     expect(names(forDeck, "owned").sort()).toEqual(["Banishing Light", "Carrot Cake"]);
@@ -102,7 +103,7 @@ describe("deck suggestions", () => {
         sql`select oracle_id from printings where name = 'Crumb and Get It' limit 1`,
       )
     ).rows;
-    const like = await similarCards(db, jack.userId, deckId, crumb.oracle_id);
+    const like = await similarCards(candidatePool(db, jack.userId), deckId, crumb.oracle_id);
     const truce = like?.store.find((suggestion) => suggestion.card.name === "Dawn's Truce");
     expect(truce?.reasons).toContainEqual({ kind: "theme", theme: "spells" });
     // Two printings of Dawn's Truce are for sale, at $14.20 and $9.56.
@@ -111,7 +112,7 @@ describe("deck suggestions", () => {
   });
 
   it("makes a list within a budget, written for Buy a list", async () => {
-    const list = await budgetList(db, jack.userId, await bezaDeck(), 100);
+    const list = await budgetList(candidatePool(db, jack.userId), await bezaDeck(), 100);
     if (list === null) throw new Error("Jack's deck");
     expect(list.picks.length).toBeGreaterThan(0);
     expect(list.totalCents).toBeLessThanOrEqual(100);
@@ -125,8 +126,8 @@ describe("deck suggestions", () => {
   it("refuses someone else's deck", async () => {
     await resetPlayers(["jack", "sam"]);
     const deckId = await bezaDeck();
-    expect(await deckSuggestions(db, actor("sam").userId, deckId)).toBeNull();
-    expect(await budgetList(db, actor("sam").userId, deckId, 500)).toBeNull();
+    expect(await deckSuggestions(candidatePool(db, actor("sam").userId), deckId)).toBeNull();
+    expect(await budgetList(candidatePool(db, actor("sam").userId), deckId, 500)).toBeNull();
   });
 });
 
@@ -152,23 +153,23 @@ describe("a target bracket (design doc 31)", () => {
 
   it("leaves out Game Changers in bracket 2, says how many, and keeps them in bracket 3 (invariant 10)", async () => {
     const deckId = await bezaDeck();
-    const open = await deckSuggestions(db, jack.userId, deckId);
+    const open = await deckSuggestions(candidatePool(db, jack.userId), deckId);
     expect(everyName(open?.forDeck ?? emptyList)).toEqual(expect.arrayContaining(GAME_CHANGERS));
     expect(open?.forDeck.hiddenOverTarget).toBe(0);
 
     await decks.updateDeck(jack, { deckId, targetBracket: 2 });
-    const core = await deckSuggestions(db, jack.userId, deckId);
+    const core = await deckSuggestions(candidatePool(db, jack.userId), deckId);
     for (const name of GAME_CHANGERS)
       expect(everyName(core?.forDeck ?? emptyList)).not.toContain(name);
     expect(core?.forDeck.hiddenOverTarget).toBe(2);
     expect(names(core?.forDeck ?? emptyList, "owned")).toContain("Carrot Cake");
 
-    const budget = await budgetList(db, jack.userId, deckId, 100_000);
+    const budget = await budgetList(candidatePool(db, jack.userId), deckId, 100_000);
     expect(budget?.picks.map((pick) => pick.card.name)).not.toContain("Builder's Talent");
     expect(budget?.hiddenOverTarget).toBeGreaterThan(0);
 
     await decks.updateDeck(jack, { deckId, targetBracket: 3 });
-    const upgraded = await deckSuggestions(db, jack.userId, deckId);
+    const upgraded = await deckSuggestions(candidatePool(db, jack.userId), deckId);
     expect(everyName(upgraded?.forDeck ?? emptyList)).toEqual(
       expect.arrayContaining(GAME_CHANGERS),
     );
@@ -214,7 +215,7 @@ describe("60-card playset copy limits in suggestions (design doc 44)", () => {
       text: "Deck\n1 Carrot Cake\n1 Banishing Light\n24 Plains\nSideboard\n3 Carrot Cake",
     });
 
-    const suggestions = await deckSuggestions(db, jack.userId, created.value);
+    const suggestions = await deckSuggestions(candidatePool(db, jack.userId), created.value);
     if (suggestions === null) throw new Error("expected suggestions");
 
     const allOwned = [

@@ -7,6 +7,20 @@ import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
+// The areas of the decks module (ADR 0029) and the areas each may import (always through that
+// area's index.ts or client.ts). Only these names and the cycle check's table
+// (scripts/check-cycles.ts) spell the areas out.
+const DECKS_ARROWS = {
+  core: [],
+  scoring: ["core"],
+  play: ["core"],
+  proxies: ["core"],
+  building: ["core", "scoring", "play"],
+  overview: ["core", "scoring", "play", "proxies", "building"],
+};
+const DECKS_AREAS = Object.keys(DECKS_ARROWS);
+const DECKS_AREAS_WITH_DOMAIN = DECKS_AREAS.filter((area) => area !== "overview");
+
 const SOURCE = ["src/**/*.{ts,tsx}", "worker/**/*.ts"];
 // The two card rules (eslint-rules/), one plugin so blocks that overlap agree on it.
 const CARDS_PLUGIN = {
@@ -14,7 +28,7 @@ const CARDS_PLUGIN = {
 };
 // The folders that hold card rules (design doc 66): the regex-count ratchet watches the same ones.
 const CARD_RULE_FOLDERS = [
-  "src/modules/decks/domain",
+  ...DECKS_AREAS_WITH_DOMAIN.map((area) => `src/modules/decks/${area}/domain`),
   "src/shared/card-search",
   "src/modules/drafts/domain",
   "src/modules/catalog/domain",
@@ -34,6 +48,18 @@ const elements = [
   { type: "config", pattern: "src/shared/config" },
   // The card search language and card lists (ADR 0017): index.ts is pure, sql.ts is server-only.
   { type: "card-search", pattern: "src/shared/card-search" },
+  // The decks module's areas (ADR 0029): src/modules/decks/<area>/<layer>, and the area's own
+  // index.ts and client.ts. A decks file is a module-layer like any other, plus its area.
+  {
+    type: "module-layer",
+    pattern: "src/modules/@(decks)/*/@(domain|application|infrastructure|queries|testing)",
+    capture: ["module", "area", "layer"],
+  },
+  {
+    type: "decks-area",
+    pattern: `src/modules/@(decks)/@(${DECKS_AREAS.join("|")})`,
+    capture: ["module", "area"],
+  },
   // src/modules/<module>/<layer>: domain | application | infrastructure | queries | testing
   { type: "module-layer", pattern: "src/modules/*/*", capture: ["module", "layer"] },
   // src/modules/<module> itself, which holds only index.ts: the module's public API
@@ -67,6 +93,18 @@ const layer = (name, { sameModule = false, file } = {}) => ({
   },
 });
 const from = (selector, ...to) => ({ from: selector, allow: { to } });
+// A file of one area of decks, and an area's public API (its index.ts and client.ts).
+const decksFile = (area) => ({
+  element: { type: "module-layer", captured: { module: "decks", area } },
+});
+const decksApi = (area, file) => ({
+  element: {
+    type: "decks-area",
+    ...(area ? { captured: { area } } : {}),
+    ...(file ? { fileInternalPath: file } : {}),
+  },
+});
+const anyDecksApi = { element: { type: "decks-area" } };
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
 // A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
 // A module's wiring.ts builds its capabilities (ADR 0026); only the composition roots import it.
@@ -124,7 +162,7 @@ const CANDIDATE_SQL = [
     selector:
       "TemplateElement[value.raw=/order by latest\\.usd_cents|array_agg\\(c\\.printing_id/]",
     message:
-      "Cards you own (one per card) and the cheapest printing for sale are written once, in decks/queries/candidate-pool.ts: use ownedPerCard, notOwned, cheapestForSale or cheapestOfCards.",
+      "Cards you own (one per card) and the cheapest printing for sale are written once, in decks/building/queries/candidate-pool.ts: use ownedPerCard, notOwned, cheapestForSale or cheapestOfCards.",
   },
 ];
 
@@ -135,7 +173,7 @@ const FORMAT_NAMES = [
     selector:
       "BinaryExpression[operator=/^[!=]==?$/][right.type='Literal']:matches([left.name='format'], [left.property.name='format'][left.computed=false])",
     message:
-      "Don't compare a format's name. Ask a question of formatRules(format) from decks/domain/format-rules.ts (client code: @/modules/decks/client), and add the question there if it's missing (refactor P10).",
+      "Don't compare a format's name. Ask a question of formatRules(format) from decks/core/domain/format-rules.ts (client code: @/modules/decks/client), and add the question there if it's missing (refactor P10).",
   },
 ];
 
@@ -238,14 +276,56 @@ const policies = [
     layer("domain", { sameModule: true }),
     layer("application", { sameModule: true }),
     layer("queries", { sameModule: true }),
+    anyDecksApi,
   ),
 
   // wiring.ts (ADR 0026): builds the module's capabilities from its own layers and the readers it
   // takes from other modules' public APIs. It is the one place a module's queries meet its use cases.
   {
     from: wiringFile,
-    allow: { to: [el("kernel"), el("db"), publicApi] },
+    allow: { to: [el("kernel"), el("db"), publicApi, anyDecksApi] },
   },
+
+  // The areas of decks (ADR 0029): a file imports another area only through its index.ts or
+  // client.ts (fakes in testing/ too), and only along the arrows of DECKS_ARROWS. The layer rules
+  // above allow any layer of the same module, so these come after them and take it back.
+  ...DECKS_AREAS.flatMap((area) => [
+    ...(DECKS_ARROWS[area].length === 0
+      ? []
+      : [
+          {
+            from: decksFile(area),
+            allow: { to: DECKS_ARROWS[area].map((other) => decksApi(other)) },
+          },
+        ]),
+    {
+      from: decksFile(area),
+      disallow: {
+        to: {
+          element: {
+            type: "module-layer",
+            captured: { module: "decks", area: `!(${area})`, layer: "!(testing)" },
+            // table definitions are shared on purpose, as with other modules (ADR 0006)
+            fileInternalPath: "!(schema.ts)",
+          },
+        },
+      },
+    },
+    // An area's own index.ts and client.ts re-export only its own layers.
+    {
+      from: decksApi(area),
+      allow: { to: { element: { type: "module-layer", captured: { module: "decks", area } } } },
+    },
+  ]),
+  // client.ts is pure (ADR 0016): domain code only. A domain file never imports an index.ts.
+  {
+    from: decksApi(undefined, "client.ts"),
+    disallow: {
+      to: [layer("application"), layer("queries"), layer("infrastructure"), layer("testing")],
+    },
+  },
+  { from: layer("domain"), disallow: { to: decksApi(undefined, "index.ts") } },
+  { from: clientApi, disallow: { to: decksApi(undefined, "index.ts") } },
 
   // Design doc 16, rule 1: real cards never touch the game. Of the modules, only decks may use
   // the real collection (its public API, or its tables through schema.ts).
@@ -352,7 +432,7 @@ export default defineConfig([
         {
           default: "disallow",
           message:
-            "Architecture: {{ from.element.types.[0] }}{{#if from.element.captured.module}} ({{ from.element.captured.module }}{{#if from.element.captured.layer}}/{{ from.element.captured.layer }}{{/if}}){{/if}} may not import {{ to.element.types.[0] }}{{#if to.element.captured.module}} ({{ to.element.captured.module }}{{#if to.element.captured.layer}}/{{ to.element.captured.layer }}{{/if}}){{/if}}. See docs/architecture/overview.md.",
+            "Architecture: {{ from.element.types.[0] }}{{#if from.element.captured.module}} ({{ from.element.captured.module }}{{#if from.element.captured.area}}/{{ from.element.captured.area }}{{/if}}{{#if from.element.captured.layer}}/{{ from.element.captured.layer }}{{/if}}){{/if}} may not import {{ to.element.types.[0] }}{{#if to.element.captured.module}} ({{ to.element.captured.module }}{{#if to.element.captured.area}}/{{ to.element.captured.area }}{{/if}}{{#if to.element.captured.layer}}/{{ to.element.captured.layer }}{{/if}}){{/if}}. See docs/architecture/overview.md.",
           policies,
         },
       ],
@@ -366,6 +446,7 @@ export default defineConfig([
     files: [
       "src/shared/kernel/**/*.ts",
       "src/modules/*/domain/**/*.ts",
+      "src/modules/decks/*/domain/**/*.ts",
       // the card search language's pure half (its sql.ts may use drizzle-orm)
       "src/shared/card-search/index.ts",
       "src/shared/card-search/parse.ts",
@@ -406,7 +487,7 @@ export default defineConfig([
       ...TESTS,
       "src/shared/runtime/**",
       "src/shared/kernel/testing/**",
-      "src/modules/decks/domain/format-rules.ts",
+      "src/modules/decks/core/domain/format-rules.ts",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -441,7 +522,7 @@ export default defineConfig([
   },
   // The candidate pool's own SQL (refactor P07b) is the one place that may spell it out.
   {
-    files: ["src/modules/decks/queries/candidate-pool.ts"],
+    files: ["src/modules/decks/building/queries/candidate-pool.ts"],
     ignores: TESTS,
     rules: {
       "no-restricted-syntax": [
@@ -579,7 +660,11 @@ export default defineConfig([
   // Network access only through shared/http and module adapters.
   {
     files: SOURCE,
-    ignores: ["src/shared/http/**", "src/modules/*/infrastructure/**"],
+    ignores: [
+      "src/shared/http/**",
+      "src/modules/*/infrastructure/**",
+      "src/modules/decks/*/infrastructure/**",
+    ],
     rules: {
       "no-restricted-globals": [
         "error",
@@ -614,7 +699,7 @@ export default defineConfig([
 
   // No card is named in domain code (P14): a rule about one card is a feature or a data table.
   {
-    files: ["src/modules/{catalog,decks,drafts}/domain/**/*.ts"],
+    files: ["src/modules/{catalog,drafts}/domain/**/*.ts", "src/modules/decks/*/domain/**/*.ts"],
     ignores: TESTS,
     plugins: { cards: CARDS_PLUGIN },
     rules: { "cards/card-name-literal": "error" },

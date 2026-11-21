@@ -1,6 +1,6 @@
 import pg from "pg";
 import { type Tag, type Theme } from "@/shared/kernel";
-import type { Bracket } from "@/modules/decks/domain/brackets";
+import type { Bracket } from "@/modules/decks/core/domain/brackets";
 import {
   emptyRatingProfile,
   fitLogisticWeights,
@@ -10,9 +10,9 @@ import {
   type CalibrationSample,
   type PowerTier,
   type RatingWeights,
-} from "@/modules/decks/domain/rate";
-import { isLand, type ProfileLine } from "@/modules/decks/domain/stats";
-import { deckProfile, type CandidateCard } from "@/modules/decks/domain/suggest";
+} from "@/modules/decks/scoring/domain/rate";
+import { isLand, type ProfileLine } from "@/modules/decks/core/domain/stats";
+import { deckProfile, type CandidateCard } from "@/modules/decks/scoring/domain/suggest";
 
 // Fits the rating weights per power tier (logistic regression) against held-out cards of the
 // Commander precons, and prints the result to paste into `RATING_WEIGHTS_BY_TIER` (rate.ts).

@@ -8,7 +8,9 @@ import { join } from "node:path";
 import ts from "typescript";
 
 const FOLDERS = [
-  "src/modules/decks/domain",
+  ...["core", "scoring", "building", "play", "proxies"].map(
+    (area) => `src/modules/decks/${area}/domain`,
+  ),
   "src/shared/card-search",
   "src/modules/drafts/domain",
   "src/modules/catalog/domain",

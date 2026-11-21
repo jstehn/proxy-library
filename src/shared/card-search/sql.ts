@@ -500,7 +500,7 @@ function isCondition(value: string, context: SearchContext): SQL {
   }
 }
 
-// is:commander mirrors canBeCommander in decks/domain/rules.ts (test both when changing either).
+// is:commander mirrors canBeCommander in decks/core/domain/rules.ts (test both when changing either).
 function commanderCondition(): SQL {
   return sql`(
     (p.type_line ~ '\\mLegendary\\M' and p.type_line ~ '\\mCreature\\M')

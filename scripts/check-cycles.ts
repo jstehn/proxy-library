@@ -8,8 +8,8 @@
 // `type`) are erased when compiled, so they can't make a cycle at runtime. Packages in
 // node_modules are left out: only our own files can form a cycle we can fix.
 //
-// `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside decks, the
-// areas P18 will split it into. It counts every import, `import type` too, and the `wiring.ts`
+// `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside decks, its
+// areas (ADR 0029). It counts every import, `import type` too, and the `wiring.ts`
 // files (but not test files), and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
 // cycle fails; `--update` only removes entries from the baseline.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -115,32 +115,18 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
 
 const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
 
-/**
- * The files of `decks/domain` by area (the split P18 makes); a file not listed is core. The mana
- * and plan files are core: stats and the deck view read them, and play reads core, never the other
- * way round. Other files of decks (application, queries, ...) stay one node, "decks".
- */
-const DECKS_AREAS: Readonly<Record<string, string>> = {
-  play: "goldfish draws castability cast-by-turn cast-effects opening-hand/",
-  proxies: "proxy-sheet playtest-card token-proxies proxy-progress",
-  advice:
-    "rate signals suggest suggestion-types cuts swaps optimize replacements draft-deck mana-base commanders audit-report avoid-cards",
-};
+/** The areas of the decks module (ADR 0029): folders of src/modules/decks, each one node. */
+const DECKS_AREAS = ["core", "scoring", "building", "play", "proxies", "overview"];
 
-/** The node a file belongs to: its module, or for decks/domain its area. */
+/** The node a file belongs to: its module, or for a file in a decks area, that area. */
 export function nodeOf(path: string): string | undefined {
-  const match = /(?:^|\/)src\/modules\/([^/]+)\/(domain\/)?([^.]*)/.exec(
-    path.replaceAll("\\", "/"),
-  );
+  const match = /(?:^|\/)src\/modules\/([^/]+)(?:\/([^/.]+))?/.exec(path.replaceAll("\\", "/"));
   if (match === null) return undefined;
-  const [, moduleName, isDomain, name] = match;
-  if (moduleName !== "decks" || isDomain === undefined) return moduleName;
-  const area = Object.keys(DECKS_AREAS).find((candidate) =>
-    DECKS_AREAS[candidate]!.split(" ").some(
-      (entry) => name!.startsWith(entry) && (entry.endsWith("/") || name === entry),
-    ),
-  );
-  return `decks/${area ?? "core"}`;
+  const [, moduleName, folder] = match;
+  if (moduleName !== "decks" || folder === undefined || !DECKS_AREAS.includes(folder)) {
+    return moduleName;
+  }
+  return `decks/${folder}`;
 }
 
 /** The module graph: an edge for every import between two different nodes. */

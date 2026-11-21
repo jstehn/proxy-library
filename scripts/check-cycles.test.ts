@@ -30,12 +30,14 @@ describe("findCycles", () => {
 });
 
 describe("module cycles", () => {
-  it("maps files to modules, and decks/domain files to their area", () => {
+  it("maps files to modules, and decks files to their area", () => {
     expect(nodeOf("/p/src/modules/wallet/application/refresh.ts")).toBe("wallet");
-    expect(nodeOf("/p/src/modules/decks/domain/goldfish.ts")).toBe("decks/play");
-    expect(nodeOf("/p/src/modules/decks/domain/opening-hand/hand.ts")).toBe("decks/play");
-    expect(nodeOf("/p/src/modules/decks/domain/deck.ts")).toBe("decks/core");
-    expect(nodeOf("/p/src/modules/decks/queries/decks.ts")).toBe("decks");
+    expect(nodeOf("/p/src/modules/decks/play/domain/goldfish.ts")).toBe("decks/play");
+    expect(nodeOf("/p/src/modules/decks/play/domain/opening-hand/hand.ts")).toBe("decks/play");
+    expect(nodeOf("/p/src/modules/decks/core/queries/decks.ts")).toBe("decks/core");
+    expect(nodeOf("/p/src/modules/decks/overview/index.ts")).toBe("decks/overview");
+    expect(nodeOf("/p/src/modules/decks/wiring.ts")).toBe("decks");
+    expect(nodeOf("/p/src/modules/decks/index.ts")).toBe("decks");
     expect(nodeOf("/p/src/server/core.ts")).toBeUndefined();
   });
 

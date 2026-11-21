@@ -1,9 +1,9 @@
 # Source files allowed to be over 500 lines (docs/refactor/README.md). Format: path  # reason
 src/app/drafts/[id]/page.tsx  # pre-refactor, owned by P20
-src/modules/decks/domain/draft-deck.ts  # pre-refactor, owned by P16
-src/modules/decks/domain/playtest-card.ts  # pre-refactor, owned by P20
-src/modules/decks/domain/rate.ts  # pre-refactor, owned by P16
-src/modules/decks/queries/decks.ts  # pre-refactor, owned by P06
+src/modules/decks/building/domain/build-from-collection.ts  # pre-refactor, owned by P16
+src/modules/decks/proxies/domain/playtest-card.ts  # pre-refactor, owned by P20
+src/modules/decks/scoring/domain/rate.ts  # pre-refactor, owned by P16
+src/modules/decks/core/queries/decks.ts  # pre-refactor, owned by P06
 src/modules/drafts/application/drafts.ts  # pre-refactor, owned by P20
 src/modules/drafts/domain/draft.ts  # pre-refactor, owned by P20
 src/modules/drafts/domain/steps.ts  # pre-refactor, owned by P20

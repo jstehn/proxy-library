@@ -10,7 +10,7 @@ const DraftDeckInput = z.object({
 });
 
 /** A 100-card Commander draft from owned cards first (design doc 37). */
-export const draftDeckAction = action(
+export const buildFromCollectionAction = action(
   DraftDeckInput,
   async ({ actor, reads }, input): Promise<DeckDraft | null> =>
     reads.decks.draft(actor, input.deckId, {
