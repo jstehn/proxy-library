@@ -29,21 +29,21 @@ export default async function PhotosPage() {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border-subtle border-b text-left">
-            <th className="py-1 font-medium">Set</th>
-            <th className="py-1 font-medium">WPN page</th>
+            <th className="py-1 pr-3 font-medium">Set</th>
+            <th className="py-1 pr-3 font-medium">WPN page</th>
             <th className="py-1 font-medium">Products with a photo</th>
           </tr>
         </thead>
         <tbody>
           {sets.map((set) => (
             <tr key={set.setCode} className="border-border-subtle border-b">
-              <td className="py-1.5">
+              <td className="py-1.5 pr-3">
                 <Link href={`/admin/photos/${set.setCode}`} className="underline">
                   {set.setName}
                 </Link>{" "}
                 <span className="text-muted">{set.setCode}</span>
               </td>
-              <td className={`py-1.5 ${set.status === "found" ? "" : "text-warning-text"}`}>
+              <td className={`py-1.5 pr-3 ${set.status === "found" ? "" : "text-warning-text"}`}>
                 {STATUS_LABELS[set.status]}
               </td>
               <td className="py-1.5 tabular-nums">
