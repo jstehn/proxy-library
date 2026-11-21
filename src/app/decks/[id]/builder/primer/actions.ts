@@ -1,11 +1,11 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { DeckPlan } from "@/modules/decks";
 import { action } from "@/server/action-instance";
 import { err, ok } from "@/shared/kernel";
 import { DeckIdInput, NOT_YOURS } from "../action-helpers";
 import { rejected } from "../answer";
+import { revalidateDeck } from "@/app/decks/paths";
 
 // The builder's plan and primer panel (design doc 61).
 
@@ -58,7 +58,7 @@ export const saveDeckPlanAction = action(DeckPlanInput, async ({ actor, capabili
   });
   if (!updated.ok) return err(rejected(NOT_YOURS));
   const savedPrimer = await deckPlanEdits.setPrimer(actor, { deckId, content: primer });
-  revalidatePath(`/decks/${deckId}`);
+  revalidateDeck(deckId);
   const saved: DeckPlanWithPrimer = {
     profile: updated.value.profile,
     primer: savedPrimer.ok ? savedPrimer.value.primer : primer.trim(),

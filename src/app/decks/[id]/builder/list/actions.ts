@@ -1,10 +1,10 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { BOARDS, DeckId, GROUPINGS, MAX_ROLE_LENGTH } from "@/modules/decks";
 import { action } from "@/server/action-instance";
 import { afterChange, DeckIdInput } from "../action-helpers";
+import { revalidateDeck } from "@/app/decks/paths";
 
 // The deck list's server side (design doc 14): card changes, headings, notes and roles. Each
 // returns the fresh deck, or why the change was refused.
@@ -101,7 +101,7 @@ export const noteAction = action(NoteInput, async (context, input) => {
     ...input,
     deckId: DeckId.of(input.deckId),
   });
-  if (result.ok) revalidatePath(`/decks/${input.deckId}`);
+  if (result.ok) revalidateDeck(input.deckId);
   return afterChange(context, input.deckId, result);
 });
 
@@ -122,6 +122,6 @@ export const entryDetailsAction = action(EntryDetailsInput, async (context, inpu
     ...(input.role !== undefined ? { role: input.role } : {}),
     ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
   });
-  if (result.ok) revalidatePath(`/decks/${input.deckId}`);
+  if (result.ok) revalidateDeck(input.deckId);
   return afterChange(context, input.deckId, result);
 });

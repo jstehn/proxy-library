@@ -110,6 +110,15 @@ function readForm(schema: FormSchema, formData: FormData): Record<string, unknow
 }
 
 /**
+ * For a form that returns its own state, not a `FormState` (it keeps typed values, shows a secret
+ * once, lists problems): reads the FormData the way `formAction` does, and gives the schema's
+ * result. The action still finds the actor itself.
+ */
+export function parseForm<Schema extends FormSchema>(schema: Schema, formData: FormData) {
+  return schema.safeParse(readForm(schema, formData)) as z.ZodSafeParseResult<z.output<Schema>>;
+}
+
+/**
  * A sentence per field, for `invalidInput`: the message of the first problem's field, or
  * `otherwise` when that field has none. (A schema lists its fields in order, so the order of the
  * form decides which problem comes first.)

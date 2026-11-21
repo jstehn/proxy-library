@@ -1,11 +1,11 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DeckId, describeDeckError, SnapshotId } from "@/modules/decks";
 import { action } from "@/server/action-instance";
 import { err, ok } from "@/shared/kernel";
 import { DeckIdInput, loadDeck, NOT_YOURS } from "../action-helpers";
 import { rejected } from "../answer";
+import { revalidateDeck } from "@/app/decks/paths";
 
 // The builder's snapshots (design doc 41).
 
@@ -68,7 +68,7 @@ export const restoreSnapshotAction = action(SnapshotMutationInput, async (contex
     snapshotId: SnapshotId.of(input.snapshotId),
   });
   if (!result.ok) return err(rejected(describeDeckError(result.error)));
-  revalidatePath(`/decks/${input.deckId}`);
+  revalidateDeck(input.deckId);
   const deck = await loadDeck(context, input.deckId);
   return deck === null ? err(rejected(NOT_YOURS)) : ok({ deck, cardCount: result.value.cards });
 });

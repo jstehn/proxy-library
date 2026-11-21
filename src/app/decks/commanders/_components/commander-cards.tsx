@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
-import { commanderCardsAction, type CommanderCardsView } from "./actions";
+import type { CommanderCardsView } from "./commander-cards-view";
 import { Card } from "@/ui/card";
 import { Button } from "@/ui/button";
 
@@ -76,9 +76,14 @@ export function CommanderCards(props: { oracleId: string; withReal: boolean }) {
     setOpen(!open);
     if (cards !== null) return;
     setCards("loading");
-    void commanderCardsAction(props.oracleId, props.withReal).then((view) =>
-      setCards(view ?? "failed"),
-    );
+    const query = new URLSearchParams({ oracleId: props.oracleId });
+    if (props.withReal) query.set("real", "1");
+    // This app's own route (same site), not an outside service, so ADR 0007's gateway rule doesn't apply.
+    // eslint-disable-next-line no-restricted-globals -- see above
+    fetch(`/decks/commanders/cards?${query.toString()}`)
+      .then((response) => (response.ok ? (response.json() as Promise<CommanderCardsView>) : null))
+      .then((view) => setCards(view ?? "failed"))
+      .catch(() => setCards("failed"));
   }
 
   return (

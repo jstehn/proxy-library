@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId, type PrintingCard } from "@/modules/catalog";
 import {
@@ -13,6 +12,7 @@ import { action } from "@/server/action-instance";
 import { err, FinishSchema, ok } from "@/shared/kernel";
 import { afterChange, DeckIdInput, loadDeck, NOT_YOURS } from "../action-helpers";
 import { rejected } from "../answer";
+import { revalidateDeck } from "@/app/decks/paths";
 
 // The selected card's server side (design docs 24 and 42): its details, other decks, printings
 // and look-alikes, and the changes made from its sheet.
@@ -73,7 +73,7 @@ export const takeFromDeckAction = action(TakeInput, async (context, input) => {
       ),
     );
   }
-  revalidatePath(`/decks/${input.fromDeckId}`);
+  revalidateDeck(input.fromDeckId);
   const deck = await loadDeck(context, input.deckId);
   return deck === null ? err(rejected(NOT_YOURS)) : ok(deck);
 });
