@@ -6,4 +6,5 @@ export {
 export { drizzleDeckTokenRepository } from "../proxies/infrastructure/drizzle-deck-tokens";
 export { drizzleDeckSharing } from "../sharing/infrastructure/drizzle-sharing";
 export { pdfLibRenderer } from "../proxies/infrastructure/pdf-lib-renderer";
-export { drizzleChangePreviewRepository } from "../core/infrastructure/drizzle-change-previews";
+export { drizzleChangePreviewRepository } from "../changes/infrastructure/drizzle-change-previews";
+export { drizzleSnapshotRepository } from "../changes/infrastructure/drizzle-snapshots";

@@ -3,12 +3,9 @@ import { printingCards } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { ok, pick, type Clock, type UserId } from "@/shared/kernel";
 import {
-  makeSwapCards,
-  makeTakeFromDeck,
   makeDeckCombos,
   makeEdhrecResearch,
   makeDeckPlanEdits,
-  makeDeckPreviews,
   makeDeckSearch,
   makeStartDeck,
   makeListDecks,
@@ -21,7 +18,6 @@ import {
   deckView,
   decksFor,
   listDeckSources,
-  deckChangePreview,
 } from "@/modules/decks/core";
 import { deckViewForViewer } from "@/modules/decks/sharing";
 import { makeDeckFacts, makeDeckOverview } from "@/modules/decks/overview";
@@ -46,8 +42,16 @@ import {
   ownedSignalCards,
 } from "@/modules/decks/scoring";
 import { makeDrawSample } from "@/modules/decks/play";
-import type { Decks, PreviewRepository } from "@/modules/decks/core";
+import type { Decks } from "@/modules/decks/core";
 import type { DeckSharing } from "@/modules/decks/sharing";
+import {
+  deckChangePreview,
+  makeDeckPreviews,
+  makeSwapCards,
+  makeTakeFromDeck,
+  type DeckSnapshots,
+  type PreviewRepository,
+} from "@/modules/decks/changes";
 import type { makeProxySheets, makeTokenChoices } from "@/modules/decks/proxies";
 import { DeckId } from "@/modules/decks/core/client";
 
@@ -67,6 +71,7 @@ export type DeckWiringDependencies = Readonly<{
   }>;
   decks: Decks;
   deckSharing: DeckSharing;
+  deckSnapshots: DeckSnapshots;
   chooseToken: ReturnType<typeof makeTokenChoices>;
   proxySheet: ReturnType<typeof makeProxySheets>;
   previews: PreviewRepository;
@@ -75,7 +80,7 @@ export type DeckWiringDependencies = Readonly<{
 
 export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
   const { db, clock, textEmbedder, outsideData, decks, previews, newPreviewId } = dependencies;
-  const { deckSharing, chooseToken, proxySheet } = dependencies;
+  const { deckSharing, deckSnapshots, chooseToken, proxySheet } = dependencies;
 
   // The readers several capabilities share, each written once.
   const readDeck = (userId: UserId, deckId: number) => deckView(db, userId, deckId);
@@ -143,28 +148,28 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       addSource: (userId, deckId, source, now) => addDeckSource(db, userId, deckId, source, now),
     }),
     // The deck-changing commands the builder and the tools use (each checks its own rules).
-    deckEdits: pick(
-      decks,
-      "createDeck",
-      "createDeckFromCards",
-      "copyDeck",
-      "deleteDeck",
-      "updateDeck",
-      "addCards",
-      "setEntry",
-      "setEntryDetails",
-      "setEntryNote",
-      "setEntryHeading",
-      "moveEntry",
-      "importList",
-      "replaceList",
-      "choosePrinting",
-      "renameHeading",
-      "orderHeadings",
-      "saveSnapshot",
-      "restoreSnapshot",
-      "deleteSnapshot",
-    ),
+    deckEdits: {
+      ...pick(
+        decks,
+        "createDeck",
+        "createDeckFromCards",
+        "copyDeck",
+        "deleteDeck",
+        "updateDeck",
+        "addCards",
+        "setEntry",
+        "setEntryDetails",
+        "setEntryNote",
+        "setEntryHeading",
+        "moveEntry",
+        "importList",
+        "replaceList",
+        "choosePrinting",
+        "renameHeading",
+        "orderHeadings",
+      ),
+      ...pick(deckSnapshots, "saveSnapshot", "restoreSnapshot", "deleteSnapshot"),
+    },
     deckSharing: pick(
       deckSharing,
       "setVisibility",

@@ -1,16 +1,16 @@
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import type { Board } from "../domain/deck";
-import type { DeckView } from "../domain/deck-view";
-import type { DeckChanged, DeckNotFound } from "../domain/errors";
+import type { Board } from "@/modules/decks/core/client";
+import type { DeckView } from "@/modules/decks/core/client";
+import type { DeckChanged, DeckNotFound } from "@/modules/decks/core/client";
 import { takeCopies } from "../domain/free-copies";
-import { fingerprint } from "../domain/list-format";
+import { fingerprint } from "@/modules/decks/core/client";
 import type {
   ApplyChangesError,
   ApplyChangesInput,
   SetEntryError,
   SetEntryInput,
-} from "./deck-entries";
+} from "@/modules/decks/core";
 
 // The two builder moves that touch more than one card or deck: swapping a cut for an add, and
 // taking copies out of another deck. Each is a capability over the decks' own use cases.

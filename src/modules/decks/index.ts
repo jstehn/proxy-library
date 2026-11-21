@@ -2,6 +2,7 @@
 // (ADR 0029) says what it offers in its own index.ts.
 export * from "./core";
 export * from "./sharing";
+export * from "./changes";
 export * from "./scoring";
 export * from "./building";
 export * from "./play";

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { err, ok } from "@/shared/kernel";
-import type { Board } from "./deck";
+import type { Board } from "@/modules/decks/core/client";
 import { compareDeckStates, type PreviewLine } from "./preview";
-import type { CardRules } from "./rules";
+import type { CardRules } from "@/modules/decks/core/client";
 import { checkSnapshotLabel, MAX_SNAPSHOT_LABEL_LENGTH } from "./snapshots";
-import { featuresOfText } from "../testing/deck-view";
+import { featuresOfText } from "@/modules/decks/core/testing/deck-view";
 
 function line(
   oracleId: string,

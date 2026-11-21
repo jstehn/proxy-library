@@ -21,6 +21,7 @@ import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleSnapshotRepository,
   drizzleDeckTokenRepository,
 } from "@/modules/decks/infrastructure";
 import {
@@ -81,6 +82,7 @@ function servicesFor(transaction: DbExecutor) {
     cards: drizzleCardLookup(transaction),
     deckTokens: drizzleDeckTokenRepository(transaction),
     deckSharing: drizzleDeckSharing(transaction),
+    snapshots: drizzleSnapshotRepository(transaction),
     trades: drizzleTradeRepository(transaction),
     tradePlayers: drizzleTradePlayers(transaction),
     holdings: drizzleHoldings(transaction),

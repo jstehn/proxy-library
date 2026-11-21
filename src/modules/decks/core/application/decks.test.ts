@@ -6,7 +6,6 @@ import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
 import { becomesADeck, DeckId, MAX_DECKS } from "../domain/deck";
 import { fingerprint } from "../domain/list-format";
 import { MAX_NOTE_LENGTH } from "../domain/notes";
-import { MAX_SNAPSHOT_LABEL_LENGTH, MAX_SNAPSHOTS_PER_DECK, SnapshotId } from "../domain/snapshots";
 import { inMemoryCardLookup, inMemoryDeckRepository, samplePrintingId } from "../testing/fakes";
 import { makeDecks } from "./make-decks";
 
@@ -848,89 +847,6 @@ describe("line notes (design doc 41)", () => {
     const entries = repository.get(id)?.entries ?? [];
     expect(entries.find((e) => e.oracleId === "bolt")?.note).toBe("Keep this");
     expect(entries.find((e) => e.oracleId === "ring")?.note).toBe("Turn-1 fast mana");
-  });
-});
-
-describe("deck snapshots (design doc 41)", () => {
-  it("saves, restores, and deletes snapshots for the owner only", async () => {
-    const created = await decks.createDeck(jack, { name: "Burn", format: "commander" });
-    if (!created.ok) throw new Error("failed");
-    const id = created.value;
-    await decks.setEntry(jack, {
-      deckId: id,
-      oracleId: "bolt",
-      board: "main",
-      quantity: 1,
-      note: "Core spell",
-    });
-
-    const saved = await decks.saveSnapshot(jack, { deckId: id, label: "  Before   cuts  " });
-    expect(saved.ok).toBe(true);
-    if (!saved.ok) return;
-    expect(repository.snapshotsOf(id)[0]?.label).toBe("Before cuts");
-
-    // Modify deck after saving snapshot
-    await decks.setEntry(jack, { deckId: id, oracleId: "bolt", board: "main", quantity: 0 });
-    await decks.setEntry(jack, { deckId: id, oracleId: "ring", board: "main", quantity: 1 });
-
-    // Stale fingerprint blocks restore
-    expect(
-      await decks.restoreSnapshot(jack, {
-        deckId: id,
-        snapshotId: saved.value,
-        fingerprint: "stale",
-      }),
-    ).toEqual(err({ kind: "DeckChanged" }));
-
-    // Restoring recovers bolt + note and leaves snapshot intact
-    const currentFp = fingerprint(repository.get(id)?.entries ?? []);
-    const restored = await decks.restoreSnapshot(jack, {
-      deckId: id,
-      snapshotId: saved.value,
-      fingerprint: currentFp,
-    });
-    expect(restored.ok).toBe(true);
-    expect(repository.get(id)?.entries).toHaveLength(1);
-    expect(repository.get(id)?.entries[0]).toMatchObject({
-      oracleId: "bolt",
-      quantity: 1,
-      note: "Core spell",
-    });
-    expect(repository.snapshotsOf(id)).toHaveLength(1);
-
-    // Other player cannot save, restore, or delete
-    expect(await decks.saveSnapshot(mallory, { deckId: id, label: "Steal" })).toEqual(
-      err({ kind: "DeckNotFound" }),
-    );
-    expect(await decks.deleteSnapshot(mallory, { deckId: id, snapshotId: saved.value })).toEqual(
-      err({ kind: "DeckNotFound" }),
-    );
-
-    expect(await decks.deleteSnapshot(jack, { deckId: id, snapshotId: saved.value })).toEqual({
-      ok: true,
-      value: undefined,
-    });
-    expect(repository.snapshotsOf(id)).toHaveLength(0);
-    expect(
-      await decks.restoreSnapshot(jack, { deckId: id, snapshotId: SnapshotId.of(999) }),
-    ).toEqual(err({ kind: "SnapshotNotFound" }));
-  });
-
-  it("enforces label rules and snapshot limit per deck", async () => {
-    const created = await decks.createDeck(jack, { name: "Cap", format: "casual" });
-    if (!created.ok) throw new Error("failed");
-    const id = created.value;
-
-    expect(await decks.saveSnapshot(jack, { deckId: id, label: "  " })).toEqual(
-      err({ kind: "SnapshotLabelInvalid", maximum: MAX_SNAPSHOT_LABEL_LENGTH }),
-    );
-    for (let i = 0; i < MAX_SNAPSHOTS_PER_DECK; i++) {
-      const okSave = await decks.saveSnapshot(jack, { deckId: id, label: `v${i + 1}` });
-      expect(okSave.ok).toBe(true);
-    }
-    expect(await decks.saveSnapshot(jack, { deckId: id, label: "overflow" })).toEqual(
-      err({ kind: "TooManySnapshots", maximum: MAX_SNAPSHOTS_PER_DECK }),
-    );
   });
 });
 

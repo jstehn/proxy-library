@@ -7,11 +7,16 @@ import {
   type BracketEstimate,
   type BracketSource,
   type BracketWarning,
-} from "./brackets";
-import { isPlayed } from "./boards";
-import { BOARDS, type Board, type Format } from "./deck";
-import { formatRules } from "./format-rules";
-import { deckProblems, shortCount, type CardRules, type DeckProblem } from "./rules";
+} from "@/modules/decks/core/client";
+import { isPlayed } from "@/modules/decks/core/client";
+import { BOARDS, type Board, type Format } from "@/modules/decks/core/client";
+import { formatRules } from "@/modules/decks/core/client";
+import {
+  deckProblems,
+  shortCount,
+  type CardRules,
+  type DeckProblem,
+} from "@/modules/decks/core/client";
 import {
   deckStats,
   TARGETED_TAGS,
@@ -19,7 +24,7 @@ import {
   type StatsLine,
   type TargetedTag,
   type EdhrecSignal,
-} from "./stats";
+} from "@/modules/decks/core/client";
 
 // Dry-run deck preview (design doc 40, section 3): computes before/after stats, roles, problems,
 // bracket and price for a batch of quantity changes without touching the database.

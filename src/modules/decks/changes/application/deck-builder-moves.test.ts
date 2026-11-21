@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { err, ok, UserId } from "@/shared/kernel";
-import type { DeckView } from "../domain/deck-view";
+import type { DeckView } from "@/modules/decks/core/client";
 import { makeSwapCards, makeTakeFromDeck } from "./deck-builder-moves";
 
 const actor = { userId: UserId.of("1") } as Actor;

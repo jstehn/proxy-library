@@ -14,6 +14,7 @@ import {
   fingerprint,
   listDeckSnapshots,
   makeDecks,
+  makeDeckSnapshots,
   summarizeTokenChecklist,
   toTokenChecklistItem,
   type DeckId,
@@ -26,6 +27,7 @@ import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork }
 afterAll(close);
 
 const decks = makeDecks({ unitOfWork, clock });
+const snapshots = makeDeckSnapshots({ unitOfWork, clock });
 const store = makeStore({ unitOfWork, clock });
 const jack = actor("jack");
 
@@ -562,7 +564,7 @@ describe("line notes and snapshots (design doc 41)", () => {
     await decks.importList(jack, { deckId, text: `2 ${name}\n20 Plains` });
     await decks.setEntryNote(jack, { deckId, oracleId: oid, board: "main", note: "Original role" });
 
-    const snap1 = await decks.saveSnapshot(jack, { deckId, label: "Before cuts" });
+    const snap1 = await snapshots.saveSnapshot(jack, { deckId, label: "Before cuts" });
     if (!snap1.ok) throw new Error(snap1.error.kind);
 
     await decks.setEntry(jack, {
@@ -575,7 +577,7 @@ describe("line notes and snapshots (design doc 41)", () => {
     const carrotOid = await oracleOf("Carrot Cake");
     await decks.setEntry(jack, { deckId, oracleId: carrotOid, board: "main", quantity: 2 });
 
-    const snap2 = await decks.saveSnapshot(jack, { deckId, label: "After cuts" });
+    const snap2 = await snapshots.saveSnapshot(jack, { deckId, label: "After cuts" });
     if (!snap2.ok) throw new Error(snap2.error.kind);
 
     const list = await listDeckSnapshots(db, jack.userId, deckId);
@@ -607,7 +609,7 @@ describe("line notes and snapshots (design doc 41)", () => {
     const between = await compareDeckSnapshot(db, jack.userId, deckId, snap1.value, snap2.value);
     expect(between?.afterSide).toMatchObject({ label: "After cuts" });
 
-    const restored = await decks.restoreSnapshot(jack, { deckId, snapshotId: snap1.value });
+    const restored = await snapshots.restoreSnapshot(jack, { deckId, snapshotId: snap1.value });
     expect(restored.ok).toBe(true);
     const view = await deckView(db, jack.userId, deckId);
     expect(view?.lines.find((line) => line.oracleId === oid)).toMatchObject({
@@ -616,7 +618,7 @@ describe("line notes and snapshots (design doc 41)", () => {
     });
     expect(view?.lines.find((line) => line.oracleId === carrotOid)).toBeUndefined();
 
-    const deleted = await decks.deleteSnapshot(jack, { deckId, snapshotId: snap2.value });
+    const deleted = await snapshots.deleteSnapshot(jack, { deckId, snapshotId: snap2.value });
     expect(deleted).toEqual({ ok: true, value: undefined });
     expect((await listDeckSnapshots(db, jack.userId, deckId))?.length).toBe(1);
   });

@@ -1,5 +1,5 @@
-import type { DeckCount } from "./boards";
-import type { Board } from "./deck";
+import type { DeckCount } from "@/modules/decks/core/client";
+import type { Board } from "@/modules/decks/core/client";
 
 // Free copies (task 42). Ownership is shared between decks: every deck counts all the copies you
 // own. A copy is "free" when none of your other decks uses it. Taking a card from another deck

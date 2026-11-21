@@ -7,6 +7,7 @@ import {
   findCard,
   type Decks,
   type DeckSharing,
+  type DeckSnapshots,
   type makeProxySheets,
   type makeTokenChoices,
   type PreviewRepository,
@@ -61,6 +62,7 @@ type CapabilityDependencies = Readonly<{
   catalog: Catalog;
   decks: Decks;
   deckSharing: DeckSharing;
+  deckSnapshots: DeckSnapshots;
   chooseToken: ReturnType<typeof makeTokenChoices>;
   proxySheet: ReturnType<typeof makeProxySheets>;
   drafts: Drafts;

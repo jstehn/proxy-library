@@ -38,11 +38,18 @@ import {
   makeOutsideData,
 } from "@/modules/catalog/infrastructure";
 import { drizzleCollectionRepository } from "@/modules/collection/infrastructure";
-import { makeDecks, makeDeckSharing, makeProxySheets, makeTokenChoices } from "@/modules/decks";
+import {
+  makeDecks,
+  makeDeckSharing,
+  makeDeckSnapshots,
+  makeProxySheets,
+  makeTokenChoices,
+} from "@/modules/decks";
 import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleSnapshotRepository,
   drizzleDeckTokenRepository,
   drizzleChangePreviewRepository,
   pdfLibRenderer,
@@ -150,6 +157,7 @@ export function buildCore(config: Config) {
       cards: drizzleCardLookup(transaction),
       deckTokens: drizzleDeckTokenRepository(transaction),
       deckSharing: drizzleDeckSharing(transaction),
+      snapshots: drizzleSnapshotRepository(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
@@ -219,6 +227,7 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
+  const deckSnapshots = makeDeckSnapshots({ unitOfWork, clock });
   const deckSharing = makeDeckSharing({
     unitOfWork,
     clock,
@@ -277,6 +286,7 @@ export function buildCore(config: Config) {
     store,
     decks,
     deckSharing,
+    deckSnapshots,
     chooseToken,
     proxySheet,
     trades,
@@ -305,6 +315,7 @@ export function buildCore(config: Config) {
       catalog,
       decks,
       deckSharing,
+      deckSnapshots,
       chooseToken,
       proxySheet,
       drafts,

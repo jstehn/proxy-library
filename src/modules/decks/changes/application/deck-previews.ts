@@ -1,13 +1,18 @@
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Clock, type Result, type UserId } from "@/shared/kernel";
-import { isPlayed } from "../domain/boards";
-import type { Board } from "../domain/deck";
-import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
-import type { DeckView } from "../domain/deck-view";
-import type { DeckChanged, DeckNotFound, HeadingInvalid, NoteInvalid } from "../domain/errors";
-import { checkNote } from "../domain/notes";
+import { isPlayed } from "@/modules/decks/core/client";
+import type { Board } from "@/modules/decks/core/client";
+import { isAvoidCard, isKeyCard, type DeckPlan } from "@/modules/decks/core/client";
+import type { DeckView } from "@/modules/decks/core/client";
+import type {
+  DeckChanged,
+  DeckNotFound,
+  HeadingInvalid,
+  NoteInvalid,
+} from "@/modules/decks/core/client";
+import { checkNote } from "@/modules/decks/core/client";
 import type { DeckChange, DeckChangePreview } from "../domain/preview";
-import type { ApplyChangesError, ApplyChangesReport } from "./deck-entries";
+import type { ApplyChangesError, ApplyChangesReport } from "@/modules/decks/core";
 import type { ChangeToSave, PreviewRepository } from "./ports";
 
 // Dry-run changes (design doc 40, ADR 0026). A preview evaluates a batch of card changes without

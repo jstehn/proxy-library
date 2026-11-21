@@ -1,27 +1,32 @@
 import type { SignalIO } from "@/shared/kernel";
-import { bracketFlagsOf } from "../domain/brackets";
+import { bracketFlagsOf } from "@/modules/decks/core/client";
 import type { BracketFlag } from "@/shared/kernel";
 import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import { type DbExecutor, latestPrice } from "@/shared/db";
 import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { ColorSchema, type Tag, type Theme, type UserId } from "@/shared/kernel";
-import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "../domain/deck";
-import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
-import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
-import { fingerprint } from "../domain/list-format";
+import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "@/modules/decks/core/client";
+import { resolveDeckProfileTargets, type DeckPlan } from "@/modules/decks/core/client";
+import type {
+  DeckChanged,
+  DeckNotFound,
+  ListProblems,
+  ListTooLong,
+} from "@/modules/decks/core/client";
+import { fingerprint } from "@/modules/decks/core/client";
 import {
   previewChanges,
   type DeckChange,
   type DeckChangePreview,
   type PreviewLine,
 } from "../domain/preview";
-import type { CardRules } from "../domain/rules";
-import { formatRules } from "../domain/format-rules";
-import { decks } from "../infrastructure/schema";
-import type { DeckLine, DeckView } from "../domain/deck-view";
-import { deckView } from "./decks";
-import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
+import type { CardRules } from "@/modules/decks/core/client";
+import { formatRules } from "@/modules/decks/core/client";
+import { decks } from "@/modules/decks/core/infrastructure/schema";
+import type { DeckLine, DeckView } from "@/modules/decks/core/client";
+import { deckView } from "@/modules/decks/core";
+import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "@/modules/decks/core";
 
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the
 // `owned.ts` SQL orderings so stats, legalities and prices agree with the deck builder.

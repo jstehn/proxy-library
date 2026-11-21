@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Board } from "./deck";
+import type { Board } from "@/modules/decks/core/client";
 import { previewChanges, type PreviewLine } from "./preview";
-import type { CardRules } from "./rules";
-import { featuresOfText } from "../testing/deck-view";
+import type { CardRules } from "@/modules/decks/core/client";
+import { featuresOfText } from "@/modules/decks/core/testing/deck-view";
 
 function makeCard(
   oracleId: string,

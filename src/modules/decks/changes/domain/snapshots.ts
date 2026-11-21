@@ -1,7 +1,7 @@
 import { err, ok, type Brand, type Result } from "@/shared/kernel";
-import type { Bracket } from "./brackets";
-import type { DeckEntry, DeckId, Format, Grouping } from "./deck";
-import type { SnapshotLabelInvalid } from "./errors";
+import type { Bracket } from "@/modules/decks/core/client";
+import type { DeckEntry, DeckId, Format, Grouping } from "@/modules/decks/core/client";
+import type { SnapshotLabelInvalid } from "@/modules/decks/core/client";
 
 // Immutable point-in-time snapshots of a deck for comparing before/after cuts (design doc 41).
 
