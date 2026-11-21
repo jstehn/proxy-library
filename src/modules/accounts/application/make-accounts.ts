@@ -26,6 +26,13 @@ import {
   makeRegisterOAuthClient,
 } from "./oauth";
 import { makeCreateManualOAuthClient, makeDeleteOAuthClient } from "./oauth-clients";
+import {
+  makeHandleExternalCallback,
+  makeSetPlayerEmail,
+  makeStartExternalLink,
+  makeStartExternalSignIn,
+  makeUnlinkExternal,
+} from "./external-sign-in";
 
 export function makeAccounts(dependencies: AccountsDependencies) {
   const checkAuthorizationRequest = makeCheckAuthorizationRequest(dependencies);
@@ -47,6 +54,11 @@ export function makeAccounts(dependencies: AccountsDependencies) {
     createAccessToken: makeCreateAccessToken(dependencies),
     revokeAccessToken: makeRevokeAccessToken(dependencies),
     actorFromToken: makeActorFromToken(dependencies),
+    startExternalSignIn: makeStartExternalSignIn(dependencies),
+    startExternalLink: makeStartExternalLink(dependencies),
+    unlinkExternal: makeUnlinkExternal(dependencies),
+    handleExternalCallback: makeHandleExternalCallback(dependencies),
+    setPlayerEmail: makeSetPlayerEmail(dependencies),
     registerOAuthClient: makeRegisterOAuthClient(createOAuthClient),
     createManualOAuthClient: makeCreateManualOAuthClient(createOAuthClient),
     deleteOAuthClient: makeDeleteOAuthClient(dependencies),

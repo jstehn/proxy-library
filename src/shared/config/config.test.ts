@@ -26,6 +26,44 @@ describe("loadConfig", () => {
     expect(loadConfig(validEnv).nodeEnv).toBe("development");
   });
 
+  it("leaves sign-in with an OpenID Connect provider off unless all three variables are set", () => {
+    expect(loadConfig(validEnv).oidc).toBeUndefined();
+    // An empty value (a compose file passing `${OIDC_ISSUER_URL:-}` through) counts as unset.
+    expect(
+      loadConfig({ ...validEnv, OIDC_ISSUER_URL: "", OIDC_CLIENT_ID: "" }).oidc,
+    ).toBeUndefined();
+    const oidc = {
+      OIDC_ISSUER_URL: "https://auth.example/application/o/proxy-library/",
+      OIDC_CLIENT_ID: "client",
+      OIDC_CLIENT_SECRET: "secret",
+    };
+    expect(loadConfig({ ...validEnv, ...oidc }).oidc).toEqual({
+      issuerUrl: "https://auth.example/application/o/proxy-library/",
+      clientId: "client",
+      clientSecret: "secret",
+      providerName: "Authentik",
+    });
+    expect(loadConfig({ ...validEnv, ...oidc, OIDC_PROVIDER_NAME: "SSO" }).oidc?.providerName).toBe(
+      "SSO",
+    );
+  });
+
+  it("refuses a half-set OpenID Connect group and an insecure issuer", () => {
+    expect(() => loadConfig({ ...validEnv, OIDC_CLIENT_ID: "client" })).toThrow(
+      /OIDC_ISSUER_URL[\s\S]*OIDC_CLIENT_SECRET|OIDC_CLIENT_SECRET[\s\S]*OIDC_ISSUER_URL/,
+    );
+    const rest = { OIDC_CLIENT_ID: "client", OIDC_CLIENT_SECRET: "secret" };
+    expect(() =>
+      loadConfig({ ...validEnv, ...rest, OIDC_ISSUER_URL: "http://auth.example/o/" }),
+    ).toThrow(/https/);
+    expect(() => loadConfig({ ...validEnv, ...rest, OIDC_ISSUER_URL: "nonsense" })).toThrow(
+      /OIDC_ISSUER_URL/,
+    );
+    expect(
+      loadConfig({ ...validEnv, ...rest, OIDC_ISSUER_URL: "http://127.0.0.1:9000/o/" }).oidc,
+    ).toBeDefined();
+  });
+
   it("fails fast, naming the problem variable", () => {
     expect(() => loadConfig({})).toThrow(/DATABASE_URL/);
     expect(() => loadConfig({ ...validEnv, DATABASE_URL: "mysql://nope" })).toThrow(

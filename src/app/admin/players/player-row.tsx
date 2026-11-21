@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import type { PlayerListItem } from "@/modules/accounts";
 import { MoneyForm } from "./money-form";
+import { EmailForm } from "./email-form";
 import { ResetForm } from "./reset-form";
 import { Alert, SubmitButton } from "@/ui/form";
 import { playerAction, type PlayerActionState } from "./actions";
@@ -29,6 +30,7 @@ export function PlayerRow(props: PlayerRowProps) {
         {player.isAdmin && <Badge>admin</Badge>}
         {player.canSelfFund && <Badge>self-funding</Badge>}
         {player.isDisabled && <Badge tone="danger">disabled</Badge>}
+        {player.authentikLinked && <Badge>Authentik linked</Badge>}
       </div>
 
       <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -58,6 +60,7 @@ export function PlayerRow(props: PlayerRowProps) {
           ))}
       </div>
 
+      <EmailForm userId={player.userId} email={player.email} />
       <ResetForm userId={player.userId} username={player.username} />
 
       {state.message && <Alert tone={state.tone}>{state.message}</Alert>}

@@ -11,6 +11,10 @@ export type PasswordInvalid = Readonly<{ kind: "PasswordInvalid"; reason: string
 export type InvalidCredentials = Readonly<{ kind: "InvalidCredentials" }>;
 export type AccountDisabled = Readonly<{ kind: "AccountDisabled" }>;
 
+// Sign-in through Authentik (design doc 69).
+export type EmailInvalid = Readonly<{ kind: "EmailInvalid"; reason: string }>;
+export type EmailTaken = Readonly<{ kind: "EmailTaken" }>;
+
 export type InviteRequired = Readonly<{ kind: "InviteRequired" }>;
 export type InviteNotFound = Readonly<{ kind: "InviteNotFound" }>;
 export type InviteNotOpen = Readonly<{
