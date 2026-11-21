@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/shared/db";
 import type { Cents } from "@/shared/kernel";
-import { packPrice } from "./store";
+import { packPrice } from "./store-prices";
 
 // Not a public read (not in `queries/index.ts`): the drafts module's catalog adapter prices a
 // draft's packs with it, through the store's public API.

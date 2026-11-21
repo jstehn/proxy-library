@@ -11,6 +11,13 @@ import {
 } from "@/shared/kernel";
 import type { Bracket, Format, EdhrecSignal, TargetedTag } from "@/modules/decks/core/client";
 import { formatRules } from "@/modules/decks/core/client";
+import {
+  EMBED_SIM_BASELINE,
+  RATING_BIAS,
+  RATING_WEIGHTS,
+  weightsForBracket,
+  type RatingWeights,
+} from "./rating-weights";
 import { deckSignalProfile, NO_SIGNALS, synergyMatches, type DeckSignalProfile } from "./signals";
 
 // Unified 0–100 Card Rating (design doc 46, #53/#55/#56/#59):
@@ -84,102 +91,6 @@ export type RatingOptions = Readonly<{
   targetBracket?: Bracket | null;
   weightsOverride?: RatingWeights;
 }>;
-
-export type PowerTier = "casual" | "upgraded" | "optimized";
-
-export function powerTierForBracket(bracket: Bracket | null): PowerTier {
-  if (bracket === null || bracket === 3) return "upgraded";
-  return bracket <= 2 ? "casual" : "optimized";
-}
-
-export const RATING_BIAS = -1.2;
-
-export const EMBED_SIM_BASELINE = 0.55;
-
-/**
- * THE weight table: the one scorer (`rateCard`) judges a card for suggestions, cuts, "cards like
- * this one" and draft-a-deck with these numbers. They are FITTED FROM DATA, not tuned by hand:
- * `scripts/dev/fit-rating-weights.ts` runs a class-balanced logistic regression (`fitLogisticWeights`)
- * per power tier, on cards held out of real Commander precon decklists (positives) against cards
- * that aren't in the deck (negatives), and prints the numbers pasted here (last fitted
- * 2026-11-13). Only the four the data can't show (the two caps and the two penalties) are set by
- * hand. This table is the "upgraded" tier; the other two tiers below override the fitted ones.
- * If a result looks wrong, fit again or tell the owner; don't edit one number.
- */
-export const RATING_WEIGHTS = {
-  /** Per point of produces/consumes synergy with what the deck does (signals.ts). */
-  synergy: 0.35,
-  /** Most synergy can add (set by hand). */
-  synergyCap: 2.2,
-  /** Per theme of the deck the card plays into. */
-  theme: 0.6,
-  /** Per tribe of the deck the card belongs to (or a changeling). */
-  tribe: 0.689,
-  /** Per keyword the commander has and the card shares. */
-  keyword: 0.229,
-  /** Most keywords counted (set by hand). */
-  keywordCap: 2,
-  /** Per unit of text similarity to the deck above `EMBED_SIM_BASELINE`. */
-  embedSim: 7.227,
-  /** Per unit of how short the deck is of a role the card does. */
-  roleNeed: 0.643,
-  /** Per unit of EDHREC log-lift (how much likelier it is under this commander). */
-  edhrecLift: 0.95,
-  /** Per unit of EDHREC inclusion rate under this commander. */
-  edhrecInclusion: 1.2,
-  /** Per two-card combo with a card in the deck (at most two). */
-  combo: 1.0,
-  /** Per unit of the card's general quality (EDHREC rank, precons; rarity and price if unknown). */
-  quality: 0.834,
-  /** Expensive card in a deck whose curve is already high. */
-  topHeavyPenalty: -0.395,
-  /** Card of a mana value whose slot of the curve is already full. */
-  saturatedSlotPenalty: -0.416,
-  /** Over the player's price cap (set by hand). */
-  pricePenalty: -0.9,
-  /** Takes the deck over its target bracket (set by hand). */
-  bracketPenalty: -1.4,
-} as const;
-
-export type RatingWeights = { readonly [K in keyof typeof RATING_WEIGHTS]: number };
-
-const RATING_WEIGHTS_BY_TIER: Readonly<Record<PowerTier, RatingWeights>> = {
-  casual: {
-    ...RATING_WEIGHTS,
-    synergy: 0.35,
-    theme: 0.7,
-    tribe: 0.844,
-    keyword: 0.295,
-    embedSim: 8.141,
-    roleNeed: 0.69,
-    edhrecInclusion: 0.8,
-    combo: 0,
-    quality: 0.366,
-    topHeavyPenalty: -0.324,
-    saturatedSlotPenalty: -0.288,
-  },
-  upgraded: RATING_WEIGHTS,
-  optimized: {
-    ...RATING_WEIGHTS,
-    synergy: 0.4,
-    synergyCap: 2.5,
-    theme: 0.45,
-    tribe: 0.599,
-    keyword: 0.256,
-    embedSim: 5.85,
-    roleNeed: 0.708,
-    edhrecLift: 1.1,
-    edhrecInclusion: 1.5,
-    combo: 1.6,
-    quality: 1.294,
-    topHeavyPenalty: -0.465,
-    saturatedSlotPenalty: -0.538,
-  },
-};
-
-export function weightsForBracket(targetBracket: Bracket | null): RatingWeights {
-  return RATING_WEIGHTS_BY_TIER[powerTierForBracket(targetBracket)];
-}
 
 export function sigmoid(z: number): number {
   return 1 / (1 + Math.exp(-z));
@@ -531,124 +442,4 @@ export function emptyRatingProfile(format: Format): RatingProfile {
     averageManaValue: 0,
     curveCounts: [],
   };
-}
-
-export type CalibrationSample = Readonly<{
-  features: RatingFeatureVector;
-  label: 0 | 1;
-}>;
-
-export type FitLogisticOptions = Readonly<{
-  learningRate?: number;
-  epochs?: number;
-  l2?: number;
-}>;
-
-type TrainableKey =
-  | "synergy"
-  | "theme"
-  | "tribe"
-  | "keyword"
-  | "embedSim"
-  | "roleNeed"
-  | "edhrecLift"
-  | "edhrecInclusion"
-  | "combo"
-  | "quality"
-  | "topHeavyPenalty"
-  | "saturatedSlotPenalty";
-
-const TRAINABLE_KEYS: readonly {
-  weight: TrainableKey;
-  feature: keyof RatingFeatureVector;
-  sign: 1 | -1;
-  maxAbs: number;
-}[] = [
-  { weight: "synergy", feature: "synergyTotal", sign: 1, maxAbs: 2.5 },
-  { weight: "theme", feature: "themeCount", sign: 1, maxAbs: 3.0 },
-  { weight: "tribe", feature: "tribeCount", sign: 1, maxAbs: 3.0 },
-  { weight: "keyword", feature: "keywordCount", sign: 1, maxAbs: 2.0 },
-  { weight: "embedSim", feature: "embedSimDelta", sign: 1, maxAbs: 14.0 },
-  { weight: "roleNeed", feature: "roleNeed", sign: 1, maxAbs: 3.0 },
-  { weight: "edhrecLift", feature: "edhrecLift", sign: 1, maxAbs: 4.0 },
-  { weight: "edhrecInclusion", feature: "edhrecInclusion", sign: 1, maxAbs: 5.0 },
-  { weight: "combo", feature: "comboCount", sign: 1, maxAbs: 3.0 },
-  { weight: "quality", feature: "quality", sign: 1, maxAbs: 4.0 },
-  { weight: "topHeavyPenalty", feature: "topHeavy", sign: -1, maxAbs: 2.0 },
-  { weight: "saturatedSlotPenalty", feature: "saturatedSlot", sign: -1, maxAbs: 2.0 },
-];
-
-/** One number per trainable weight, worked out from the weight's name. */
-function perKey(valueOf: (key: TrainableKey) => number): Record<TrainableKey, number> {
-  return Object.fromEntries(
-    TRAINABLE_KEYS.map(({ weight }) => [weight, valueOf(weight)]),
-  ) as Record<TrainableKey, number>;
-}
-
-/**
- * Fits `RatingWeights` via L2-regularized, class-balanced logistic regression over
- * `ratingFeatureVector` samples, shrinking toward `initial` and preserving feature signs.
- */
-export function fitLogisticWeights(
-  samples: readonly CalibrationSample[],
-  initial: RatingWeights,
-  options: FitLogisticOptions = {},
-): RatingWeights {
-  if (samples.length === 0) return initial;
-  const lr = options.learningRate ?? 0.15;
-  const epochs = options.epochs ?? 120;
-  const l2 = options.l2 ?? 0.02;
-
-  let positives = 0;
-  let negatives = 0;
-  for (const s of samples) {
-    if (s.label === 1) positives += 1;
-    else negatives += 1;
-  }
-  const posWeight = positives > 0 ? samples.length / (2 * positives) : 1;
-  const negWeight = negatives > 0 ? samples.length / (2 * negatives) : 1;
-
-  const w = perKey((key) => initial[key]);
-
-  for (let epoch = 0; epoch < epochs; epoch++) {
-    const grad = perKey(() => 0);
-
-    for (const sample of samples) {
-      const f = sample.features;
-      const synPart = Math.min(initial.synergyCap, w.synergy * f.synergyTotal);
-      const logit =
-        RATING_BIAS +
-        synPart +
-        w.theme * f.themeCount +
-        w.tribe * f.tribeCount +
-        w.keyword * f.keywordCount +
-        w.embedSim * f.embedSimDelta +
-        w.roleNeed * f.roleNeed +
-        w.edhrecLift * f.edhrecLift +
-        w.edhrecInclusion * f.edhrecInclusion +
-        w.combo * f.comboCount +
-        w.quality * f.quality +
-        w.topHeavyPenalty * f.topHeavy +
-        w.saturatedSlotPenalty * f.saturatedSlot;
-      const pred = sigmoid(logit);
-      const err = (pred - sample.label) * (sample.label === 1 ? posWeight : negWeight);
-
-      for (const spec of TRAINABLE_KEYS) {
-        const val = f[spec.feature];
-        if (val !== 0) grad[spec.weight] += err * val;
-      }
-    }
-
-    for (const spec of TRAINABLE_KEYS) {
-      const key = spec.weight;
-      const step = grad[key] / samples.length + l2 * (w[key] - initial[key]);
-      const updated = w[key] - lr * step;
-      w[key] =
-        spec.sign === 1
-          ? Math.max(0, Math.min(spec.maxAbs, updated))
-          : Math.min(0, Math.max(-spec.maxAbs, updated));
-    }
-  }
-
-  return { ...initial, ...perKey((key) => Number(w[key].toFixed(3))) };
 }

@@ -1,19 +1,21 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { fitLogisticWeights } from "./calibrate";
 import {
   edhrecLogLift,
-  fitLogisticWeights,
-  powerTierForBracket,
   qualityPrior,
   rateCard,
-  RATING_BIAS,
-  RATING_WEIGHTS,
   ratingFeatureVector,
   sigmoid,
-  weightsForBracket,
   type RatingCandidate,
   type RatingProfile,
 } from "./rate";
+import {
+  powerTierForBracket,
+  RATING_BIAS,
+  RATING_WEIGHTS,
+  weightsForBracket,
+} from "./rating-weights";
 import { formatRules } from "@/modules/decks/core/client";
 import { deckSignalProfile } from "./signals";
 
