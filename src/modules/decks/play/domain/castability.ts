@@ -7,10 +7,10 @@ import {
   type Tag,
 } from "@/shared/kernel";
 import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
-import { isPlayed, type DeckCount } from "./boards";
-import { effectiveManaValue, type DeckPlan } from "./deck-profile";
+import { isPlayed, type DeckCount } from "../../domain/boards";
+import { effectiveManaValue, type DeckPlan } from "../../domain/deck-profile";
 import { simulateCasting } from "./cast-by-turn";
-import { parseCost, type Pip } from "./mana-payment";
+import { parseCost, type Pip } from "../../domain/mana-payment";
 import { COMMANDER_KEEP, type MulliganRule } from "./opening-hand/hand";
 import { library } from "./opening-hand/library";
 

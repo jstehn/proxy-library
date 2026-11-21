@@ -6,7 +6,7 @@ import type { DeckPlan } from "../domain/deck-profile";
 import type { DeckView } from "../domain/deck-view";
 import { makeDeckCombos } from "./deck-combos";
 import { makeEdhrecResearch } from "./deck-edhrec";
-import { makeDrawSample } from "./draw-sample";
+import { makeDrawSample } from "@/modules/decks/play";
 
 const userId = UserId.of("1");
 

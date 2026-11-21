@@ -183,8 +183,8 @@ export {
   type SnapshotComparison,
 } from "./queries/snapshots";
 export type { ProxyProgress, ProxyStreamEvent } from "@/modules/decks/proxies/client";
-export { openingHandOdds } from "./domain/draws";
-export { library, type LibraryCard } from "./domain/opening-hand/library";
+export { openingHandOdds } from "@/modules/decks/play/client";
+export { library, type LibraryCard } from "@/modules/decks/play/client";
 
 export {
   isKeyCard,
@@ -215,4 +215,4 @@ export {
   type EdhrecUnavailable,
 } from "./application/deck-edhrec";
 export { type DeckCombos, type SpellbookUnavailable } from "./application/deck-combos";
-export { type CastReport, type DeckTooSmall } from "./application/draw-sample";
+export { type CastReport, type DeckTooSmall } from "@/modules/decks/play";

@@ -9,7 +9,7 @@ import {
   totalDiscount,
   type CardEffect,
 } from "./cast-effects";
-import { canPay, firstUnpaidPip, type ManaSource, type Pip } from "./mana-payment";
+import { canPay, firstUnpaidPip, type ManaSource, type Pip } from "../../domain/mana-payment";
 import { drawsByTurn, playOpening, type MulliganRule, type Opening } from "./opening-hand/hand";
 import type { LibraryCard } from "./opening-hand/library";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
-import { EMPTY_DECK_PROFILE, type DeckPlan } from "./deck-profile";
+import { EMPTY_DECK_PROFILE, type DeckPlan } from "../../domain/deck-profile";
 import type { TapMana } from "@/modules/catalog";
 import { simulateCastOnCurve, type CastabilityLine } from "./castability";
 

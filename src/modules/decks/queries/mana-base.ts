@@ -6,7 +6,7 @@ import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/boards";
-import { simulateCastOnCurve } from "../domain/castability";
+import { simulateCastOnCurve } from "@/modules/decks/play/client";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import {
   planManaBase,

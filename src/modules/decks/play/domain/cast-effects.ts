@@ -1,5 +1,5 @@
 import type { ManaSymbol } from "@/shared/kernel";
-import { isManaSymbol, parseCost, type ManaSource, type Pip } from "./mana-payment";
+import { isManaSymbol, parseCost, type ManaSource, type Pip } from "../../domain/mana-payment";
 import type { LibraryCard } from "./opening-hand/library";
 
 // The cast simulator's effect registry (P28): what a card does to mana or to costs. Four kinds

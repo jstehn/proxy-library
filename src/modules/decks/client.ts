@@ -103,15 +103,24 @@ export {
   type LandDropOdds,
   type OddsRow,
   type OpeningHandOdds,
-} from "./domain/draws";
-export { dealHand, nextHand, type HandState, type TestHandEvent } from "./domain/opening-hand/hand";
+} from "@/modules/decks/play/client";
+export {
+  dealHand,
+  nextHand,
+  type HandState,
+  type TestHandEvent,
+} from "@/modules/decks/play/client";
 export {
   EARLY_RAMP_MAX_MV,
   library,
   type DrawLine,
   type LibraryCard,
-} from "./domain/opening-hand/library";
-export { type GoldfishReport, type SampleHand, type SimulateHandsOptions } from "./domain/goldfish";
+} from "@/modules/decks/play/client";
+export {
+  type GoldfishReport,
+  type SampleHand,
+  type SimulateHandsOptions,
+} from "@/modules/decks/play/client";
 export { plural, type Reason } from "./domain/suggest";
 export {
   BRACKET_NAMES,

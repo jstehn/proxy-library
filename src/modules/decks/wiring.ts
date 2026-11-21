@@ -14,7 +14,7 @@ import { makeDeckPreviews } from "./application/deck-previews";
 import { makeDeckSearch } from "./application/deck-search";
 import { makeDeckSignals, makeSearchSignals } from "./application/deck-signals";
 import { makeStartDeck } from "./application/deck-start";
-import { makeDrawSample } from "./application/draw-sample";
+import { makeDrawSample } from "@/modules/decks/play";
 import { makeFindReplacements } from "./application/find-replacements";
 import { makeListDecks } from "./application/list-decks";
 import type { Decks } from "./application/make-decks";

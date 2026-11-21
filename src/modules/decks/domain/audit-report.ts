@@ -1,7 +1,7 @@
 import type { Bracket, BracketRuleReason } from "./brackets";
-import type { CardCastability } from "./castability";
+import type { CardCastability } from "@/modules/decks/play/client";
 import type { Format } from "./deck";
-import type { GoldfishReport } from "./goldfish";
+import type { GoldfishReport } from "@/modules/decks/play/client";
 import type { DeckScore } from "./optimize";
 import type { TargetedTag } from "./stats";
 

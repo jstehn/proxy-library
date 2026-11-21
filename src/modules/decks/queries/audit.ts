@@ -8,11 +8,11 @@ import {
   bracketWarning,
   estimateBracket,
 } from "../domain/brackets";
-import { simulateCastOnCurve } from "../domain/castability";
+import { simulateCastOnCurve } from "@/modules/decks/play/client";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
 import { decks } from "../infrastructure/schema";
-import { library } from "../domain/opening-hand/library";
-import { simulateOpeningHands } from "../domain/goldfish";
+import { library } from "@/modules/decks/play/client";
+import { simulateOpeningHands } from "@/modules/decks/play/client";
 import { scoreDeck } from "../domain/optimize";
 import { deckProblems } from "../domain/rules";
 import { formatRules } from "../domain/format-rules";

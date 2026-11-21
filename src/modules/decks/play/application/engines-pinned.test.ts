@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 import { seededRng, type UserId } from "@/shared/kernel";
 import type { TapMana } from "@/modules/catalog";
 import { makeDrawSample } from "./draw-sample";
-import { aLine } from "../testing/deck-view";
-import type { Deck } from "../domain/deck";
-import type { DeckLine, DeckView } from "../domain/deck-view";
+import { aLine } from "../../testing/deck-view";
+import type { Deck } from "../../domain/deck";
+import type { DeckLine, DeckView } from "../../domain/deck-view";
 import { simulateCastOnCurve, type CastabilityLine } from "../domain/castability";
 import { openingHandOdds } from "../domain/draws";
 import { COMMANDER_KEEP, dealHand as startHand, nextHand } from "../domain/opening-hand/hand";
 import { library } from "../domain/opening-hand/library";
 import { simulateOpeningHands } from "../domain/goldfish";
 import { simulateCasting } from "../domain/cast-by-turn";
-import type { Pip } from "../domain/mana-payment";
+import type { Pip } from "../../domain/mana-payment";
 
 // Characterization of the opening-hand and payment engines (P15): seeded runs on one reference
 // deck, recorded before the engines were merged. A difference here is a change in behaviour.
