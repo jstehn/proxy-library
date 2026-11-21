@@ -24,14 +24,12 @@ export { comboPartnersForDeck, combosForDeck } from "./queries/combos";
 export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
 export {
   addDeckSource,
-  deckView,
   decksFor,
   decksUsing,
   listDeckSources,
-  loadEdhrecSignals,
-  otherDecksHolding,
   preconCommanders,
   type DeckRef,
-} from "./queries/decks";
+} from "./queries/deck-lists";
+export { deckView, loadEdhrecSignals, otherDecksHolding } from "./queries/decks";
 export { MOST_SPECIAL_FIRST, STANDARD_FIRST, ownedCopies } from "./queries/owned";
 export { cardPrintings, type PrintingFinish, type PrintingOption } from "./queries/printings";

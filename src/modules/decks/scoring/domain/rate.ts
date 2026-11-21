@@ -578,6 +578,13 @@ const TRAINABLE_KEYS: readonly {
   { weight: "saturatedSlotPenalty", feature: "saturatedSlot", sign: -1, maxAbs: 2.0 },
 ];
 
+/** One number per trainable weight, worked out from the weight's name. */
+function perKey(valueOf: (key: TrainableKey) => number): Record<TrainableKey, number> {
+  return Object.fromEntries(
+    TRAINABLE_KEYS.map(({ weight }) => [weight, valueOf(weight)]),
+  ) as Record<TrainableKey, number>;
+}
+
 /**
  * Fits `RatingWeights` via L2-regularized, class-balanced logistic regression over
  * `ratingFeatureVector` samples, shrinking toward `initial` and preserving feature signs.
@@ -601,36 +608,10 @@ export function fitLogisticWeights(
   const posWeight = positives > 0 ? samples.length / (2 * positives) : 1;
   const negWeight = negatives > 0 ? samples.length / (2 * negatives) : 1;
 
-  const w: Record<TrainableKey, number> = {
-    synergy: initial.synergy,
-    theme: initial.theme,
-    tribe: initial.tribe,
-    keyword: initial.keyword,
-    embedSim: initial.embedSim,
-    roleNeed: initial.roleNeed,
-    edhrecLift: initial.edhrecLift,
-    edhrecInclusion: initial.edhrecInclusion,
-    combo: initial.combo,
-    quality: initial.quality,
-    topHeavyPenalty: initial.topHeavyPenalty,
-    saturatedSlotPenalty: initial.saturatedSlotPenalty,
-  };
+  const w = perKey((key) => initial[key]);
 
   for (let epoch = 0; epoch < epochs; epoch++) {
-    const grad: Record<TrainableKey, number> = {
-      synergy: 0,
-      theme: 0,
-      tribe: 0,
-      keyword: 0,
-      embedSim: 0,
-      roleNeed: 0,
-      edhrecLift: 0,
-      edhrecInclusion: 0,
-      combo: 0,
-      quality: 0,
-      topHeavyPenalty: 0,
-      saturatedSlotPenalty: 0,
-    };
+    const grad = perKey(() => 0);
 
     for (const sample of samples) {
       const f = sample.features;
@@ -669,19 +650,5 @@ export function fitLogisticWeights(
     }
   }
 
-  return {
-    ...initial,
-    synergy: Number(w.synergy.toFixed(3)),
-    theme: Number(w.theme.toFixed(3)),
-    tribe: Number(w.tribe.toFixed(3)),
-    keyword: Number(w.keyword.toFixed(3)),
-    embedSim: Number(w.embedSim.toFixed(3)),
-    roleNeed: Number(w.roleNeed.toFixed(3)),
-    edhrecLift: Number(w.edhrecLift.toFixed(3)),
-    edhrecInclusion: Number(w.edhrecInclusion.toFixed(3)),
-    combo: Number(w.combo.toFixed(3)),
-    quality: Number(w.quality.toFixed(3)),
-    topHeavyPenalty: Number(w.topHeavyPenalty.toFixed(3)),
-    saturatedSlotPenalty: Number(w.saturatedSlotPenalty.toFixed(3)),
-  };
+  return { ...initial, ...perKey((key) => Number(w[key].toFixed(3))) };
 }
