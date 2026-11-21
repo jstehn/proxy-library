@@ -3,73 +3,55 @@
 # Proxy Library
 
 Self-hosted web app simulating an MTG collection: buy/open virtual sealed product, singles store,
-wallet ledger, deck builder (owned cards only), trades. Also a TypeScript learning project for a
-Python/SQL developer: `lessons/NN-*.md` has a lesson for each build phase that teaches something new
-(ADR 0023). Lessons **teach concepts** (objectives → concepts with Python comparisons → mistakes →
-exercises with verified solutions → recap), following `lessons/README.md`. They are not changelogs.
-When the approved plan says "Lesson: yes", write or update the phase's lesson when finishing it,
-verify every exercise solution compiles and passes, and commit at the end of each lesson.
+wallet ledger, deck builder (owned cards only), trades, live drafts, LLM tools. Also a TypeScript
+learning project for a Python/SQL developer: `lessons/` (moving to its own repo) has a lesson for
+each build phase that teaches something new (ADR 0023); follow `lessons/README.md`, verify every
+exercise solution, commit at the end of each lesson. Lessons teach concepts; they are not changelogs.
 
-## Architecture: read before writing code
+## Read before writing code
 
 - Docs index: `docs/README.md`. Build order and per-phase workflow: `docs/roadmap.md`.
-- Modular monolith: `src/modules/<module>/{domain,application,infrastructure,queries,testing}` +
-  `index.ts` public API. Functional core, ports & adapters, factory-function DI, composition
-  roots in `src/server/` and `worker/`. See `docs/architecture/overview.md`.
-- Pattern choices: `docs/architecture/patterns.md`. Rules and naming:
-  `docs/architecture/conventions.md`. Tests: `docs/architecture/testing.md`. Why: `docs/adr/`.
-- **Process (ADR 0023):** a big feature (new table, module or port, cross-cutting decision, or work
+- Layout, layers and request flow: `docs/architecture/overview.md`. Rules, naming and "where does
+  this live?": `docs/architecture/conventions.md`. Patterns: `patterns.md`. Tests: `testing.md`.
+  Why: `docs/adr/`. Product rules per responsibility: `docs/modules/`.
+- **Process (ADR 0023):** a big feature (new table, module or port, cross-cutting decision, work
   across modules) starts with a design doc (`docs/design/NN-*.md` from the template); a small one
-  with a short plan in its tududi task. The user must approve it **before** implementation code is
-  written. Each says "Lesson: yes (topics)" or "Lesson: no". New cross-cutting decisions become
-  ADRs.
-- **Task board:** the Proxy Library project in tududi, via the `tududi` MCP server (`.mcp.json`,
-  key in `.envrc.local`). One feature in progress at a time; new ideas mid-feature go to tududi's
-  inbox, not into the current work. See `docs/todo.md`.
+  with a short plan in its tududi task. The user approves it **before** implementation code. Each
+  says "Lesson: yes (topics)" or "Lesson: no". New cross-cutting decisions become ADRs.
+- **Task board:** the Proxy Library project in tududi (`tududi` MCP server, `.mcp.json`, key in
+  `.envrc.local`). One feature in progress at a time; new ideas go to tududi's inbox. See `docs/todo.md`.
+- The refactor (doc 65) is run from `docs/refactor/README.md`.
 
 ## Environment
 
 - NixOS + flakes + direnv: `flake.nix` provides node 22, pnpm, postgres 17. `.envrc` sets
-  `DATABASE_URL`, `PG*` vars and `IMAGE_CACHE_DIR`. Outside a direnv shell, prefix commands with
+  `DATABASE_URL`, `PG*` and `IMAGE_CACHE_DIR`. Outside a direnv shell, prefix commands with
   `nix develop -c`.
 - Postgres is project-local, socket-only, in `.dev/`: `pnpm db:start | db:stop | db:reset`. It
-  doesn't survive a reboot: `pnpm dev:all` starts it (if needed), migrates, and runs app + worker.
-- Docker Compose for deployment (docs/deploy.md). Read config only from env vars.
+  doesn't survive a reboot: `pnpm dev:all` starts it, migrates, and runs app + worker.
+- Docker Compose for deployment (`docs/deploy.md`). Read config only from env vars.
 
-## Conventions (summary)
+## Commands
 
-- Expected failures return `Result`, errors are `{ kind: ... }` unions, and defects throw.
-- Money is integer cents: `Cents` from `@/shared/kernel` (companion object: `Cents.of/add/format`).
-  Never floats.
-- All randomness (pack opening) and money movement happen server-side, via injected `Rng`/`Clock`.
-- Card data: MTGJSON (sets, booster sheets, sealed products) + Scryfall (prices, images,
-  legalities), synced by the worker. Prefer bulk files and batched calls (`/cards/collection`, 75
-  per request).
-- **Readable for a TypeScript newcomer** (docs/architecture/conventions.md, "Readability"): full
-  words, no abbreviations (`unitOfWork`, `dependencies`, `transaction`); named types rather than
-  nested inline ones; factories unpack `dependencies`, define a named inner `function`, and return
-  it by name.
-- `@/*` imports resolve to `src/*`.
-- Client components import a module's pure code from `@/modules/<module>/client` (ADR 0016), never
-  its `index.ts` (that would pull server code into the browser); `import type` from `index.ts` is fine.
-- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it).
-  The SQL that runs it is `catalog/cards/queries/search-sql.ts` (queries only), ADR 0017 and 0030.
-- Shared kernel `@/shared/kernel`, Magic's vocabulary `@/shared/mtg`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
-  DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/composition/core.ts`.
-- Commands: `pnpm check` (typecheck + lint + cycles + format + unit tests, in parallel and cached
-  by `scripts/dev/check.sh`; must pass before commit),
-  `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
-  (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
-  (`sync [prices|full]` runs a catalog sync now; `sync features` works out card features only; `schedule` runs the nightly sync + admin-queued runs
-  and the draft pick timers; `draft-timers` runs the pick timers once;
-  `check-packs [n]` opens n packs of every booster recipe and reports rule violations;
-  `check-products` checks every product for sale contains something; `check-commanders` checks every
-  precon's commander is allowed to lead a deck), `pnpm test:remote` (the only
+- `pnpm check`: typecheck, lint, cycles, format, unit tests and the size/clone/knip ratchets, in
+  parallel and cached. Must pass before commit.
+- `pnpm test` (unit, watch) · `pnpm test:int` (needs `pnpm db:start`) · `pnpm test:e2e` (Playwright,
+  Nix browsers; keep `@playwright/test` pinned to nixpkgs' version) · `pnpm test:remote` (the only
   tests that call MTGJSON/Scryfall; never run automatically).
-- Automated tests never touch the network: recorded fixtures, local image responses.
-- Docker: `docker compose up -d --build` (see docs/deploy.md). Dev stays on Nix + direnv.
-- External data (MTGJSON, Scryfall) enters only through `catalog/infrastructure` gateways → Zod → pure
-  mappers. Tests use recorded fixtures in `tests/fixtures/`, never the network. Be polite to both
-  services (ADR 0007).
-- Lint enforces architecture boundaries (`eslint.config.mjs`, ADR 0009). Don't disable a rule
-  without a reason comment.
+- `pnpm worker <command>`: `sync`, `schedule`, `draft-timers`, `check-packs`, `check-products`,
+  `check-commanders`, `embed-cards` (see `worker/commands/`).
+
+## Rules that bite
+
+- Expected failures return `Result`, errors are `{ kind }` unions, defects throw. Money is integer
+  `Cents` from `@/shared/kernel`, never floats.
+- Randomness and the clock are injected (`Rng`, `Clock`); money moves server-side only.
+- External data enters only through `catalog/infrastructure` gateways, then Zod, then pure mappers.
+  Tests use recorded fixtures and never touch the network. Be polite to MTGJSON and Scryfall (ADR 0007).
+- **Readable for a TypeScript newcomer**: full words, no abbreviations (`unitOfWork`,
+  `dependencies`; lint bans `ctx`, `res`, `obj`, `val`, `tl`); named types; factories unpack
+  `dependencies`, define a named inner `function`, and return it by name.
+- `@/*` resolves to `src/*`. Client components import a module's pure code from
+  `@/modules/<module>/client`, never its `index.ts` (`import type` is fine).
+- Lint enforces the architecture (`eslint.config.mjs`, ADR 0009). Don't disable a rule without a
+  reason comment.

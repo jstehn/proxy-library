@@ -86,4 +86,28 @@ wc -l CLAUDE.md
 
 ## Handoff
 
-(empty)
+Steps 1-8 done on `refactor/P21-naming-docs`; step 9 (final milestone) is left to the PM.
+
+- **Renames:** `ctx` (169 uses, all the drafts `StepContext` parameter) is now `context`; `res`, `obj`,
+  `val` became `result`, `record`, `value`/`entryValue`. Counts after: ctx 0, res 1 (a `/res/` in a Brave
+  search URL), obj 0, val 0, tl 0. Tests: `ctxAt` is now `contextAtSeconds`.
+- **Lint:** `id-denylist` for `ctx res obj val tl` over `src` and `worker` (not tests, not `.d.ts`), in
+  `eslint.config.mjs`. Used instead of `no-restricted-syntax` because the existing blocks each set
+  their own `no-restricted-syntax` list and a flat-config block would replace, not add to, them.
+- **Sizes:** production code is **+17 lines (77,870 against 77,853)**: longer names make Prettier wrap
+  a few calls in `drafts/application/drafts.ts` and `drafts/domain/steps.ts`. `pnpm check` fails only
+  on sizes. The baseline was not edited; the owner decides (approve the growth or find 17 lines).
+- **README facts fixed:** the module list said `collections` (the module is `collection`) and missed
+  `reset`; the diagram said "money, cards and collections" (now wallet, catalog and collection); "Weekly
+  allowance" (the period is a setting in days). Everything else checked true (links, scripts, versions,
+  `check-packs` default 1,000, worker commands, pgvector, SSE, PWA, scorecards).
+- **CLAUDE.md:** 75 to 57 lines; links to the docs instead of restating. Lessons rule kept, with
+  "moving to its own repo".
+- **Docs:** `conventions.md` gets the 500-line benchmark, the thin-adapter rules and a "Where does this
+  live?" table; `patterns.md` gets `FORMAT_RULES`, `CAST_EFFECTS` and card features as worked examples;
+  `overview.md`'s read walkthrough now shows `readPage`, `reads` and capabilities. `decisions-to-review.md`
+  moved to `docs/archive/` (links in `docs/design/` fixed); `docs/README.md` is Use / Understand /
+  Contribute / Notes.
+- **`CONTAINER_ALLOWED`:** both entries kept. `_oauth/http.ts` still calls `getContainer().config.appUrl`
+  from a synchronous function and registers/exchanges through the container; `api/health/route.ts` still
+  calls `getContainer().checkHealth()`, which has no capability yet. The removal-list rows stay.

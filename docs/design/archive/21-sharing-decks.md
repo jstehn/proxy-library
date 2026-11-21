@@ -2,7 +2,7 @@
 
 - **Phase:** 21
 - **Status:** **Approved** (2026-10-06, after review; self-approved during the overnight run of
-  2026-10-02 → 03, judgement calls in [decisions-to-review.md](../../decisions-to-review.md))
+  2026-10-02 → 03, judgement calls in [decisions-to-review.md](../../archive/decisions-to-review.md))
 - **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks, ownership shared between decks), design doc 11 (activity
   feed), design doc 12 (reset), design doc 15 (buy a list), ADR 0006 (cross-module reads)
