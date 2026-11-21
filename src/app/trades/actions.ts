@@ -1,6 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import {
   TradeId,
@@ -9,8 +8,9 @@ import {
   type TradeItem,
 } from "@/modules/trades";
 import { Cents, UserId } from "@/shared/kernel";
+import { formRedirect } from "@/server/form-action-instance";
 import { draftHref, readDraft, type Draft } from "./draft";
-import { readPage } from "@/server/page-instance";
+import { NEW_TRADE_PATH, revalidateTrades, TRADES_PATH, tradePath } from "./paths";
 
 /** The draft's items, from the proposer's point of view (you are the proposer). */
 function itemsOf(draft: Draft): TradeItem[] | null {
@@ -38,55 +38,65 @@ function itemsOf(draft: Draft): TradeItem[] | null {
   ];
 }
 
-/** Sends the draft as a proposal, or as a counter-offer when it replaces a trade. */
-export async function proposeTradeAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draft = readDraft(
-    Object.fromEntries([...formData.entries()].map(([key, value]) => [key, String(value)])),
-  );
-  const back = (message: string) =>
-    redirect(`${draftHref(draft)}&error=${encodeURIComponent(message)}`);
-  if (draft.withUserId === null) redirect("/trades/new");
-  const items = itemsOf(draft);
-  if (items === null) back("Enter money like 2.50.");
-  const message = String(formData.get("message") ?? "");
+/**
+ * The trade builder's whole draft travels in the form (the page's address, copied in just before
+ * it is sent), next to the message.
+ */
+const ProposeForm = z.object({
+  with: z.string().default(""),
+  give: z.string().default(""),
+  get: z.string().default(""),
+  giveMoney: z.string().default(""),
+  getMoney: z.string().default(""),
+  replaces: z.string().default(""),
+  mine: z.string().default(""),
+  theirs: z.string().default(""),
+  message: z.string().default(""),
+});
 
-  const { trades } = capabilities;
-  const result =
-    draft.replaces === null
-      ? await trades.proposeTrade(actor, {
-          recipientId: UserId.of(draft.withUserId),
-          items: items ?? [],
-          message,
-        })
-      : await trades.counterTrade(actor, TradeId.of(Number(draft.replaces)), {
-          items: items ?? [],
-          message,
-        });
-  if (!result.ok) back(describeProposeTradeError(result.error));
-  revalidatePath("/trades");
-  revalidatePath("/", "layout"); // the badge
-  redirect(`/trades/${result.ok ? result.value : ""}`);
-}
+/** Sends the draft as a proposal, or as a counter-offer when it replaces a trade. */
+export const proposeTradeAction = formRedirect(
+  ProposeForm,
+  async ({ actor, capabilities }, input) => {
+    const draft = readDraft(input);
+    const back = (message: string) => `${draftHref(draft)}&error=${encodeURIComponent(message)}`;
+    if (draft.withUserId === null) return NEW_TRADE_PATH;
+    const items = itemsOf(draft);
+    if (items === null) return back("Enter money like 2.50.");
+
+    const { trades } = capabilities;
+    const result =
+      draft.replaces === null
+        ? await trades.proposeTrade(actor, {
+            recipientId: UserId.of(draft.withUserId),
+            items,
+            message: input.message,
+          })
+        : await trades.counterTrade(actor, TradeId.of(Number(draft.replaces)), {
+            items,
+            message: input.message,
+          });
+    if (!result.ok) return back(describeProposeTradeError(result.error));
+    revalidateTrades();
+    return tradePath(result.value);
+  },
+);
 
 /** Accept, decline or cancel. */
-export async function decideTradeAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const tradeId = TradeId.of(Number(formData.get("tradeId")));
-  const decision = String(formData.get("decision"));
-  const { trades } = capabilities;
-  const result =
-    decision === "accept"
-      ? await trades.acceptTrade(actor, tradeId)
-      : decision === "decline"
-        ? await trades.declineTrade(actor, tradeId)
-        : await trades.cancelTrade(actor, tradeId);
-  revalidatePath("/trades");
-  revalidatePath(`/trades/${tradeId}`);
-  revalidatePath("/", "layout"); // the badge and the balance
-  if (!result.ok)
-    redirect(
-      `/trades/${tradeId}?error=${encodeURIComponent(describeDecideTradeError(result.error))}`,
-    );
-  redirect(`/trades/${tradeId}`);
-}
+export const decideTradeAction = formRedirect(
+  z.object({ tradeId: z.coerce.number().int().positive(), decision: z.string().default("") }),
+  async ({ actor, capabilities }, { tradeId: rawTradeId, decision }) => {
+    const tradeId = TradeId.of(rawTradeId);
+    const { trades } = capabilities;
+    const result =
+      decision === "accept"
+        ? await trades.acceptTrade(actor, tradeId)
+        : decision === "decline"
+          ? await trades.declineTrade(actor, tradeId)
+          : await trades.cancelTrade(actor, tradeId);
+    revalidateTrades(rawTradeId);
+    if (!result.ok) return tradePath(rawTradeId, describeDecideTradeError(result.error));
+    return tradePath(rawTradeId);
+  },
+  { unreadable: TRADES_PATH },
+);
