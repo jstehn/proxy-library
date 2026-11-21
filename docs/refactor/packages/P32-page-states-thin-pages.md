@@ -170,3 +170,9 @@ until the owner approves the growth.
 covers `src/app` actions). `export const x = formRedirect(...)` in a `"use server"` file is the
 pattern P25 already used for `formAction`, but Next did not compile any of it here. The by-eye list
 is in `deferred-checks.md` under P32.
+
+**PM note at merge (2026-11-21):** every `loading.tsx` (root, decks, drafts, admin, collection, store)
+and `PageSkeleton` were removed. With a loading boundary at or above a page, Next streams status
+200 before the page can call `notFound()`, so a private deck answered 200 instead of 404 (the e2e
+sharing test caught it; the content was never shown). Loading states can come back per page only
+where nothing below calls `notFound()`; note it before adding one.
