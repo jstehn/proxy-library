@@ -2,7 +2,7 @@ import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId } from "@/modules/catalog";
-import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
+import { inMemoryCollectionRepository } from "@/modules/collection/game/testing/fakes";
 import {
   inMemoryItemRepository,
   inMemoryProductCatalog,

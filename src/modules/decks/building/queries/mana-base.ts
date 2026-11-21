@@ -7,7 +7,7 @@ import {
   deckStats,
 } from "@/modules/decks/core/client";
 import type { BracketFlag } from "@/shared/kernel";
-import { featureArray } from "@/shared/card-search/sql";
+import { featureArray } from "@/modules/catalog/cards/queries/search-sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";

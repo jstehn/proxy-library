@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { boosterConfigs } from "@/modules/catalog/infrastructure/schema";
+import { boosterConfigs } from "@/modules/catalog/cards/infrastructure/schema";
 import { packTheme, type ThemeRecipe } from "../domain/theme";
 
 // The themes of opened Jumpstart packs, for the Opened page (task 40, ADR 0006).

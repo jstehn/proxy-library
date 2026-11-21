@@ -56,11 +56,11 @@ import {
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
-import { makeRealCollection, realPrintingIds } from "@/modules/real-collection";
+import { makeRealCollection, realPrintingIds } from "@/modules/collection/real";
 import {
   drizzleRealCollectionRepository,
   sqlPrintingMatcher,
-} from "@/modules/real-collection/infrastructure";
+} from "@/modules/collection/infrastructure";
 import { makeResetPlayer } from "@/modules/reset";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
@@ -87,10 +87,10 @@ import {
 import { makeWallet } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
-import { makeReddit } from "@/modules/reddit";
-import { redditHttpGateway } from "@/modules/reddit/infrastructure";
-import { makeYoutube } from "@/modules/youtube";
-import { youtubeiGateway } from "@/modules/youtube/infrastructure";
+import { makeReddit } from "@/modules/research";
+import { redditHttpGateway } from "@/modules/research/infrastructure";
+import { makeYoutube } from "@/modules/research";
+import { youtubeiGateway } from "@/modules/research/infrastructure";
 import {
   drizzleEconomySettingsRepository,
   drizzlePlayerDirectory,

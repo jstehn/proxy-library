@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DECK_TECH_SEARCH_KINDS, SEARCH_SORT_MODES } from "@/modules/youtube";
+import { DECK_TECH_SEARCH_KINDS, SEARCH_SORT_MODES } from "@/modules/research";
 import { err, type Result } from "@/shared/kernel";
 import { defineBinding } from "../binding";
 

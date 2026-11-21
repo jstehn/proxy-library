@@ -1,8 +1,8 @@
 import { pickForAdmin } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { pick } from "@/shared/kernel";
-import type { Catalog } from "./application/make-catalog";
-import { printingCards } from "./queries/printing-cards";
+import type { Catalog } from "./make-catalog";
+import { printingCards } from "./cards";
 
 // The catalog's capabilities (ADR 0026): only what callers use. The two image ones are for routes,
 // which have no player. The sync and the other jobs belong to the worker, which holds the service.

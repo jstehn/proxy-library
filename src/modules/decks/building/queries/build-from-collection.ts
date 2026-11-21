@@ -7,7 +7,7 @@ import {
   TARGETED_TAGS,
 } from "@/modules/decks/core/client";
 import type { BracketFlag } from "@/shared/kernel";
-import { featureArray, signalIO } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";

@@ -4,7 +4,7 @@ import type { Actor } from "@/modules/accounts";
 import { isNotable } from "@/modules/activity";
 import { SealedProductId } from "@/modules/catalog";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
-import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
+import { inMemoryCollectionRepository } from "@/modules/collection/game/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
 import { err } from "@/shared/kernel";

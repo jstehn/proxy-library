@@ -1,6 +1,6 @@
 import { and, inArray, lte, notInArray, or } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { spellbookTwoCardCombos } from "@/modules/catalog/infrastructure/schema";
+import { spellbookTwoCardCombos } from "@/modules/catalog/outside/infrastructure/schema";
 import type { Bracket, DeckCombo } from "../domain/brackets";
 
 /**

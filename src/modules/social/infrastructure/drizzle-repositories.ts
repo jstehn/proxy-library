@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { PrintingId } from "@/modules/catalog";
-import { printings } from "@/modules/catalog/infrastructure/schema";
+import { printings } from "@/modules/catalog/cards/infrastructure/schema";
 import { DeckId, type Format } from "@/modules/decks";
 import { decks } from "@/modules/decks/core/infrastructure/schema";
 import { players } from "@/modules/accounts/infrastructure/schema";

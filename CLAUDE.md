@@ -52,8 +52,8 @@ verify every exercise solution compiles and passes, and commit at the end of eac
 - `@/*` imports resolve to `src/*`.
 - Client components import a module's pure code from `@/modules/<module>/client` (ADR 0016), never
   its `index.ts` (that would pull server code into the browser); `import type` from `index.ts` is fine.
-- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it)
-  and `@/shared/card-search/sql` (queries only), ADR 0017.
+- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it).
+  The SQL that runs it is `catalog/cards/queries/search-sql.ts` (queries only), ADR 0017 and 0030.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + cycles + format + unit tests, in parallel and cached

@@ -6,7 +6,7 @@ import { deckPublicQueries, deckQueries } from "@/modules/decks";
 import { draftQueries } from "@/modules/drafts";
 import { inventoryQueries } from "@/modules/inventory";
 import { packsQueries } from "@/modules/packs";
-import { realCollectionQueries } from "@/modules/real-collection";
+import { realCollectionQueries } from "@/modules/collection/real";
 import { tradeQueries } from "@/modules/trades";
 import { socialQueries } from "@/modules/social";
 import { wishlistQueries } from "@/modules/wishlist";

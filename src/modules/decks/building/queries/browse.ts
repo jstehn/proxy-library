@@ -15,7 +15,12 @@ import {
   type UserId,
 } from "@/shared/kernel";
 import { parseSearch } from "@/shared/card-search";
-import { featureArray, signalIO, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import {
+  featureArray,
+  signalIO,
+  foilOwnedBy,
+  searchCondition,
+} from "@/modules/catalog/cards/queries/search-sql";
 import { legalInFormat, ownedPerCard } from "./candidate-pool";
 import { STANDARD_FIRST } from "@/modules/decks/core";
 

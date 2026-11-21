@@ -7,7 +7,7 @@ import {
   cardSets,
   priceSnapshots,
   printings,
-} from "@/modules/catalog/infrastructure/schema";
+} from "@/modules/catalog/cards/infrastructure/schema";
 import { SetCode } from "@/modules/catalog";
 import { loadConfig } from "@/shared/config";
 import { createDatabase } from "@/shared/db";

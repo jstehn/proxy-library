@@ -38,7 +38,7 @@ import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import {
   drizzleRealCollectionRepository,
   sqlPrintingMatcher,
-} from "@/modules/real-collection/infrastructure";
+} from "@/modules/collection/infrastructure";
 import {
   drizzleMarketPrices,
   drizzlePriceList,

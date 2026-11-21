@@ -3,6 +3,7 @@
 - **Phase:** 16
 - **Status:** **Approved** (2026-10-01, with the decisions in section 14; amendment in section 15
   approved 2026-10-29)
+- **Superseded in part** (2026-11-20, P30): the module `real-collection` is now the area `collection/real` of the merged `collection` module (design doc 70, ADR 0030). Rule 1 still holds, enforced by lint and by `tests/integration/collection-real.int.test.ts`.
 - **Related:** design doc 04 (catalog sync, rule 13), design doc 07 (collection screens), design
   doc 09 and 14 (decks, proxy PDFs), design doc 15 (list parsing and card search), ADR 0006
   (cross-module reads), ADR 0009 (lint boundaries), ADR 0011 (printing × finish)

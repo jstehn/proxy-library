@@ -22,7 +22,7 @@ import { randomSeed } from "@/shared/runtime";
 import { accountPublicQueries, accountQueries } from "@/modules/accounts";
 import { collectionQueries } from "@/modules/collection";
 import { draftQueries, makeDrafts, type DraftId } from "@/modules/drafts";
-import { realCollectionQueries } from "@/modules/real-collection";
+import { realCollectionQueries } from "@/modules/collection/real";
 import { randomBytes } from "node:crypto";
 import {
   canViewDeck,

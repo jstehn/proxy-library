@@ -8,8 +8,8 @@
 // `type`) are erased when compiled, so they can't make a cycle at runtime. Packages in
 // node_modules are left out: only our own files can form a cycle we can fix.
 //
-// `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside decks, its
-// areas (ADR 0029). It counts every import, `import type` too, and the `wiring.ts`
+// `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside the split
+// modules, their areas (ADR 0029, 0030). It counts every import, `import type` too, and the `wiring.ts`
 // files (but not test files), and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
 // cycle fails; `--update` only removes entries from the baseline.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -115,18 +115,23 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
 
 const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
 
-/** The areas of the decks module (ADR 0029): folders of src/modules/decks, each one node. */
-const DECKS_AREAS = ["core", "scoring", "building", "play", "proxies", "overview"];
+/** The areas of the split modules (ADR 0029, 0030): folders of src/modules/<module>, each one node. */
+const AREAS: Readonly<Record<string, readonly string[]>> = {
+  decks: ["core", "scoring", "building", "play", "proxies", "overview"],
+  catalog: ["cards", "rules", "outside"],
+  collection: ["game", "real", "copies"],
+  research: ["reddit", "youtube"],
+};
 
-/** The node a file belongs to: its module, or for a file in a decks area, that area. */
+/** The node a file belongs to: its module, or for a file in an area, that area. */
 export function nodeOf(path: string): string | undefined {
   const match = /(?:^|\/)src\/modules\/([^/]+)(?:\/([^/.]+))?/.exec(path.replaceAll("\\", "/"));
   if (match === null) return undefined;
   const [, moduleName, folder] = match;
-  if (moduleName !== "decks" || folder === undefined || !DECKS_AREAS.includes(folder)) {
+  if (moduleName === undefined || folder === undefined || !AREAS[moduleName]?.includes(folder)) {
     return moduleName;
   }
-  return `decks/${folder}`;
+  return `${moduleName}/${folder}`;
 }
 
 /** The module graph: an edge for every import between two different nodes. */

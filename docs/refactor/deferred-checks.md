@@ -114,7 +114,7 @@ of old and new tool output.
 ## Left by P17 (one way to show a collection)
 
 - [x] **Done 2026-11-19 (merge of P16 and P17, e2e database):** the full integration suite, 281 of 281. **Run the integration tests for the shared collection SQL (P17).** `pnpm test:int
-tests/integration/singles.int.test.ts tests/integration/real-collection.int.test.ts
+tests/integration/singles.int.test.ts tests/integration/collection-real.int.test.ts
 tests/integration/card-search.int.test.ts`, plus whatever covers the card page's "owned" boxes and
       the exports (`grep -l "exportRows\|ownedByOracle\|copiesOf" tests/integration`). Not run in the package
       (shared database).

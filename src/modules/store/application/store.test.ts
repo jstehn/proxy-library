@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { SealedProductId } from "@/modules/catalog";
-import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
+import { inMemoryCollectionRepository } from "@/modules/collection/game/testing/fakes";
 import {
   inMemoryItemRepository,
   inMemoryProductCatalog,

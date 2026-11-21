@@ -2,7 +2,7 @@ import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
-import { inMemoryCollectionRepository, sampleGain } from "@/modules/collection/testing/fakes";
+import { inMemoryCollectionRepository, sampleGain } from "@/modules/collection/game/testing/fakes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
 import { Cents, err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";

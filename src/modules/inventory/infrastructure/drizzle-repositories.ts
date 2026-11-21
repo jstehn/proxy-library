@@ -12,7 +12,7 @@ import {
   cardSets,
   deckLists,
   sealedProducts,
-} from "@/modules/catalog/infrastructure/schema";
+} from "@/modules/catalog/cards/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
 import { FinishSchema, UserId, assertNever } from "@/shared/kernel";
 import type {

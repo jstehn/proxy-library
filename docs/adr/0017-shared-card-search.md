@@ -18,8 +18,10 @@ store now needs for buying a list.
   - `index.ts`, `parse.ts`, `list.ts`: **pure** (text in, a syntax tree or list lines out). Domain
     code, application code, queries and the app (including client components, for quick filters)
     may import it. Lint holds it to the same purity rules as domain code.
-  - `sql.ts`: turns a syntax tree into SQL over printings aliased `p`. Only **queries** may import
-    it (lint-enforced), so `drizzle-orm` never reaches the browser.
+  - ~~`sql.ts`~~ (amended by [ADR 0030](0030-merge-collections-split-catalog.md)): the SQL that runs
+    a search is now `catalog/cards/queries/search-sql.ts`, and the copies' listing SQL is
+    `collection/copies/queries/copies-sql.ts`. Only **queries** may import them (lint-enforced), so
+    `drizzle-orm` never reaches the browser. `shared/card-search` keeps the pure language only.
 - A **search context** says what the few page-dependent words mean: the player (for `own`), and
   the SQL that answers `is:foil` (sold in foil, this copy is foil, or you own a foil copy).
 
