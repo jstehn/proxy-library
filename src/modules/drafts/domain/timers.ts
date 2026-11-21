@@ -90,26 +90,26 @@ function smartColor(
   draft: Draft,
   seatNumber: number,
   note: Extract<import("./abilities").Note, { kind: "colors" }>,
-  ctx: StepContext,
+  context: StepContext,
 ): import("@/modules/catalog").Color {
-  const pool = poolOf(draft, seatNumber).map((c) => factsOf(ctx.cards, c.printingId));
+  const pool = poolOf(draft, seatNumber).map((c) => factsOf(context.cards, c.printingId));
   const top = topColors(pool);
   const openTop = top.filter((c) => !note.colors.includes(c));
   if (openTop.length > 0) return openTop[0];
-  return randomColor(note, ctx.rng);
+  return randomColor(note, context.rng);
 }
 
 function smartDeal(
   draft: Draft,
   seatNumber: number,
-  ctx: StepContext,
+  context: StepContext,
 ): { draft: Draft; card: null } | null {
   const deal = draft.deals?.current;
   if (draft.status !== "dealing" || deal == null) return null;
 
   // Simplified: just pass. Deals for bots would require evaluating offers which is complex here.
   // For now, bots don't participate heavily in deals, per design.
-  const dealt = passOnDeal(draft, seatNumber, ctx);
+  const dealt = passOnDeal(draft, seatNumber, context);
   return dealt !== null ? { draft: dealt, card: null } : null;
 }
 
@@ -122,7 +122,7 @@ function smartDeal(
 export function actFor(
   draft: Draft,
   seatNumber: number,
-  ctx: StepContext,
+  context: StepContext,
   choose: ChooseCard,
 ): { draft: Draft; card: DraftCard | null } | null {
   const owed = owedColor(draft, seatNumber);
@@ -130,57 +130,57 @@ export function actFor(
     const chosen = chooseColor(
       draft,
       seatNumber,
-      smartColor(draft, seatNumber, owed.note, ctx),
-      ctx,
+      smartColor(draft, seatNumber, owed.note, context),
+      context,
     );
     return chosen.ok ? { draft: chosen.value, card: null } : null;
   }
   if (seatAt(draft, seatNumber).abilities.awaitingChoices !== null) {
-    const decided = decideOnCard(draft, seatNumber, {}, ctx);
+    const decided = decideOnCard(draft, seatNumber, {}, context);
     return decided.ok ? { draft: decided.value, card: null } : null;
   }
-  const dealt = smartDeal(draft, seatNumber, ctx);
+  const dealt = smartDeal(draft, seatNumber, context);
   if (dealt !== null) return dealt;
 
   const pack = currentPack(draft, seatNumber);
   if (draft.status !== "drafting" || pack === null) return null;
-  const atRandom = faceUpWith(draft, seatNumber, "random", ctx).length > 0;
+  const atRandom = faceUpWith(draft, seatNumber, "random", context).length > 0;
   const slot = atRandom ? "random" : choose(pack, poolOf(draft, seatNumber));
   // A Spire Phantasm drafted this way guesses another card left in the pack.
-  const poolFacts = poolOf(draft, seatNumber).map((c) => factsOf(ctx.cards, c.printingId));
+  const poolFacts = poolOf(draft, seatNumber).map((c) => factsOf(context.cards, c.printingId));
   let other = pack.cards.find((card) => card.pick === null && card.slot !== slot);
   if (!atRandom) {
     const others = pack.cards.filter((c) => c.pick === null && c.slot !== slot);
     if (others.length > 0) {
       other = others.reduce((best, c) =>
-        pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >
-        pickScore(factsOf(ctx.cards, best.printingId), poolFacts)
+        pickScore(factsOf(context.cards, c.printingId), poolFacts) >
+        pickScore(factsOf(context.cards, best.printingId), poolFacts)
           ? c
           : best,
       );
     }
   }
-  const guess = other === undefined ? undefined : ctx.cards(other.printingId)?.name;
+  const guess = other === undefined ? undefined : context.cards(other.printingId)?.name;
 
   let wholePack = false;
-  const agents = faceUpWith(draft, seatNumber, "wholePack", ctx);
+  const agents = faceUpWith(draft, seatNumber, "wholePack", context);
   if (agents.length > 0 && !atRandom) {
     const goodCards = pack.cards.filter(
-      (c) => c.pick === null && pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >= 1.5,
+      (c) => c.pick === null && pickScore(factsOf(context.cards, c.printingId), poolFacts) >= 1.5,
     );
     if (goodCards.length >= 3) wholePack = true;
   }
 
   let librarians = 0;
-  const libs = faceUpWith(draft, seatNumber, "extraCard", ctx).filter((c) => {
+  const libs = faceUpWith(draft, seatNumber, "extraCard", context).filter((c) => {
     // The abilities table says which cards put themselves back into the pack (the Librarian).
     const card = cardAt(draft, c);
-    const ability = card && abilityOfCard(ctx, card)?.ability;
+    const ability = card && abilityOfCard(context, card)?.ability;
     return ability?.kind === "extraCard" && ability.then === "intoPack";
   });
   if (libs.length > 0 && !wholePack && !atRandom) {
     const goodCards = pack.cards.filter(
-      (c) => c.pick === null && pickScore(factsOf(ctx.cards, c.printingId), poolFacts) >= 2.0,
+      (c) => c.pick === null && pickScore(factsOf(context.cards, c.printingId), poolFacts) >= 2.0,
     );
     if (goodCards.length >= 2) librarians = 1;
   }
@@ -198,7 +198,7 @@ export function actFor(
         librarians: librarians > 0 ? librarians : undefined,
       },
     },
-    ctx,
+    context,
   );
   if (!stepped.ok)
     throw new Error(`auto-pick for seat ${seatNumber} failed: ${stepped.error.kind}`);
@@ -211,8 +211,8 @@ export function actFor(
  * answered "no" for whoever it waits for. One seat at a time, earliest deadline first, because
  * each action can change who is waiting.
  */
-export function runTimers(draft: Draft, ctx: StepContext, choose: ChooseCard): TimerOutcome {
-  const now = ctx.now;
+export function runTimers(draft: Draft, context: StepContext, choose: ChooseCard): TimerOutcome {
+  const now = context.now;
   let current = draft;
   const autoPicks: Array<{ seatNumber: number; card: DraftCard }> = [];
   let extensions = 0;
@@ -221,7 +221,7 @@ export function runTimers(draft: Draft, ctx: StepContext, choose: ChooseCard): T
     const deal = current.deals?.current;
     if (current.status === "dealing" && deal != null && isDue(deal.deadline, now)) {
       const waiting = dealWaitsFor(current)[0];
-      const passed = waiting === undefined ? null : passOnDeal(current, waiting, ctx);
+      const passed = waiting === undefined ? null : passOnDeal(current, waiting, context);
       if (passed === null) break;
       current = passed;
       continue;
@@ -245,7 +245,7 @@ export function runTimers(draft: Draft, ctx: StepContext, choose: ChooseCard): T
       continue;
     }
 
-    const acted = actFor(current, seat.seatNumber, ctx, choose);
+    const acted = actFor(current, seat.seatNumber, context, choose);
     if (acted === null) {
       // Nothing to do after all: clear the stale deadlines so this seat isn't picked again.
       current = withSeat(current, { ...seat, deadline: null, promptDeadline: null });
@@ -264,14 +264,14 @@ export function runTimers(draft: Draft, ctx: StepContext, choose: ChooseCard): T
 export function pickForAway(
   draft: Draft,
   seatNumber: number,
-  ctx: StepContext,
+  context: StepContext,
   choose: ChooseCard,
 ): Result<{ draft: Draft; card: DraftCard | null }, DraftNotRunning | NotAway | NothingToPick> {
   if (draft.status !== "drafting" && draft.status !== "dealing")
     return err({ kind: "DraftNotRunning" });
   const seat = draft.seats.find((each) => each.seatNumber === seatNumber);
-  if (seat === undefined || !isAway(seat, ctx.now)) return err({ kind: "NotAway" });
-  const acted = actFor(draft, seatNumber, ctx, choose);
+  if (seat === undefined || !isAway(seat, context.now)) return err({ kind: "NotAway" });
+  const acted = actFor(draft, seatNumber, context, choose);
   return acted === null ? err({ kind: "NothingToPick" }) : ok(acted);
 }
 
@@ -282,7 +282,7 @@ export function pickForAway(
  */
 export function runBots(
   draft: Draft,
-  ctx: StepContext,
+  context: StepContext,
   choose: ChooseCard,
 ): Readonly<{ draft: Draft; picks: number }> {
   let current = draft;
@@ -291,7 +291,7 @@ export function runBots(
   for (let guard = 0; guard <= (cardCount + draft.seats.length) * 4; guard += 1) {
     let acted: ReturnType<typeof actFor> = null;
     for (const bot of current.seats.filter((seat) => seat.botNumber !== null)) {
-      acted = actFor(current, bot.seatNumber, ctx, choose);
+      acted = actFor(current, bot.seatNumber, context, choose);
       if (acted !== null) break;
     }
     if (acted === null) break;

@@ -16,7 +16,11 @@ import {
 
 const at = (seconds: number) => new Date(START.getTime() + seconds * 1000);
 /** What the engine needs at a moment: no card has a draft ability in these tests. */
-const ctxAt = (seconds: number) => ({ now: at(seconds), cards: () => undefined, rng: NO_RNG });
+const contextAtSeconds = (seconds: number) => ({
+  now: at(seconds),
+  cards: () => undefined,
+  rng: NO_RNG,
+});
 const alice = UserId.of("alice");
 const bob = UserId.of("bob");
 /** Always takes the last card left: easy to tell apart from a player's first-card picks. */
@@ -73,12 +77,16 @@ describe("presence", () => {
 describe("runTimers (rule 10)", () => {
   it("does nothing before a deadline", () => {
     const draft = started();
-    expect(runTimers(draft, ctxAt(89), lastCard)).toEqual({ draft, autoPicks: [], extensions: 0 });
+    expect(runTimers(draft, contextAtSeconds(89), lastCard)).toEqual({
+      draft,
+      autoPicks: [],
+      extensions: 0,
+    });
   });
 
   it("auto-picks for a player who is here but didn't pick", () => {
     const draft = bothHere(started(), 80);
-    const outcome = runTimers(draft, ctxAt(90), lastCard);
+    const outcome = runTimers(draft, contextAtSeconds(90), lastCard);
     expect(outcome.extensions).toBe(0);
     expect(outcome.autoPicks.map((pick) => [pick.seatNumber, pick.card.slot])).toEqual([
       [0, 2],
@@ -93,7 +101,7 @@ describe("runTimers (rule 10)", () => {
     const extensionsForAlice: number[] = [];
     for (let i = 0; i < 4; i += 1) {
       draft = markPresence(draft, bob, true, at(now)); // bob stays
-      const outcome = runTimers(draft, ctxAt(now), lastCard);
+      const outcome = runTimers(draft, contextAtSeconds(now), lastCard);
       draft = outcome.draft;
       const aliceSeat = draft.seats[0];
       extensionsForAlice.push(aliceSeat.graceUsedSeconds);
@@ -113,13 +121,13 @@ describe("runTimers (rule 10)", () => {
 
   it("never picks with the timer off, but the host can pick for an away player", () => {
     const draft = started({ kind: "off" });
-    expect(runTimers(draft, ctxAt(10_000), lastCard).autoPicks).toEqual([]);
+    expect(runTimers(draft, contextAtSeconds(10_000), lastCard).autoPicks).toEqual([]);
     const here = markPresence(draft, bob, true, at(100));
-    expect(pickForAway(here, 1, ctxAt(100), lastCard)).toEqual({
+    expect(pickForAway(here, 1, contextAtSeconds(100), lastCard)).toEqual({
       ok: false,
       error: { kind: "NotAway" },
     });
-    const picked = pickForAway(here, 1, ctxAt(200), lastCard); // bob's last heartbeat was 100 s ago
+    const picked = pickForAway(here, 1, contextAtSeconds(200), lastCard); // bob's last heartbeat was 100 s ago
     expect(picked.ok && picked.value.card?.slot).toBe(2);
   });
 });
@@ -133,7 +141,7 @@ describe("runBots (rule 16)", () => {
       lobby = added.value;
     }
     const started = startDraft(lobby, samplePacks(4, 3, 3), at(10));
-    const { draft, picks } = runBots(started, ctxAt(10), lastCard);
+    const { draft, picks } = runBots(started, contextAtSeconds(10), lastCard);
     // Packs pass left: bot 1 picks from its pack; bot 2 from its own and bot 1's; bot 3 from all
     // three. Bot 1's pack is then empty, and the two others wait behind Alice's own pack.
     expect(picks).toBe(1 + 2 + 3);

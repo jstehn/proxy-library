@@ -105,8 +105,8 @@ export function fitLogisticWeights(
       const err = (pred - sample.label) * (sample.label === 1 ? posWeight : negWeight);
 
       for (const spec of TRAINABLE_KEYS) {
-        const val = f[spec.feature];
-        if (val !== 0) grad[spec.weight] += err * val;
+        const value = f[spec.feature];
+        if (value !== 0) grad[spec.weight] += err * value;
       }
     }
 
