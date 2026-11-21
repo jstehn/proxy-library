@@ -11,6 +11,17 @@ on:
 permissions:
   contents: read
 
+# Both jobs need valid app settings: the integration tests use them, and knip loads
+# drizzle.config.ts (which validates them) to see which schema tables are used.
+env:
+  # The test setup refuses a database whose name doesn't contain "_test".
+  TEST_DATABASE_URL: postgres://tcg:tcg@localhost:5432/tcg_test
+  DATABASE_URL: postgres://tcg:tcg@localhost:5432/tcg_test
+  AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+  APP_URL: http://localhost:3000
+  IMAGE_CACHE_DIR: /tmp/proxy-library/images
+  SYNC_CACHE_DIR: /tmp/proxy-library/cache
+
 concurrency:
   group: check-${{ github.ref }}
   cancel-in-progress: true
@@ -51,12 +62,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      # The test setup refuses a database whose name doesn't contain "_test".
-      TEST_DATABASE_URL: postgres://tcg:tcg@localhost:5432/tcg_test
-      DATABASE_URL: postgres://tcg:tcg@localhost:5432/tcg_test
-      AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
-      APP_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -66,9 +71,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:int
-        # `runner` isn't available in a job's env, only in its steps.
-        env:
-          IMAGE_CACHE_DIR: ${{ runner.temp }}/images
-          SYNC_CACHE_DIR: ${{ runner.temp }}/cache
 
   # Follow-up: an end-to-end job (`pnpm test:e2e`). Playwright needs browsers installed first.
