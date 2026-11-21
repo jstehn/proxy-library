@@ -21,5 +21,5 @@ hateful purposes.
 ## Reporting
 
 If someone breaks this code of conduct, open an issue, or contact the maintainer, Jack Stehn,
-through the contact details on his GitHub profile. Reports are handled privately where
+through the contact details on the maintainer's GitHub profile. Reports are handled privately where
 possible. The maintainer decides what happens next.

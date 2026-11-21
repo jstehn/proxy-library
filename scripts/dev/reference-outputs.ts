@@ -9,9 +9,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { buildCore } from "@/server/core";
 import { loadConfig } from "@/shared/config";
-// One line on purpose: wrapped by Prettier it would grow by six lines (the width is 100).
-// prettier-ignore
-import { actor, close, db, loadFixtureCatalog, resetPlayers } from "../../tests/integration/harness";
+import {
+  actor,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+} from "../../tests/integration/harness";
 import { callTool, inputJsonSchema, TOOLS } from "../../src/app/_llm-tools/registry";
 import type { ToolContext } from "../../src/app/_llm-tools/tool";
 
