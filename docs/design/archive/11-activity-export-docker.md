@@ -2,7 +2,8 @@
 
 - **Phase:** 11
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
-  [decisions-to-review.md](../decisions-to-review.md))
+  [decisions-to-review.md](../../decisions-to-review.md))
+- **Reviewed by the user** (2026-10-06, docs/decisions-to-review.md): judgement calls reviewed by the user; the self-approved status above is the build-time record
 - **Superseded** (2026-11-20, P22): by docs/modules/game-collection.md
 - **Related ADRs:** 0004 (ledgers), 0005 (unit of work), 0010 (Nix for development; Docker later)
 

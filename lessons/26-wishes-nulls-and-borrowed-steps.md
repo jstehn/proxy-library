@@ -407,7 +407,7 @@ narrowed value. Round trip: `reminderFromStored(reminderToStored(r))` equals `r`
 
 ## Further reading
 
-- [Design doc 26](../docs/design/26-wishlist.md): the decisions, and the implementation notes
+- [Design doc 26](../docs/design/archive/26-wishlist.md): the decisions, and the implementation notes
   (section 14).
 - PostgreSQL: [partial indexes](https://www.postgresql.org/docs/current/indexes-partial.html)
   and [unique indexes and nulls](https://www.postgresql.org/docs/current/indexes-unique.html).

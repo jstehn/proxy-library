@@ -435,7 +435,7 @@ doesn't fit. The real code is the `card.isToken` block in
 
 ## Further reading
 
-- [Design doc 25](../docs/design/25-token-proxies.md): the decisions, and what real data
+- [Design doc 25](../docs/design/archive/25-token-proxies.md): the decisions, and what real data
   changed (section 14).
 - PostgreSQL: [`INSERT … ON CONFLICT`](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT)
   and [foreign key actions](https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK)

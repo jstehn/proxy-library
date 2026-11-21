@@ -69,7 +69,7 @@ helpers, and `mana.ts` as far as `castability` and `mana-base` use it.
 
 The files above; `src/modules/decks/index.ts` and `client.ts` (remove exports); `src/server/core.ts`;
 `worker/index.ts`; `drizzle/` (one new migration); `tests/integration/embeddings.int.test.ts`;
-`docs/design/60-interactive-goldfish-and-comprehensive-rules-mcp.md` (one line);
+`docs/design/archive/60-interactive-goldfish-and-comprehensive-rules-mcp.md` (one line);
 `docs/refactor/removal-list.md`; `scripts/dev/check.sh`.
 
 ## Steps

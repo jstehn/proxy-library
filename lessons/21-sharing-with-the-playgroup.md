@@ -322,7 +322,7 @@ list.
 
 ## Further reading
 
-- [Design doc 21](../docs/design/21-sharing-decks.md): invariants 1–7.
+- [Design doc 21](../docs/design/archive/21-sharing-decks.md): invariants 1–7.
 - [Design doc 15](../docs/design/15-buy-a-list-and-card-search.md), decision 2: "only buy what I
   don't already own".
 - OWASP, "Insecure Direct Object Reference": why existence can leak through error codes.

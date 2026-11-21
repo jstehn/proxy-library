@@ -652,7 +652,7 @@ retrying when the rule can't be met at all.
 
 ## Further reading
 
-- [Design doc 05: pack engine](../docs/design/05-packs.md), especially section 15
+- [Design doc 05: pack engine](../docs/design/archive/05-packs.md), especially section 15
 - [ADR 0008: injected Rng and Clock](../docs/adr/0008-injected-rng-clock.md)
 - [ADR 0014: pricing sources](../docs/adr/0014-pricing-sources.md) (why packs cost MSRP but their
   contents are valued at market)

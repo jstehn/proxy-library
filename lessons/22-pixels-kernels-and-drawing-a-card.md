@@ -594,7 +594,7 @@ throws on both halves.
 
 ## Further reading
 
-- [Design doc 22](../docs/design/22-playtest-proxies.md): the decisions and measurements.
+- [Design doc 22](../docs/design/archive/22-playtest-proxies.md): the decisions and measurements.
 - [Mana](https://github.com/andrewgioia/mana): the font and its stylesheet.
 - [Sobel operator](https://en.wikipedia.org/wiki/Sobel_operator) and
   [Sutherland–Hodgman](https://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm) on
