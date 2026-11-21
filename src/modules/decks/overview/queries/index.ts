@@ -4,5 +4,5 @@
 // a capability in this module calls with a plain `userId`, design doc 67 section 7B), and
 // `export *` would offer those too. `public.ts` holds what a visitor may call (`PublicReads`).
 export * from "./reads";
-export { deckForViewer, deckComments, sharedDecks } from "@/modules/decks/core";
+export { deckForViewer, deckComments, sharedDecks } from "@/modules/decks/sharing";
 export { tokenArtOptions } from "@/modules/decks/proxies";

@@ -23,7 +23,8 @@ export {
   type QuoteLine,
   type QuoteOptions,
 } from "./domain/shopping-list";
-export type { SingleHistoryRow, ProductForSale, StorePage } from "./queries/store";
+export type { ProductForSale, StorePage } from "./queries/store";
+export type { SingleHistoryRow } from "./queries/store-prices";
 export { packMsrp } from "./queries/pack-msrp";
 export * as storeQueries from "./queries";
 export {

@@ -1,9 +1,6 @@
-import type { ActivityServices } from "@/modules/activity";
 import type { PrintingId } from "@/modules/catalog";
 import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
-import type { Board, Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
-import type { CommentId, DeckComment, DeckForSharing, Visibility } from "../domain/sharing";
-import type { DeckSnapshot, SnapshotId } from "../domain/snapshots";
+import type { Deck, DeckId, DeckOrigin, Format, PrintingFacts } from "../domain/deck";
 
 // Ports: what the deck use cases need from outside (design doc 09, section 6).
 
@@ -34,14 +31,6 @@ export interface DeckRepository {
   delete(deckId: DeckId): Promise<void>;
   /** Deletes every deck a player has. Returns how many. */
   deleteAllOf(ownerId: UserId): Promise<number>;
-  /** How many saved snapshots this deck has (design doc 41). */
-  countSnapshots(deckId: DeckId): Promise<number>;
-  /** Saves a point-in-time snapshot of a deck and returns its new id. */
-  saveSnapshot(snapshot: Omit<DeckSnapshot, "id">): Promise<SnapshotId>;
-  /** One saved snapshot belonging to this deck, or null if absent. */
-  getSnapshot(deckId: DeckId, snapshotId: SnapshotId): Promise<DeckSnapshot | null>;
-  /** Deletes a snapshot belonging to this deck; returns false if it wasn't there. */
-  deleteSnapshot(deckId: DeckId, snapshotId: SnapshotId): Promise<boolean>;
 }
 
 /** A card named in a pasted list, found in the catalog. */
@@ -100,60 +89,3 @@ export interface CardLookup {
 export type DecksServices = { decks: DeckRepository; cards: CardLookup };
 
 export type DecksDependencies = { unitOfWork: UnitOfWork<DecksServices>; clock: Clock };
-
-/** Sharing decks and commenting on them (design doc 21, section 6). */
-export interface DeckSharingRepository {
-  /** The deck, locked until the transaction ends, or null if there's no such deck. */
-  lockDeck(deckId: DeckId): Promise<DeckForSharing | null>;
-  setVisibility(deckId: DeckId, visibility: Visibility, firstSharedAt: Date | null): Promise<void>;
-  setPublicToken(deckId: DeckId, publicToken: string | null): Promise<void>;
-  addComment(input: {
-    deckId: DeckId;
-    authorId: UserId;
-    body: string;
-    at: Date;
-  }): Promise<CommentId>;
-  /** The comment, locked, with its deck's owner, or null. */
-  lockComment(commentId: CommentId): Promise<(DeckComment & { deckOwnerId: UserId }) | null>;
-  markDeleted(commentId: CommentId, deletedBy: UserId, at: Date): Promise<void>;
-}
-
-export type DeckSharingServices = { deckSharing: DeckSharingRepository } & ActivityServices;
-
-export type DeckSharingDependencies = {
-  unitOfWork: UnitOfWork<DeckSharingServices>;
-  clock: Clock;
-  tokens: Readonly<{ newPublicToken(): string }>;
-};
-
-/** One change of a stored preview, resolved to the card's oracle id (design doc 40). */
-export type ChangeToSave = Readonly<{
-  oracleId: string;
-  board: Board;
-  quantity: number;
-  note?: string | null;
-  heading?: string | null;
-  tags?: readonly string[];
-  role?: string | null;
-  pinned?: boolean;
-}>;
-
-export type PreviewRecord = Readonly<{
-  id: string;
-  userId: UserId;
-  deckId: number;
-  /** The deck's fingerprint when the preview was made: applying needs the deck to match. */
-  fingerprint: string;
-  changes: readonly ChangeToSave[];
-  expiresAt: Date;
-}>;
-
-/** Dry-run changes kept until they're applied or expire (so they survive a restart). */
-export interface PreviewRepository {
-  store(record: PreviewRecord): Promise<void>;
-  /** The player's own preview, if it hasn't expired. */
-  find(id: string, userId: UserId, now: Date): Promise<PreviewRecord | null>;
-  delete(id: string): Promise<void>;
-  /** Removes every preview that expired before `now`. */
-  prune(now: Date): Promise<void>;
-}

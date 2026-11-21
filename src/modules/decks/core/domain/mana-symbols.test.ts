@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { colorsOfCost, costSymbols, splitSymbols, symbolArt } from "./mana-symbols";
+import { colorsOfCost, costSymbols, splitSymbols, symbolArt } from "./mana";
 
 // Every symbol Scryfall knows, recorded from GET /symbology.
 const symbology = JSON.parse(readFileSync("tests/fixtures/scryfall/symbology.json", "utf8")) as {

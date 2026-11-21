@@ -1,6 +1,5 @@
 import { ok, type Result, type UserId } from "@/shared/kernel";
-import type { Format } from "../domain/deck";
-import type { Visibility } from "../domain/sharing";
+import type { Format, Visibility } from "../domain/deck";
 
 /** One line of "my decks": what the deck list and the LLM tool both show. */
 export type DeckListing = Readonly<{

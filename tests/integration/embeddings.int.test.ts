@@ -9,6 +9,7 @@ import {
   compareDeckSnapshot,
   embedSimForCards,
   makeDecks,
+  makeDeckSnapshots,
   optimizeDeckForView,
   semanticSearchForDeck,
   similarCards,
@@ -20,6 +21,7 @@ beforeAll(loadFixtureCatalog);
 beforeEach(() => resetPlayers(["jack"]));
 
 const decks = makeDecks({ unitOfWork, clock });
+const snapshots = makeDeckSnapshots({ unitOfWork, clock });
 const jack = actor("jack");
 
 function unitVec(axis: number, secondAxis?: number, secondWeight = 0): number[] {
@@ -184,7 +186,10 @@ describe("card embeddings & budget replacements", () => {
     expect(audit?.findings.length).toBeGreaterThan(0);
 
     // 9. compareDeckSnapshot (with scoreDelta)
-    const snap = await decks.saveSnapshot(jack, { deckId: created.value, label: "Before diff" });
+    const snap = await snapshots.saveSnapshot(jack, {
+      deckId: created.value,
+      label: "Before diff",
+    });
     expect(snap.ok).toBe(true);
     if (snap.ok) {
       const diff = await compareDeckSnapshot(db, jack.userId, created.value, snap.value);

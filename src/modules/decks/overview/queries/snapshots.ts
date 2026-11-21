@@ -7,12 +7,17 @@ import {
   DeckId,
   FORMATS,
   type Format,
+} from "@/modules/decks/core/client";
+import {
   compareDeckStates,
+  lineToPreview,
+  loadCardsForPreview,
+  viewFingerprint,
+  SnapshotId,
   type ChangePreview,
   type PreviewLine,
-  SnapshotId,
   type SnapshotSummary,
-} from "@/modules/decks/core/client";
+} from "@/modules/decks/changes";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
@@ -24,14 +29,9 @@ import {
   type OptimizerCard,
 } from "@/modules/decks/scoring/client";
 import type { EdhrecSignal, DeckLine } from "@/modules/decks/core/client";
-import { decks, deckSnapshots } from "@/modules/decks/core/infrastructure/schema";
-import {
-  deckView,
-  loadEdhrecSignals,
-  lineToPreview,
-  loadCardsForPreview,
-  viewFingerprint,
-} from "@/modules/decks/core";
+import { decks } from "@/modules/decks/core/infrastructure/schema";
+import { deckSnapshots } from "@/modules/decks/changes/infrastructure/schema";
+import { deckView, loadEdhrecSignals } from "@/modules/decks/core";
 
 // Read models for deck snapshots and before/after comparisons (design doc 41).
 

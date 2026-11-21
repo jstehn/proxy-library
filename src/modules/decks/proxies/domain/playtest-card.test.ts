@@ -12,12 +12,9 @@ import {
   STRIPE_TINTS,
   stripeColors,
   stripes,
-  TEXT_SIZES,
-  TEXT_SYMBOL_RATIO,
-  textBoxParagraphs,
-  type Measure,
   type PlaytestDrawing,
 } from "./playtest-card";
+import { TEXT_SIZES, TEXT_SYMBOL_RATIO, textBoxParagraphs, type Measure } from "./playtest-text";
 import { CARD_HEIGHT, CARD_WIDTH, type Box, type Point } from "./proxy-sheet";
 
 /** Every character half as wide as the text is tall: close enough to Helvetica for layout tests. */

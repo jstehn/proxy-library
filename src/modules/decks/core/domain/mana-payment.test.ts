@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPay, firstUnpaidPip, parseCost } from "./mana-payment";
+import { canPay, firstUnpaidPip, parseCost } from "./mana";
 
 describe("parseCost", () => {
   it("reads generic mana, single colours, hybrid, two-brid and Phyrexian symbols", () => {

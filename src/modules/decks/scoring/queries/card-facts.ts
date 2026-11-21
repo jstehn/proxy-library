@@ -1,4 +1,4 @@
-import type { OwnedCardCheck } from "@/modules/decks/core/client";
+import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";

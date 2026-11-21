@@ -13,13 +13,13 @@ import type { Format } from "@/modules/decks/core/client";
 import {
   edhrecLogLift,
   emptyRatingProfile,
-  RATING_WEIGHTS,
   rateCard,
   type CardRating,
   type RatingCandidate,
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
+import { RATING_WEIGHTS } from "./rating-weights";
 import { deckSignalProfile } from "./signals";
 
 // Deck suggestions (design doc 20, section 3.2): what a deck is about, and how well a card fits

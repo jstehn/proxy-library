@@ -14,7 +14,7 @@ import {
   type EntryMove,
 } from "../domain/deck";
 import { checkHeading, tidyHeadings } from "../domain/headings";
-import { checkNote } from "../domain/notes";
+import { checkNote } from "../domain/headings";
 import type {
   CardNotFound,
   CommanderMove,

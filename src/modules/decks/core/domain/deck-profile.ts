@@ -1,5 +1,5 @@
 import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
-import { parseCost } from "./mana-payment";
+import { parseCost } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [
   "ramp",

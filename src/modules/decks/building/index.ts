@@ -1,5 +1,7 @@
 // What the other areas and the module root use of decks/building (ADR 0029).
 export * from "./client";
+export { makeDeckPlanEdits } from "./application/deck-plan-edits";
+export { makeDeckSearch } from "./application/deck-search";
 export { makeDeckManaPlan } from "./application/deck-mana-plan";
 export { makeFindReplacements, type SimilarCards } from "./application/find-replacements";
 export {
@@ -21,7 +23,6 @@ export {
   type BrowseSource,
 } from "./queries/browse";
 export { draftForDeck } from "./queries/build-from-collection";
-export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./queries/candidate-pool";
 export { commanderDetails, commandersICanBuild, type CommanderSearch } from "./queries/commanders";
 export { embedSimForCards } from "./queries/embeddings";
 export { manaBasePlan } from "./queries/mana-base";

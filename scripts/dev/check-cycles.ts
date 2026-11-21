@@ -117,7 +117,7 @@ const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
 
 /** The areas of the split modules (ADR 0029, 0030): folders of src/modules/<module>, each one node. */
 const AREAS: Readonly<Record<string, readonly string[]>> = {
-  decks: ["core", "scoring", "building", "play", "proxies", "overview"],
+  decks: ["core", "scoring", "building", "play", "proxies", "sharing", "changes", "overview"],
   catalog: ["cards", "rules", "outside"],
   collection: ["game", "real", "copies"],
   research: ["reddit", "youtube"],

@@ -424,3 +424,24 @@ function chosenVersion(current: readonly DeckEntry[], line: MatchedLine): DeckEn
 export function becomesADeck(deckType: string): boolean {
   return !/land pack/i.test(deckType);
 }
+
+// Who can see a deck (design doc 21, section 3). The sharing area adds comments and public links.
+
+export const VISIBILITIES = ["private", "shared"] as const;
+/** Who can see a deck: only its owner, or every signed-in player. */
+export type Visibility = (typeof VISIBILITIES)[number];
+
+const PUBLIC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
+
+/** Whether a candidate URL token has the shape of a generated public deck link token. */
+export function isValidPublicToken(raw: string): boolean {
+  return PUBLIC_TOKEN_PATTERN.test(raw);
+}
+
+/** Its owner sees a deck; everyone sees a shared one (invariant 1). */
+export function canViewDeck(
+  viewer: UserId,
+  deck: Readonly<{ ownerId: UserId; visibility: Visibility }>,
+): boolean {
+  return deck.ownerId === viewer || deck.visibility === "shared";
+}

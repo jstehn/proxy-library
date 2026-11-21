@@ -3,7 +3,7 @@ import type { EdhrecCommanderData, SpellbookCombosResult } from "@/modules/catal
 import { UserId } from "@/shared/kernel";
 import { fixedClock } from "@/shared/kernel/testing";
 import type { DeckPlan, DeckView } from "@/modules/decks/core/client";
-import { makeDeckCombos, makeEdhrecResearch } from "@/modules/decks/core";
+import { makeDeckCombos, makeEdhrecResearch } from "@/modules/decks/scoring";
 import { makeDrawSample } from "@/modules/decks/play";
 
 const userId = UserId.of("1");

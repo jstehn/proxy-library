@@ -1,7 +1,7 @@
 import { isReservedTitle } from "@/shared/card-search";
 import { err, ok, type Result } from "@/shared/kernel";
 import type { Deck } from "./deck";
-import type { HeadingInvalid, HeadingNotFound, HeadingOrderInvalid } from "./errors";
+import type { HeadingInvalid, HeadingNotFound, HeadingOrderInvalid, NoteInvalid } from "./errors";
 
 // A deck's own headings (design doc 34): "Ramp", "Win conditions". A card line has at most one;
 // they group the main deck when the deck's grouping is "custom". Pure.
@@ -86,4 +86,20 @@ export function headingMoved(
   const moved = [...order];
   [moved[index], moved[other]] = [moved[other], moved[index]];
   return moved;
+}
+
+// Short per-line notes explaining why a card is in the deck (design doc 41). Pure.
+
+export const MAX_NOTE_LENGTH = 200;
+
+/**
+ * Collapses whitespace to single spaces and trims; rejects empty text or text past `MAX_NOTE_LENGTH`.
+ * Clearing a note passes `null` at the application boundary (or `""` in UI/MCP).
+ */
+export function checkNote(raw: string): Result<string, NoteInvalid> {
+  const note = raw.trim().replace(/\s+/g, " ");
+  if (note.length === 0 || note.length > MAX_NOTE_LENGTH) {
+    return err({ kind: "NoteInvalid", maximum: MAX_NOTE_LENGTH });
+  }
+  return ok(note);
 }

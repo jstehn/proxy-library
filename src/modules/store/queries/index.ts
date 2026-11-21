@@ -3,3 +3,4 @@
 // `pack-msrp.ts` is a helper for the drafts module, so it is not listed.
 export * from "./shopping-list";
 export * from "./store";
+export * from "./store-prices";

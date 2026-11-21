@@ -1,16 +1,17 @@
 import pg from "pg";
 import { type Tag, type Theme } from "@/shared/kernel";
 import type { Bracket } from "@/modules/decks/core/domain/brackets";
+import { emptyRatingProfile, ratingFeatureVector } from "@/modules/decks/scoring/domain/rate";
 import {
-  emptyRatingProfile,
   fitLogisticWeights,
-  powerTierForBracket,
-  ratingFeatureVector,
-  weightsForBracket,
   type CalibrationSample,
+} from "@/modules/decks/scoring/domain/calibrate";
+import {
+  powerTierForBracket,
+  weightsForBracket,
   type PowerTier,
   type RatingWeights,
-} from "@/modules/decks/scoring/domain/rate";
+} from "@/modules/decks/scoring/domain/rating-weights";
 import { isLand, type ProfileLine } from "@/modules/decks/core/domain/stats";
 import { deckProfile, type CandidateCard } from "@/modules/decks/scoring/domain/suggest";
 

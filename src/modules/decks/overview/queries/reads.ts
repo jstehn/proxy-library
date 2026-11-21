@@ -18,10 +18,10 @@ import {
   decksUsing as decksUsingPrintings,
   deckView as viewOfOwnDeck,
   otherDecksHolding as otherDecksOf,
-  deckListPreview,
   cardPrintings,
-  cardsToGetFor,
 } from "@/modules/decks/core";
+import { deckListPreview } from "@/modules/decks/changes";
+import { cardsToGetFor } from "@/modules/decks/sharing";
 import { optimizeDeckForView, type OptimizeDeckPool } from "./optimize";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";
 

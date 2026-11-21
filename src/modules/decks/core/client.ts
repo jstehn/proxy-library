@@ -17,6 +17,7 @@ export {
   type BracketLine,
   type BracketRule,
   type BracketRuleReason,
+  type BracketSource,
   type BracketWarning,
   type DeckCombo,
 } from "./domain/brackets";
@@ -24,18 +25,26 @@ export {
   DeckId,
   FORMATS,
   GROUPINGS,
+  MAX_LIST_LINES,
+  MAX_QUANTITY,
   MAX_ROLE_LENGTH,
+  VISIBILITIES,
+  canViewDeck,
+  isValidPublicToken,
   becomesADeck,
   tidyRole,
   type Deck,
+  type DeckEntry,
   type Format,
   type Grouping,
+  type Visibility,
 } from "./domain/deck";
 export {
   EMPTY_DECK_PROFILE,
   commanderOnlyProfile,
   effectiveManaValue,
   isAvoidCard,
+  declaredComboFor,
   isKeyCard,
   resolveDeckProfileTargets,
   summarizeDeckProfile,
@@ -47,7 +56,7 @@ export {
   listAndFingerprint,
   problemsOfLines,
   type BracketReport,
-} from "./domain/deck-reads";
+} from "./domain/deck-view";
 export type {
   DeckLine,
   DeckSource,
@@ -57,14 +66,24 @@ export type {
 } from "./domain/deck-view";
 export type {
   CardNotFound,
+  CommentInvalid,
+  CommentNotFound,
+  DeckChanged,
   DeckNotFound,
+  HeadingInvalid,
+  ListProblems,
+  ListTooLong,
+  NotAllowed,
+  NoteInvalid,
   NotThatToken,
+  SnapshotLabelInvalid,
+  SnapshotNotFound,
+  TooManySnapshots,
   TokenNotInDeck,
   TooManyDecks,
 } from "./domain/errors";
 export { FORMAT_RULES, formatRules } from "./domain/format-rules";
-export { copiesToTake } from "./domain/free-copies";
-export { MAX_HEADINGS, MAX_HEADING_LENGTH, headingMoved } from "./domain/headings";
+export { MAX_HEADINGS, MAX_HEADING_LENGTH, headingMoved, tidyHeadings } from "./domain/headings";
 export {
   EXPORTERS,
   exportWithHeadings,
@@ -79,17 +98,9 @@ export {
   parseCost,
   type ManaSource as PaymentSource,
   type Pip,
-} from "./domain/mana-payment";
-export {
-  colorsOfCost,
-  costSymbols,
-  splitSymbols,
-  symbolArt,
-  type SymbolArt,
-} from "./domain/mana-symbols";
-export { MAX_NOTE_LENGTH, checkNote } from "./domain/notes";
-export type { OwnedCardCheck } from "./domain/owned-card-check";
-export { compareDeckStates, type ChangePreview, type PreviewLine } from "./domain/preview";
+} from "./domain/mana";
+export { colorsOfCost, costSymbols, splitSymbols, symbolArt, type SymbolArt } from "./domain/mana";
+export { MAX_NOTE_LENGTH, checkNote } from "./domain/headings";
 export {
   canBeCommander,
   copyLimitFor,
@@ -97,23 +108,10 @@ export {
   invalidCommanders,
   legalFormatsForCards,
   pairProblem,
+  shortCount,
   type CardRules,
   type DeckProblem,
 } from "./domain/rules";
-export {
-  CommentId,
-  MAX_COMMENT_LENGTH,
-  VISIBILITIES,
-  canViewDeck,
-  isValidPublicToken,
-} from "./domain/sharing";
-export {
-  MAX_SNAPSHOTS_PER_DECK,
-  MAX_SNAPSHOT_LABEL_LENGTH,
-  SnapshotId,
-  checkSnapshotLabel,
-  type SnapshotSummary,
-} from "./domain/snapshots";
 export {
   TARGETED_TAGS,
   TYPE_ORDER,
