@@ -231,9 +231,14 @@ to UI. No business rules live in `app/`.
 
 ## Anatomy of a read request
 
-Server Component → `collection/queries.getCollectionPage(db, userId, filters)` → one SQL query →
-plain serializable view objects → render. Reads skip repositories and use cases on purpose
-(ADR [0006](../adr/0006-cqrs-lite-reads.md)).
+A page calls `readPage()` (the session and the actor), then `reads.<module>.<query>(actor, ...)`:
+`reads` is each module's query functions with the database filled in (`src/server/composition/reads.ts`).
+One SQL query returns plain serializable view objects, and the page renders them. A read that
+shows one player's data takes the `Actor` and filters by it in SQL. Anything with rules, or any
+write, goes through a **capability** instead (`capabilities.decks.listDecks(actor, input)`),
+and the same capability serves the page, a server action and an LLM tool binding: those are the
+adapters, and each only parses input, calls, and presents (ADR 0026). Reads skip repositories and
+use cases on purpose (ADR [0006](../adr/0006-cqrs-lite-reads.md)).
 
 ## Where state and nondeterminism live
 

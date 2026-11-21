@@ -14,16 +14,16 @@ export function stripProvenance(value: unknown): Record<string, unknown> {
 export function compactMoneyFields(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(compactMoneyFields);
   if (typeof value !== "object" || value === null) return value;
-  const obj = value as Record<string, unknown>;
+  const record = value as Record<string, unknown>;
   if (
-    Object.keys(obj).length === 2 &&
-    typeof obj.cents === "number" &&
-    typeof obj.text === "string"
+    Object.keys(record).length === 2 &&
+    typeof record.cents === "number" &&
+    typeof record.text === "string"
   ) {
-    return obj.cents;
+    return record.cents;
   }
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
+  for (const [k, v] of Object.entries(record)) {
     if (k === "provenance") continue;
     out[k] = compactMoneyFields(v);
   }

@@ -678,6 +678,12 @@ export default defineConfig([
     rules: { "no-restricted-syntax": ["error", ...BASIC_WORDS, ...MONEY_TEXT, ...PRICE_TABLE] },
   },
 
+  // Full words, no abbreviations (refactor P21): `ctx`, `res`, `obj`, `val` and `tl` say too little.
+  {
+    files: ["src/**/*.{ts,tsx}", "worker/**/*.ts"],
+    ignores: [...TESTS, "**/*.d.ts"],
+    rules: { "id-denylist": ["error", "ctx", "res", "obj", "val", "tl"] },
+  },
   // The ratchet (ADR 0026): no `getContainer` in src/app, except the files listed above.
   {
     files: ["src/app/**/*.{ts,tsx}"],

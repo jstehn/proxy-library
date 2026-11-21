@@ -17,9 +17,9 @@ function hasFaceUp(
   seatNumber: number,
   card: CardRef,
   kind: "peekPack" | "watchPlayer",
-  ctx: StepContext,
+  context: StepContext,
 ) {
-  return faceUpWith(draft, seatNumber, kind, ctx).some((each) => sameCard(each, card));
+  return faceUpWith(draft, seatNumber, kind, context).some((each) => sameCard(each, card));
 }
 
 const turnFaceDown = (draft: Draft, ref: CardRef) =>
@@ -53,12 +53,12 @@ export function peekAtPack(
   seatNumber: number,
   sneak: CardRef,
   packNumber: number,
-  ctx: StepContext,
+  context: StepContext,
 ): Result<Draft, DraftNotRunning | AbilityUnavailable> {
   if (draft.status !== "drafting") return err({ kind: "DraftNotRunning" });
-  if (!hasFaceUp(draft, seatNumber, sneak, "peekPack", ctx))
+  if (!hasFaceUp(draft, seatNumber, sneak, "peekPack", context))
     return err(unavailable("no such face-up Whispergear Sneak"));
-  if (faceUpWith(draft, seatNumber, "random", ctx).length > 0) {
+  if (faceUpWith(draft, seatNumber, "random", context).length > 0) {
     return err(unavailable("your face-up Archdemon of Paliano says you can't look at packs"));
   }
   if (!sneakablePacks(draft).includes(packNumber))
@@ -66,7 +66,7 @@ export function peekAtPack(
   const pack = draft.packs.find((each) => each.packNumber === packNumber);
   if (pack === undefined) return err(unavailable("no such pack"));
   const looked = reveal(turnFaceDown(draft, sneak), {
-    at: ctx.now,
+    at: context.now,
     audience: seatNumber,
     seat: seatNumber,
     kind: "peeked",
@@ -84,10 +84,10 @@ export function watchPlayer(
   seatNumber: number,
   informant: CardRef,
   targetSeat: number,
-  ctx: StepContext,
+  context: StepContext,
 ): Result<Draft, DraftNotRunning | AbilityUnavailable> {
   if (draft.status !== "drafting") return err({ kind: "DraftNotRunning" });
-  if (!hasFaceUp(draft, seatNumber, informant, "watchPlayer", ctx)) {
+  if (!hasFaceUp(draft, seatNumber, informant, "watchPlayer", context)) {
     return err(unavailable("no such face-up Illusionary Informant"));
   }
   if (targetSeat === seatNumber || !draft.seats.some((seat) => seat.seatNumber === targetSeat)) {

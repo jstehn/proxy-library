@@ -17,17 +17,17 @@ function inPool(draft: Draft, seatNumber: number, ref: CardRef): boolean {
 }
 
 /** Moves on to the next broker, or finishes the draft (pools are final, CR 905.1d). */
-function nextDeal(draft: Draft, ctx: StepContext): Draft {
+function nextDeal(draft: Draft, context: StepContext): Draft {
   const [next, ...waiting] = draft.deals?.waiting ?? [];
   if (next === undefined) {
     return {
       ...draft,
       status: "finished",
-      finishedAt: ctx.now,
+      finishedAt: context.now,
       deals: { current: null, waiting: [] },
     };
   }
-  return { ...draft, deals: { current: dealDeadline(draft, next, ctx.now), waiting } };
+  return { ...draft, deals: { current: dealDeadline(draft, next, context.now), waiting } };
 }
 
 function withDeal(draft: Draft, deal: Deal): Draft {
@@ -44,7 +44,7 @@ export function revealForDeal(
   draft: Draft,
   seatNumber: number,
   card: CardRef | null,
-  ctx: StepContext,
+  context: StepContext,
 ): Result<Draft, NothingToAnswer | AbilityUnavailable> {
   const deal = draft.deals?.current;
   if (
@@ -55,12 +55,12 @@ export function revealForDeal(
   ) {
     return err(nothing);
   }
-  if (card === null) return ok({ ...nextDeal(draft, ctx), version: draft.version + 1 });
+  if (card === null) return ok({ ...nextDeal(draft, context), version: draft.version + 1 });
   if (!inPool(draft, seatNumber, card)) {
     return err({ kind: "AbilityUnavailable", reason: "that card isn't in your pool" });
   }
   const revealed = reveal(draft, {
-    at: ctx.now,
+    at: context.now,
     audience: null,
     seat: seatNumber,
     kind: "dealt",
@@ -70,7 +70,7 @@ export function revealForDeal(
   return ok({
     ...withDeal(
       revealed,
-      dealDeadline(draft, { ...deal, stage: "offers", revealed: card, offers: [] }, ctx.now),
+      dealDeadline(draft, { ...deal, stage: "offers", revealed: card, offers: [] }, context.now),
     ),
     version: draft.version + 1,
   });
@@ -88,7 +88,7 @@ export function offerForDeal(
   draft: Draft,
   seatNumber: number,
   card: CardRef | null,
-  ctx: StepContext,
+  context: StepContext,
 ): Result<Draft, NothingToAnswer | AbilityUnavailable> {
   const deal = draft.deals?.current;
   if (
@@ -105,20 +105,20 @@ export function offerForDeal(
   }
   const offers = [...deal.offers, { seat: seatNumber, card }];
   return ok({
-    ...closeOffersIfDone(withDeal(draft, { ...deal, offers }), ctx),
+    ...closeOffersIfDone(withDeal(draft, { ...deal, offers }), context),
     version: draft.version + 1,
   });
 }
 
 /** Once everyone has offered, the offers are revealed together and the broker chooses. */
-function closeOffersIfDone(draft: Draft, ctx: StepContext): Draft {
+function closeOffersIfDone(draft: Draft, context: StepContext): Draft {
   const deal = draft.deals?.current;
   if (deal == null || deal.offers.length < offerers(draft, deal).length) return draft;
   let next = draft;
   for (const offer of deal.offers) {
     if (offer.card === null) continue;
     next = reveal(next, {
-      at: ctx.now,
+      at: context.now,
       audience: null,
       seat: offer.seat,
       kind: "dealt",
@@ -128,8 +128,8 @@ function closeOffersIfDone(draft: Draft, ctx: StepContext): Draft {
   }
   const anyOffer = deal.offers.some((offer) => offer.card !== null);
   return anyOffer
-    ? withDeal(next, dealDeadline(draft, { ...deal, stage: "accept" }, ctx.now))
-    : nextDeal(next, ctx);
+    ? withDeal(next, dealDeadline(draft, { ...deal, stage: "accept" }, context.now))
+    : nextDeal(next, context);
 }
 
 /**
@@ -139,7 +139,7 @@ export function acceptDeal(
   draft: Draft,
   seatNumber: number,
   offerSeat: number | null,
-  ctx: StepContext,
+  context: StepContext,
 ): Result<Draft, NothingToAnswer | AbilityUnavailable> {
   const deal = draft.deals?.current;
   if (
@@ -150,7 +150,7 @@ export function acceptDeal(
   ) {
     return err(nothing);
   }
-  if (offerSeat === null) return ok({ ...nextDeal(draft, ctx), version: draft.version + 1 });
+  if (offerSeat === null) return ok({ ...nextDeal(draft, context), version: draft.version + 1 });
   const offer = deal.offers.find((each) => each.seat === offerSeat && each.card !== null);
   if (offer?.card == null || deal.revealed === null) {
     return err({ kind: "AbilityUnavailable", reason: "no such offer" });
@@ -161,23 +161,23 @@ export function acceptDeal(
     );
   let next = swapTo(offerSeat)(deal.revealed)(draft);
   next = swapTo(seatNumber)(offer.card)(next);
-  return ok({ ...nextDeal(next, ctx), version: draft.version + 1 });
+  return ok({ ...nextDeal(next, context), version: draft.version + 1 });
 }
 
 /** What a bot, or a player who ran out of time, does at a deal step: nothing. */
-export function passOnDeal(draft: Draft, seatNumber: number, ctx: StepContext): Draft | null {
+export function passOnDeal(draft: Draft, seatNumber: number, context: StepContext): Draft | null {
   const deal = draft.deals?.current;
   if (draft.status !== "dealing" || deal == null) return null;
   if (deal.stage === "reveal" && deal.brokerSeat === seatNumber) {
-    const answered = revealForDeal(draft, seatNumber, null, ctx);
+    const answered = revealForDeal(draft, seatNumber, null, context);
     return answered.ok ? answered.value : null;
   }
   if (deal.stage === "offers" && !deal.offers.some((offer) => offer.seat === seatNumber)) {
-    const answered = offerForDeal(draft, seatNumber, null, ctx);
+    const answered = offerForDeal(draft, seatNumber, null, context);
     return answered.ok ? answered.value : null;
   }
   if (deal.stage === "accept" && deal.brokerSeat === seatNumber) {
-    const answered = acceptDeal(draft, seatNumber, null, ctx);
+    const answered = acceptDeal(draft, seatNumber, null, context);
     return answered.ok ? answered.value : null;
   }
   return null;
@@ -196,12 +196,12 @@ export function dealWaitsFor(draft: Draft): number[] {
 }
 
 /** The host ends the deals (timer off, someone has gone): pools are final as they are. */
-export function endDeals(draft: Draft, ctx: StepContext): Draft {
+export function endDeals(draft: Draft, context: StepContext): Draft {
   if (draft.status !== "dealing") return draft;
   return {
     ...draft,
     status: "finished",
-    finishedAt: ctx.now,
+    finishedAt: context.now,
     deals: { current: null, waiting: [] },
     version: draft.version + 1,
   };

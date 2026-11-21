@@ -28,7 +28,7 @@ import {
 import { actFor, runTimers } from "./timers";
 import { visibleTo } from "./visibility";
 
-const ctx = contextAt();
+const context = contextAt();
 const names = (cards: readonly DraftCard[]) => cards.map((card) => nameOf(card.printingId));
 const frontNames = (draft: Draft, seat: number) =>
   names(currentPack(draft, seat)?.cards.filter((card) => card.pick === null) ?? []);
@@ -39,7 +39,7 @@ function pick(
   seat: number,
   name: string,
   choices: StepChoices = {},
-  at: StepContext = ctx,
+  at: StepContext = context,
 ): Draft {
   const pack = currentPack(draft, seat);
   const card = pack?.cards.find((each) => each.pick === null && nameOf(each.printingId) === name);
@@ -142,18 +142,18 @@ describe("Paliano, the High City and Regicide: right neighbor, you, then left ne
       draftStep(
         draft,
         { seatNumber: 0, packNumber: front?.packNumber ?? -1, slot: 0, auto: false },
-        ctx,
+        context,
       ),
     ).toEqual({ ok: false, error: { kind: "ChooseColorsFirst" } });
     draft = pick(draft, 2, "Bear"); // the left neighbor isn't held up yet
 
     const chose = (seat: number, color: "W" | "U" | "B") => {
-      const done = chooseColor(draft, seat, color, ctx);
+      const done = chooseColor(draft, seat, color, context);
       if (!done.ok) throw new Error(done.error.reason);
       draft = done.value;
     };
     chose(0, "W");
-    expect(chooseColor(draft, 1, "W", ctx).ok).toBe(false); // the colors must differ
+    expect(chooseColor(draft, 1, "W", context).ok).toBe(false); // the colors must differ
     chose(1, "U");
     chose(2, "B");
     expect(notes(draft, drafted(draft, 1, "Paliano, the High City"))).toEqual([
@@ -172,7 +172,7 @@ describe("Paliano, the High City and Regicide: right neighbor, you, then left ne
     }
     draft = pick(draft, 0, "Regicide");
     const chose = (seat: number, color: "R" | "G" | "B") => {
-      const done = chooseColor(draft, seat, color, ctx);
+      const done = chooseColor(draft, seat, color, context);
       if (!done.ok) throw new Error(done.error.reason);
       draft = done.value;
     };
@@ -301,7 +301,7 @@ describe("extra cards from one pack", () => {
           auto: false,
           choices: { librarians: 1 },
         },
-        ctx,
+        context,
       ),
     ).toMatchObject({ ok: false, error: { kind: "AbilityUnavailable" } });
     draft = pick(draft, 0, "Bear");
@@ -392,7 +392,7 @@ describe("taking cards out of the draft", () => {
           auto: false,
           choices: { remove: "faceUp" },
         },
-        ctx,
+        context,
       ),
     ).toMatchObject({ ok: false, error: { kind: "AbilityUnavailable" } });
     draft = pick(pick(draft, 0, "Animus of Predation"), 1, "Bear");
@@ -430,7 +430,7 @@ describe("noting a later card", () => {
           auto: false,
           choices: { noteWith: [drafted(other, 0, "Noble Banneret")] },
         },
-        ctx,
+        context,
       ),
     ).toMatchObject({ ok: false, error: { kind: "AbilityUnavailable" } });
     other = pick(other, 0, "Bolt");
@@ -465,13 +465,13 @@ describe("Archdemon of Paliano", () => {
       const pointed = draftStep(
         state,
         { seatNumber: 0, packNumber: front?.packNumber ?? -1, slot: 0, auto: false },
-        ctx,
+        context,
       );
       expect(pointed).toEqual({ ok: false, error: { kind: "MustDraftAtRandom" } });
       const drawn = draftStep(
         state,
         { seatNumber: 0, packNumber: front?.packNumber ?? -1, slot: "random", auto: false },
-        ctx,
+        context,
       );
       if (!drawn.ok) throw new Error(drawn.error.kind);
       expect(seatAt(drawn.value.draft, 0).abilities.awaitingChoices).toEqual(drawn.value.card);
@@ -480,13 +480,13 @@ describe("Archdemon of Paliano", () => {
         draftStep(
           drawn.value.draft,
           { seatNumber: 0, packNumber: 0, slot: "random", auto: false },
-          ctx,
+          context,
         ),
       ).toEqual({
         ok: false,
         error: { kind: "AwaitingChoices" },
       });
-      const decided = decideOnCard(drawn.value.draft, 0, {}, ctx);
+      const decided = decideOnCard(drawn.value.draft, 0, {}, context);
       if (!decided.ok) throw new Error(decided.error.kind);
       return decided.value;
     };
@@ -541,11 +541,11 @@ describe("any time during the draft", () => {
     expect(sneakablePacks(draft)).not.toContain(theirs); // p1 is looking at it
     const unopened =
       draft.packs.find((pack) => pack.round === 2 && pack.openedBySeat === 0)?.packNumber ?? -1;
-    const peeked = peekAtPack(draft, 0, sneak, unopened, ctx);
+    const peeked = peekAtPack(draft, 0, sneak, unopened, context);
     if (!peeked.ok) throw new Error(peeked.error.kind);
     expect(revealsFor(peeked.value, 0)).toEqual([{ kind: "peeked", cards: ["Elf", "Bolt"] }]);
     expect(revealsFor(peeked.value, 1)).toEqual([]);
-    expect(peekAtPack(peeked.value, 0, sneak, unopened, ctx).ok).toBe(false); // face down now
+    expect(peekAtPack(peeked.value, 0, sneak, unopened, context).ok).toBe(false); // face down now
   });
 
   it("Illusionary Informant shows you the next card a chosen player drafts", () => {
@@ -555,7 +555,7 @@ describe("any time during the draft", () => {
       [["Bolt", "Bear"], ["Bear"], ["Bear"]],
     ]);
     draft = pick(draft, 0, "Illusionary Informant");
-    const watched = watchPlayer(draft, 0, drafted(draft, 0, "Illusionary Informant"), 1, ctx);
+    const watched = watchPlayer(draft, 0, drafted(draft, 0, "Illusionary Informant"), 1, context);
     if (!watched.ok) throw new Error(watched.error.kind);
     draft = pick(watched.value, 2, "Bolt");
     draft = pick(draft, 1, "Elf");
@@ -582,11 +582,11 @@ describe("Deal Broker, right after the draft", () => {
       return result.value;
     };
     const bear = drafted(draft, 0, "Bear");
-    draft = answer(revealForDeal(draft, 0, bear, ctx));
-    expect(offerForDeal(draft, 1, drafted(draft, 0, "Bear", 1), ctx).ok).toBe(false); // not theirs
-    draft = answer(offerForDeal(draft, 1, drafted(draft, 1, "Bolt"), ctx));
+    draft = answer(revealForDeal(draft, 0, bear, context));
+    expect(offerForDeal(draft, 1, drafted(draft, 0, "Bear", 1), context).ok).toBe(false); // not theirs
+    draft = answer(offerForDeal(draft, 1, drafted(draft, 1, "Bolt"), context));
     expect(draft.deals?.current?.stage).toBe("accept");
-    draft = answer(acceptDeal(draft, 0, 1, ctx));
+    draft = answer(acceptDeal(draft, 0, 1, context));
     expect(draft.status).toBe("finished");
     expect(names(poolOf(draft, 0)).sort()).toEqual(["Bear", "Bolt", "Deal Broker"]);
     expect(names(poolOf(draft, 1)).sort()).toEqual(["Bear", "Bear", "Elf"]);
@@ -700,10 +700,10 @@ describe("edge cases from the rulings", () => {
     draft = pick(pick(draft, 0, "Cogwork Librarian"), 1, "Bear");
     // One card left in front of p0: drafting it leaves nothing for an extra card.
     expect(frontNames(draft, 0)).toEqual(["Bear"]);
-    expect(visibleTo(draft, 0, ctx).you?.options.librarians).toBe(0);
+    expect(visibleTo(draft, 0, context).you?.options.librarians).toBe(0);
     draft = pick(pick(draft, 0, "Bear"), 1, "Bear");
     expect(frontNames(draft, 0)).toEqual(["Elf", "Bolt"]);
-    expect(visibleTo(draft, 0, ctx).you?.options.librarians).toBe(1);
+    expect(visibleTo(draft, 0, context).you?.options.librarians).toBe(1);
   });
 
   it("a face-up Archdemon of Paliano stops you looking at packs: no Sneak, no peek at packs passed on", () => {
@@ -716,8 +716,8 @@ describe("edge cases from the rulings", () => {
     draft = pick(draft, 0, "Leovold's Operative"); // from p1's pack
     draft = pick(draft, 1, "Archdemon of Paliano"); // p1 now drafts blind
     const sneak = drafted(draft, 0, "Whispergear Sneak");
-    expect(visibleTo(draft, 0, ctx).you?.options.sneak).not.toBeNull(); // p0 has no Archdemon
-    expect(visibleTo(draft, 1, ctx).you?.pack?.cards).toBeNull();
+    expect(visibleTo(draft, 0, context).you?.options.sneak).not.toBeNull(); // p0 has no Archdemon
+    expect(visibleTo(draft, 1, context).you?.pack?.cards).toBeNull();
     // Give p1 a skip: the pack they pass on is not shown to them.
     draft = withAbilities(draft, 1, (abilities) => ({ ...abilities, skipPacks: 1 }));
     draft = pick(draft, 0, "Bear"); // p0 passes 1 card to p1 … who must pass it on
@@ -728,7 +728,7 @@ describe("edge cases from the rulings", () => {
       each.pick === null ? each : { ...each, pick: { ...each.pick, seat: 0, poolSeat: 0 } },
     );
     const unopened = blind.packs.find((pack) => pack.round === 2)?.packNumber ?? -1;
-    expect(peekAtPack(blind, 0, sneak, unopened, ctx)).toMatchObject({
+    expect(peekAtPack(blind, 0, sneak, unopened, context)).toMatchObject({
       ok: false,
       error: { kind: "AbilityUnavailable" },
     });

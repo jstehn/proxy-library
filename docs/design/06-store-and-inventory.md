@@ -2,7 +2,7 @@
 
 - **Phase:** 6
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
-  [decisions-to-review.md](../decisions-to-review.md))
+  [decisions-to-review.md](../archive/decisions-to-review.md))
 - **Reviewed by the user** (2026-10-06, docs/decisions-to-review.md): approved by the user; the self-approved status above is the build-time record
 - **Related ADRs:** 0004 (ledger), 0005 (unit of work), 0008 (seeded randomness), 0011
   (printing × finish), 0013 (store ledger), 0014 (MSRP)

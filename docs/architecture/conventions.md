@@ -28,6 +28,37 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   More than that usually means a second job: give it its own folder. The one exception is
   `src/app/_llm-tools/bindings/`, one file per LLM tool named after it, so the folder reads as the
   tool list.
+- **Files stay under about 500 lines** (the benchmark; `pnpm sizes` lists the biggest and the
+  production-line ratchet in `docs/refactor/sizes-baseline.txt` only goes down). A longer file needs a
+  reason in its header comment.
+- **Adapters stay thin** (ADR 0026). A server action, a page, an LLM tool binding, an API route and
+  a worker command each parse input, call a capability or a `reads` query, and present the result.
+  They hold no rules, don't call each other, and import a module only through `index.ts` or
+  `client.ts`; `src/app` never imports `@/shared/db` or a module's `queries/` (lint).
+
+## Where does this live?
+
+One job, one home. Look here before writing a second copy; a clone check in `pnpm check` catches
+some of them.
+
+| Job                                         | Home                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| Today's price of a printing (SQL)           | `latestPrice`, `cheapestPrice` in `src/shared/db/prices.ts`                      |
+| Cards you could add: owned and for sale     | `decks/building/queries/candidate-pool.ts`                                       |
+| Opening hands, mulligans, mana payment      | `decks/play/domain/opening-hand/`, `decks/core/domain/mana.ts`                   |
+| "Can I cast X by turn Y?"                   | `decks/play/domain/cast-by-turn.ts`; each effect in `cast-effects.ts`            |
+| Land, creature, basic: ask the type line    | `cardTypes`, `isLand` in `src/shared/mtg/card-types.ts`                          |
+| Mana curve buckets                          | `src/shared/mtg/mana-curve.ts`                                                   |
+| Finish, colour and rarity words and schemas | `src/shared/mtg` (`FinishSchema`, `ColorSchema`, `RaritySchema`)                 |
+| Showing money                               | `Cents.format` in `@/shared/kernel`                                              |
+| An error as a sentence                      | `describe<Thing>Error` in the module's `application/describe-error.ts`           |
+| Format differences, deck problems, brackets | `FORMAT_RULES` in `decks/core/domain/format-rules.ts`, `brackets.ts`, `rules.ts` |
+| Reading oracle text (tags, signals, themes) | card features: `catalog/cards/domain/features/` (`registry.ts`, recognizers)     |
+| Owned copies, game and real collection      | `collection/copies/queries`, shared by `game/` and `real/`                       |
+| Today's offer for a card                    | `store/queries/store-prices.ts`, `shopping-list.ts`                              |
+| One LLM tool                                | a capability in its module, a binding in `src/app/_llm-tools/bindings/`          |
+| Revalidating pages after a write            | the area's `paths.ts`                                                            |
+| Reading `process.env`                       | `src/shared/config` only                                                         |
 
 ## TypeScript
 

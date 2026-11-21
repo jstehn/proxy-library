@@ -202,8 +202,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
   async function letBotsAct(services: DraftsServices, draft: Draft, now: Date): Promise<Draft> {
     const running = draft.status === "drafting" || draft.status === "dealing";
     if (!draft.seats.some(isBot) || !running) return draft;
-    const ctx = await contextFor(services, draft, now);
-    return runBots(draft, ctx, choosingWith(ctx.cards)).draft;
+    const context = await contextFor(services, draft, now);
+    return runBots(draft, context, choosingWith(context.cards)).draft;
   }
 
   /** Bots act, then the change is saved with everything that goes with it. */
@@ -225,7 +225,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     actor: Actor,
     draft: Draft,
     request: LorePackSource,
-    ctx: StepContext,
+    context: StepContext,
   ): Promise<Result<AddedPack, LorePackUnavailable | InsufficientFunds>> {
     const seed = seeds.newSeed();
     const unavailable = (reason: string) =>
@@ -236,7 +236,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
         ownerId: actor.userId,
         itemId: ItemId.of(request.itemId),
         seed,
-        now: ctx.now,
+        now: context.now,
       });
       if (!pack.ok) return unavailable("that isn't an unopened booster pack of yours");
       opened = { seed, cards: pack.value.cards };
@@ -256,7 +256,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
         kind: "draft_entry",
         note: `Lore Seeker pack: ${await services.draftCatalog.setName(setCode)}`,
         ref: `draft:${draft.id}`,
-        now: ctx.now,
+        now: context.now,
       });
       if (!paid.ok) return paid;
       opened = { seed, cards: pack.value.cards };
@@ -271,7 +271,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     const people = seatsInOrder(draft)
       .filter((seat) => !isBot(seat))
       .map((seat) => seat.userId);
-    return ok({ pack: packs[0][0], basics: dealBasics(basics, people, ctx.rng) });
+    return ok({ pack: packs[0][0], basics: dealBasics(basics, people, context.rng) });
   }
 
   /** The player's choices, with a Lore Seeker's pack opened if they asked for one. */
@@ -281,16 +281,19 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     draft: Draft,
     drafting: CardRef | null,
     choices: PickChoices | undefined,
-    ctx: StepContext,
+    context: StepContext,
   ): Promise<Result<StepChoices, LorePackUnavailable | InsufficientFunds>> {
     const { addPack, ...rest } = choices ?? {};
     if (addPack === undefined || drafting === null) return ok(rest);
     const card = cardAt(draft, drafting);
     // Only a Lore Seeker adds a pack: anything else ignores the request (and nothing is spent).
-    if (card === null || abilityOf(ctx.cards(card.printingId)?.name)?.ability.kind !== "addPack") {
+    if (
+      card === null ||
+      abilityOf(context.cards(card.printingId)?.name)?.ability.kind !== "addPack"
+    ) {
       return ok(rest);
     }
-    const opened = await openLorePack(services, actor, draft, addPack, ctx);
+    const opened = await openLorePack(services, actor, draft, addPack, context);
     return opened.ok ? ok({ ...rest, addPack: opened.value }) : opened;
   }
 
@@ -415,10 +418,17 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, PickError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
+      const context = await contextFor(services, draft, now);
       const drafting =
         input.slot === "random" ? null : { packNumber: input.packNumber, slot: input.slot };
-      const choices = await resolveChoices(services, actor, draft, drafting, input.choices, ctx);
+      const choices = await resolveChoices(
+        services,
+        actor,
+        draft,
+        drafting,
+        input.choices,
+        context,
+      );
       if (!choices.ok) return choices;
       const stepped = draftStep(
         draft,
@@ -429,7 +439,7 @@ export function makeDrafts(dependencies: DraftsDependencies) {
           auto: false,
           choices: choices.value,
         },
-        ctx,
+        context,
       );
       if (!stepped.ok) return stepped;
       // Drafting also shows the player is here.
@@ -446,17 +456,17 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
+      const context = await contextFor(services, draft, now);
       const choices = await resolveChoices(
         services,
         actor,
         draft,
         seat.abilities.awaitingChoices,
         input.choices,
-        ctx,
+        context,
       );
       if (!choices.ok) return choices;
-      const decided = decideOnCard(draft, seat.seatNumber, choices.value, ctx);
+      const decided = decideOnCard(draft, seat.seatNumber, choices.value, context);
       if (!decided.ok) return decided;
       return save(services, draft, decided.value, now);
     });
@@ -470,8 +480,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
-      const chosen = chooseTableColor(draft, seat.seatNumber, input.color, ctx);
+      const context = await contextFor(services, draft, now);
+      const chosen = chooseTableColor(draft, seat.seatNumber, input.color, context);
       if (!chosen.ok) return chosen;
       return save(services, draft, chosen.value, now);
     });
@@ -485,8 +495,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
-      const peeked = peekAtPack(draft, seat.seatNumber, input.card, input.packNumber, ctx);
+      const context = await contextFor(services, draft, now);
+      const peeked = peekAtPack(draft, seat.seatNumber, input.card, input.packNumber, context);
       if (!peeked.ok) return peeked;
       return save(services, draft, peeked.value, now);
     });
@@ -500,8 +510,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
-      const watching = watchPlayer(draft, seat.seatNumber, input.card, input.targetSeat, ctx);
+      const context = await contextFor(services, draft, now);
+      const watching = watchPlayer(draft, seat.seatNumber, input.card, input.targetSeat, context);
       if (!watching.ok) return watching;
       return save(services, draft, watching.value, now);
     });
@@ -515,13 +525,13 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, AnswerError>(input.draftId, async (services, draft, now) => {
       const seat = seatOf(draft, actor.userId);
       if (seat === null) return err({ kind: "NotSeated" });
-      const ctx = await contextFor(services, draft, now);
+      const context = await contextFor(services, draft, now);
       const answered =
         input.step === "reveal"
-          ? revealForDeal(draft, seat.seatNumber, input.card, ctx)
+          ? revealForDeal(draft, seat.seatNumber, input.card, context)
           : input.step === "offer"
-            ? offerForDeal(draft, seat.seatNumber, input.card, ctx)
-            : acceptDeal(draft, seat.seatNumber, input.offerSeat, ctx);
+            ? offerForDeal(draft, seat.seatNumber, input.card, context)
+            : acceptDeal(draft, seat.seatNumber, input.offerSeat, context);
       if (!answered.ok) return answered;
       return save(services, draft, answered.value, now);
     });
@@ -544,8 +554,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
   ): Promise<Result<void, PickForAwayError>> {
     return withDraft<void, PickForAwayError>(input.draftId, async (services, draft, now) => {
       if (draft.hostId !== actor.userId) return err({ kind: "NotHost" });
-      const ctx = await contextFor(services, draft, now);
-      const acted = pickForAwaySeat(draft, input.seatNumber, ctx, choosingWith(ctx.cards));
+      const context = await contextFor(services, draft, now);
+      const acted = pickForAwaySeat(draft, input.seatNumber, context, choosingWith(context.cards));
       if (!acted.ok) return acted;
       return save(services, draft, acted.value.draft, now);
     });
@@ -576,8 +586,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     let extensions = 0;
     for (const draftId of due.ok ? due.value : []) {
       await withDraft<void, CardNoLongerOwned>(draftId, async (services, draft, now) => {
-        const ctx = await contextFor(services, draft, now);
-        const outcome = runTableTimers(draft, ctx, choosingWith(ctx.cards));
+        const context = await contextFor(services, draft, now);
+        const outcome = runTableTimers(draft, context, choosingWith(context.cards));
         autoPicks += outcome.autoPicks.length;
         extensions += outcome.extensions;
         return save(services, draft, outcome.draft, now);
@@ -641,8 +651,8 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     const seen = await unitOfWork.run<DraftSeen | null, never>(async (services) => {
       const draft = await services.drafts.find(draftId);
       if (draft === null) return ok(null);
-      const ctx = await contextFor(services, draft, clock.now());
-      return ok(visibleTo(draft, seatOf(draft, actor.userId)?.seatNumber ?? null, ctx));
+      const context = await contextFor(services, draft, clock.now());
+      return ok(visibleTo(draft, seatOf(draft, actor.userId)?.seatNumber ?? null, context));
     });
     return seen.ok ? seen.value : null;
   }
