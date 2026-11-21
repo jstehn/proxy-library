@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rankCuts, type CutLine, type CutReason } from "./cuts";
-import { featuresOfText } from "../testing/deck-view";
+import { featuresOfText } from "../../testing/deck-view";
 
 // Cards to cut (design doc 32, section 3 and invariants 4-5).
 

@@ -15,7 +15,7 @@ import {
 } from "../domain/mana-base";
 import { decks } from "../infrastructure/schema";
 import { deckStats } from "../domain/stats";
-import { deckProfile } from "../domain/suggest";
+import { deckProfile } from "@/modules/decks/scoring/client";
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
 import { suggestionContext } from "./suggestions";
 import { cardFeaturesOf, withFeatures, type FeaturesOf } from "./card-features";

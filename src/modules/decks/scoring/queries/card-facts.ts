@@ -1,4 +1,4 @@
-import type { OwnedCardCheck } from "../domain/owned-card-check";
+import type { OwnedCardCheck } from "../../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
@@ -6,7 +6,7 @@ import { catalogQueries } from "@/modules/catalog";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 import type { SignalCard } from "../domain/signals";
-import { ownedCopies, STANDARD_FIRST } from "./owned";
+import { ownedCopies, STANDARD_FIRST } from "../../queries/owned";
 
 // Card facts for the LLM tools (design doc 28): finding a card by the name a person (or a model)
 // writes, and the cards a deck or a search holds, as analyze_cards reads them (section 3.7).

@@ -1,5 +1,5 @@
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import type { DeckNotFound } from "../domain/errors";
+import type { DeckNotFound } from "../../domain/errors";
 import { countSignals, type SignalCard } from "../domain/signals";
 
 // What a deck keeps doing (recurring mechanics, tokens, creature types, themes), with a follow-up

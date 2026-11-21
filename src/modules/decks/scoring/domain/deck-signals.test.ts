@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardFeaturesOf } from "../testing/deck-view";
+import { cardFeaturesOf } from "../../testing/deck-view";
 import { parseSearch } from "@/shared/card-search";
 import { countSignals, phrasesOf, type SignalCard } from "./signals";
 

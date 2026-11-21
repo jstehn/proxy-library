@@ -5,9 +5,9 @@ import {
   type CandidateCard,
   type DeckFingerprint,
   type Scored,
-} from "./suggest";
+} from "@/modules/decks/scoring/client";
 import { creatureTypes } from "@/shared/kernel";
-import { strength } from "./rate";
+import { strength } from "@/modules/decks/scoring/client";
 import { FORMAT_RULES } from "./format-rules";
 import { isLand, TARGETED_TAGS, type TargetedTag } from "./stats";
 import {

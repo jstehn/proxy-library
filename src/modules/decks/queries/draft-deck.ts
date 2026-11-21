@@ -16,7 +16,7 @@ import {
   type DraftOptions,
 } from "../domain/draft-deck";
 import { TARGETED_TAGS } from "../domain/stats";
-import { deckProfile } from "../domain/suggest";
+import { deckProfile } from "@/modules/decks/scoring/client";
 import { landPoolsForDeck } from "./mana-base";
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { fitsDeck, tribePattern } from "./suggestion-sql";

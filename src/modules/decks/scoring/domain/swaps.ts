@@ -1,9 +1,9 @@
-import type { Bracket } from "./brackets";
+import type { Bracket } from "../../domain/brackets";
 import type { RankedCut } from "./cuts";
-import type { Format } from "./deck";
-import { formatRules } from "./format-rules";
+import type { Format } from "../../domain/deck";
+import { formatRules } from "../../domain/format-rules";
 import type { Scored } from "./suggest";
-import type { TargetedTag } from "./stats";
+import type { TargetedTag } from "../../domain/stats";
 
 // One-step swap suggestions (design doc 47, #85): pair weak main-deck cards from `rankCuts`
 // with top-rated replacements from `rateCard`, ensuring each swap improves rating or fixes

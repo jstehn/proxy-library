@@ -6,7 +6,7 @@ import type { UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import { isBracket, type Bracket } from "../domain/brackets";
 import { BOARDS, DeckId, FORMATS, type Format } from "../domain/deck";
-import { scoreDeck, type DeckScore, type OptimizerCard } from "../domain/optimize";
+import { scoreDeck, type DeckScore, type OptimizerCard } from "@/modules/decks/scoring/client";
 import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
 import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
 import type { EdhrecSignal } from "../domain/stats";

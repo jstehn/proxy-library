@@ -32,7 +32,7 @@ export type { ManaBasePlanWithCastability } from "./domain/mana-base";
 export { type SimilarCards } from "./application/find-replacements";
 export { type DeckFacts } from "./application/deck-facts";
 
-export { type DeckSignals, type SearchSignals } from "./application/deck-signals";
+export { type DeckSignals, type SearchSignals } from "@/modules/decks/scoring";
 
 export { type DeckOverview, type OverviewParts } from "./application/deck-overview";
 export { listAndFingerprint, problemsOfLines } from "./domain/deck-reads";
@@ -101,14 +101,14 @@ export {
 } from "./queries/decks";
 export type { DeckLine, DeckView, OtherDeckUse } from "./domain/deck-view";
 
-export { type CutReason } from "./domain/cuts";
-export { type SwapCutMeta, type SwapReason } from "./domain/swaps";
-export { type OptimizeResult } from "./domain/optimize";
+export { type CutReason } from "@/modules/decks/scoring/client";
+export { type SwapCutMeta, type SwapReason } from "@/modules/decks/scoring/client";
+export { type OptimizeResult } from "@/modules/decks/scoring/client";
 export { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
 
 export { auditDeck } from "./queries/audit";
 
-export { type PowerTier } from "./domain/rate";
+export { type PowerTier } from "@/modules/decks/scoring/client";
 export {
   BROWSE_SORTS,
   browseCollection,
@@ -137,7 +137,7 @@ export {
 export { embedSimForCards } from "./queries/embeddings";
 export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
 
-export type { Reason } from "./domain/suggest";
+export type { Reason } from "@/modules/decks/scoring/client";
 export { manaBasePlan } from "./queries/mana-base";
 export { draftForDeck } from "./queries/draft-deck";
 
@@ -150,7 +150,7 @@ export { canViewDeck } from "./domain/sharing";
 export { cardsToGetFor, type CommentView } from "./queries/sharing";
 export * as deckQueries from "./queries";
 export * as deckPublicQueries from "./queries/public";
-export { checkOwnedCards, findCard } from "./queries/card-facts";
+export { checkOwnedCards, findCard } from "@/modules/decks/scoring";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
 export { type SynergyQuery } from "./domain/search-for-deck";
 export { makeProxySheets, type ProxySheetInput } from "@/modules/decks/proxies";

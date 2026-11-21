@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { rateCard } from "../domain/rate";
-import { deckProfile } from "../domain/suggest";
+import { rateCard } from "@/modules/decks/scoring/client";
+import { deckProfile } from "@/modules/decks/scoring/client";
 import { cheapestOfCards } from "./candidate-pool";
 import {
   candidateColumns,

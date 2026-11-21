@@ -14,7 +14,7 @@ import {
   type RatingCandidate,
   type RatingProfile,
 } from "./rate";
-import { formatRules } from "./format-rules";
+import { formatRules } from "../../domain/format-rules";
 import { deckSignalProfile } from "./signals";
 
 const emptyProfile: RatingProfile = {

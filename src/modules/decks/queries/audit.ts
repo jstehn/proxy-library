@@ -13,7 +13,7 @@ import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile
 import { decks } from "../infrastructure/schema";
 import { library } from "@/modules/decks/play/client";
 import { simulateOpeningHands } from "@/modules/decks/play/client";
-import { scoreDeck } from "../domain/optimize";
+import { scoreDeck } from "@/modules/decks/scoring/client";
 import { deckProblems } from "../domain/rules";
 import { formatRules } from "../domain/format-rules";
 import { deckStats, TARGETED_TAGS } from "../domain/stats";

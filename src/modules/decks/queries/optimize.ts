@@ -2,7 +2,11 @@ import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
 import { isPlayed } from "../domain/boards";
 import type { Deck } from "../domain/deck";
-import { optimizeDeck, type OptimizerCard, type OptimizeResult } from "../domain/optimize";
+import {
+  optimizeDeck,
+  type OptimizerCard,
+  type OptimizeResult,
+} from "@/modules/decks/scoring/client";
 import type { DeckLine } from "../domain/deck-view";
 import { deckView } from "./decks";
 import { deckSuggestions } from "./suggestions";

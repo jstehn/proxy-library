@@ -18,8 +18,8 @@ export {
   type RoleTargets,
 } from "./domain/format-rules";
 export { problemsOfLines } from "./domain/deck-reads";
-export { deckProfile } from "./domain/suggest";
-export { deckSignalProfile } from "./domain/signals";
+export { deckProfile } from "@/modules/decks/scoring/client";
+export { deckSignalProfile } from "@/modules/decks/scoring/client";
 export {
   DEFAULT_PROXY_OPTIONS,
   GAPS_IN_MILLIMETERS,
@@ -58,7 +58,7 @@ export {
   type CutLine,
   type CutReason,
   type RankedCut,
-} from "./domain/cuts";
+} from "@/modules/decks/scoring/client";
 export {
   rateCard,
   type CardRating,
@@ -68,14 +68,14 @@ export {
   type RatingPart,
   type RatingProfile,
   type RatingWeights,
-} from "./domain/rate";
+} from "@/modules/decks/scoring/client";
 export {
   suggestSwaps,
   type SwapCutMeta,
   type SwapOptions,
   type SwapReason,
   type SwapSuggestion,
-} from "./domain/swaps";
+} from "@/modules/decks/scoring/client";
 export {
   type DeckScore,
   type DeckScoreMetrics,
@@ -84,12 +84,12 @@ export {
   type OptimizeResult,
   type OptimizerCard,
   type ScoreDeckContext,
-} from "./domain/optimize";
+} from "@/modules/decks/scoring/client";
 export {
   type BudgetReplacement,
   type BudgetReplacementOptions,
   type ReplacementCandidate,
-} from "./domain/replacements";
+} from "@/modules/decks/scoring/client";
 export { BOARDS, isCounted, type DeckCount } from "./domain/boards";
 export {
   copyLimitFor,
@@ -121,7 +121,7 @@ export {
   type SampleHand,
   type SimulateHandsOptions,
 } from "@/modules/decks/play/client";
-export { plural, type Reason } from "./domain/suggest";
+export { plural, type Reason } from "@/modules/decks/scoring/client";
 export {
   BRACKET_NAMES,
   BRACKETS,

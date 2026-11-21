@@ -12,7 +12,7 @@ import { makeDeckPlanEdits } from "./application/deck-plan-edits";
 import { makeProxyDeck } from "@/modules/decks/proxies";
 import { makeDeckPreviews } from "./application/deck-previews";
 import { makeDeckSearch } from "./application/deck-search";
-import { makeDeckSignals, makeSearchSignals } from "./application/deck-signals";
+import { makeDeckSignals, makeSearchSignals } from "@/modules/decks/scoring";
 import { makeStartDeck } from "./application/deck-start";
 import { makeDrawSample } from "@/modules/decks/play";
 import { makeFindReplacements } from "./application/find-replacements";
@@ -25,7 +25,12 @@ import type { makeTokenChoices } from "@/modules/decks/proxies";
 import { DeckId } from "./domain/deck";
 import { auditDeckView } from "./queries/audit";
 import { budgetReplacements } from "./queries/budget-replacements";
-import { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./queries/card-facts";
+import {
+  checkOwnedCards,
+  deckSignalCards,
+  findCard,
+  ownedSignalCards,
+} from "@/modules/decks/scoring";
 import { withFeatures } from "./queries/card-features";
 import { combosForDeck } from "./queries/combos";
 import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";

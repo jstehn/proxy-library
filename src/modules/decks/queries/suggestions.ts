@@ -25,7 +25,7 @@ import {
   type CandidateCard,
   type DeckFingerprint,
   type Scored,
-} from "../domain/suggest";
+} from "@/modules/decks/scoring/client";
 import { isLand } from "../domain/stats";
 import { comboPartnersForDeck } from "./combos";
 import { deckView } from "./decks";

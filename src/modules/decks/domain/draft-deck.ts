@@ -17,8 +17,8 @@ import {
   type CandidateCard,
   type DeckFingerprint,
   type Reason,
-} from "./suggest";
-import { strength, type RoleGap } from "./rate";
+} from "@/modules/decks/scoring/client";
+import { strength, type RoleGap } from "@/modules/decks/scoring/client";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first,
 // then optional store gap-fill, plus lands from planManaBase (design docs 37 & 44). Pure: queries

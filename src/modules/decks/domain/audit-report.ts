@@ -2,7 +2,7 @@ import type { Bracket, BracketRuleReason } from "./brackets";
 import type { CardCastability } from "@/modules/decks/play/client";
 import type { Format } from "./deck";
 import type { GoldfishReport } from "@/modules/decks/play/client";
-import type { DeckScore } from "./optimize";
+import type { DeckScore } from "@/modules/decks/scoring/client";
 import type { TargetedTag } from "./stats";
 
 // What the one-shot deck audit reports (legality, bracket, roles, mana, ownership, goldfish).

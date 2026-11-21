@@ -5,7 +5,7 @@ import type { ManaBasePlanWithCastability } from "../domain/mana-base";
 import { aDeckView, aLine } from "../testing/deck-view";
 import { makeDeckFacts } from "./deck-facts";
 import { makeDeckManaPlan } from "./deck-mana-plan";
-import { makeDeckSignals } from "./deck-signals";
+import { makeDeckSignals } from "@/modules/decks/scoring";
 
 const userId = UserId.of("1");
 

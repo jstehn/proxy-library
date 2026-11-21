@@ -12,8 +12,8 @@ import { hasTypeWord, type Tag, type UserId } from "@/shared/kernel";
 import { isCounted } from "../domain/deck";
 import { isAvoidCard, isKeyCard, type DeckPlan } from "../domain/deck-profile";
 import { deckEntries, decks } from "../infrastructure/schema";
-import { deckProfile } from "../domain/suggest";
-import { rankBudgetReplacements } from "../domain/replacements";
+import { deckProfile } from "@/modules/decks/scoring/client";
+import { rankBudgetReplacements } from "@/modules/decks/scoring/client";
 import { isLand } from "../domain/stats";
 import { cheapestOfCards } from "./candidate-pool";
 import type {
