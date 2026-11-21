@@ -159,7 +159,7 @@ New `src/app/{error,not-found,loading}.tsx` and one set per big section (`decks`
   `docs/architecture/conventions.md` ("UI"); a component file over 300 lines in `src/app` is a lint
   warning. Doc and lesson paths were updated.
 
-**Numbers.** Production code 76,920 to 77,393 (**+473** over the baseline, under the 500 the owner
+**Numbers.** Production code 76,920 to 77,396 (**+476** over the baseline, under the 500 the owner
 accepts). Where it goes: the page states and two blocks (about 110), the form variants (about 110),
 11 `paths.ts` files (about 170), the commanders route and view split (about 70), and the extra
 imports of the split pages, less the hand parsing and revalidate strings removed. The baseline was
