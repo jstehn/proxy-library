@@ -1,7 +1,7 @@
 # To do
 
 The working queue lives on the **Proxy Library** project in tududi
-(https://tududi.devstageprod.duckdns.org), not in the repo. Work is **one feature at a time**;
+([tududi](https://github.com/chrisvel/tududi), self-hosted), not in the repo. Work is **one feature at a time**;
 ideas that come up mid-feature go to tududi's **inbox** and wait.
 
 | Kanban column | Task status | Means                                                         |
@@ -64,3 +64,5 @@ When every task is done, any lesson is written and the work is committed, set th
 Claude Code connects to tududi's built-in MCP server through `.mcp.json`. It reads
 `TUDUDI_URL` and `TUDUDI_API_KEY` from `.envrc.local` (copy `.envrc.local.example`; the key comes
 from tududi's Profile → API keys). Start Claude Code from a direnv shell so they're set.
+`.mcp.json` and the helper scripts (`scripts/tududi-*`) are personal tooling: git ignores them, so
+each maintainer keeps their own copy.
