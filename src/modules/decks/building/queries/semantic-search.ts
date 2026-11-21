@@ -2,8 +2,7 @@ import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { rateCard } from "@/modules/decks/scoring/client";
-import { deckProfile } from "@/modules/decks/scoring/client";
+import { rateCard, deckProfile } from "@/modules/decks/scoring/client";
 import { cheapestOfCards } from "./candidate-pool";
 import {
   candidateColumns,
@@ -12,8 +11,8 @@ import {
   toCard,
   type CandidateRow,
 } from "./suggestion-sql";
-import { suggestionContext, withinTarget } from "../../queries/suggestions";
-import { type SuggestionCard } from "../domain/suggestion-types";
+import { suggestionContext } from "./suggestion-pool";
+import { withinTarget, type SuggestionCard } from "../domain/suggestion-types";
 
 export type SemanticSearchPick = Readonly<{
   card: SuggestionCard;

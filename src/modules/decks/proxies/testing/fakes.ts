@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DeckId } from "../../domain/deck";
+import type { DeckId } from "@/modules/decks/core/client";
 import type { DeckTokenRepository, ProxyImageSource } from "../application/ports";
 import type { TokenChoice } from "../domain/token-proxies";
 

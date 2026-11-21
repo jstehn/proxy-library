@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { cardFeaturesOf } from "../../testing/deck-view";
+import { cardFeaturesOf } from "../../core/testing/deck-view";
 import { THEME_LABELS, type SignalIO } from "@/shared/kernel";
-import type { Board } from "../../domain/boards";
+import type { Board } from "@/modules/decks/core/client";
 import { deckSignalProfile, synergyMatches } from "./signals";
 
 type TextCard = Readonly<{ name: string; typeLine: string; manaValue: number; text: string }>;

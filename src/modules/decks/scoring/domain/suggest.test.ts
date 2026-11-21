@@ -13,8 +13,8 @@ import {
   type Scored,
 } from "./suggest";
 import { emptyRatingProfile } from "./rate";
-import type { ProfileLine } from "../../domain/stats";
-import { featuresOfText } from "../../testing/deck-view";
+import type { ProfileLine } from "@/modules/decks/core/client";
+import { featuresOfText } from "../../core/testing/deck-view";
 
 const candidate = (name: string, overrides: Partial<CandidateCard> = {}): CandidateCard => ({
   oracleId: name,

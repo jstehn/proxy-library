@@ -1,26 +1,29 @@
 import type { SignalIO } from "@/shared/kernel";
-import { bracketFlagsOf, fitsTarget } from "../../domain/brackets";
+import {
+  bracketFlagsOf,
+  fitsTarget,
+  formatRules,
+  isCounted,
+  TARGETED_TAGS,
+} from "@/modules/decks/core/client";
 import type { BracketFlag } from "@/shared/kernel";
 import { featureArray, signalIO } from "@/shared/card-search/sql";
-import { formatRules } from "../../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
 import { type Tag, type Theme } from "@/shared/kernel";
 import type { UserId } from "@/shared/kernel";
-import { isCounted } from "../../domain/boards";
 import {
   buildFromCollection,
   type DeckDraft,
   type DraftCandidate,
   type DraftOptions,
 } from "../domain/build-from-collection";
-import { TARGETED_TAGS } from "../../domain/stats";
 import { deckProfile } from "@/modules/decks/scoring/client";
 import { landPoolsForDeck } from "./mana-base";
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { fitsDeck, tribePattern } from "./suggestion-sql";
-import { suggestionContext } from "../../queries/suggestions";
+import { suggestionContext } from "./suggestion-pool";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
 // (design docs 37 & 44): SQL gathers your legal non-land cards, store non-land candidates, and the

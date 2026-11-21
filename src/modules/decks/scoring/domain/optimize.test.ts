@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/shared/kernel";
-import { featuresOfText } from "../../testing/deck-view";
+import { featuresOfText } from "../../core/testing/deck-view";
 import { optimizeDeck, scoreDeck, type OptimizerCard } from "./optimize";
 
 function makeCard(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featuresOfText } from "../../testing/deck-view";
+import { featuresOfText } from "../../core/testing/deck-view";
 import { scoreDeck, type OptimizerCard } from "./optimize";
 
 function card(

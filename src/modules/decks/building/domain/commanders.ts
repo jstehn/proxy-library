@@ -5,11 +5,10 @@ import {
   type CandidateCard,
   type DeckFingerprint,
   type Scored,
+  strength,
 } from "@/modules/decks/scoring/client";
 import { creatureTypes } from "@/shared/kernel";
-import { strength } from "@/modules/decks/scoring/client";
-import { FORMAT_RULES } from "../../domain/format-rules";
-import { isLand, TARGETED_TAGS, type TargetedTag } from "../../domain/stats";
+import { FORMAT_RULES, isLand, TARGETED_TAGS, type TargetedTag } from "@/modules/decks/core/client";
 import {
   type CardFacts,
   type CardIdentity,

@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { isValidPublicToken } from "../../domain/sharing";
+import { isValidPublicToken } from "@/modules/decks/core/client";
 import {
   deckTokens,
   newestFirst,

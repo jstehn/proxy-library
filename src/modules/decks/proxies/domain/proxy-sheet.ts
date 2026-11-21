@@ -1,4 +1,4 @@
-import { isCounted, isPlayed, type Board } from "../../domain/boards";
+import { isCounted, isPlayed, type Board } from "@/modules/decks/core/client";
 import type { PrintedCard } from "./playtest-card";
 
 // Proxy sheets (design doc 14, section 3): which cards to print and where each one goes on the

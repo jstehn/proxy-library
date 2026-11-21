@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
-import type { DeckView } from "../../domain/deck-view";
+import type { DeckView } from "@/modules/decks/core/client";
 import { makeProxyDeck } from "./proxy-deck";
 
 const view = {

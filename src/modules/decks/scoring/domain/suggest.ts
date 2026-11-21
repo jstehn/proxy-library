@@ -1,6 +1,15 @@
 import { creatureTypes, manaCurve, type Tag, type Theme } from "@/shared/kernel";
-import { isPlayed } from "../../domain/boards";
-import type { Format } from "../../domain/deck";
+import {
+  isPlayed,
+  formatRules,
+  deckStats,
+  isLand,
+  TARGETED_TAGS,
+  type EdhrecSignal,
+  type ProfileLine,
+  type StatsLine,
+} from "@/modules/decks/core/client";
+import type { Format } from "@/modules/decks/core/client";
 import {
   edhrecLogLift,
   emptyRatingProfile,
@@ -11,16 +20,7 @@ import {
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
-import { formatRules } from "../../domain/format-rules";
 import { deckSignalProfile } from "./signals";
-import {
-  deckStats,
-  isLand,
-  TARGETED_TAGS,
-  type EdhrecSignal,
-  type ProfileLine,
-  type StatsLine,
-} from "../../domain/stats";
 
 // Deck suggestions (design doc 20, section 3.2): what a deck is about, and how well a card fits
 // it. Pure: the queries fetch candidates, this decides their order and says why. The order always

@@ -5,6 +5,7 @@ export {
   type DeckOverview,
   type OverviewParts,
 } from "./application/deck-overview";
+export { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
 export {
   compareDeckSnapshot,
   listDeckSnapshots,

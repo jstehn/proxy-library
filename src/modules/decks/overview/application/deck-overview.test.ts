@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testActor } from "@/modules/accounts/testing/actors";
-import { aDeckView, aLine } from "../../testing/deck-view";
+import { aDeckView, aLine } from "../../core/testing/deck-view";
 import { makeDeckOverview, type DeckOverviewReaders } from "./deck-overview";
 
 function readers(

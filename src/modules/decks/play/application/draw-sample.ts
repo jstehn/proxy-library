@@ -1,4 +1,10 @@
-import { formatRules } from "../../domain/format-rules";
+import {
+  formatRules,
+  commanderOnlyProfile,
+  effectiveManaValue,
+  type DeckPlan,
+  parseCost,
+} from "@/modules/decks/core/client";
 import {
   err,
   ok,
@@ -8,12 +14,9 @@ import {
   type UserId,
   type CardFacts,
 } from "@/shared/kernel";
-import { commanderOnlyProfile, effectiveManaValue, type DeckPlan } from "../../domain/deck-profile";
-import type { DeckLine, DeckView } from "../../domain/deck-view";
-import { parseCost } from "../../domain/mana-payment";
+import type { DeckLine, DeckView, DeckNotFound } from "@/modules/decks/core/client";
 import { COMMANDER_KEEP, dealHand, MAX_MULLIGANS } from "../domain/opening-hand/hand";
 import { library, OPENING_HAND } from "../domain/opening-hand/library";
-import type { DeckNotFound } from "../../domain/errors";
 import { simulateOpeningHands } from "../domain/goldfish";
 import { simulateCasting, type CastCurve, type CastTarget } from "../domain/cast-by-turn";
 import type { CardFeatures } from "@/modules/catalog";

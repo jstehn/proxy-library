@@ -9,7 +9,7 @@ import {
   totalDiscount,
   type CardEffect,
 } from "./cast-effects";
-import { canPay, firstUnpaidPip, type ManaSource, type Pip } from "../../domain/mana-payment";
+import { canPay, firstUnpaidPip, type PaymentSource, type Pip } from "@/modules/decks/core/client";
 import { drawsByTurn, playOpening, type MulliganRule, type Opening } from "./opening-hand/hand";
 import type { LibraryCard } from "./opening-hand/library";
 
@@ -119,10 +119,10 @@ function playTarget(
 ): Outcome {
   const hand = [...opening.hand];
   const lands: PlayedLand[] = [];
-  const permanents: ManaSource[] = [];
+  const permanents: PaymentSource[] = [];
   const reducers: CardEffect[] = [];
   const holdsTarget = () => hand.some((card) => sameName(card.name, target.name));
-  let mana: ManaSource[] = [];
+  let mana: PaymentSource[] = [];
 
   for (let turn = 1; turn <= lastTurn; turn++) {
     const drawnBefore = turn === 1 ? 0 : drawsByTurn(turn - 1, options.onTheDraw);
@@ -169,7 +169,7 @@ function manaNeeded(target: CastTarget, discount: number): number {
 /** Whether the mana pays for the target, using rituals in hand if that is what it takes. */
 function canCast(
   target: CastTarget,
-  mana: readonly ManaSource[],
+  mana: readonly PaymentSource[],
   discount: number,
   hand: readonly LibraryCard[],
 ): boolean {
@@ -188,7 +188,7 @@ function canCast(
 
 /** What cast-ahead cards add to: mana from permanents, cost reducers, and lands in play. */
 type InPlay = Readonly<{
-  permanents: ManaSource[];
+  permanents: PaymentSource[];
   reducers: CardEffect[];
   lands: PlayedLand[];
   pips: readonly Pip[];
@@ -256,7 +256,7 @@ function entersTapped(card: LibraryCard, landsInPlay: number): boolean {
 }
 
 /** What a land in play taps for; a land that needs five lands makes nothing before the fifth. */
-function landMana(card: LandInPlay, landCount: number): ManaSource[] {
+function landMana(card: LandInPlay, landCount: number): PaymentSource[] {
   const needsFive = card.tapMana?.requiresFiveLands === true;
   if (needsFive && landCount < 5) return [];
   const amount = needsFive ? 2 : Math.max(1, card.tapMana?.amount ?? 1);
@@ -265,7 +265,7 @@ function landMana(card: LandInPlay, landCount: number): ManaSource[] {
 
 function whyNot(
   target: CastTarget,
-  mana: readonly ManaSource[],
+  mana: readonly PaymentSource[],
   discount: number,
   holdsTarget: boolean,
 ): CastMiss["reason"] {

@@ -5,6 +5,7 @@ import { drizzleEmbeddingRepository } from "@/modules/catalog/infrastructure";
 import {
   auditDeck,
   budgetReplacements,
+  candidatePool,
   compareDeckSnapshot,
   embedSimForCards,
   makeDecks,
@@ -108,14 +109,18 @@ describe("card embeddings & budget replacements", () => {
     });
 
     // 3. similarCards uses vector similarity when embeddings exist
-    const simResult = await similarCards(db, jack.userId, created.value, caretaker.oracle_id);
+    const simResult = await similarCards(
+      candidatePool(db, jack.userId),
+      created.value,
+      caretaker.oracle_id,
+    );
     expect(simResult).not.toBeNull();
     expect(simResult?.store.some((s) => s.card.oracleId === banishing.oracle_id)).toBe(true);
 
     // 4. budgetReplacements only offers cards that share a role with the target (design doc 61,
     // invariant 5): Banishing Light is removal and Caretaker's Talent is draw, so however similar
     // their text, it isn't offered, and every offer it does make names the role it matched.
-    const replacements = await budgetReplacements(db, jack.userId, created.value, {
+    const replacements = await budgetReplacements(candidatePool(db, jack.userId), created.value, {
       minPriceCents: 500,
       maxPriceCents: 200,
     });

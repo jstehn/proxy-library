@@ -1,18 +1,19 @@
 import type { BracketFlag } from "@/shared/kernel";
 import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kernel";
-import { bracketLine, estimateBracket, type Bracket } from "../../domain/brackets";
-import type { Format } from "../../domain/deck";
-import { rateCard, type RatingProfile } from "./rate";
-import { NO_SIGNALS, synergyMatches } from "./signals";
-import { formatRules } from "../../domain/format-rules";
-import type { DeckLine } from "../../domain/deck-view";
 import {
+  bracketLine,
+  estimateBracket,
+  type Bracket,
+  formatRules,
   deckStats,
   isLand,
   type EdhrecSignal,
   type StatsLine,
   type TargetedTag,
-} from "../../domain/stats";
+} from "@/modules/decks/core/client";
+import type { Format, DeckLine } from "@/modules/decks/core/client";
+import { rateCard, type RatingProfile } from "./rate";
+import { NO_SIGNALS, synergyMatches } from "./signals";
 import { deckProfile } from "./suggest";
 
 // Whole-deck objective and Simulated Annealing optimizer (design doc 55):

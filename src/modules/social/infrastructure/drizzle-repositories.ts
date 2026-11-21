@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { PrintingId } from "@/modules/catalog";
 import { printings } from "@/modules/catalog/infrastructure/schema";
 import { DeckId, type Format } from "@/modules/decks";
-import { decks } from "@/modules/decks/infrastructure/schema";
+import { decks } from "@/modules/decks/core/infrastructure/schema";
 import { players } from "@/modules/accounts/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
 import { UserId, type ManaColor } from "@/shared/kernel";

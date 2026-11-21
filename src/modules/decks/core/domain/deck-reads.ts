@@ -1,5 +1,5 @@
 import type { Format } from "./deck";
-import type { DeckLine } from "./deck-view";
+import type { DeckLine, DeckView } from "./deck-view";
 import {
   bracketLine,
   bracketRuleReasons,
@@ -13,7 +13,6 @@ import {
 } from "./brackets";
 import { deckText, fingerprint } from "./list-format";
 import { deckProblems, type CardRules, type DeckProblem } from "./rules";
-import type { DeckView } from "./deck-view";
 
 // The facts about a deck that every reader needs the same way (design doc 65, audit F2): its
 // problems, its Commander bracket, and its list text with the fingerprint of what's stored. The

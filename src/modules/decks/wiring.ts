@@ -2,46 +2,53 @@ import type { Actor } from "@/modules/accounts";
 import { printingCards } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { ok, pick, type Clock, type UserId } from "@/shared/kernel";
-import { makeSwapCards, makeTakeFromDeck } from "./application/deck-builder-moves";
-import { makeDeckCombos } from "./application/deck-combos";
-import { makeEdhrecResearch } from "./application/deck-edhrec";
-import { makeDeckFacts } from "@/modules/decks/overview";
-import { makeDeckManaPlan } from "@/modules/decks/building";
-import { makeDeckOverview } from "@/modules/decks/overview";
-import { makeDeckPlanEdits } from "./application/deck-plan-edits";
-import { makeProxyDeck } from "@/modules/decks/proxies";
-import { makeDeckPreviews } from "./application/deck-previews";
-import { makeDeckSearch } from "./application/deck-search";
-import { makeDeckSignals, makeSearchSignals } from "@/modules/decks/scoring";
-import { makeStartDeck } from "./application/deck-start";
-import { makeDrawSample } from "@/modules/decks/play";
-import { makeFindReplacements } from "@/modules/decks/building";
-import { makeListDecks } from "./application/list-decks";
-import type { Decks } from "./application/make-decks";
-import type { PreviewRepository } from "./application/ports";
-import type { makeProxySheets } from "@/modules/decks/proxies";
-import type { DeckSharing } from "./application/sharing";
-import type { makeTokenChoices } from "@/modules/decks/proxies";
-import { DeckId } from "./domain/deck";
-import { auditDeckView } from "@/modules/decks/building";
-import { budgetReplacements } from "./queries/budget-replacements";
 import {
+  makeSwapCards,
+  makeTakeFromDeck,
+  makeDeckCombos,
+  makeEdhrecResearch,
+  makeDeckPlanEdits,
+  makeDeckPreviews,
+  makeDeckSearch,
+  makeStartDeck,
+  makeListDecks,
+  withFeatures,
+  combosForDeck,
+  getDeckProfile,
+  updateDeckPrimer,
+  updateDeckProfile,
+  addDeckSource,
+  deckView,
+  decksFor,
+  listDeckSources,
+  deckChangePreview,
+  deckViewForViewer,
+} from "@/modules/decks/core";
+import { makeDeckFacts, makeDeckOverview } from "@/modules/decks/overview";
+import {
+  makeDeckManaPlan,
+  budgetReplacements,
+  candidatePool,
+  makeFindReplacements,
+  similarCards,
+  auditDeckView,
+  manaBasePlan,
+  searchForDeck,
+  semanticSearchForDeck,
+} from "@/modules/decks/building";
+import { makeProxyDeck, deckTokenLines } from "@/modules/decks/proxies";
+import {
+  makeDeckSignals,
+  makeSearchSignals,
   checkOwnedCards,
   deckSignalCards,
   findCard,
   ownedSignalCards,
 } from "@/modules/decks/scoring";
-import { withFeatures } from "./queries/card-features";
-import { combosForDeck } from "./queries/combos";
-import { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
-import { addDeckSource, deckView, decksFor, listDeckSources } from "./queries/decks";
-import { manaBasePlan } from "@/modules/decks/building";
-import { deckChangePreview } from "./queries/preview";
-import { searchForDeck } from "@/modules/decks/building";
-import { semanticSearchForDeck } from "@/modules/decks/building";
-import { similarCards } from "./queries/suggestions";
-import { deckViewForViewer } from "./queries/sharing";
-import { deckTokenLines } from "@/modules/decks/proxies";
+import { makeDrawSample } from "@/modules/decks/play";
+import type { Decks, PreviewRepository, DeckSharing } from "@/modules/decks/core";
+import type { makeProxySheets, makeTokenChoices } from "@/modules/decks/proxies";
+import { DeckId } from "@/modules/decks/core/client";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
 // composition root (src/server/capabilities.ts) calls this once and spreads the result.
@@ -192,8 +199,10 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       ok(await ownedChecks(actor.userId, request.names)),
     replacements: makeFindReplacements({
       findCard: (nameOrId) => findCard(db, nameOrId),
-      similar: (userId, deckId, oracleId) => similarCards(db, userId, deckId, oracleId),
-      budget: (userId, deckId, options) => budgetReplacements(db, userId, deckId, options),
+      similar: (userId, deckId, oracleId) =>
+        similarCards(candidatePool(db, userId), deckId, oracleId),
+      budget: (userId, deckId, options) =>
+        budgetReplacements(candidatePool(db, userId), deckId, options),
       profile: readPlan,
     }),
     deckSearch: makeDeckSearch({

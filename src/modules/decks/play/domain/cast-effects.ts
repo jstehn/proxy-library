@@ -1,5 +1,5 @@
 import type { ManaSymbol } from "@/shared/kernel";
-import { isManaSymbol, parseCost, type ManaSource, type Pip } from "../../domain/mana-payment";
+import { isManaSymbol, parseCost, type PaymentSource, type Pip } from "@/modules/decks/core/client";
 import type { LibraryCard } from "./opening-hand/library";
 
 // The cast simulator's effect registry (P28): what a card does to mana or to costs. Four kinds
@@ -32,9 +32,9 @@ type EffectHandler<Effect> = Readonly<{
   /** Generic mana taken off a spell's cost while the card is in play. */
   discount?: (effect: Effect, spell: SpellToCast) => number;
   /** The mana left after casting the card from hand, or null when it can't be paid. */
-  resolve?: (effect: Effect, mana: readonly ManaSource[]) => readonly ManaSource[] | null;
+  resolve?: (effect: Effect, mana: readonly PaymentSource[]) => readonly PaymentSource[] | null;
   /** The mana the card adds each turn once in play. */
-  produces?: (effect: Effect) => readonly ManaSource[];
+  produces?: (effect: Effect) => readonly PaymentSource[];
   /** The land the card puts onto the battlefield, one that adds a colour still missing if it can. */
   fetches?: (effect: Effect, missing: readonly Pip[]) => LandInPlay;
 }>;
@@ -63,8 +63,8 @@ function fetchLand(effect: EffectOf<"landFetch">, missing: readonly Pip[]): Land
 /** Pays the ritual's cost from the pool and adds its mana. */
 function payRitual(
   effect: EffectOf<"ritual">,
-  mana: readonly ManaSource[],
-): readonly ManaSource[] | null {
+  mana: readonly PaymentSource[],
+): readonly PaymentSource[] | null {
   const { pips, generic } = parseCost(effect.cost);
   // Sources with the fewest colours pay first, so a dual source is kept for what needs it.
   const left = [...mana].sort((a, b) => a.length - b.length);
@@ -75,7 +75,7 @@ function payRitual(
   }
   if (left.length < generic) return null;
   left.splice(0, generic);
-  return [...left, ...effect.adds.map((color): ManaSource => [color])];
+  return [...left, ...effect.adds.map((color): PaymentSource => [color])];
 }
 
 const ARTIFACT_REDUCER: EffectOf<"reducer"> = {
@@ -125,12 +125,12 @@ export function totalDiscount(effects: readonly CardEffect[], spell: SpellToCast
 /** The mana left after casting a ritual, or null when it can't be paid or the effect is no ritual. */
 export function castRitual(
   effect: CardEffect,
-  mana: readonly ManaSource[],
-): readonly ManaSource[] | null {
+  mana: readonly PaymentSource[],
+): readonly PaymentSource[] | null {
   return effect.kind === "ritual" ? (CAST_EFFECTS.ritual.resolve?.(effect, mana) ?? null) : null;
 }
 
 /** The mana a card in play adds each turn. */
-export function producedBy(effect: CardEffect): readonly ManaSource[] {
+export function producedBy(effect: CardEffect): readonly PaymentSource[] {
   return effect.kind === "tapMana" ? (CAST_EFFECTS.tapMana.produces?.(effect) ?? []) : [];
 }

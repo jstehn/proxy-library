@@ -7,7 +7,7 @@ import {
   type DraftInput,
 } from "./build-from-collection";
 import type { LandCandidate } from "./mana-base";
-import type { ProfileLine } from "../../domain/stats";
+import type { ProfileLine } from "@/modules/decks/core/client";
 import { type ManaColor } from "@/shared/kernel";
 
 // Draft a 100-card Commander deck from owned cards first (design doc 37, sections 3-4).

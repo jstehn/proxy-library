@@ -3,7 +3,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { makeProxySheets } from "../application/proxy-sheets";
-import { symbolArt } from "../../domain/mana-symbols";
+import { symbolArt } from "@/modules/decks/core/client";
 import { DEFAULT_PROXY_OPTIONS, type ProxyLine, type ProxyOptions } from "../domain/proxy-sheet";
 import { fakeProxyImages } from "../testing/fakes";
 import { colorTestCards, printedCard } from "../testing/printed-cards";

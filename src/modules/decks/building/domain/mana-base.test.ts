@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Format } from "../../domain/deck";
+import type { Format } from "@/modules/decks/core/client";
 import {
   landTarget,
   planManaBase,
@@ -9,7 +9,7 @@ import {
   type ManaBaseInput,
   type ManaBasePlan,
 } from "./mana-base";
-import { deckStats, type ProfileLine } from "../../domain/stats";
+import { deckStats, type ProfileLine } from "@/modules/decks/core/client";
 import { type ManaColor } from "@/shared/kernel";
 
 // A mana base you could start from (design doc 35, sections 3-4).

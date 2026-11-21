@@ -5,17 +5,18 @@ import {
   manaCurve,
   type Theme,
 } from "@/shared/kernel";
-import { isPlayed } from "../../domain/boards";
-import type { Format } from "../../domain/deck";
-import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
-import { FORMAT_RULES, formatRules } from "../../domain/format-rules";
 import {
+  isPlayed,
+  FORMAT_RULES,
+  formatRules,
   deckStats,
   isLand,
   TARGETED_TAGS,
   type ProfileLine,
   type TargetedTag,
-} from "../../domain/stats";
+} from "@/modules/decks/core/client";
+import type { Format } from "@/modules/decks/core/client";
+import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
 import {
   deckProfile,
   scoreForDeck,
@@ -23,8 +24,9 @@ import {
   type CandidateCard,
   type DeckFingerprint,
   type Reason,
+  strength,
+  type RoleGap,
 } from "@/modules/decks/scoring/client";
-import { strength, type RoleGap } from "@/modules/decks/scoring/client";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first,
 // then optional store gap-fill, plus lands from planManaBase (design docs 37 & 44). Pure: queries

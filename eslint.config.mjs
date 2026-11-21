@@ -305,6 +305,8 @@ const policies = [
           element: {
             type: "module-layer",
             captured: { module: "decks", area: `!(${area})`, layer: "!(testing)" },
+            // table definitions are shared on purpose, as with other modules (ADR 0006)
+            fileInternalPath: "!(schema.ts)",
           },
         },
       },
@@ -430,7 +432,7 @@ export default defineConfig([
         {
           default: "disallow",
           message:
-            "Architecture: {{ from.element.types.[0] }}{{#if from.element.captured.module}} ({{ from.element.captured.module }}{{#if from.element.captured.layer}}/{{ from.element.captured.layer }}{{/if}}){{/if}} may not import {{ to.element.types.[0] }}{{#if to.element.captured.module}} ({{ to.element.captured.module }}{{#if to.element.captured.layer}}/{{ to.element.captured.layer }}{{/if}}){{/if}}. See docs/architecture/overview.md.",
+            "Architecture: {{ from.element.types.[0] }}{{#if from.element.captured.module}} ({{ from.element.captured.module }}{{#if from.element.captured.area}}/{{ from.element.captured.area }}{{/if}}{{#if from.element.captured.layer}}/{{ from.element.captured.layer }}{{/if}}){{/if}} may not import {{ to.element.types.[0] }}{{#if to.element.captured.module}} ({{ to.element.captured.module }}{{#if to.element.captured.area}}/{{ to.element.captured.area }}{{/if}}{{#if to.element.captured.layer}}/{{ to.element.captured.layer }}{{/if}}){{/if}}. See docs/architecture/overview.md.",
           policies,
         },
       ],

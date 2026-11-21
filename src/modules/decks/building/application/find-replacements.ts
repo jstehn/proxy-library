@@ -1,7 +1,6 @@
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import type { DeckPlan } from "../../domain/deck-profile";
-import { withoutAvoidCards } from "../../domain/deck-profile";
-import type { CardNotFound, DeckNotFound } from "../../domain/errors";
+import type { DeckPlan, CardNotFound, DeckNotFound } from "@/modules/decks/core/client";
+import { withoutAvoidCards } from "@/modules/decks/core/client";
 import type {
   BudgetReplacementsResult,
   Suggestion,

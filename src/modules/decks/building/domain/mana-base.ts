@@ -1,8 +1,13 @@
 import type { EntersTapped } from "@/modules/catalog";
 import type { CastabilitySummary } from "@/modules/decks/play/client";
-import type { Format } from "../../domain/deck";
-import { formatRules } from "../../domain/format-rules";
-import { colorPips, deckStats, type DeckStats, type ProfileLine } from "../../domain/stats";
+import type { Format } from "@/modules/decks/core/client";
+import {
+  formatRules,
+  colorPips,
+  deckStats,
+  type DeckStats,
+  type ProfileLine,
+} from "@/modules/decks/core/client";
 import {
   type CardFacts,
   type CardIdentity,

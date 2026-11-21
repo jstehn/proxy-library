@@ -1,17 +1,18 @@
 import { type BracketFlag } from "@/shared/kernel";
-import type { Board } from "../../domain/boards";
-import { bracketLine, flagsOverTarget, type Bracket } from "../../domain/brackets";
-import type { Format } from "../../domain/deck";
-import { formatRules } from "../../domain/format-rules";
-import { rateCard } from "./rate";
+import type { Board, Format } from "@/modules/decks/core/client";
 import {
+  bracketLine,
+  flagsOverTarget,
+  type Bracket,
+  formatRules,
   deckStats,
   isLand,
   TARGETED_TAGS,
   type EdhrecSignal,
   type ProfileLine,
   type TargetedTag,
-} from "../../domain/stats";
+} from "@/modules/decks/core/client";
+import { rateCard } from "./rate";
 import {
   deckProfile,
   edhrecReason,

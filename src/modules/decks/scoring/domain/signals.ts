@@ -6,7 +6,7 @@ import {
   type Theme,
 } from "@/shared/kernel";
 import type { SignalFact } from "@/modules/catalog";
-import type { DeckCount } from "../../domain/boards";
+import type { DeckCount } from "@/modules/decks/core/client";
 
 // Signals (design docs 28, 46 and 66), counted over a deck: what a group of cards keeps doing. A
 // Shroofus deck full of spore counters and Saprolings says "proliferate" and "token payoffs" even

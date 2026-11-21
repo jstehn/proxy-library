@@ -1,7 +1,11 @@
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Result, type UnitOfWork } from "@/shared/kernel";
-import type { DeckId } from "../../domain/deck";
-import type { DeckNotFound, NotThatToken, TokenNotInDeck } from "../../domain/errors";
+import type {
+  DeckId,
+  DeckNotFound,
+  NotThatToken,
+  TokenNotInDeck,
+} from "@/modules/decks/core/client";
 import type { TokenChoiceServices } from "./ports";
 
 // Choosing a token's art, or leaving it out, for one deck's proxies (design doc 25).

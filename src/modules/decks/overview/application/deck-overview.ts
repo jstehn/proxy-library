@@ -1,19 +1,27 @@
-import { formatRules } from "../../domain/format-rules";
+import {
+  formatRules,
+  isPlayed,
+  bracketReport,
+  listAndFingerprint,
+  problemsOfLines,
+  deckStats,
+  type DeckStats,
+} from "@/modules/decks/core/client";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Actor } from "@/modules/accounts";
 import { err, ok, type Result } from "@/shared/kernel";
-import type { DeckCombo } from "../../domain/brackets";
-import type { Board } from "../../domain/deck";
-import { isPlayed } from "../../domain/boards";
-import { bracketReport, listAndFingerprint, problemsOfLines } from "../../domain/deck-reads";
-import type { DeckSource, DeckView, StoredDeckProfile } from "../../domain/deck-view";
-import { openingHandOdds, type OpeningHandOdds } from "@/modules/decks/play/client";
-import { library } from "@/modules/decks/play/client";
-import type { DeckNotFound } from "../../domain/errors";
-import type { DeckProblem } from "../../domain/rules";
-import { deckStats, type DeckStats } from "../../domain/stats";
+import type {
+  DeckCombo,
+  Board,
+  DeckSource,
+  DeckView,
+  StoredDeckProfile,
+  DeckNotFound,
+  DeckProblem,
+  BracketReport,
+} from "@/modules/decks/core/client";
+import { openingHandOdds, type OpeningHandOdds, library } from "@/modules/decks/play/client";
 import type { TokenLine } from "@/modules/decks/proxies/client";
-import type { BracketReport } from "../../domain/deck-reads";
 
 // One deck, read once (ADR 0026, audit F2). The builder, the deck page and the get_deck tool all
 // ask for the deck here, so they agree on its problems, its bracket and its list. What costs a

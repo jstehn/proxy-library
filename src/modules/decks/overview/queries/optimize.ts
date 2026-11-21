@@ -1,16 +1,15 @@
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
-import { isPlayed } from "../../domain/boards";
-import type { Deck } from "../../domain/deck";
+import { isPlayed } from "@/modules/decks/core/client";
+import type { Deck } from "@/modules/decks/core/client";
 import {
   optimizeDeck,
   type OptimizerCard,
   type OptimizeResult,
   lineToOptimizerCard,
 } from "@/modules/decks/scoring/client";
-import { deckView } from "../../queries/decks";
-import { deckSuggestions } from "../../queries/suggestions";
-import { type Suggestion } from "../domain/suggestion-types";
+import { deckView } from "@/modules/decks/core";
+import { candidatePool, deckSuggestions, type Suggestion } from "@/modules/decks/building";
 
 export type OptimizeDeckPool = "owned" | "store" | "both";
 
@@ -68,7 +67,7 @@ export async function optimizeDeckForView(
 ): Promise<OptimizeDeckViewResult | null> {
   const [view, suggestions] = await Promise.all([
     deckView(db, userId, deckId),
-    deckSuggestions(db, userId, deckId),
+    deckSuggestions(candidatePool(db, userId), deckId),
   ]);
   if (view === null) return null;
 
@@ -80,10 +79,10 @@ export async function optimizeDeckForView(
       ? [...(suggestions?.forDeck.owned ?? []), ...(suggestions?.forDeck.store ?? [])]
       : [...(suggestions?.forDeck[poolMode] ?? [])];
 
-  const candidatePool = rawPool.map(suggestionToOptimizerCard);
+  const optimizerCandidates = rawPool.map(suggestionToOptimizerCard);
   const rng = options.rng ?? seededRng(options.seed ?? `deck-${deckId}`);
 
-  const result = optimizeDeck(currentDeck, candidatePool, {
+  const result = optimizeDeck(currentDeck, optimizerCandidates, {
     format: view.deck.format,
     targetBracket: view.deck.targetBracket,
     maxSwaps: options.maxSwaps,

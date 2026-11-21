@@ -1,25 +1,29 @@
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import type { DraftOptions } from "@/modules/decks/building/client";
-import { browseCollection, type BrowseInput } from "@/modules/decks/building";
 import {
+  browseCollection,
+  type BrowseInput,
   commanderDetails as detailsOfCommander,
   commandersICanBuild as buildable,
+  draftForDeck,
+  budgetList as budgetOf,
+  candidatePool,
+  deckSuggestions,
+  similarCards,
 } from "@/modules/decks/building";
 import type { CommanderSearch } from "@/modules/decks/building";
-import { draftForDeck } from "@/modules/decks/building";
 import {
   decksFor as decksOf,
   decksUsing as decksUsingPrintings,
   deckView as viewOfOwnDeck,
   otherDecksHolding as otherDecksOf,
-} from "../../queries/decks";
-import { deckListPreview } from "../../queries/preview";
-import { optimizeDeckForView, type OptimizeDeckPool } from "@/modules/decks/building";
-import { cardPrintings } from "../../queries/printings";
-import { cardsToGetFor } from "../../queries/sharing";
+  deckListPreview,
+  cardPrintings,
+  cardsToGetFor,
+} from "@/modules/decks/core";
+import { optimizeDeckForView, type OptimizeDeckPool } from "./optimize";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";
-import { budgetList as budgetOf, deckSuggestions, similarCards } from "../../queries/suggestions";
 
 // The decks module's player reads (design doc 67, kind P), bound into `reads.decks` by
 // `src/server/reads.ts`. Each takes the `Actor` and passes the actor's own id to the query that
@@ -86,7 +90,7 @@ export function otherDecksHolding(db: DbExecutor, actor: Actor, deckId: number, 
 
 /** Cards for one of the actor's decks and for each role it is short of (R38). */
 export function suggestions(db: DbExecutor, actor: Actor, deckId: number) {
-  return deckSuggestions(db, actor.userId, deckId);
+  return deckSuggestions(candidatePool(db, actor.userId), deckId);
 }
 
 /** The whole-deck optimizer's answer for one of the actor's decks (R39). */
@@ -106,12 +110,12 @@ export function draft(db: DbExecutor, actor: Actor, deckId: number, options: Dra
 
 /** Cards like one card, for one of the actor's decks (R41). */
 export function similar(db: DbExecutor, actor: Actor, deckId: number, oracleId: string) {
-  return similarCards(db, actor.userId, deckId, oracleId);
+  return similarCards(candidatePool(db, actor.userId), deckId, oracleId);
 }
 
 /** Store cards for one of the actor's decks within a budget (R42). */
 export function budgetList(db: DbExecutor, actor: Actor, deckId: number, budgetCents: number) {
-  return budgetOf(db, actor.userId, deckId, budgetCents);
+  return budgetOf(candidatePool(db, actor.userId), deckId, budgetCents);
 }
 
 /** The saved snapshots of one of the actor's decks (R43). */

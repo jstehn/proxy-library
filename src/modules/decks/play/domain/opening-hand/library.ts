@@ -1,7 +1,7 @@
 import { cardTypes, type CardFacts, type CardIdentity, type Tag } from "@/shared/kernel";
 import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
-import type { DeckCount } from "../../../domain/boards";
-import { isLand } from "../../../domain/stats";
+import type { DeckCount } from "@/modules/decks/core/client";
+import { isLand } from "@/modules/decks/core/client";
 
 /** What the hand engine needs from a deck line. */
 export type DrawLine = DeckCount &

@@ -1,27 +1,25 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { Cents, COLORS, type UserId, seededRng } from "@/shared/kernel";
-import { isPlayed } from "../../domain/boards";
 import {
+  isPlayed,
   bracketLine,
   bracketRuleReasons,
   bracketWarning,
   estimateBracket,
-} from "../../domain/brackets";
-import { simulateCastOnCurve } from "@/modules/decks/play/client";
-import { resolveDeckProfileTargets, type DeckPlan } from "../../domain/deck-profile";
-import { decks } from "../../infrastructure/schema";
-import { library } from "@/modules/decks/play/client";
-import { simulateOpeningHands } from "@/modules/decks/play/client";
+  resolveDeckProfileTargets,
+  type DeckPlan,
+  deckProblems,
+  formatRules,
+  deckStats,
+  TARGETED_TAGS,
+} from "@/modules/decks/core/client";
+import { simulateCastOnCurve, library, simulateOpeningHands } from "@/modules/decks/play/client";
+import { decks } from "@/modules/decks/core/infrastructure/schema";
 import { lineToOptimizerCard, scoreDeck } from "@/modules/decks/scoring/client";
-import { deckProblems } from "../../domain/rules";
-import { formatRules } from "../../domain/format-rules";
-import { deckStats, TARGETED_TAGS } from "../../domain/stats";
 import type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "../domain/audit-report";
-import { combosForDeck } from "../../queries/combos";
-import type { DeckView } from "../../domain/deck-view";
-import { deckView } from "../../queries/decks";
-import { withFeatures } from "../../queries/card-features";
+import { combosForDeck, deckView, withFeatures } from "@/modules/decks/core";
+import type { DeckView } from "@/modules/decks/core/client";
 
 /**
  * One-shot diagnostic audit combining legality, bracket/combos, whole-deck score,

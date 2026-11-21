@@ -15,8 +15,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
-import { players } from "../../accounts/infrastructure/schema";
-import { printings, tokenPrintings } from "../../catalog/infrastructure/schema";
+import { players } from "../../../accounts/infrastructure/schema";
+import { printings, tokenPrintings } from "../../../catalog/infrastructure/schema";
 import type { ChangeToSave } from "../application/ports";
 import type { DeckPlan } from "../domain/deck-profile";
 import { timestamptz } from "@/shared/db";

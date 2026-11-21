@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { err, ok } from "@/shared/kernel";
 import { inMemoryUnitOfWork } from "@/shared/kernel/testing";
-import { DeckId } from "../../domain/deck";
-import { inMemoryDeckRepository } from "../../testing/fakes";
+import { DeckId } from "@/modules/decks/core/client";
+import { inMemoryDeckRepository } from "../../core/testing/fakes";
 import { inMemoryDeckTokens } from "../testing/fakes";
 import { makeTokenChoices } from "./token-choices";
 

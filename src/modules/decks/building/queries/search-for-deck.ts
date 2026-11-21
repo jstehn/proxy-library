@@ -6,8 +6,8 @@ import type { UserId } from "@/shared/kernel";
 import { type BracketFlag, type Tag, type Theme } from "@/shared/kernel";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
-import { bracketLine, flagsOverTarget, type Bracket } from "../../domain/brackets";
-import type { Format } from "../../domain/deck";
+import { bracketLine, flagsOverTarget, type Bracket } from "@/modules/decks/core/client";
+import type { Format } from "@/modules/decks/core/client";
 import {
   SEARCH_FOR_DECK_LIMITS,
   searchForDeckResult,
@@ -19,7 +19,7 @@ import {
   type SynergyQuery,
 } from "../domain/search-for-deck";
 import { deckBrowseContext } from "./browse";
-import { deckView } from "../../queries/decks";
+import { deckView } from "@/modules/decks/core";
 
 // Several synergy searches for one deck at once (design doc 28, section 3.3). Every query is
 // ANDed with the deck's rules (rule 12): the commanders' color identity, the format's legality

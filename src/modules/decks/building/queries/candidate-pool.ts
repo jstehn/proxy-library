@@ -1,8 +1,8 @@
 import { sql, type SQL } from "drizzle-orm";
 import { latestPriceRows, textArray } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { formatRules } from "../../domain/format-rules";
-import { MOST_SPECIAL_FIRST, ownedCopies } from "../../queries/owned";
+import { formatRules } from "@/modules/decks/core/client";
+import { MOST_SPECIAL_FIRST, ownedCopies } from "@/modules/decks/core";
 
 // The two halves of "cards you could add" (audit S2, decision of 2026-11-19): what you own, one
 // row per card, and what the store sells that you don't own, at its cheapest printing. Every

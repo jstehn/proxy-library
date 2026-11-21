@@ -9,11 +9,9 @@ import {
   THEME_LABELS,
   type Theme,
 } from "@/shared/kernel";
-import type { Bracket } from "../../domain/brackets";
-import type { Format } from "../../domain/deck";
-import { formatRules } from "../../domain/format-rules";
+import type { Bracket, Format, EdhrecSignal, TargetedTag } from "@/modules/decks/core/client";
+import { formatRules } from "@/modules/decks/core/client";
 import { deckSignalProfile, NO_SIGNALS, synergyMatches, type DeckSignalProfile } from "./signals";
-import type { EdhrecSignal, TargetedTag } from "../../domain/stats";
 
 // Unified 0–100 Card Rating (design doc 46, #53/#55/#56/#59):
 // combines produces/consumes synergy, theme/tribe/keyword fit, EDHREC community stats,

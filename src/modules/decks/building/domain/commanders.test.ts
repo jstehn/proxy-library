@@ -11,7 +11,7 @@ import {
   type PoolCard,
 } from "./commanders";
 import { type ManaColor } from "@/shared/kernel";
-import { featuresOfText } from "../../testing/deck-view";
+import { featuresOfText } from "../../core/testing/deck-view";
 
 const commander = (
   name: string,

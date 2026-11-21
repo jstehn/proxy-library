@@ -1,5 +1,5 @@
-import type { DeckId } from "../../domain/deck";
-import type { DeckRepository } from "../../application/ports";
+import type { DeckId } from "@/modules/decks/core/client";
+import type { DeckRepository } from "@/modules/decks/core";
 import type { ProxyProgress } from "../domain/proxy-progress";
 import type { ProxyOptions, ProxyPage } from "../domain/proxy-sheet";
 import type { TokenChoice } from "../domain/token-proxies";
