@@ -23,7 +23,6 @@ export {
   type BrowseSource,
 } from "./queries/browse";
 export { draftForDeck } from "./queries/build-from-collection";
-export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./queries/candidate-pool";
 export { commanderDetails, commandersICanBuild, type CommanderSearch } from "./queries/commanders";
 export { embedSimForCards } from "./queries/embeddings";
 export { manaBasePlan } from "./queries/mana-base";

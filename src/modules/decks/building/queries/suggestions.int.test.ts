@@ -6,12 +6,10 @@ import {
   budgetList,
   candidatePool,
   deckSuggestions,
-  deckView,
-  makeDecks,
   similarCards,
-  type DeckId,
   type SuggestionList,
-} from "@/modules/decks";
+} from "@/modules/decks/building";
+import { deckView, makeDecks, type DeckId } from "@/modules/decks/core";
 import {
   actor,
   clock,

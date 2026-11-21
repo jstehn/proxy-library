@@ -24,4 +24,3 @@ export {
   type Scored,
 } from "./domain/suggest";
 export { suggestSwaps, type SwapCutMeta, type SwapReason } from "./domain/swaps";
-export type { OwnedCardCheck } from "./domain/owned-card-check";

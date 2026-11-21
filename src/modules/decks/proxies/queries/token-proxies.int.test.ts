@@ -17,14 +17,13 @@ import { makeCatalog, PrintingId } from "@/modules/catalog";
 import {
   DEFAULT_PROXY_OPTIONS,
   deckTokenLines,
-  makeDecks,
   makeProxySheets,
-  deckQueries,
   makeTokenChoices,
-  type DeckId,
   type TokenLine,
   type TokenMaker,
-} from "@/modules/decks";
+} from "@/modules/decks/proxies";
+import { makeDecks, type DeckId } from "@/modules/decks/core";
+import { deckQueries } from "@/modules/decks/overview";
 import { pdfLibRenderer } from "@/modules/decks/infrastructure";
 import { makeDrizzleUnitOfWork } from "@/shared/db";
 import { err, ok } from "@/shared/kernel";

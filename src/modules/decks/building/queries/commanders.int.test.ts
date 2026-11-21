@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { extractFeatures } from "@/modules/catalog";
-import { commanderDetails, commandersICanBuild, makeDecks } from "@/modules/decks";
+import { commanderDetails, commandersICanBuild } from "@/modules/decks/building";
+import { makeDecks } from "@/modules/decks/core";
 import {
   actor,
   clock,

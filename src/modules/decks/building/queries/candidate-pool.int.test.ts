@@ -2,7 +2,7 @@
 // which copy stands for a card, and which printing the store sells cheapest.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "@/modules/decks";
+import { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./candidate-pool";
 import { UserId } from "@/shared/kernel";
 import {
   actor,

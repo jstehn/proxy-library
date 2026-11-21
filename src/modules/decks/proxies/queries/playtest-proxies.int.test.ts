@@ -13,7 +13,7 @@ import {
   fixtureWpnGateway,
   memoryArtworkStore,
 } from "@/modules/catalog/infrastructure";
-import { DEFAULT_PROXY_OPTIONS, makeProxySheets, type ProxyLine } from "@/modules/decks";
+import { DEFAULT_PROXY_OPTIONS, makeProxySheets, type ProxyLine } from "@/modules/decks/proxies";
 import { pdfLibRenderer } from "@/modules/decks/infrastructure";
 import { makeDrizzleUnitOfWork } from "@/shared/db";
 import { readFileSync } from "node:fs";

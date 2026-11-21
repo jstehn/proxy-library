@@ -2,23 +2,24 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrintingId } from "@/modules/catalog";
+import { browseCollection } from "@/modules/decks/building";
 import {
-  browseCollection,
   cardPrintings,
-  compareDeckSnapshot,
   deckProblems,
-  deckTokenLines,
   deckView,
   decksFor,
-  filterTokenChecklist,
   fingerprint,
-  listDeckSnapshots,
   makeDecks,
-  makeDeckSnapshots,
+  type DeckId,
+} from "@/modules/decks/core";
+import { compareDeckSnapshot, listDeckSnapshots } from "@/modules/decks/overview";
+import {
+  deckTokenLines,
+  filterTokenChecklist,
   summarizeTokenChecklist,
   toTokenChecklistItem,
-  type DeckId,
-} from "@/modules/decks";
+} from "@/modules/decks/proxies";
+import { makeDeckSnapshots } from "@/modules/decks/changes";
 import { drizzleCardLookup } from "@/modules/decks/infrastructure";
 import { makeStore } from "@/modules/store";
 import { UserId } from "@/shared/kernel";

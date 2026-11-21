@@ -2,7 +2,8 @@
 // catalog: the deck's rules on every query (rule 12), owned before store, merged synergies.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { makeDecks, searchForDeck, type DeckId } from "@/modules/decks";
+import { makeDecks, type DeckId } from "@/modules/decks/core";
+import { searchForDeck } from "@/modules/decks/building";
 import {
   actor,
   clock,

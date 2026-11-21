@@ -1,6 +1,6 @@
 // The stored dry-run changes (design doc 40, P08) against real Postgres.
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { makeDecks } from "@/modules/decks";
+import { makeDecks } from "@/modules/decks/core";
 import { drizzleChangePreviewRepository } from "@/modules/decks/infrastructure";
 import { UserId } from "@/shared/kernel";
 import {

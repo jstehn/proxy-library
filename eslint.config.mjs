@@ -439,6 +439,7 @@ const policies = [
     allow: {
       to: [
         { element: { type: "module" } },
+        { element: { type: "module-area" } },
         { element: { type: "module-layer", captured: { layer: "infrastructure" } } },
         { element: { type: "module-layer", captured: { layer: "testing" } } },
         { element: { type: "module-layer", captured: { layer: "application" } } },

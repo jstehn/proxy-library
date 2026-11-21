@@ -11,7 +11,7 @@ export {
   type StoredPreviewResult,
 } from "./application/deck-previews";
 export { makeDeckSnapshots, type DeckSnapshots } from "./application/deck-snapshots";
-export type { PreviewRepository, SnapshotRepository, SnapshotServices } from "./application/ports";
+export type { PreviewRepository } from "./application/ports";
 export {
   deckChangePreview,
   deckListPreview,

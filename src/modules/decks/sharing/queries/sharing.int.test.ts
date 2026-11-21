@@ -3,16 +3,9 @@ import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { activityQueries } from "@/modules/activity";
-import {
-  cardsToGetFor,
-  CommentId,
-  deckPublicQueries,
-  deckQueries,
-  decksFor,
-  makeDeckSharing,
-  makeDecks,
-  type DeckId,
-} from "@/modules/decks";
+import { cardsToGetFor, CommentId, makeDeckSharing } from "@/modules/decks/sharing";
+import { deckPublicQueries, deckQueries } from "@/modules/decks/overview";
+import { decksFor, makeDecks, type DeckId } from "@/modules/decks/core";
 import { makeResetPlayer } from "@/modules/reset";
 import {
   actor,

@@ -2,13 +2,8 @@
 // Postgres and the fixture catalog.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  browseCollection,
-  deckView,
-  makeDecks,
-  type BrowseInput,
-  type DeckId,
-} from "@/modules/decks";
+import { browseCollection, type BrowseInput } from "@/modules/decks/building";
+import { deckView, makeDecks, type DeckId } from "@/modules/decks/core";
 import { PrintingId } from "@/modules/catalog";
 import {
   actor,

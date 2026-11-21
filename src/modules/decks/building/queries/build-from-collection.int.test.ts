@@ -3,7 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { deckView, draftForDeck, makeDecks, type DeckId } from "@/modules/decks";
+import { deckView, makeDecks, type DeckId } from "@/modules/decks/core";
+import { draftForDeck } from "@/modules/decks/building";
 import {
   actor,
   clock,
