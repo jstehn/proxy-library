@@ -5,12 +5,15 @@ import { MAX_QUANTITY, payoutPerCopy, type SingleHistoryRow } from "@/modules/st
 import { readPage } from "@/server/page-instance";
 import { Cents, type Finish } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
-import { ManaStylesheet, ManaText } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mana";
 import { PriceChart, type ChartMarker } from "@/ui/price-chart";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { AddWishForm } from "@/app/wishlist/wish-forms";
 import { RealCopiesBox } from "./real-copies";
 import { BuyForm, SellForm } from "./trade-forms";
+import { Card } from "@/ui/card";
+import { CardView } from "@/ui/card-view";
+import { Page } from "@/ui/page";
 
 // One card: what it is, what it's worth over time, what you own, and buying or selling it
 // (design doc 07, section 10).
@@ -58,22 +61,17 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12">
+    <Page width="5xl" spacing="roomy">
       <KeyruneStylesheet />
       <ManaStylesheet />
-      <div className="flex flex-col gap-8 md:flex-row">
-        {card.hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`/api/images/${card.id}/normal/front`}
-            alt={card.name}
-            width={488}
-            height={680}
-            className="aspect-[488/680] w-full max-w-72 self-start rounded-[4.5%] bg-zinc-100 shadow-lg dark:bg-zinc-800"
-          />
-        ) : null}
-
-        <div className="flex flex-1 flex-col gap-4">
+      <CardView
+        printingId={card.id}
+        name={card.name}
+        hasImage={card.hasImage}
+        faces={card.faces}
+        textStyle="plain"
+        desktopImage="wide"
+        heading={
           <header className="flex flex-col gap-1">
             <h1 className="text-2xl font-semibold">{card.name}</h1>
             <p className="text-muted flex items-center gap-2 text-sm">
@@ -85,133 +83,111 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
               {card.variantLabel && ` · ${card.variantLabel}`}
             </p>
           </header>
-
-          {card.faces.map((face, index) => (
-            <section key={index} className="flex flex-col gap-1 text-sm">
-              <p className="flex justify-between gap-2 font-medium">
-                <span>{face.name}</span>
-                {face.manaCost && (
-                  <span className="shrink-0">
-                    <ManaText text={face.manaCost} />
-                  </span>
-                )}
-              </p>
-              <p className="text-zinc-600 italic dark:text-zinc-400">{face.typeLine}</p>
-              {face.text.split("\n").map((paragraph, line) => (
-                <p key={line}>
-                  <ManaText text={paragraph} />
-                </p>
+        }
+      >
+        <section className="flex flex-col gap-1 text-sm">
+          <h2 className="font-medium">In your decks</h2>
+          {decks.length === 0 ? (
+            <p className="text-muted">No deck uses this card.</p>
+          ) : (
+            <ul className="flex flex-wrap gap-x-3">
+              {decks.map((deck) => (
+                <li key={deck.id}>
+                  <Link href={`/decks/${deck.id}`} className="underline">
+                    {deck.name}
+                  </Link>{" "}
+                  <span className="text-muted">({deck.quantity})</span>
+                </li>
               ))}
-            </section>
-          ))}
+            </ul>
+          )}
+        </section>
 
-          <section className="flex flex-col gap-1 text-sm">
-            <h2 className="font-medium">In your decks</h2>
-            {decks.length === 0 ? (
-              <p className="text-muted">No deck uses this card.</p>
-            ) : (
-              <ul className="flex flex-wrap gap-x-3">
-                {decks.map((deck) => (
-                  <li key={deck.id}>
-                    <Link href={`/decks/${deck.id}`} className="underline">
-                      {deck.name}
-                    </Link>{" "}
-                    <span className="text-muted">({deck.quantity})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+        <section className="flex flex-col gap-4">
+          <h2 className="font-medium">Buy and sell</h2>
+          {finishes.map((finish) => {
+            const price = card.prices[finish];
+            const copies = owned[finish] ?? 0;
+            const payout = price === undefined ? null : payoutPerCopy(price, rateBps);
+            return (
+              <Card key={finish} padding="md" className="flex flex-col gap-2">
+                <p className="text-sm">
+                  <strong>{FINISH_LABELS[finish]}</strong> ·{" "}
+                  {price === undefined ? "no market price" : `${Cents.format(price)} market`} · you
+                  own {copies}
+                </p>
+                {price !== undefined && detail.isSetEnabled && (
+                  <BuyForm
+                    printingId={card.id}
+                    finish={finish}
+                    finishLabel={FINISH_LABELS[finish]}
+                    maxQuantity={MAX_QUANTITY}
+                    priceText={`${Cents.format(price)} each`}
+                  />
+                )}
+                {payout !== null && payout > 0 && (
+                  <SellForm
+                    printingId={card.id}
+                    finish={finish}
+                    finishLabel={FINISH_LABELS[finish]}
+                    maxQuantity={Math.min(copies, MAX_QUANTITY)}
+                    priceText={`${Cents.format(payout)} each`}
+                  />
+                )}
+              </Card>
+            );
+          })}
+          <p className="text-muted text-xs">
+            The store buys cards at {rateBps / 100}% of market price, rounded down.
+          </p>
+        </section>
 
-          <section className="flex flex-col gap-4">
-            <h2 className="font-medium">Buy and sell</h2>
-            {finishes.map((finish) => {
-              const price = card.prices[finish];
-              const copies = owned[finish] ?? 0;
-              const payout = price === undefined ? null : payoutPerCopy(price, rateBps);
-              return (
-                <div
-                  key={finish}
-                  className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
-                >
-                  <p className="text-sm">
-                    <strong>{FINISH_LABELS[finish]}</strong> ·{" "}
-                    {price === undefined ? "no market price" : `${Cents.format(price)} market`} ·
-                    you own {copies}
-                  </p>
-                  {price !== undefined && detail.isSetEnabled && (
-                    <BuyForm
-                      printingId={card.id}
-                      finish={finish}
-                      finishLabel={FINISH_LABELS[finish]}
-                      maxQuantity={MAX_QUANTITY}
-                      priceText={`${Cents.format(price)} each`}
-                    />
-                  )}
-                  {payout !== null && payout > 0 && (
-                    <SellForm
-                      printingId={card.id}
-                      finish={finish}
-                      finishLabel={FINISH_LABELS[finish]}
-                      maxQuantity={Math.min(copies, MAX_QUANTITY)}
-                      priceText={`${Cents.format(payout)} each`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            <p className="text-muted text-xs">
-              The store buys cards at {rateBps / 100}% of market price, rounded down.
+        <section className="flex flex-col gap-2 text-sm">
+          <h2 className="font-medium">Wishlist</h2>
+          {wishes.length > 0 && (
+            <ul className="flex flex-col gap-0.5">
+              {wishes.map((wish) => (
+                <li key={wish.id}>
+                  ★ On your{" "}
+                  <Link href="/wishlist" className="underline">
+                    wishlist
+                  </Link>
+                  : {wish.quantity} {wish.quantity === 1 ? "copy" : "copies"},{" "}
+                  {wish.target.kind === "anyPrinting"
+                    ? `any printing (${WISH_FINISHES[wish.target.finish]})`
+                    : wish.target.printingId === card.id
+                      ? `this printing (${wish.target.finish})`
+                      : `another printing (${wish.target.finish})`}
+                  {wish.targetPrice !== null && `, target ${Cents.format(wish.targetPrice)}`}
+                </li>
+              ))}
+            </ul>
+          )}
+          <details className="border-border-subtle rounded-lg border p-3">
+            <summary className="cursor-pointer font-medium">
+              {wishes.length > 0 ? "Add or change a wish" : "Add to wishlist"}
+            </summary>
+            <div className="mt-3">
+              <AddWishForm
+                printingId={card.id}
+                finishes={finishes}
+                printingLabel={`${detail.setCode.toUpperCase()} #${card.collectorNumber}${card.variantLabel ? `, ${card.variantLabel}` : ""}`}
+              />
+            </div>
+            <p className="text-muted mt-2 text-xs">
+              Wishing for the same thing again changes that wish instead of adding another.
             </p>
-          </section>
+          </details>
+        </section>
 
-          <section className="flex flex-col gap-2 text-sm">
-            <h2 className="font-medium">Wishlist</h2>
-            {wishes.length > 0 && (
-              <ul className="flex flex-col gap-0.5">
-                {wishes.map((wish) => (
-                  <li key={wish.id}>
-                    ★ On your{" "}
-                    <Link href="/wishlist" className="underline">
-                      wishlist
-                    </Link>
-                    : {wish.quantity} {wish.quantity === 1 ? "copy" : "copies"},{" "}
-                    {wish.target.kind === "anyPrinting"
-                      ? `any printing (${WISH_FINISHES[wish.target.finish]})`
-                      : wish.target.printingId === card.id
-                        ? `this printing (${wish.target.finish})`
-                        : `another printing (${wish.target.finish})`}
-                    {wish.targetPrice !== null && `, target ${Cents.format(wish.targetPrice)}`}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <details className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-              <summary className="cursor-pointer font-medium">
-                {wishes.length > 0 ? "Add or change a wish" : "Add to wishlist"}
-              </summary>
-              <div className="mt-3">
-                <AddWishForm
-                  printingId={card.id}
-                  finishes={finishes}
-                  printingLabel={`${detail.setCode.toUpperCase()} #${card.collectorNumber}${card.variantLabel ? `, ${card.variantLabel}` : ""}`}
-                />
-              </div>
-              <p className="text-muted mt-2 text-xs">
-                Wishing for the same thing again changes that wish instead of adding another.
-              </p>
-            </details>
-          </section>
-
-          <RealCopiesBox
-            printingId={card.id}
-            finishes={finishes}
-            copies={realCopies}
-            printings={samePrintings}
-            error={realError}
-          />
-        </div>
-      </div>
+        <RealCopiesBox
+          printingId={card.id}
+          finishes={finishes}
+          copies={realCopies}
+          printings={samePrintings}
+          error={realError}
+        />
+      </CardView>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price history</h2>
@@ -238,7 +214,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
       </section>
 
       {trades.length > 0 && <TradeHistory trades={trades} />}
-    </main>
+    </Page>
   );
 }
 

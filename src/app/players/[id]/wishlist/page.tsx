@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { type SharedWishLine } from "@/modules/wishlist";
 import { UserId } from "@/shared/kernel";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 // Another player's shared wishlist, read-only (design doc 50). Never exposes targetCents,
 // wallet balance, or paydays.
@@ -32,7 +34,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
   const totalOwnedMatches = shared.lines.filter((line) => line.viewerOwned.length > 0).length;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{shared.ownerName}&apos;s wishlist</h1>
@@ -50,10 +52,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
           </p>
         </div>
         {id !== actor.userId && (
-          <Link
-            href={`/trades/new?with=${encodeURIComponent(id)}`}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-          >
+          <Link href={`/trades/new?with=${encodeURIComponent(id)}`} className={buttonClass()}>
             Propose a trade
           </Link>
         )}
@@ -62,7 +61,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
       {shared.lines.length === 0 ? (
         <p className="text-muted text-sm">Their wishlist is empty right now.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {shared.lines.map((line) => {
             const ownedTotal = line.viewerOwned.reduce((sum, copy) => sum + copy.quantity, 0);
             return (
@@ -73,7 +72,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
                   </span>
                   <span className="text-muted text-xs">{targetText(line)}</span>
                   {id !== actor.userId && ownedTotal > 0 && (
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    <span className="text-success-text text-xs font-medium">
                       You own {ownedTotal}
                     </span>
                   )}
@@ -84,6 +83,6 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
           })}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

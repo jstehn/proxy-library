@@ -4,6 +4,9 @@ import "./globals.css";
 import { PwaRegistration } from "./_components/pwa-registration";
 import { SiteHeader } from "./site-header";
 
+const SKIP_LINK =
+  "focus:bg-background focus:text-foreground sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-current";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -37,10 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-        <a
-          href="#main-content"
-          className="focus:bg-background focus:text-foreground sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-current"
-        >
+        <a href="#main-content" className={SKIP_LINK}>
           Skip to content
         </a>
         <PwaRegistration />
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </div>
         {/* Required by Wizards' Fan Content Policy (design doc 13). */}
-        <footer className="border-t border-zinc-200 px-4 py-4 text-center text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+        <footer className="border-border-subtle text-muted border-t px-4 py-4 text-center text-xs">
           Proxy Library is unofficial Fan Content permitted under the Fan Content Policy. Not
           approved/endorsed by Wizards. Portions of the materials used are property of Wizards of
           the Coast. ©Wizards of the Coast LLC.

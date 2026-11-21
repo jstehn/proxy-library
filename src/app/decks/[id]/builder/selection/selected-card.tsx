@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
 import { copiesToTake } from "@/modules/decks/client";
@@ -10,6 +9,11 @@ import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-pane
 import { ownedWords } from "../derive";
 import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+import { CardView } from "@/ui/card-view";
+import { Badge } from "@/ui/badge";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -47,44 +51,36 @@ export function SelectedCard(props: {
   const inDeck = countedCopies(selection.inDeck);
   const onMaybeboard = selection.inDeck.maybe ?? 0;
   const button =
-    "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-zinc-300 dark:border-zinc-700";
+    "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-line";
 
   return (
-    <section
+    <Card
       aria-label={`Selected: ${selection.name}`}
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+      as="section"
+      padding="md"
+      stack
+      className="bg-background"
     >
-      <div className="flex gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/api/images/${selection.printingId}/normal/front`}
-          alt={selection.name}
-          width={488}
-          height={680}
-          className="aspect-[488/680] h-auto w-32 shrink-0 self-start rounded-[4.5%] bg-zinc-100 shadow-md sm:w-48 dark:bg-zinc-800"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 text-xs">
+      <CardView
+        printingId={selection.printingId}
+        name={selection.name}
+        faces={detail?.faces ?? null}
+        textStyle="panel"
+        heading={
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold">{selection.name}</h3>
             <button
               type="button"
               onClick={props.onClose}
               aria-label="Close the selected card"
-              className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="text-muted hover:text-foreground"
             >
               ✕
             </button>
           </div>
-          {/* The card's printed text, on a dark panel like the card previews. */}
-          <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-md bg-zinc-900 p-2 text-white">
-            {detail === null ? (
-              <p className="text-white/60">Loading the card&apos;s text…</p>
-            ) : (
-              detail.faces.map((face, index) => (
-                <FaceText key={index} face={face} isBackFace={index > 0} />
-              ))
-            )}
-          </div>
+        }
+      >
+        <div className="flex flex-col gap-2 text-xs">
           <dl className="flex flex-wrap gap-x-3 gap-y-0.5">
             <Fact
               label="You own"
@@ -116,38 +112,30 @@ export function SelectedCard(props: {
           {selection.tags.length > 0 && (
             <ul aria-label="Roles" className="flex flex-wrap gap-1">
               {selection.tags.map((tag) => (
-                <li
-                  key={tag}
-                  className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-900 dark:bg-sky-950 dark:text-sky-200"
-                >
+                <Badge key={tag} as="li" tone="sky" size="sm">
                   {TAG_LABELS[tag]}
-                </li>
+                </Badge>
               ))}
             </ul>
           )}
           {selection.bracketFlags.length > 0 && (
             <ul aria-label="Bracket" className="flex flex-wrap gap-1">
               {selection.bracketFlags.map((flag) => (
-                <li
-                  key={flag}
-                  className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] text-violet-900 dark:bg-violet-950 dark:text-violet-200"
-                >
+                <Badge key={flag} as="li" tone="violet" size="sm">
                   {FLAG_LABELS[flag]}
-                </li>
+                </Badge>
               ))}
             </ul>
           )}
-          {selection.misfit && (
-            <p className="text-amber-700 dark:text-amber-400">{MISFIT_TEXT[selection.misfit]}</p>
-          )}
+          {selection.misfit && <p className="text-warning-text">{MISFIT_TEXT[selection.misfit]}</p>}
         </div>
-      </div>
+      </CardView>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1" role="group" aria-label="How many to add">
           <button
             type="button"
-            className="h-8 w-8 rounded-md border border-zinc-300 dark:border-zinc-700"
+            className="border-line h-8 w-8 rounded-md border"
             onClick={() => props.onQuantity(Math.max(1, props.quantity - 1))}
             aria-label="One fewer to add"
           >
@@ -158,7 +146,7 @@ export function SelectedCard(props: {
           </span>
           <button
             type="button"
-            className="h-8 w-8 rounded-md border border-zinc-300 dark:border-zinc-700"
+            className="border-line h-8 w-8 rounded-md border"
             onClick={() => props.onQuantity(Math.min(99, props.quantity + 1))}
             aria-label="One more to add"
           >
@@ -168,40 +156,41 @@ export function SelectedCard(props: {
         <button
           type="button"
           onClick={() => props.onAdd("main")}
-          className={`${button} border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900`}
+          className={`${button} border-accent bg-accent text-accent-foreground`}
         >
           Add to deck
         </button>
         {props.copyLimit === 4 && inDeck < 4 && (
-          <button type="button" onClick={() => props.onAdd("main", 4 - inDeck)} className={button}>
+          <Button type="button" onClick={() => props.onAdd("main", 4 - inDeck)} variant="secondary">
             Fill to 4
-          </button>
+          </Button>
         )}
-        <button type="button" onClick={() => props.onAdd("side")} className={button}>
+        <Button type="button" onClick={() => props.onAdd("side")} variant="secondary">
           Sideboard
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => props.onAdd("maybe")}
-          className={button}
+
           title="Keep it with the deck without counting it (the maybeboard)"
+          variant="secondary"
         >
           Maybe
-        </button>
+        </Button>
         {props.isCommanderDeck && (
-          <button type="button" onClick={() => props.onAdd("commander")} className={button}>
+          <Button type="button" onClick={() => props.onAdd("commander")} variant="secondary">
             Make commander
-          </button>
+          </Button>
         )}
       </div>
       {props.copyLimit !== null && inDeck + props.quantity > props.copyLimit && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-warning-text text-xs">
           Adding {props.quantity} puts this card at {inDeck + props.quantity} copies (format limit
           is {props.copyLimit}). You can still add it and adjust later.
         </p>
       )}
       {selection.owned === 0 ? (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-warning-text text-xs">
           You don&apos;t own this card. Add it and the deck marks it short; then{" "}
           <Link href={`/singles/list?deck=${props.deckId}`} className="underline">
             buy what it&apos;s short
@@ -210,7 +199,7 @@ export function SelectedCard(props: {
         </p>
       ) : (
         props.quantity > selection.owned && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-xs">
             That&apos;s more than you own ({selection.owned}). You can add them; the deck marks it.
           </p>
         )
@@ -231,9 +220,7 @@ export function SelectedCard(props: {
           <p className="text-muted text-xs">Nothing like it in your collection or the store.</p>
         ) : (
           <>
-            <h4 className="text-muted text-xs font-medium tracking-wide uppercase">
-              Cards like this
-            </h4>
+            <Eyebrow as="h4">Cards like this</Eyebrow>
             <HiddenOverTarget count={props.similar.hiddenOverTarget} />
             <ul aria-label="Cards like this" className="flex flex-col">
               {[...props.similar.owned, ...props.similar.store].map((suggestion) => (
@@ -247,7 +234,7 @@ export function SelectedCard(props: {
           </>
         )}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -278,13 +265,14 @@ function OtherDecks(props: {
                     : `has ${use.quantity} (${use.quantity - use.available} as commander)`}
               </span>
               {count > 0 && (
-                <button
+                <Button
                   type="button"
                   onClick={() => props.onTake(use, count)}
-                  className="rounded-md border border-zinc-300 px-2 py-0.5 dark:border-zinc-700"
+                  variant="secondary"
+                  size="mini"
                 >
                   Take {count}
-                </button>
+                </Button>
               )}
             </li>
           );

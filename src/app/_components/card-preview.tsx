@@ -1,7 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
+import { Button } from "@/ui/button";
+import { CardView } from "@/ui/card-view";
 import { ManaText } from "@/ui/mana";
+
+const DIALOG_BOX =
+  "border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70";
+const NO_IMAGE_BOX =
+  "bg-surface-raised flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs";
+const TEXT_OVERLAY =
+  "absolute inset-x-0 bottom-0 flex max-h-full flex-col gap-2 overflow-hidden bg-gradient-to-t from-black/95 via-black/85 to-black/60 p-3 text-xs text-white";
 
 // A card, larger, with its printed text laid over the image: used wherever a card is too small
 // (or only a name) to read. Card grids open it on hover; a Commander deck in the store shows its
@@ -32,14 +41,14 @@ export function EnlargedCard(props: {
             alt=""
             width={488}
             height={680}
-            className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[488/680] w-full"
           />
         ) : (
-          <div className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800" />
+          <div className="bg-surface-raised aspect-[488/680] w-full" />
         )}
 
         {/* The overlay: the card's printed text, readable at any size. */}
-        <div className="absolute inset-x-0 bottom-0 flex max-h-full flex-col gap-2 overflow-hidden bg-gradient-to-t from-black/95 via-black/85 to-black/60 p-3 text-xs text-white">
+        <div className={TEXT_OVERLAY}>
           {printing.faces.map((face, index) => (
             <FaceText key={index} face={face} isBackFace={index > 0} />
           ))}
@@ -120,40 +129,32 @@ export function CardPreviewDialog(props: {
         if (event.target === dialogRef.current) onClose();
       }}
       aria-label={printing.name}
-      className="border-border-subtle m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border bg-zinc-950 p-4 text-white shadow-2xl backdrop:bg-black/70"
+      className={DIALOG_BOX}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">{printing.name}</span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close card preview"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-zinc-700 px-3 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Close
-        </button>
-      </div>
-      {printing.hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/images/${printing.id}/normal/front`}
-          alt={printing.name}
-          width={488}
-          height={680}
-          className="mb-3 aspect-[488/680] w-full rounded-[4.5%] bg-zinc-800"
-        />
-      )}
-      <div className="flex flex-col gap-3 text-xs">
-        {printing.faces.map((face, index) => (
-          <FaceText key={index} face={face} isBackFace={index > 0} />
-        ))}
-        {(printing.variantLabel || printing.artist) && (
-          <p className="text-[11px] text-white/70">
-            {printing.variantLabel && `${printing.variantLabel} · `}
-            {printing.artist && `Illustrated by ${printing.artist}`}
-          </p>
-        )}
-      </div>
+      <CardView
+        printingId={printing.id}
+        name={printing.name}
+        hasImage={printing.hasImage}
+        faces={printing.faces}
+        credit={[printing.variantLabel, printing.artist && `Illustrated by ${printing.artist}`]
+          .filter(Boolean)
+          .join(" · ")}
+        layout="stacked"
+        heading={
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{printing.name}</span>
+            <Button
+              type="button"
+              onClick={onClose}
+              aria-label="Close card preview"
+              variant="secondary"
+              className="min-h-11 min-w-11"
+            >
+              Close
+            </Button>
+          </div>
+        }
+      />
     </dialog>
   );
 }
@@ -226,17 +227,13 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
             loading="lazy"
             width={488}
             height={680}
-            className="aspect-[488/680] w-full rounded-[4.5%] bg-zinc-100 shadow-md dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[488/680] w-full rounded-[4.5%] shadow-md"
           />
         ) : (
-          <div className="flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] bg-zinc-100 p-2 text-center text-xs dark:bg-zinc-800">
-            {printing.name}
-          </div>
+          <div className={NO_IMAGE_BOX}>{printing.name}</div>
         )}
       </button>
-      {props.caption && (
-        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{props.caption}</p>
-      )}
+      {props.caption && <p className="text-muted mt-1 text-xs">{props.caption}</p>}
       {isOpen && <EnlargedCard printing={printing} align={align} />}
       {isDialogOpen && (
         <CardPreviewDialog

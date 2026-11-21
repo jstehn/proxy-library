@@ -46,6 +46,7 @@ import {
 } from "./pick-grid";
 
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
+import { buttonClass } from "@/ui/button";
 
 // One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
 // Deal Broker stage and the finished pool. Names, deadlines and presence come from `reads.drafts.view`;
@@ -118,7 +119,7 @@ export default async function DraftPage(props: PageProps<"/drafts/[id]">) {
           {view.setName} draft
           {isLive && <LiveUpdates draftId={view.id} version={view.version} />}
         </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           {STATUS_TEXT[view.status]} · {boosterLabel(view.boosterType)} · hosted by {view.hostName}{" "}
           · {Cents.format(view.entryFee)} to enter · {timerLabel(view.secondsPerPick)}
         </p>
@@ -210,7 +211,7 @@ function Lobby(props: { view: DraftView; canAddBots: boolean }) {
       <h2 className="font-medium">
         Players ({view.seats.length}/{view.maxSeats})
       </h2>
-      <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+      <ul className="divide-border-subtle flex flex-col divide-y">
         {view.seats.map((seat) => (
           <li key={seat.seatNumber} className="flex items-center gap-2 py-2 text-sm">
             {seat.botNumber === null ? <Presence away={seat.away} /> : <BotMark />}
@@ -292,7 +293,7 @@ function Presence(props: { away: boolean }) {
     <span
       title={props.away ? "away" : "here"}
       aria-label={props.away ? "away" : "here"}
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${props.away ? "bg-zinc-400" : "bg-green-500"}`}
+      className={`inline-block h-2 w-2 shrink-0 rounded-full ${props.away ? "bg-muted" : "bg-green-500"}`}
     />
   );
 }
@@ -383,7 +384,7 @@ function Drafting(props: {
               />
             ))
           ) : you.pack === null ? (
-            <p className="text-muted rounded-md border border-dashed border-zinc-300 p-6 text-center text-sm dark:border-zinc-700">
+            <p className="text-muted border-line rounded-md border border-dashed p-6 text-center text-sm">
               Waiting for {neighbourName(view, mySeat)} to pass you a pack…
             </p>
           ) : you.pack.cards === null ? (
@@ -454,7 +455,7 @@ function Table(props: { view: DraftView; seen: DraftSeen; names: Names; serverNo
             className={`flex max-w-64 min-w-36 flex-col gap-0.5 rounded-md border px-3 py-2 text-sm ${
               seat.isYou
                 ? "border-sky-400 bg-sky-50 dark:border-sky-700 dark:bg-sky-950"
-                : "border-zinc-200 dark:border-zinc-800"
+                : "border-border-subtle"
             }`}
           >
             <span className="flex items-center gap-1.5 font-medium">
@@ -566,7 +567,7 @@ function Curve(props: { counts: readonly number[] }) {
           <span className="tabular-nums">{count}</span>
           <span
             aria-hidden
-            className="w-4 rounded-sm bg-zinc-400 dark:bg-zinc-500"
+            className="bg-muted w-4 rounded-sm"
             style={{ height: `${Math.max(2, (count / most) * 28)}px` }}
           />
           <span>{curveSlotLabel(index)}</span>
@@ -592,7 +593,7 @@ function Finished(props: {
         </p>
       ) : (
         <>
-          <section className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <section className="border-border-subtle flex flex-wrap items-center gap-3 rounded-lg border p-4">
             <p className="text-sm">
               Your {seen.pile.length} cards are in your collection
               {you.basicsReceived.length > 0 &&
@@ -603,10 +604,7 @@ function Finished(props: {
                 : ""}
             </p>
             {you.deckId !== null ? (
-              <Link
-                href={`/decks/${you.deckId}`}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-              >
+              <Link href={`/decks/${you.deckId}`} className={buttonClass()}>
                 Open your deck
               </Link>
             ) : (

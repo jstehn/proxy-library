@@ -2,6 +2,7 @@ import Link from "next/link";
 import { readPage } from "@/server/page-instance";
 import { LocalTime } from "@/ui/local-time";
 import { FORMAT_LABELS } from "../labels";
+import { Page } from "@/ui/page";
 
 // Decks → Shared (design doc 21): every deck the playgroup has shared, newest change first.
 
@@ -9,10 +10,10 @@ export default async function SharedDecksPage() {
   const { reads } = await readPage();
   const decks = await reads.decks.sharedDecks();
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Shared decks</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Decks the playgroup has shared. Open one to read it, try a test hand, see which cards you
           own, and leave a comment.{" "}
           <Link href="/decks" className="underline">
@@ -26,7 +27,7 @@ export default async function SharedDecksPage() {
           playgroup&quot;.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {decks.map((deck) => (
             <li key={deck.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
               <Link href={`/decks/${deck.id}`} className="font-medium underline">
@@ -46,6 +47,6 @@ export default async function SharedDecksPage() {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

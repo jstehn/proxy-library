@@ -18,8 +18,7 @@ const ERRORS: Record<string, string> = {
   NotTheSameCard: "Copies can only move to another printing of the same card.",
 };
 
-const small =
-  "rounded-md border border-zinc-300 px-2 py-1 text-sm tabular-nums dark:border-zinc-700";
+const small = "rounded-md border border-line px-2 py-1 text-sm tabular-nums";
 
 function Stepper(props: {
   printingId: string;
@@ -66,7 +65,7 @@ export function RealCopiesBox(props: {
         game.
       </p>
       {props.error !== null && (
-        <p role="status" className="text-sm text-red-700 dark:text-red-400">
+        <p role="status" className="text-danger-text text-sm">
           {ERRORS[props.error] ?? "That didn't work."}
         </p>
       )}
@@ -112,9 +111,7 @@ export function RealCopiesBox(props: {
       })}
       {owned.length > 0 && targets.length > 1 && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">
-            Wrong printing? Move them…
-          </summary>
+          <summary className="text-muted cursor-pointer">Wrong printing? Move them…</summary>
           {owned.map((finish) => (
             <form
               key={finish}

@@ -11,6 +11,8 @@ import {
 } from "@/modules/decks/client";
 import { valueOr } from "../answer";
 import { tokensAction } from "./actions";
+import { Card } from "@/ui/card";
+import { Badge } from "@/ui/badge";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.
@@ -24,7 +26,7 @@ const KIND_LABELS: Record<TokenKind, string> = {
 };
 
 const KIND_BADGE_CLASSES: Record<TokenKind, string> = {
-  token: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  token: "bg-surface-raised text-muted",
   emblem: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200",
   helper: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
 };
@@ -89,7 +91,7 @@ export function TokensPanel(props: Props) {
         ];
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+    <Card as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="font-medium">Tokens &amp; emblems</h2>
@@ -101,7 +103,7 @@ export function TokensPanel(props: Props) {
           type="button"
           onClick={onClose}
           aria-label="Close tokens and emblems"
-          className="text-muted min-h-7 min-w-7 rounded px-1.5 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground min-h-7 min-w-7 rounded px-1.5"
         >
           ✕
         </button>
@@ -128,8 +130,8 @@ export function TokensPanel(props: Props) {
                       onClick={() => setKindFilter(option.value)}
                       className={`min-h-7 rounded-md border px-2 py-0.5 text-xs ${
                         active
-                          ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                          : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                          ? "border-accent bg-accent text-accent-foreground"
+                          : "border-line text-muted hover:bg-surface"
                       }`}
                     >
                       {option.label} ({option.count})
@@ -143,8 +145,8 @@ export function TokensPanel(props: Props) {
                   onClick={() => setPlayedOnly((value) => !value)}
                   className={`min-h-7 rounded-md border px-2 py-0.5 text-xs ${
                     playedOnly
-                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                      : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : "border-line text-muted hover:bg-surface"
                   }`}
                 >
                   Hide sideboard-only ({summary.sideboardOnly})
@@ -160,7 +162,7 @@ export function TokensPanel(props: Props) {
               {filtered.map((item) => (
                 <li
                   key={item.oracleId}
-                  className="flex items-start gap-2.5 rounded-md border border-zinc-200 p-2 dark:border-zinc-800"
+                  className="border-border-subtle flex items-start gap-2.5 rounded-md border p-2"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- served by our image cache */}
                   <img
@@ -169,7 +171,7 @@ export function TokensPanel(props: Props) {
                     loading="lazy"
                     width={146}
                     height={204}
-                    className="aspect-[146/204] w-11 shrink-0 rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+                    className="bg-surface-raised aspect-[146/204] w-11 shrink-0 rounded-[4.5%]"
                   />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -180,20 +182,16 @@ export function TokensPanel(props: Props) {
                         {KIND_LABELS[item.kind]}
                       </span>
                       {item.sideboardOnly && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        <Badge tone="amber" size="sm">
                           Sideboard only
-                        </span>
+                        </Badge>
                       )}
                       {!item.includedInProxies && (
                         <span className="text-muted text-[11px]">(unchecked for PDF)</span>
                       )}
                     </div>
-                    {item.description !== "" && (
-                      <p className="text-zinc-600 dark:text-zinc-400">{item.description}</p>
-                    )}
-                    {item.text !== "" && (
-                      <p className="text-zinc-600 dark:text-zinc-400">{item.text}</p>
-                    )}
+                    {item.description !== "" && <p className="text-muted">{item.description}</p>}
+                    {item.text !== "" && <p className="text-muted">{item.text}</p>}
                     <p className="text-muted">Made by {item.madeBy.join(", ")}</p>
                   </div>
                 </li>
@@ -212,7 +210,7 @@ export function TokensPanel(props: Props) {
           </Link>
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 

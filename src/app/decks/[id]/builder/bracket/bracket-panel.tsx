@@ -2,6 +2,7 @@
 import type { Bracket, BracketEstimate, BracketRule } from "@/modules/decks";
 import { BRACKET_NAMES, BRACKETS, bracketWarning } from "@/modules/decks/client";
 import { estimateLabel, findingText, uncheckedText } from "@/app/decks/labels";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The Commander bracket (design doc 31, section 5.2): the lowest bracket the cards allow, why,
 // and the bracket the owner is aiming for. Worked out in the browser, like the statistics.
@@ -23,7 +24,7 @@ export function BracketPanel(props: {
   return (
     <section aria-label="Commander bracket" className="flex flex-col gap-1 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Bracket</h3>
+        <Eyebrow as="h3">Bracket</Eyebrow>
         {props.onTargetChange !== undefined ? (
           <label className="text-muted flex items-center gap-1 text-xs">
             Target
@@ -35,7 +36,7 @@ export function BracketPanel(props: {
                   event.target.value === "" ? null : (Number(event.target.value) as Bracket),
                 )
               }
-              className="rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className="border-line bg-field text-foreground rounded border px-1 py-0.5 text-xs"
             >
               <option value="">none</option>
               {BRACKETS.map((bracket) => (
@@ -61,7 +62,7 @@ export function BracketPanel(props: {
       {warning !== null && (
         <p
           role="status"
-          className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+          className="bg-warning-soft text-warning-ink rounded border border-amber-300 px-2 py-1 dark:border-amber-800"
         >
           ⚠ Over {props.onTargetChange === undefined ? "its" : "your"} target (bracket{" "}
           {warning.target}): the reasons in amber below.
@@ -76,7 +77,7 @@ export function BracketPanel(props: {
                 type="button"
                 aria-pressed={props.highlighted === finding.rule}
                 onClick={() => toggle(finding.rule)}
-                className={`text-left underline-offset-2 hover:underline ${props.highlighted === finding.rule ? "font-semibold underline" : ""} ${target !== null && finding.forces > target ? "text-amber-700 dark:text-amber-400" : ""}`}
+                className={`text-left underline-offset-2 hover:underline ${props.highlighted === finding.rule ? "font-semibold underline" : ""} ${target !== null && finding.forces > target ? "text-warning-text" : ""}`}
               >
                 {findingText(finding)}
               </button>

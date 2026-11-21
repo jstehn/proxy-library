@@ -20,9 +20,9 @@ import { DeckComments } from "./comments";
 import { EditAsText } from "./edit-as-text";
 import { PublicLinkControls } from "./public-link-controls";
 import { SharedDeckView } from "./shared-view";
-
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+import { Button } from "@/ui/button";
+import { Input, Select, Textarea } from "@/ui/field";
+import { Page } from "@/ui/page";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { actor, capabilities, reads } = await readPage();
@@ -58,7 +58,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     if (!shared.ok) notFound();
     const { printings, tokens, combos } = shared.value;
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
+      <Page width="7xl" spacing="tight">
         <ManaStylesheet />
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -72,12 +72,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           </div>
           <form action={copyDeckAction}>
             <input type="hidden" name="deckId" value={deck.id} />
-            <button
-              type="submit"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Copy to my decks
-            </button>
+            <Button type="submit">Copy to my decks</Button>
           </form>
         </header>
         {typeof searchParams.error === "string" && <Alert tone="error">{searchParams.error}</Alert>}
@@ -97,7 +92,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           tokens={[...(tokens ?? [])]}
         />
         {commentSection}
-      </main>
+      </Page>
     );
   }
 
@@ -116,7 +111,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { list: listText, fingerprint: deckFingerprint } = listAndFingerprint(view);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
+    <Page width="7xl" spacing="tight">
       <ManaStylesheet />
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex-1">
@@ -157,12 +152,9 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
                 ? "Shared: every player can see it and comment."
                 : "Private: only you can see it."}
             </span>
-            <button
-              type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-            >
+            <Button type="submit" variant="secondary" size="sm">
               {viewed.visibility === "shared" ? "Make private" : "Share with the playgroup"}
-            </button>
+            </Button>
           </form>
           <PublicLinkControls deckId={deck.id} publicToken={viewed.publicToken} />
         </div>
@@ -175,12 +167,9 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             ? "Using your real cards: cards you own for real count as owned here."
             : "Game cards only: cards you own for real don't count here."}
         </span>
-        <button
-          type="submit"
-          className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-        >
+        <Button type="submit" variant="secondary" size="sm">
           {deck.usesRealCards ? "Stop using my real cards" : "Use my real cards"}
-        </button>
+        </Button>
       </form>
       {typeof searchParams.error === "string" && <Alert tone="error">{searchParams.error}</Alert>}
       {typeof searchParams.imported === "string" && (
@@ -200,58 +189,50 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <div className="grid items-start gap-3 md:grid-cols-3">
         <details
           open={deck.entries.length === 0}
-          className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+          className="border-border-subtle rounded-md border p-3"
         >
           <summary className="cursor-pointer font-medium">Paste a list</summary>
           <form action={importListAction} className="mt-3 flex flex-col gap-2">
             <input type="hidden" name="deckId" value={deck.id} />
-            <textarea
+            <Textarea
               name="list"
               rows={6}
               aria-label="Paste a deck list"
               placeholder={"4 Lightning Bolt\n1 Sol Ring (C21) 263\nSideboard\n2 Duress"}
-              className={`${field} font-mono`}
+              className="font-mono"
             />
-            <button type="submit" className={field}>
+            <Button variant="secondary" type="submit">
               Add these cards
-            </button>
+            </Button>
           </form>
           <p className="text-muted text-xs">
             Cards you don&apos;t own are added too, and show as short.
           </p>
         </details>
-        <details className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+        <details className="border-border-subtle rounded-md border p-3">
           <summary className="cursor-pointer font-medium">Deck settings</summary>
           <form action={updateDeckAction} className="mt-3 flex flex-col gap-2">
             <input type="hidden" name="deckId" value={deck.id} />
-            <input
-              name="name"
-              defaultValue={deck.name}
-              aria-label="Deck name"
-              maxLength={60}
-              className={field}
-            />
-            <select name="format" defaultValue={deck.format} aria-label="Format" className={field}>
+            <Input name="name" defaultValue={deck.name} aria-label="Deck name" maxLength={60} />
+            <Select name="format" defaultValue={deck.format} aria-label="Format">
               {FORMATS.map((format) => (
                 <option key={format} value={format}>
                   {FORMAT_LABELS[format]}
                 </option>
               ))}
-            </select>
-            <button type="submit" className={field}>
+            </Select>
+            <Button variant="secondary" type="submit">
               Save
-            </button>
+            </Button>
           </form>
           {/* A second click to confirm, so a slip doesn't delete a deck. */}
           <details className="mt-2 text-sm">
-            <summary className="cursor-pointer text-red-700 dark:text-red-400">
-              Delete this deck…
-            </summary>
+            <summary className="text-danger-text cursor-pointer">Delete this deck…</summary>
             <form action={deleteDeckAction} className="mt-2">
               <input type="hidden" name="deckId" value={deck.id} />
-              <button type="submit" className="rounded-md bg-red-700 px-3 py-1 text-white">
+              <Button type="submit" variant="danger" size="sm">
                 Yes, delete {deck.name}
-              </button>
+              </Button>
             </form>
           </details>
         </details>
@@ -266,6 +247,6 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         targetBracket={deck.targetBracket}
         seed={capabilities.site.newSeed()}
       />
-    </main>
+    </Page>
   );
 }

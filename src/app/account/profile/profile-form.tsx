@@ -6,6 +6,8 @@ import { MAX_BIO_LENGTH, VISIBILITIES, type SectionVisibility } from "@/modules/
 import { COLORS } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { saveProfileAction, type ProfileFormState } from "./actions";
+import { Select } from "@/ui/field";
+import { Button } from "@/ui/button";
 
 const COLOR_NAMES: Record<string, string> = {
   W: "White",
@@ -53,7 +55,7 @@ export function ProfileForm(props: {
           maxLength={MAX_BIO_LENGTH}
           defaultValue={props.initial.bio}
           placeholder="Tell the playgroup about your playstyle, favorite commanders, or what you're looking to trade for."
-          className="rounded-md border border-zinc-300 bg-transparent p-2.5 text-sm dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent p-2.5 text-sm"
         />
         <span className="text-muted text-xs">Up to {MAX_BIO_LENGTH} characters.</span>
       </div>
@@ -96,11 +98,11 @@ export function ProfileForm(props: {
         <label htmlFor="showcaseDeckId" className="text-sm font-medium">
           Showcase deck
         </label>
-        <select
+        <Select
           id="showcaseDeckId"
           name="showcaseDeckId"
           defaultValue={props.initial.showcaseDeckId ?? ""}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+          controlSize="lg"
         >
           <option value="">None</option>
           {props.initial.sharedDecks.map((deck) => (
@@ -108,7 +110,7 @@ export function ProfileForm(props: {
               {deck.name} ({formatLabel(deck.format)})
             </option>
           ))}
-        </select>
+        </Select>
         <span className="text-muted text-xs">
           Only your shared decks can be showcased on your profile.
         </span>
@@ -129,7 +131,7 @@ export function ProfileForm(props: {
                 name={`showcaseCard${index + 1}`}
                 defaultValue={existing?.printingId ?? ""}
                 placeholder={`Showcase card ${index + 1} printing ID`}
-                className="rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+                className="border-line rounded-md border bg-transparent px-3 py-1.5 text-sm"
               />
               {existing && <span className="text-muted text-xs">Currently: {existing.name}</span>}
             </div>
@@ -142,47 +144,43 @@ export function ProfileForm(props: {
           <label htmlFor="statsVisibility" className="text-sm font-medium">
             Who can see your stats
           </label>
-          <select
+          <Select
             id="statsVisibility"
             name="statsVisibility"
             defaultValue={props.initial.statsVisibility}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+            controlSize="lg"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
                 {VISIBILITY_LABELS[vis]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="wishlistVisibility" className="text-sm font-medium">
             Who can see your wishlist
           </label>
-          <select
+          <Select
             id="wishlistVisibility"
             name="wishlistVisibility"
             defaultValue={props.initial.wishlistVisibility}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+            controlSize="lg"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
                 {VISIBILITY_LABELS[vis]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-        >
+        <Button type="submit" disabled={pending} size="xl">
           {pending ? "Saving…" : "Save profile"}
-        </button>
+        </Button>
       </div>
     </form>
   );

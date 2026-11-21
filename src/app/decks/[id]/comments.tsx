@@ -2,6 +2,9 @@ import type { CommentView } from "@/modules/decks";
 import { MAX_COMMENT_LENGTH } from "@/modules/decks";
 import { LocalTime } from "@/ui/local-time";
 import { deleteCommentAction, postCommentAction } from "../actions";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/field";
+import { EmptyState } from "@/ui/empty-state";
 
 // A deck's comments (design doc 21): oldest first, a box to add one, and a delete button for
 // those the viewer may remove (their own, any on their deck, or any at all for an admin).
@@ -28,14 +31,14 @@ export function DeckComments(props: {
         </p>
       )}
       {props.comments.length === 0 ? (
-        <p className="text-muted text-sm">No comments yet.</p>
+        <EmptyState>No comments yet.</EmptyState>
       ) : (
         <ol className="flex flex-col gap-3">
           {props.comments.map((comment) => (
             <li
               key={comment.id}
               id={`comment-${comment.id}`}
-              className="flex scroll-mt-20 flex-col gap-1 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900"
+              className="bg-surface flex scroll-mt-20 flex-col gap-1 rounded-md p-3 text-sm"
             >
               <div className="flex flex-wrap items-baseline gap-2">
                 <strong>{comment.authorName}</strong>
@@ -49,7 +52,7 @@ export function DeckComments(props: {
                     <input type="hidden" name="commentId" value={comment.id} />
                     <button
                       type="submit"
-                      className="text-xs text-red-700 underline dark:text-red-400"
+                      className="text-danger-text text-xs underline"
                       aria-label={`Delete ${comment.authorName}'s comment`}
                     >
                       Delete
@@ -68,21 +71,17 @@ export function DeckComments(props: {
       )}
       <form action={postCommentAction} className="flex flex-col gap-2">
         <input type="hidden" name="deckId" value={props.deckId} />
-        <textarea
+        <Textarea
           name="body"
           rows={3}
           required
           maxLength={MAX_COMMENT_LENGTH}
           aria-label="Your comment"
           placeholder={props.isOwner ? "A note about this deck" : "What do you think of this deck?"}
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
         />
-        <button
-          type="submit"
-          className="self-start rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
+        <Button type="submit" className="self-start">
           Post comment
-        </button>
+        </Button>
       </form>
     </>
   );
@@ -93,7 +92,7 @@ export function DeckComments(props: {
       <details
         id="comments"
         open={props.comments.length > 0}
-        className="scroll-mt-20 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+        className="border-border-subtle scroll-mt-20 rounded-md border p-3"
       >
         <summary className="cursor-pointer font-medium">{title}</summary>
         <section aria-label="Comments" className="mt-3 flex flex-col gap-3">
@@ -106,7 +105,7 @@ export function DeckComments(props: {
     <section
       id="comments"
       aria-label="Comments"
-      className="flex scroll-mt-20 flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+      className="border-border-subtle flex scroll-mt-20 flex-col gap-3 border-t pt-6"
     >
       <h2 className="font-medium">{title}</h2>
       {contents}

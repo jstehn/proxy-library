@@ -14,6 +14,8 @@ import {
   withSuggestedSections,
   type PrimerInline,
 } from "./primer-text";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 // The deck's plan and primer (design doc 61): what the deck is trying to do, the cards that must
 // stay and the ones to keep out (the MCP tools read these too), and free-form notes in Markdown
@@ -119,31 +121,30 @@ export function PrimerPanel(props: Props) {
     });
   }
 
-  const field = "flex flex-col gap-1";
+  const stackedLabel = "flex flex-col gap-1";
   const label = "text-muted text-xs font-medium";
-  const input =
-    "rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
-  const button =
-    "rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700";
+  const input = "rounded border border-line bg-transparent px-2 py-1 text-sm";
 
   return (
-    <section
-      aria-label="Plan and primer"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
-    >
+    <Card aria-label="Plan and primer" as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-medium">Plan &amp; primer</h2>
         <div className="flex items-center gap-1">
           {plan !== null && plan !== "loading" && draft === null && (
-            <button type="button" className={button} onClick={() => setDraft(draftOf(plan))}>
+            <Button
+              type="button"
+              onClick={() => setDraft(draftOf(plan))}
+              variant="secondary"
+              size="sm"
+            >
               Edit
-            </button>
+            </Button>
           )}
           <button
             type="button"
             onClick={props.onClose}
             aria-label="Close plan and primer"
-            className="text-muted min-h-7 min-w-7 rounded px-1.5 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="text-muted hover:text-foreground min-h-7 min-w-7 rounded px-1.5"
           >
             ✕
           </button>
@@ -184,7 +185,7 @@ export function PrimerPanel(props: Props) {
                 <PlanText title="Pilot notes" text={plan.profile.pilotNotes} />
               )}
               {plan.primer.trim() !== "" && (
-                <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
                   {parsePrimer(plan.primer).map((block, index) =>
                     block.kind === "heading" ? (
                       block.level === 2 ? (
@@ -219,7 +220,7 @@ export function PrimerPanel(props: Props) {
 
       {draft !== null && (
         <form onSubmit={save} className="flex flex-col gap-3">
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Plan (a sentence or two)</span>
             <textarea
               rows={2}
@@ -230,7 +231,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>How it wins (one per line)</span>
             <textarea
               rows={3}
@@ -240,7 +241,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Key cards, never cut (Card — reason, one per line)</span>
             <textarea
               rows={3}
@@ -250,7 +251,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Keep out (Card — reason, one per line)</span>
             <textarea
               rows={2}
@@ -260,7 +261,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Combos in the deck (one per line)</span>
             <textarea
               rows={2}
@@ -270,7 +271,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Mulligan</span>
             <textarea
               rows={2}
@@ -280,7 +281,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <label className={field}>
+          <label className={stackedLabel}>
             <span className={label}>Pilot notes</span>
             <textarea
               rows={2}
@@ -290,7 +291,7 @@ export function PrimerPanel(props: Props) {
               className={input}
             />
           </label>
-          <div className={field}>
+          <div className={stackedLabel}>
             <div className="flex items-baseline justify-between gap-2">
               <label htmlFor={`primer-${deckId}`} className={label}>
                 Primer (Markdown: ## headings, - lists, **bold**, [[Card Name]])
@@ -319,21 +320,22 @@ export function PrimerPanel(props: Props) {
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={isSaving} className={button}>
+            <Button type="submit" disabled={isSaving} variant="secondary" size="sm">
               {isSaving ? "Saving…" : "Save"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={isSaving}
               onClick={() => setDraft(null)}
-              className={button}
+              variant="secondary"
+              size="sm"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
-    </section>
+    </Card>
   );
 }
 

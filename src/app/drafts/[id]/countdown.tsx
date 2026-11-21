@@ -20,7 +20,7 @@ export function Countdown(props: { deadline: string; serverNow: string; classNam
   const urgent = left <= 10;
   return (
     <span
-      className={`font-mono tabular-nums ${urgent ? "text-red-600 dark:text-red-400" : ""} ${props.className ?? ""}`}
+      className={`font-mono tabular-nums ${urgent ? "text-danger-text" : ""} ${props.className ?? ""}`}
       title="Time left for this pick"
     >
       {left <= 0 ? "time's up" : clockText(left)}

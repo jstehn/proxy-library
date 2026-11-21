@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
 import { resetLibraryAction } from "./reset-actions";
 import type { FormState } from "@/server/form-action";
+import { Input } from "@/ui/field";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -15,9 +16,9 @@ export function ResetForm(props: { userId: string; username: string }) {
 
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Reset library…</summary>
+      <summary className="text-muted cursor-pointer">Reset library…</summary>
       <form action={formAction} className="mt-2 flex flex-col gap-2">
-        <p className="text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted">
           Removes every card, sealed item and deck @{props.username} has, closes their open trades,
           and sets their balance back to the starting grant. Their money and card history keep a
           record. This can&apos;t be undone.
@@ -25,13 +26,13 @@ export function ResetForm(props: { userId: string; username: string }) {
         <input type="hidden" name="userId" value={props.userId} />
         <input type="hidden" name="username" value={props.username} />
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Input
             name="confirmation"
             aria-label={`Type ${props.username} to confirm`}
             placeholder={`Type ${props.username} to confirm`}
             autoComplete="off"
             required
-            className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            controlSize="sm"
           />
           <SubmitButton tone="danger" pendingText="Resetting…">
             Reset library

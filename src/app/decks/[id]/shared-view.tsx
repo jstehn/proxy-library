@@ -20,6 +20,7 @@ import { problemsOf } from "./builder/derive";
 import { StatsPanel } from "./builder/stats/stats-panel";
 import { TestHandPanel } from "./builder/test-hand/test-hand-panel";
 import { TokensPanel } from "./builder/tokens/tokens-panel";
+import { Button } from "@/ui/button";
 
 // Someone else's shared deck, read-only (design doc 21): its list (with how many of each card
 // you own), its statistics and problems as its owner has them, test hands, and the list as text
@@ -97,19 +98,19 @@ export function SharedDeckView(props: {
             rows={10}
             aria-label="Deck list as text"
             value={props.listText}
-            className="w-full rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
+            className="border-line w-full rounded-md border bg-transparent p-2 font-mono text-sm"
           />
         </details>
       </div>
       <aside aria-label="About the deck" className="flex w-full flex-col gap-4 lg:w-[26rem]">
         <section aria-label="Problems" className="text-sm">
           {problems.length === 0 ? (
-            <p className="text-green-700 dark:text-green-400">
+            <p className="text-success-text">
               Ready to play: {props.ownerName} owns everything, and it follows the format&apos;s
               rules.
             </p>
           ) : (
-            <ul className="flex flex-col gap-1 text-amber-700 dark:text-amber-400">
+            <ul className="text-warning-text flex flex-col gap-1">
               {problems
                 .filter((problem) => problem.name === null)
                 .map((problem) => (
@@ -139,23 +140,25 @@ export function SharedDeckView(props: {
           onHighlight={setHighlighted}
         />
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
             aria-expanded={showTestHand}
             onClick={() => setShowTestHand((value) => !value)}
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+            variant="secondary"
+            size="sm"
           >
             {showTestHand ? "Hide test hand" : "Test hand"}
-          </button>
+          </Button>
           {props.tokens !== undefined && props.tokens.length > 0 && (
-            <button
+            <Button
               type="button"
               aria-expanded={showTokens}
               onClick={() => setShowTokens((value) => !value)}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+              variant="secondary"
+              size="sm"
             >
               {showTokens ? "Hide tokens" : `Tokens (${props.tokens.length})`}
-            </button>
+            </Button>
           )}
         </div>
         {showTestHand && (

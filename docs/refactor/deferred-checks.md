@@ -137,3 +137,46 @@ tests/integration/card-search.int.test.ts`, plus whatever covers the card page's
       land, a 1-drop and a 7-drop: the chances should look sensible (a 7-drop low until turn 6 to 8).
 - [ ] **Ask the `draw_sample` tool for `cast: ["commander"]` on a real deck (P28)** and read the
       table: one `T<n>` line per turn, the median turn and the misses line.
+
+## Left by P31 (UI blocks, colour tokens, the phone card view: all by eye)
+
+No browser was available, so none of this was looked at. Do each in dark mode, light mode and at
+phone width (375), and note long names and empty lists. Colours now come from tokens in
+`globals.css` (`border-line`, `border-border-subtle`, `text-muted`, `bg-accent`, `bg-surface`,
+`bg-surface-raised`, `bg-field`, `*-danger/-success/-warning` families); the dark values are the
+old `dark:` ones, so nothing should have moved.
+
+- [ ] **CardView, the three modes (new feature).** At phone width: tap a card in a card grid (the
+      dialog opens), in the deck builder list (the selected-card sheet), and open a card page
+      (`/cards/<id>`). Image only is the first view: the image is large, the text is not on screen.
+      "Text" shows the type line, rules text and stats with no image. "Both" shows the image above
+      the text. The choice is remembered after a reload and shared by every card view on the page;
+      a private window falls back to "Image". The toggle is a labelled group of three buttons
+      (`aria-pressed`); with a screen reader the text is still read while "Image" is chosen.
+- [ ] **CardView on desktop (768 and wider).** No toggle; the card page, the builder sheet and the
+      hover preview look as before (image left, text and details right). The builder's text box is
+      now themed (it was a dark panel in both themes): check it in light and dark.
+- [ ] **Builder sheet at phone width.** The selected card's sheet floats over the tab and scrolls;
+      with a large image, check the facts, Add to deck / Sideboard / Maybe buttons and the "When can
+      I cast this?" chart (P28) are reachable by scrolling, and the chart still loads only on press.
+- [ ] **Card dialog (touch).** Tapping a card on a phone opens the dialog: close button reachable,
+      image fits at 375 wide, the mode toggle works, the dialog scrolls in "Both".
+- [ ] **Buttons.** Every migrated button has the same size as before, except these small changes:
+      primary and danger buttons are always `font-medium`; secondary buttons have a hover tint;
+      disabled buttons fade to 60% (some were 40%); buttons that had no `text-sm` now have it.
+      Look for wrapped labels in rows of buttons (deck builder sheet, trades, admin).
+- [ ] **Fields.** Text fields, selects and textareas now share one look (`bg-transparent`, same
+      border). Some were `bg-field` (white / zinc-900): look in dark mode for fields that now show
+      the page colour instead (drafts, the login and account forms, admin money form). The login
+      and account `TextField` is a little different: `bg-transparent` instead of `bg-field`.
+- [ ] **Areas to walk through (dark + phone each):** sign-in and account (password, profile,
+      tokens, start over), wallet, store and a set page, singles and "buy a list", collection
+      (game and real, import), cards page, wishlist, trades (list, new, one trade), friends and
+      players, admin (catalog, packs, store, photos, players, invites, connectors), drafts list and
+      the conspiracy panel, decks list, one deck page, commanders, every deck builder panel (stats,
+      cuts, tokens, test hand, primer, snapshots, draft, bracket), home page, the site header.
+- [ ] **Chips and labels.** The `Badge` tones (sky, violet, amber, green) in the deck list, the
+      builder tokens panel and the selected card's role and bracket chips; the small uppercase
+      headings (`Eyebrow`) in the builder panels.
+- [ ] **Left alone, still raw colours:** `pick-grid.tsx` (P20's) keeps three long class strings and
+      its own `field` string; check it still looks as it did.
