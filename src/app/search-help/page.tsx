@@ -7,6 +7,7 @@ import {
   SEARCH_KEYWORDS,
   type SearchHelpRow,
 } from "@/shared/card-search";
+import { Page } from "@/ui/page";
 
 // Every keyword the card search understands (design docs 14, 15 and 28). The rows live in
 // @/shared/card-search/help.ts, which the LLM tools serve too. Linked from every card search box.
@@ -39,7 +40,7 @@ function Table(props: { rows: readonly SearchHelpRow[] }) {
 export default async function SearchHelpPage() {
   await requireActor();
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Search help</h1>
         <p className="text-muted text-sm">
@@ -73,6 +74,6 @@ export default async function SearchHelpPage() {
           ))}
         </dl>
       </section>
-    </main>
+    </Page>
   );
 }

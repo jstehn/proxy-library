@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { enablePublicLinkAction, revokePublicLinkAction, rotatePublicLinkAction } from "../actions";
+import { Button } from "@/ui/button";
 
 /** Owner controls for a deck's unauthenticated `/d/[token]` link (design doc 47). */
 export function PublicLinkControls(props: { deckId: number; publicToken: string | null }) {
@@ -13,9 +14,9 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
       <form action={enablePublicLinkAction} className="flex items-center gap-2 text-sm">
         <input type="hidden" name="deckId" value={props.deckId} />
         <span className="text-muted">Public link: off.</span>
-        <button type="submit" className="border-line rounded-md border px-3 py-1">
+        <Button type="submit" variant="secondary" size="sm">
           Create public link
-        </button>
+        </Button>
       </form>
     );
   }
@@ -35,22 +36,20 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
       <Link href={path} className="font-mono text-xs underline">
         {path}
       </Link>
-      <button
-        type="button"
-        onClick={copyLink}
-        className="border-line rounded-md border px-2.5 py-1 text-xs"
-      >
+      <Button type="button" onClick={copyLink} variant="secondary" size="xs">
         {copied ? "Copied!" : "Copy"}
-      </button>
+      </Button>
       <form action={rotatePublicLinkAction}>
         <input type="hidden" name="deckId" value={props.deckId} />
-        <button
+        <Button
           type="submit"
-          className="border-line rounded-md border px-2.5 py-1 text-xs"
+
           title="Generate a new link and invalidate the current one"
+          variant="secondary"
+          size="xs"
         >
           New link
-        </button>
+        </Button>
       </form>
       <form action={revokePublicLinkAction}>
         <input type="hidden" name="deckId" value={props.deckId} />

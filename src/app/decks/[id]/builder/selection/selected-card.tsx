@@ -10,6 +10,8 @@ import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-pane
 import { ownedWords } from "../derive";
 import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -50,9 +52,12 @@ export function SelectedCard(props: {
     "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-line";
 
   return (
-    <section
+    <Card
       aria-label={`Selected: ${selection.name}`}
-      className="border-border-subtle bg-background flex flex-col gap-3 rounded-lg border p-3"
+      as="section"
+      padding="md"
+      stack
+      className="bg-background"
     >
       <div className="flex gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -171,25 +176,26 @@ export function SelectedCard(props: {
           Add to deck
         </button>
         {props.copyLimit === 4 && inDeck < 4 && (
-          <button type="button" onClick={() => props.onAdd("main", 4 - inDeck)} className={button}>
+          <Button type="button" onClick={() => props.onAdd("main", 4 - inDeck)} variant="secondary">
             Fill to 4
-          </button>
+          </Button>
         )}
-        <button type="button" onClick={() => props.onAdd("side")} className={button}>
+        <Button type="button" onClick={() => props.onAdd("side")} variant="secondary">
           Sideboard
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => props.onAdd("maybe")}
-          className={button}
+
           title="Keep it with the deck without counting it (the maybeboard)"
+          variant="secondary"
         >
           Maybe
-        </button>
+        </Button>
         {props.isCommanderDeck && (
-          <button type="button" onClick={() => props.onAdd("commander")} className={button}>
+          <Button type="button" onClick={() => props.onAdd("commander")} variant="secondary">
             Make commander
-          </button>
+          </Button>
         )}
       </div>
       {props.copyLimit !== null && inDeck + props.quantity > props.copyLimit && (
@@ -245,7 +251,7 @@ export function SelectedCard(props: {
           </>
         )}
       </div>
-    </section>
+    </Card>
   );
 }
 

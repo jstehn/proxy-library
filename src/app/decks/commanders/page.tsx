@@ -13,6 +13,9 @@ import { ManaStylesheet, ManaText } from "@/ui/mana";
 import { planText, TAG_LABELS } from "../labels";
 import { startDeckAction } from "./actions";
 import { CommanderCards, CommanderThumbnail } from "./commander-cards";
+import { Button } from "@/ui/button";
+import { Input, Select } from "@/ui/field";
+import { Page } from "@/ui/page";
 
 // Decks → Find a commander (design docs 36 and 39): the cards that could lead a deck, with
 // Oracle text, hover card preview, theme/tribe filtering, and coverage / popularity / power ordering.
@@ -54,8 +57,6 @@ function chosenTheme(value: string | string[] | undefined): Theme | undefined {
   if (raw === "") return undefined;
   return canonicalTheme(raw) ?? undefined;
 }
-
-const fieldClass = "rounded-md border border-line bg-transparent px-2 py-1 text-sm";
 
 export default async function FindCommanderPage(props: PageProps<"/decks/commanders">) {
   const { actor, reads } = await readPage();
@@ -101,7 +102,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Find a commander</h1>
@@ -137,34 +138,35 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
         </fieldset>
         <label className="flex items-center gap-1.5">
           <span className="text-muted text-xs">Theme</span>
-          <select name="theme" defaultValue={theme ?? ""} className={fieldClass}>
+          <Select name="theme" defaultValue={theme ?? ""} controlSize="sm">
             <option value="">Any theme</option>
             {THEMES.map((entry) => (
               <option key={entry} value={entry}>
                 {THEME_LABELS[entry]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex items-center gap-1.5">
           <span className="text-muted text-xs">Tribe</span>
-          <input
+          <Input
             type="text"
             name="tribe"
             defaultValue={tribe}
             placeholder="e.g. Elf, Dragon"
-            className={`${fieldClass} w-32`}
+            controlSize="sm"
+            className="w-32"
           />
         </label>
         <label className="flex items-center gap-1.5">
           <span className="text-muted text-xs">Order by</span>
-          <select name="sort" defaultValue={sort} className={fieldClass}>
+          <Select name="sort" defaultValue={sort} controlSize="sm">
             {COMMANDER_SORTS.map((mode) => (
               <option key={mode} value={mode}>
                 {SORT_LABELS[mode]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex items-center gap-1">
           <input type="checkbox" name="store" value="1" defaultChecked={includeStore} />
@@ -174,12 +176,9 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           <input type="checkbox" name="real" value="1" defaultChecked={withReal} />
           Count my real cards
         </label>
-        <button
-          type="submit"
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm font-medium"
-        >
+        <Button type="submit" size="sm">
           Show
-        </button>
+        </Button>
         {(colors.length > 0 || theme !== undefined || tribe !== "" || sort !== "coverage") && (
           <Link href="/decks/commanders" className="text-muted text-xs underline">
             Reset filters
@@ -225,7 +224,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
           )}
         </>
       )}
-    </main>
+    </Page>
   );
 }
 
@@ -367,12 +366,9 @@ function CommanderRow(props: {
           <form action={startDeckAction}>
             <input type="hidden" name="name" value={commander.name} />
             {props.withReal && <input type="hidden" name="real" value="1" />}
-            <button
-              type="submit"
-              className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm"
-            >
+            <Button type="submit" size="sm">
               Start a deck
-            </button>
+            </Button>
           </form>
           <CommanderCards oracleId={commander.oracleId} withReal={props.withReal} />
         </div>

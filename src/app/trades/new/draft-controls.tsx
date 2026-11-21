@@ -49,7 +49,6 @@ export function DraftSync() {
 }
 
 const smallButton = "rounded border border-line px-2 text-sm leading-6";
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 /** "+ add" or "−" for one card on one side. */
 export function DraftButton(props: {
@@ -108,9 +107,9 @@ export function DraftTextForm(props: {
           className="flex-1"
         />
       </label>
-      <button type="submit" disabled={pending} className={field}>
+      <Button variant="secondary" type="submit" disabled={pending}>
         {props.button}
-      </button>
+      </Button>
     </form>
   );
 }

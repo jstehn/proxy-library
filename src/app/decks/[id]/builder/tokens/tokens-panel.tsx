@@ -11,6 +11,7 @@ import {
 } from "@/modules/decks/client";
 import { valueOr } from "../answer";
 import { tokensAction } from "./actions";
+import { Card } from "@/ui/card";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.
@@ -89,7 +90,7 @@ export function TokensPanel(props: Props) {
         ];
 
   return (
-    <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm">
+    <Card as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="font-medium">Tokens &amp; emblems</h2>
@@ -208,7 +209,7 @@ export function TokensPanel(props: Props) {
           </Link>
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 

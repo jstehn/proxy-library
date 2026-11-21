@@ -8,6 +8,8 @@ import { draftReasonText, landReasonText, TAG_LABELS } from "@/app/decks/labels"
 import { valueOr } from "../answer";
 import { buildFromCollectionAction } from "./actions";
 import type { LandsToAdd } from "../mana-base/mana-base-panel";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards
 // first, then optional store cards for remaining gaps, plus a mana base from planManaBase.
@@ -73,10 +75,7 @@ export function DraftPanel(props: {
   const fullCount = (draft ? sumQuantities(draft.spells) : 0) + landsAddedCount;
 
   return (
-    <section
-      aria-label="Deck draft"
-      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
-    >
+    <Card aria-label="Deck draft" as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Draft deck</h2>
         <button
@@ -150,21 +149,21 @@ export function DraftPanel(props: {
 
           <div className="flex flex-wrap gap-2">
             {fullCount > 0 && (
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
                   props.onAdd(fullAdditions, fullCount, `Added ${fullCount} drafted cards.`)
                 }
-                className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm disabled:opacity-40"
+                size="sm"
               >
                 {draft.storeAddedCount > 0
                   ? `Add full draft (${fullCount} cards, ${Cents.format(Cents.of(draft.storeCostCents))} store)`
                   : `Add draft to deck (${fullCount} cards)`}
-              </button>
+              </Button>
             )}
             {draft.storeAddedCount > 0 && draft.ownedAddedCount > 0 && (
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
@@ -174,10 +173,11 @@ export function DraftPanel(props: {
                     `Added ${draft.ownedAddedCount} owned cards and lands.`,
                   )
                 }
-                className="border-line rounded-md border px-3 py-1 text-sm disabled:opacity-40"
+                variant="secondary"
+                size="sm"
               >
                 Add owned + lands only ({draft.ownedAddedCount} cards)
-              </button>
+              </Button>
             )}
           </div>
 
@@ -224,7 +224,7 @@ export function DraftPanel(props: {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }
 

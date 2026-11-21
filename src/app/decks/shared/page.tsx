@@ -2,6 +2,7 @@ import Link from "next/link";
 import { readPage } from "@/server/page-instance";
 import { LocalTime } from "@/ui/local-time";
 import { FORMAT_LABELS } from "../labels";
+import { Page } from "@/ui/page";
 
 // Decks → Shared (design doc 21): every deck the playgroup has shared, newest change first.
 
@@ -9,7 +10,7 @@ export default async function SharedDecksPage() {
   const { reads } = await readPage();
   const decks = await reads.decks.sharedDecks();
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Shared decks</h1>
         <p className="text-muted text-sm">
@@ -46,6 +47,6 @@ export default async function SharedDecksPage() {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

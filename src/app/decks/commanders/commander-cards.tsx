@@ -2,6 +2,8 @@
 import { useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
 import { commanderCardsAction, type CommanderCardsView } from "./actions";
+import { Card } from "@/ui/card";
+import { Button } from "@/ui/button";
 
 // One commander's cards on Find a commander (design docs 36 and 39), loaded when opened:
 // your on-plan cards and why, your cards for each role, and what the rest might cost; plus
@@ -81,16 +83,11 @@ export function CommanderCards(props: { oracleId: string; withReal: boolean }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        className="border-line rounded-md border px-3 py-1 text-sm"
-      >
+      <Button type="button" onClick={toggle} aria-expanded={open} variant="secondary" size="sm">
         {open ? "Hide the cards" : "See the cards"}
-      </button>
+      </Button>
       {open && (
-        <div className="border-border-subtle flex w-full flex-col gap-3 rounded-lg border p-3 text-sm">
+        <Card padding="md" stack className="w-full text-sm">
           {cards === "loading" || cards === null ? (
             <p className="text-muted">Looking through your cards…</p>
           ) : cards === "failed" ? (
@@ -98,7 +95,7 @@ export function CommanderCards(props: { oracleId: string; withReal: boolean }) {
           ) : (
             <CardsView cards={cards} />
           )}
-        </div>
+        </Card>
       )}
     </>
   );

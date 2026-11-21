@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Input, Select } from "@/ui/field";
 import { COLOR_COMBINATIONS } from "@/shared/kernel";
 import { Button } from "@/ui/button";
 
@@ -34,9 +35,7 @@ const FINISHES: Array<[string, string]> = [
   ["etched", "Etched"],
 ];
 
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
-
-function Select(props: {
+function FilterSelect(props: {
   name: string;
   label: string;
   value: string;
@@ -44,14 +43,14 @@ function Select(props: {
   anyLabel?: string;
 }) {
   return (
-    <select name={props.name} defaultValue={props.value} aria-label={props.label} className={field}>
+    <Select name={props.name} defaultValue={props.value} aria-label={props.label}>
       {props.anyLabel !== undefined && <option value="">{props.anyLabel}</option>}
       {props.options.map(([value, label]) => (
         <option key={value} value={value}>
           {label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 
@@ -70,29 +69,29 @@ export function CardFilters(props: {
   return (
     <form method="get" action={props.action} className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           type="search"
           name="q"
           defaultValue={searchText(props.values)}
           placeholder="Search: bolt, t:creature mv<=2, kw:flying, is:showcase"
           aria-label="Search cards"
-          className={`${field} w-full sm:w-80`}
+          className="w-full sm:w-80"
         />
-        <Select
+        <FilterSelect
           name="set"
           label="Set"
           value={value("set")}
           anyLabel="Any set"
           options={props.sets.map((set) => [set.code, `${set.name} (${set.code})`] as const)}
         />
-        <Select
+        <FilterSelect
           name="rarity"
           label="Rarity"
           value={value("rarity")}
           anyLabel="Any rarity"
           options={RARITIES.map((rarity) => [rarity, rarity] as const)}
         />
-        <select name="color" defaultValue={value("color")} aria-label="Color" className={field}>
+        <Select name="color" defaultValue={value("color")} aria-label="Color">
           <option value="">Any color</option>
           {COLORS.map(([code, label]) => (
             <option key={code} value={code}>
@@ -108,9 +107,9 @@ export function CardFilters(props: {
               ))}
             </optgroup>
           ))}
-        </select>
+        </Select>
         {props.showFinish && (
-          <Select
+          <FilterSelect
             name="finish"
             label="Finish"
             value={value("finish")}
@@ -119,14 +118,14 @@ export function CardFilters(props: {
           />
         )}
         {props.sections && (
-          <Select
+          <FilterSelect
             name="sections"
             label="Sections"
             value={value("sections")}
             options={props.sections}
           />
         )}
-        <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
+        <FilterSelect name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
         <Button type="submit">Show</Button>
         <Link href={props.action} className="text-sm underline">
           Clear

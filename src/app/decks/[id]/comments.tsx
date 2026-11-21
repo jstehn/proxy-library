@@ -2,6 +2,9 @@ import type { CommentView } from "@/modules/decks";
 import { MAX_COMMENT_LENGTH } from "@/modules/decks";
 import { LocalTime } from "@/ui/local-time";
 import { deleteCommentAction, postCommentAction } from "../actions";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/field";
+import { EmptyState } from "@/ui/empty-state";
 
 // A deck's comments (design doc 21): oldest first, a box to add one, and a delete button for
 // those the viewer may remove (their own, any on their deck, or any at all for an admin).
@@ -28,7 +31,7 @@ export function DeckComments(props: {
         </p>
       )}
       {props.comments.length === 0 ? (
-        <p className="text-muted text-sm">No comments yet.</p>
+        <EmptyState>No comments yet.</EmptyState>
       ) : (
         <ol className="flex flex-col gap-3">
           {props.comments.map((comment) => (
@@ -68,21 +71,17 @@ export function DeckComments(props: {
       )}
       <form action={postCommentAction} className="flex flex-col gap-2">
         <input type="hidden" name="deckId" value={props.deckId} />
-        <textarea
+        <Textarea
           name="body"
           rows={3}
           required
           maxLength={MAX_COMMENT_LENGTH}
           aria-label="Your comment"
           placeholder={props.isOwner ? "A note about this deck" : "What do you think of this deck?"}
-          className="border-line rounded-md border bg-transparent px-2 py-1.5 text-sm"
         />
-        <button
-          type="submit"
-          className="bg-accent text-accent-foreground self-start rounded-md px-3 py-1.5 text-sm font-medium"
-        >
+        <Button type="submit" className="self-start">
           Post comment
-        </button>
+        </Button>
       </form>
     </>
   );

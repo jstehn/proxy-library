@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EXPORTERS, exportWithHeadings, type ExportLine } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 // The deck as text (design doc 09): "4 Lightning Bolt (M11) 149", which Moxfield, Archidekt and
 // Arena all read, or names only; and with the deck's own headings (design doc 34).
@@ -22,7 +23,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
+    <Page width="3xl">
       <header>
         <h1 className="text-2xl font-semibold">Export: {view.deck.name}</h1>
         <p className="text-muted text-sm">
@@ -64,6 +65,6 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
           className="border-line rounded-md border bg-transparent p-2 font-mono text-sm"
         />
       </section>
-    </main>
+    </Page>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActivityList } from "./_components/activity-list";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 // The home page: where to go, and what the playgroup has been up to.
 const sections = [
@@ -26,7 +27,7 @@ export default async function Home() {
   const recent = await reads.activity.feed(actor, { limit: 5 });
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
+    <Page width="3xl" spacing="roomy">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Welcome, {actor.displayName}</h1>
         <p className="text-muted mt-2">Make it out of what you have.</p>
@@ -55,6 +56,6 @@ export default async function Home() {
         </h2>
         <ActivityList items={recent} />
       </section>
-    </main>
+    </Page>
   );
 }

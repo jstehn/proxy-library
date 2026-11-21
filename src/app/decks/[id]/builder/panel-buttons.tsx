@@ -3,6 +3,7 @@ import type { Dispatch } from "react";
 import type { Format } from "@/modules/decks";
 import { formatRules } from "@/modules/decks/client";
 import type { BuilderAction, PanelName } from "./builder-state";
+import { Button } from "@/ui/button";
 
 // The row of buttons that open and close the builder's panels (design doc 14, section 2.4).
 
@@ -49,15 +50,16 @@ export function PanelButtons(props: {
   return (
     <div className="flex flex-wrap gap-2">
       {buttons.map((button) => (
-        <button
+        <Button
           key={button.panel}
           type="button"
           aria-expanded={openPanels[button.panel]}
           onClick={() => dispatch({ type: "panelToggled", panel: button.panel })}
-          className="border-line rounded-md border px-3 py-1 text-sm"
+          variant="secondary"
+          size="sm"
         >
           {openPanels[button.panel] ? button.hideLabel : button.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

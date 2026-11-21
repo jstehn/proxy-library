@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { DeckLine } from "@/modules/decks";
 import { MAX_HEADING_LENGTH } from "@/modules/decks/client";
+import { Input } from "@/ui/field";
 
 // The selected card's heading (design doc 34): type one, pick one the deck has, or clear it.
 // Only main-deck cards have one shown; the commander, sideboard and maybeboard are boards.
@@ -32,14 +33,15 @@ export function HeadingField(props: {
       <label htmlFor={`${listId}-input`} className="text-muted text-xs">
         Heading
       </label>
-      <input
+      <Input
         id={`${listId}-input`}
         list={listId}
         value={text}
         maxLength={MAX_HEADING_LENGTH}
         placeholder="e.g. Ramp"
         onChange={(event) => setText(event.target.value)}
-        className="border-line min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 text-sm"
+        controlSize="sm"
+        className="min-w-0 flex-1"
       />
       <datalist id={listId}>
         {props.headings.map((heading) => (

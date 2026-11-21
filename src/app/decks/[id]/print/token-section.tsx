@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { tokenDescription, type TokenArt, type TokenLine } from "@/modules/decks/client";
 import { chooseTokenAction, tokenArtsAction } from "./actions";
+import { EmptyState } from "@/ui/empty-state";
 
 // The print page's tokens (design doc 25): each token the deck's cards make, whether it prints,
 // and its art. Every change is saved for the deck at once.
@@ -22,7 +23,7 @@ export function TokenList({ deckId, tokens, onTokensChange }: Props) {
   const [message, setMessage] = useState<string | null>(null);
 
   if (tokens.length === 0) {
-    return <p className="text-muted text-sm">None of this deck&apos;s cards make tokens.</p>;
+    return <EmptyState>None of this deck&apos;s cards make tokens.</EmptyState>;
   }
 
   async function save(token: TokenLine, change: TokenChange) {

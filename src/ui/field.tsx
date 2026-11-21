@@ -1,17 +1,13 @@
 // Form controls with one look: `Input`, `Select`, `Textarea`, and `Field` (a label, the control,
 // a hint and an error). Presentational only.
-import type {
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
-} from "react";
+import type { ComponentProps, ReactNode } from "react";
 
-export type ControlSize = "md" | "sm" | "lg" | "form";
+export type ControlSize = "md" | "sm" | "xs" | "lg" | "form";
 
 const SIZE_CLASSES: Record<ControlSize, string> = {
   md: "px-2 py-1.5 text-sm",
   sm: "px-2 py-1 text-sm",
+  xs: "px-2 py-1.5 text-xs",
   lg: "px-3 py-2 text-sm",
   form: "px-3 py-2 text-base",
 };
@@ -25,17 +21,17 @@ export function controlClass(size: ControlSize = "md", className?: string): stri
 
 type SizeProp = { controlSize?: ControlSize };
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement> & SizeProp) {
+export function Input(props: ComponentProps<"input"> & SizeProp) {
   const { controlSize, className, ...rest } = props;
   return <input className={controlClass(controlSize, className)} {...rest} />;
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement> & SizeProp) {
+export function Select(props: ComponentProps<"select"> & SizeProp) {
   const { controlSize, className, ...rest } = props;
   return <select className={controlClass(controlSize, className)} {...rest} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement> & SizeProp) {
+export function Textarea(props: ComponentProps<"textarea"> & SizeProp) {
   const { controlSize, className, ...rest } = props;
   return <textarea className={controlClass(controlSize, className)} {...rest} />;
 }

@@ -5,8 +5,10 @@ import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { createDeckAction } from "./actions";
 import { FORMAT_LABELS } from "./labels";
-
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
+import { Button } from "@/ui/button";
+import { Input, Select } from "@/ui/field";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
   const { actor, reads } = await readPage();
@@ -19,7 +21,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
   const error = searchParams.error;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Decks</h1>
         <p className="text-muted text-sm">
@@ -41,27 +43,22 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
 
       <form action={createDeckAction} className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           name="name"
           placeholder="New deck name"
           aria-label="Deck name"
           required
           maxLength={60}
-          className={`${field} w-64`}
+          className="w-64"
         />
-        <select name="format" aria-label="Format" defaultValue="commander" className={field}>
+        <Select name="format" aria-label="Format" defaultValue="commander">
           {FORMATS.map((format) => (
             <option key={format} value={format}>
               {FORMAT_LABELS[format]}
             </option>
           ))}
-        </select>
-        <button
-          type="submit"
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-        >
-          Create deck
-        </button>
+        </Select>
+        <Button type="submit">Create deck</Button>
       </form>
 
       {draftCount > 0 && (
@@ -84,7 +81,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       )}
 
       {decks.length === 0 ? (
-        <p className="text-muted text-sm">No decks yet.</p>
+        <EmptyState>No decks yet.</EmptyState>
       ) : (
         <ul className="divide-border-subtle flex flex-col divide-y">
           {decks.map((deck) => (
@@ -137,6 +134,6 @@ export default async function DecksPage(props: PageProps<"/decks">) {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

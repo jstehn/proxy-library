@@ -1,6 +1,6 @@
 // The one button look. `Button` is the element; `buttonClass` gives the same look to a link
 // (`<Link className={buttonClass({ variant: "secondary" })}>`). Presentational only.
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "quiet";
 export type ButtonSize = "md" | "sm" | "xs" | "lg" | "xl";
@@ -30,7 +30,7 @@ export function buttonClass(look: ButtonLook = {}): string {
   return classes.join(" ");
 }
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & Omit<ButtonLook, "className">;
+type ButtonProps = ComponentProps<"button"> & Omit<ButtonLook, "className">;
 
 export function Button(props: ButtonProps) {
   const { variant, size, className, ...rest } = props;

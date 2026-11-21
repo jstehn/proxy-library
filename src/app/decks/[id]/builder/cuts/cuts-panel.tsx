@@ -22,6 +22,7 @@ import { cutReasonText, swapReasonText } from "@/app/decks/labels";
 import { suggestionsAction } from "../suggestions/actions";
 import { valueOr } from "../answer";
 import { optimizeDeckAction } from "./actions";
+import { Card } from "@/ui/card";
 
 // Possible cuts (design doc 32, section 9) and one-step swaps (design doc 47): the main-deck
 // cards that score lowest on simple checks, with the reasons for each and a button to move it to
@@ -107,9 +108,11 @@ export function CutsPanel(props: {
     lines.find((line) => line.oracleId === oracleId && line.board === "main");
 
   return (
-    <section
+    <Card
       aria-label="Possible cuts"
-      className="border-border-subtle flex flex-col gap-2 rounded-lg border p-3 text-sm"
+      as="section"
+      padding="md"
+      className="flex flex-col gap-2 text-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Possible cuts</h2>
@@ -287,6 +290,6 @@ export function CutsPanel(props: {
           )}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

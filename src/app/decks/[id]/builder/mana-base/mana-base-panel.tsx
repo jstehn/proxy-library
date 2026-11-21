@@ -7,6 +7,8 @@ import { ManaText } from "@/ui/mana";
 import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { manaBaseAction } from "./actions";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 // Mana base (design doc 35, section 9): how many lands and sources of each color to aim for,
 // and lands you could add: yours first (decks share cards), then basics; and store lands to
@@ -46,10 +48,7 @@ export function ManaBasePanel(props: {
   const adding = plan?.add.reduce((sum, land) => sum + land.quantity, 0) ?? 0;
 
   return (
-    <section
-      aria-label="Mana base"
-      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
-    >
+    <Card aria-label="Mana base" as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Mana base</h2>
         <button
@@ -108,7 +107,7 @@ export function ManaBasePanel(props: {
             <div className="flex flex-col gap-2">
               <h3 className="text-muted text-xs font-medium uppercase">Lands you could add</h3>
               <LandList lands={plan.add} />
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
@@ -120,10 +119,11 @@ export function ManaBasePanel(props: {
                     adding,
                   )
                 }
-                className="bg-accent text-accent-foreground self-start rounded-md px-3 py-1 text-sm disabled:opacity-40"
+                size="sm"
+                className="self-start"
               >
                 Add these {adding} lands
-              </button>
+              </Button>
             </div>
           )}
           {plan.over === 0 && plan.add.length === 0 && (
@@ -145,7 +145,7 @@ export function ManaBasePanel(props: {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }
 

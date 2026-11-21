@@ -20,6 +20,7 @@ import { problemsOf } from "./builder/derive";
 import { StatsPanel } from "./builder/stats/stats-panel";
 import { TestHandPanel } from "./builder/test-hand/test-hand-panel";
 import { TokensPanel } from "./builder/tokens/tokens-panel";
+import { Button } from "@/ui/button";
 
 // Someone else's shared deck, read-only (design doc 21): its list (with how many of each card
 // you own), its statistics and problems as its owner has them, test hands, and the list as text
@@ -139,23 +140,25 @@ export function SharedDeckView(props: {
           onHighlight={setHighlighted}
         />
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
             aria-expanded={showTestHand}
             onClick={() => setShowTestHand((value) => !value)}
-            className="border-line rounded-md border px-3 py-1 text-sm"
+            variant="secondary"
+            size="sm"
           >
             {showTestHand ? "Hide test hand" : "Test hand"}
-          </button>
+          </Button>
           {props.tokens !== undefined && props.tokens.length > 0 && (
-            <button
+            <Button
               type="button"
               aria-expanded={showTokens}
               onClick={() => setShowTokens((value) => !value)}
-              className="border-line rounded-md border px-3 py-1 text-sm"
+              variant="secondary"
+              size="sm"
             >
               {showTokens ? "Hide tokens" : `Tokens (${props.tokens.length})`}
-            </button>
+            </Button>
           )}
         </div>
         {showTestHand && (

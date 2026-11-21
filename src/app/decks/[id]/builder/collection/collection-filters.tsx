@@ -5,6 +5,7 @@ import { hasTerm, toggleTerm } from "@/shared/card-search";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { CARD_SIZE_NAMES, type Browsing } from "./use-browse";
+import { Input } from "@/ui/field";
 
 // Above the grid: where to search, the search box, card size, colors, quick filters and the sort.
 
@@ -73,14 +74,15 @@ export function CollectionFilters(props: {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <input
+        <Input
           ref={searchRef}
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           aria-label={source === "mine" ? "Search your cards" : "Search every card"}
           placeholder='Search: bolt, t:creature mv<=3, o:"draw a card", id<=esper'
-          className="border-line min-w-0 flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
+          controlSize="lg"
+          className="min-w-0 flex-1"
         />
         <div role="group" aria-label="Card size" className="flex shrink-0 items-center gap-1">
           <span className="text-muted mr-1 hidden text-xs sm:inline">Card size</span>

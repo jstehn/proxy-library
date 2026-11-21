@@ -6,6 +6,8 @@ import {
   type EditAsTextPreviewState,
   type EditAsTextState,
 } from "../edit-as-text/actions";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/field";
 
 // Edit as text (design doc 23): the deck's whole list in a text box; saving replaces the deck.
 
@@ -16,8 +18,6 @@ const initialPreviewState: EditAsTextPreviewState = {
   preview: null,
   previewedList: null,
 };
-
-const button = "rounded-md border border-line px-3 py-1.5 text-sm disabled:opacity-50";
 
 type Props = Readonly<{ deckId: number; text: string; fingerprint: string }>;
 
@@ -80,7 +80,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
           choose the board. Cards without &quot;(SET) number&quot; keep their printing, and new ones
           use your most special copy.
         </p>
-        <textarea
+        <Textarea
           name="list"
           rows={30}
           value={list}
@@ -88,7 +88,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
           aria-label="The deck's list as text"
           aria-describedby={activeError === null ? undefined : `edit-as-text-error-${deckId}`}
           spellCheck={false}
-          className="border-line w-full rounded-md border bg-transparent px-2 py-1.5 font-mono text-sm"
+          className="w-full font-mono"
         />
         {activeError !== null && (
           <div
@@ -203,26 +203,26 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
           </section>
         )}
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="submit"
             disabled={pending}
             onClick={() => setLastMode("save")}
-            className={button}
+            variant="secondary"
           >
             {savePending ? "Saving…" : "Save list"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             formAction={previewAction}
             disabled={pending}
             onClick={() => setLastMode("preview")}
-            className={button}
+            variant="secondary"
           >
             {previewPending ? "Previewing…" : "Preview changes"}
-          </button>
-          <button type="button" onClick={cancel} disabled={pending} className={button}>
+          </Button>
+          <Button type="button" onClick={cancel} disabled={pending} variant="secondary">
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </details>

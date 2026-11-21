@@ -14,6 +14,9 @@ import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { budgetAction, suggestionsAction } from "./actions";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/field";
+import { Card } from "@/ui/card";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects
@@ -53,9 +56,11 @@ export function SuggestionsPanel(props: {
   ];
 
   return (
-    <section
+    <Card
       aria-label="Suggestions"
-      className="border-border-subtle flex flex-col gap-4 rounded-lg border p-3 text-sm"
+      as="section"
+      padding="md"
+      className="flex flex-col gap-4 text-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -105,7 +110,7 @@ export function SuggestionsPanel(props: {
         . Suggestions are ideas to consider, picked by simple rules from rules text and prices, not
         from other players&apos; decks.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -236,21 +241,18 @@ function BudgetForm(props: {
       <form onSubmit={makeList} className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1">
           Spend up to $
-          <input
+          <Input
             value={dollars}
             onChange={(event) => setDollars(event.target.value)}
             inputMode="decimal"
             aria-label="Budget in dollars"
-            className="border-line w-20 rounded-md border bg-transparent px-2 py-1"
+            controlSize="sm"
+            className="w-20"
           />
         </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="border-line rounded-md border px-3 py-1 disabled:opacity-40"
-        >
+        <Button type="submit" disabled={busy} variant="secondary" size="sm">
           {busy ? "Choosing…" : "Make a list"}
-        </button>
+        </Button>
       </form>
       {error && <p className="text-danger-text text-xs">{error}</p>}
       {result !== null && <HiddenOverTarget count={result.list.hiddenOverTarget} />}

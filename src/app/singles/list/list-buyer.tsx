@@ -5,13 +5,12 @@ import type { ListQuote, PrintingPreference, QuoteLine } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
 import { buyListAction, quoteListAction, type BuyListResult } from "./actions";
 import { Button } from "@/ui/button";
-import { Textarea } from "@/ui/field";
+import { Select, Textarea } from "@/ui/field";
 
 // The list on the left, what it would buy on the right (design doc 15, section 3.1). The quote
 // follows the text after a pause in typing; buying sends exactly the lines shown.
 
 const WAIT_MILLISECONDS = 400;
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 const money = (cents: number) => Cents.format(Cents.of(cents));
 
 export function ListBuyer(props: { startingText: string; balanceCents: number }) {
@@ -199,12 +198,13 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
       </span>
       {choice !== null && (
         <>
-          <select
+          <Select
+            controlSize="xs"
             value={choice.printingId}
             onChange={(event) => props.onChoose(event.target.value)}
             aria-label={`Printing of ${choice.name}`}
             // On a phone the menu gets its own line under the name; beside it on wider screens.
-            className={`${field} order-last ml-11 w-[calc(100%-2.75rem)] text-xs sm:order-none sm:ml-0 sm:w-auto sm:max-w-64`}
+            className="order-last ml-11 w-[calc(100%-2.75rem)] sm:order-none sm:ml-0 sm:w-auto sm:max-w-64"
           >
             {line.options.map((option) => (
               <option key={option.printingId} value={option.printingId}>
@@ -213,7 +213,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
                 {money(option.priceCents)}
               </option>
             ))}
-          </select>
+          </Select>
           <span className="w-24 shrink-0 text-right tabular-nums">
             {money(line.totalCents)}
             <span className="text-muted block text-xs">

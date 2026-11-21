@@ -2,6 +2,7 @@ import Link from "next/link";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { WishForShortForm } from "../../wishlist/wish-forms";
+import { Page } from "@/ui/page";
 
 // Decks → Cards to get (design doc 21): every card your decks need beyond what you own. One copy
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
@@ -12,7 +13,7 @@ export default async function CardsToGetPage() {
   const copies = toGet.cards.reduce((sum, card) => sum + card.missing, 0);
   const unpriced = toGet.cards.filter((card) => card.priceCents === null).length;
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Cards to get</h1>
         <p className="text-muted text-sm">
@@ -91,6 +92,6 @@ export default async function CardsToGetPage() {
           </p>
         </>
       )}
-    </main>
+    </Page>
   );
 }
