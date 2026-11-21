@@ -3,4 +3,4 @@
 // can take a player or a deck number.
 export { publicDeck } from "./sharing";
 export { publicScorecard } from "./scorecard";
-export { publicDeckTokens } from "./tokens";
+export { publicDeckTokens } from "@/modules/decks/proxies";

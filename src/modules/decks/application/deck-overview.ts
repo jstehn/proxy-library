@@ -12,7 +12,7 @@ import { library } from "../domain/opening-hand/library";
 import type { DeckNotFound } from "../domain/errors";
 import type { DeckProblem } from "../domain/rules";
 import { deckStats, type DeckStats } from "../domain/stats";
-import type { TokenLine } from "../domain/token-proxies";
+import type { TokenLine } from "@/modules/decks/proxies/client";
 import type { BracketReport } from "../domain/deck-reads";
 
 // One deck, read once (ADR 0026, audit F2). The builder, the deck page and the get_deck tool all

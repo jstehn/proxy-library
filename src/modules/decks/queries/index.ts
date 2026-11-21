@@ -5,4 +5,4 @@
 // `export *` would offer those too. `public.ts` holds what a visitor may call (`PublicReads`).
 export * from "./reads";
 export { deckForViewer, deckComments, sharedDecks } from "./sharing";
-export { tokenArtOptions } from "./tokens";
+export { tokenArtOptions } from "@/modules/decks/proxies";

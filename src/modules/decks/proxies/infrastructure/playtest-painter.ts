@@ -26,7 +26,7 @@ import {
   type GrayPixels,
   type Pixels,
 } from "../domain/art-filters";
-import { symbolArt, type SymbolArt } from "../domain/mana-symbols";
+import { symbolArt, type SymbolArt } from "../../domain/mana-symbols";
 import {
   STRIPE_TINTS,
   type DrawnSymbol,

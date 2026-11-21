@@ -1,4 +1,4 @@
-import { colorsOfCost, costSymbols, splitSymbols } from "./mana-symbols";
+import { colorsOfCost, costSymbols, splitSymbols } from "../../domain/mana-symbols";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
 import { COLORS, type ManaColor, isLand, type CardFacts } from "@/shared/kernel";
 

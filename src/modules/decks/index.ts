@@ -1,6 +1,6 @@
 // The decks module's public API: the only file other modules and the app may import.
 export { deleteAllDecks } from "./application/delete-all-decks";
-export type { ProxyDeck } from "./application/proxy-deck";
+export type { ProxyDeck } from "@/modules/decks/proxies";
 export { makeDecks, type Decks } from "./application/make-decks";
 
 export { makeDeckSharing, type DeckSharing } from "./application/sharing";
@@ -153,7 +153,7 @@ export * as deckPublicQueries from "./queries/public";
 export { checkOwnedCards, findCard } from "./queries/card-facts";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
 export { type SynergyQuery } from "./domain/search-for-deck";
-export { makeProxySheets, type ProxySheetInput } from "./application/proxy-sheets";
+export { makeProxySheets, type ProxySheetInput } from "@/modules/decks/proxies";
 
 export {
   cardsToPrint,
@@ -162,9 +162,9 @@ export {
   TOKEN_COPIES,
   type ProxyLine,
   type ProxyOptions,
-} from "./domain/proxy-sheet";
-export { makeTokenChoices, type ChooseTokenInput } from "./application/token-choices";
-export { deckTokenLines } from "./queries/tokens";
+} from "@/modules/decks/proxies/client";
+export { makeTokenChoices, type ChooseTokenInput } from "@/modules/decks/proxies";
+export { deckTokenLines } from "@/modules/decks/proxies";
 export {
   filterTokenChecklist,
   summarizeTokenChecklist,
@@ -174,7 +174,7 @@ export {
   type TokenKind,
   type TokenLine,
   type TokenMaker,
-} from "./domain/token-proxies";
+} from "@/modules/decks/proxies/client";
 
 export { deckChangePreview, deckListPreview, type DeckChangePreview } from "./queries/preview";
 export {
@@ -182,7 +182,7 @@ export {
   listDeckSnapshots,
   type SnapshotComparison,
 } from "./queries/snapshots";
-export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
+export type { ProxyProgress, ProxyStreamEvent } from "@/modules/decks/proxies/client";
 export { openingHandOdds } from "./domain/draws";
 export { library, type LibraryCard } from "./domain/opening-hand/library";
 

@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import type { DeckTokenRepository } from "../application/ports";
-import type { DeckId } from "../domain/deck";
+import type { DeckId } from "../../domain/deck";
 import type { TokenChoice } from "../domain/token-proxies";
-import { deckTokenChoices } from "./schema";
+import { deckTokenChoices } from "../../infrastructure/schema";
 
 // The deck's token choices (design doc 25), and what it reads of the catalog's tokens.
 

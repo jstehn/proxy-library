@@ -29,7 +29,7 @@ export {
   type ProxyLine,
   type ProxyOptions,
   type ProxySummary,
-} from "./domain/proxy-sheet";
+} from "@/modules/decks/proxies/client";
 export {
   filterTokenChecklist,
   sheetCards,
@@ -41,15 +41,15 @@ export {
   type TokenChecklistSummary,
   type TokenKind,
   type TokenLine,
-} from "./domain/token-proxies";
-export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
+} from "@/modules/decks/proxies/client";
+export { proxyPages, cardsToPrint } from "@/modules/decks/proxies/client";
 export {
   completeLines,
   progressFraction,
   progressLabel,
   type ProxyProgress,
   type ProxyStreamEvent,
-} from "./domain/proxy-progress";
+} from "@/modules/decks/proxies/client";
 export { copiesToTake } from "./domain/free-copies";
 export { landTarget } from "./domain/mana-base";
 export {

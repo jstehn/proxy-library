@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { err, ok } from "@/shared/kernel";
 import { inMemoryUnitOfWork } from "@/shared/kernel/testing";
-import { DeckId } from "../domain/deck";
-import { inMemoryDeckRepository, inMemoryDeckTokens } from "../testing/fakes";
+import { DeckId } from "../../domain/deck";
+import { inMemoryDeckRepository } from "../../testing/fakes";
+import { inMemoryDeckTokens } from "../testing/fakes";
 import { makeTokenChoices } from "./token-choices";
 
 // Choosing a token's art, or leaving it out (design doc 25).

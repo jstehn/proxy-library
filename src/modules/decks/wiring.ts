@@ -9,7 +9,7 @@ import { makeDeckFacts } from "./application/deck-facts";
 import { makeDeckManaPlan } from "./application/deck-mana-plan";
 import { makeDeckOverview } from "./application/deck-overview";
 import { makeDeckPlanEdits } from "./application/deck-plan-edits";
-import { makeProxyDeck } from "./application/proxy-deck";
+import { makeProxyDeck } from "@/modules/decks/proxies";
 import { makeDeckPreviews } from "./application/deck-previews";
 import { makeDeckSearch } from "./application/deck-search";
 import { makeDeckSignals, makeSearchSignals } from "./application/deck-signals";
@@ -19,9 +19,9 @@ import { makeFindReplacements } from "./application/find-replacements";
 import { makeListDecks } from "./application/list-decks";
 import type { Decks } from "./application/make-decks";
 import type { PreviewRepository } from "./application/ports";
-import type { makeProxySheets } from "./application/proxy-sheets";
+import type { makeProxySheets } from "@/modules/decks/proxies";
 import type { DeckSharing } from "./application/sharing";
-import type { makeTokenChoices } from "./application/token-choices";
+import type { makeTokenChoices } from "@/modules/decks/proxies";
 import { DeckId } from "./domain/deck";
 import { auditDeckView } from "./queries/audit";
 import { budgetReplacements } from "./queries/budget-replacements";
@@ -36,7 +36,7 @@ import { searchForDeck } from "./queries/search-for-deck";
 import { semanticSearchForDeck } from "./queries/semantic-search";
 import { similarCards } from "./queries/suggestions";
 import { deckViewForViewer } from "./queries/sharing";
-import { deckTokenLines } from "./queries/tokens";
+import { deckTokenLines } from "@/modules/decks/proxies";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
 // composition root (src/server/capabilities.ts) calls this once and spreads the result.

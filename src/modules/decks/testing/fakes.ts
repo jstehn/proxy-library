@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { PrintingId } from "@/modules/catalog";
 import { type Finish, type UserId } from "@/shared/kernel";
 import type {
@@ -7,8 +5,6 @@ import type {
   CardQuery,
   DeckRepository,
   DeckSharingRepository,
-  DeckTokenRepository,
-  ProxyImageSource,
   ResolvedCard,
 } from "../application/ports";
 import { DeckId, type Deck } from "../domain/deck";
@@ -21,7 +17,6 @@ import {
   type Visibility,
 } from "../domain/sharing";
 import { SnapshotId, type DeckSnapshot } from "../domain/snapshots";
-import type { TokenChoice } from "../domain/token-proxies";
 
 // In-memory stand-ins for the decks ports.
 
@@ -121,35 +116,6 @@ export function inMemoryDeckRepository() {
   };
 }
 
-/** A token printing the fake catalog has, and the cards (oracle ids) that make it. */
-export type SampleToken = Readonly<{ tokenId: string; tokenOracleId: string; madeBy: string[] }>;
-
-/** Tokens the catalog "has", and the choices saved, readable with `choicesOf`. */
-export function inMemoryDeckTokens(tokens: readonly SampleToken[]) {
-  const choices = new Map<DeckId, Map<string, TokenChoice>>();
-  const repository: DeckTokenRepository = {
-    async tokenOracleOf(tokenId) {
-      return tokens.find((token) => token.tokenId === tokenId)?.tokenOracleId ?? null;
-    },
-    async anyMakes(cardOracleIds, tokenOracleId) {
-      return tokens.some(
-        (token) =>
-          token.tokenOracleId === tokenOracleId &&
-          token.madeBy.some((oracleId) => cardOracleIds.includes(oracleId)),
-      );
-    },
-    async saveChoice(deckId, choice) {
-      const forDeck = choices.get(deckId) ?? new Map<string, TokenChoice>();
-      forDeck.set(choice.tokenOracleId, choice);
-      choices.set(deckId, forDeck);
-    },
-  };
-  return {
-    ...repository,
-    choicesOf: (deckId: DeckId) => [...(choices.get(deckId)?.values() ?? [])],
-  };
-}
-
 export type SampleCard = {
   oracleId: string;
   name: string;
@@ -223,30 +189,6 @@ export function inMemoryCardLookup(cards: readonly SampleCard[]): CardLookup {
 /** A printing id for tests (domain code may only import catalog types, not its constructors). */
 export function samplePrintingId(raw: string): PrintingId {
   return PrintingId.of(raw);
-}
-
-/** A real 8 × 8 JPEG (one blue square, drawn by Chromium), to stand in for card images. */
-const TINY_JPEG = new Uint8Array(
-  readFileSync(join(process.cwd(), "tests/fixtures/images/card.jpg")),
-);
-
-/**
- * Card images from memory: every printing has a front; only those in `withBacks` have a back.
- * Remembers what was asked for, to check each image is fetched once.
- */
-export function fakeProxyImages(withBacks: readonly string[] = []) {
-  const requests: string[] = [];
-  const images: ProxyImageSource = {
-    async image(printingId, face) {
-      requests.push(`${printingId}/${face}`);
-      return face === "front" || withBacks.includes(printingId) ? TINY_JPEG : null;
-    },
-    async artCrop(printingId, face) {
-      requests.push(`art:${printingId}/${face}`);
-      return face === "front" || withBacks.includes(printingId) ? TINY_JPEG : null;
-    },
-  };
-  return { images, requests };
 }
 
 type StoredComment = {

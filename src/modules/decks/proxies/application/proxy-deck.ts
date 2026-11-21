@@ -1,6 +1,6 @@
 import type { PrintingCard } from "@/modules/catalog";
 import type { UserId } from "@/shared/kernel";
-import type { DeckView } from "../domain/deck-view";
+import type { DeckView } from "../../domain/deck-view";
 import type { ProxyLine } from "../domain/proxy-sheet";
 import type { TokenLine, TokenMaker } from "../domain/token-proxies";
 

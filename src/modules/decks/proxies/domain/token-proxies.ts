@@ -1,5 +1,5 @@
 import { hasTypeWord } from "@/shared/kernel";
-import { isCounted, isPlayed, type Board } from "./boards";
+import { isCounted, isPlayed, type Board } from "../../domain/boards";
 import type { PrintedCard, PrintedFace } from "./playtest-card";
 import { cardsToPrint, type ProxyCard, type ProxyLine, type ProxyOptions } from "./proxy-sheet";
 
