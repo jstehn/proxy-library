@@ -137,7 +137,7 @@ describe("commanders I can build", () => {
       text: "Commander\n1 Test Rabbit Lord\nDeck\n1 Test Bunny One",
     });
 
-    const ranked = await commandersICanBuild(db, jack.userId);
+    const ranked = await commandersICanBuild(db, jack.userId, { sort: "coverage" });
     expect(ranked.map((entry) => entry.commander.name)).toEqual([
       "Test Rabbit Lord",
       "Test Lone Legend",
