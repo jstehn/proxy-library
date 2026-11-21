@@ -239,3 +239,7 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       (game and real) and a player's real collection sort and section as before.
 - [ ] **Run `pnpm test:e2e`.** `tests/e2e` was not touched, so a changed message or redirect shows
       up there first.
+- [ ] **The commander finder's orderings (P36 part 2), in dark mode and at phone width.** The select
+      reads "Blend of popularity and power" by default and the "ordered by …" line matches;
+      `?sort=coverage` shows "Reset filters"; with a real collection the blend lists popular,
+      strong commanders first even when few of their cards are owned.
