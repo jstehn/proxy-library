@@ -106,3 +106,18 @@ P31 as its `CardView` block.
 **P18 (2026-11-20): accepted as recommended.** Area names core, scoring, building, play, proxies and
 the added `overview`; +132 lines; splitting `core` and narrowing the root exports go to P20.
 **P35:** accepted at +967; the homelab Authentik setup happens with milestone 2.
+
+**P22's disagreements (2026-11-20):**
+
+1. Role targets for 60-card formats: **research the best targets** (P36), then set them in
+   `FORMAT_RULES`.
+2. Tool response size: **whatever is smaller and more effective**; the code's 14 KB cap stands.
+3. Search batching: batches save queries and tokens; **keep what is best and reasonable** (the
+   code's 6 queries, 1–20 results).
+4. Redirect URIs: the limit is arbitrary; **the most efficient answer**, the code's 20.
+5. EDHREC sync: **the code** (30 days, 200 a night).
+6. Kind-priced products: **MSRP, not market rate** (the code: sell at the kind price in MSRP mode).
+7. Wishlist sharing: **the code** (profile visibility, default friends).
+8. Card images: **download and cache on view** (the code already does; doc 13 is corrected).
+9. Commanders: **found by their own score**, not the card scorer. Popularity and power are good
+   metrics, **with options** for the player (P36).
