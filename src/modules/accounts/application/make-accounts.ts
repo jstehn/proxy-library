@@ -21,12 +21,15 @@ import {
   makeApproveAuthorization,
   makeCheckAuthorizationRequest,
   makeDenyAuthorization,
+  makeCreateOAuthClient,
   makeExchangeAuthorizationCode,
   makeRegisterOAuthClient,
 } from "./oauth";
+import { makeCreateManualOAuthClient, makeDeleteOAuthClient } from "./oauth-clients";
 
 export function makeAccounts(dependencies: AccountsDependencies) {
   const checkAuthorizationRequest = makeCheckAuthorizationRequest(dependencies);
+  const createOAuthClient = makeCreateOAuthClient(dependencies);
   return {
     registerPlayer: makeRegisterPlayer(dependencies),
     signIn: makeSignIn(dependencies),
@@ -44,7 +47,9 @@ export function makeAccounts(dependencies: AccountsDependencies) {
     createAccessToken: makeCreateAccessToken(dependencies),
     revokeAccessToken: makeRevokeAccessToken(dependencies),
     actorFromToken: makeActorFromToken(dependencies),
-    registerOAuthClient: makeRegisterOAuthClient(dependencies),
+    registerOAuthClient: makeRegisterOAuthClient(createOAuthClient),
+    createManualOAuthClient: makeCreateManualOAuthClient(createOAuthClient),
+    deleteOAuthClient: makeDeleteOAuthClient(dependencies),
     checkAuthorizationRequest,
     approveAuthorization: makeApproveAuthorization(dependencies, checkAuthorizationRequest),
     denyAuthorization: makeDenyAuthorization(checkAuthorizationRequest),

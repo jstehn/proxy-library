@@ -90,14 +90,16 @@ export interface AccessTokenRepository {
   /** Revokes every live token of the player; returns how many. */
   revokeAll(userId: UserId, at: Date): Promise<number>;
   touch(id: AccessTokenId, at: Date): Promise<void>;
-  /** Revokes the player's live tokens made for one OAuth client (design doc 30, rule 7). */
-  revokeForClient(userId: UserId, clientId: string, at: Date): Promise<number>;
+  /** Revokes the live tokens made for one OAuth client: one player's (design doc 30, rule 7), or everyone's. */
+  revokeForClient(clientId: string, at: Date, userId?: UserId): Promise<number>;
 }
 
-/** OAuth clients and authorization codes (design doc 30). Codes are stored as hashes. */
+/** OAuth clients and authorization codes (design docs 30 and 69). Codes are stored as hashes. */
 export interface OAuthRepository {
   insertClient(client: OAuthClient): Promise<void>;
   findClient(clientId: string): Promise<OAuthClient | null>;
+  /** Deleting a client deletes its unused codes; its tokens are revoked first. */
+  deleteClient(clientId: string): Promise<boolean>;
   insertCode(hash: string, code: AuthorizationCode): Promise<void>;
   /** The code with this hash if it's unused and unexpired, marking it used; otherwise null. */
   takeCode(hash: string, now: Date): Promise<AuthorizationCode | null>;

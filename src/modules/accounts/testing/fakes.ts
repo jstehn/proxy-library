@@ -115,9 +115,10 @@ export function inMemoryAccessTokenRepository(): AccessTokenRepository {
         tokens.set(id, { ...stored, token: { ...stored.token, lastUsedAt: at } });
       }
     },
-    async revokeForClient(userId, clientId, at) {
+    async revokeForClient(clientId, at, userId) {
       const theirs = live().filter(
-        (stored) => stored.token.userId === userId && stored.clientId === clientId,
+        (stored) =>
+          (userId === undefined || stored.token.userId === userId) && stored.clientId === clientId,
       );
       for (const stored of theirs) {
         tokens.set(stored.token.id, { ...stored, token: { ...stored.token, revokedAt: at } });
@@ -137,6 +138,9 @@ function inMemoryOAuthRepository(): OAuthRepository {
     },
     async findClient(clientId) {
       return clients.get(clientId) ?? null;
+    },
+    async deleteClient(clientId) {
+      return clients.delete(clientId);
     },
     async insertCode(hash, code) {
       codes.set(hash, { code, used: false });

@@ -14,10 +14,17 @@ export type {
   AuthorizationProblem,
   AuthorizationRequest,
   IssuedToken,
+  RegisteredClient,
   RegisterClientInput,
   TokenRequest,
 } from "./application/oauth";
-export { type OAuthClient } from "./domain/oauth";
+export type {
+  CreateManualClientError,
+  CreateManualClientInput,
+  DeleteOAuthClientError,
+} from "./application/oauth-clients";
+export type { RedirectUriNotRegistered, UnknownClient } from "./domain/errors";
+export { basicCredentials, CLIENT_AUTH_METHODS, type OAuthClient } from "./domain/oauth";
 export {
   AccessTokenId,
   allows,
@@ -57,7 +64,7 @@ export { PASSWORD_MIN_LENGTH } from "./domain/credentials";
 export { pickForAdmin, type Actor, type AdminActor, type Player } from "./domain/player";
 export * as accountQueries from "./queries";
 export * as accountPublicQueries from "./queries/public";
-export type { InviteListItem, PlayerListItem } from "./queries/admin";
+export type { InviteListItem, OAuthClientListItem, PlayerListItem } from "./queries/admin";
 export {
   describeChangeOwnPasswordError,
   describeSignInError,

@@ -44,6 +44,8 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
         "setDisabled",
         "setSelfFunding",
         "resetPassword",
+        "createManualOAuthClient",
+        "deleteOAuthClient",
       ),
     },
     getAccountOverview: makeGetAccountOverview({

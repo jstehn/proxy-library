@@ -7,6 +7,7 @@ import { requireAdminActor } from "@/server/session";
 const ADMIN_PAGES = [
   ["/admin/players", "Players"],
   ["/admin/invites", "Invites"],
+  ["/admin/connectors", "Connectors"],
   ["/admin/economy", "Economy"],
   ["/admin/catalog", "Catalog"],
   ["/admin/photos", "Photos"],

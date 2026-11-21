@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  authMethodFor,
+  basicCredentials,
+  clientAuthenticated,
   clientName,
+  clientSecretFor,
   codeExpiry,
   pkceMatches,
   redirectUriProblem,
@@ -65,5 +69,48 @@ describe("names, expiry and redirects", () => {
     expect(withQuery("https://app.example/cb?keep=1", { code: "abc", state: null })).toBe(
       "https://app.example/cb?keep=1&code=abc",
     );
+  });
+});
+
+describe("client secrets (design doc 69)", () => {
+  it("makes a pls_ secret from 32 bytes, and no other length", () => {
+    expect(clientSecretFor(new Uint8Array(32))).toMatch(/^pls_[A-Za-z0-9_-]{43}$/);
+    expect(() => clientSecretFor(new Uint8Array(16))).toThrow(RangeError);
+  });
+
+  it("reads the requested auth method: none given is public, unknown is refused", () => {
+    expect(authMethodFor(undefined)).toBe("none");
+    expect(authMethodFor("none")).toBe("none");
+    expect(authMethodFor("client_secret_basic")).toBe("client_secret_basic");
+    expect(authMethodFor("client_secret_post")).toBe("client_secret_post");
+    expect(authMethodFor("private_key_jwt")).toBeNull();
+  });
+
+  it("authenticates a confidential client by the secret's hash, a public one by no secret", async () => {
+    const secret = clientSecretFor(new Uint8Array(32).fill(7));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+    const secretHash = Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    const confidential = { authMethod: "client_secret_basic", secretHash } as const;
+    expect(await clientAuthenticated(confidential, secret)).toBe(true);
+    expect(await clientAuthenticated(confidential, secret + "x")).toBe(false);
+    expect(await clientAuthenticated(confidential, null)).toBe(false);
+    const open = { authMethod: "none", secretHash: null } as const;
+    expect(await clientAuthenticated(open, null)).toBe(true);
+    expect(await clientAuthenticated(open, secret)).toBe(false);
+  });
+
+  it("reads Basic credentials, form-decoded, and rejects anything malformed", () => {
+    const header = (text: string) => `Basic ${btoa(text)}`;
+    expect(basicCredentials(header("plc_abc:pls_def"))).toEqual({
+      id: "plc_abc",
+      secret: "pls_def",
+    });
+    expect(basicCredentials(header("id:a%2Bb+c"))).toEqual({ id: "id", secret: "a+b c" });
+    expect(basicCredentials(header("no-colon"))).toBeNull();
+    expect(basicCredentials("Basic !!!")).toBeNull();
+    expect(basicCredentials("Bearer abc")).toBeNull();
+    expect(basicCredentials(null)).toBeNull();
   });
 });

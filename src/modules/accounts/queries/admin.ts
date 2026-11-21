@@ -1,9 +1,9 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "@/shared/db";
 import type { AdminActor } from "../domain/player";
 import { inviteStatus, type InviteStatus } from "../domain/invite";
-import { authUsers, invites, players } from "../infrastructure/schema";
+import { accessTokens, authUsers, invites, oauthClients, players } from "../infrastructure/schema";
 
 // Read models for the admin screens (ADR 0006): one query each, plain objects out.
 
@@ -80,5 +80,49 @@ export async function listInvites(
     createdBy: row.createdBy ?? "",
     expiresAt: row.invite.expiresAt.toISOString(),
     usedBy: row.usedBy,
+  }));
+}
+
+export type OAuthClientListItem = Readonly<{
+  clientId: string;
+  name: string;
+  redirectUris: readonly string[];
+  /** `none` for a public client; otherwise it holds a secret. */
+  authMethod: string;
+  /** The admin who made it by hand, or null when the app registered itself. */
+  createdBy: string | null;
+  createdAt: string;
+  liveTokens: number;
+}>;
+
+/** Every OAuth client, newest first, with how many live tokens each has made (kind A). */
+export async function listOAuthClients(
+  db: DbExecutor,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+  admin: AdminActor,
+): Promise<OAuthClientListItem[]> {
+  const rows = await db
+    .select({
+      client: oauthClients,
+      createdBy: authUsers.username,
+      liveTokens: sql<number>`(
+        select count(*)::int from ${accessTokens}
+         where ${accessTokens.oauthClientId} = ${oauthClients.clientId}
+           and ${accessTokens.revokedAt} is null
+      )`,
+    })
+    .from(oauthClients)
+    .leftJoin(authUsers, eq(authUsers.id, oauthClients.createdBy))
+    .orderBy(desc(oauthClients.createdAt))
+    .limit(200);
+
+  return rows.map((row) => ({
+    clientId: row.client.clientId,
+    name: row.client.name,
+    redirectUris: row.client.redirectUris,
+    authMethod: row.client.authMethod,
+    createdBy: row.createdBy,
+    createdAt: row.client.createdAt.toISOString(),
+    liveTokens: row.liveTokens,
   }));
 }

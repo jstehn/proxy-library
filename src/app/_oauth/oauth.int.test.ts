@@ -20,9 +20,10 @@ const { GET: authorizationServer } =
 const { POST: register } = await import("@/app/api/oauth/register/route");
 const { POST: token } = await import("@/app/api/oauth/token/route");
 const { POST: mcp } = await import("@/app/api/mcp/route");
+const { POST: tools } = await import("@/app/api/tools/[name]/route");
 
 afterAll(async () => {
-  await db.execute(sql`delete from oauth_clients where name = 'Claude test'`);
+  await db.execute(sql`delete from oauth_clients where name in ('Claude test', 'Google test')`);
   globalThis.__tcgContainer = undefined;
   await core.close();
   await close();
@@ -73,6 +74,7 @@ describe("OAuth for web connectors", () => {
       token_endpoint: `${origin}/api/oauth/token`,
       registration_endpoint: `${origin}/api/oauth/register`,
       code_challenge_methods_supported: ["S256"],
+      token_endpoint_auth_methods_supported: ["none", "client_secret_basic", "client_secret_post"],
     });
   });
 
@@ -145,5 +147,178 @@ describe("OAuth for web connectors", () => {
     );
     expect(refused.status).toBe(400);
     expect(await refused.json()).toMatchObject({ error: "invalid_redirect_uri" });
+  });
+});
+
+// Design doc 69: confidential clients, end to end through the route handlers.
+
+function registrationRequest(body: unknown): Request {
+  return new Request(`${origin}/api/oauth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": "Google-test" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Registers a confidential client and returns an approved code for it. */
+async function confidentialClient(method: string, scopes: string[] = ["decks:write"]) {
+  const registered = await register(
+    registrationRequest({
+      client_name: "Google test",
+      redirect_uris: [REDIRECT],
+      token_endpoint_auth_method: method,
+    }),
+  );
+  expect(registered.status).toBe(201);
+  const body = await registered.json();
+  const approved = await core.accounts.approveAuthorization(
+    actor("jack"),
+    {
+      clientId: body.client_id,
+      redirectUri: REDIRECT,
+      responseType: "code",
+      codeChallenge: CHALLENGE,
+      codeChallengeMethod: "S256",
+      scope: null,
+      state: null,
+    },
+    scopes,
+  );
+  if (!approved.ok) throw new Error(approved.error.kind);
+  const code = new URL(approved.value.redirectTo).searchParams.get("code") ?? "";
+  return { body, code };
+}
+
+function codeFields(clientId: string, code: string): Record<string, string> {
+  return {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: REDIRECT,
+    code_verifier: VERIFIER,
+    ...(clientId === "" ? {} : { client_id: clientId }),
+  };
+}
+
+function withHeaders(request: Request, headers: Record<string, string>): Request {
+  return new Request(request, { headers: { ...Object.fromEntries(request.headers), ...headers } });
+}
+
+describe("confidential clients", () => {
+  it("registers with a secret, stores only its hash, and the token works with Basic", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const { body, code } = await confidentialClient("client_secret_basic");
+    expect(body).toMatchObject({
+      token_endpoint_auth_method: "client_secret_basic",
+      client_secret_expires_at: 0,
+    });
+    expect(body.client_secret).toMatch(/^pls_/);
+
+    const [stored] = (
+      await db.execute<{ client_secret_hash: string; auth_method: string }>(sql`
+        select client_secret_hash, auth_method from oauth_clients where client_id = ${body.client_id}
+      `)
+    ).rows;
+    expect(stored.auth_method).toBe("client_secret_basic");
+    expect(stored.client_secret_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(stored)).not.toContain(body.client_secret);
+
+    const basic = `Basic ${btoa(`${body.client_id}:${body.client_secret}`)}`;
+    const swapped = await token(
+      withHeaders(tokenRequest(codeFields("", code)), { Authorization: basic }),
+    );
+    expect(swapped.status).toBe(200);
+    const issued = await swapped.json();
+    expect((await mcp(mcpRequest(`Bearer ${issued.access_token}`))).status).toBe(200);
+
+    // The log has what the client asked for and no secret.
+    const logged = info.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(logged).toContain("oauth registration");
+    expect(logged).toContain(REDIRECT);
+    expect(logged).not.toContain(body.client_secret);
+    info.mockRestore();
+  });
+
+  it("accepts client_secret_post, and refuses a wrong or missing secret with a 401 challenge", async () => {
+    const { body, code } = await confidentialClient("client_secret_post");
+    const attempts = [
+      codeFields(body.client_id, code),
+      { ...codeFields(body.client_id, code), client_secret: "pls_wrong" },
+    ];
+    for (const fields of attempts) {
+      const refused = await token(tokenRequest(fields));
+      expect(refused.status).toBe(401);
+      expect(refused.headers.get("WWW-Authenticate")).toContain("Basic");
+      expect(await refused.json()).toMatchObject({ error: "invalid_client" });
+    }
+    // The failed tries didn't use the code up.
+    const swapped = await token(
+      tokenRequest({ ...codeFields(body.client_id, code), client_secret: body.client_secret }),
+    );
+    expect(swapped.status).toBe(200);
+  });
+
+  it("refuses the secret sent both ways", async () => {
+    const { body, code } = await confidentialClient("client_secret_basic");
+    const both = await token(
+      withHeaders(
+        tokenRequest({ ...codeFields(body.client_id, code), client_secret: body.client_secret }),
+        { Authorization: `Basic ${btoa(`${body.client_id}:${body.client_secret}`)}` },
+      ),
+    );
+    expect(both.status).toBe(400);
+    expect(await both.json()).toMatchObject({ error: "invalid_request" });
+  });
+
+  it("answers an unsupported method and 21 redirect URIs with a reason, and logs both", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const method = await register(
+      registrationRequest({
+        client_name: "Google test",
+        redirect_uris: [REDIRECT],
+        token_endpoint_auth_method: "private_key_jwt",
+      }),
+    );
+    expect(method.status).toBe(400);
+    expect(await method.json()).toMatchObject({ error: "invalid_client_metadata" });
+    const many = await register(
+      registrationRequest({
+        client_name: "Google test",
+        redirect_uris: Array.from({ length: 21 }, (_, index) => `https://vendor.example/${index}`),
+      }),
+    );
+    expect(many.status).toBe(400);
+    expect(await many.json()).toMatchObject({ error: "invalid_redirect_uri" });
+    const logged = info.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(logged).toContain('"outcome":"refused"');
+    expect(logged).toContain("private_key_jwt");
+    info.mockRestore();
+  });
+
+  it("gives a connector token only the scopes it was approved for, and loses it when the client is deleted", async () => {
+    const { body, code } = await confidentialClient("client_secret_post", []);
+    const swapped = await token(
+      tokenRequest({ ...codeFields(body.client_id, code), client_secret: body.client_secret }),
+    );
+    const issued = await swapped.json();
+    expect(issued.scope).toBe("read");
+
+    const write = await tools(
+      new Request(`${origin}/api/tools/create_deck`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${issued.access_token}`,
+        },
+        body: JSON.stringify({ name: "Nope", format: "commander" }),
+      }),
+      { params: Promise.resolve({ name: "create_deck" }) } as never,
+    );
+    expect(write.status).toBe(403);
+
+    const deleted = await core.accounts.deleteOAuthClient(actor("jack", true), {
+      clientId: body.client_id,
+    });
+    expect(deleted.ok).toBe(true);
+    expect((await mcp(mcpRequest(`Bearer ${issued.access_token}`))).status).toBe(401);
   });
 });

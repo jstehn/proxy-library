@@ -27,10 +27,21 @@ export type LastAdmin = Readonly<{ kind: "LastAdmin" }>;
 export type CannotDisableSelf = Readonly<{ kind: "CannotDisableSelf" }>;
 
 // OAuth for web connectors (design doc 30).
-export type OAuthClientInvalid = Readonly<{ kind: "OAuthClientInvalid"; reason: string }>;
+export type OAuthClientInvalid = Readonly<{
+  kind: "OAuthClientInvalid";
+  /** RFC 7591's error name: which part of the registration was refused. */
+  error: "invalid_redirect_uri" | "invalid_client_metadata";
+  reason: string;
+}>;
+export type OAuthClientNotFound = Readonly<{ kind: "OAuthClientNotFound" }>;
 /** Shown on the approval page, never redirected to (rule 2). */
 export type UnknownClient = Readonly<{ kind: "UnknownClient" }>;
-export type RedirectUriNotRegistered = Readonly<{ kind: "RedirectUriNotRegistered" }>;
+/** Carries what was sent and what is registered, so the page can name both (design doc 69). */
+export type RedirectUriNotRegistered = Readonly<{
+  kind: "RedirectUriNotRegistered";
+  sentUri: string | null;
+  registeredUris: readonly string[];
+}>;
 /** Sent back to the client's redirect URI as `error=…` (RFC 6749, section 4.1.2.1). */
 export type AuthorizationRefused = Readonly<{
   kind: "AuthorizationRefused";
@@ -42,6 +53,6 @@ export type AuthorizationRefused = Readonly<{
 /** The token endpoint's errors (RFC 6749, section 5.2). */
 export type TokenRequestRefused = Readonly<{
   kind: "TokenRequestRefused";
-  error: "invalid_request" | "invalid_grant" | "unsupported_grant_type";
+  error: "invalid_request" | "invalid_grant" | "invalid_client" | "unsupported_grant_type";
   description: string;
 }>;
