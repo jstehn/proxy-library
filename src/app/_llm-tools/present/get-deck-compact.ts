@@ -1,9 +1,10 @@
 import {
-  isKeyCard,
   type DeckLine,
   type DeckOverview,
   type DeckProblem,
   type DeckView,
+  formatRules,
+  isKeyCard,
 } from "@/modules/decks";
 import { problemText } from "@/app/decks/labels";
 import { MAX_TOOL_RESPONSE_BYTES } from "../cap-response";
@@ -78,7 +79,7 @@ export function compactDeckPayload(
       id: view.deck.id,
       name: view.deck.name,
       format: view.deck.format,
-      ...(view.deck.format === "commander"
+      ...(formatRules(view.deck.format).hasCommandZone
         ? {
             commander: view.lines
               .filter((line) => line.board === "commander")

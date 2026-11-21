@@ -122,7 +122,9 @@ docs' sections about files, ports and queries: they describe the layout the refa
 ### The design docs behind each group
 
 A starting list from the docs' titles and a keyword search (2026-11-19). If you find a doc that
-belongs to your group, add it here.
+belongs to your group, add it here. P22 (2026-11-20) archived the docs whose rules are now in
+`docs/modules/`: they are in `docs/design/archive/` (same file names), and
+[`docs/design/README.md`](../design/README.md) says which page holds each one's rules.
 
 | Group                          | Design docs (`docs/design/NN-*.md`)                                                                             |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
@@ -428,7 +430,7 @@ To list clones by file yourself:
 ```bash
 pnpm exec tsx -e '
 import { readFileSync } from "node:fs"; import { execSync } from "node:child_process";
-import { findCloneRuns } from "./scripts/clones.ts";
+import { findCloneRuns } from "./scripts/dev/clones.ts";
 const files = new Map(execSync("git ls-files src worker scripts").toString().split("\n")
   .filter((f) => /\.tsx?$/.test(f) && !/\.(test|spec)\./.test(f) && !/\/(testing|fixtures)\//.test(f))
   .map((f) => [f, readFileSync(f, "utf8")]));

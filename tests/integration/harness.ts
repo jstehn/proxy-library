@@ -1,5 +1,6 @@
 // Shared wiring for cross-module integration tests: the real Drizzle repositories of every
 // module, the catalog loaded from recorded fixtures (no network), and players made with SQL.
+import { testActor } from "@/modules/accounts/testing/actors";
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
@@ -7,6 +8,7 @@ import { makeCatalog } from "@/modules/catalog";
 import { makeStore } from "@/modules/store";
 import {
   drizzleArtworkRepository,
+  drizzleCardFeatureStore,
   drizzleCatalogRepository,
   drizzleSyncRunRepository,
   fixtureMtgjsonGateway,
@@ -19,6 +21,7 @@ import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleSnapshotRepository,
   drizzleDeckTokenRepository,
 } from "@/modules/decks/infrastructure";
 import {
@@ -36,7 +39,7 @@ import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import {
   drizzleRealCollectionRepository,
   sqlPrintingMatcher,
-} from "@/modules/real-collection/infrastructure";
+} from "@/modules/collection/infrastructure";
 import {
   drizzleMarketPrices,
   drizzlePriceList,
@@ -52,7 +55,6 @@ import {
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
 import { loadConfig } from "@/shared/config";
 import { createDatabase, makeDrizzleUnitOfWork, type DbExecutor } from "@/shared/db";
-import { UserId } from "@/shared/kernel";
 import { systemClock } from "@/shared/runtime";
 
 export const { db, close } = createDatabase(loadConfig().databaseUrl);
@@ -80,6 +82,7 @@ function servicesFor(transaction: DbExecutor) {
     cards: drizzleCardLookup(transaction),
     deckTokens: drizzleDeckTokenRepository(transaction),
     deckSharing: drizzleDeckSharing(transaction),
+    snapshots: drizzleSnapshotRepository(transaction),
     trades: drizzleTradeRepository(transaction),
     tradePlayers: drizzleTradePlayers(transaction),
     holdings: drizzleHoldings(transaction),
@@ -100,14 +103,49 @@ export const unitOfWork = makeDrizzleUnitOfWork(db, servicesFor);
 /** A fresh catalog from the recorded fixtures: Bloomburrow, enabled as a Standard set. */
 export async function loadFixtureCatalog(): Promise<void> {
   await db.execute(
-    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, token_printings cascade`,
+    sql`truncate sync_runs, price_snapshots, deck_lists, sealed_products, booster_configs, printings, card_sets, artwork_files, token_printings, card_features cascade`,
   );
-  const catalog = makeCatalog({
+  await fixtureCatalog().runSync("prices");
+  // Kind-priced products are for sale only once valued (design doc 27, decision 3).
+  await makeStore({ unitOfWork, clock }).valueProducts();
+}
+
+/**
+ * What the features pass stores for a card a test inserted by hand: the arrays the SQL filters
+ * read (`role_tags`, `theme_tags`, `bracket_flags`; `leader_themes` for commanders).
+ */
+export async function storeFeatureArrays(
+  oracleId: string,
+  arrays: Readonly<{
+    roleTags?: readonly string[];
+    themeTags?: readonly string[];
+    leaderThemes?: readonly string[];
+    bracketFlags?: readonly string[];
+  }>,
+): Promise<void> {
+  const roleTags = `{${(arrays.roleTags ?? []).join(",")}}`;
+  const themeTags = `{${(arrays.themeTags ?? []).join(",")}}`;
+  const leaderThemes = `{${(arrays.leaderThemes ?? []).join(",")}}`;
+  const bracketFlags = `{${(arrays.bracketFlags ?? []).join(",")}}`;
+  await db.execute(sql`
+    insert into card_features (oracle_id, features, features_version, role_tags, theme_tags,
+                               leader_themes, bracket_flags, updated_at)
+    values (${oracleId}, '{}'::jsonb, 0, ${roleTags}::text[], ${themeTags}::text[],
+            ${leaderThemes}::text[], ${bracketFlags}::text[], now())
+    on conflict (oracle_id) do update
+      set role_tags = excluded.role_tags, theme_tags = excluded.theme_tags,
+          leader_themes = excluded.leader_themes, bracket_flags = excluded.bracket_flags`);
+}
+
+/** The catalog service over the recorded fixtures (no network). */
+export function fixtureCatalog() {
+  return makeCatalog({
     extraPricedPrintings: { printingIds: async () => [] },
     unitOfWork: makeDrizzleUnitOfWork(db, (transaction) => ({
       catalog: drizzleCatalogRepository(transaction),
       syncRuns: drizzleSyncRunRepository(transaction),
       artwork: drizzleArtworkRepository(transaction),
+      cardFeatures: drizzleCardFeatureStore(transaction),
     })),
     mtgjson: fixtureMtgjsonGateway(),
     scryfall: fixtureScryfallGateway(),
@@ -118,9 +156,6 @@ export async function loadFixtureCatalog(): Promise<void> {
     clock,
     syncTime: { hour: 4, minute: 0 },
   });
-  await catalog.runSync("prices");
-  // Kind-priced products are for sale only once valued (design doc 27, decision 3).
-  await makeStore({ unitOfWork, clock }).valueProducts();
 }
 
 /**
@@ -146,14 +181,7 @@ export async function resetPlayers(ids: readonly string[]): Promise<void> {
 }
 
 export function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 export async function count(table: string, where = "true"): Promise<number> {

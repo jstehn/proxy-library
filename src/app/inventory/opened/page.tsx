@@ -3,13 +3,17 @@ import { CardTile } from "@/app/_components/card-tile";
 import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
 import { type OpenedCard, type OpeningView } from "@/modules/inventory";
 import type { Capabilities } from "@/server/capabilities";
+import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
-import type { OpenerPack } from "@/ui/opening/machine";
-import { PackOpener } from "@/ui/opening/pack-opener";
+import type { OpenerPack } from "./_components/machine";
+import { PackOpener } from "./_components/pack-opener";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
 import { productLabel } from "../../store/labels";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
 
 // What one or more openings produced: packs in reveal order, decks, and what boxes unpacked into.
 // (Phase 8 turns a pack into an animated reveal.)
@@ -23,7 +27,7 @@ function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
 }
 
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const searchParams = await props.searchParams;
   const raw = searchParams.items;
   const animate = searchParams.animate === "1";
@@ -34,13 +38,13 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     .slice(0, MAX_SHOWN);
 
   const openings = (
-    await Promise.all(ids.map((id) => capabilities.inventoryReads.openingView(actor.userId, id)))
+    await Promise.all(ids.map((id) => reads.inventory.openingView(actor, id)))
   ).filter((opening): opening is OpeningView => opening !== null);
   const cards = await capabilities.printingDetails(
     openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
-  const themes = await capabilities.packReads.themes(packs);
+  const themes = await reads.packs.themes(packs);
   const total = Cents.sum(
     openings.flatMap((opening) =>
       opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),
@@ -52,7 +56,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Opened</h1>
         {newDecks !== null && (
-          <p className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+          <p className="border-success-line bg-success-soft text-success-ink rounded-md border px-3 py-2 text-sm">
             Added to your decks: <strong>{newDecks}</strong>.{" "}
             <Link href="/decks" className="underline">
               Open your decks
@@ -60,12 +64,15 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           </p>
         )}
         {openings.length === 0 ? (
-          <p className="text-muted text-sm">Nothing to show.</p>
+          <EmptyState>Nothing to show.</EmptyState>
         ) : (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             {packs.length > 0 && `${packs.length} pack${packs.length === 1 ? "" : "s"} · `}
-            cards worth <strong className="tabular-nums">{Cents.format(total)}</strong> at market
-            price ·{" "}
+            cards worth{" "}
+            <strong className="tabular-nums">
+              <Price cents={total} />
+            </strong>{" "}
+            at market price ·{" "}
             <Link href="/inventory" className="underline">
               back to inventory
             </Link>{" "}
@@ -82,7 +89,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           <div className="flex flex-col gap-0.5">
             <h2 className="text-lg font-medium">{opening.name}</h2>
             {themes.has(opening.itemId) && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-muted text-sm">
                 Theme: <strong>{themes.get(opening.itemId)}</strong>
               </p>
             )}
@@ -111,17 +118,17 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
+    <Page width="6xl" spacing="wide">
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(capabilities, packs, cards, themes)}>
+        <PackOpener packs={await openerPacks(capabilities, reads, packs, cards, themes)}>
           {results}
         </PackOpener>
       ) : (
         results
       )}
-    </main>
+    </Page>
   );
 }
 
@@ -131,6 +138,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
  */
 async function openerPacks(
   capabilities: Capabilities,
+  reads: Reads,
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
   themes: ReadonlyMap<number, string>,
@@ -140,15 +148,15 @@ async function openerPacks(
     await Promise.all(
       setCodes.map(async (code) => {
         const [set, page] = await Promise.all([
-          capabilities.catalogReads.findSet(code),
-          capabilities.storeReads.page(code),
+          reads.catalog.findSet(code),
+          reads.store.page(code),
         ]);
         return [code, { set, featured: page?.set.featured ?? null }] as const;
       }),
     ),
   );
 
-  const photos = await capabilities.catalogReads.packPhotos(
+  const photos = await reads.catalog.packPhotos(
     packs.flatMap((pack) =>
       pack.setCode && pack.boosterType
         ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]

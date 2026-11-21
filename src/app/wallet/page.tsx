@@ -4,17 +4,21 @@ import { LocalTime } from "@/ui/local-time";
 import { AddFundsForm } from "./add-funds-form";
 import { ledgerKindLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
 
 export default async function WalletPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
   const { wallet } = capabilities;
 
   // Pay anything that's due first, so the page shows an up-to-date balance.
-  await wallet.refreshWallet(actor.userId);
+  await wallet.refreshWallet(actor);
   const [summary, history, settings] = await Promise.all([
-    capabilities.walletReads.summary(actor.userId),
-    capabilities.walletReads.history(actor.userId),
-    capabilities.walletReads.economySettings(),
+    reads.wallet.summary(actor),
+    reads.wallet.history(actor),
+    reads.wallet.economySettings(),
   ]);
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
@@ -22,12 +26,14 @@ export default async function WalletPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
+    <Page width="3xl" spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Wallet</h1>
-        <p className="text-4xl font-semibold tabular-nums">{Cents.format(summary.balance)}</p>
+        <p className="text-4xl font-semibold tabular-nums">
+          <Price cents={summary.balance} />
+        </p>
         {settings.allowance > 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Next allowance: {Cents.format(settings.allowance)} on{" "}
             <LocalTime iso={payday.toISOString()} withTime />
           </p>
@@ -43,7 +49,7 @@ export default async function WalletPage() {
           <Stat label="Corrected" value={summary.corrected} />
         </dl>
         {summary.totalsSince !== null && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Totals since your library was reset on <LocalTime iso={summary.totalsSince} />. The
             history below still shows everything.
           </p>
@@ -51,19 +57,19 @@ export default async function WalletPage() {
       </section>
 
       {actor.canSelfFund && (
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <Card as="section" padding="lg" stack>
           <h2 className="font-medium">Add your own funds</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Money you add is recorded as self-funded, which admins can see.
           </p>
           <AddFundsForm limitText={Cents.format(settings.selfFundLimit)} />
-        </section>
+        </Card>
       )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">History</h2>
-        {history.length === 0 && <p className="text-muted text-sm">Nothing yet.</p>}
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+        {history.length === 0 && <EmptyState>Nothing yet.</EmptyState>}
+        <ul className="divide-border-subtle divide-y">
           {history.map((entry) => (
             <li
               key={entry.id}
@@ -79,9 +85,7 @@ export default async function WalletPage() {
                   <span className="text-muted"> · by @{entry.createdByUsername}</span>
                 )}
               </span>
-              <span
-                className={`tabular-nums ${entry.amount < 0 ? "text-red-700 dark:text-red-400" : ""}`}
-              >
+              <span className={`tabular-nums ${entry.amount < 0 ? "text-danger-text" : ""}`}>
                 {entry.amount > 0 ? "+" : ""}
                 {Cents.format(entry.amount)}
               </span>
@@ -89,15 +93,17 @@ export default async function WalletPage() {
           ))}
         </ul>
       </section>
-    </main>
+    </Page>
   );
 }
 
 function Stat(props: { label: string; value: Cents }) {
   return (
-    <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+    <Card padding="md">
       <dt className="text-muted text-xs">{props.label}</dt>
-      <dd className="text-lg font-medium tabular-nums">{Cents.format(props.value)}</dd>
-    </div>
+      <dd className="text-lg font-medium tabular-nums">
+        <Price cents={props.value} />
+      </dd>
+    </Card>
   );
 }

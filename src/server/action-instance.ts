@@ -7,4 +7,5 @@ import { requireActor } from "./session";
 export const action = makeAction({
   requireActor: () => requireActor(),
   capabilities: () => getContainer().capabilities,
+  reads: () => getContainer().reads,
 });

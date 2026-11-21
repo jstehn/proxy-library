@@ -15,7 +15,7 @@ purpose (see [future-ideas.md](future-ideas.md)).
 | Open with realistic odds (MTGJSON booster sheets and weights)         | ✅     | `packs/domain/generate.ts` (Monte Carlo tests); Pack lab `/admin/packs`                           |
 | Balance colors when the sheet says so                                 | ✅     | `balanceColors` in `generate.ts`                                                                  |
 | Boxes / bundles / Draft Night unpack into inventory                   | ✅     | `inventory` `unpack`; Draft Night on sale for TMT, MSH, SOS, ECL, HOB                             |
-| Polished FX: flips, rarity glow, foil shimmer, generated sounds, mute | ✅     | `src/ui/opening/pack-opener.tsx`, `sounds.ts` (Web Audio), `globals.css`                          |
+| Polished FX: flips, rarity glow, foil shimmer, generated sounds, mute | ✅     | `src/app/inventory/opened/_components/pack-opener.tsx`, `sounds.ts` (Web Audio), `globals.css`    |
 | Reveal order builds suspense                                          | ✅     | `packs/domain/reveal.ts`                                                                          |
 | Readable flipped cards; 7-column grid; phone stack                    | ✅     | spotlight + `normal` image; phone stack; tapping a seen card shows it large                       |
 | Collection with sections and sorts                                    | ✅     | `/collection`: sections none/color/type/rarity/set, sorts newest/value/name/mana/set              |

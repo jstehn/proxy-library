@@ -1,6 +1,6 @@
 import type { BrowseCard, DeckLine, Format } from "@/modules/decks";
-import { problemsOfLines, type CardRules } from "@/modules/decks/client";
-import { problemText } from "../../labels";
+import { formatRules, problemsOfLines, type CardRules } from "@/modules/decks/client";
+import { problemText } from "@/app/decks/labels";
 import { COLORS, type ManaColor } from "@/shared/kernel";
 
 // What the builder works out from the deck in hand (design doc 19, section 5.3): its problems,
@@ -34,7 +34,7 @@ export function commanderColorsOf(
   rules: Readonly<Record<string, CardRules>>,
 ): ManaColor[] | null {
   const commanders = lines.filter((line) => line.board === "commander");
-  if (format !== "commander" || commanders.length === 0) return null;
+  if (!formatRules(format).usesColorIdentity || commanders.length === 0) return null;
   const colors = new Set(commanders.flatMap((line) => rules[line.oracleId]?.colorIdentity ?? []));
   return COLORS.filter((color) => colors.has(color));
 }
@@ -61,8 +61,13 @@ export function provisionalLine(
     manaValue: card.manaValue,
     manaCost: card.manaCost,
     producedMana: card.producedMana,
+    roles: card.roles,
+    themes: card.themes,
+    signals: card.signals,
+    leaderThemes: [],
     text: card.text,
     isGameChanger: card.isGameChanger,
+    bracketFlags: card.bracketFlags,
     priceCents: card.priceCents,
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,

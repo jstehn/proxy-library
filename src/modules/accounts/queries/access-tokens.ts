@@ -1,11 +1,12 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import type { UserId } from "@/shared/kernel";
 import { AccessTokenId, withRead, type AccessToken } from "../domain/access-token";
+import type { Actor } from "../domain/player";
 import { accessTokens } from "../infrastructure/schema";
 
 /** A player's live access tokens, newest first, for their Account page (design doc 28). */
-export async function listAccessTokens(db: DbExecutor, userId: UserId): Promise<AccessToken[]> {
+export async function listAccessTokens(db: DbExecutor, actor: Actor): Promise<AccessToken[]> {
+  const userId = actor.userId;
   const rows = await db
     .select()
     .from(accessTokens)

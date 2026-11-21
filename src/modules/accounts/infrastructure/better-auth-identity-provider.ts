@@ -1,11 +1,8 @@
 import { isAPIError } from "better-auth/api";
 import { err, ok, UserId } from "@/shared/kernel";
 import type { IdentityProvider } from "../application/ports";
+import { EXTERNAL_PROVIDER_ID, placeholderEmail } from "../domain/external-sign-in";
 import type { Auth } from "./better-auth";
-
-// Better Auth insists every user has an email. We never send email, so we store an address
-// on the reserved ".invalid" domain (RFC 2606), which can never receive mail.
-const PLACEHOLDER_EMAIL_DOMAIN = "players.invalid";
 
 /** IdentityProvider implemented with Better Auth (ADR 0012). */
 export function betterAuthIdentityProvider(auth: Auth): IdentityProvider {
@@ -23,7 +20,7 @@ export function betterAuthIdentityProvider(auth: Auth): IdentityProvider {
       const passwordHash = await context.password.hash(password);
       const user = await context.internalAdapter.createUser(
         {
-          email: `${username}@${PLACEHOLDER_EMAIL_DOMAIN}`,
+          email: placeholderEmail(username),
           name: displayName,
           username,
           displayUsername: username,
@@ -95,5 +92,64 @@ export function betterAuthIdentityProvider(auth: Auth): IdentityProvider {
       const context = await auth.$context;
       await context.internalAdapter.deleteUserSessions(userId);
     },
+
+    async startExternalSignIn({ callbackPath, errorPath }, requestHeaders) {
+      if (!(await externalProviderExists(auth))) return null;
+      const { url } = await auth.api.signInSocial({
+        body: {
+          provider: EXTERNAL_PROVIDER_ID,
+          callbackURL: callbackPath,
+          errorCallbackURL: errorPath,
+          disableRedirect: true,
+        },
+        headers: requestHeaders,
+      });
+      return url ?? null;
+    },
+
+    async startExternalLink({ callbackPath, errorPath }, requestHeaders) {
+      if (!(await externalProviderExists(auth))) return null;
+      const { url } = await auth.api.linkSocialAccount({
+        body: {
+          provider: EXTERNAL_PROVIDER_ID,
+          callbackURL: callbackPath,
+          errorCallbackURL: errorPath,
+          disableRedirect: true,
+        },
+        headers: requestHeaders,
+      });
+      return url;
+    },
+
+    async unlinkExternal(requestHeaders) {
+      // The session proves whose link it is; the password account is left alone.
+      const session = await auth.api.getSession({ headers: requestHeaders });
+      if (session === null) return;
+      const context = await auth.$context;
+      const accounts = await context.internalAdapter.findAccounts(session.user.id);
+      for (const account of accounts) {
+        if (account.providerId === EXTERNAL_PROVIDER_ID) {
+          await context.internalAdapter.deleteAccount(account.id);
+        }
+      }
+    },
+
+    handleExternalCallback(request) {
+      return auth.handler(request);
+    },
+
+    async setEmail(userId, { email, verified }) {
+      const context = await auth.$context;
+      const owner = await context.internalAdapter.findUserByEmail(email);
+      if (owner !== null && owner.user.id !== userId) return err({ kind: "EmailTaken" });
+      await context.internalAdapter.updateUser(userId, { email, emailVerified: verified });
+      return ok();
+    },
   };
+}
+
+/** Whether the Authentik provider is set up and was found by Better Auth at start-up. */
+async function externalProviderExists(auth: Auth): Promise<boolean> {
+  const context = await auth.$context;
+  return context.socialProviders.some((provider) => provider.id === EXTERNAL_PROVIDER_ID);
 }

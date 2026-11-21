@@ -1,17 +1,22 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import { collectionPage, exportRows, ownedCopies } from "./queries/collection";
+import { pick } from "@/shared/kernel";
+import type { RealCollection } from "./real/application/make-real-collection";
 
-// The collection module's capabilities (ADR 0026): what its pages read, each a query with the database
-// filled in. They forward to the query functions until those merge into real capabilities
-// (docs/refactor/removal-list.md).
+// The real collection's capabilities (ADR 0026): only what callers use.
 
-export function wireCollectionCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
+export function wireRealCollectionCapabilities({
+  realCollection,
+}: Readonly<{ realCollection: RealCollection }>) {
   return {
-    collectionReads: {
-      page: withDb(db, collectionPage),
-      ownedCopies: withDb(db, ownedCopies),
-      exportRows: withDb(db, exportRows),
-    },
+    realCollection: pick(
+      realCollection,
+      "addRealProduct",
+      "removeRealProduct",
+      "setRealCopies",
+      "changeRealPrinting",
+      "clearRealCollection",
+      "previewImport",
+      "applyImport",
+      "setRealSharing",
+    ),
   };
 }

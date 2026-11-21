@@ -62,10 +62,14 @@ image, like a card Scryfall hasn't caught up with.
   only; `default-cards.jsonl` id `00000000-7a9a-…-00bb`, `lang: "ja"`). It must get its image
   and price, like the real Japanese-only Mystical Archive cards (design doc 04, rule 8).
 
-Regenerate with `scripts/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
+Regenerate with `scripts/dev/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
 `BLB.json.gz`, `SPG.json.gz` and `SetList.json.gz`).
 
 `lists/archidekt-categories.txt` is a real Commander deck list (Jolene, the Plunder Queen) as a
 player pasted it on 2026-11-03, grouped under category headings with counts ("Commander (1)",
 "Lands (36)", "Ramp & Mana Fixers (9)"), the way Archidekt and Moxfield export by category
 (design doc 23).
+
+`features/cards.json` is real Oracle text (printed faces, type lines and Scryfall's produced mana) for
+29 cards, written out by hand from the cards' Oracle entries (2026-11-19), for the card feature recognizers
+(design doc 66). `features/cards.ts` loads it. Each recognizer adds its cards.

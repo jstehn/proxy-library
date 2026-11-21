@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { adjust, draftHref, readDraft, type Draft, type DraftCard } from "../draft";
 import { proposeTradeAction } from "../actions";
+import { Button } from "@/ui/button";
+import { Input, Textarea } from "@/ui/field";
 
 /**
  * The newest draft asked for, while its page is still loading: `router.push` only changes the
@@ -46,9 +48,7 @@ export function DraftSync() {
   return null;
 }
 
-const smallButton = "rounded border border-zinc-300 px-2 text-sm leading-6 dark:border-zinc-700";
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const smallButton = "rounded border border-line px-2 text-sm leading-6";
 
 /** "+ add" or "−" for one card on one side. */
 export function DraftButton(props: {
@@ -92,24 +92,25 @@ export function DraftTextForm(props: {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   function submit(formData: FormData) {
-    const next = { ...currentDraft(), [props.name]: String(formData.get(props.name) ?? "").trim() };
+    const typed = Object.fromEntries(formData)[props.name];
+    const next = { ...currentDraft(), [props.name]: String(typed ?? "").trim() };
     startTransition(() => goTo(router, next));
   }
   return (
     <form action={submit} className="flex items-center gap-2">
       <label className="flex flex-1 items-center gap-1 text-sm">
         {props.prefix}
-        <input
+        <Input
           name={props.name}
           defaultValue={props.defaultValue}
           placeholder={props.placeholder}
           aria-label={props.label}
-          className={`${field} flex-1`}
+          className="flex-1"
         />
       </label>
-      <button type="submit" disabled={pending} className={field}>
+      <Button variant="secondary" type="submit" disabled={pending}>
         {props.button}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -126,21 +127,15 @@ export function ProposeForm(props: { isCounter: boolean }) {
   }
   return (
     <form action={submit} className="flex flex-col gap-2">
-      <textarea
+      <Textarea
         name="message"
         rows={2}
         maxLength={300}
         placeholder="A message (optional)"
         aria-label="Message"
-        className={field}
       />
       <div>
-        <button
-          type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          {props.isCounter ? "Send counter-offer" : "Propose trade"}
-        </button>
+        <Button type="submit">{props.isCounter ? "Send counter-offer" : "Propose trade"}</Button>
       </div>
     </form>
   );

@@ -1,38 +1,30 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import { packPhotos, photosOverview, productPhotos, setPhotos } from "./queries/artwork";
-import {
-  enabledSets,
-  findSet,
-  listSetsForAdmin,
-  priceHistory,
-  printingCards,
-  printingDetail,
-  recentSyncRuns,
-  searchPrintings,
-  setPrintings,
-} from "./queries/catalog";
+import { pickForAdmin } from "@/modules/accounts";
+import type { DbExecutor } from "@/shared/db";
+import { pick } from "@/shared/kernel";
+import type { Catalog } from "./make-catalog";
+import { printingCards } from "./cards";
 
-// The catalog's capabilities (ADR 0026). The ones that read across modules (card lookup, search,
-// rules lookup) are joined in src/server/capabilities.ts.
+// The catalog's capabilities (ADR 0026): only what callers use. The two image ones are for routes,
+// which have no player. The sync and the other jobs belong to the worker, which holds the service.
 
-export function wireCatalogCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
+export function wireCatalogCapabilities(
+  dependencies: Readonly<{ catalog: Catalog; db: DbExecutor }>,
+) {
+  const { catalog, db } = dependencies;
   return {
+    catalog: {
+      ...pick(catalog, "imageFor", "artworkFor"),
+      ...pickForAdmin(
+        catalog,
+        "choosePhoto",
+        "clearPhotoChoice",
+        "enableStandardSets",
+        "requestSync",
+        "setPageSlug",
+        "setSetEnabled",
+      ),
+    },
     /** Card details for printings, for the selected-card panel and previews. */
     printingDetails: (printingIds: readonly string[]) => printingCards(db, printingIds),
-    catalogReads: {
-      enabledSets: withDb(db, enabledSets),
-      findSet: withDb(db, findSet),
-      packPhotos: withDb(db, packPhotos),
-      productPhotos: withDb(db, productPhotos),
-      photosOverview: withDb(db, photosOverview),
-      setPhotos: withDb(db, setPhotos),
-      listSetsForAdmin: withDb(db, listSetsForAdmin),
-      recentSyncRuns: withDb(db, recentSyncRuns),
-      searchPrintings: withDb(db, searchPrintings),
-      setPrintings: withDb(db, setPrintings),
-      priceHistory: withDb(db, priceHistory),
-      printingDetail: withDb(db, printingDetail),
-    },
   };
 }

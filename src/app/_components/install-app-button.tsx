@@ -10,6 +10,9 @@ import {
   takeDeferredInstallPrompt,
 } from "./pwa-install-store";
 
+const INSTALL_BUTTON =
+  "border-line hover:bg-surface-raised w-fit rounded-md border px-3 py-1.5 text-sm font-medium aria-disabled:opacity-60";
+
 type InstallAppButtonProps = {
   /** "section" renders the full /account block; "menu" renders a compact item for PhoneMenu. */
   variant?: "section" | "menu";
@@ -70,7 +73,7 @@ export function InstallAppButton({ variant = "section" }: InstallAppButtonProps)
             type="button"
             aria-disabled={isInstalling ? "true" : undefined}
             onClick={handleInstallClick}
-            className="w-full rounded px-2 py-1.5 text-left font-medium hover:bg-zinc-100 aria-disabled:opacity-60 dark:hover:bg-zinc-800"
+            className="hover:bg-surface-raised w-full rounded px-2 py-1.5 text-left font-medium aria-disabled:opacity-60"
           >
             Install app
           </button>
@@ -87,7 +90,7 @@ export function InstallAppButton({ variant = "section" }: InstallAppButtonProps)
   return (
     <section hidden={!showSection} className="flex flex-col gap-2">
       <h2 className="font-medium">Install app</h2>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-muted text-sm">
         Add Proxy Library to your device for a standalone app window.
       </p>
       <div className="flex flex-wrap items-center gap-3">
@@ -96,11 +99,11 @@ export function InstallAppButton({ variant = "section" }: InstallAppButtonProps)
           hidden={!showButton}
           aria-disabled={isInstalling ? "true" : undefined}
           onClick={handleInstallClick}
-          className="w-fit rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 aria-disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className={INSTALL_BUTTON}
         >
           Install Proxy Library
         </button>
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-muted text-sm">
           {statusMessage}
         </p>
       </div>

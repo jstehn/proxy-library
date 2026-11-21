@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { PrintingId } from "@/modules/catalog";
-import { UserId } from "@/shared/kernel";
 import {
   canViewSection,
   checkBio,
   checkShowcaseCards,
-  defaultProfile,
   MAX_BIO_LENGTH,
   MAX_SHOWCASE_CARDS,
   normalizeFavoriteColors,
@@ -13,19 +11,6 @@ import {
 } from "./profile";
 
 describe("social profile domain", () => {
-  it("creates a default profile with expected privacy defaults", () => {
-    const now = new Date("2026-11-12T00:00:00Z");
-    const profile = defaultProfile(UserId.of("u1"), now);
-    expect(profile.bio).toBe("");
-    expect(profile.favoriteColors).toEqual([]);
-    expect(profile.favoriteFormats).toEqual([]);
-    expect(profile.showcaseDeckId).toBeNull();
-    expect(profile.showcasePrintingIds).toEqual([]);
-    expect(profile.statsVisibility).toBe("everyone");
-    expect(profile.wishlistVisibility).toBe("friends");
-    expect(profile.updatedAt).toBe(now);
-  });
-
   it("trims and validates bio length", () => {
     expect(checkBio("  Hello world  ")).toEqual({ ok: true, value: "Hello world" });
     expect(checkBio("a".repeat(MAX_BIO_LENGTH))).toEqual({

@@ -1,6 +1,7 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
-import { err, UserId } from "@/shared/kernel";
+import { err } from "@/shared/kernel";
 import { inMemoryPacksServices } from "../testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS, sampleSheet } from "../testing/recipes";
 import { makePacks } from "./make-packs";
@@ -10,14 +11,7 @@ import { packSeed } from "./simulate";
 // Use-case tests: the real pack code against an in-memory BoosterSource and predictable seeds.
 
 function actor(isAdmin: boolean): Actor {
-  return {
-    userId: UserId.of(isAdmin ? "admin" : "jack"),
-    username: "someone" as Actor["username"],
-    displayName: "Someone" as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: isAdmin ? "admin" : "jack", isAdmin });
 }
 
 const admin = actor(true);

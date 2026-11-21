@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type BoosterConfig, PrintingId, SetCode } from "@/modules/catalog";
-import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
+import { boosterConfigs, cardSets } from "@/modules/catalog/cards/infrastructure/schema";
 import { type DbExecutor, latestPricesByFinish } from "@/shared/db";
 import { Cents, ColorSchema, type Finish, FinishSchema, RaritySchema } from "@/shared/kernel";
 import type { BoosterKey, BoosterSource } from "../application/ports";

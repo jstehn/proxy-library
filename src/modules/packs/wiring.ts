@@ -1,17 +1,8 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import { availableBoosters } from "./queries/boosters";
-import { packThemes } from "./queries/themes";
+import { pickForAdmin } from "@/modules/accounts";
+import type { Packs } from "./application/make-packs";
 
-// The packs module's capabilities (ADR 0026): what its pages read, each a query with the database
-// filled in. They forward to the query functions until those merge into real capabilities
-// (docs/refactor/removal-list.md).
+// The packs module's capabilities (ADR 0026): only what callers use.
 
-export function wirePackCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
-  return {
-    packReads: {
-      themes: withDb(db, packThemes),
-      availableBoosters: withDb(db, availableBoosters),
-    },
-  };
+export function wirePackCapabilities({ packs }: Readonly<{ packs: Packs }>) {
+  return { packs: pickForAdmin(packs, "simulateOpenings") };
 }

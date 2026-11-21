@@ -1,12 +1,21 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { DeckId } from "@/modules/decks";
+import { parseForm } from "@/server/form-action";
 import { readPage } from "@/server/page-instance";
-import { bracketWarningText, estimateLabel, problemText, TAG_LABELS } from "../labels";
-import { deckPath } from "../paths";
+import { DECKS_PATH, deckPath, revalidateDeck, revalidateDeckList } from "../paths";
+import { presentListPreview, type ListPreviewSummary } from "./list-preview";
 
-// The Edit as text box's server actions (design doc 23, design doc 40).
+// The Edit as text box's server actions (design doc 23, design doc 40). Both keep their own state
+// (the problems, the preview), so they read the form with `parseForm`. A form that can't be read
+// goes back to the deck list.
+
+const EditForm = z.object({
+  deckId: z.coerce.number().int().positive(),
+  list: z.string().default(""),
+  fingerprint: z.string().default(""),
+});
 
 /** What the Edit as text box shows after a save that didn't go through (design doc 23). */
 export type EditAsTextState = Readonly<{ error: string | null; problems: string[] }>;
@@ -21,18 +30,19 @@ export async function replaceListAction(
   formData: FormData,
 ): Promise<EditAsTextState> {
   const { actor, capabilities } = await readPage();
-  const deckId = Number(formData.get("deckId"));
-  if (!Number.isSafeInteger(deckId) || deckId <= 0) redirect("/decks");
+  const form = parseForm(EditForm, formData);
+  if (!form.success) redirect(DECKS_PATH);
+  const { deckId, list, fingerprint } = form.data;
   const result = await capabilities.deckEdits.replaceList(actor, {
     deckId: DeckId.of(deckId),
-    text: String(formData.get("list") ?? ""),
-    fingerprint: String(formData.get("fingerprint") ?? ""),
+    text: list,
+    fingerprint,
   });
   if (!result.ok) {
     const { error } = result;
     switch (error.kind) {
       case "DeckNotFound":
-        redirect("/decks");
+        redirect(DECKS_PATH);
       case "DeckChanged":
         return {
           error:
@@ -51,41 +61,12 @@ export async function replaceListAction(
         };
     }
   }
-  revalidatePath("/decks");
-  revalidatePath(deckPath(deckId));
+  revalidateDeckList();
+  revalidateDeck(deckId);
   redirect(
     `${deckPath(deckId)}?imported=${encodeURIComponent(`Saved: ${result.value.cards} cards.`)}`,
   );
 }
-
-/** Summary shown by the "Preview changes" button inside Edit as text (design doc 40, section 6). */
-export type ListPreviewSummary = Readonly<{
-  beforeCards: number;
-  afterCards: number;
-  targetSize: number;
-  exactSize: boolean;
-  beforeAverageManaValue: number;
-  afterAverageManaValue: number;
-  roles: ReadonlyArray<{
-    tag: string;
-    label: string;
-    before: number;
-    after: number;
-    target: number | null;
-  }>;
-  problemsAdded: string[];
-  problemsResolved: string[];
-  problemsRemainingCount: number;
-  bracketBefore: string | null;
-  bracketAfter: string | null;
-  bracketWarningAfter: string | null;
-  changes: ReadonlyArray<{
-    name: string;
-    board: string;
-    before: number;
-    after: number;
-  }>;
-}>;
 
 export type EditAsTextPreviewState = Readonly<{
   error: string | null;
@@ -99,21 +80,16 @@ export async function previewListAction(
   _previous: EditAsTextPreviewState,
   formData: FormData,
 ): Promise<EditAsTextPreviewState> {
-  const { actor, capabilities } = await readPage();
-  const deckId = Number(formData.get("deckId"));
-  if (!Number.isSafeInteger(deckId) || deckId <= 0) redirect("/decks");
-  const listText = String(formData.get("list") ?? "");
-  const result = await capabilities.deckReads.listPreview(
-    actor.userId,
-    deckId,
-    listText,
-    String(formData.get("fingerprint") ?? ""),
-  );
+  const { actor, reads } = await readPage();
+  const form = parseForm(EditForm, formData);
+  if (!form.success) redirect(DECKS_PATH);
+  const { deckId, list: listText, fingerprint } = form.data;
+  const result = await reads.decks.listPreview(actor, deckId, listText, fingerprint);
   if (!result.ok) {
     const { error } = result;
     switch (error.kind) {
       case "DeckNotFound":
-        redirect("/decks");
+        redirect(DECKS_PATH);
       case "DeckChanged":
         return {
           error:
@@ -141,40 +117,10 @@ export async function previewListAction(
         };
     }
   }
-  const p = result.value;
   return {
     error: null,
     problems: [],
     previewedList: listText,
-    preview: {
-      beforeCards: p.before.stats.cardCount,
-      afterCards: p.after.stats.cardCount,
-      targetSize: p.targetSize.cards,
-      exactSize: p.targetSize.exact,
-      beforeAverageManaValue: Math.round(p.before.stats.averageManaValue * 100) / 100,
-      afterAverageManaValue: Math.round(p.after.stats.averageManaValue * 100) / 100,
-      roles: p.roles
-        .filter((role) => role.before > 0 || role.after > 0 || role.target !== null)
-        .map((role) => ({
-          tag: role.tag,
-          label: TAG_LABELS[role.tag],
-          before: role.before,
-          after: role.after,
-          target: role.target,
-        })),
-      problemsAdded: p.problems.added.map(problemText),
-      problemsResolved: p.problems.resolved.map(problemText),
-      problemsRemainingCount: p.problems.remaining.length,
-      bracketBefore: p.bracket.before === null ? null : estimateLabel(p.bracket.before),
-      bracketAfter: p.bracket.after === null ? null : estimateLabel(p.bracket.after),
-      bracketWarningAfter:
-        p.bracket.warningAfter === null ? null : bracketWarningText(p.bracket.warningAfter),
-      changes: p.changes.map((change) => ({
-        name: change.name,
-        board: change.board,
-        before: change.beforeQuantity,
-        after: change.afterQuantity,
-      })),
-    },
+    preview: presentListPreview(result.value),
   };
 }

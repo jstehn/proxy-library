@@ -1,37 +1,43 @@
 "use server";
 // Controller for the approval form (design doc 30): approve or deny, then send the browser back
 // to the app that asked.
-import { redirect } from "next/navigation";
+import { z } from "zod";
+import { formRedirect } from "@/server/form-action-instance";
 import { assertNever } from "@/shared/kernel";
-import { queryOf, readParameters } from "./parameters";
-import { readPage } from "@/server/page-instance";
+import { PARAMETER_NAMES, queryOf, readParameters } from "./parameters";
 
-export async function decideAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const parameters = readParameters((name) => formData.get(name));
+// The form carries the OAuth request in hidden inputs, the chosen scopes (checkboxes named
+// "scope", as the request's own "scope" is a single string) and which button was pressed.
+const DecideForm = z.object({
+  ...Object.fromEntries(
+    Object.values(PARAMETER_NAMES).map((name) => [name, z.string().optional()]),
+  ),
+  scope: z.array(z.string()).default([]),
+  decision: z.string().default(""),
+});
+
+export const decideAction = formRedirect(DecideForm, async ({ actor, capabilities }, input) => {
+  const fields: Record<string, string | string[] | undefined> = input;
+  const parameters = readParameters((name) => fields[name]);
   const { accounts } = capabilities;
   const back = `/oauth/authorize?${queryOf(parameters)}`;
 
   const result =
-    formData.get("decision") === "approve"
-      ? await accounts.approveAuthorization(
-          actor,
-          parameters,
-          formData.getAll("scope").filter((scope) => typeof scope === "string"),
-        )
+    input.decision === "approve"
+      ? await accounts.approveAuthorization(actor, parameters, input.scope)
       : await accounts.denyAuthorization(parameters);
-  if (result.ok) redirect(result.value.redirectTo);
+  if (result.ok) return result.value.redirectTo;
 
   const { error } = result;
   switch (error.kind) {
     case "TooManyTokens":
-      redirect(`${back}&problem=too-many-tokens`);
+      return `${back}&problem=too-many-tokens`;
     // The page itself shows or redirects these, as it did before the form was sent.
     case "UnknownClient":
     case "RedirectUriNotRegistered":
     case "AuthorizationRefused":
-      redirect(back);
+      return back;
     default:
       return assertNever(error);
   }
-}
+});

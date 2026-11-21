@@ -52,19 +52,18 @@ verify every exercise solution compiles and passes, and commit at the end of eac
 - `@/*` imports resolve to `src/*`.
 - Client components import a module's pure code from `@/modules/<module>/client` (ADR 0016), never
   its `index.ts` (that would pull server code into the browser); `import type` from `index.ts` is fine.
-- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it)
-  and `@/shared/card-search/sql` (queries only), ADR 0017.
+- The card search language and list reader: `@/shared/card-search` (pure; the browser may use it).
+  The SQL that runs it is `catalog/cards/queries/search-sql.ts` (queries only), ADR 0017 and 0030.
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + cycles + format + unit tests, in parallel and cached
-  by `scripts/check.sh`; must pass before commit),
+  by `scripts/dev/check.sh`; must pass before commit),
   `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
   (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
-  (`sync [prices|full]` runs a catalog sync now; `schedule` runs the nightly sync + admin-queued runs
+  (`sync [prices|full]` runs a catalog sync now; `sync features` works out card features only; `schedule` runs the nightly sync + admin-queued runs
   and the draft pick timers; `draft-timers` runs the pick timers once;
   `check-packs [n]` opens n packs of every booster recipe and reports rule violations;
-  `check-products` checks every product for sale contains something; `tag-cards` stores role tags
-  and themes for printings missing them; `check-commanders` checks every
+  `check-products` checks every product for sale contains something; `check-commanders` checks every
   precon's commander is allowed to lead a deck), `pnpm test:remote` (the only
   tests that call MTGJSON/Scryfall; never run automatically).
 - Automated tests never touch the network: recorded fixtures, local image responses.

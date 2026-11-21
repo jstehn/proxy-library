@@ -202,7 +202,7 @@ export function cookbookText(): string {
   });
   return [
     "# Synergy cookbook",
-    "Tested query patterns. Use them as starting points for search_for_deck: copy, then adapt to the deck. The deck's colors and legality are applied for you.",
+    "Tested query patterns. Use them as starting points for search_cards with a deckId: copy, then adapt to the deck. The deck's colors and legality are applied for you. They find cards worth a look, not recommendations: some results are poor fits, so read each card's text and check an outside source (edhrec_lookup) before suggesting it.",
     ...entries,
   ].join("\n\n");
 }

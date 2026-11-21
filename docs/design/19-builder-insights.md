@@ -2,6 +2,7 @@
 
 - **Phase:** 19
 - **Status:** **Approved** (2026-10-02, with the decisions in section 13)
+- **Superseded in part** (2026-11-20, P22): the role tag table is now card features (doc 66, ADR 0027); 60-card role targets came with doc 44; test hands are in decks-play.md; see docs/modules/card-features.md
 - **Related:** design doc 09 (decks, rules 1–5), design doc 14 (deck builder, live statistics),
   design doc 15 (shared card search), ADR 0008 (injected randomness), ADR 0016 (client-safe
   module API), ADR 0017 (shared card search)

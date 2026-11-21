@@ -2,6 +2,7 @@
 
 - **Phase:** 50 (Roadmap #72)
 - **Status:** **Approved** (2026-11-12)
+- **Superseded in part** (2026-11-21, P36): section 4 rules 1-2 (private until `isShared`): sharing follows the profile's wishlist visibility (`wishlistVisibility`, default friends), no `isShared` column; owner: the code; see docs/modules/game-collection.md
 - **Related ADRs:** 0001, 0009, 0016, 0023
 - **Lesson:** no
 

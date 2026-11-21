@@ -7,6 +7,7 @@ import { requireAdminActor } from "@/server/session";
 const ADMIN_PAGES = [
   ["/admin/players", "Players"],
   ["/admin/invites", "Invites"],
+  ["/admin/connectors", "Connectors"],
   ["/admin/economy", "Economy"],
   ["/admin/catalog", "Catalog"],
   ["/admin/photos", "Photos"],
@@ -18,18 +19,11 @@ export default async function AdminLayout(props: LayoutProps<"/admin">) {
   await requireAdminActor();
   return (
     <div className="flex flex-col">
-      <nav
-        aria-label="Admin"
-        className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
-      >
+      <nav aria-label="Admin" className="border-border-subtle bg-surface border-b">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm">
           <span className="font-semibold">Admin</span>
           {ADMIN_PAGES.map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-zinc-700 hover:underline dark:text-zinc-300"
-            >
+            <Link key={href} href={href} className="text-muted hover:underline">
               {label}
             </Link>
           ))}

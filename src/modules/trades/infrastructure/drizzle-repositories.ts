@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
-import { collectionCards } from "@/modules/collection/infrastructure/schema";
+import { collectionCards } from "@/modules/collection/game/infrastructure/schema";
 import { players } from "@/modules/accounts/infrastructure/schema";
 import type { DbExecutor } from "@/shared/db";
 import { Cents, type Finish, FinishSchema, UserId, assertNever } from "@/shared/kernel";

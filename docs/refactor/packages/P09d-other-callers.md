@@ -68,7 +68,7 @@ Follow P09c's steps 1–5, folder by folder, committing after each. In addition:
   wishes at target, active draft, friend requests) are one call that runs them together instead of
   one after another.
 - **`ToolContext`** carries `capabilities` instead of the whole container; the tests and
-  `scripts/reference-outputs.ts` follow.
+  `scripts/dev/reference-outputs.ts` follow.
 - **Checked:** `pnpm check` green, 281 of 281 integration tests, Playwright 26 of 26.
 
 **Lines:** source 92,379 (92,236 after P09c), code lines 79,270 (79,180). The package added about 140

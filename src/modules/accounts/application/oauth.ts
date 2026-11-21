@@ -16,8 +16,11 @@ import type {
   UnknownClient,
 } from "../domain/errors";
 import {
+  authMethodFor,
+  clientAuthenticated,
   clientIdFor,
   clientName,
+  clientSecretFor,
   codeExpiry,
   codeSecret,
   isChallenge,
@@ -30,6 +33,7 @@ import {
   type OAuthClient,
 } from "../domain/oauth";
 import { isActive, type Actor } from "../domain/player";
+import type { UserId } from "@/shared/kernel";
 import type { AccountsDependencies } from "./ports";
 
 // OAuth for web connectors (design doc 30, section 5). The token at the end is an ordinary
@@ -38,7 +42,12 @@ import type { AccountsDependencies } from "./ports";
 export type RegisterClientInput = Readonly<{
   clientName?: string;
   redirectUris: readonly string[];
+  /** `token_endpoint_auth_method` as the client sent it; none given means a public client. */
+  authMethod?: string;
 }>;
+
+/** A new client, and its secret when it has one: the only time the secret exists in the clear. */
+export type RegisteredClient = Readonly<{ client: OAuthClient; clientSecret: string | null }>;
 
 /** The query parameters of `GET /oauth/authorize`, as given (null when missing). */
 export type AuthorizationParameters = Readonly<{
@@ -76,46 +85,72 @@ export type TokenRequest = Readonly<{
   clientId: string | null;
   redirectUri: string | null;
   codeVerifier: string | null;
+  /** The client's secret, from the Basic header or the form (design doc 69, section 5). */
+  clientSecret: string | null;
 }>;
 
 export type IssuedToken = Readonly<{ accessToken: string; scopes: readonly Scope[] }>;
 
-/** RFC 7591 registration: any app may register, with redirect URIs that follow rule 1. */
-export function makeRegisterOAuthClient(dependencies: AccountsDependencies) {
+/**
+ * Makes a client from a registration or an admin's form (design doc 69, section 5): checks the
+ * redirect URIs (rule 1) and the auth method, and makes a secret for a confidential client.
+ */
+export function makeCreateOAuthClient(dependencies: AccountsDependencies) {
   const { unitOfWork, secrets, clock } = dependencies;
 
-  async function registerOAuthClient(
-    input: RegisterClientInput,
-  ): Promise<Result<OAuthClient, OAuthClientInvalid>> {
+  async function createOAuthClient(
+    input: RegisterClientInput & { createdBy: UserId | null },
+  ): Promise<Result<RegisteredClient, OAuthClientInvalid>> {
+    const invalid = (error: OAuthClientInvalid["error"], reason: string) =>
+      err({ kind: "OAuthClientInvalid", error, reason } as const);
     const redirectUris = [...new Set(input.redirectUris)];
     if (redirectUris.length === 0) {
-      return err({
-        kind: "OAuthClientInvalid",
-        reason: "redirect_uris must list at least one URI",
-      });
+      return invalid("invalid_redirect_uri", "redirect_uris must list at least one URI");
     }
     if (redirectUris.length > MAX_REDIRECT_URIS) {
-      return err({
-        kind: "OAuthClientInvalid",
-        reason: `redirect_uris may list at most ${MAX_REDIRECT_URIS} URIs`,
-      });
+      return invalid(
+        "invalid_redirect_uri",
+        `redirect_uris may list at most ${MAX_REDIRECT_URIS} URIs`,
+      );
     }
     for (const uri of redirectUris) {
       const problem = redirectUriProblem(uri);
-      if (problem !== null) {
-        return err({ kind: "OAuthClientInvalid", reason: `redirect URI ${uri} ${problem}` });
-      }
+      if (problem !== null)
+        return invalid("invalid_redirect_uri", `redirect URI ${uri} ${problem}`);
     }
+    const authMethod = authMethodFor(input.authMethod);
+    if (authMethod === null) {
+      return invalid(
+        "invalid_client_metadata",
+        `token_endpoint_auth_method ${input.authMethod} isn't supported ` +
+          "(use none, client_secret_basic or client_secret_post)",
+      );
+    }
+    const clientSecret = authMethod === "none" ? null : clientSecretFor(secrets.accessTokenBytes());
     const client: OAuthClient = {
       clientId: clientIdFor(secrets.accessTokenBytes()),
       name: clientName(input.clientName),
       redirectUris,
       createdAt: clock.now(),
+      authMethod,
+      secretHash: clientSecret === null ? null : await tokenHash(clientSecret),
+      createdBy: input.createdBy,
     };
-    return unitOfWork.run<OAuthClient, OAuthClientInvalid>(async ({ oauth }) => {
+    return unitOfWork.run<RegisteredClient, OAuthClientInvalid>(async ({ oauth }) => {
       await oauth.insertClient(client);
-      return ok(client);
+      return ok({ client, clientSecret });
     });
+  }
+
+  return createOAuthClient;
+}
+
+/** RFC 7591 registration: any app may register, with redirect URIs that follow rule 1. */
+export function makeRegisterOAuthClient(
+  createOAuthClient: ReturnType<typeof makeCreateOAuthClient>,
+) {
+  function registerOAuthClient(input: RegisterClientInput) {
+    return createOAuthClient({ ...input, createdBy: null });
   }
 
   return registerOAuthClient;
@@ -138,7 +173,11 @@ export function makeCheckAuthorizationRequest(dependencies: AccountsDependencies
     const redirectUri =
       parameters.redirectUri ?? (client.redirectUris.length === 1 ? client.redirectUris[0] : null);
     if (redirectUri === null || !client.redirectUris.includes(redirectUri)) {
-      return err({ kind: "RedirectUriNotRegistered" });
+      return err({
+        kind: "RedirectUriNotRegistered",
+        sentUri: parameters.redirectUri,
+        registeredUris: client.redirectUris,
+      });
     }
 
     const refuse = (
@@ -252,6 +291,15 @@ export function makeExchangeAuthorizationCode(dependencies: AccountsDependencies
     if (secret === null || clientId === null || codeVerifier === null) {
       return refuse("invalid_request", "code, client_id and code_verifier are required.");
     }
+    // The client proves itself before the code is touched, so someone holding a stolen code
+    // but not the secret can't use it up.
+    const registered = await unitOfWork.run(async ({ oauth }) =>
+      ok(await oauth.findClient(clientId)),
+    );
+    const known = registered.ok ? registered.value : null;
+    if (known === null || !(await clientAuthenticated(known, request.clientSecret))) {
+      return refuse("invalid_client", "Client authentication failed.");
+    }
     const hash = await tokenHash(secret);
     const taken = await unitOfWork.run(async ({ oauth }) =>
       ok(await oauth.takeCode(hash, clock.now())),
@@ -274,7 +322,7 @@ export function makeExchangeAuthorizationCode(dependencies: AccountsDependencies
           return invalid;
         }
         const now = clock.now();
-        await accessTokens.revokeForClient(player.userId, client.clientId, now);
+        await accessTokens.revokeForClient(client.clientId, now, player.userId);
         if ((await accessTokens.countLive(player.userId)) >= MAX_LIVE_TOKENS) {
           return refuse("invalid_grant", `You already have ${MAX_LIVE_TOKENS} access tokens.`);
         }

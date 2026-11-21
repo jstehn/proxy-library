@@ -7,12 +7,14 @@ import {
   setProductPriceAction,
 } from "./actions";
 import { readPage } from "@/server/page-instance";
+import { Select } from "@/ui/field";
+import { Page } from "@/ui/page";
 
 // MSRPs (ADR 0014): one price per product kind, and optional per-product overrides.
 
 const inputClass =
-  "w-24 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-700";
-const buttonClass = "rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700";
+  "w-24 rounded-md border border-line bg-transparent px-2 py-1 text-right text-sm tabular-nums";
+const buttonClass = "rounded-md border border-line px-2 py-1 text-sm";
 
 function PriceForm(props: {
   action: (formData: FormData) => Promise<void>;
@@ -40,29 +42,29 @@ function PriceForm(props: {
 }
 
 export default async function AdminStorePage(props: PageProps<"/admin/store">) {
-  const { capabilities } = await readPage({ admin: true });
+  const { actor: admin, reads } = await readPage({ admin: true });
 
   const searchParams = await props.searchParams;
   const setCode = typeof searchParams.set === "string" ? searchParams.set.toUpperCase() : null;
   const error = typeof searchParams.error === "string" ? searchParams.error : null;
   const back = setCode === null ? "/admin/store" : `/admin/store?set=${setCode}`;
   const [rateBps, pricingMode, belowResale, kinds, sets, products] = await Promise.all([
-    capabilities.storeReads.buylistRate(),
-    capabilities.storeReads.pricingMode(),
-    capabilities.storeReads.msrpsBelowResale(),
-    capabilities.storeReads.kindPrices(),
-    capabilities.catalogReads.enabledSets(),
-    setCode === null ? Promise.resolve([]) : capabilities.storeReads.productPrices(setCode),
+    reads.store.buylistRate(),
+    reads.store.pricingMode(),
+    reads.store.msrpsBelowResale(admin),
+    reads.store.kindPrices(admin),
+    reads.catalog.enabledSets(),
+    setCode === null ? Promise.resolve([]) : reads.store.productPrices(admin, setCode),
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12">
+    <Page width="5xl" spacing="wide">
       <h1 className="text-2xl font-semibold">Store prices</h1>
       {error && <Alert tone="error">{error}</Alert>}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Buying cards from players</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           The store pays this share of a card&apos;s market price, rounded down to the cent. 0%
           means the store doesn&apos;t buy cards.
         </p>
@@ -110,7 +112,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               for whenever that&apos;s higher than the MSRP.
             </span>
           </label>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted">
             {belowResale === 0
               ? "No product has an MSRP below what its cards sell back for, so both choices give the same prices today."
               : `${belowResale} ${belowResale === 1 ? "product has" : "products have"} an MSRP below what ${belowResale === 1 ? "its" : "their"} cards sell back for: value-based pricing raises ${belowResale === 1 ? "it" : "them"}, MSRP pricing doesn't.`}
@@ -125,13 +127,13 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price per kind of product</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Every product of a kind sells at this MSRP unless it has its own price below. Leave a
           price empty to stop selling that kind.
         </p>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+            <tr className="border-border-subtle border-b text-left">
               <th className="py-1 font-medium">Kind</th>
               <th className="py-1 font-medium">Products</th>
               <th className="py-1 font-medium">MSRP</th>
@@ -139,7 +141,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           </thead>
           <tbody>
             {kinds.map((row) => (
-              <tr key={row.kind} className="border-b border-zinc-100 dark:border-zinc-900">
+              <tr key={row.kind} className="border-border-subtle border-b">
                 <td className="py-1.5">
                   <code>{row.kind}</code>
                   <div className="text-muted text-xs">e.g. {row.example}</div>
@@ -161,19 +163,14 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Price for one product</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           A product sells at its own price if it has one, else Wizards&apos; official MSRP (from its
           WPN product page), else its kind&apos;s price. The last two are raised to what its
           contents sell back for when that&apos;s more, so buying it to sell the cards never pays
           (worked out after each nightly price sync). Its own price is never raised.
         </p>
         <form method="get" className="flex items-center gap-2 text-sm">
-          <select
-            name="set"
-            defaultValue={setCode ?? ""}
-            aria-label="Set"
-            className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
-          >
+          <Select name="set" defaultValue={setCode ?? ""} aria-label="Set">
             <option value="" disabled>
               Choose a set…
             </option>
@@ -182,7 +179,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                 {set.name} ({set.code})
               </option>
             ))}
-          </select>
+          </Select>
           <button type="submit" className={buttonClass}>
             Show products
           </button>
@@ -191,7 +188,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[40rem] text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+                <tr className="border-border-subtle border-b text-left">
                   <th className="py-1 font-medium">Product</th>
                   <th className="py-1 font-medium">Kind price</th>
                   <th className="py-1 font-medium">Official MSRP</th>
@@ -202,7 +199,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-b border-zinc-100 dark:border-zinc-900">
+                  <tr key={product.id} className="border-border-subtle border-b">
                     <td className="py-1.5">
                       {product.name}
                       <div className="text-muted text-xs">
@@ -228,7 +225,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                         ? "not valued"
                         : Cents.format(product.contentsValue)}
                       {product.isPartial && (
-                        <div className="text-xs text-amber-700 dark:text-amber-400">
+                        <div className="text-warning-text text-xs">
                           some contents couldn&apos;t be valued
                         </div>
                       )}
@@ -248,6 +245,6 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           </div>
         )}
       </section>
-    </main>
+    </Page>
   );
 }

@@ -4,6 +4,8 @@ import { revokeTokenAction } from "./actions";
 import { ConnectSnippets } from "./connect-snippets";
 import { CreateTokenForm } from "./create-token-form";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { EmptyState } from "@/ui/empty-state";
 
 // Access tokens for LLM clients (design doc 28, section 9): make one, see it once, revoke it.
 
@@ -14,11 +16,11 @@ const SCOPE_WORDS: Readonly<Record<string, string>> = {
 };
 
 export default async function TokensPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, capabilities, reads } = await readPage();
 
-  const tokens = await capabilities.accountReads.listAccessTokens(actor.userId);
-  const mcpUrl = new URL("/api/mcp", capabilities.appUrl).toString();
-  const openApiUrl = new URL("/api/tools/openapi.json", capabilities.appUrl).toString();
+  const tokens = await reads.accounts.listAccessTokens(actor);
+  const mcpUrl = new URL("/api/mcp", capabilities.site.appUrl).toString();
+  const openApiUrl = new URL("/api/tools/openapi.json", capabilities.site.appUrl).toString();
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-12">
@@ -27,7 +29,7 @@ export default async function TokensPage() {
           Account
         </Link>
         <h1 className="text-2xl font-semibold">Connect an LLM</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           An access token lets an AI assistant (any app that speaks MCP, or calls tools from an
           OpenAPI description) look at your cards, decks and wishlist and help build decks, as you.
           Give each app its own token, and revoke one you no longer use.
@@ -36,7 +38,7 @@ export default async function TokensPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Claude on the web, and other web connectors</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           No token needed: in claude.ai, open Settings → Connectors → Add custom connector, and give
           it <code className="break-all">{mcpUrl}</code>. It sends you to Proxy Library to approve
           it, and then shows up in the list below.
@@ -51,9 +53,9 @@ export default async function TokensPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Your tokens</h2>
         {tokens.length === 0 ? (
-          <p className="text-muted text-sm">None yet.</p>
+          <EmptyState>None yet.</EmptyState>
         ) : (
-          <ul className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <Card as="ul" divided className="flex flex-col">
             {tokens.map((token) => (
               <li key={token.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -75,20 +77,20 @@ export default async function TokensPage() {
                   <input type="hidden" name="tokenId" value={token.id} />
                   <button
                     type="submit"
-                    className="rounded-md border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                    className="border-danger-line text-danger-text hover:bg-danger-soft rounded-md border px-3 py-1"
                   >
                     Revoke
                   </button>
                 </form>
               </li>
             ))}
-          </ul>
+          </Card>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Setting it up</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           The address is <code className="break-all">{mcpUrl}</code>. Replace{" "}
           <code>pl_YOUR_TOKEN</code> with the token you made. From outside your home network, the
           app must be served over HTTPS.

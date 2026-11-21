@@ -8,13 +8,16 @@ import { decideTradeAction } from "../actions";
 import { draftHref, type DraftCard } from "../draft";
 import { itemText, sideValue, STATUS_LABELS } from "../summary";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { Card } from "@/ui/card";
+import { EmptyState } from "@/ui/empty-state";
 
 function Side(props: { title: string; items: readonly TradeItemView[] }) {
   return (
-    <section className="flex flex-1 flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <Card as="section" padding="lg" className="flex flex-1 flex-col gap-2">
       <h2 className="font-medium">{props.title}</h2>
       {props.items.length === 0 ? (
-        <p className="text-muted text-sm">Nothing.</p>
+        <EmptyState>Nothing.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {props.items.map((item, index) => (
@@ -42,18 +45,16 @@ function Side(props: { title: string; items: readonly TradeItemView[] }) {
       <p className="text-muted text-xs">
         About {Cents.format(sideValue(props.items))} at market price.
       </p>
-    </section>
+    </Card>
   );
 }
 
 const button = "rounded-md px-3 py-1.5 text-sm font-medium";
 
 export default async function TradePage(props: PageProps<"/trades/[id]">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const tradeId = Number((await props.params).id);
-  const trade = Number.isSafeInteger(tradeId)
-    ? await capabilities.tradeReads.view(actor.userId, tradeId)
-    : null;
+  const trade = Number.isSafeInteger(tradeId) ? await reads.trades.view(actor, tradeId) : null;
   if (trade === null) notFound();
   const error = (await props.searchParams).error;
   const fromProposer = trade.items.filter((item) => item.from === "proposer");
@@ -93,7 +94,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">
           Trade: {trade.proposer.displayName} ⇄ {trade.recipient.displayName}
@@ -117,7 +118,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       </header>
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
       {trade.message && (
-        <blockquote className="border-l-4 border-zinc-300 pl-3 text-sm italic dark:border-zinc-700">
+        <blockquote className="border-line border-l-4 pl-3 text-sm italic">
           {trade.message}
         </blockquote>
       )}
@@ -130,11 +131,8 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "recipient" && (
         <div className="flex flex-wrap gap-3">
           {decide("accept", "Accept", "bg-green-700 text-white")}
-          {decide("decline", "Decline", "border border-zinc-300 dark:border-zinc-700")}
-          <Link
-            href={counterHref}
-            className={`${button} border border-zinc-300 dark:border-zinc-700`}
-          >
+          {decide("decline", "Decline", "border border-line")}
+          <Link href={counterHref} className={`${button} border-line border`}>
             Counter-offer
           </Link>
         </div>
@@ -142,9 +140,9 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "proposer" && (
         <div className="flex gap-3">
           <p className="text-muted text-sm">Waiting for {trade.recipient.displayName}.</p>
-          {decide("cancel", "Cancel this offer", "border border-zinc-300 dark:border-zinc-700")}
+          {decide("cancel", "Cancel this offer", "border border-line")}
         </div>
       )}
-    </main>
+    </Page>
   );
 }

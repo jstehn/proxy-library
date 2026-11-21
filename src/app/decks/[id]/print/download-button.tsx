@@ -84,7 +84,7 @@ export function DownloadButton(props: { href: string; disabled: boolean }) {
           if (!working) void download();
         }}
         aria-disabled={props.disabled || working}
-        className={`rounded-md bg-zinc-900 px-4 py-2 text-center text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 ${props.disabled || working ? "pointer-events-none opacity-40" : ""}`}
+        className={`bg-accent text-accent-foreground rounded-md px-4 py-2 text-center text-sm font-medium ${props.disabled || working ? "pointer-events-none opacity-40" : ""}`}
       >
         {working ? "Making the PDF…" : "Download PDF"}
       </a>
@@ -96,10 +96,10 @@ export function DownloadButton(props: { href: string; disabled: boolean }) {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(fraction * 100)}
-            className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+            className="bg-surface-raised h-2 w-full overflow-hidden rounded-full"
           >
             <div
-              className="h-full rounded-full bg-zinc-900 transition-[width] duration-200 dark:bg-zinc-100"
+              className="bg-accent h-full rounded-full transition-[width] duration-200"
               style={{ width: `${fraction * 100}%` }}
             />
           </div>
@@ -109,7 +109,7 @@ export function DownloadButton(props: { href: string; disabled: boolean }) {
         </div>
       )}
       {state.kind === "failed" && (
-        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+        <p role="alert" className="text-danger-text text-xs">
           {state.message}
         </p>
       )}

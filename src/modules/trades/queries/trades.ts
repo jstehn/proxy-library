@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
 import { type Finish, type UserId } from "@/shared/kernel";
@@ -7,8 +8,9 @@ import { type Finish, type UserId } from "@/shared/kernel";
 
 export type TradingPartner = Readonly<{ userId: string; displayName: string; username: string }>;
 
-/** Every active player except you, by display name. */
-export async function tradingPartners(db: DbExecutor, userId: UserId): Promise<TradingPartner[]> {
+/** Every active player except you, by display name (kind S: the trade builder's partners). */
+export async function partners(db: DbExecutor, actor: Actor): Promise<TradingPartner[]> {
+  const userId = actor.userId;
   const rows = await db.execute<{ user_id: string; name: string; username: string | null }>(sql`
     select p.user_id, u.name, u.username
       from players p join auth_users u on u.id = p.user_id
@@ -23,7 +25,8 @@ export async function tradingPartners(db: DbExecutor, userId: UserId): Promise<T
 }
 
 /** How many trades are waiting for you to decide (the header's badge). */
-export async function tradesWaitingForYou(db: DbExecutor, userId: UserId): Promise<number> {
+export async function waitingForYou(db: DbExecutor, actor: Actor): Promise<number> {
+  const userId = actor.userId;
   const [row] = (
     await db.execute<{ total: number }>(sql`
       select count(*)::int as total from trades where recipient_id = ${userId} and status = 'proposed'
@@ -154,11 +157,12 @@ function toView(row: TradeRow, userId: UserId, items: TradeItemView[]): TradeVie
 }
 
 /** One trade you're part of, or null. */
-export async function tradeView(
+export async function view(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   tradeId: number,
 ): Promise<TradeView | null> {
+  const userId = actor.userId;
   const [row] = (
     await db.execute<TradeRow>(sql`
       select ${TRADE_COLUMNS} from trades t ${TRADE_JOINS}
@@ -171,7 +175,8 @@ export async function tradeView(
 }
 
 /** Your trades, newest first (the page splits them into waiting and history). */
-export async function tradesFor(db: DbExecutor, userId: UserId, limit = 50): Promise<TradeView[]> {
+export async function tradesFor(db: DbExecutor, actor: Actor, limit = 50): Promise<TradeView[]> {
+  const userId = actor.userId;
   const rows = await db.execute<TradeRow>(sql`
     select ${TRADE_COLUMNS} from trades t ${TRADE_JOINS}
      where t.proposer_id = ${userId} or t.recipient_id = ${userId}

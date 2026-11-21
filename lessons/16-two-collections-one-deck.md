@@ -36,7 +36,7 @@ build is one more column on the game's table:
 alter table collection_cards add column is_real boolean not null default false;
 ```
 
-The design doc ([16, section 3](../docs/design/16-real-collection.md)) rejected it, and the
+The design doc ([16, section 3](../docs/design/archive/16-real-collection.md)) rejected it, and the
 reason is the rules, not the columns:
 
 | Game collection                              | Real collection                    |
@@ -515,7 +515,7 @@ another set.
 
 ## Further reading
 
-- [Design doc 16](../docs/design/16-real-collection.md), including section 15 (real products)
+- [Design doc 16](../docs/design/archive/16-real-collection.md), including section 15 (real products)
   and section 16 (as built)
 - [ADR 0020: reference sets](../docs/adr/0020-reference-sets.md),
   [ADR 0011: printing × finish](../docs/adr/0011-printing-level-ownership.md),

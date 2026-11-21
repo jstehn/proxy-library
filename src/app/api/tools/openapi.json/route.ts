@@ -6,5 +6,5 @@ import { readCapabilities } from "@/server/page-instance";
 
 export async function GET(): Promise<Response> {
   const capabilities = readCapabilities();
-  return Response.json(openApiDocument(capabilities.appUrl));
+  return Response.json(openApiDocument(capabilities.site.appUrl));
 }

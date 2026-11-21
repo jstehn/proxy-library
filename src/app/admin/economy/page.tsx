@@ -5,9 +5,9 @@ import { EconomyForm } from "./economy-form";
 import { readPage } from "@/server/page-instance";
 
 export default async function AdminEconomyPage() {
-  const { capabilities } = await readPage({ admin: true });
+  const { capabilities, reads } = await readPage({ admin: true });
 
-  const settings = await capabilities.walletReads.economySettings();
+  const settings = await reads.wallet.economySettings();
   const payday = nextPayday(
     { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
     capabilities.now(),
@@ -16,7 +16,7 @@ export default async function AdminEconomyPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-12">
       <h1 className="text-2xl font-semibold">Economy</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-muted text-sm">
         {Cents.format(settings.allowance)} every {settings.allowancePeriodDays} days. Next payday:{" "}
         <LocalTime iso={payday.toISOString()} withTime />. Changes apply from now on: allowances
         already due are paid at the old amount first.

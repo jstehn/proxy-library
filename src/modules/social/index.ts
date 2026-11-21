@@ -18,23 +18,14 @@ export type {
 export type { UpdateProfileError, UpdateProfileInput } from "./application/update-profile";
 export type { Friendship, FriendshipStatus, ViewerRelation } from "./domain/friendship";
 export { VISIBILITIES, type PlayerProfile, type SectionVisibility } from "./domain/profile";
-export {
-  incomingRequestCount,
-  listFriendRequests,
-  listFriends,
-  searchPlayers,
-  type FriendItem,
-  type FriendRequestItem,
-  type PlayerSearchResult,
-} from "./queries/friends";
-export {
-  getPlayerProfile,
-  getProfileForEdit,
-  type PlayerProfileView,
-  type ProfileEditView,
-  type ProfileStatsView,
-  type ProfileWishlistItem,
-  type SharedDeckSummary,
-  type ShowcaseCardView,
-  type ShowcaseDeckView,
+export type { FriendItem, FriendRequestItem, PlayerSearchResult } from "./queries/friends";
+export * as socialQueries from "./queries";
+export type {
+  PlayerProfileView,
+  ProfileEditView,
+  ProfileStatsView,
+  ProfileWishlistItem,
+  SharedDeckSummary,
+  ShowcaseCardView,
+  ShowcaseDeckView,
 } from "./queries/profile";

@@ -134,6 +134,11 @@ export const oauthClients = pgTable("oauth_clients", {
   name: text("name").notNull(),
   redirectUris: text("redirect_uris").array().notNull(),
   createdAt: timestamptz("created_at").notNull(),
+  // Design doc 69: `none` (public), `client_secret_basic` or `client_secret_post`; the secret's
+  // SHA-256 when there is one; the admin who made the client by hand (null: it registered itself).
+  authMethod: text("auth_method").notNull().default("none"),
+  secretHash: text("client_secret_hash"),
+  createdBy: text("created_by").references(() => players.userId, { onDelete: "set null" }),
 });
 
 export const oauthCodes = pgTable("oauth_codes", {

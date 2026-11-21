@@ -1,34 +1,48 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { DeckId, FORMATS, type Format } from "@/modules/decks";
 import { VISIBILITIES, type SectionVisibility } from "@/modules/social";
 import { COLORS } from "@/shared/kernel";
 import type { ManaColor } from "@/shared/kernel";
+import { parseForm } from "@/server/form-action";
 import { readPage } from "@/server/page-instance";
+import { playerPath, revalidateProfile } from "../paths";
 
 export type ProfileFormState = { error: string | null };
+
+const ProfileForm = z.object({
+  bio: z.string().default(""),
+  favoriteColors: z.array(z.string()).default([]),
+  favoriteFormats: z.array(z.string()).default([]),
+  showcaseDeckId: z.string().default(""),
+  showcaseCard1: z.string().default(""),
+  showcaseCard2: z.string().default(""),
+  showcaseCard3: z.string().default(""),
+  statsVisibility: z.string().default("everyone"),
+  wishlistVisibility: z.string().default("friends"),
+});
 
 export async function saveProfileAction(
   _prev: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
   const { actor, capabilities } = await readPage();
-  const bio = String(formData.get("bio") ?? "");
+  // Every field has a default, so the form always reads; a value that isn't one of ours falls back below.
+  const form = parseForm(ProfileForm, formData);
+  if (!form.success) return { error: "Please check the form and try again." };
+  const { bio, showcaseCard1, showcaseCard2, showcaseCard3 } = form.data;
 
-  const rawColors = formData.getAll("favoriteColors").map(String);
-  const favoriteColors = rawColors.filter((c): c is ManaColor =>
+  const favoriteColors = form.data.favoriteColors.filter((c): c is ManaColor =>
     (COLORS as readonly string[]).includes(c),
   );
-
-  const rawFormats = formData.getAll("favoriteFormats").map(String);
-  const favoriteFormats = rawFormats.filter((f): f is Format =>
+  const favoriteFormats = form.data.favoriteFormats.filter((f): f is Format =>
     (FORMATS as readonly string[]).includes(f),
   );
 
-  const rawDeckId = String(formData.get("showcaseDeckId") ?? "").trim();
+  const rawDeckId = form.data.showcaseDeckId.trim();
   let showcaseDeckId: DeckId | null = null;
   if (rawDeckId !== "") {
     const parsed = Number(rawDeckId);
@@ -38,15 +52,13 @@ export async function saveProfileAction(
     showcaseDeckId = DeckId.of(parsed);
   }
 
-  const rawCards = [
-    String(formData.get("showcaseCard1") ?? "").trim(),
-    String(formData.get("showcaseCard2") ?? "").trim(),
-    String(formData.get("showcaseCard3") ?? "").trim(),
-  ].filter((id) => id.length > 0);
+  const rawCards = [showcaseCard1, showcaseCard2, showcaseCard3]
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
   const showcasePrintingIds = rawCards.map(PrintingId.of);
 
-  const rawStatsVis = String(formData.get("statsVisibility") ?? "everyone");
-  const rawWishlistVis = String(formData.get("wishlistVisibility") ?? "friends");
+  const rawStatsVis = form.data.statsVisibility;
+  const rawWishlistVis = form.data.wishlistVisibility;
   const statsVisibility: SectionVisibility = (VISIBILITIES as readonly string[]).includes(
     rawStatsVis,
   )
@@ -81,9 +93,6 @@ export async function saveProfileAction(
     }
   }
 
-  revalidatePath(`/players/${actor.username}`);
-  revalidatePath(`/players/${actor.userId}`);
-  revalidatePath("/account/profile");
-  revalidatePath("/friends");
-  redirect(`/players/${actor.username}`);
+  revalidateProfile(actor);
+  redirect(playerPath(actor.username));
 }

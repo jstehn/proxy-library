@@ -44,22 +44,22 @@ root.
 
 ## Modules (bounded contexts)
 
-| Module            | Owns                                                                                                                                                                                                     | Kind                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `accounts`        | users, roles, permissions (`canSelfFund`), sessions (via Better Auth), `Actor`                                                                                                                           | adapter-heavy, thin domain        |
-| `wallet`          | append-only ledger, balance, allowance accrual, grants, self-funding, public stats                                                                                                                       | **reference module**, rich domain |
-| `catalog`         | sets, **printings** (set, number, finishes, treatments: full art, borderless, showcase…), prices per finish with **daily price history** (ADR 0013), booster configs, sealed product definitions, images | read-mostly; sync = ACL           |
-| `packs`           | pack generation engine: booster config + Rng → cards                                                                                                                                                     | **pure library**, no I/O          |
-| `inventory`       | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                         | domain + persistence              |
-| `collection`      | owned cards at exact **printing × finish** (ADR 0011) + acquisition log                                                                                                                                  | domain + persistence              |
-| `store`           | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                       | orchestration only                |
-| `decks`           | decks, ownership check, format legality, export formats                                                                                                                                                  | rich domain                       |
-| `trades`          | proposals, trade lifecycle, atomic execution                                                                                                                                                             | rich domain + orchestration       |
-| `activity`        | feed of domain events ("X opened a mythic")                                                                                                                                                              | read model                        |
-| `reset`           | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                              | orchestration only (no tables)    |
-| `drafts`          | live booster drafts: lobbies, entry fees, packs passed around the table, pick timers, a deck for each player at the end                                                                                  | rich domain + orchestration       |
-| `real-collection` | cards and sealed products a player owns physically (design doc 16): imports, sharing; never touches the game (only `decks` reads it, lint-enforced)                                                      | domain + persistence              |
-| `wishlist`        | cards a player wants, any printing or one exact printing (design doc 26): today's best offer, affordability, buying through the store                                                                    | domain + persistence              |
+| Module       | Owns                                                                                                                                                                                                                                     | Kind                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `accounts`   | users, roles, permissions (`canSelfFund`), sessions (via Better Auth), `Actor`                                                                                                                                                           | adapter-heavy, thin domain        |
+| `wallet`     | append-only ledger, balance, allowance accrual, grants, self-funding, public stats                                                                                                                                                       | **reference module**, rich domain |
+| `catalog`    | **cards**: sets, **printings**, prices per finish with **daily price history** (ADR 0013), booster configs, sealed products, images. **rules**: the Comprehensive Rules. **outside**: EDHREC, Commander Spellbook, embeddings (ADR 0030) | read-mostly; sync = ACL           |
+| `packs`      | pack generation engine: booster config + Rng → cards                                                                                                                                                                                     | **pure library**, no I/O          |
+| `inventory`  | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                                                         | domain + persistence              |
+| `collection` | **game**: owned cards at exact **printing × finish** (ADR 0011) + acquisition log. **real**: cards and sealed products a player owns physically (design doc 16). **copies**: the SQL both share (ADR 0030)                               | domain + persistence              |
+| `store`      | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                                                       | orchestration only                |
+| `decks`      | decks, ownership check, format legality, export formats; also suggestions, building, the simulator and proxy sheets, as six areas (below, ADR 0029)                                                                                      | rich domain                       |
+| `trades`     | proposals, trade lifecycle, atomic execution                                                                                                                                                                                             | rich domain + orchestration       |
+| `activity`   | feed of domain events ("X opened a mythic")                                                                                                                                                                                              | read model                        |
+| `reset`      | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                                                              | orchestration only (no tables)    |
+| `drafts`     | live booster drafts: lobbies, entry fees, packs passed around the table, pick timers, a deck for each player at the end                                                                                                                  | rich domain + orchestration       |
+| `research`   | outside research for the LLM tools: Reddit threads and posts (`reddit`), YouTube transcripts and videos (`youtube`) (ADR 0030)                                                                                                           | adapters over outside services    |
+| `wishlist`   | cards a player wants, any printing or one exact printing (design doc 26): today's best offer, affordability, buying through the store                                                                                                    | domain + persistence              |
 
 ### Module dependency graph (allowed directions only)
 
@@ -78,9 +78,8 @@ flowchart TD
   wishlist --> store
   drafts --> wallet & collection & decks & packs & activity
   drafts -. pack price .-> store
-  decks -. real_cards, when a deck uses real cards .-> realCollection[real-collection]
-  realCollection --> catalog_types
-  catalog -. ExtraPricedPrintings port, filled in core.ts .-> realCollection
+  collection_real[collection/real] --> catalog_types
+  catalog -. ExtraPricedPrintings port, filled in core.ts .-> collection_real
 ```
 
 As built (2026-09-28): modules share each other's **types** freely (`import type`), and call each
@@ -125,6 +124,50 @@ flowchart LR
   `infrastructure` and wires it into use cases.
 
 This is enforced by lint (ADR [0009](../adr/0009-lint-enforced-boundaries.md)).
+
+### Inside `decks`: areas
+
+`decks` is one module split into **areas**, each with the usual layer folders and its own public
+API (ADR [0029](../adr/0029-split-decks.md)). A file imports another area only through its
+`index.ts` or `client.ts` (lint rule in `eslint.config.mjs`; the cycle check treats each area as a
+node), and only along these arrows:
+
+```mermaid
+flowchart LR
+  overview --> building & proxies
+  building --> scoring & play
+  scoring & play & proxies & building & overview --> core
+```
+
+| Area       | Holds                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `core`     | the deck, lists, legality, formats, brackets, headings, stats, snapshots, previews, sharing |
+| `scoring`  | `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                   |
+| `building` | `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration  |
+| `play`     | opening hands, goldfish, odds, castability                                                  |
+| `proxies`  | proxy sheets, playtest cards, token proxies, the PDF renderer                               |
+| `overview` | the reads that combine areas: deck overview and facts, snapshot comparison, the optimizer   |
+
+The module root keeps `index.ts` and `client.ts` (each is `export *` of the areas'), `wiring.ts`
+and `infrastructure/index.ts` (the real adapters, for the composition roots).
+
+### Inside `catalog`, `collection` and `research`: areas
+
+The same rule (ADR [0030](../adr/0030-merge-collections-split-catalog.md)): each area has the
+layer folders and its own `index.ts`, and imports another area only through it, along these arrows.
+The module root keeps `index.ts` (`export *` of the areas), `wiring.ts` and `infrastructure/index.ts`;
+`catalog` also has `make-catalog.ts`, which joins the areas' use cases.
+
+| Module       | Areas (arrows)                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `catalog`    | `cards` → `outside`; `rules` → `outside`; `outside` imports none                                                  |
+| `collection` | `game` → `copies`; `real` → `copies`; `copies` imports none. `real` has its own door, `@/modules/collection/real` |
+| `research`   | `reddit`, `youtube`: no arrows                                                                                    |
+
+**Real cards never touch the game's money** (design doc 16, rule 1). `collection/real` is not
+exported by the module's `index.ts`: only the app, the composition roots and the tests may import
+it, `real` imports no game area, and lint stops it importing any module but `accounts` and
+`catalog`, so never the wallet or the store.
 
 ## Cross-cutting pieces (`src/shared/`)
 

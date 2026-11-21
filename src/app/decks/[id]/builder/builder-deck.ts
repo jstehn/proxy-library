@@ -1,7 +1,7 @@
 import type { PrintingCard } from "@/modules/catalog";
 import type { CardRules, DeckCombo, DeckLine, Grouping } from "@/modules/decks";
 import type { Capabilities } from "@/server/capabilities";
-import type { UserId } from "@/shared/kernel";
+import type { Actor } from "@/modules/accounts";
 
 /** The deck as the builder shows it, with what the browser needs to check its rules. */
 export type BuilderDeck = Readonly<{
@@ -20,10 +20,10 @@ export type BuilderDeck = Readonly<{
 /** Loads the deck for the builder, or null if it isn't the player's. */
 export async function builderDeckFor(
   capabilities: Capabilities,
-  userId: UserId,
+  actor: Actor,
   deckId: number,
 ): Promise<BuilderDeck | null> {
-  const result = await capabilities.deckOverview({ userId, deckId, parts: { printings: true } });
+  const result = await capabilities.deckOverview(actor, { deckId, parts: { printings: true } });
   if (!result.ok) return null;
   const { view, printings, combos } = result.value;
   return {

@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
-import { type Finish, type UserId } from "@/shared/kernel";
+import type { Finish } from "@/shared/kernel";
 import { itemOpenings, sealedItems } from "../infrastructure/schema";
 
 // Read models for the inventory screens (ADR 0006).
@@ -19,7 +20,8 @@ export type UnopenedGroup = Readonly<{
   itemIds: number[];
 }>;
 
-export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<UnopenedGroup[]> {
+/** The player's unopened items, grouped. Only the actor's own (design doc 67, kind P). */
+export async function unopenedItems(db: DbExecutor, actor: Actor): Promise<UnopenedGroup[]> {
   const rows = await db
     .select({
       name: sealedItems.name,
@@ -34,7 +36,7 @@ export async function unopenedItems(db: DbExecutor, userId: UserId): Promise<Uno
       itemIds: sql<number[]>`array_agg(${sealedItems.id} order by ${sealedItems.id})`,
     })
     .from(sealedItems)
-    .where(and(eq(sealedItems.ownerId, userId), eq(sealedItems.status, "unopened")))
+    .where(and(eq(sealedItems.ownerId, actor.userId), eq(sealedItems.status, "unopened")))
     .groupBy(sealedItems.name, sealedItems.contentKind, sealedItems.productId)
     .orderBy(sealedItems.name);
 
@@ -60,7 +62,7 @@ export type RecentOpening = Readonly<{
 /** The player's latest openings, newest first. */
 export async function recentOpenings(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   limit = 20,
 ): Promise<RecentOpening[]> {
   const rows = await db
@@ -71,7 +73,7 @@ export async function recentOpenings(
       openedAt: sealedItems.openedAt,
     })
     .from(sealedItems)
-    .where(and(eq(sealedItems.ownerId, userId), eq(sealedItems.status, "opened")))
+    .where(and(eq(sealedItems.ownerId, actor.userId), eq(sealedItems.status, "opened")))
     .orderBy(desc(sealedItems.openedAt), desc(sealedItems.id))
     .limit(limit);
   return rows.map((row) => ({
@@ -115,7 +117,7 @@ type StoredResult = {
 /** What one of the player's openings produced, or null if it isn't theirs or isn't opened. */
 export async function openingView(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   itemId: number,
 ): Promise<OpeningView | null> {
   const [row] = await db
@@ -131,7 +133,7 @@ export async function openingView(
     })
     .from(sealedItems)
     .innerJoin(itemOpenings, eq(itemOpenings.itemId, sealedItems.id))
-    .where(and(eq(sealedItems.id, itemId), eq(sealedItems.ownerId, userId)));
+    .where(and(eq(sealedItems.id, itemId), eq(sealedItems.ownerId, actor.userId)));
   if (row === undefined) return null;
 
   // Written by this module as a StoredOpening, so this shape is known.

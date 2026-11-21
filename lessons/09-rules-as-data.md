@@ -436,7 +436,7 @@ The question is always: can this state exist harmlessly while someone keeps work
 
 ## Further reading
 
-- [Design doc 09: deck builder](../docs/design/09-decks.md)
+- [Design doc 09: deck builder](../docs/design/archive/09-decks.md)
 - [ADR 0011: printing-level ownership](../docs/adr/0011-printing-level-ownership.md)
 - TypeScript handbook: "Indexed Access Types", "Narrowing"
 - MDN: "Regular expressions" (groups, lazy quantifiers), "CSS: printing", `break-inside`

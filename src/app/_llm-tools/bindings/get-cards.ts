@@ -28,14 +28,12 @@ export const getCardsBinding = defineBinding({
   }),
   async call(capabilities, actor, input) {
     if (input.detail === "owned") {
-      const checked = await capabilities.checkOwnedCards({
-        userId: actor.userId,
+      const checked = await capabilities.checkOwnedCards(actor, {
         names: input.cards,
       });
       return ok<Answer>({ detail: "owned", checked: checked.value });
     }
-    const cards = await capabilities.lookUpCards({
-      userId: actor.userId,
+    const cards = await capabilities.lookUpCards(actor, {
       queries: input.cards.slice(0, 25),
     });
     if (!cards.ok) return cards;

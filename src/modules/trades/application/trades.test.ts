@@ -1,7 +1,8 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
-import { inMemoryCollectionRepository, sampleGain } from "@/modules/collection/testing/fakes";
+import { inMemoryCollectionRepository, sampleGain } from "@/modules/collection/game/testing/fakes";
 import { inMemoryWalletServices } from "@/modules/wallet/testing/fakes";
 import { Cents, err, UserId } from "@/shared/kernel";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
@@ -14,14 +15,7 @@ import {
 import { makeTrades } from "./trades";
 
 function actor(id: string): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin: false,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id });
 }
 
 const alice = actor("alice");

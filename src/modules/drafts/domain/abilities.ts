@@ -1,4 +1,4 @@
-import { isCreature } from "@/shared/kernel";
+import { hasTypeWord } from "@/shared/kernel";
 import type { Color } from "@/modules/catalog";
 
 // Cards that do something during the draft (design doc 18, section 3), as data: the pick engine
@@ -109,13 +109,5 @@ export function guessedRight(note: Extract<Note, { kind: "guess" }>): boolean {
   return note.guess.trim().toLowerCase() === note.actual.trim().toLowerCase();
 }
 
-/** "Creature — Human Knight" → ["Human", "Knight"] (Paliano Vanguard notes creature types). */
-export function creatureTypes(typeLine: string): string[] {
-  const [front] = typeLine.split(" // ");
-  const [types, subtypes] = front.split(" — ");
-  if (subtypes === undefined || !isCreature(types)) return [];
-  return subtypes.split(/\s+/).filter((word) => word.length > 0);
-}
-
 export { isCreature as isCreatureLine } from "@/shared/kernel";
-export const isConspiracyLine = (typeLine: string) => /\bConspiracy\b/.test(typeLine);
+export const isConspiracyLine = (typeLine: string) => hasTypeWord(typeLine, ["Conspiracy"]);

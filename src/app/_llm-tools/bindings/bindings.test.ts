@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { err, ok } from "@/shared/kernel";
+import { err, ok, UserId } from "@/shared/kernel";
 import type { Actor } from "@/modules/accounts";
-import { UserId } from "@/shared/kernel";
 import type { ToolContext } from "../tool";
 import { getAccountBinding } from "./get-account";
 import { listDecksBinding } from "./list-decks";
@@ -25,6 +24,7 @@ function contextWith(capabilities: object): ToolContext {
     scopes: ["read"],
     allows: () => true,
     capabilities: capabilities as unknown as ToolContext["capabilities"],
+    reads: {} as ToolContext["reads"],
   };
 }
 

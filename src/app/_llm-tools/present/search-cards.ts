@@ -21,21 +21,20 @@ export function presentSemantic(
   avoided: readonly string[],
   includeText: boolean,
 ): unknown {
+  // Ideas in the order the search put them: no similarity or rating number, which would make a
+  // guess sound like a fact.
   const pick = (each: SemanticSearchResult["owned"][number]) => ({
     name: each.card.name,
-    oracleId: each.card.oracleId,
     typeLine: each.card.typeLine,
     manaCost: each.card.manaCost,
     price: moneyOrNull(each.card.priceCents),
-    similarityPct: each.similarityPct,
-    rating: each.rating,
     ...(includeText ? { text: each.card.text } : {}),
   });
   return compactMoneyFields({
     concept: result.concept,
     owned: owned.map(pick),
     store: store.map(pick),
-    hiddenOverTarget: result.hiddenOverTarget,
+    ...(result.hiddenOverTarget > 0 ? { hiddenOverTarget: result.hiddenOverTarget } : {}),
     ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
   });
 }

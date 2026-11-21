@@ -1,11 +1,12 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { describeUpdateEconomySettingsError } from "@/modules/wallet";
-import { Cents } from "@/shared/kernel";
-import { readPage } from "@/server/page-instance";
-
-export type EconomyFormState = { message: string | null; tone: "error" | "success" };
+import {
+  describeUpdateEconomySettingsError,
+  type UpdateEconomySettingsError,
+} from "@/modules/wallet";
+import { Cents, err } from "@/shared/kernel";
+import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const EconomyForm = z.object({
   allowance: z.string(),
@@ -15,34 +16,35 @@ const EconomyForm = z.object({
   selfFundLimit: z.string(),
 });
 
-export async function updateEconomyAction(
-  _previousState: EconomyFormState,
-  formData: FormData,
-): Promise<EconomyFormState> {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = EconomyForm.safeParse(Object.fromEntries(formData));
-  if (!form.success) return failure("Please fill in every field.");
+type EconomyFailure = UpdateEconomySettingsError | Readonly<{ kind: "AmountsUnreadable" }>;
 
-  const allowance = Cents.fromUsd(form.data.allowance);
-  const startingGrant = Cents.fromUsd(form.data.startingGrant);
-  const selfFundLimit = Cents.fromUsd(form.data.selfFundLimit);
-  if (allowance === null || startingGrant === null || selfFundLimit === null) {
-    return failure("Enter amounts like 20.00.");
-  }
+export const updateEconomyAction = formAction(
+  EconomyForm,
+  async ({ actor: admin, capabilities }, form) => {
+    const allowance = Cents.fromUsd(form.allowance);
+    const startingGrant = Cents.fromUsd(form.startingGrant);
+    const selfFundLimit = Cents.fromUsd(form.selfFundLimit);
+    if (allowance === null || startingGrant === null || selfFundLimit === null) {
+      return err<EconomyFailure>({ kind: "AmountsUnreadable" });
+    }
 
-  const result = await capabilities.wallet.updateEconomySettings(admin, {
-    allowance,
-    allowancePeriodDays: form.data.allowancePeriodDays,
-    allowanceAnchor: new Date(form.data.anchorIso),
-    startingGrant,
-    selfFundLimit,
-  });
-  if (!result.ok) return failure(describeUpdateEconomySettingsError(result.error));
-
-  revalidatePath("/", "layout");
-  return { message: "Saved. Changes apply from now on.", tone: "success" };
-}
-
-function failure(message: string): EconomyFormState {
-  return { message, tone: "error" };
-}
+    const result = await capabilities.wallet.updateEconomySettings(admin, {
+      allowance,
+      allowancePeriodDays: form.allowancePeriodDays,
+      allowanceAnchor: new Date(form.anchorIso),
+      startingGrant,
+      selfFundLimit,
+    });
+    if (result.ok) revalidateHeader();
+    return result;
+  },
+  {
+    admin: true,
+    invalidInput: "Please fill in every field.",
+    describeError: (error: EconomyFailure) =>
+      error.kind === "AmountsUnreadable"
+        ? "Enter amounts like 20.00."
+        : describeUpdateEconomySettingsError(error),
+    successMessage: "Saved. Changes apply from now on.",
+  },
+);

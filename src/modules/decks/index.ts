@@ -1,225 +1,79 @@
-// The decks module's public API: the only file other modules and the app may import.
-export { deleteAllDecks } from "./application/delete-all-decks";
-export type { ProxyDeck } from "./application/proxy-deck";
-export { makeDecks, type Decks } from "./application/make-decks";
-
-export { makeDeckSharing, type DeckSharing } from "./application/sharing";
-export { CommentId, MAX_COMMENT_LENGTH, VISIBILITIES } from "./domain/sharing";
+// The decks module's public API: the only file other modules and the app may import. It lists
+// exactly what they use (each area's index.ts, ADR 0029, offers more to its sibling areas).
+export * from "./client";
 export {
   createDeckInTransaction,
   type DeckCardInput,
-} from "./application/create-deck-in-transaction";
-
-export type { ChoosePrintingInput } from "./application/deck-printings";
-export type { UpdateDeckError } from "./application/deck-lifecycle";
-
-export type { ReplaceListError, ReplaceReport } from "./application/deck-lists";
-
-export type { CardLookup, DecksServices } from "./application/ports";
-export {
-  becomesADeck,
-  BOARDS,
-  DeckId,
-  FORMATS,
-  GROUPINGS,
-  MAX_QUANTITY,
-  type Board,
-  type Deck,
-  type Format,
-  type Grouping,
-} from "./domain/deck";
-export type { ManaBasePlanWithCastability } from "./domain/mana-base";
-export { type SimilarCards } from "./application/find-replacements";
-export { type DeckFacts } from "./application/deck-facts";
-
-export { type DeckSignals, type SearchSignals } from "./application/deck-signals";
-
-export { type DeckOverview, type OverviewParts } from "./application/deck-overview";
-export { listAndFingerprint, problemsOfLines } from "./domain/deck-reads";
-export { describeDeckError, type DeckError } from "./application/describe-error";
-export { MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
-export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
-export { MAX_ROLE_LENGTH } from "./domain/deck";
-export {
-  MAX_SNAPSHOT_LABEL_LENGTH,
-  MAX_SNAPSHOTS_PER_DECK,
-  SnapshotId,
-  type SnapshotSummary,
-} from "./domain/snapshots";
-export type {
-  CardNotFound,
-  CommentNotFound,
-  DeckChanged,
-  DeckNotFound,
-  FinishNotAvailable,
-  HeadingInvalid,
-  ListProblems,
-  ListTooLong,
-  NameInvalid,
-  NoteInvalid,
-  QuantityInvalid,
-  TooManyDecks,
-} from "./domain/errors";
-export {
-  EXPORTERS,
-  exportWithHeadings,
-  fingerprint,
-  shortList,
-  type ExportLine,
-  type ShortLine,
-} from "./domain/list-format";
-export {
-  deckProblems,
-  formatRulesSummary,
-  invalidCommanders,
-  legalFormatsForCards,
-  pairProblem,
-  type CardRules,
-  type DeckProblem,
-} from "./domain/rules";
-export { colorPips, deckStats, roleTargets } from "./domain/stats";
-export {
-  bracketLine,
-  bracketWarning,
-  estimateBracket,
-  type Bracket,
-  type BracketEstimate,
-  type BracketFinding,
-  type BracketRule,
-  type BracketWarning,
-  type DeckCombo,
-} from "./domain/brackets";
-export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./queries/candidate-pool";
-export { combosForDeck } from "./queries/combos";
-export {
+  type DeckError,
+  type DeckRef,
+  type Decks,
+  decksFor,
+  type DecksServices,
   decksUsing,
   deckView,
-  decksFor,
-  type DeckRef,
+  deleteAllDecks,
+  describeDeckError,
+  makeDecks,
   preconCommanders,
-  otherDecksHolding,
-} from "./queries/decks";
-export type { DeckLine, DeckView, OtherDeckUse } from "./domain/deck-view";
-
-export { type CutReason } from "./domain/cuts";
-export { type SwapCutMeta, type SwapReason } from "./domain/swaps";
-export { type OptimizeResult } from "./domain/optimize";
-export { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
-
-export { auditDeck } from "./queries/audit";
-
-export { type PowerTier } from "./domain/rate";
-export {
-  BROWSE_SORTS,
-  browseCollection,
-  type BrowseInput,
-  type BrowsePage,
-  type BrowseSort,
-  BROWSE_SOURCES,
-  type BrowseSource,
-} from "./queries/browse";
-export { cardPrintings, type PrintingFinish, type PrintingOption } from "./queries/printings";
-export {
-  budgetList,
-  deckSuggestions,
-  similarCards,
-  type BudgetList,
-  type DeckSuggestions,
-} from "./queries/suggestions";
-export { budgetReplacements } from "./queries/budget-replacements";
-export type { BrowseCard } from "./domain/browse-card";
-export type { BudgetReplacementsResult } from "./domain/suggestion-types";
-export {
-  type Suggestion,
-  type SuggestionCard,
-  type SuggestionList,
-} from "./domain/suggestion-types";
-export { embedSimForCards } from "./queries/embeddings";
-export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
-export { deckCombosView } from "./queries/deck-combos";
-
-export type { Reason } from "./domain/suggest";
-export { manaBasePlan } from "./queries/mana-base";
-export { draftForDeck } from "./queries/draft-deck";
-
-export { type DeckDraft, type DraftedSpell, type DraftReason } from "./domain/draft-deck";
-export { commanderDetails, commandersICanBuild } from "./queries/commanders";
-export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "./domain/commanders";
-export type { CommanderCoverage, CommanderPlan } from "./domain/commanders";
-export type { LandReason, LandTargetReason, ManaBasePlan, PlannedLand } from "./domain/mana-base";
-export {
-  cardsToGetFor,
-  deckComments,
-  deckForViewer,
-  publicDeckByToken,
-  sharedDecks,
-  type CommentView,
-} from "./queries/sharing";
-export { checkOwnedCards, findCard } from "./queries/card-facts";
-export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
-export { type SynergyQuery } from "./domain/search-for-deck";
-export { makeProxySheets, type ProxySheetInput } from "./application/proxy-sheets";
-
-export {
-  cardsToPrint,
-  DEFAULT_PROXY_OPTIONS,
-  GAPS_IN_MILLIMETERS,
-  TOKEN_COPIES,
-  type ProxyLine,
-  type ProxyOptions,
-} from "./domain/proxy-sheet";
-export { makeTokenChoices, type ChooseTokenInput } from "./application/token-choices";
-export { deckTokenLines, tokenArtOptions } from "./queries/tokens";
-export {
-  filterTokenChecklist,
-  summarizeTokenChecklist,
-  toTokenChecklistItem,
-  type TokenArt,
-  type TokenChecklistItem,
-  type TokenKind,
-  type TokenLine,
-  type TokenMaker,
-} from "./domain/token-proxies";
-
-export { deckChangePreview, deckListPreview, type DeckChangePreview } from "./queries/preview";
-export {
-  compareDeckSnapshot,
-  listDeckSnapshots,
-  type SnapshotComparison,
-} from "./queries/snapshots";
-export type { ProxyProgress, ProxyStreamEvent } from "./domain/proxy-progress";
-export { library, openingHandOdds, type LibraryCard, type TestHand } from "./domain/draws";
-
-export { deckUpgradeRoadmap } from "./queries/upgrade-roadmap";
-export { makeGoldfishSessions } from "./application/goldfish-sessions";
-
-export {
-  isKeyCard,
-  resolveDeckProfileTargets,
-  summarizeDeckProfile,
-  type DeckPlan,
-} from "./domain/deck-profile";
-
+  type PrintingFinish,
+  type PrintingOption,
+  type ReplaceListError,
+  type ReplaceReport,
+  type StartedDeck,
+  type UpdateDeckError,
+} from "./core";
+export { type CommentView, type DeckSharing, makeDeckSharing } from "./sharing";
 export {
   type ApplyPreviewError,
-  type ChangeNoteInvalid,
-  type CardsNotFound,
-  type LineNotOnBoard,
+  type DeckChangePreview,
+  type DeckSnapshots,
+  makeDeckSnapshots,
   type PreviewChangesError,
-  type PreviewExpired,
+  type PreviewRepository,
   type PreviewWarning,
   type SaveChangesError,
   type SavedChanges,
   type StoredPreviewResult,
-} from "./application/deck-previews";
-export type { PreviewRepository } from "./application/ports";
-
-export { type StartedDeck } from "./application/deck-start";
+} from "./changes";
 export {
   type CommanderMissing,
+  type DeckCombos,
+  type DeckSignals,
   type EdhrecDeckComparison,
   type EdhrecNotFound,
   type EdhrecUnavailable,
-} from "./application/deck-edhrec";
-export { type DeckCombos, type SpellbookUnavailable } from "./application/deck-combos";
-export { type DeckTooSmall } from "./application/draw-sample";
+  findCard,
+  type SearchSignals,
+  type SpellbookUnavailable,
+} from "./scoring";
+export {
+  auditDeck,
+  BROWSE_SORTS,
+  BROWSE_SOURCES,
+  browseCollection,
+  type BrowsePage,
+  type BrowseSort,
+  type BrowseSource,
+  type BudgetList,
+  budgetReplacements,
+  candidatePool,
+  type DeckSuggestions,
+  embedSimForCards,
+  type SearchForDeck,
+  semanticSearchForDeck,
+  type SemanticSearchResult,
+  similarCards,
+  type SimilarCards,
+} from "./building";
+export { type CastReport } from "./play";
+export { makeProxySheets, makeTokenChoices, type ProxyDeck, type ProxySheetInput } from "./proxies";
+export {
+  compareDeckSnapshot,
+  type DeckFacts,
+  type DeckOverview,
+  deckPublicQueries,
+  deckQueries,
+  optimizeDeckForView,
+  type OverviewParts,
+  type SnapshotComparison,
+} from "./overview";

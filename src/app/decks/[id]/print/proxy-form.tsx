@@ -203,7 +203,7 @@ export function ProxyForm(props: ProxyFormProps) {
             viewBox={`0 0 ${firstPage.width} ${firstPage.height}`}
             role="img"
             aria-label="The first page"
-            className="w-full rounded border border-zinc-300 bg-white shadow dark:border-zinc-700"
+            className="border-line w-full rounded border bg-white shadow"
           >
             {/* PDF measures from the bottom; SVG from the top. */}
             <g transform={`translate(0 ${firstPage.height}) scale(1 -1)`}>
@@ -251,7 +251,7 @@ export function ProxyForm(props: ProxyFormProps) {
             href={`/decks/${props.deckId}/proxies.pdf?${query}&preview=1`}
             target="_blank"
             rel="noopener"
-            className="rounded-md border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
+            className="border-line rounded-md border px-4 py-2 text-center text-sm font-medium"
           >
             {cardCount === 0 ? "Preview one token" : "Preview one card"}
           </a>
@@ -269,7 +269,7 @@ export function ProxyForm(props: ProxyFormProps) {
           onChoose={(value) => choose("style", value)}
         />
         {options.style === "playtest" && (
-          <div className="flex flex-col gap-5 border-l-2 border-zinc-300 pl-4 dark:border-zinc-700">
+          <div className="border-line flex flex-col gap-5 border-l-2 pl-4">
             {PLAYTEST_QUESTIONS.map((question) => (
               <OptionGroup
                 key={question.key}
@@ -335,7 +335,7 @@ function OptionGroup<Key extends keyof ProxyOptions>(props: {
         {question.choices.map((choice) => (
           <label
             key={String(choice.value)}
-            className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm ${props.selected === choice.value ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"}`}
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm ${props.selected === choice.value ? "border-accent bg-accent text-accent-foreground" : "border-line"}`}
           >
             <input
               type="radio"

@@ -105,3 +105,29 @@ describe("chooseAutoPick", () => {
     expect(pickScore(dual, pool)).toBeGreaterThan(pickScore(offDual, pool));
   });
 });
+
+describe("the curve gap bonus reads the one mana curve (0 to 7+)", () => {
+  const sixDrop = sampleCardFacts({ colors: ["G"], typeLine: "Instant", manaValue: 6 });
+  const sevenDrop = { ...sixDrop, manaValue: 7 };
+  const pool = [...mono("G", 6), ...mono("U", 6)].map((facts) => ({
+    ...facts,
+    manaValue: 1,
+    typeLine: "Instant",
+  }));
+  const crowdedWith = (manaValue: number) => [
+    ...pool,
+    ...Array.from({ length: 3 }, () => ({ ...sixDrop, manaValue })),
+  ];
+
+  it("marks down a six-drop once the pool has three, but not a seven-drop", () => {
+    // Before, six and seven were one slot and the pool had to hold four.
+    expect(pickScore(sixDrop, crowdedWith(6))).toBeLessThan(pickScore(sixDrop, pool));
+    expect(pickScore(sevenDrop, crowdedWith(6))).toBe(pickScore(sevenDrop, pool));
+  });
+
+  it("puts a fractional mana value in the slot below (2.5 is a two-drop)", () => {
+    const half = { ...sixDrop, manaValue: 2.5 };
+    const twoDrops = Array.from({ length: 8 }, () => ({ ...sixDrop, manaValue: 2 }));
+    expect(pickScore(half, [...pool, ...twoDrops])).toBeLessThan(pickScore(half, pool));
+  });
+});

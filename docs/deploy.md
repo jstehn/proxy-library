@@ -30,6 +30,9 @@ downloads Scryfall's card data (about 80 MB) and MTGJSON's files for the current
 ## Every day
 
 - **Nightly sync** at `SYNC_TIME` (default 04:00, in `TZ`): new prices, and new sets you enabled.
+- **Card features** (what each card does, ADR 0027) are filled in by the nightly sync. After an
+  update that raises the features version, the next sync recomputes them, or run
+  `pnpm worker sync features` now.
 - **Card images** are fetched from Scryfall the first time someone views a card, then served from
   the `images` volume.
 - **Updating the app:** `git pull && docker compose up -d --build`. Migrations run automatically
@@ -38,7 +41,7 @@ downloads Scryfall's card data (about 80 MB) and MTGJSON's files for the current
 ## Backups
 
 ```sh
-scripts/backup.sh                     # writes backups/tcg-<date>.sql.gz
+scripts/ops/backup.sh                     # writes backups/tcg-<date>.sql.gz
 gunzip -c backups/tcg-….sql.gz | docker compose exec -T db psql -U tcg -d tcg   # restore
 ```
 
@@ -93,7 +96,7 @@ public address (the OAuth endpoints are built from it).
 
 ## Deploying to a Portainer server
 
-`scripts/deploy.sh` deploys to a Docker server managed by Portainer, as the stack
+`scripts/ops/deploy.sh` deploys to a Docker server managed by Portainer, as the stack
 **proxylib-stack**. Your server's details live in **`deploy/local.env`**, which git ignores:
 copy [`deploy/local.env.example`](../deploy/local.env.example) and fill in the server
 (`DEPLOY_HOST`), the public address (`DEPLOY_APP_URL`), the port and the time zone. Below,
@@ -112,7 +115,7 @@ copy [`deploy/local.env.example`](../deploy/local.env.example) and fill in the s
 From this repo, after committing (and running the tests):
 
 ```sh
-scripts/deploy.sh
+scripts/ops/deploy.sh
 ```
 
 It builds the image here, tags it with the commit (`proxy-library:<commit>`), copies it to the
@@ -152,6 +155,45 @@ without a photo shows generated art. Check and correct matches on **Admin → Ph
 
 When `APP_URL` is an `https://` address, sign-in cookies are marked HTTPS-only: sign in through
 the domain, not `http://your-server:3470` (by design).
+
+### Signing in with Authentik (optional)
+
+Passwords always work. To add a "Sign in with Authentik" button, set these in `.env` (or in the
+`proxylib-stack` environment in Portainer). All of them are optional, but the first three go
+together: a half-set group stops the app at start-up with a message.
+
+| Variable             | Meaning                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `OIDC_ISSUER_URL`    | The provider's issuer, e.g. `https://auth.example/application/o/proxy-library/` |
+| `OIDC_CLIENT_ID`     | The confidential client's ID                                                    |
+| `OIDC_CLIENT_SECRET` | Its secret (only in Portainer's environment panel or `.env`, never in the repo) |
+| `OIDC_PROVIDER_NAME` | The button's label (default `Authentik`)                                        |
+
+In Authentik, make an OAuth2/OpenID provider (client type **confidential**, a signing key so
+tokens are RS256, scopes `openid`, `email` and `profile`) and an application for it, with exactly
+one redirect URI (strict): `<APP_URL>/api/auth/callback/authentik`. Use `APP_URL`'s public
+address; add `http://localhost:3000/api/auth/callback/authentik` too for development.
+
+How players are linked (nobody is created by signing in; an invite is still needed):
+
+- A signed-in player clicks **Link Authentik** on their Account page. This works whatever email
+  either account has.
+- Or an admin sets the player's real email under **Admin → Players → Email**. It is then treated
+  as verified, and the player's first Authentik sign-in links to them when Authentik's email
+  matches. This trusts Authentik to vouch for emails because the owner sets every email there
+  and it has no self-enrollment. If self-enrollment is ever turned on, stop using the admin email
+  and link from the Account page only.
+
+The app reads Authentik's discovery document when it starts. If Authentik is down at that moment,
+the button reports that it isn't available until the app is restarted. Passwords are unaffected.
+Admin rights stay with the player's own admin flag; Authentik groups aren't read.
+
+### Connectors that need a client ID and secret
+
+**Admin → Connectors** makes an OAuth client by hand for a connector that asks for a client ID and
+secret (the secret is shown once). Connectors that register themselves can ask for
+`client_secret_basic` or `client_secret_post` and are given a secret. Each registration is logged
+(`oauth registration {...}`: the reason and the redirect URIs, never a secret) in the app's logs.
 
 ### Backups
 

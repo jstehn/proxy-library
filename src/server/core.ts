@@ -3,6 +3,7 @@
 // hands them to the functions that need them. Each phase adds its module's services here.
 import { randomBytes, randomUUID } from "node:crypto";
 import { buildCapabilities } from "./capabilities";
+import { buildPublicReads, buildReads } from "./reads";
 import { makeAccounts } from "@/modules/accounts";
 import { drizzleEventRecorder } from "@/modules/activity/infrastructure";
 import {
@@ -22,6 +23,7 @@ import {
   drizzleCatalogRepository,
   drizzleComprehensiveRulesRepository,
   drizzleEdhrecRepository,
+  drizzleCardFeatureStore,
   drizzleEmbeddingRepository,
   drizzleSpellbookRepository,
   drizzleSyncRunRepository,
@@ -39,7 +41,7 @@ import { drizzleCollectionRepository } from "@/modules/collection/infrastructure
 import {
   makeDecks,
   makeDeckSharing,
-  makeGoldfishSessions,
+  makeDeckSnapshots,
   makeProxySheets,
   makeTokenChoices,
 } from "@/modules/decks";
@@ -47,9 +49,9 @@ import {
   drizzleCardLookup,
   drizzleDeckRepository,
   drizzleDeckSharing,
+  drizzleSnapshotRepository,
   drizzleDeckTokenRepository,
   drizzleChangePreviewRepository,
-  drizzleGoldfishSessionRepository,
   pdfLibRenderer,
 } from "@/modules/decks/infrastructure";
 import { makeDrafts } from "@/modules/drafts";
@@ -61,11 +63,11 @@ import {
 import { makeInventory } from "@/modules/inventory";
 import { drizzleItemRepository, drizzleProductCatalog } from "@/modules/inventory/infrastructure";
 import { makePacks } from "@/modules/packs";
-import { makeRealCollection, realPrintingIds } from "@/modules/real-collection";
+import { makeRealCollection, realPrintingIds } from "@/modules/collection/real";
 import {
   drizzleRealCollectionRepository,
   sqlPrintingMatcher,
-} from "@/modules/real-collection/infrastructure";
+} from "@/modules/collection/infrastructure";
 import { makeResetPlayer } from "@/modules/reset";
 import { drizzleBoosterSource } from "@/modules/packs/infrastructure";
 import { makeStore } from "@/modules/store";
@@ -92,10 +94,10 @@ import {
 import { makeWallet } from "@/modules/wallet";
 import { makeWishlist } from "@/modules/wishlist";
 import { drizzleWishCatalog, drizzleWishRepository } from "@/modules/wishlist/infrastructure";
-import { makeReddit } from "@/modules/reddit";
-import { redditHttpGateway } from "@/modules/reddit/infrastructure";
-import { makeYoutube } from "@/modules/youtube";
-import { youtubeiGateway } from "@/modules/youtube/infrastructure";
+import { makeReddit } from "@/modules/research";
+import { redditHttpGateway } from "@/modules/research/infrastructure";
+import { makeYoutube } from "@/modules/research";
+import { youtubeiGateway } from "@/modules/research/infrastructure";
 import {
   drizzleEconomySettingsRepository,
   drizzlePlayerDirectory,
@@ -115,7 +117,12 @@ import { makeCheckHealth } from "./health";
 export function buildCore(config: Config) {
   const { db, close } = createDatabase(config.databaseUrl);
   const clock = systemClock();
-  const auth = createAuth({ db, secret: config.authSecret, appUrl: config.appUrl });
+  const auth = createAuth({
+    db,
+    secret: config.authSecret,
+    appUrl: config.appUrl,
+    oidc: config.oidc,
+  });
 
   // Called at the start of every transaction: builds each module's services so that all
   // of their database work happens inside that one transaction (ADR 0005).
@@ -135,6 +142,7 @@ export function buildCore(config: Config) {
       edhrec: drizzleEdhrecRepository(transaction),
       spellbook: drizzleSpellbookRepository(transaction),
       embeddings: drizzleEmbeddingRepository(transaction),
+      cardFeatures: drizzleCardFeatureStore(transaction),
       comprehensiveRules: drizzleComprehensiveRulesRepository(transaction),
       boosters: drizzleBoosterSource(transaction),
       collection: drizzleCollectionRepository(transaction),
@@ -149,7 +157,7 @@ export function buildCore(config: Config) {
       cards: drizzleCardLookup(transaction),
       deckTokens: drizzleDeckTokenRepository(transaction),
       deckSharing: drizzleDeckSharing(transaction),
-      goldfishSessions: drizzleGoldfishSessionRepository(transaction),
+      snapshots: drizzleSnapshotRepository(transaction),
       trades: drizzleTradeRepository(transaction),
       tradePlayers: drizzleTradePlayers(transaction),
       holdings: drizzleHoldings(transaction),
@@ -219,11 +227,7 @@ export function buildCore(config: Config) {
   const inventory = makeInventory({ unitOfWork, clock, seeds });
   const store = makeStore({ unitOfWork, clock });
   const decks = makeDecks({ unitOfWork, clock });
-  const goldfishSessions = makeGoldfishSessions({
-    unitOfWork,
-    clock,
-    newSessionId: randomUUID,
-  });
+  const deckSnapshots = makeDeckSnapshots({ unitOfWork, clock });
   const deckSharing = makeDeckSharing({
     unitOfWork,
     clock,
@@ -265,6 +269,8 @@ export function buildCore(config: Config) {
     }),
   });
 
+  const reads = buildReads(db);
+
   return {
     config,
     db,
@@ -280,7 +286,7 @@ export function buildCore(config: Config) {
     store,
     decks,
     deckSharing,
-    goldfishSessions,
+    deckSnapshots,
     chooseToken,
     proxySheet,
     trades,
@@ -293,37 +299,37 @@ export function buildCore(config: Config) {
     youtube,
     reddit,
     textEmbedder,
+    reads,
+    publicReads: buildPublicReads(db),
     capabilities: buildCapabilities({
       db,
       clock,
+      reads,
+      textEmbedder,
+      outsideData,
+      seeds,
+      appUrl: config.appUrl,
+      newPreviewId: randomUUID,
+      previews: drizzleChangePreviewRepository(db),
+      accounts,
+      catalog,
+      decks,
+      deckSharing,
+      deckSnapshots,
+      chooseToken,
+      proxySheet,
+      drafts,
+      inventory,
+      packs,
+      realCollection,
+      reddit,
+      resetPlayer,
+      social,
+      store,
+      trades,
       wallet,
       wishlist,
-      textEmbedder,
-      decks,
-      previews: drizzleChangePreviewRepository(db),
-      services: {
-        deckSharing,
-        chooseToken,
-        proxySheet,
-        seeds,
-        drafts,
-        realCollection,
-        store,
-        inventory,
-        accounts,
-        wallet,
-        social,
-        trades,
-        wishlist,
-        catalog,
-        packs,
-        resetPlayer,
-        appUrl: config.appUrl,
-      },
-      newPreviewId: randomUUID,
-      outsideData,
       youtube,
-      reddit,
     }),
     checkHealth: makeCheckHealth({ unitOfWork, clock }),
     close,

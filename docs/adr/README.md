@@ -31,4 +31,5 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0021 | [Never sell sealed product for less than its contents sell back for](0021-sealed-value-floor.md)                                             | Accepted (amended by 0024) |
 | 0022 | [Serve LLM tools from one registry, over MCP and OpenAPI, signed in with access tokens](0022-llm-tool-api.md)                                | Accepted                   |
 | 0023 | [Make `pnpm check` incremental, and size the design doc and lesson to the feature](0023-faster-checks-and-a-process-sized-to-the-feature.md) | Accepted                   |
+| 0028 | [Mount one Better Auth route: the Authentik callback](0028-authentik-callback-route.md)                                                      | Accepted                   |
 | 0024 | [Sell at the official MSRP by default; make value-based pricing an admin switch](0024-msrp-pricing-by-default.md)                            | Accepted                   |

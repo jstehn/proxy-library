@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { boosterConfigs } from "@/modules/catalog/infrastructure/schema";
+import { boosterConfigs } from "@/modules/catalog/cards/infrastructure/schema";
 import { packTheme, type ThemeRecipe } from "../domain/theme";
 
 // The themes of opened Jumpstart packs, for the Opened page (task 40, ADR 0006).
@@ -14,7 +14,7 @@ export type OpenedPackKey = Readonly<{
 }>;
 
 /** Each Jumpstart pack's theme ("Angels"), by item id. Other packs aren't in the map. */
-export async function packThemes(
+export async function themes(
   db: DbExecutor,
   packs: readonly OpenedPackKey[],
 ): Promise<Map<number, string>> {

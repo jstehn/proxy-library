@@ -2,6 +2,7 @@
 
 - **Phase:** 58
 - **Status:** **Approved** (2026-11-13)
+- **Superseded in part** (2026-11-20, P22): the audit, diff and transparent-bracket tools are gone; cast on curve is doc 68 (P28); see docs/modules/decks-play.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0008 (injected RNG and clock), 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (extends existing `decks/domain`, `decks/queries`, and `_llm-tools`)
 
@@ -116,5 +117,5 @@ export type CardCastability = Readonly<{
 
 ## 7. Decisions (resolved 2026-11-13)
 
-1. **`edhrecLift` replaces `edhrecSynergy`/`edhrecNegative`:** Replace both in `rate.ts` and re-calibrate `RATING_WEIGHTS_BY_TIER` via `scripts/eval-ratings.ts --calibrate` so there is one clean, symmetric lift signal alongside `edhrecInclusion` with no conflicting weights.
+1. **`edhrecLift` replaces `edhrecSynergy`/`edhrecNegative`:** Replace both in `rate.ts` and re-calibrate `RATING_WEIGHTS_BY_TIER` via `scripts/dev/fit-rating-weights.ts` so there is one clean, symmetric lift signal alongside `edhrecInclusion` with no conflicting weights.
 2. **Before/after castability in `plan_mana_base`:** Run `simulateCastOnCurve` both before and after the proposed land additions so the player sees the exact castability improvement for bottlenecked spells.

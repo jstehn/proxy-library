@@ -1,11 +1,11 @@
 "use client";
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
-import { buySingleAction, sellSingleAction, type TradeState } from "./actions";
+import { buySingleAction, sellSingleAction } from "./actions";
+import type { FormState } from "@/server/form-action";
+import { Select } from "@/ui/field";
 
-const initialState: TradeState = { message: null, tone: "success" };
-const select =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const initialState: FormState = { message: null, tone: null };
 
 type TradeFormProps = {
   printingId: string;
@@ -28,13 +28,13 @@ function Hidden(props: { printingId: string; finish: string }) {
 
 function QuantitySelect(props: { max: number; label: string }) {
   return (
-    <select name="quantity" defaultValue="1" aria-label={props.label} className={select}>
+    <Select name="quantity" defaultValue="1" aria-label={props.label}>
       {Array.from({ length: props.max }, (_, index) => index + 1).map((quantity) => (
         <option key={quantity} value={quantity}>
           {quantity}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 

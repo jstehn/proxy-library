@@ -15,8 +15,8 @@ import {
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
-import { cardSets, printings } from "../../catalog/infrastructure/schema";
-import { decks } from "../../decks/infrastructure/schema";
+import { cardSets, printings } from "../../catalog/cards/infrastructure/schema";
+import { decks } from "../../decks/core/infrastructure/schema";
 import { timestamptz } from "@/shared/db";
 
 export const drafts = pgTable(

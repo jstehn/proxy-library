@@ -1,9 +1,10 @@
+import { testActor } from "@/modules/accounts/testing/actors";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { PrintingId, SetCode, type Color } from "@/modules/catalog";
-import { inMemoryCollectionRepository } from "@/modules/collection/testing/fakes";
-import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/testing/fakes";
+import { inMemoryCollectionRepository } from "@/modules/collection/game/testing/fakes";
+import { inMemoryCardLookup, inMemoryDeckRepository } from "@/modules/decks/core/testing/fakes";
 import { inMemoryItemRepository } from "@/modules/inventory/testing/fakes";
 import { inMemoryBoosterSource } from "@/modules/packs/testing/fakes";
 import { SAMPLE_BOOSTER, SAMPLE_FACTS } from "@/modules/packs/testing/recipes";
@@ -18,14 +19,7 @@ import { makeDrafts } from "./drafts";
 import { removeFromLobbies } from "./remove-from-lobbies";
 
 function actor(id: string, isAdmin = false): Actor {
-  return {
-    userId: UserId.of(id),
-    username: id as Actor["username"],
-    displayName: id as Actor["displayName"],
-    isAdmin,
-    canSelfFund: false,
-    mustChangePassword: false,
-  };
+  return testActor({ name: id, isAdmin });
 }
 
 const alice = actor("alice");

@@ -33,6 +33,7 @@ const context = (scopes: Scope[] = ["read", "decks:write", "wishlist:write"]): T
   scopes,
   allows: (scope) => allows(scopes, scope),
   capabilities: core.capabilities,
+  reads: core.reads,
 });
 
 async function connect(scopes?: Scope[]): Promise<Client> {
@@ -477,7 +478,7 @@ describe("the maybeboard and disabled cut suggestions", () => {
     const audit = deckWithFacts.facts;
     expect(audit).not.toHaveProperty("topCuts");
     expect(audit).not.toHaveProperty("score");
-    expect(audit.heuristicScore).toBeDefined();
+    expect(audit).not.toHaveProperty("heuristicScore");
     expect(audit.legality).toBeDefined();
     expect(audit.mana).toBeDefined();
     expect(audit.ownership).toBeDefined();
@@ -667,6 +668,18 @@ describe("opening-hand odds & draw_sample", () => {
     expect(sample.samples[0].nextDraws).toHaveLength(4);
     expect(sample.odds.trials).toBe(200);
     expect(sample.odds.turn3LandPct).toBeGreaterThan(90);
+
+    const cast = await call(client, "draw_sample", {
+      deckId,
+      hands: 1,
+      drawNext: 0,
+      trials: 200,
+      cast: ["Banishing Light"],
+      lastTurn: 4,
+      seed: "test-seed",
+    });
+    expect(cast.cast.table).toHaveLength(4);
+    expect(cast.cast).toMatchObject({ runs: 200, cards: ["Banishing Light"] });
   });
 });
 

@@ -54,7 +54,7 @@ beforeEach(async () => {
     redirectUris: [REDIRECT],
   });
   if (!client.ok) throw new Error(client.error.kind);
-  clientId = client.value.clientId;
+  clientId = client.value.client.clientId;
 });
 
 function parameters(overrides: Partial<AuthorizationParameters> = {}): AuthorizationParameters {
@@ -80,13 +80,17 @@ async function approve(scopes: string[] = ["decks:write"]): Promise<string> {
   return url.searchParams.get("code") ?? "";
 }
 
-function exchange(code: string, overrides: { verifier?: string; clientId?: string } = {}) {
+function exchange(
+  code: string,
+  overrides: { verifier?: string; clientId?: string; clientSecret?: string | null } = {},
+) {
   return accounts.exchangeAuthorizationCode({
     grantType: "authorization_code",
     code,
     clientId: overrides.clientId ?? clientId,
     redirectUri: REDIRECT,
     codeVerifier: overrides.verifier ?? VERIFIER,
+    clientSecret: overrides.clientSecret ?? null,
   });
 }
 
@@ -115,7 +119,14 @@ describe("checking a request (rules 2 and 3)", () => {
     });
     expect(
       await accounts.checkAuthorizationRequest(parameters({ redirectUri: "https://evil.example" })),
-    ).toEqual({ ok: false, error: { kind: "RedirectUriNotRegistered" } });
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "RedirectUriNotRegistered",
+        sentUri: "https://evil.example",
+        registeredUris: [REDIRECT],
+      },
+    });
   });
 
   it("uses the only registered redirect URI when the request leaves it out", async () => {
@@ -195,5 +206,169 @@ describe("approving and swapping the code", () => {
     const url = new URL(denied.value.redirectTo);
     expect(url.searchParams.get("error")).toBe("access_denied");
     expect(url.searchParams.get("state")).toBe("xyz");
+  });
+});
+
+// Design doc 69, section 5: confidential clients and clients made by hand.
+
+/** A confidential client, as the registration endpoint would make it. */
+async function registerConfidential(authMethod = "client_secret_basic") {
+  const registered = await accounts.registerOAuthClient({
+    clientName: "Google",
+    redirectUris: [REDIRECT],
+    authMethod,
+  });
+  if (!registered.ok || registered.value.clientSecret === null) throw new Error("no secret");
+  return { id: registered.value.client.clientId, secret: registered.value.clientSecret };
+}
+
+async function approveFor(id: string): Promise<string> {
+  const result = await accounts.approveAuthorization(jack, parameters({ clientId: id }), []);
+  if (!result.ok) throw new Error(result.error.kind);
+  return new URL(result.value.redirectTo).searchParams.get("code") ?? "";
+}
+
+describe("registering a confidential client", () => {
+  it("makes a secret for client_secret_basic and client_secret_post, and stores only its hash", async () => {
+    for (const method of ["client_secret_basic", "client_secret_post"]) {
+      const registered = await accounts.registerOAuthClient({
+        redirectUris: [REDIRECT],
+        authMethod: method,
+      });
+      if (!registered.ok) throw new Error(registered.error.reason);
+      const { client, clientSecret } = registered.value;
+      expect(client.authMethod).toBe(method);
+      expect(clientSecret).toMatch(/^pls_[A-Za-z0-9_-]{43}$/);
+      expect(client.secretHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(JSON.stringify(client)).not.toContain(clientSecret ?? "");
+      expect(await services.oauth.findClient(client.clientId)).toEqual(client);
+    }
+  });
+
+  it("makes a public client with no secret when no method is asked for, or none", async () => {
+    for (const authMethod of [undefined, "none"]) {
+      const registered = await accounts.registerOAuthClient({
+        redirectUris: [REDIRECT],
+        authMethod,
+      });
+      expect(registered).toMatchObject({
+        ok: true,
+        value: { clientSecret: null, client: { authMethod: "none", secretHash: null } },
+      });
+    }
+  });
+
+  it("refuses a method it doesn't support, naming it", async () => {
+    const refused = await accounts.registerOAuthClient({
+      redirectUris: [REDIRECT],
+      authMethod: "private_key_jwt",
+    });
+    expect(refused).toMatchObject({
+      ok: false,
+      error: {
+        error: "invalid_client_metadata",
+        reason: expect.stringContaining("private_key_jwt"),
+      },
+    });
+  });
+
+  it("takes up to 20 redirect URIs, exactly matched, and refuses 21", async () => {
+    const uris = (count: number) =>
+      Array.from({ length: count }, (_, index) => `https://vendor.example/region-${index}/cb`);
+    const twenty = await accounts.registerOAuthClient({ redirectUris: uris(20) });
+    if (!twenty.ok) throw new Error(twenty.error.reason);
+    const tooMany = await accounts.registerOAuthClient({ redirectUris: uris(21) });
+    expect(tooMany).toMatchObject({
+      ok: false,
+      error: { error: "invalid_redirect_uri", reason: "redirect_uris may list at most 20 URIs" },
+    });
+    // No wildcards: a near miss is not registered.
+    const near = await accounts.checkAuthorizationRequest(
+      parameters({
+        clientId: twenty.value.client.clientId,
+        redirectUri: "https://vendor.example/region-0/cb/",
+      }),
+    );
+    expect(near).toMatchObject({ ok: false, error: { kind: "RedirectUriNotRegistered" } });
+  });
+});
+
+describe("the token endpoint and a client secret", () => {
+  it("swaps a code for a confidential client that sends its secret", async () => {
+    const { id, secret } = await registerConfidential();
+    const issued = await exchange(await approveFor(id), { clientId: id, clientSecret: secret });
+    expect(issued.ok).toBe(true);
+  });
+
+  it("refuses a missing or wrong secret with invalid_client, and the code stays usable", async () => {
+    const { id, secret } = await registerConfidential("client_secret_post");
+    const code = await approveFor(id);
+    for (const clientSecret of [null, "pls_wrong"]) {
+      expect(await exchange(code, { clientId: id, clientSecret })).toMatchObject({
+        ok: false,
+        error: { error: "invalid_client" },
+      });
+    }
+    expect((await exchange(code, { clientId: id, clientSecret: secret })).ok).toBe(true);
+  });
+
+  it("refuses a secret sent for a public client, and an unknown client", async () => {
+    expect(await exchange(await approve(), { clientSecret: "pls_made-up" })).toMatchObject({
+      ok: false,
+      error: { error: "invalid_client" },
+    });
+    expect(await exchange("code", { clientId: "plc_nope" })).toMatchObject({
+      ok: false,
+      error: { error: "invalid_client" },
+    });
+  });
+
+  it("gives another client's secret no access to a code", async () => {
+    const first = await registerConfidential();
+    const second = await registerConfidential();
+    const code = await approveFor(first.id);
+    expect(
+      await exchange(code, { clientId: second.id, clientSecret: second.secret }),
+    ).toMatchObject({ ok: false, error: { error: "invalid_grant" } });
+  });
+});
+
+describe("clients made by an admin", () => {
+  it("makes a confidential client with a secret shown once, recording who made it", async () => {
+    const made = await accounts.createManualOAuthClient(admin, {
+      name: "Google",
+      redirectUris: [REDIRECT],
+      confidential: true,
+    });
+    if (!made.ok) throw new Error(made.error.kind);
+    expect(made.value.clientSecret).not.toBeNull();
+    expect(made.value.client).toMatchObject({
+      authMethod: "client_secret_basic",
+      createdBy: admin.userId,
+    });
+  });
+
+  it("is for admins only", async () => {
+    const made = await accounts.createManualOAuthClient(jack, {
+      name: "Google",
+      redirectUris: [REDIRECT],
+      confidential: false,
+    });
+    expect(made).toEqual({ ok: false, error: { kind: "Forbidden" } });
+    expect(await accounts.deleteOAuthClient(jack, { clientId })).toEqual({
+      ok: false,
+      error: { kind: "Forbidden" },
+    });
+  });
+
+  it("deleting a client revokes the tokens it made", async () => {
+    const issued = await exchange(await approve());
+    if (!issued.ok) throw new Error(issued.error.description);
+    expect(await accounts.deleteOAuthClient(admin, { clientId })).toMatchObject({ ok: true });
+    expect(await accounts.actorFromToken(`Bearer ${issued.value.accessToken}`)).toBeNull();
+    expect(await accounts.deleteOAuthClient(admin, { clientId })).toEqual({
+      ok: false,
+      error: { kind: "OAuthClientNotFound" },
+    });
   });
 });

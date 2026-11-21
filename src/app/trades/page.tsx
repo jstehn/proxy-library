@@ -3,6 +3,8 @@ import { type TradeView } from "@/modules/trades";
 import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 function TradeLine(props: {
   trade: TradeView;
@@ -45,12 +47,12 @@ function TradeLine(props: {
 }
 
 export default async function TradesPage() {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
 
   const [trades, shared, sharedWishes] = await Promise.all([
-    capabilities.tradeReads.tradesFor(actor.userId),
-    capabilities.realCollectionReads.shared(),
-    capabilities.wishlistReads.shared(),
+    reads.trades.tradesFor(actor),
+    reads.realCollection.shared(),
+    reads.wishlist.shared(),
   ]);
   // Players who share their real collection or wishlist get a link next to their name.
   const sharingReal = new Set(shared.map((player) => player.userId));
@@ -69,7 +71,7 @@ export default async function TradesPage() {
       {list.length === 0 ? (
         <p className="text-muted text-sm">{empty}</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {list.map((trade) => (
             <TradeLine
               key={trade.id}
@@ -84,19 +86,16 @@ export default async function TradesPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-wrap items-center gap-4">
         <h1 className="flex-1 text-2xl font-semibold">Trades</h1>
-        <Link
-          href="/trades/new"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
+        <Link href="/trades/new" className={buttonClass()}>
           New trade
         </Link>
       </header>
       {section("Waiting for you", forYou, "Nothing to decide.")}
       {section("Waiting for them", forThem, "No open offers.")}
       {section("History", history, "No trades yet.")}
-    </main>
+    </Page>
   );
 }

@@ -339,7 +339,7 @@ That's a lot of surface area for a small playgroup, which is why this design re-
 
 ## Further reading
 
-- [Design doc 10: trades](../docs/design/10-trades.md), especially section 13
+- [Design doc 10: trades](../docs/design/archive/10-trades.md), especially section 13
 - PostgreSQL docs: "Explicit Locking: Deadlocks"
 - [patterns.md](../docs/architecture/patterns.md): state machines (13), unit of work
 - Martin Kleppmann, _Designing Data-Intensive Applications_, chapter 7 (transactions)

@@ -1,152 +1,139 @@
-// The decks module's browser-safe public API (ADR 0016): pure domain code for client components.
-// Server code imports index.ts instead.
+// The decks module's browser-safe API (ADR 0016): exactly what client code outside the module uses
+// of each area's client.ts.
 export {
-  roleTargets,
-  TARGETED_TAGS,
-  type TargetedTag,
-  deckSize,
-  deckStats,
-  isLand,
-  mainType,
-  TYPE_ORDER,
-  type DeckStats,
-  type ManaSource,
-  type StatsLine,
-} from "./domain/stats";
-export { problemsOfLines } from "./domain/deck-reads";
-export { deckProfile } from "./domain/suggest";
-export { deckSignalProfile } from "./domain/signals";
-export {
-  DEFAULT_PROXY_OPTIONS,
-  GAPS_IN_MILLIMETERS,
-  pageList,
-  proxySummary,
-  TOKEN_COPIES,
-  type ProxyLine,
-  type ProxyOptions,
-  type ProxySummary,
-} from "./domain/proxy-sheet";
-export {
-  filterTokenChecklist,
-  sheetCards,
-  summarizeTokenChecklist,
-  tokenDescription,
-  toTokenChecklistItem,
-  type TokenArt,
-  type TokenChecklistItem,
-  type TokenChecklistSummary,
-  type TokenKind,
-  type TokenLine,
-} from "./domain/token-proxies";
-export { proxyPages, cardsToPrint } from "./domain/proxy-sheet";
-export {
-  completeLines,
-  progressFraction,
-  progressLabel,
-  type ProxyProgress,
-  type ProxyStreamEvent,
-} from "./domain/proxy-progress";
-export { copiesToTake } from "./domain/free-copies";
-export { landTarget } from "./domain/mana-base";
-export {
-  rankCuts,
-  type CutContext,
-  type CutLine,
-  type CutReason,
-  type CutWeights,
-  type RankedCut,
-} from "./domain/cuts";
-export {
-  rateCard,
-  type CardRating,
-  type PowerTier,
-  type RatingCandidate,
-  type RatingOptions,
-  type RatingPart,
-  type RatingProfile,
-  type RatingWeights,
-} from "./domain/rate";
-export {
-  suggestSwaps,
-  type SwapCutMeta,
-  type SwapOptions,
-  type SwapReason,
-  type SwapSuggestion,
-} from "./domain/swaps";
-export {
-  type DeckScore,
-  type DeckScoreMetrics,
-  type OptimizedSwap,
-  type OptimizeOptions,
-  type OptimizeResult,
-  type OptimizerCard,
-  type ScoreDeckContext,
-} from "./domain/optimize";
-export {
-  type BudgetReplacement,
-  type BudgetReplacementOptions,
-  type ReplacementCandidate,
-} from "./domain/replacements";
-export { BOARDS, isCounted, type Board } from "./domain/boards";
-export {
-  copyLimitFor,
-  deckProblems,
-  formatRulesSummary,
-  type CardRules,
-  type DeckProblem,
-  type DeckToCheck,
-  type FormatRulesSummary,
-} from "./domain/rules";
-export {
-  EARLY_RAMP_MAX_MV,
-  library,
-  nextHand,
-  openingHandOdds,
-  startHand,
-  type DrawLine,
-  type LandDropOdds,
-  type LibraryCard,
-  type OddsRow,
-  type OpeningHandOdds,
-  type TestHand,
-  type TestHandEvent,
-} from "./domain/draws";
-export { type GoldfishReport, type SampleHand, type SimulateHandsOptions } from "./domain/goldfish";
-export { plural, type Reason } from "./domain/suggest";
-export {
-  BRACKET_NAMES,
-  BRACKETS,
-  bracketLine,
-  bracketWarning,
-  estimateBracket,
+  becomesADeck,
+  type Board,
+  BOARDS,
   type Bracket,
+  BRACKET_NAMES,
   type BracketEstimate,
   type BracketFinding,
-  type BracketLine,
+  bracketLine,
   type BracketRule,
-  type BracketSource,
+  BRACKETS,
+  bracketWarning,
   type BracketWarning,
+  canViewDeck,
+  type CardRules,
+  checkNote,
+  copyLimitFor,
   type DeckCombo,
-} from "./domain/brackets";
-export { headingMoved, MAX_HEADING_LENGTH } from "./domain/headings";
-export { checkNote, MAX_NOTE_LENGTH } from "./domain/notes";
-export { MAX_ROLE_LENGTH, tidyRole } from "./domain/deck";
+  type DeckCount,
+  DeckId,
+  type DeckLine,
+  type DeckPlan,
+  type DeckProblem,
+  deckProblems,
+  deckStats,
+  type DeckView,
+  estimateBracket,
+  EXPORTERS,
+  type ExportLine,
+  exportWithHeadings,
+  type Format,
+  formatRules,
+  FORMATS,
+  type Grouping,
+  GROUPINGS,
+  headingMoved,
+  invalidCommanders,
+  isCounted,
+  isKeyCard,
+  isLand,
+  legalFormatsForCards,
+  listAndFingerprint,
+  mainType,
+  type ManaSource,
+  MAX_HEADING_LENGTH,
+  MAX_HEADINGS,
+  MAX_NOTE_LENGTH,
+  MAX_ROLE_LENGTH,
+  type OtherDeckUse,
+  pairProblem,
+  problemsOfLines,
+  resolveDeckProfileTargets,
+  shortList,
+  summarizeDeckProfile,
+  TARGETED_TAGS,
+  tidyRole,
+  type TooManyDecks,
+  TYPE_ORDER,
+  VISIBILITIES,
+} from "./core/client";
+export { CommentId, MAX_COMMENT_LENGTH } from "./sharing/client";
 export {
   checkSnapshotLabel,
+  copiesToTake,
   MAX_SNAPSHOT_LABEL_LENGTH,
   MAX_SNAPSHOTS_PER_DECK,
-} from "./domain/snapshots";
+  SnapshotId,
+  type SnapshotSummary,
+} from "./changes/client";
 export {
-  type BuildUpgradeRoadmapInput,
-  type UpgradeCandidate,
-  type UpgradeCut,
-  type UpgradeRoadmap,
-  type UpgradeSwap,
-  type UpgradeTierPlan,
-} from "./domain/upgrade-roadmap";
+  type CutReason,
+  deckProfile,
+  type OptimizeResult,
+  plural,
+  rankCuts,
+  rateCard,
+  type Reason,
+  suggestSwaps,
+  type SwapCutMeta,
+  type SwapReason,
+} from "./scoring/client";
 export {
-  EMPTY_DECK_PROFILE,
-  type AvoidCard,
-  type DeckPlan,
-  type KeyCardPin,
-} from "./domain/deck-profile";
+  type BrowseCard,
+  type BudgetReplacementsResult,
+  COMMANDER_SORTS,
+  type CommanderCoverage,
+  type CommanderPlan,
+  type CommanderSort,
+  type DeckDraft,
+  type DraftedSpell,
+  type DraftReason,
+  type LandReason,
+  landTarget,
+  type LandTargetReason,
+  type ManaBasePlan,
+  type ManaBasePlanWithCastability,
+  type PlannedLand,
+  SPELL_SLOTS,
+  type Suggestion,
+  type SuggestionCard,
+  type SuggestionList,
+  type SynergyQuery,
+} from "./building/client";
+export {
+  dealHand,
+  EARLY_RAMP_MAX_MV,
+  type HandState,
+  library,
+  type LibraryCard,
+  nextHand,
+  openingHandOdds,
+} from "./play/client";
+export {
+  cardsToPrint,
+  completeLines,
+  DEFAULT_PROXY_OPTIONS,
+  filterTokenChecklist,
+  GAPS_IN_MILLIMETERS,
+  pageList,
+  progressFraction,
+  progressLabel,
+  type ProxyLine,
+  type ProxyOptions,
+  proxyPages,
+  type ProxyProgress,
+  type ProxyStreamEvent,
+  proxySummary,
+  sheetCards,
+  summarizeTokenChecklist,
+  TOKEN_COPIES,
+  type TokenArt,
+  type TokenChecklistItem,
+  tokenDescription,
+  type TokenKind,
+  type TokenLine,
+  toTokenChecklistItem,
+} from "./proxies/client";

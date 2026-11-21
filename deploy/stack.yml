@@ -1,6 +1,6 @@
 # Proxy Library on the server (docs/deploy.md): the Portainer stack "proxylib-stack". Unlike
 # ../docker-compose.yml, it uses a prebuilt image and has no build step, since Portainer stacks
-# can't build. scripts/deploy.sh builds the image, loads it on the server, and creates or updates
+# can't build. scripts/ops/deploy.sh builds the image, loads it on the server, and creates or updates
 # the stack through Portainer's API. Settings are the stack's environment variables in Portainer.
 
 x-app: &app
@@ -19,8 +19,13 @@ x-app: &app
     REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
     BRAVE_SEARCH_API_KEY: ${BRAVE_SEARCH_API_KEY:-}
     SEARXNG_URL: ${SEARXNG_URL:-}
+    # Sign in with Authentik (docs/deploy.md): all three of the first group, or none.
+    OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+    OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+    OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+    OIDC_PROVIDER_NAME: ${OIDC_PROVIDER_NAME:-}
   labels:
-    # The image is built and loaded by scripts/deploy.sh, not pulled from a registry, so
+    # The image is built and loaded by scripts/ops/deploy.sh, not pulled from a registry, so
     # Watchtower must not try to update it.
     com.centurylinklabs.watchtower.enable: "false"
   volumes:

@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import type { ViewerRelation } from "../domain/friendship";
 
@@ -24,7 +25,9 @@ export type PlayerSearchResult = Readonly<{
   relation: ViewerRelation;
 }>;
 
-export async function listFriends(db: DbExecutor, userId: string): Promise<FriendItem[]> {
+/** The actor's friends (design doc 67, kind P). */
+export async function friends(db: DbExecutor, actor: Actor): Promise<FriendItem[]> {
+  const userId = actor.userId;
   const rows = await db.execute<{
     user_id: string;
     username: string;
@@ -52,10 +55,12 @@ export async function listFriends(db: DbExecutor, userId: string): Promise<Frien
   }));
 }
 
-export async function listFriendRequests(
+/** Friend requests to or from the actor. */
+export async function friendRequests(
   db: DbExecutor,
-  userId: string,
+  actor: Actor,
 ): Promise<{ incoming: FriendRequestItem[]; outgoing: FriendRequestItem[] }> {
+  const userId = actor.userId;
   const [incomingRows, outgoingRows] = await Promise.all([
     db.execute<{
       user_id: string;
@@ -111,7 +116,9 @@ export async function listFriendRequests(
   };
 }
 
-export async function incomingRequestCount(db: DbExecutor, userId: string): Promise<number> {
+/** Requests addressed to the actor. */
+export async function incomingRequestCount(db: DbExecutor, actor: Actor): Promise<number> {
+  const userId = actor.userId;
   const rows = await db.execute<{ count: number }>(sql`
     select count(*)::int as count
       from friendships f
@@ -123,11 +130,13 @@ export async function incomingRequestCount(db: DbExecutor, userId: string): Prom
   return Number(rows.rows[0]?.count ?? 0);
 }
 
+/** Active players matching `query`, with their relation to the actor (kind S). */
 export async function searchPlayers(
   db: DbExecutor,
-  viewerId: string,
+  actor: Actor,
   query: string,
 ): Promise<PlayerSearchResult[]> {
+  const viewerId = actor.userId;
   const trimmed = query.trim();
   const pattern = `%${trimmed}%`;
   const rows = await db.execute<{

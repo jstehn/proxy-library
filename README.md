@@ -2,7 +2,7 @@
 
 A self-hosted web app for a Magic: The Gathering playgroup—combining a virtual sealed/singles economy, collection tracker, deck builder, proxy PDF generator, live booster drafts, and AI deck-building tools. **Everything uses play money and prints proxies for casual play; it is not a real store.**
 
-> **How this is built:** This project is primarily implemented by AI coding assistants. It started as a hands-on way for a Python/SQL developer to learn TypeScript and team software engineering practices, and has since grown into a full-featured playgroup app. I set the requirements and scope, **review and approve every design document** before implementation begins, test against real data with my playgroup, and run the server—while delegating the specific engineering decisions and implementation details.
+Licensed under [0BSD](LICENSE) · [Contributing](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
 ---
 
@@ -22,33 +22,65 @@ A self-hosted web app for a Magic: The Gathering playgroup—combining a virtual
 
 - **Playgroup economy & sealed store** — Weekly play-money allowance tracked in an append-only ledger, sealed product priced at official MSRP, and pack opening with realistic odds from real booster recipes, animations, foils, and synthesized sound.
 - **Collection, singles & trading** — Track owned cards at exact printing × finish granularity (plus a separate tracker for your real physical collection), buy and sell singles at market price, manage a wishlist, and trade cards and money with other players.
-- **Deck builder & analysis** — Build decks from your virtual collection, your real collection, or the entire Magic catalog. Includes a Scryfall-style search language, Commander legality & bracket checks, role tags, reusable card packages, hypergeometric draw odds, a keep-or-mulligan trainer, synergy/budget suggestions, and a whole-deck optimizer.
+- **Deck builder & analysis** — Build decks from your virtual collection, your real collection, or the entire Magic catalog. Includes a Scryfall-style search language, Commander legality & bracket checks, role tags, hypergeometric draw odds, synergy/budget suggestions, and a whole-deck optimizer.
 - **Proxy PDFs** — Generate print-ready proxy sheets (including double-faced cards, tokens, and playtest proxies) with cutting guides.
 - **Live drafts** — Draft together in real time (including Conspiracy drafts) with bot seats and Server-Sent Events.
 - **Social & sharing** — Share decks and scorecards with the playgroup (or via public links), comment on decks, and browse an activity feed of notable pulls and trades. Installable as a PWA on mobile.
-- **LLM & MCP integration** — Built-in MCP server, OpenAPI endpoints, and OAuth 2.1 support so AI assistants can search your collection, audit decks, simulate opening hands, and suggest upgrades—backed by local ONNX text embeddings (`pgvector`), Commander Spellbook combos, and EDHREC data.
+- **LLM & MCP integration** — Built-in MCP server, OpenAPI endpoints, and OAuth 2.1 support so AI assistants can search your collection, audit decks, draw sample hands, and suggest upgrades—backed by local ONNX text embeddings (`pgvector`), Commander Spellbook combos, and EDHREC data.
 
 Card data is synced nightly from [MTGJSON](https://mtgjson.com) and [Scryfall](https://scryfall.com), with official product imagery from Wizards Play Network.
 
 ---
 
-## Workflow & My Role
+## Quick start
 
-Every significant feature follows the process in [docs/roadmap.md](docs/roadmap.md):
+**Development** (Nix and direnv provide Node 22, pnpm and Postgres 17 with pgvector from `flake.nix`):
 
-1. **Design document** ([`docs/design/`](docs/design/)) — Written before implementation, ending with open questions and trade-offs.
-2. **Approval gate** — I review and approve every design document before code is written.
-3. **Implementation & verification** — Domain logic first (pure functions + property tests), then application use cases with in-memory fakes, infrastructure adapters with Postgres integration tests, and UI.
-4. **Documentation** — Cross-cutting choices are recorded as Architecture Decision Records ([`docs/adr/`](docs/adr/README.md), 25 so far), and concepts are captured in companion lessons ([`lessons/`](lessons/README.md), 30 so far).
+```sh
+direnv allow
+pnpm install
+pnpm hooks:install    # optional: a pre-commit hook (Prettier, typecheck, lint)
+pnpm dev:all          # starts a project-local Postgres, migrates, runs the app and the worker
+```
 
-What I handle directly:
+Open http://localhost:3000. The first account you register becomes the admin. The worker starts
+the first catalog sync within a minute (it downloads Scryfall's card data, about 80 MB, and
+MTGJSON's files); watch it under **Admin → Catalog**. Without Nix, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **Product direction & scope** — Deciding what the app should do and what stays out of scope ([roadmap](docs/roadmap.md), [future ideas](docs/future-ideas.md)).
-- **Design approval** — Reviewing every design doc and answering its open product/UX questions.
-- **Real-world testing** — Using the app with my playgroup and feeding back issues (pack collation bugs, Commander edge cases, proxy layout readability).
-- **Hosting & operations** — Running it on a home server with Docker Compose, Portainer, and nightly backups.
+**For a playgroup** (Docker Compose, one image for the app and the worker, next to Postgres):
+
+```sh
+cp .env.example .env  # set AUTH_SECRET, APP_URL and POSTGRES_PASSWORD
+docker compose up -d --build
+```
+
+The full guide is [docs/deploy.md](docs/deploy.md).
 
 ---
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  browser([Browser]) --> app
+  assistant([AI assistant]) -->|MCP · OpenAPI · OAuth 2.1| app
+  subgraph server[Next.js app and worker, one codebase]
+    app[Pages, server actions<br/>and LLM tools]
+    core[Capabilities and reads<br/>src/server/]
+    modules[Feature modules<br/>domain · application · infrastructure · queries<br/>money, cards and collections, decks,<br/>packs, trades, drafts, social]
+    worker[Worker<br/>nightly sync, queued syncs,<br/>draft timers]
+    app --> core --> modules
+    worker --> modules
+  end
+  modules --> db[(PostgreSQL)]
+  worker -->|bulk files| mtgjson[MTGJSON]
+  worker -->|bulk data and prices| scryfall[Scryfall]
+```
+
+The pages, actions and tools never reach into a module's internals: they go through the
+capabilities and reads in `src/server/`, which are wired once per entry point. The app and the
+worker are two entry points into the same modules. Details, the module list and the layer rules
+are in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Architecture & Engineering Practices
 
@@ -82,6 +114,26 @@ The codebase is structured as a **modular monolith** with ports & adapters aroun
 
 ---
 
+## How this was built
+
+This project is primarily implemented by AI coding assistants. It started as a hands-on way for a Python/SQL developer to learn TypeScript and team software engineering practices, and has since grown into a full-featured playgroup app. I set the requirements and scope, **review and approve every design document** before implementation begins, test against real data with my playgroup, and run the server—while delegating the specific engineering decisions and implementation details.
+
+Every significant feature follows the process in [docs/roadmap.md](docs/roadmap.md):
+
+1. **Design document** ([`docs/design/`](docs/design/)) — Written before implementation, ending with open questions and trade-offs.
+2. **Approval gate** — I review and approve every design document before code is written.
+3. **Implementation & verification** — Domain logic first (pure functions + property tests), then application use cases with in-memory fakes, infrastructure adapters with Postgres integration tests, and UI.
+4. **Documentation** — Cross-cutting choices are recorded as Architecture Decision Records ([`docs/adr/`](docs/adr/README.md)), and concepts are captured in companion lessons ([`lessons/`](lessons/README.md)).
+
+What I handle directly:
+
+- **Product direction & scope** — Deciding what the app should do and what stays out of scope ([roadmap](docs/roadmap.md), [future ideas](docs/future-ideas.md)).
+- **Design approval** — Reviewing every design doc and answering its open product/UX questions.
+- **Real-world testing** — Using the app with my playgroup and feeding back issues (pack collation bugs, Commander edge cases, proxy layout readability).
+- **Hosting & operations** — Running it on a home server with Docker Compose, Portainer, and nightly backups.
+
+---
+
 ## Status & Limits
 
 This is a **personal playgroup project, not a commercial product**. It serves an invite-only playgroup on a home server and has not been load-tested or security-audited for the open internet.
@@ -90,58 +142,39 @@ This is a **personal playgroup project, not a commercial product**. It serves an
 
 ## Repository Tour
 
-| Path                                               | What's there                                                                                                                                                                                                                                                                     |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`src/modules/`](src/modules/)                     | Feature modules (`accounts`, `wallet`, `catalog`, `packs`, `inventory`, `collection`, `store`, `decks`, `trades`, `drafts`, `real-collection`, `wishlist`, `social`, `activity`, `reset`), each layered into `domain`, `application`, `infrastructure`, `queries`, and `testing` |
-| [`src/app/`](src/app/)                             | Next.js pages, API routes (including MCP/OAuth), and server actions                                                                                                                                                                                                              |
-| [`src/server/`](src/server/), [`worker/`](worker/) | Composition roots for the web app and background worker                                                                                                                                                                                                                          |
-| [`docs/`](docs/README.md)                          | Architecture docs, design docs, ADRs, roadmap, and deployment guide                                                                                                                                                                                                              |
-| [`lessons/`](lessons/README.md)                    | Companion TypeScript & software design lessons with a [glossary](lessons/GLOSSARY.md)                                                                                                                                                                                            |
-| [`tests/`](tests/)                                 | Integration tests, Playwright E2E tests, and recorded fixtures                                                                                                                                                                                                                   |
+| Path                                               | What's there                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`src/modules/`](src/modules/)                     | Feature modules, each layered into `domain`, `application`, `infrastructure`, `queries`, and `testing` with a public `index.ts` (accounts, wallet, catalog, packs, inventory, collections, store, decks, trades, drafts, wishlist, social, activity, and the research gateways). The list is in [docs/architecture/overview.md](docs/architecture/overview.md) |
+| [`src/app/`](src/app/)                             | Next.js pages, API routes (including MCP/OAuth), and server actions                                                                                                                                                                                                                                                                                            |
+| [`src/server/`](src/server/), [`worker/`](worker/) | Composition roots for the web app and background worker, and the capabilities and reads that pages and tools use                                                                                                                                                                                                                                               |
+| [`docs/`](docs/README.md)                          | Architecture docs, design docs, ADRs, roadmap, and deployment guide                                                                                                                                                                                                                                                                                            |
+| [`lessons/`](lessons/README.md)                    | Companion TypeScript & software design lessons with a [glossary](lessons/GLOSSARY.md)                                                                                                                                                                                                                                                                          |
+| [`scripts/`](scripts/)                             | `dev/` (the `pnpm check` gate, database, ratchets) and `ops/` (deploy, backup)                                                                                                                                                                                                                                                                                 |
+| [`tests/`](tests/)                                 | Integration tests, Playwright E2E tests, and recorded fixtures                                                                                                                                                                                                                                                                                                 |
 
 ---
 
-## Running It
+## Common commands
 
-### For a playgroup (Docker)
-
-See [docs/deploy.md](docs/deploy.md) for the full Docker Compose setup.
-
-### For development (Nix + direnv)
-
-```sh
-direnv allow          # loads Node, pnpm, and Postgres from flake.nix
-pnpm install
-pnpm db:start         # starts a project-local Postgres in .dev/
-pnpm db:migrate
-pnpm worker sync      # loads the card catalog (downloads Scryfall bulk data once)
-pnpm dev              # http://localhost:3000 (first registered user becomes admin)
-```
-
-After initial setup, one command starts everything:
-
-```sh
-pnpm dev:all          # starts Postgres if needed, runs migrations, starts app + worker
-```
-
-### Common commands
-
-| Command                        | Does                                                                  |
-| ------------------------------ | --------------------------------------------------------------------- |
-| `pnpm dev:all`                 | Database + migrations + app + worker in one terminal                  |
-| `pnpm check`                   | Typecheck, lint, cycle check, format check, and unit tests            |
-| `pnpm test:int`                | Integration tests against the `tcg_test` database                     |
-| `pnpm test:e2e`                | Browser tests (Playwright)                                            |
-| `pnpm test:remote`             | Opt-in tests against live MTGJSON/Scryfall endpoints                  |
-| `pnpm worker schedule`         | Nightly catalog sync, queued syncs, and draft timers                  |
-| `pnpm worker check-packs`      | Opens 1,000 packs of every booster recipe and reports rule violations |
-| `pnpm worker check-products`   | Verifies every product for sale has contents                          |
-| `pnpm worker check-commanders` | Verifies every precon's commander is Commander-legal                  |
-| `pnpm worker tag-cards`        | Computes role tags and themes for printings missing them              |
-| `pnpm worker embed-cards`      | Generates local text embeddings for semantic card search              |
+| Command                                     | Does                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pnpm dev:all`                              | Database + migrations + app + worker in one terminal                                       |
+| `pnpm hooks:install`                        | Installs the pre-commit hook (the fast part of `pnpm check`)                               |
+| `pnpm check`                                | The pre-commit gate: typecheck, lint, cycles, format, unit tests, size/clone/knip ratchets |
+| `pnpm test:int`                             | Integration tests against the `tcg_test` database                                          |
+| `pnpm test:e2e`                             | Browser tests (Playwright)                                                                 |
+| `pnpm test:remote`                          | Opt-in tests against live MTGJSON/Scryfall endpoints                                       |
+| `pnpm worker schedule`                      | Nightly catalog sync, queued syncs, and draft timers                                       |
+| `pnpm worker check-packs`                   | Opens 1,000 packs of every booster recipe and reports rule violations                      |
+| `pnpm worker check-products`                | Verifies every product for sale has contents                                               |
+| `pnpm worker check-commanders`              | Verifies every precon's commander is Commander-legal                                       |
+| `pnpm worker sync [prices\|full\|features]` | Runs a catalog sync (or just the card-feature pass) now                                    |
+| `pnpm worker embed-cards`                   | Generates local text embeddings for semantic card search                                   |
 
 ---
 
 ## Legal
+
+The code is licensed under [0BSD](LICENSE). Please read the [code of conduct](CODE_OF_CONDUCT.md) too: it states what I hope the project is used for.
 
 Proxy Library is unofficial Fan Content permitted under the Wizards of the Coast [Fan Content Policy](https://company.wizards.com/en/legal/fancontentpolicy). Not approved or endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. This project is free and has no affiliation with Wizards of the Coast, MTGJSON, or Scryfall. Proxies printed by it are for casual play only, not for sale.

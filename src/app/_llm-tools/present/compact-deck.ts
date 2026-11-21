@@ -3,30 +3,26 @@
 // need. Pages by whole groups so a page never splits a heading unless one heading alone is too
 // big. Pure: no database, no clock.
 
-import { isLand, isCreature } from "@/shared/kernel";
-import type { Board } from "@/modules/decks/client";
+import { hasTypeWord, isLand, isCreature, plainText, type CardFacts } from "@/shared/kernel";
+import type { DeckCount } from "@/modules/decks/client";
 
 /** The facts about one deck line that the compact view shows. */
-export type CompactLineSource = Readonly<{
-  name: string;
-  board: Board;
-  quantity: number;
-  heading: string | null;
-  note: string | null;
-  tags?: readonly string[];
-  /** The card's one-line job in this deck. */
-  role?: string | null;
-  /** Pinned on the line or a keyCard in the deck profile: never suggested as a cut. */
-  pinned?: boolean;
-  manaCost: string | null;
-  typeLine: string;
-  text: string;
-  faceTexts?: readonly string[];
-  printedStats?: string | null;
-  isGameChanger: boolean;
-  isBasicLand: boolean;
-  owned: number;
-}>;
+export type CompactLineSource = DeckCount &
+  Pick<CardFacts, "name" | "manaCost" | "typeLine" | "text"> &
+  Readonly<{
+    heading: string | null;
+    note: string | null;
+    tags?: readonly string[];
+    /** The card's one-line job in this deck. */
+    role?: string | null;
+    /** Pinned on the line or a keyCard in the deck profile: never suggested as a cut. */
+    pinned?: boolean;
+    faceTexts?: readonly string[];
+    printedStats?: string | null;
+    isGameChanger: boolean;
+    isBasicLand: boolean;
+    owned: number;
+  }>;
 
 export type CompactLineOptions = Readonly<{
   /** Append the card's (trimmed) oracle text. */
@@ -38,12 +34,12 @@ export type CompactGroup = Readonly<{ title: string; lines: readonly string[] }>
 
 /** The order card-type groups appear in when a line has no heading. */
 const TYPE_GROUPS = [
-  { title: "Planeswalkers", pattern: /\bPlaneswalker\b/ },
-  { title: "Battles", pattern: /\bBattle\b/ },
-  { title: "Instants", pattern: /\bInstant\b/ },
-  { title: "Sorceries", pattern: /\bSorcery\b/ },
-  { title: "Artifacts", pattern: /\bArtifact\b/ },
-  { title: "Enchantments", pattern: /\bEnchantment\b/ },
+  { title: "Planeswalkers", word: "Planeswalker" },
+  { title: "Battles", word: "Battle" },
+  { title: "Instants", word: "Instant" },
+  { title: "Sorceries", word: "Sorcery" },
+  { title: "Artifacts", word: "Artifact" },
+  { title: "Enchantments", word: "Enchantment" },
 ] as const;
 
 const DISPLAY_ORDER = [
@@ -63,7 +59,7 @@ export function typeGroupOf(typeLine: string): string {
   if (isLand(typeLine)) return "Lands"; // a land on either face (STATUS decision 1)
   const frontFace = typeLine.split("//")[0] ?? typeLine;
   if (isCreature(frontFace)) return "Creatures";
-  const match = TYPE_GROUPS.find((group) => group.pattern.test(frontFace));
+  const match = TYPE_GROUPS.find((group) => hasTypeWord(frontFace, [group.word]));
   return match?.title ?? "Other";
 }
 
@@ -77,27 +73,15 @@ export function shortenOracleText(
   text: string,
   faceTexts?: readonly string[],
 ): string {
-  const fullFaceNames = name.split(" // ").map((face) => face.trim());
-  // Legends' text uses the part before the comma ("When Ojer Kaslem dies"), so that goes too.
-  const shortNames = fullFaceNames.flatMap((face) => {
-    const beforeComma = face.split(",")[0]?.trim() ?? "";
-    return face.includes(",") && beforeComma.length >= 3 ? [beforeComma] : [];
-  });
-  const faceNames = [...fullFaceNames, ...shortNames];
+  const faceNames = name.split(" // ").map((face) => face.trim());
   const faces = faceTexts !== undefined && faceTexts.length > 0 ? faceTexts : [text];
-  const shortened = faces.map((faceText) => {
-    let result = faceText;
-    // Longest names first, so "Ojer Kaslem, Deepest Growth" goes before a shorter face name.
-    for (const faceName of [...faceNames].sort((a, b) => b.length - a.length)) {
-      if (faceName !== "") result = result.split(faceName).join("~");
-    }
-    return result
-      .replace(/\s*\([^()]*\)/g, "")
+  const shortened = faces.map((faceText) =>
+    plainText(faceText, faceNames)
       .split(/\n+/)
       .map((ability) => ability.trim())
       .filter((ability) => ability !== "")
-      .join(" • ");
-  });
+      .join(" • "),
+  );
   return shortened.filter((faceText) => faceText !== "").join(" // ");
 }
 

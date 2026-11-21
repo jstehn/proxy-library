@@ -3,27 +3,29 @@ import { reasonText } from "@/app/decks/labels";
 import { money, moneyOrNull } from "../tool";
 import { compactMoneyFields } from "./money";
 
-// What find_replacements says: cards like one card, or cheaper cards for the dear ones in a deck.
+// What find_replacements says: cards that might stand in for one card, or cheaper cards for the
+// dear ones in a deck. They are ideas to consider, listed in the order the app's heuristics put
+// them, with no score, rank or similarity number: those would make a guess sound like a fact.
+
+/** The most reasons said per card: a short "why" is enough to decide whether to look. */
+const REASONS_SHOWN = 3;
+
+/** A reason in words, without the text-similarity percentage (a score by another name). */
+function whyText(reason: Suggestion["reasons"][number]): string {
+  return reason.kind === "embedSim" ? "Reads like the deck" : reasonText(reason);
+}
 
 function suggestionView(suggestion: Suggestion, includeText: boolean) {
   const card = suggestion.card;
   return {
     name: card.name,
-    oracleId: card.oracleId,
-    printingId: card.printingId,
     manaCost: card.manaCost,
     typeLine: card.typeLine,
     ...(includeText ? { text: card.text } : {}),
     ...(card.isGameChanger ? { isGameChanger: true } : {}),
     owned: card.owned,
     price: moneyOrNull(card.priceCents),
-    rating: suggestion.rating,
-    ratingParts: suggestion.ratingParts.map((part) => ({
-      kind: part.kind,
-      label: part.label,
-      contribution: Math.round(part.contribution * 100) / 100,
-    })),
-    why: suggestion.reasons.map(reasonText),
+    why: suggestion.reasons.slice(0, REASONS_SHOWN).map(whyText),
   };
 }
 
@@ -32,7 +34,7 @@ export function presentSimilarCards(result: SimilarCards, includeText: boolean):
     like: result.like,
     owned: result.owned.map((each) => suggestionView(each, includeText)),
     store: result.store.map((each) => suggestionView(each, includeText)),
-    hiddenOverTarget: result.hiddenOverTarget,
+    ...(result.hiddenOverTarget > 0 ? { hiddenOverTarget: result.hiddenOverTarget } : {}),
     ...(result.avoided.length > 0 ? { leftOutAvoid: result.avoided } : {}),
   });
 }
@@ -43,12 +45,9 @@ export function presentBudgetReplacements(
 ): unknown {
   const pick = (entry: BudgetReplacementsResult["cards"][number]["owned"][number]) => ({
     name: entry.card.name,
-    oracleId: entry.card.oracleId,
     price: moneyOrNull(entry.card.priceCents),
     saved: money(entry.savedCents),
-    similarityPct: entry.similarityPct,
-    rating: entry.rating,
-    matchedRoles: entry.matchedRoles,
+    ...(entry.matchedRoles.length > 0 ? { matchedRoles: entry.matchedRoles } : {}),
     ...(includeText ? { text: entry.card.text } : {}),
   });
   return compactMoneyFields({
@@ -57,7 +56,6 @@ export function presentBudgetReplacements(
     cards: result.cards.map((entry) => ({
       target: {
         name: entry.target.name,
-        oracleId: entry.target.oracleId,
         typeLine: entry.target.typeLine,
         price: money(entry.target.priceCents),
       },

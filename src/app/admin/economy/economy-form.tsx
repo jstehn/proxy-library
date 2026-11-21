@@ -1,9 +1,11 @@
 "use client";
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
-import { updateEconomyAction, type EconomyFormState } from "./actions";
+import { updateEconomyAction } from "./actions";
+import type { FormState } from "@/server/form-action";
+import { Input } from "@/ui/field";
 
-const initialState: EconomyFormState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 export type EconomyFormValues = {
   allowance: string; // e.g. "20.00"
@@ -46,27 +48,29 @@ export function EconomyForm(props: { values: EconomyFormValues; maxPeriodDays: n
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Paid every (days)</span>
-        <input
+        <Input
           name="allowancePeriodDays"
           type="number"
           min={1}
           max={props.maxPeriodDays}
           defaultValue={props.values.allowancePeriodDays}
           required
-          className="w-24 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          controlSize="lg"
+          className="w-24"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">One payday, in your local time</span>
         {isBrowser ? (
-          <input
+          <Input
             type="datetime-local"
             defaultValue={toLocalInputValue(new Date(props.values.anchorIso))}
             // The browser knows your time zone; turn the local time into an exact instant.
             onChange={(event) => setAnchorIso(new Date(event.target.value).toISOString())}
             required
-            className="w-60 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            controlSize="lg"
+            className="w-60"
           />
         ) : (
           <span className="text-muted">Loading…</span>

@@ -1,161 +1,99 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { z } from "zod";
 import { SetCode } from "@/modules/catalog";
 import {
   DraftId,
-  type AddBotError,
-  type AnswerError,
+  describeDraftError,
   type CardRef,
-  type CreateDraftError,
   type DealAnswer,
-  type EndDealsError,
-  type JoinDraftError,
-  type LeaveDraftError,
-  type MakeDraftDeckError,
+  type DraftError,
   type PickChoices,
-  type PickError,
-  type PickForAwayError,
-  type RemoveBotError,
-  type StartDraftError,
 } from "@/modules/drafts";
+import { formRedirect } from "@/server/form-action-instance";
 import { readPage } from "@/server/page-instance";
-import { COLORS, Cents, assertNever } from "@/shared/kernel";
+import { COLORS } from "@/shared/kernel";
+import { revalidateDeckList } from "../decks/paths";
+import { DRAFTS_PATH, draftPath, revalidateDraft } from "./paths";
 
 // Controllers for the draft pages (design doc 17): read the form, call the use case, and show
-// the outcome. No rules live here.
+// the outcome. No rules live here. A form that can't be read goes back to the draft list.
 
-type DraftError =
-  | CreateDraftError
-  | JoinDraftError
-  | LeaveDraftError
-  | StartDraftError
-  | PickError
-  | PickForAwayError
-  | AnswerError
-  | EndDealsError
-  | MakeDraftDeckError
-  | AddBotError
-  | RemoveBotError;
+const FORM_UNREADABLE = { unreadable: DRAFTS_PATH };
 
-function errorMessage(error: DraftError): string {
-  switch (error.kind) {
-    case "DraftNotFound":
-      return "That draft doesn't exist.";
-    case "DraftNotOpen":
-      return "That draft has already started or closed.";
-    case "DraftNotRunning":
-      return "That draft isn't running.";
-    case "DraftNotFinished":
-      return "The draft isn't finished yet.";
-    case "DraftFull":
-      return `That draft is full (${error.maxSeats} players).`;
-    case "AlreadyInADraft":
-      return "You're already in a draft. Finish or leave it first.";
-    case "NotSeated":
-      return "You're not playing in that draft.";
-    case "NotHost":
-      return "Only the host can do that.";
-    case "TooFewPlayers":
-      return `A draft needs at least ${error.minimum} players.`;
-    case "StalePick":
-      return "That pick is out of date: here's your pack now.";
-    case "NotAway":
-      return "That player is still here. Give them a moment.";
-    case "NothingToPick":
-      return "That player has no pack waiting.";
-    case "SeatsInvalid":
-      return `A draft seats ${error.minimum} to ${error.maximum} players.`;
-    case "TimerInvalid":
-      return `The pick timer must be ${error.minimum} to ${error.maximum} seconds, or off.`;
-    case "BoosterNotDraftable":
-      return "That booster can't be drafted.";
-    case "PriceUnavailable":
-      return "The store has no price for that booster, so there's no entry fee to charge.";
-    case "InsufficientFunds":
-      return `You have ${Cents.format(error.balance)}; the entry fee is ${Cents.format(error.required)}.`;
-    case "BotsForAdminsOnly":
-      return "Only an admin hosting the lobby can add bots.";
-    case "BotNotFound":
-      return "That bot has already left.";
-    case "AwaitingChoices":
-      return "First make your choices about the card you drew.";
-    case "ChooseColorsFirst":
-      return "First choose the color you owe.";
-    case "MustDraftAtRandom":
-      return "Your Archdemon of Paliano is face up: you draft at random.";
-    case "AbilityUnavailable":
-      return `You can't do that now: ${error.reason}.`;
-    case "NothingToAnswer":
-      return "There's nothing waiting for your answer.";
-    case "CardNoLongerOwned":
-      return "That card isn't in your collection any more, so it can't change hands.";
-    case "LorePackUnavailable":
-      return `That pack can't be added: ${error.reason}.`;
-    case "TooManyDecks":
-      return `You have ${error.maximum} decks, the most allowed. Delete one first.`;
-    default:
-      return assertNever(error);
-  }
-}
+const DraftIdField = z.coerce
+  .number()
+  .int()
+  .positive()
+  .transform((raw) => DraftId.of(raw));
+const DraftForm = z.object({ draftId: DraftIdField });
 
-function draftIdFrom(formData: FormData): DraftId {
-  const raw = Number(formData.get("draftId"));
-  if (!Number.isSafeInteger(raw) || raw <= 0) redirect("/drafts");
-  return DraftId.of(raw);
-}
-
-function backTo(path: string, error: DraftError): never {
-  redirect(`${path}?error=${encodeURIComponent(errorMessage(error))}`);
-}
-
-function refreshDraftPages(draftId: number) {
-  revalidatePath("/drafts");
-  revalidatePath(`/drafts/${draftId}`);
-  revalidatePath("/", "layout"); // the balance and the header's draft reminder
-}
-
-export async function createDraftAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const [setCode, boosterType] = String(formData.get("booster") ?? "").split("/");
-  const timer = String(formData.get("secondsPerPick") ?? "");
-  if (!setCode || !boosterType) redirect("/drafts?error=Choose+a+set+to+draft.");
-  const result = await capabilities.drafts.createDraft(actor, {
-    setCode: SetCode.of(setCode),
-    boosterType,
-    maxSeats: Number(formData.get("maxSeats")),
-    secondsPerPick: timer === "off" ? null : Number(timer),
+/** "12:3" (pack 12, slot 3) from a form field, or null for "none". */
+const CardField = z
+  .string()
+  .default("")
+  .transform((value): CardRef | null => {
+    const match = /^(\d+):(\d+)$/.exec(value);
+    return match === null ? null : { packNumber: Number(match[1]), slot: Number(match[2]) };
   });
-  if (!result.ok) backTo("/drafts", result.error);
-  refreshDraftPages(result.value);
-  redirect(`/drafts/${result.value}`);
+
+function backTo(path: string, error: DraftError): string {
+  return `${path}?error=${encodeURIComponent(describeDraftError(error))}`;
 }
 
-export async function joinDraftAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.joinDraft(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-  redirect(`/drafts/${draftId}`);
-}
+export const createDraftAction = formRedirect(
+  z.object({
+    booster: z.string().default(""),
+    secondsPerPick: z.string().default(""),
+    maxSeats: z.coerce.number(),
+  }),
+  async ({ actor, capabilities }, { booster, secondsPerPick, maxSeats }) => {
+    const [setCode, boosterType] = booster.split("/");
+    if (!setCode || !boosterType) return `${DRAFTS_PATH}?error=Choose+a+set+to+draft.`;
+    const result = await capabilities.drafts.createDraft(actor, {
+      setCode: SetCode.of(setCode),
+      boosterType,
+      maxSeats,
+      secondsPerPick: secondsPerPick === "off" ? null : Number(secondsPerPick),
+    });
+    if (!result.ok) return backTo(DRAFTS_PATH, result.error);
+    revalidateDraft(result.value);
+    return draftPath(result.value);
+  },
+  FORM_UNREADABLE,
+);
 
-export async function leaveDraftAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.leaveDraft(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-  redirect("/drafts");
-}
+export const joinDraftAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.joinDraft(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return draftPath(draftId);
+  },
+  FORM_UNREADABLE,
+);
 
-export async function startDraftAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.startDraft(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const leaveDraftAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.leaveDraft(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return DRAFTS_PATH;
+  },
+  FORM_UNREADABLE,
+);
+
+export const startDraftAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.startDraft(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
 export type PickActionResult = { error: string | null };
 
@@ -177,9 +115,9 @@ export async function pickAction(input: {
     slot: input.slot,
     choices: input.choices,
   });
-  refreshDraftPages(input.draftId);
+  revalidateDraft(input.draftId);
   if (result.ok || result.error.kind === "StalePick") return { error: null };
-  return { error: errorMessage(result.error) };
+  return { error: describeDraftError(result.error) };
 }
 
 /** The choices about a card drawn at random (Archdemon of Paliano). */
@@ -192,125 +130,127 @@ export async function decideAction(input: {
     draftId: DraftId.of(input.draftId),
     choices: input.choices,
   });
-  refreshDraftPages(input.draftId);
-  return { error: result.ok ? null : errorMessage(result.error) };
+  revalidateDraft(input.draftId);
+  return { error: result.ok ? null : describeDraftError(result.error) };
 }
 
 /** A color the player owes (Paliano, the High City; Regicide). */
-export async function chooseColorAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const color = COLORS.find((each) => each === formData.get("color"));
-  if (color === undefined) redirect(`/drafts/${draftId}`);
-  const result = await capabilities.drafts.chooseColor(actor, { draftId, color });
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
-
-/** "12:3" (pack 12, slot 3) from a form field, or null for "none". */
-function cardFrom(value: FormDataEntryValue | null): CardRef | null {
-  const match = /^(\d+):(\d+)$/.exec(String(value ?? ""));
-  return match === null ? null : { packNumber: Number(match[1]), slot: Number(match[2]) };
-}
+export const chooseColorAction = formRedirect(
+  z.object({ draftId: DraftIdField, color: z.enum(COLORS).optional().catch(undefined) }),
+  async ({ actor, capabilities }, { draftId, color }) => {
+    if (color === undefined) return draftPath(draftId);
+    const result = await capabilities.drafts.chooseColor(actor, { draftId, color });
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
 /** Whispergear Sneak: look at a pack. */
-export async function sneakAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const card = cardFrom(formData.get("card"));
-  if (card === null) redirect(`/drafts/${draftId}`);
-  const result = await capabilities.drafts.peekWithSneak(actor, {
-    draftId,
-    card,
-    packNumber: Number(formData.get("packNumber")),
-  });
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const sneakAction = formRedirect(
+  z.object({ draftId: DraftIdField, card: CardField, packNumber: z.coerce.number() }),
+  async ({ actor, capabilities }, { draftId, card, packNumber }) => {
+    if (card === null) return draftPath(draftId);
+    const result = await capabilities.drafts.peekWithSneak(actor, { draftId, card, packNumber });
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
 /** Illusionary Informant: see the next card a player drafts. */
-export async function informantAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const card = cardFrom(formData.get("card"));
-  if (card === null) redirect(`/drafts/${draftId}`);
-  const result = await capabilities.drafts.watchWithInformant(actor, {
-    draftId,
-    card,
-    targetSeat: Number(formData.get("targetSeat")),
-  });
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const informantAction = formRedirect(
+  z.object({ draftId: DraftIdField, card: CardField, targetSeat: z.coerce.number() }),
+  async ({ actor, capabilities }, { draftId, card, targetSeat }) => {
+    if (card === null) return draftPath(draftId);
+    const result = await capabilities.drafts.watchWithInformant(actor, {
+      draftId,
+      card,
+      targetSeat,
+    });
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
 /** A Deal Broker step: reveal, offer (a card or nothing) or accept (an offer or none). */
-export async function dealAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const step = String(formData.get("step"));
-  const answer: DealAnswer =
-    step === "accept"
-      ? {
-          draftId,
-          step: "accept",
-          offerSeat:
-            formData.get("offerSeat") === "none" ? null : Number(formData.get("offerSeat")),
-        }
-      : {
-          draftId,
-          step: step === "offer" ? "offer" : "reveal",
-          card: cardFrom(formData.get("card")),
-        };
-  const result = await capabilities.drafts.answerDeal(actor, answer);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const dealAction = formRedirect(
+  z.object({
+    draftId: DraftIdField,
+    step: z.string().default(""),
+    offerSeat: z.string().optional(),
+    card: CardField,
+  }),
+  async ({ actor, capabilities }, { draftId, step, offerSeat, card }) => {
+    const answer: DealAnswer =
+      step === "accept"
+        ? { draftId, step: "accept", offerSeat: offerSeat === "none" ? null : Number(offerSeat) }
+        : { draftId, step: step === "offer" ? "offer" : "reveal", card };
+    const result = await capabilities.drafts.answerDeal(actor, answer);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
 /** The host ends the deals (timer off, someone has gone). */
-export async function endDealsAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.endDeals(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const endDealsAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.endDeals(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
-export async function pickForAwayAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.pickForAway(actor, {
-    draftId,
-    seatNumber: Number(formData.get("seatNumber")),
-  });
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const pickForAwayAction = formRedirect(
+  z.object({ draftId: DraftIdField, seatNumber: z.coerce.number() }),
+  async ({ actor, capabilities }, { draftId, seatNumber }) => {
+    const result = await capabilities.drafts.pickForAway(actor, { draftId, seatNumber });
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
-export async function makeDraftDeckAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.makeDraftDeck(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  revalidatePath("/decks");
-  redirect(`/decks/${result.value}`);
-}
+export const makeDraftDeckAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.makeDraftDeck(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDeckList();
+    return `/decks/${result.value}`;
+  },
+  FORM_UNREADABLE,
+);
 
 /** An admin hosting a lobby adds a bot, paying its entry fee (a testing tool). */
-export async function addBotAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.addBot(actor, draftId);
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const addBotAction = formRedirect(
+  DraftForm,
+  async ({ actor, capabilities }, { draftId }) => {
+    const result = await capabilities.drafts.addBot(actor, draftId);
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);
 
-export async function removeBotAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const draftId = draftIdFrom(formData);
-  const result = await capabilities.drafts.removeBot(actor, {
-    draftId,
-    botNumber: Number(formData.get("botNumber")),
-  });
-  if (!result.ok) backTo(`/drafts/${draftId}`, result.error);
-  refreshDraftPages(draftId);
-}
+export const removeBotAction = formRedirect(
+  z.object({ draftId: DraftIdField, botNumber: z.coerce.number() }),
+  async ({ actor, capabilities }, { draftId, botNumber }) => {
+    const result = await capabilities.drafts.removeBot(actor, { draftId, botNumber });
+    if (!result.ok) return backTo(draftPath(draftId), result.error);
+    revalidateDraft(draftId);
+    return undefined;
+  },
+  FORM_UNREADABLE,
+);

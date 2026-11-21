@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 
 // The activity feed (design doc 11, section 2): newest first, with players' display names.
@@ -88,21 +89,25 @@ export type ActivityScope = "all" | "friends";
  * while the deck exists and is shared: a deleted deck, a reset player's deck, or one made private
  * again drops out, so the feed never links to a deck you can't open or names a private one
  * (design doc 21, rule 9). Checked when reading, so the events themselves are never changed.
+ * The "friends" scope is the viewer's friends and the viewer: the read takes the `Actor`, never an
+ * id from the caller (design doc 67, kind S).
  */
-export async function activityFeed(
+export async function feed(
   db: DbExecutor,
-  limit = 50,
-  filter?: { actorId: string; scope: ActivityScope },
+  actor: Actor,
+  options: Readonly<{ limit?: number; scope?: ActivityScope }> = {},
 ): Promise<FeedItem[]> {
+  const { limit = 50, scope = "all" } = options;
+  const viewerId = actor.userId;
   const scopeFilter =
-    filter?.scope === "friends"
+    scope === "friends"
       ? sql`and (
-          e.actor_id = ${filter.actorId}
+          e.actor_id = ${viewerId}
           or exists (
             select 1 from friendships f
              where f.status = 'accepted'
-               and ((f.requester_id = ${filter.actorId} and f.addressee_id = e.actor_id)
-                 or (f.addressee_id = ${filter.actorId} and f.requester_id = e.actor_id))
+               and ((f.requester_id = ${viewerId} and f.addressee_id = e.actor_id)
+                 or (f.addressee_id = ${viewerId} and f.requester_id = e.actor_id))
           )
         )`
       : sql``;

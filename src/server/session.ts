@@ -1,8 +1,13 @@
 // Helpers every page and server action uses to find out who is signed in.
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import type { Actor } from "@/modules/accounts";
+import type { Actor, AdminActor } from "@/modules/accounts";
 import { getContainer } from "./container";
+
+/** What the sign-in button calls the outside provider (Authentik), or null when none is set up. */
+export function externalSignInName(): string | null {
+  return getContainer().config.oidc?.providerName ?? null;
+}
 
 /** The signed-in player, or null. */
 export async function getCurrentActor(): Promise<Actor | null> {
@@ -23,8 +28,8 @@ export async function requireActor(options: { allowPasswordChangePending?: boole
 }
 
 /** The signed-in admin. Anyone else sees "not found", which also hides that the page exists. */
-export async function requireAdminActor(): Promise<Actor> {
-  const actor = await requireActor();
-  if (!actor.isAdmin) notFound();
-  return actor;
+export async function requireAdminActor(): Promise<AdminActor> {
+  const admin = getContainer().accounts.asAdmin(await requireActor());
+  if (admin === null) notFound();
+  return admin;
 }

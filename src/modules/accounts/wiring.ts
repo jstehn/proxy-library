@@ -1,55 +1,62 @@
-import { collectionPage } from "@/modules/collection";
-import { decksFor } from "@/modules/decks";
-import { currentEconomySettings, nextPayday } from "@/modules/wallet";
-import { wishlistAnswers } from "@/modules/wishlist";
-import { withDb, type DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
-import { listAccessTokens } from "./queries/access-tokens";
-import { hasAnyPlayers, listInvites, listPlayers } from "./queries/admin";
-import { makeGetAccountOverview } from "./application/get-account-overview";
+import { pick, type Cents } from "@/shared/kernel";
+import { pickForAdmin, type Actor } from "./domain/player";
+import type { Accounts } from "./application/make-accounts";
+import {
+  makeGetAccountOverview,
+  type GetAccountOverviewDependencies,
+} from "./application/get-account-overview";
 
-// The accounts module's capabilities (ADR 0026): the account overview reads the balance, the
-// collection, the decks and the wishlist through those modules' public APIs.
+// The accounts module's capabilities (ADR 0026). The account overview needs readers from other
+// modules; the composition root (`src/server/account-overview.ts`) passes them in, so accounts
+// imports none of them.
+
+/** The overview's readers that belong to other modules (all but the balance). */
+export type AccountOverviewReaders = Omit<GetAccountOverviewDependencies, "refreshBalance">;
 
 type AccountWiringDependencies = Readonly<{
-  db: DbExecutor;
-  clock: Clock;
-  wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  accounts: Accounts;
+  readers: AccountOverviewReaders;
+  wallet: Readonly<{ refreshWallet(actor: Actor): Promise<Cents> }>;
 }>;
 
 export function wireAccountCapabilities(dependencies: AccountWiringDependencies) {
-  const { db, clock, wallet } = dependencies;
+  const { accounts, readers, wallet } = dependencies;
   return {
-    accountReads: {
-      hasAnyPlayers: withDb(db, hasAnyPlayers),
-      listAccessTokens: withDb(db, listAccessTokens),
-      listInvites: withDb(db, listInvites),
-      listPlayers: withDb(db, listPlayers),
+    // `signIn`, `registerPlayer` and `signOut` are for visitors, so they take no actor.
+    accounts: {
+      ...pick(
+        accounts,
+        "signIn",
+        "signOut",
+        "registerPlayer",
+        "startExternalSignIn",
+        "handleExternalCallback",
+        "startExternalLink",
+        "unlinkExternal",
+        "actorFromToken",
+        "changeOwnPassword",
+        "createAccessToken",
+        "revokeAccessToken",
+        "checkAuthorizationRequest",
+        "approveAuthorization",
+        "denyAuthorization",
+      ),
+      ...pickForAdmin(
+        accounts,
+        "createInvite",
+        "revokeInvite",
+        "setAdmin",
+        "setDisabled",
+        "setSelfFunding",
+        "resetPassword",
+        "setPlayerEmail",
+        "createManualOAuthClient",
+        "deleteOAuthClient",
+      ),
     },
     getAccountOverview: makeGetAccountOverview({
-      refreshBalance: (userId) => wallet.refreshWallet(userId),
-      allowance: async () => {
-        const settings = await currentEconomySettings(db);
-        if (settings.allowance <= 0) return null;
-        return {
-          amountCents: settings.allowance,
-          everyDays: settings.allowancePeriodDays,
-          next: nextPayday(
-            { anchor: settings.allowanceAnchor, periodDays: settings.allowancePeriodDays },
-            clock.now(),
-          ),
-        };
-      },
-      collectionTotals: async (userId) => {
-        const page = await collectionPage(db, userId, { sections: "none", sort: "name", page: 1 });
-        return {
-          differentCards: page.totals.different,
-          copies: page.totals.copies,
-          valueCents: page.totals.valueCents,
-        };
-      },
-      deckCount: async (userId) => (await decksFor(db, userId)).length,
-      wishCount: async (userId) => (await wishlistAnswers(db, userId)).wishes.length,
+      refreshBalance: (actor) => wallet.refreshWallet(actor),
+      ...readers,
     }),
   };
 }

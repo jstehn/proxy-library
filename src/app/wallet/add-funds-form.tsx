@@ -1,9 +1,10 @@
 "use client";
 import { useActionState } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
-import { addFundsAction, type AddFundsState } from "./actions";
+import type { FormState } from "@/server/form-action";
+import { addFundsAction } from "./actions";
 
-const initialState: AddFundsState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 export function AddFundsForm(props: { limitText: string }) {
   const [state, formAction] = useActionState(addFundsAction, initialState);

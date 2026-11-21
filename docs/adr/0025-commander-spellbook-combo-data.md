@@ -2,7 +2,7 @@
 
 - **Date:** 2026-11-13
 - **Status:** Accepted
-- **Related:** [Design 31 (Commander brackets)](../design/31-commander-brackets.md), [Design 52 (Two-card combos in the bracket estimate)](../design/52-two-card-combos-in-bracket-estimate.md), [ADR 0007 (External data behind an ACL)](0007-external-data-behind-acl.md)
+- **Related:** [Design 31 (Commander brackets)](../design/archive/31-commander-brackets.md), [Design 52 (Two-card combos in the bracket estimate)](../design/archive/52-two-card-combos-in-bracket-estimate.md), [ADR 0007 (External data behind an ACL)](0007-external-data-behind-acl.md)
 
 ## Context
 

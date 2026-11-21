@@ -62,7 +62,7 @@ problems the fixtures couldn't (design doc 04, section 15).
 
 ### Integration test database
 
-- `scripts/db.sh` also creates `tcg_test` on the same socket.
+- `scripts/dev/db.sh` also creates `tcg_test` on the same socket.
 - Vitest global setup runs migrations on `tcg_test` once per run.
 - Integration tests **empty the tables they use** (`truncate … cascade`) in `beforeEach`, and set
   any shared settings they depend on (such as `economy_settings`) themselves. Never assume another
@@ -70,15 +70,19 @@ problems the fixtures couldn't (design doc 04, section 15).
 
 ## Layout
 
+**A test lives with what it covers** (owner decision, 2026-11-19). A test of one module, unit or
+integration, sits in that module beside the code. `tests/` holds only what belongs to no single
+module.
+
 ```
-src/modules/wallet/domain/allowance.test.ts        next to the code it tests
+src/modules/wallet/domain/allowance.test.ts                  unit, next to the code it tests
 src/modules/wallet/application/wallet-service.test.ts
-src/modules/wallet/infrastructure/drizzle-ledger-repo.test.ts
-src/modules/wallet/testing/ledger-repo.contract.ts  shared contract suite
-tests/integration/*.int.test.ts                     journeys across modules (e.g. buy → open),
-                                                    wired like a small composition root
-tests/e2e/*.spec.ts                                 Playwright
-tests/fixtures/                                     recorded external payloads
+src/modules/wallet/infrastructure/drizzle-ledger.int.test.ts integration, one module: in the module
+src/modules/wallet/testing/ledger-repo.contract.ts           shared contract suite
+tests/integration/*.int.test.ts                              journeys across modules (buy → open),
+                                                             wired like a small composition root
+tests/e2e/*.spec.ts                                          Playwright
+tests/fixtures/  tests/setup/                                recorded payloads; test setup
 ```
 
 ## Commands

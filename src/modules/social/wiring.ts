@@ -1,26 +1,18 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import {
-  incomingRequestCount,
-  listFriendRequests,
-  listFriends,
-  searchPlayers,
-} from "./queries/friends";
-import { getPlayerProfile, getProfileForEdit } from "./queries/profile";
+import { pick } from "@/shared/kernel";
+import type { Social } from "./application/make-social";
 
-// The social module's capabilities (ADR 0026): what its pages read, each a query with the database
-// filled in. They forward to the query functions until those merge into real capabilities
-// (docs/refactor/removal-list.md).
+// The social module's capabilities (ADR 0026): only what callers use.
 
-export function wireSocialCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
+export function wireSocialCapabilities({ social }: Readonly<{ social: Social }>) {
   return {
-    socialReads: {
-      playerProfile: withDb(db, getPlayerProfile),
-      profileForEdit: withDb(db, getProfileForEdit),
-      incomingRequestCount: withDb(db, incomingRequestCount),
-      friendRequests: withDb(db, listFriendRequests),
-      friends: withDb(db, listFriends),
-      searchPlayers: withDb(db, searchPlayers),
-    },
+    social: pick(
+      social,
+      "updateProfile",
+      "sendFriendRequest",
+      "acceptFriendRequest",
+      "declineFriendRequest",
+      "cancelFriendRequest",
+      "unfriend",
+    ),
   };
 }

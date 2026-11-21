@@ -5,6 +5,7 @@
 - **Superseded in part** (date, package): which section → where it lives now. Added later, one line per change; leave the rest of the doc as it was.
 - **Related ADRs:** 000X, 000Y
 - **Lesson:** yes (topics) | no
+- **Module page:** the `docs/modules/<responsibility>.md` page this feature changes; update it when the feature is built (a rule that holds belongs there, not only here)
 
 For big features only; a small feature gets a short plan in its tududi task (ADR 0023). Delete
 any section below that doesn't apply instead of writing "none".

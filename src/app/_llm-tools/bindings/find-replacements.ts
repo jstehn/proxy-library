@@ -16,7 +16,7 @@ export const findReplacementsBinding = defineBinding({
   name: "find_replacements",
   title: "Find similar or budget replacement cards",
   description:
-    "Find similar cards for a given `card` (optionally scoped to `deckId` and `maxPriceCents`), or find budget replacements for expensive cards in `deckId`.",
+    "Ideas to consider, not recommendations: cards that might stand in for `card` (give `deckId`; optionally `maxPriceCents`), or cheaper cards for the dear ones in `deckId`. The app finds them with rough text and deck-profile heuristics and lists them with no scores; some are poor fits. Read each card's text and check an outside source (edhrec_lookup, reddit_research) before suggesting one.",
   scope: "read",
   readOnly: true,
   input: z.object({

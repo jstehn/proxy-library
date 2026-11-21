@@ -1,10 +1,15 @@
 import { desc, eq, sql } from "drizzle-orm";
+import type { Actor, AdminActor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, type UserId } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
 import { authUsers, players } from "../../accounts/infrastructure/schema";
 import type { EconomySettings } from "../domain/economy";
 import type { LedgerKind } from "../domain/ledger";
-import { economySettings, ledgerEntries, walletAccounts } from "../infrastructure/schema";
+import {
+  economySettings as economySettingsTable,
+  ledgerEntries,
+  walletAccounts,
+} from "../infrastructure/schema";
 
 // Read models (ADR 0006): one query each, SQL aggregates, plain objects out.
 
@@ -36,7 +41,9 @@ export type WalletSummary = Readonly<{
   totalsSince: string | null;
 }>;
 
-export async function walletSummary(db: DbExecutor, userId: UserId): Promise<WalletSummary> {
+/** The actor's own totals (design doc 67, kind P). */
+export async function summary(db: DbExecutor, actor: Actor): Promise<WalletSummary> {
+  const userId = actor.userId;
   const [row] = await db
     .select({
       balance: sql`coalesce(sum(${ledgerEntries.amountCents}), 0)`.mapWith(Number),
@@ -76,11 +83,13 @@ export type WalletHistoryItem = Readonly<{
   effectiveAt: string; // ISO date, so it can be passed to client components
 }>;
 
-export async function walletHistory(
+/** The actor's own ledger, newest first. */
+export async function history(
   db: DbExecutor,
-  userId: UserId,
+  actor: Actor,
   limit = 100,
 ): Promise<WalletHistoryItem[]> {
+  const userId = actor.userId;
   const rows = await db
     .select({
       id: ledgerEntries.id,
@@ -115,8 +124,9 @@ export type PlayerMoney = Readonly<{
   hasWallet: boolean;
 }>;
 
-/** Money totals for every player, for the admin Players page. */
-export async function playerMoney(db: DbExecutor): Promise<PlayerMoney[]> {
+/** Money totals for every player, for the admin Players page. Admin only: the type is the rule. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the AdminActor parameter is the access rule
+export async function playerMoney(db: DbExecutor, admin: AdminActor): Promise<PlayerMoney[]> {
   const rows = await db
     .select({
       userId: players.userId,
@@ -141,8 +151,9 @@ export async function playerMoney(db: DbExecutor): Promise<PlayerMoney[]> {
   }));
 }
 
-export async function currentEconomySettings(db: DbExecutor): Promise<EconomySettings> {
-  const [row] = await db.select().from(economySettings).where(eq(economySettings.id, 1));
+/** The allowance and starting-grant rules: every signed-in player reads the same ones. */
+export async function economySettings(db: DbExecutor): Promise<EconomySettings> {
+  const [row] = await db.select().from(economySettingsTable).where(eq(economySettingsTable.id, 1));
   if (row === undefined) throw new Error("economy settings are missing: run the migrations");
   return {
     allowance: Cents.of(row.allowanceCents),

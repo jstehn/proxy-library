@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UserId } from "@/shared/kernel";
+import { testActor } from "../testing/actors";
 import { makeGetAccountOverview } from "./get-account-overview";
 
 const readers = {
@@ -13,7 +13,7 @@ const readers = {
 describe("getAccountOverview", () => {
   it("gathers the balance and totals", async () => {
     const getAccountOverview = makeGetAccountOverview(readers);
-    expect(await getAccountOverview({ userId: UserId.of("1") })).toEqual({
+    expect(await getAccountOverview(testActor())).toEqual({
       ok: true,
       value: {
         balanceCents: 5000,
@@ -32,7 +32,7 @@ describe("getAccountOverview", () => {
       ...readers,
       allowance: async () => allowance,
     });
-    const result = await getAccountOverview({ userId: UserId.of("1") });
+    const result = await getAccountOverview(testActor());
     expect(result.ok && result.value.allowance).toEqual(allowance);
   });
 });

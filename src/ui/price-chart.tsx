@@ -1,6 +1,7 @@
 // A small price-history chart, drawn as SVG on the server (design doc 07, section 10): one line
 // per finish, and markers for the player's own buys (▲) and sells (▼). No chart library.
 import { Cents } from "@/shared/kernel";
+import { EmptyState } from "@/ui/empty-state";
 
 export type ChartSeries = Readonly<{
   label: string;
@@ -31,7 +32,7 @@ export function PriceChart(props: {
     ...markers.map((marker) => ({ day: marker.day, cents: marker.cents })),
   ];
   if (allPoints.length === 0) {
-    return <p className="text-muted text-sm">No price history yet.</p>;
+    return <EmptyState>No price history yet.</EmptyState>;
   }
 
   const days = allPoints.map((point) => dayNumber(point.day));
@@ -50,7 +51,7 @@ export function PriceChart(props: {
     <figure className="flex flex-col gap-2">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full max-w-2xl text-zinc-400"
+        className="text-muted w-full max-w-2xl"
         role="img"
         aria-label="Price history"
       >
@@ -129,7 +130,7 @@ export function PriceChart(props: {
           );
         })}
       </svg>
-      <figcaption className="flex flex-wrap gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+      <figcaption className="text-muted flex flex-wrap gap-4 text-xs">
         {props.series.map((series) => (
           <span key={series.label} className="flex items-center gap-1">
             <span className="inline-block h-0.5 w-4" style={{ background: series.color }} />

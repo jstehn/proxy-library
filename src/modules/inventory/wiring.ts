@@ -1,17 +1,8 @@
-import { withDb, type DbExecutor } from "@/shared/db";
-import { openingView, recentOpenings, unopenedItems } from "./queries/inventory";
+import { pick } from "@/shared/kernel";
+import type { Inventory } from "./application/make-inventory";
 
-// The inventory module's capabilities (ADR 0026): what its pages read, each a query with the database
-// filled in. They forward to the query functions until those merge into real capabilities
-// (docs/refactor/removal-list.md).
+// The inventory module's capabilities (ADR 0026): only what callers use.
 
-export function wireInventoryCapabilities(dependencies: Readonly<{ db: DbExecutor }>) {
-  const { db } = dependencies;
-  return {
-    inventoryReads: {
-      recentOpenings: withDb(db, recentOpenings),
-      unopenedItems: withDb(db, unopenedItems),
-      openingView: withDb(db, openingView),
-    },
-  };
+export function wireInventoryCapabilities({ inventory }: Readonly<{ inventory: Inventory }>) {
+  return { inventory: pick(inventory, "openItem", "openAll") };
 }

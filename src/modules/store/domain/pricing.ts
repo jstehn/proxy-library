@@ -22,18 +22,6 @@ export function kindPriceApplies(productName: string): boolean {
 }
 
 /**
- * A product's list price (ADR 0014, amended by ADR 0015): its own override, else Wizards'
- * official MSRP from WPN, else its kind's price. None of them means not for sale.
- */
-export function msrpFor(prices: {
-  override: Cents | null;
-  officialMsrp: Cents | null;
-  kindPrice: Cents | null;
-}): Cents | null {
-  return prices.override ?? prices.officialMsrp ?? prices.kindPrice;
-}
-
-/**
  * The lowest price a product may sell at (ADR 0021): what its contents sell back for on
  * average, rounded up to the cent, so buying and selling everything back never pays.
  */

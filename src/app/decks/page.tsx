@@ -5,14 +5,19 @@ import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { createDeckAction } from "./actions";
 import { FORMAT_LABELS } from "./labels";
+import { Button } from "@/ui/button";
+import { Input, Select } from "@/ui/field";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Badge } from "@/ui/badge";
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const SHARED_BADGE =
+  "rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-200";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
-  const { actor, capabilities } = await readPage();
+  const { actor, reads } = await readPage();
   const searchParams = await props.searchParams;
-  const allDecks = await capabilities.deckReads.decksFor(actor.userId);
+  const allDecks = await reads.decks.decksFor(actor);
   // ?show=drafts lists only the decks finished drafts made (design doc 17).
   const onlyDrafts = searchParams.show === "drafts";
   const decks = onlyDrafts ? allDecks.filter((deck) => deck.origin !== null) : allDecks;
@@ -20,10 +25,10 @@ export default async function DecksPage(props: PageProps<"/decks">) {
   const error = searchParams.error;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Decks</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Build from the cards you own, then print proxies to play with. A deck can use every copy
           you own, even if another deck uses them too.
         </p>
@@ -42,27 +47,22 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
 
       <form action={createDeckAction} className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           name="name"
           placeholder="New deck name"
           aria-label="Deck name"
           required
           maxLength={60}
-          className={`${field} w-64`}
+          className="w-64"
         />
-        <select name="format" aria-label="Format" defaultValue="commander" className={field}>
+        <Select name="format" aria-label="Format" defaultValue="commander">
           {FORMATS.map((format) => (
             <option key={format} value={format}>
               {FORMAT_LABELS[format]}
             </option>
           ))}
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Create deck
-        </button>
+        </Select>
+        <Button type="submit">Create deck</Button>
       </form>
 
       {draftCount > 0 && (
@@ -85,9 +85,9 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       )}
 
       {decks.length === 0 ? (
-        <p className="text-muted text-sm">No decks yet.</p>
+        <EmptyState>No decks yet.</EmptyState>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {decks.map((deck) => (
             <li key={deck.id} className="flex flex-wrap items-center gap-3 py-3">
               <Link href={`/decks/${deck.id}`} className="font-medium underline">
@@ -96,39 +96,31 @@ export default async function DecksPage(props: PageProps<"/decks">) {
               {deck.origin?.kind === "draft" && (
                 <Link
                   href={`/drafts/${deck.origin.draftId}`}
-                  className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  className={SHARED_BADGE}
                   title="Made by a draft: open the draft"
                 >
                   Draft
                 </Link>
               )}
               {deck.visibility === "shared" && (
-                <span
-                  className="rounded bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-950 dark:text-sky-200"
-                  title="Every player can see this deck"
-                >
+                <Badge title="Every player can see this deck" tone="sky">
                   Shared
-                </span>
+                </Badge>
               )}
               <span className="text-muted text-sm">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards
               </span>
               {deck.usesRealCards && (
-                <span
-                  className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-                  title="Cards you own for real count as owned in this deck"
-                >
+                <Badge title="Cards you own for real count as owned in this deck" tone="amber">
                   real cards
-                </span>
+                </Badge>
               )}
               {deck.short > 0 ? (
                 <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200">
                   short {deck.short}
                 </span>
               ) : (
-                <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
-                  all owned
-                </span>
+                <Badge tone="green">all owned</Badge>
               )}
               <span className="flex-1" />
               <span className="text-muted text-xs">
@@ -138,6 +130,6 @@ export default async function DecksPage(props: PageProps<"/decks">) {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

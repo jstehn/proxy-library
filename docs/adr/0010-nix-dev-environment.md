@@ -12,7 +12,7 @@ pnpm, postgres) must be reproducible, and the project must not depend on system 
 
 - `flake.nix` dev shell provides node 22, pnpm, postgres 17 and jq. `flake.lock` pins nixpkgs.
 - `.envrc` (`use flake`) sets `DATABASE_URL`, `PG*` and `IMAGE_CACHE_DIR`.
-- Postgres runs project-local and **socket-only** in `.dev/` via `scripts/db.sh`.
+- Postgres runs project-local and **socket-only** in `.dev/` via `scripts/dev/db.sh`.
 - Application config is read exclusively from env vars, so Docker (Phase 11) needs no code
   changes.
 

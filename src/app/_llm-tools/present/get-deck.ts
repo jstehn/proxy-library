@@ -46,12 +46,14 @@ export function presentGetDeck(answer: GetDeckAnswer, request: PresentInput): un
   const result = compactMoneyFields(payload) as Record<string, unknown>;
 
   if (answer.facts !== undefined) {
-    const { score, ...facts } = answer.facts.report;
+    // The audit's whole-deck score is for the builder's screens; the tool shows the facts only.
+    const facts = Object.fromEntries(
+      Object.entries(answer.facts.report).filter(([name]) => name !== "score"),
+    );
     result.facts = compactMoneyFields({
       ...facts,
       roleCards: answer.facts.roleCards,
       ...(answer.facts.bracketWithMaybe ? { bracketWithMaybe: answer.facts.bracketWithMaybe } : {}),
-      heuristicScore: score,
     });
   }
   if (answer.signals !== undefined) result.signals = answer.signals;

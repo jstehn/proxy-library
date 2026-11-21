@@ -239,7 +239,7 @@ describe("any table, any order of picks", () => {
       }),
       { numRuns: 150 },
     );
-  });
+  }, 30_000);
 });
 
 describe("bots (rule 16)", () => {

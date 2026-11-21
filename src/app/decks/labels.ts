@@ -14,8 +14,13 @@ import type {
   SwapReason,
 } from "@/modules/decks";
 import { BRACKET_NAMES, plural } from "@/modules/decks/client";
-import { THEME_LABELS, type BracketFlag, type Tag } from "@/shared/card-search";
-import { assertNever } from "@/shared/kernel";
+import {
+  assertNever,
+  type BracketFlag,
+  curveSlotLabel,
+  type Tag,
+  THEME_LABELS,
+} from "@/shared/kernel";
 
 export const FORMAT_LABELS: Record<Format, string> = {
   casual: "Casual (no rules)",
@@ -284,7 +289,7 @@ export function planText(plan: CommanderPlan): string {
 /** Why a spell is in a draft, in words (design doc 37). */
 export function draftReasonText(reason: DraftReason): string {
   if (reason.kind === "curve") {
-    return reason.bucket === "5+" ? "5+ mana curve slot" : `${reason.bucket} mana curve slot`;
+    return `${curveSlotLabel(reason.slot)} mana curve slot`;
   }
   return reasonText(reason);
 }

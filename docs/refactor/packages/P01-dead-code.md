@@ -24,7 +24,7 @@ Remove code nothing can reach, so later packages don't move or test it.
 ## Done when
 
 - None of the 27 names appear in `src/`.
-- The clone baseline is updated (`tsx scripts/clones.ts --update`) and the allowlist sizes shrink
+- The clone baseline is updated (`tsx scripts/dev/clones.ts --update`) and the allowlist sizes shrink
   where files got shorter.
 
 ## Re-check the numbers
@@ -41,7 +41,7 @@ Done on `refactor/P01-dead-code`.
   used (the domain and query code they called stays where something else uses it).
 - Step 2: `knip` is a dev dependency (`pnpm knip`, config in `knip.json`). Its unused files were
   false positives (`public/sw.js` is registered by string, `mana-font` is read by path,
-  `scripts/eval-ratings.ts` is a tool you run by hand), so they're in the config. I ran
+  `scripts/dev/eval-ratings.ts` is a tool you run by hand), so they're in the config. I ran
   `knip --fix --fix-type exports` (357 unused exports lose the `export` keyword), then deleted what
   that left unused. Unused exported **types** (729) are left alone: exporting a type does no harm.
 - Ten exports remain that knip flags, because a type uses them through `typeof` (the lint rule

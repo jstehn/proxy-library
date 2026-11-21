@@ -23,7 +23,7 @@ const MAIN_LINKS = [
 /** The bar across the top of every page: who you are, where you can go, and sign out. */
 export async function SiteHeader() {
   const { actor, capabilities } = await readPage({ allowVisitors: true });
-  const summary = actor === null ? null : await capabilities.headerSummary(actor.userId);
+  const summary = actor === null ? null : await capabilities.site.headerSummary(actor);
   const balance = summary?.balance ?? null;
   const waitingTrades = summary?.waitingTrades ?? 0;
   const wishesOnTarget = summary?.wishesOnTarget ?? 0;
@@ -95,7 +95,7 @@ export async function SiteHeader() {
         ];
 
   return (
-    <header className="border-b border-zinc-200 dark:border-zinc-800">
+    <header className="border-border-subtle border-b">
       <nav
         aria-label="Primary"
         className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"

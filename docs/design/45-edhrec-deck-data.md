@@ -2,6 +2,7 @@
 
 - **Phase:** 45 (backlog task #86)
 - **Status:** **Approved** (2026-11-12)
+- **Superseded in part** (2026-11-20, P22): the sync cadence in section 11 is 30 days and 200 commanders a night, not 14 days and 50 (owner: the code, 2026-11-21); see docs/modules/catalog.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0007 (External data behind an ACL), 0019 (Precomputed/synced card features)
 - **Lesson:** no
 

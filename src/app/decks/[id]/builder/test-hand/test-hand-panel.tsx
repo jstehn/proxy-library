@@ -1,0 +1,255 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { NamePreview } from "@/app/_components/card-preview";
+import type { PrintingCard } from "@/modules/catalog";
+import type { DeckLine, Format } from "@/modules/decks";
+import {
+  EARLY_RAMP_MAX_MV,
+  library,
+  nextHand,
+  formatRules,
+  openingHandOdds,
+  dealHand,
+  type LibraryCard,
+  type HandState,
+} from "@/modules/decks/client";
+import { seededRng } from "@/shared/kernel";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+import { Eyebrow } from "@/ui/eyebrow";
+
+// The test hand (design doc 19, section 5.2): deal an opening hand from the deck, mulligan, draw,
+// and see the exact odds of drawing lands and roles. The rules live in the pure reducer
+// `nextHand`; this component only keeps its state and shows it. Nothing is saved.
+
+export function TestHandPanel(props: {
+  lines: readonly DeckLine[];
+  format: Format;
+  /** From the server, so shuffles need no Math.random (ADR 0008's implementation note). */
+  seed: string;
+  cards: Readonly<Record<string, PrintingCard>>;
+  onClose: () => void;
+}) {
+  const cards = library(props.lines);
+  // Each shuffle gets its own seed: the page's seed and a running count.
+  const shuffles = useRef(0);
+  const nextRng = () => seededRng(`${props.seed}:${shuffles.current++}`);
+  const freeFirstMulligan = formatRules(props.format).freeFirstMulligan;
+  const [freeMulligan, setFreeMulligan] = useState(freeFirstMulligan);
+  const [onTheDraw, setOnTheDraw] = useState(false);
+  const [hand, setHand] = useState<HandState>(() =>
+    dealHand(cards, seededRng(`${props.seed}:start`), freeFirstMulligan),
+  );
+
+  /** A fresh hand from the deck as it is now (cards may have changed since the last one). */
+  function newHand(free = freeMulligan) {
+    setHand(dealHand(cards, nextRng(), free));
+  }
+  function mulligan() {
+    setHand((current) => nextHand(current, { kind: "mulligan", rng: nextRng() }));
+  }
+  function draw() {
+    setHand((current) => nextHand(current, { kind: "draw" }));
+  }
+  function bottom(card: LibraryCard) {
+    setHand((current) => nextHand(current, { kind: "bottom", key: card.key }));
+  }
+
+  // N, M and D while the panel is open (not while typing in a box).
+  // The listener reads the latest actions through a ref, updated after each render.
+  const keys = useRef({ newHand, mulligan, draw });
+  useEffect(() => {
+    keys.current = { newHand, mulligan, draw };
+  });
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select") || event.ctrlKey || event.metaKey) return;
+      const action = { n: keys.current.newHand, m: keys.current.mulligan, d: keys.current.draw }[
+        event.key.toLowerCase()
+      ];
+      if (action === undefined) return;
+      event.preventDefault();
+      action();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const odds = openingHandOdds(cards, { onTheDraw, freeMulligan });
+  const canMulligan = hand.turn === 0 && hand.toBottom === 0;
+
+  return (
+    <Card aria-label="Test hand" as="section" padding="md" stack className="text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-medium">Test hand</h2>
+        <p className="text-muted text-xs">
+          {hand.mulligans === 0
+            ? "No mulligans"
+            : `Mulligans: ${hand.mulligans}${hand.freeMulligan ? " (first free)" : ""}`}
+          {" · "}
+          {hand.turn === 0 ? "opening hand" : `turn ${hand.turn}`}
+          {" · "}
+          {hand.library.length} in library
+        </p>
+        <button type="button" onClick={props.onClose} className="text-xs underline">
+          Close
+        </button>
+      </div>
+
+      {cards.length === 0 ? (
+        <p className="text-muted">Add cards to the main deck to draw a hand.</p>
+      ) : (
+        <>
+          {hand.toBottom > 0 && (
+            <p role="status" className="text-amber-700 dark:text-amber-400">
+              Choose {hand.toBottom} {hand.toBottom === 1 ? "card" : "cards"} to put on the bottom.
+            </p>
+          )}
+          <ul aria-label="Cards in hand" className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+            {hand.hand.map((card) => (
+              <li key={card.key} className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  disabled={hand.toBottom === 0}
+                  onClick={() => bottom(card)}
+                  aria-label={hand.toBottom > 0 ? `Put ${card.name} on the bottom` : card.name}
+                  className="block w-full enabled:cursor-pointer enabled:hover:opacity-70"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/images/${card.printingId}/small/front`}
+                    alt=""
+                    className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
+                  />
+                </button>
+                <NamePreview
+                  printing={props.cards[card.printingId]}
+                  name={card.name}
+                  className="truncate text-[11px]"
+                />
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" onClick={() => newHand()} variant="secondary" size="sm">
+              New hand
+            </Button>
+            <Button
+              type="button"
+              disabled={!canMulligan}
+              onClick={mulligan}
+              variant="secondary"
+              size="sm"
+            >
+              Mulligan
+            </Button>
+            <Button
+              type="button"
+
+              disabled={hand.toBottom > 0 || hand.library.length === 0}
+              onClick={draw}
+              variant="secondary"
+              size="sm"
+            >
+              Draw
+            </Button>
+            <label className="flex items-center gap-1 text-xs">
+              <input
+                type="checkbox"
+                checked={freeMulligan}
+                onChange={(event) => {
+                  setFreeMulligan(event.target.checked);
+                  newHand(event.target.checked);
+                }}
+              />
+              First mulligan free
+            </label>
+          </div>
+
+          {odds !== null && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Eyebrow as="h3">Odds ({odds.librarySize}-card library)</Eyebrow>
+                <label className="flex items-center gap-1 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={onTheDraw}
+                    onChange={(event) => setOnTheDraw(event.target.checked)}
+                  />
+                  On the draw
+                </label>
+              </div>
+              <dl aria-label="Opening hand distribution" className="flex flex-col">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">2–5 lands in opening 7</dt>
+                  <dd className="tabular-nums">
+                    {Math.round(odds.opening.playableLands * 100)}%{" "}
+                    <span className="text-muted text-xs">
+                      (after 1 mulligan: {Math.round(odds.opening.playableAfterFirstMulligan * 100)}
+                      %)
+                    </span>
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">0–1 lands / 6–7 lands in opening 7</dt>
+                  <dd className="tabular-nums">
+                    {Math.round(odds.opening.tooFewLands * 100)}% /{" "}
+                    {Math.round(odds.opening.tooManyLands * 100)}%
+                  </dd>
+                </div>
+              </dl>
+              <dl aria-label="Land drops and turn 3 ramp" className="flex flex-col">
+                {odds.landDrops.map((row) => (
+                  <div key={row.turn} className="flex justify-between gap-2">
+                    <dt className="text-muted">
+                      {row.targetLands}+ {row.targetLands === 1 ? "land" : "lands"} by turn{" "}
+                      {row.turn}
+                    </dt>
+                    <dd className="tabular-nums">{Math.round(row.chance * 100)}%</dd>
+                  </div>
+                ))}
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">
+                    Early ramp (MV ≤ {EARLY_RAMP_MAX_MV}, {odds.earlyRamp}) by turn 3
+                  </dt>
+                  <dd className="tabular-nums">
+                    {Math.round(odds.rampByTurn3.atLeastOneEarlyRamp * 100)}%{" "}
+                    <span className="text-muted text-xs">
+                      (with 2+ lands: {Math.round(odds.rampByTurn3.twoLandsAndEarlyRamp * 100)}%)
+                    </span>
+                  </dd>
+                </div>
+                {odds.ramp > odds.earlyRamp && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">Any ramp ({odds.ramp}) by turn 3</dt>
+                    <dd className="tabular-nums">
+                      {Math.round(odds.rampByTurn3.atLeastOneAnyRamp * 100)}%
+                    </dd>
+                  </div>
+                )}
+                {odds.roles
+                  .filter(
+                    (row) =>
+                      row.label !== "2–5 lands in the opening hand" &&
+                      !row.label.includes("lands by turn") &&
+                      !row.label.includes("ramp"),
+                  )
+                  .map((row) => (
+                    <div key={row.label} className="flex justify-between gap-2">
+                      <dt className="text-muted">{row.label}</dt>
+                      <dd className="tabular-nums">{Math.round(row.chance * 100)}%</dd>
+                    </div>
+                  ))}
+              </dl>
+              <p className="text-muted text-[10px]">
+                Exact hypergeometric odds without replacement. By turn 3 counts{" "}
+                {odds.rampByTurn3.cardsSeen} cards ({onTheDraw ? "on the draw" : "on the play"}).
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}

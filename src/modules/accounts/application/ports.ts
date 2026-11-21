@@ -1,7 +1,7 @@
 import type { Clock, Result, UnitOfWork, UserId } from "@/shared/kernel";
 import type { AccessToken, AccessTokenId, Scope } from "../domain/access-token";
 import type { DisplayName, Password, Username } from "../domain/credentials";
-import type { InvalidCredentials, UsernameTaken } from "../domain/errors";
+import type { EmailTaken, InvalidCredentials, UsernameTaken } from "../domain/errors";
 import type { Invite, InviteCode } from "../domain/invite";
 import type { AuthorizationCode, OAuthClient } from "../domain/oauth";
 import type { Player } from "../domain/player";
@@ -36,7 +36,26 @@ export interface IdentityProvider {
   /** Admin reset: replace a player's password without knowing the old one. */
   setPassword(userId: UserId, password: Password): Promise<void>;
   endAllSessions(userId: UserId): Promise<void>;
+
+  // Sign-in through an outside provider, Authentik (design doc 69, section 4). Better Auth keeps
+  // the state, the PKCE verifier and the nonce; these only start and finish the round trip.
+  /** Where to send the browser to sign in there, or null when no provider is set up. */
+  startExternalSignIn(paths: ExternalSignInPaths, requestHeaders: Headers): Promise<string | null>;
+  /** The same for a signed-in player linking the provider to their own account. */
+  startExternalLink(paths: ExternalSignInPaths, requestHeaders: Headers): Promise<string | null>;
+  /** Removes the signed-in player's link to the provider (the password still works). */
+  unlinkExternal(requestHeaders: Headers): Promise<void>;
+  /** The provider's redirect back to the app: checks it and answers with the session cookie. */
+  handleExternalCallback(request: Request): Promise<Response>;
+  /** A player's email, as an admin says it is (design doc 69, section 4.2). */
+  setEmail(
+    userId: UserId,
+    input: { email: string; verified: boolean },
+  ): Promise<Result<void, EmailTaken>>;
 }
+
+/** Where Better Auth sends the browser afterwards: when it worked, and when it didn't. */
+export type ExternalSignInPaths = Readonly<{ callbackPath: string; errorPath: string }>;
 
 /** Our own player data. */
 export interface PlayerRepository {
@@ -90,14 +109,16 @@ export interface AccessTokenRepository {
   /** Revokes every live token of the player; returns how many. */
   revokeAll(userId: UserId, at: Date): Promise<number>;
   touch(id: AccessTokenId, at: Date): Promise<void>;
-  /** Revokes the player's live tokens made for one OAuth client (design doc 30, rule 7). */
-  revokeForClient(userId: UserId, clientId: string, at: Date): Promise<number>;
+  /** Revokes the live tokens made for one OAuth client: one player's (design doc 30, rule 7), or everyone's. */
+  revokeForClient(clientId: string, at: Date, userId?: UserId): Promise<number>;
 }
 
-/** OAuth clients and authorization codes (design doc 30). Codes are stored as hashes. */
+/** OAuth clients and authorization codes (design docs 30 and 69). Codes are stored as hashes. */
 export interface OAuthRepository {
   insertClient(client: OAuthClient): Promise<void>;
   findClient(clientId: string): Promise<OAuthClient | null>;
+  /** Deleting a client deletes its unused codes; its tokens are revoked first. */
+  deleteClient(clientId: string): Promise<boolean>;
   insertCode(hash: string, code: AuthorizationCode): Promise<void>;
   /** The code with this hash if it's unused and unexpired, marking it used; otherwise null. */
   takeCode(hash: string, now: Date): Promise<AuthorizationCode | null>;

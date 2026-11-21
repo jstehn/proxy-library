@@ -9,9 +9,15 @@ export const readPage = makeReadPage({
   requireAdminActor: () => requireAdminActor(),
   currentActor: () => getCurrentActor(),
   capabilities: () => getContainer().capabilities,
+  reads: () => getContainer().reads,
+  publicReads: () => getContainer().publicReads,
 });
 
-/** The capabilities alone, for routes that sign in some other way (a bearer token) or not at all. */
+/**
+ * The capabilities alone, for routes that read nothing for a player: card images, product
+ * artwork and the OpenAPI document (design doc 67, section 5). Routes that sign in with a
+ * bearer token use `readTool()`.
+ */
 export function readCapabilities() {
   return getContainer().capabilities;
 }

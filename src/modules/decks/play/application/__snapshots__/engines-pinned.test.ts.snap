@@ -1,0 +1,805 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`engines, pinned > cast on curve 1`] = `
+{
+  "averageCastOnCurvePct": 0.678,
+  "spells": [
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0,
+      "manaCost": "{12}",
+      "manaValue": 12,
+      "name": "Blightsteel Colossus",
+      "oracleId": "oracle-Blightsteel Colossus",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.048,
+      "manaCost": "{B}{B}{B}{B}",
+      "manaValue": 4,
+      "name": "Obliterator",
+      "oracleId": "oracle-Obliterator",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.233,
+      "manaCost": "{2/B}{2/B}",
+      "manaValue": 2,
+      "name": "Twobrid Tutor",
+      "oracleId": "oracle-Twobrid Tutor",
+    },
+    {
+      "bottleneckColor": "G",
+      "castOnCurvePct": 0.56,
+      "manaCost": "{4}{G}{G}",
+      "manaValue": 6,
+      "name": "Wurm",
+      "oracleId": "oracle-Wurm",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.655,
+      "manaCost": "{3}{B}{G}",
+      "manaValue": 5,
+      "name": "Henzie",
+      "oracleId": "oracle-Henzie",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0.665,
+      "manaCost": "{4}{G}",
+      "manaValue": 5,
+      "name": "Worldspine Wurm",
+      "oracleId": "oracle-Worldspine Wurm",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.78,
+      "manaCost": "{2}{B}{G}",
+      "manaValue": 4,
+      "name": "Giant",
+      "oracleId": "oracle-Giant",
+    },
+    {
+      "bottleneckColor": "G",
+      "castOnCurvePct": 0.81,
+      "manaCost": "{G}",
+      "manaValue": 1,
+      "name": "Llanowar Elves",
+      "oracleId": "oracle-Llanowar Elves",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.863,
+      "manaCost": "{1}{B}",
+      "manaValue": 2,
+      "name": "Night's Whisper",
+      "oracleId": "oracle-Night's Whisper",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0.878,
+      "manaCost": "{2}{G}",
+      "manaValue": 3,
+      "name": "Cultivate",
+      "oracleId": "oracle-Cultivate",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0.878,
+      "manaCost": "{2}{B/P}",
+      "manaValue": 3,
+      "name": "Phyrexian Gargoyle",
+      "oracleId": "oracle-Phyrexian Gargoyle",
+    },
+    {
+      "bottleneckColor": "G",
+      "castOnCurvePct": 0.92,
+      "manaCost": "{1}{G}",
+      "manaValue": 2,
+      "name": "Bear",
+      "oracleId": "oracle-Bear",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.93,
+      "manaCost": "{B/G}{B/G}",
+      "manaValue": 2,
+      "name": "Hybrid Elf",
+      "oracleId": "oracle-Hybrid Elf",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0.953,
+      "manaCost": "{1}",
+      "manaValue": 1,
+      "name": "Sol Ring",
+      "oracleId": "oracle-Sol Ring",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 1,
+      "manaCost": "{X}{X}",
+      "manaValue": 0,
+      "name": "Walking Ballista",
+      "oracleId": "oracle-Walking Ballista",
+    },
+  ],
+  "struggling": [
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0,
+      "manaCost": "{12}",
+      "manaValue": 12,
+      "name": "Blightsteel Colossus",
+      "oracleId": "oracle-Blightsteel Colossus",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.048,
+      "manaCost": "{B}{B}{B}{B}",
+      "manaValue": 4,
+      "name": "Obliterator",
+      "oracleId": "oracle-Obliterator",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.233,
+      "manaCost": "{2/B}{2/B}",
+      "manaValue": 2,
+      "name": "Twobrid Tutor",
+      "oracleId": "oracle-Twobrid Tutor",
+    },
+    {
+      "bottleneckColor": "G",
+      "castOnCurvePct": 0.56,
+      "manaCost": "{4}{G}{G}",
+      "manaValue": 6,
+      "name": "Wurm",
+      "oracleId": "oracle-Wurm",
+    },
+    {
+      "bottleneckColor": "B",
+      "castOnCurvePct": 0.655,
+      "manaCost": "{3}{B}{G}",
+      "manaValue": 5,
+      "name": "Henzie",
+      "oracleId": "oracle-Henzie",
+    },
+    {
+      "bottleneckColor": null,
+      "castOnCurvePct": 0.665,
+      "manaCost": "{4}{G}",
+      "manaValue": 5,
+      "name": "Worldspine Wurm",
+      "oracleId": "oracle-Worldspine Wurm",
+    },
+  ],
+  "trials": 400,
+}
+`;
+
+exports[`engines, pinned > castable by a turn (library card, commander, colourless): the cast simulator 1`] = `
+[
+  0.55,
+  0.688,
+  0.94,
+  0.307,
+]
+`;
+
+exports[`engines, pinned > draw_sample 1`] = `
+[
+  {
+    "ok": true,
+    "value": {
+      "deckId": 7,
+      "odds": {
+        "earlyRampPct": 28.2,
+        "keepablePct": 99.3,
+        "trials": 400,
+        "turn3LandPct": 90,
+      },
+      "samples": [
+        {
+          "hand": [
+            {
+              "manaCost": "{2}{B/P}",
+              "name": "Phyrexian Gargoyle",
+              "typeLine": "Creature — Gargoyle",
+            },
+            {
+              "manaCost": "{4}{G}{G}",
+              "name": "Wurm",
+              "typeLine": "Creature — Wurm",
+            },
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+          ],
+          "nextDraws": [
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "{2/B}{2/B}",
+              "name": "Twobrid Tutor",
+              "typeLine": "Instant",
+            },
+            {
+              "manaCost": "{12}",
+              "name": "Blightsteel Colossus",
+              "typeLine": "Artifact Creature — Golem",
+            },
+          ],
+        },
+        {
+          "hand": [
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+            {
+              "manaCost": "{X}{X}",
+              "name": "Walking Ballista",
+              "typeLine": "Artifact Creature",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "{2}{B/P}",
+              "name": "Phyrexian Gargoyle",
+              "typeLine": "Creature — Gargoyle",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "{B/G}{B/G}",
+              "name": "Hybrid Elf",
+              "typeLine": "Creature — Elf",
+            },
+          ],
+          "nextDraws": [
+            {
+              "manaCost": "{4}{G}{G}",
+              "name": "Wurm",
+              "typeLine": "Creature — Wurm",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "",
+              "name": "Woodland Cemetery",
+              "typeLine": "Land",
+            },
+          ],
+        },
+        {
+          "hand": [
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "{12}",
+              "name": "Blightsteel Colossus",
+              "typeLine": "Artifact Creature — Golem",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "",
+              "name": "Command Tower",
+              "typeLine": "Land",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+          ],
+          "nextDraws": [
+            {
+              "manaCost": "{4}{G}",
+              "name": "Worldspine Wurm",
+              "typeLine": "Artifact",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    "ok": true,
+    "value": {
+      "cast": {
+        "cards": [
+          {
+            "byTurnPct": [
+              0,
+              0,
+              2,
+              25,
+              68,
+            ],
+            "card": "Henzie",
+            "medianTurn": 5,
+            "misses": "too little mana 32%",
+          },
+        ],
+        "marginPct": 4.9,
+        "onTheDraw": false,
+        "runs": 400,
+      },
+      "deckId": 7,
+      "odds": {
+        "earlyRampPct": 28.2,
+        "keepablePct": 99.3,
+        "trials": 400,
+        "turn3LandPct": 90,
+      },
+      "samples": [
+        {
+          "hand": [
+            {
+              "manaCost": "{2}{B/P}",
+              "name": "Phyrexian Gargoyle",
+              "typeLine": "Creature — Gargoyle",
+            },
+            {
+              "manaCost": "{4}{G}{G}",
+              "name": "Wurm",
+              "typeLine": "Creature — Wurm",
+            },
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+          ],
+          "nextDraws": [
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "{2/B}{2/B}",
+              "name": "Twobrid Tutor",
+              "typeLine": "Instant",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    "ok": true,
+    "value": {
+      "cast": {
+        "cards": [
+          {
+            "byTurnPct": [
+              0,
+              0,
+              12,
+              57,
+            ],
+            "card": "Giant",
+            "medianTurn": 4,
+            "misses": "not drawn 26%, too little mana 15%, no B source 2%",
+          },
+        ],
+        "marginPct": 4.9,
+        "onTheDraw": false,
+        "runs": 400,
+      },
+      "deckId": 7,
+      "odds": {
+        "earlyRampPct": 28.2,
+        "keepablePct": 99.3,
+        "trials": 400,
+        "turn3LandPct": 90,
+      },
+      "samples": [
+        {
+          "hand": [
+            {
+              "manaCost": "{2}{B/P}",
+              "name": "Phyrexian Gargoyle",
+              "typeLine": "Creature — Gargoyle",
+            },
+            {
+              "manaCost": "{4}{G}{G}",
+              "name": "Wurm",
+              "typeLine": "Creature — Wurm",
+            },
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "",
+              "name": "Forest",
+              "typeLine": "Basic Land — Forest",
+            },
+            {
+              "manaCost": "",
+              "name": "Swamp",
+              "typeLine": "Basic Land — Swamp",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+            {
+              "manaCost": "{2}{B}{G}",
+              "name": "Giant",
+              "typeLine": "Creature — Giant",
+            },
+          ],
+          "nextDraws": [
+            {
+              "manaCost": "{1}{G}",
+              "name": "Bear",
+              "typeLine": "Creature — Bear",
+            },
+            {
+              "manaCost": "{2/B}{2/B}",
+              "name": "Twobrid Tutor",
+              "typeLine": "Instant",
+            },
+          ],
+        },
+      ],
+    },
+  },
+]
+`;
+
+exports[`engines, pinned > odds table 1`] = `
+{
+  "earlyRamp": 3,
+  "freeMulligan": true,
+  "landDrops": [
+    {
+      "cardsSeen": 7,
+      "chance": 0.9873440790259068,
+      "targetLands": 1,
+      "turn": 1,
+    },
+    {
+      "cardsSeen": 8,
+      "chance": 0.9437298282843969,
+      "targetLands": 2,
+      "turn": 2,
+    },
+    {
+      "cardsSeen": 9,
+      "chance": 0.8592272174727168,
+      "targetLands": 3,
+      "turn": 3,
+    },
+    {
+      "cardsSeen": 10,
+      "chance": 0.7385092020274703,
+      "targetLands": 4,
+      "turn": 4,
+    },
+    {
+      "cardsSeen": 11,
+      "chance": 0.59734700654716,
+      "targetLands": 5,
+      "turn": 5,
+    },
+  ],
+  "lands": 32,
+  "librarySize": 72,
+  "onTheDraw": false,
+  "opening": {
+    "atLeastOneEarlyRamp": 0.26760563380282687,
+    "playableAfterFirstMulligan": 0.984888902699992,
+    "playableLands": 0.877072796745358,
+    "tooFewLands": 0.09603610621520509,
+    "tooManyLands": 0.026891097039436873,
+  },
+  "ramp": 4,
+  "rampByTurn3": {
+    "atLeastOneAnyRamp": 0.42100428658909334,
+    "atLeastOneEarlyRamp": 0.33415492957746495,
+    "cardsSeen": 9,
+    "threeLandsAndEarlyRamp": 0.26935660433651676,
+    "twoLandsAndEarlyRamp": 0.3180054758240419,
+  },
+  "roles": [
+    {
+      "chance": 0.877072796745358,
+      "label": "2–5 lands in the opening hand",
+    },
+    {
+      "chance": 0.8592272174727168,
+      "label": "3 lands by turn 3",
+    },
+    {
+      "chance": 0.7385092020274703,
+      "label": "4 lands by turn 4",
+    },
+    {
+      "chance": 0.38240457236171305,
+      "label": "A ramp card by turn 2",
+    },
+    {
+      "chance": 0.13888888888888745,
+      "label": "Card draw by turn 4",
+    },
+  ],
+}
+`;
+
+exports[`engines, pinned > opening hands: a short deck 1`] = `
+{
+  "avgKeptLands": 3.1,
+  "avgKeptSpells": 3.8,
+  "earlyPlayInHandPct": 98.7,
+  "earlyRampInHandPct": 26.5,
+  "keepableRatePct": 98,
+  "keptByMulligan": [
+    435,
+    122,
+    43,
+  ],
+  "librarySize": 70,
+  "manaFloodPct": 0.3,
+  "manaScrewPct": 0.7,
+  "sampleHands": [
+    {
+      "cards": [
+        "Bear",
+        "Wurm",
+        "Woodland Cemetery",
+        "Woodland Cemetery",
+        "Giant",
+        "Forest",
+        "Forest",
+      ],
+      "keptCount": 7,
+      "lands": 4,
+      "mulligans": 1,
+    },
+    {
+      "cards": [
+        "Swamp",
+        "Woodland Cemetery",
+        "Night's Whisper",
+        "Giant",
+        "Swamp",
+        "Sol Ring",
+        "Giant",
+      ],
+      "keptCount": 7,
+      "lands": 3,
+      "mulligans": 0,
+    },
+    {
+      "cards": [
+        "Sol Ring",
+        "Bear",
+        "Hybrid Elf",
+        "Swamp",
+        "Swamp",
+        "Forest",
+      ],
+      "keptCount": 6,
+      "lands": 3,
+      "mulligans": 2,
+    },
+  ],
+  "trials": 600,
+  "turn3LandDropPct": 92.8,
+}
+`;
+
+exports[`engines, pinned > opening hands: the scorecard's run 1`] = `
+{
+  "avgKeptLands": 3,
+  "avgKeptSpells": 4,
+  "earlyPlayInHandPct": 100,
+  "earlyRampInHandPct": 25.4,
+  "keepableRatePct": 99.6,
+  "keptByMulligan": [
+    396,
+    78,
+    26,
+  ],
+  "librarySize": 72,
+  "manaFloodPct": 0,
+  "manaScrewPct": 0.4,
+  "sampleHands": [
+    {
+      "cards": [
+        "Twobrid Tutor",
+        "Giant",
+        "Bear",
+        "Wurm",
+        "Obliterator",
+        "Forest",
+        "Woodland Cemetery",
+      ],
+      "keptCount": 7,
+      "lands": 2,
+      "mulligans": 0,
+    },
+    {
+      "cards": [
+        "Obliterator",
+        "Bear",
+        "Swamp",
+        "Wurm",
+        "Swamp",
+        "Phyrexian Gargoyle",
+        "Forest",
+      ],
+      "keptCount": 7,
+      "lands": 3,
+      "mulligans": 1,
+    },
+    {
+      "cards": [
+        "Obliterator",
+        "Wurm",
+        "Woodland Cemetery",
+        "Forest",
+        "Forest",
+        "Swamp",
+        "Bear",
+      ],
+      "keptCount": 7,
+      "lands": 4,
+      "mulligans": 0,
+    },
+  ],
+  "trials": 500,
+  "turn3LandDropPct": 88.6,
+}
+`;
+
+exports[`engines, pinned > test hand: deal, mulligans, bottoming, draws 1`] = `
+{
+  "bottom": [
+    "oracle-Bear#10",
+    "oracle-Woodland Cemetery#5",
+  ],
+  "hand": [
+    "oracle-Blightsteel Colossus#1",
+    "oracle-Giant#6",
+    "oracle-Forest#11",
+    "oracle-Swamp#8",
+    "oracle-Twobrid Tutor#1",
+    "oracle-Woodland Cemetery#3",
+    "oracle-Forest#1",
+    "oracle-Bear#4",
+    "oracle-Swamp#1",
+  ],
+  "mulligans": 2,
+  "seen": [
+    [
+      "oracle-Woodland Cemetery#4",
+      "oracle-Bear#2",
+      "oracle-Wurm#1",
+      "oracle-Forest#1",
+      "oracle-Giant#8",
+      "oracle-Forest#3",
+      "oracle-Forest#2",
+    ],
+    [
+      "oracle-Blightsteel Colossus#1",
+      "oracle-Giant#6",
+      "oracle-Forest#11",
+      "oracle-Woodland Cemetery#5",
+      "oracle-Swamp#8",
+      "oracle-Twobrid Tutor#1",
+      "oracle-Woodland Cemetery#3",
+    ],
+    [
+      "oracle-Blightsteel Colossus#1",
+      "oracle-Giant#6",
+      "oracle-Forest#11",
+      "oracle-Swamp#8",
+      "oracle-Twobrid Tutor#1",
+      "oracle-Woodland Cemetery#3",
+    ],
+  ],
+  "top": [
+    "oracle-Sol Ring#1",
+    "oracle-Bear#3",
+    "oracle-Swamp#3",
+    "oracle-Swamp#4",
+  ],
+  "turn": 3,
+}
+`;

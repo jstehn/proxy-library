@@ -4,13 +4,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { ListQuote, PrintingPreference, QuoteLine } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
 import { buyListAction, quoteListAction, type BuyListResult } from "./actions";
+import { Button } from "@/ui/button";
+import { Select, Textarea } from "@/ui/field";
 
 // The list on the left, what it would buy on the right (design doc 15, section 3.1). The quote
 // follows the text after a pause in typing; buying sends exactly the lines shown.
 
 const WAIT_MILLISECONDS = 400;
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 const money = (cents: number) => Cents.format(Cents.of(cents));
 
 export function ListBuyer(props: { startingText: string; balanceCents: number }) {
@@ -63,7 +63,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <section aria-label="Your list" className="flex flex-col gap-3 lg:w-96">
-        <textarea
+        <Textarea
           value={text}
           onChange={(event) => {
             setText(event.target.value);
@@ -73,7 +73,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           rows={14}
           aria-label="Cards to buy"
           placeholder={"4 Lightning Bolt\n1 Sol Ring (C21) 263\n2 The One Ring *F*"}
-          className={`${field} font-mono`}
+          className="font-mono"
         />
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -114,7 +114,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           </p>
         ) : (
           <ul
-            className={`flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800 ${isQuoting ? "opacity-60" : ""}`}
+            className={`divide-border-subtle flex flex-col divide-y ${isQuoting ? "opacity-60" : ""}`}
           >
             {quote.lines.map((line) => (
               <QuoteRow
@@ -128,51 +128,45 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           </ul>
         )}
         {quote !== null && quote.unreadable.length > 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-sm">
             Couldn&apos;t read: {quote.unreadable.join(" | ")}
           </p>
         )}
         {quote !== null && quote.leftOut > 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-sm">
             Only the first {quote.lines.length} lines are bought at once; {quote.leftOut} left out.
           </p>
         )}
 
         {quote !== null && quote.cards > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <p className="text-sm">
               Total <strong className="tabular-nums">{money(quote.totalCents)}</strong> · balance
               after{" "}
-              <span
-                className={`tabular-nums ${balanceAfter < 0 ? "text-red-700 dark:text-red-400" : ""}`}
-              >
+              <span className={`tabular-nums ${balanceAfter < 0 ? "text-danger-text" : ""}`}>
                 {money(balanceAfter)}
               </span>
             </p>
-            <button
+            <Button
               type="button"
               onClick={buy}
               disabled={isBuying || isQuoting || balanceAfter < 0}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              size="xl"
             >
               {isBuying
                 ? "Buying…"
                 : `Buy ${quote.cards} ${quote.cards === 1 ? "card" : "cards"} for ${money(quote.totalCents)}`}
-            </button>
+            </Button>
           </div>
         )}
         {quote !== null && balanceAfter < 0 && (
-          <p className="text-sm text-red-700 dark:text-red-400">
+          <p className="text-danger-text text-sm">
             That&apos;s more than your balance: remove some lines, or pick cheaper printings.
           </p>
         )}
         <p role="status" className="min-h-5 text-sm">
           {result !== null && (
-            <span
-              className={
-                result.ok ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-              }
-            >
+            <span className={result.ok ? "text-success-text" : "text-danger-text"}>
               {result.message}
             </span>
           )}
@@ -192,7 +186,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
       <span className="min-w-0 flex-1">
         <span className="font-medium">{choice?.name ?? request.name}</span>
         {line.problem !== null && (
-          <span className="block text-xs text-amber-700 dark:text-amber-400">⚠ {line.problem}</span>
+          <span className="text-warning-text block text-xs">⚠ {line.problem}</span>
         )}
         {choice !== null && line.toBuy < request.quantity && (
           <span className="text-muted block text-xs">
@@ -204,12 +198,13 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
       </span>
       {choice !== null && (
         <>
-          <select
+          <Select
+            controlSize="xs"
             value={choice.printingId}
             onChange={(event) => props.onChoose(event.target.value)}
             aria-label={`Printing of ${choice.name}`}
             // On a phone the menu gets its own line under the name; beside it on wider screens.
-            className={`${field} order-last ml-11 w-[calc(100%-2.75rem)] text-xs sm:order-none sm:ml-0 sm:w-auto sm:max-w-64`}
+            className="order-last ml-11 w-[calc(100%-2.75rem)] sm:order-none sm:ml-0 sm:w-auto sm:max-w-64"
           >
             {line.options.map((option) => (
               <option key={option.printingId} value={option.printingId}>
@@ -218,7 +213,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
                 {money(option.priceCents)}
               </option>
             ))}
-          </select>
+          </Select>
           <span className="w-24 shrink-0 text-right tabular-nums">
             {money(line.totalCents)}
             <span className="text-muted block text-xs">

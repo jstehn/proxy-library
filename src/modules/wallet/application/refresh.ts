@@ -1,3 +1,4 @@
+import type { Actor } from "@/modules/accounts";
 import { ok, type Cents, type Result, type UserId } from "@/shared/kernel";
 import { paydaysBetween, type EconomySettings } from "../domain/economy";
 import { ledgerEntry, type LedgerEntry } from "../domain/ledger";
@@ -56,11 +57,15 @@ export async function bringUpToDate(
   }
 }
 
-/** Brings a player's wallet up to date and returns their balance. Called when a page shows money. */
+/**
+ * Brings the actor's wallet up to date and returns their balance. Called when a page shows money.
+ * It takes the `Actor`, not an id, so it can only pay into the signed-in player's own wallet.
+ */
 export function makeRefreshWallet(dependencies: WalletDependencies) {
   const { unitOfWork, clock } = dependencies;
 
-  async function refreshWallet(userId: UserId): Promise<Cents> {
+  async function refreshWallet(actor: Actor): Promise<Cents> {
+    const userId = actor.userId;
     const result = await unitOfWork.run<Cents, never>(async (services) => {
       await bringUpToDate(services, userId, clock.now());
       return ok(await services.wallets.balance(userId));

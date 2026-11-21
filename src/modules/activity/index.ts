@@ -2,4 +2,5 @@
 export type { ActivityServices, EventRecorder } from "./application/ports";
 export { forgetLibraryEvents, recordEvent } from "./application/record";
 export { isNotable, type ActivityEvent, type PulledCard } from "./domain/events";
-export { activityFeed, type FeedCard, type FeedItem } from "./queries/feed";
+export { type FeedCard, type FeedItem } from "./queries/feed";
+export * as activityQueries from "./queries";

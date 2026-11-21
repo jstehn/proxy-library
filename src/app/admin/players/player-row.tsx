@@ -2,9 +2,11 @@
 import { useActionState } from "react";
 import type { PlayerListItem } from "@/modules/accounts";
 import { MoneyForm } from "./money-form";
+import { EmailForm } from "./email-form";
 import { ResetForm } from "./reset-form";
 import { Alert, SubmitButton } from "@/ui/form";
 import { playerAction, type PlayerActionState } from "./actions";
+import { Card } from "@/ui/card";
 
 const initialState: PlayerActionState = { message: null, tone: "success", temporaryPassword: null };
 
@@ -21,7 +23,7 @@ export function PlayerRow(props: PlayerRowProps) {
   const shared = { formAction, userId: player.userId }; // passed to every ActionButton
 
   return (
-    <li className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <Card as="li" padding="lg" stack>
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="font-medium">{player.displayName}</span>
         <span className="text-muted text-sm">@{player.username}</span>
@@ -29,6 +31,7 @@ export function PlayerRow(props: PlayerRowProps) {
         {player.isAdmin && <Badge>admin</Badge>}
         {player.canSelfFund && <Badge>self-funding</Badge>}
         {player.isDisabled && <Badge tone="danger">disabled</Badge>}
+        {player.authentikLinked && <Badge>Authentik linked</Badge>}
       </div>
 
       <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -58,6 +61,7 @@ export function PlayerRow(props: PlayerRowProps) {
           ))}
       </div>
 
+      <EmailForm userId={player.userId} email={player.email} />
       <ResetForm userId={player.userId} username={player.username} />
 
       {state.message && <Alert tone={state.tone}>{state.message}</Alert>}
@@ -67,7 +71,7 @@ export function PlayerRow(props: PlayerRowProps) {
           on privately; it won&apos;t be shown again. They must change it when they sign in.
         </Alert>
       )}
-    </li>
+    </Card>
   );
 }
 
@@ -104,7 +108,7 @@ function MoneyFigure(props: { label: string; value: string }) {
 function Badge(props: { children: React.ReactNode; tone?: "danger" }) {
   const colors =
     props.tone === "danger"
-      ? "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100"
-      : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100";
+      ? "bg-red-100 text-danger-ink dark:bg-red-950"
+      : "bg-surface-raised text-foreground";
   return <span className={`rounded px-2 py-0.5 text-xs ${colors}`}>{props.children}</span>;
 }

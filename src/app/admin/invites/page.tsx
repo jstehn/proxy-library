@@ -3,14 +3,16 @@ import { SubmitButton } from "@/ui/form";
 import { revokeInviteAction } from "./actions";
 import { CreateInviteForm } from "./create-invite-form";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 export default async function AdminInvitesPage() {
-  const { capabilities } = await readPage({ admin: true });
+  const { actor: admin, capabilities, reads } = await readPage({ admin: true });
 
-  const invites = await capabilities.accountReads.listInvites(capabilities.now());
+  const invites = await reads.accounts.listInvites(admin, capabilities.now());
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
+    <Page width="3xl" spacing="roomy">
       <h1 className="text-2xl font-semibold">Invites</h1>
 
       <section className="flex flex-col gap-3">
@@ -24,12 +26,12 @@ export default async function AdminInvitesPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">All invites</h2>
-        {invites.length === 0 && <p className="text-muted text-sm">No invites yet.</p>}
+        {invites.length === 0 && <EmptyState>No invites yet.</EmptyState>}
         <ul className="flex flex-col gap-2">
           {invites.map((invite) => (
             <li
               key={invite.code}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+              className="border-border-subtle flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm"
             >
               <code className="font-semibold">{invite.code}</code>
               <span className="text-muted">{invite.status}</span>
@@ -51,6 +53,6 @@ export default async function AdminInvitesPage() {
           ))}
         </ul>
       </section>
-    </main>
+    </Page>
   );
 }

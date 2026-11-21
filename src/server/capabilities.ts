@@ -1,181 +1,108 @@
-import { wireActivityCapabilities } from "@/modules/activity/wiring";
-import { wireSocialCapabilities } from "@/modules/social/wiring";
-import { wireTradeCapabilities } from "@/modules/trades/wiring";
-import { wireWalletCapabilities } from "@/modules/wallet/wiring";
-import { wireCollectionCapabilities } from "@/modules/collection/wiring";
-import { wireDraftCapabilities } from "@/modules/drafts/wiring";
-import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
-import { wirePackCapabilities } from "@/modules/packs/wiring";
-import { wireRealCollectionCapabilities } from "@/modules/real-collection/wiring";
-import { wireStoreCapabilities } from "@/modules/store/wiring";
+import type { Accounts } from "@/modules/accounts";
 import { wireAccountCapabilities } from "@/modules/accounts/wiring";
+import type { Catalog } from "@/modules/catalog";
+import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import { wireCatalogCapabilities } from "@/modules/catalog/wiring";
 import {
-  makeCardLookup,
-  makeSearchCatalog,
-  makeRulesLookup,
-  lookupRules,
-  searchPrintings,
-  priceHistory,
-  printingCards,
-  printingDetail,
-  storePrintingsOfCard,
-} from "@/modules/catalog";
-import {
-  collectionPage,
-  ownedByOracle,
-  ownedCopies as ownedOfPrinting,
-} from "@/modules/collection";
-import { realCollectionPage, realOwnedByOracle } from "@/modules/real-collection";
-import {
-  decksUsing,
   findCard,
+  type Decks,
   type DeckSharing,
+  type DeckSnapshots,
   type makeProxySheets,
   type makeTokenChoices,
-  type Decks,
   type PreviewRepository,
 } from "@/modules/decks";
 import { wireDeckCapabilities } from "@/modules/decks/wiring";
-import { wishesAtTarget, wishesForCard, type Wishlist } from "@/modules/wishlist";
-import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
-import type { makeAccounts } from "@/modules/accounts";
-import type { makeCatalog } from "@/modules/catalog";
-import { activeDraftOf, type makeDrafts } from "@/modules/drafts";
-import type { makePacks } from "@/modules/packs";
+import type { Drafts } from "@/modules/drafts";
+import { wireDraftCapabilities } from "@/modules/drafts/wiring";
+import type { Inventory } from "@/modules/inventory";
+import { wireInventoryCapabilities } from "@/modules/inventory/wiring";
+import type { Packs } from "@/modules/packs";
+import { wirePackCapabilities } from "@/modules/packs/wiring";
+import type { RealCollection } from "@/modules/collection/real";
+import { wireRealCollectionCapabilities } from "@/modules/collection/wiring";
+import type { RedditService } from "@/modules/research";
+import { wireRedditCapabilities } from "@/modules/research/wiring";
 import type { makeResetPlayer } from "@/modules/reset";
-import { incomingRequestCount, type makeSocial } from "@/modules/social";
-import { tradesWaitingForYou, type makeTrades } from "@/modules/trades";
-import type { makeWallet } from "@/modules/wallet";
-import type { makeWishlist } from "@/modules/wishlist";
-import type { makeInventory } from "@/modules/inventory";
-import type { makeRealCollection } from "@/modules/real-collection";
-import type { makeStore } from "@/modules/store";
-import type { OutsideDataService } from "@/modules/catalog/infrastructure";
-import type { makeReddit } from "@/modules/reddit";
-import type { makeYoutube } from "@/modules/youtube";
+import { wireResetCapabilities } from "@/modules/reset/wiring";
+import type { Social } from "@/modules/social";
+import { wireSocialCapabilities } from "@/modules/social/wiring";
+import type { Store } from "@/modules/store";
+import { wireStoreCapabilities } from "@/modules/store/wiring";
+import type { Trades } from "@/modules/trades";
+import { wireTradeCapabilities } from "@/modules/trades/wiring";
+import type { Wallet } from "@/modules/wallet";
+import { wireWalletCapabilities } from "@/modules/wallet/wiring";
+import type { Wishlist } from "@/modules/wishlist";
+import { wireWishlistCapabilities } from "@/modules/wishlist/wiring";
+import type { YoutubeService } from "@/modules/research";
+import { wireYoutubeCapabilities } from "@/modules/research/wiring";
 import type { DbExecutor } from "@/shared/db";
-import type { Cents, Clock, UserId } from "@/shared/kernel";
+import type { Clock } from "@/shared/kernel";
+import { accountOverviewReaders } from "./account-overview";
+import { wireLookupCapabilities } from "./lookups";
+import type { Reads } from "./reads";
+import { wireSiteCapabilities } from "./site";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
-// file joins them and adds the few that read across modules.
+// file hands each one what it needs and joins the results.
 
 type CapabilityDependencies = Readonly<{
   db: DbExecutor;
   clock: Clock;
-  wallet: Readonly<{ refreshWallet(userId: UserId): Promise<Cents> }>;
+  reads: Reads;
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
-  wishlist: Pick<Wishlist, "addWish" | "removeWish">;
   outsideData: OutsideDataService;
-  youtube: ReturnType<typeof makeYoutube>;
-  reddit: ReturnType<typeof makeReddit>;
-  decks: Decks;
-  previews: PreviewRepository;
-  /** The services that change things: the capabilities pass them through for the adapters. */
-  services: Readonly<{
-    deckSharing: DeckSharing;
-    chooseToken: ReturnType<typeof makeTokenChoices>;
-    proxySheet: ReturnType<typeof makeProxySheets>;
-    seeds: Readonly<{ newSeed(): string }>;
-    drafts: ReturnType<typeof makeDrafts>;
-    realCollection: ReturnType<typeof makeRealCollection>;
-    store: ReturnType<typeof makeStore>;
-    inventory: ReturnType<typeof makeInventory>;
-    accounts: ReturnType<typeof makeAccounts>;
-    wallet: ReturnType<typeof makeWallet>;
-    social: ReturnType<typeof makeSocial>;
-    trades: ReturnType<typeof makeTrades>;
-    wishlist: ReturnType<typeof makeWishlist>;
-    catalog: ReturnType<typeof makeCatalog>;
-    packs: ReturnType<typeof makePacks>;
-    resetPlayer: ReturnType<typeof makeResetPlayer>;
-    appUrl: string;
-  }>;
+  seeds: Readonly<{ newSeed(): string }>;
+  appUrl: string;
   newPreviewId: () => string;
+  previews: PreviewRepository;
+  accounts: Accounts;
+  catalog: Catalog;
+  decks: Decks;
+  deckSharing: DeckSharing;
+  deckSnapshots: DeckSnapshots;
+  chooseToken: ReturnType<typeof makeTokenChoices>;
+  proxySheet: ReturnType<typeof makeProxySheets>;
+  drafts: Drafts;
+  inventory: Inventory;
+  packs: Packs;
+  realCollection: RealCollection;
+  reddit: RedditService;
+  resetPlayer: ReturnType<typeof makeResetPlayer>;
+  social: Social;
+  store: Store;
+  trades: Trades;
+  wallet: Wallet;
+  wishlist: Wishlist;
+  youtube: YoutubeService;
 }>;
 
 export function buildCapabilities(dependencies: CapabilityDependencies) {
-  const { db, clock, wallet, wishlist, textEmbedder, outsideData } = dependencies;
-
+  const { db, clock } = dependencies;
   return {
-    ...wireDeckCapabilities({
-      db,
-      clock,
-      textEmbedder,
-      outsideData: {
-        fetchEdhrecCommander: (commander, options) =>
-          outsideData.fetchEdhrecCommander(commander, options),
-        fetchSpellbookCombos: (mainCards, commanders) =>
-          outsideData.fetchSpellbookCombos(mainCards, commanders),
-      },
-      decks: dependencies.decks,
-      previews: dependencies.previews,
-      newPreviewId: dependencies.newPreviewId,
-    }),
-    ...wireCatalogCapabilities({ db }),
-    ...wireCollectionCapabilities({ db }),
-    ...wireActivityCapabilities({ db }),
-    ...wireSocialCapabilities({ db }),
-    ...wireTradeCapabilities({ db }),
-    ...wireWalletCapabilities({ db }),
-    ...wireRealCollectionCapabilities({ db }),
-    ...wireDraftCapabilities({ db }),
-    ...wireInventoryCapabilities({ db }),
-    ...wireStoreCapabilities({ db }),
-    ...wirePackCapabilities({ db }),
+    ...wireAccountCapabilities({ ...dependencies, readers: accountOverviewReaders(dependencies) }),
+    ...wireCatalogCapabilities(dependencies),
+    ...wireDeckCapabilities(dependencies),
+    ...wireDraftCapabilities(dependencies),
+    ...wireInventoryCapabilities(dependencies),
+    ...wirePackCapabilities(dependencies),
+    ...wireRealCollectionCapabilities(dependencies),
+    ...wireRedditCapabilities(dependencies),
+    ...wireResetCapabilities(dependencies),
+    ...wireSocialCapabilities(dependencies),
+    ...wireStoreCapabilities(dependencies),
+    ...wireTradeCapabilities(dependencies),
+    ...wireWalletCapabilities(dependencies),
     ...wireWishlistCapabilities({
-      db,
-      clock,
-      wallet,
-      wishlist,
+      ...dependencies,
       findCard: (nameOrId) => findCard(db, nameOrId),
     }),
-    ...wireAccountCapabilities({ db, clock, wallet }),
-    ...dependencies.services,
-    // The numbers in the site header, in one round trip. Showing the balance also pays any
-    // allowance that has come due (design doc 03, section 5).
-    headerSummary: async (userId: UserId) => {
-      const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
-        dependencies.services.wallet.refreshWallet(userId),
-        tradesWaitingForYou(db, userId),
-        wishesAtTarget(db, userId),
-        activeDraftOf(db, userId),
-        incomingRequestCount(db, userId),
-      ]);
-      return { balance, waitingTrades, wishesOnTarget, draft, friendRequests };
-    },
+    ...wireYoutubeCapabilities(dependencies),
+    ...wireLookupCapabilities(dependencies),
+    ...wireSiteCapabilities(dependencies),
     now: () => clock.now(),
-    youtube: dependencies.youtube,
-    reddit: dependencies.reddit,
-    // These read across modules (the game's collection, the real one, the store, the decks and
-    // the wishlist), so they are joined here rather than in one module's wiring.
-    rulesLookup: makeRulesLookup({
-      findCard: (query) => findCard(db, query),
-      fetchRulings: (target) => outsideData.fetchScryfallRulings(target),
-      searchRules: (query, limit) => lookupRules(db, textEmbedder, { query, limit }),
-    }),
-    lookUpCards: makeCardLookup({
-      find: (query) => findCard(db, query),
-      detail: (printingId) => printingDetail(db, printingId),
-      history: (printingId) => priceHistory(db, printingId),
-      ownedOfPrinting: (userId, printingId) => ownedOfPrinting(db, userId, printingId),
-      gameCopies: (userId, oracleId) => ownedByOracle(db, userId, oracleId),
-      realCopies: (userId, oracleId) => realOwnedByOracle(db, userId, oracleId),
-      decksUsing: async (userId, printingId) =>
-        (await decksUsing(db, userId, [printingId])).get(printingId) ?? [],
-      wishes: (userId, printingId) => wishesForCard(db, userId, printingId),
-      storePrintings: (userId, name) => storePrintingsOfCard(db, userId, name, 20),
-    }),
-    searchCatalog: makeSearchCatalog({
-      collection: (userId, page, search) =>
-        collectionPage(db, userId, { search, sections: "none", sort: "name", page }),
-      realCollection: (userId, page, search) =>
-        realCollectionPage(db, userId, { search, sections: "none", sort: "name", page }),
-      store: (userId, search, page, oneRowPerCard) =>
-        searchPrintings(db, { userId, search, sort: "name", page, oneRowPerCard }),
-      printings: (ids) => printingCards(db, ids),
-    }),
   };
 }
 
