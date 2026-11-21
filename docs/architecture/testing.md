@@ -62,7 +62,7 @@ problems the fixtures couldn't (design doc 04, section 15).
 
 ### Integration test database
 
-- `scripts/db.sh` also creates `tcg_test` on the same socket.
+- `scripts/dev/db.sh` also creates `tcg_test` on the same socket.
 - Vitest global setup runs migrations on `tcg_test` once per run.
 - Integration tests **empty the tables they use** (`truncate … cascade`) in `beforeEach`, and set
   any shared settings they depend on (such as `economy_settings`) themselves. Never assume another

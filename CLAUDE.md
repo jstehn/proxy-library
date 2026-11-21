@@ -57,7 +57,7 @@ verify every exercise solution compiles and passes, and commit at the end of eac
 - Shared kernel `@/shared/kernel`, fakes `@/shared/kernel/testing`, OS adapters `@/shared/runtime`,
   DB `@/shared/db`, config `@/shared/config`. Wiring: `src/server/core.ts`.
 - Commands: `pnpm check` (typecheck + lint + cycles + format + unit tests, in parallel and cached
-  by `scripts/check.sh`; must pass before commit),
+  by `scripts/dev/check.sh`; must pass before commit),
   `pnpm test` (unit, watch), `pnpm test:int` (needs `pnpm db:start`), `pnpm test:e2e`
   (Playwright, Nix browsers; keep `@playwright/test` pinned to nixpkgs' version), `pnpm worker <cmd>`
   (`sync [prices|full]` runs a catalog sync now; `sync features` works out card features only; `schedule` runs the nightly sync + admin-queued runs

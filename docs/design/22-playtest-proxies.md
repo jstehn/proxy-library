@@ -287,7 +287,7 @@ None.
   card; at the sheet's edges they continue 3 mm past the bleed into the margin. Full-line guides
   are drawn on top too.
 - **Playtest bleed shows the stripes** rather than white, so an off cut shows stripes.
-- **Deploy:** checked the production image (built as `scripts/deploy.sh` builds it) against the
+- **Deploy:** checked the production image (built as `scripts/ops/deploy.sh` builds it) against the
   dev database: health, the worker, and playtest PDFs in every art filter from the production
   bundle.
 

@@ -139,7 +139,7 @@ design doc (or joins a phase's design) and is removed from this list.
 ## Deck advice and card features (noticed during the refactor, 2026-11-20)
 
 - **Weights fitted for cuts.** P27 made one scorer (`rateCard`) serve suggestions, cuts and
-  draft-a-deck with one table fitted by `scripts/fit-rating-weights.ts`. The fitted weight for
+  draft-a-deck with one table fitted by `scripts/dev/fit-rating-weights.ts`. The fitted weight for
   "fills a role the deck needs" is small, so a ramp spell (Rampant Growth) can be offered as a cut
   while the deck is short of ramp; the "would leave a gap" reason still shows. Option: fit a
   second set of weights on cut data (what players actually cut) and pass it to `rateCard` as a

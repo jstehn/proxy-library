@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["scripts/*.ts", "worker/index.ts!"],
+  "entry": ["scripts/{dev,ops}/*.ts", "worker/index.ts!"],
   "ignore": ["public/sw.js", "eslint-rules/**", "**/testing/**", "tests/**"],
   "ignoreDependencies": ["mana-font"],
   "ignoreExportsUsedInFile": true,

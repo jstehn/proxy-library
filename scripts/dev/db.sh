@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Manage the project-local Postgres instance (data + socket in ./.dev).
-# Usage: scripts/db.sh start|stop|status|reset
+# Usage: scripts/dev/db.sh start|stop|status|reset
 set -euo pipefail
 
 : "${PGDATA:?PGDATA not set - is direnv loaded? (run: direnv allow)}"

@@ -122,4 +122,33 @@ New `.github/workflows/check.yml`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTIN
 
 ## Handoff
 
-(empty)
+**Steps 1 to 5 done; steps 6 and 7 wait for the owner's decisions** (nothing in them was started).
+
+- **CI:** `.github/workflows/check.yml`, on push and pull request to `main` and `refactor/main`.
+  Job `check` runs `pnpm check`. Job `integration` (Postgres 17 + pgvector service, database
+  `tcg_test`) runs `pnpm test:int` with `continue-on-error: true`. No secrets, no e2e job yet.
+  Not pushed; the owner turns it on.
+- **New files:** `LICENSE` (0BSD, 2026, Jack Stehn), `CODE_OF_CONDUCT.md` (a draft for the owner to
+  word), `CONTRIBUTING.md`; `"license": "0BSD"` in `package.json`. A line in `docs/README.md`.
+- **README:** AI-authorship note moved under a new "How this was built" heading (same wording),
+  with the workflow list; added "Quick start", "How it fits together" (Mermaid, no module count so
+  P30's changes don't make it stale) and licence links; counts of ADRs and lessons removed
+  (stale); `worker tag-cards` (does not exist) replaced by `worker sync`; "simulate opening
+  hands" became "draw sample hands". P24's removals were already absent from the README.
+- **scripts/:** `scripts/dev/` (check.sh, db.sh, dev-all.sh, install-hooks.sh, knip-ratchet.sh,
+  check-cycles, clones, sizes, regex-count and their tests, reference-outputs.ts,
+  fit-rating-weights.ts, fixtures/) and `scripts/ops/` (deploy.sh, backup.sh). Paths fixed in
+  `package.json`, `knip.json` (entry `scripts/{dev,ops}/*.ts`), `.gitignore`, `CLAUDE.md`,
+  `eslint.config.mjs` comments, `deploy/`, the scripts themselves (`cd "$(dirname "$0")/../.."`,
+  `../../tests` imports), `tests/fixtures/README.md`, `docs/` (deploy, roadmap, architecture,
+  ADRs 0009, 0010 and 0023, future-ideas), `docs/refactor/` package docs, and one comment in
+  `src/modules/decks/scoring/domain/rate.ts`. Older design docs 57 and 65 keep their old paths
+  (history). The `Dockerfile` needed no change.
+- **Production lines:** neutral (76,604). A Prettier wrap in `reference-outputs.ts` would have added
+  six, so its import has a `prettier-ignore`.
+- **Still waiting (steps 6, 7):** `scripts/tududi-mcp.py`, `scripts/tududi-headers.sh`, `.mcp.json`,
+  the `.envrc.local.example` key and the tududi links in `docs/todo.md` and others; moving
+  `lessons/` (README still links to it, ADR 0023 and `CLAUDE.md` still say "Lesson: yes").
+  After step 6, `ls scripts` shows only `dev` and `ops`.
+- **Owner:** review the code of conduct wording; decide when CI integration becomes required
+  and push; decide the tududi and lessons questions above.

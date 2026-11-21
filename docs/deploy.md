@@ -41,7 +41,7 @@ downloads Scryfall's card data (about 80 MB) and MTGJSON's files for the current
 ## Backups
 
 ```sh
-scripts/backup.sh                     # writes backups/tcg-<date>.sql.gz
+scripts/ops/backup.sh                     # writes backups/tcg-<date>.sql.gz
 gunzip -c backups/tcg-….sql.gz | docker compose exec -T db psql -U tcg -d tcg   # restore
 ```
 
@@ -96,7 +96,7 @@ public address (the OAuth endpoints are built from it).
 
 ## Deploying to a Portainer server
 
-`scripts/deploy.sh` deploys to a Docker server managed by Portainer, as the stack
+`scripts/ops/deploy.sh` deploys to a Docker server managed by Portainer, as the stack
 **proxylib-stack**. Your server's details live in **`deploy/local.env`**, which git ignores:
 copy [`deploy/local.env.example`](../deploy/local.env.example) and fill in the server
 (`DEPLOY_HOST`), the public address (`DEPLOY_APP_URL`), the port and the time zone. Below,
@@ -115,7 +115,7 @@ copy [`deploy/local.env.example`](../deploy/local.env.example) and fill in the s
 From this repo, after committing (and running the tests):
 
 ```sh
-scripts/deploy.sh
+scripts/ops/deploy.sh
 ```
 
 It builds the image here, tags it with the commit (`proxy-library:<commit>`), copies it to the

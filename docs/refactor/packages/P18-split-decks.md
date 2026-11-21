@@ -57,7 +57,7 @@ All of `src/modules/decks/`, `eslint.config.mjs` (boundaries and the new rule), 
    file in another area is an error unless it is that area's `index.ts` (or `client.ts` from
    client code). Add the arrows from the ADR as an allowed list. Other modules import only
    `@/modules/decks` (the module `index.ts`) as before.
-5. **Update the cycle check** (`scripts/check-cycles.ts --modules`, from P29) to treat each area as
+5. **Update the cycle check** (`scripts/dev/check-cycles.ts --modules`, from P29) to treat each area as
    a node. The module-cycle baseline stays empty.
 6. **The P07b2 leftover:** move the suggestion orchestration (`deckSuggestions`, `similarCards`,
    `budgetList`, `budgetReplacements` in `queries/suggestions.ts` and `budget-replacements.ts`)
@@ -107,7 +107,7 @@ area's `index.ts` and `client.ts`): `core` 54 files, `scoring` 9, `building` 21,
 only through `<area>/index.ts` or `<area>/client.ts`, along the arrows; `<area>/testing/*` and
 `<area>/infrastructure/schema.ts` are open to all (fakes, table definitions). Domain files import
 `client.ts` only, `client.ts` imports domain only. The area names are in `DECKS_ARROWS`, in
-`DECKS_AREAS` in `scripts/check-cycles.ts` and in the folder names (and `scripts/regex-count.ts`).
+`DECKS_AREAS` in `scripts/dev/check-cycles.ts` and in the folder names (and `scripts/dev/regex-count.ts`).
 **The cycle check** treats each area as a node (`decks/<area>`); the baseline is still empty.
 
 **Moves worth knowing.** `ports.ts` lost the proxy ports (now `proxies/application/ports.ts`), and the

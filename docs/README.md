@@ -2,6 +2,7 @@
 
 | Doc                                                        | Read it when…                                                                |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md)                   | you want to contribute: setup, commands, the process, the rules              |
 | [deploy.md](deploy.md)                                     | running it for your playgroup with Docker                                    |
 | [roadmap.md](roadmap.md)                                   | you want to know what's next and the per-phase workflow                      |
 | [architecture/overview.md](architecture/overview.md)       | you need the big picture: modules, layers, request flow                      |

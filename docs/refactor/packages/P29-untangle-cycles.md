@@ -8,7 +8,7 @@
 
 P18 splits `decks` into subfolders that import each other only through each subfolder's
 `index.ts`. Cycles inside `decks` would make that impossible, so they are broken first. Today
-`pnpm lint:cycles` (`scripts/check-cycles.ts`) looks at files and ignores `import type`, so type
+`pnpm lint:cycles` (`scripts/dev/check-cycles.ts`) looks at files and ignores `import type`, so type
 cycles between folders pass, and nothing checks cycles between **modules**.
 
 ## Deletes
@@ -27,12 +27,12 @@ catalog) and `drafts` → `decks` (7 places) / `decks` → `activity`. Fix them 
 
 ## Touches
 
-`scripts/check-cycles.ts` and its test, the files above, `eslint.config.mjs` (only if a boundary
+`scripts/dev/check-cycles.ts` and its test, the files above, `eslint.config.mjs` (only if a boundary
 rule changes), `docs/refactor/` (a new `module-cycles-baseline.txt`).
 
 ## Steps
 
-1. **A module-level cycle check first.** Extend `scripts/check-cycles.ts` with `--modules`:
+1. **A module-level cycle check first.** Extend `scripts/dev/check-cycles.ts` with `--modules`:
    - Nodes are modules (`src/modules/<name>`), and, inside `decks`, the four planned areas
      (play, advice, proxies, core, by file name list in a table at the top of the script: write
      it from the cluster map in [report 4](../reviews/plan-review/4-domain-engines.md)).
@@ -41,7 +41,7 @@ rule changes), `docs/refactor/` (a new `module-cycles-baseline.txt`).
    - It reports cycles, and compares with `docs/refactor/module-cycles-baseline.txt` (a list of
      known cycles). A new cycle fails. `--update` only removes entries from the baseline. Same
      idea as the clone baseline.
-   - Add it to `scripts/check.sh` (`cycles` runs both modes). Unit-test it on a small graph.
+   - Add it to `scripts/dev/check.sh` (`cycles` runs both modes). Unit-test it on a small graph.
 2. **Record the baseline** (every cycle it finds today). This is your worklist; the list should
    reach zero in this package.
 3. **Break the cycles, one per commit,** each commit deleting its baseline entry:
@@ -76,7 +76,7 @@ rule changes), `docs/refactor/` (a new `module-cycles-baseline.txt`).
 
 **Done.** `pnpm lint:cycles` runs both modes; `docs/refactor/module-cycles-baseline.txt` is empty.
 
-**The check** (`scripts/check-cycles.ts --modules`): nodes are the modules, and inside `decks/domain`
+**The check** (`scripts/dev/check-cycles.ts --modules`): nodes are the modules, and inside `decks/domain`
 the areas `play`, `proxies`, `advice` and `core` (the table `DECKS_AREAS`; a file not listed is core;
 non-domain files of `decks` are one node, `decks`). It counts `import type` and `wiring.ts`, and
 leaves out test files. Starting list (15 lines, a DFS report, not every path): `accounts` in a loop

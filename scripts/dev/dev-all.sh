@@ -3,9 +3,9 @@
 # the database, any new migrations, the web app, and the worker (nightly sync + "Sync now").
 # Ctrl+C stops the web app and the worker. Postgres keeps running (`pnpm db:stop` stops it).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
-scripts/db.sh start
+scripts/dev/db.sh start
 pnpm --silent db:migrate
 
 # When this script exits (Ctrl+C or the web app stopping), stop everything it started.

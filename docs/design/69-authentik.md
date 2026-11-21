@@ -474,7 +474,7 @@ neither `.envrc` nor the e2e config changes.
 
 **Production:** `deploy/stack.yml` passes them through in the shared `x-app` environment, as it does
 `REDDIT_CLIENT_ID`: `OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}` and the rest (empty means off). They
-are set in the `proxylib-stack` environment in Portainer. `scripts/deploy.sh` keeps its current
+are set in the `proxylib-stack` environment in Portainer. `scripts/ops/deploy.sh` keeps its current
 secrets handling and doesn't generate these (they come from Authentik, not from random); `docs/deploy.md`
 and `.env.example` document them. The same lines go into `docker-compose.yml`.
 
