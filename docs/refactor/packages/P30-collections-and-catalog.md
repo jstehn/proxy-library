@@ -99,4 +99,32 @@ Verify each before starting: `ls src/shared/card-search`, `wc -l` on the files, 
 
 ## Handoff
 
-(empty)
+**Done** (ADR **0030**, design doc **70**; the owner still confirms the names). Production code
+**76,604 to 76,603 (-1)**; knip baseline 300 to 212. `pnpm check` green; integration 382/382 on a
+private database; Playwright not run (not allowed here).
+
+- **collection** (`game` 12 source files, `real` 17, `copies` 2): `real-collection` is gone.
+  `copies` is a third area the plan did not name: it holds the listing SQL both share
+  (`copies/queries/copies-sql.ts`, was `shared/card-search/sql-collection.ts`). Arrows `game` and
+  `real` to `copies`. `real` has its own door, `@/modules/collection/real`; the module's `index.ts`
+  exports the game only. Root: `index.ts`, `wiring.ts`, `infrastructure/index.ts`.
+- **catalog** (`cards` 47, `rules` 11, `outside` 17): `cards` and `rules` import `outside`.
+  `ports.ts` and `schema.ts` are one per area; `make-catalog.ts` joins the services and
+  dependencies. WPN stays in `cards` (it needs the printing types and feeds the artwork pass).
+  `catalog.int.test.ts` moved to `tests/integration/` (it drives the whole catalog). `pgVector`
+  moved to `shared/db`. Largest folder: 11 source files.
+- **research** (`reddit` 10, `youtube` 10): root `index.ts`, `wiring.ts` (both capabilities),
+  `infrastructure/index.ts`. `SearchQueryError` is no longer exported (unused).
+- **card-search** keeps `parse`, `list`, `help`. `tags`, `brackets`, `signals`, `primitives` were
+  already gone (P13). `sql.ts` is `catalog/cards/queries/search-sql.ts` (every module's `queries/`
+  may import that one file); `manaSymbols`, `parseColors`, `rarityName` are now exported from its
+  index for it.
+- **Lint**: `AREA_ARROWS` in `eslint.config.mjs` (decks, catalog, collection, research) and `AREAS`
+  in `scripts/check-cycles.ts` hold the names. Real cards never touch the game's money: the
+  `collection/real` door, the arrows, and a policy that stops `real` importing any module but
+  `accounts` and `catalog` (checked with throwaway files: wallet, store, game, and a store import
+  of the door all fail), plus `tests/integration/collection-real.int.test.ts` (renamed).
+- Also: `drizzle.config.ts` schema glob is now `**`; `knip.json` queries glob covers areas; the
+  `src/app` and adapter lint regexes catch `queries/` and layer folders at any depth.
+- **Left over**: lessons and docs that name old paths were not touched; P34 owns `scripts/`
+  moves, so `scripts/check-cycles.ts`, `regex-count.ts` and their tests may need a merge.
