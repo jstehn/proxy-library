@@ -17,6 +17,8 @@ const PUBLIC_PATHS = [
   // OAuth for web connectors (design doc 30): discovery, registration and the token swap.
   "/.well-known/oauth-",
   "/api/oauth/",
+  // Authentik sends the browser back here before any session exists (ADR 0028).
+  "/api/auth/callback/",
 ];
 
 export function proxy(request: NextRequest) {

@@ -38,6 +38,13 @@ describe("proxy public paths", () => {
     expect(cardImage.headers.get("location")).toBeNull();
   });
 
+  it("lets the Authentik callback through before any session exists", () => {
+    const callback = proxy(
+      new NextRequest("http://localhost:3000/api/auth/callback/authentik?code=c&state=s"),
+    );
+    expect(callback.headers.get("location")).toBeNull();
+  });
+
   it("redirects unauthenticated access to private /decks/[id] pages to /sign-in", () => {
     const privateDeck = proxy(new NextRequest("http://localhost:3000/decks/42"));
     expect(privateDeck.headers.get("location")).toBe(
