@@ -19,6 +19,8 @@ import {
   informantAction,
   sneakAction,
 } from "../actions";
+import { Card } from "@/ui/card";
+import { Select } from "@/ui/field";
 
 // The parts of the draft page that Conspiracy's draft-matters cards add (design doc 18): what
 // everyone may see at each seat, the reveal log, prompts, any-time actions and Deal Broker.
@@ -187,7 +189,6 @@ export function AnyTimeActions(props: {
 }) {
   const { sneak, informant } = props.options;
   if (sneak === null && informant === null) return null;
-  const field = "rounded border border-line bg-field px-2 py-1";
   return (
     <section className="flex flex-col gap-2 rounded-md border border-violet-300 p-3 text-sm dark:border-violet-800">
       <h2 className="text-xs font-semibold text-violet-700 dark:text-violet-300">
@@ -198,13 +199,13 @@ export function AnyTimeActions(props: {
           <input type="hidden" name="draftId" value={props.draftId} />
           <input type="hidden" name="card" value={refValue(sneak.card)} />
           Whispergear Sneak: look at
-          <select name="packNumber" className={field}>
+          <Select name="packNumber" controlSize="sm">
             {sneak.packs.map((packNumber) => (
               <option key={packNumber} value={packNumber}>
                 {props.packLabel(packNumber)}
               </option>
             ))}
-          </select>
+          </Select>
           <SubmitButton tone="secondary">Turn it face down and look</SubmitButton>
         </form>
       )}
@@ -213,13 +214,13 @@ export function AnyTimeActions(props: {
           <input type="hidden" name="draftId" value={props.draftId} />
           <input type="hidden" name="card" value={refValue(informant.card)} />
           Illusionary Informant: see the next card drafted by
-          <select name="targetSeat" className={field}>
+          <Select name="targetSeat" controlSize="sm">
             {informant.targets.map((seat) => (
               <option key={seat} value={seat}>
                 {props.names.seat(seat)}
               </option>
             ))}
-          </select>
+          </Select>
           <SubmitButton tone="secondary">Turn it face down</SubmitButton>
         </form>
       )}
@@ -237,7 +238,6 @@ export function Dealing(props: {
 }) {
   const { deal, you, names } = props;
   const mine = you?.seatNumber;
-  const field = "rounded border border-line bg-field px-2 py-1";
   const cardOptions = (you?.pool ?? []).map((card) => (
     <option key={refValue(card.ref)} value={refValue(card.ref)}>
       {names.printing(card.printingId)}
@@ -249,7 +249,7 @@ export function Dealing(props: {
     </>
   );
   return (
-    <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4 text-sm">
+    <Card as="section" padding="lg" stack className="text-sm">
       <h2 className="font-medium">
         Deal Broker: {names.seat(deal.brokerSeat)} may trade one card from their pool
       </h2>
@@ -258,10 +258,10 @@ export function Dealing(props: {
         <form action={dealAction} className="flex flex-wrap items-center gap-2">
           {hidden}
           <input type="hidden" name="step" value="reveal" />
-          <select name="card" className={field}>
+          <Select name="card" controlSize="sm">
             <option value="none">make no deal</option>
             {cardOptions}
-          </select>
+          </Select>
           <SubmitButton>Reveal it</SubmitButton>
         </form>
       )}
@@ -270,10 +270,10 @@ export function Dealing(props: {
           {hidden}
           <input type="hidden" name="step" value="offer" />
           Offer in exchange:
-          <select name="card" className={field}>
+          <Select name="card" controlSize="sm">
             <option value="none">nothing</option>
             {cardOptions}
-          </select>
+          </Select>
           <SubmitButton>Make my offer</SubmitButton>
         </form>
       )}
@@ -291,7 +291,7 @@ export function Dealing(props: {
         <form action={dealAction} className="flex flex-wrap items-center gap-2">
           {hidden}
           <input type="hidden" name="step" value="accept" />
-          <select name="offerSeat" className={field}>
+          <Select name="offerSeat" controlSize="sm">
             <option value="none">accept none</option>
             {deal.offers
               .filter((offer) => offer.card !== null)
@@ -301,7 +301,7 @@ export function Dealing(props: {
                   {offer.card === null ? "" : names.printing(offer.card.printingId)}
                 </option>
               ))}
-          </select>
+          </Select>
           <SubmitButton>Decide</SubmitButton>
         </form>
       )}
@@ -322,6 +322,6 @@ export function Dealing(props: {
           </button>
         </form>
       )}
-    </section>
+    </Card>
   );
 }

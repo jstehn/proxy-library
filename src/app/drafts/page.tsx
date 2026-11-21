@@ -7,8 +7,11 @@ import { LocalTime } from "@/ui/local-time";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { createDraftAction, joinDraftAction } from "./actions";
 import { boosterLabel, timerLabel } from "./labels";
+import { Select } from "@/ui/field";
+import { Card } from "@/ui/card";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
-const field = "rounded-md border border-line bg-field px-2 py-1.5 text-sm";
 const TIMER_CHOICES = [30, 45, 60, 90, 120, 180, 300];
 const PACKS_PER_PLAYER = 3;
 
@@ -76,7 +79,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <KeyruneStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Drafts</h1>
@@ -95,7 +98,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Open tables</h2>
         {overview.open.length === 0 ? (
-          <p className="text-muted text-sm">No drafts right now. Host one below.</p>
+          <EmptyState>No drafts right now. Host one below.</EmptyState>
         ) : (
           <ul className="divide-border-subtle flex flex-col divide-y">
             {overview.open.map((draft) => (
@@ -106,7 +109,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       </section>
 
       {!seatedSomewhere && (
-        <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
+        <Card as="section" padding="lg" stack>
           <h2 className="font-medium">Host a draft</h2>
           {choices.length === 0 ? (
             <p className="text-muted text-sm">
@@ -116,7 +119,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
             <form action={createDraftAction} className="flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium">Set</span>
-                <select name="booster" required className={field}>
+                <Select name="booster" required>
                   {choices.map((choice) => (
                     <option
                       key={`${choice.setCode}/${choice.boosterType}`}
@@ -126,12 +129,12 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
                       {Cents.format(choice.fee)} to enter
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <div className="flex flex-wrap gap-4">
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="font-medium">Players, at most</span>
-                  <select name="maxSeats" defaultValue={MAX_SEATS} className={field}>
+                  <Select name="maxSeats" defaultValue={MAX_SEATS}>
                     {Array.from({ length: MAX_SEATS - MIN_SEATS + 1 }, (_, index) => {
                       const seats = MIN_SEATS + index;
                       return (
@@ -140,22 +143,18 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
                         </option>
                       );
                     })}
-                  </select>
+                  </Select>
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="font-medium">Pick timer</span>
-                  <select
-                    name="secondsPerPick"
-                    defaultValue={DEFAULT_PICK_SECONDS}
-                    className={field}
-                  >
+                  <Select name="secondsPerPick" defaultValue={DEFAULT_PICK_SECONDS}>
                     {TIMER_CHOICES.map((seconds) => (
                       <option key={seconds} value={seconds}>
                         {timerLabel(seconds)}
                       </option>
                     ))}
                     <option value="off">{timerLabel(null)}</option>
-                  </select>
+                  </Select>
                 </label>
               </div>
               <p className="text-muted text-xs">
@@ -168,13 +167,13 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
               </div>
             </form>
           )}
-        </section>
+        </Card>
       )}
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Your finished drafts</h2>
         {overview.finished.length === 0 ? (
-          <p className="text-muted text-sm">None yet.</p>
+          <EmptyState>None yet.</EmptyState>
         ) : (
           <ul className="divide-border-subtle flex flex-col divide-y">
             {overview.finished.map((draft) => (
@@ -200,6 +199,6 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
           </ul>
         )}
       </section>
-    </main>
+    </Page>
   );
 }
