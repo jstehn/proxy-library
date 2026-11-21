@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PrintingId, SealedProductId } from "@/modules/catalog";
@@ -12,91 +11,96 @@ import {
   type PrintingChoice,
   type ProductDeck,
 } from "@/modules/collection/real";
+import { checkbox, parseForm } from "@/server/form-action";
+import { formRedirect } from "@/server/form-action-instance";
 import type { PageContext } from "@/server/page";
 import { readPage } from "@/server/page-instance";
 import { FinishSchema } from "@/shared/kernel";
+import { cardPath, revalidateCard } from "../../cards/paths";
+import {
+  REAL_COLLECTION_PATH,
+  realCollectionMessagePath,
+  revalidateRealCollection,
+  revalidateStoreSetPages,
+} from "./paths";
 
 // Server actions for the real collection (design doc 16, sections 7 and 15). The use cases check
 // everything again; these only read the form and say what happened in words.
 
-function refresh() {
-  revalidatePath("/collection/real");
-  revalidatePath("/decks");
-}
-
 /** "Let other players see my real collection" (rule 5, off by default). */
-export async function setRealSharingAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  await capabilities.realCollection.setRealSharing(actor, formData.get("shared") === "on");
-  refresh();
-  redirect("/collection/real");
-}
+export const setRealSharingAction = formRedirect(
+  z.object({ shared: checkbox() }),
+  async ({ actor, capabilities }, { shared }) => {
+    await capabilities.realCollection.setRealSharing(actor, shared);
+    revalidateRealCollection();
+    return REAL_COLLECTION_PATH;
+  },
+);
 
 /** Empties the real collection, after the page's second click to confirm. */
 export async function clearRealCollectionAction(): Promise<void> {
   const { actor, capabilities } = await readPage();
   const removed = await capabilities.realCollection.clearRealCollection(actor);
-  refresh();
-  redirect(`/collection/real?message=${encodeURIComponent(`Removed ${removed} rows.`)}`);
+  revalidateRealCollection();
+  redirect(realCollectionMessagePath(`Removed ${removed} rows.`));
 }
 
 /** Sets how many real copies of a printing you have, from the card page's box. */
-export async function setRealCopiesAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const printingId = String(formData.get("printingId") ?? "");
-  const finish = FinishSchema.parse(formData.get("finish"));
-  const quantity = z.coerce
-    .number()
-    .int()
-    .min(0)
-    .max(MAX_REAL_QUANTITY)
-    .catch(-1)
-    .parse(formData.get("quantity"));
-  const result = await capabilities.realCollection.setRealCopies(actor, {
-    printingId: PrintingId.of(printingId),
-    finish,
-    quantity,
-  });
-  refresh();
-  revalidatePath(`/cards/${printingId}`);
-  const error = result.ok ? "" : `?realError=${result.error.kind}`;
-  redirect(`/cards/${printingId}${error}`);
-}
+export const setRealCopiesAction = formRedirect(
+  z.object({
+    printingId: z.string().default(""),
+    finish: FinishSchema,
+    quantity: z.coerce.number().int().min(0).max(MAX_REAL_QUANTITY).catch(-1),
+  }),
+  async ({ actor, capabilities }, { printingId, finish, quantity }) => {
+    const result = await capabilities.realCollection.setRealCopies(actor, {
+      printingId: PrintingId.of(printingId),
+      finish,
+      quantity,
+    });
+    revalidateRealCollection();
+    revalidateCard(printingId);
+    return cardPath(printingId, result.ok ? undefined : result.error.kind);
+  },
+);
 
 /** Moves your real copies of this printing to another printing of the same card. */
-export async function changeRealPrintingAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const from = {
-    printingId: PrintingId.of(String(formData.get("printingId") ?? "")),
-    finish: FinishSchema.parse(formData.get("finish")),
-  };
-  const [toPrinting, toFinish] = String(formData.get("to") ?? "").split("/");
-  const result = await capabilities.realCollection.changeRealPrinting(actor, from, {
-    printingId: PrintingId.of(toPrinting ?? ""),
-    finish: FinishSchema.catch("nonfoil").parse(toFinish),
-  });
-  refresh();
-  if (!result.ok) redirect(`/cards/${from.printingId}?realError=${result.error.kind}`);
-  redirect(`/cards/${result.value.printingId}`);
-}
+export const changeRealPrintingAction = formRedirect(
+  z.object({
+    printingId: z.string().default(""),
+    finish: FinishSchema,
+    to: z.string().default(""),
+  }),
+  async ({ actor, capabilities }, input) => {
+    const from = { printingId: PrintingId.of(input.printingId), finish: input.finish };
+    const [toPrinting, toFinish] = input.to.split("/");
+    const result = await capabilities.realCollection.changeRealPrinting(actor, from, {
+      printingId: PrintingId.of(toPrinting ?? ""),
+      finish: FinishSchema.catch("nonfoil").parse(toFinish),
+    });
+    revalidateRealCollection();
+    if (!result.ok) return cardPath(from.printingId, result.error.kind);
+    return cardPath(result.value.printingId);
+  },
+);
 
 /** Deletes a real product's record, and its cards too when the box is ticked (rule 13). */
-export async function removeRealProductAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const realProductId = z.coerce.number().int().positive().parse(formData.get("realProductId"));
-  const removeCards = formData.get("removeCards") === "on";
-  const result = await capabilities.realCollection.removeRealProduct(actor, {
-    realProductId,
-    removeCards,
-  });
-  refresh();
-  const message = !result.ok
-    ? "That product isn't in your real collection."
-    : removeCards
-      ? `Removed the product and ${result.value.removed.length + result.value.changed.length} of its cards' rows.`
-      : "Removed the product. Its cards stay in your real collection.";
-  redirect(`/collection/real?message=${encodeURIComponent(message)}`);
-}
+export const removeRealProductAction = formRedirect(
+  z.object({ realProductId: z.coerce.number().int().positive(), removeCards: checkbox() }),
+  async ({ actor, capabilities }, { realProductId, removeCards }) => {
+    const result = await capabilities.realCollection.removeRealProduct(actor, {
+      realProductId,
+      removeCards,
+    });
+    revalidateRealCollection();
+    const message = !result.ok
+      ? "That product isn't in your real collection."
+      : removeCards
+        ? `Removed the product and ${result.value.removed.length + result.value.changed.length} of its cards' rows.`
+        : "Removed the product. Its cards stay in your real collection.";
+    return realCollectionMessagePath(message);
+  },
+);
 
 /** Makes a deck (real cards on) from each precon a real product holds (rule 11). */
 async function makeDecks(
@@ -136,8 +140,13 @@ export async function addRealProductAction(
   formData: FormData,
 ): Promise<RealProductState> {
   const { actor, capabilities } = await readPage();
-  const productId = SealedProductId.of(String(formData.get("productId") ?? ""));
-  const choices = String(formData.get("choices") ?? "")
+  const form = parseForm(
+    z.object({ productId: z.string().default(""), choices: z.string().default("") }),
+    formData,
+  );
+  if (!form.success) return { kind: "Error", message: "That product isn't in the catalog." };
+  const productId = SealedProductId.of(form.data.productId);
+  const choices = form.data.choices
     .split(",")
     .filter((part) => part !== "")
     .map(Number)
@@ -165,8 +174,8 @@ export async function addRealProductAction(
   }
   const { cards } = result.value;
   const decks = await makeDecks({ actor, capabilities }, cards.decks);
-  refresh();
-  revalidatePath("/store/[code]", "page");
+  revalidateRealCollection();
+  revalidateStoreSetPages();
   return {
     kind: "Added",
     cards: cards.copies.reduce((total, copy) => total + copy.quantity, 0),
@@ -258,7 +267,7 @@ export async function applyImportAction(input: z.input<typeof ApplyInput>): Prom
     }[result.error.kind];
     return { ok: false, message, changed: result.error.kind === "CollectionChanged" };
   }
-  refresh();
+  revalidateRealCollection();
   const plan = result.value;
   const summary = `Imported: ${plan.added.length} new, ${plan.changed.length} changed, ${plan.removed.length} removed.`;
   if (deckName === null || deckName.trim() === "")
