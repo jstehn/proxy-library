@@ -1,11 +1,20 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { SetCode, describePhotoError } from "@/modules/catalog";
-import { readPage } from "@/server/page-instance";
+import { formRedirect } from "@/server/form-action-instance";
+import { revalidateHeader } from "../../paths";
+import { adminPath, photosSetPath } from "../paths";
 
-// Admin → Photos (design doc 13): pick a product's WPN photo, or set a set's page address.
+// Admin → Photos (design doc 13): pick a product's WPN photo, or set a set's page address. A form
+// that can't be read goes back to the photos list.
+
+const FORM_UNREADABLE = { admin: true, unreadable: adminPath("photos") } as const;
+
+/** Where a button goes back to: the store and inventory show these photos, so refresh them all. */
+function backTo(code: string, message: string, tone: "message" | "error" = "message"): string {
+  revalidateHeader();
+  return photosSetPath(code, tone, message);
+}
 
 const ChoiceForm = z.object({
   code: z.string().regex(/^[A-Z0-9]{2,8}$/),
@@ -14,52 +23,40 @@ const ChoiceForm = z.object({
   choice: z.string().min(1),
 });
 
-export async function choosePhotoAction(formData: FormData): Promise<void> {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = ChoiceForm.safeParse({
-    code: formData.get("code"),
-    productId: formData.get("productId"),
-    choice: formData.get("choice"),
-  });
-  if (!form.success) redirect("/admin/photos");
-  const { code, productId, choice } = form.data;
-  const { catalog } = capabilities;
+export const choosePhotoAction = formRedirect(
+  ChoiceForm,
+  async ({ actor: admin, capabilities }, { code, productId, choice }) => {
+    const { catalog } = capabilities;
+    if (choice === "auto") {
+      await catalog.clearPhotoChoice(admin, productId);
+      return backTo(
+        code,
+        "Undone: the product is matched again when its page is read (sync queued).",
+      );
+    }
+    const separator = choice.lastIndexOf("|");
+    const wpnName = choice === "none" ? null : choice.slice(0, separator);
+    const photoIndex = choice === "none" ? null : Number(choice.slice(separator + 1));
+    const result = await catalog.choosePhoto(admin, {
+      productId,
+      wpnName,
+      photoIndex: photoIndex === null || photoIndex < 0 ? null : photoIndex,
+    });
+    if (!result.ok) return backTo(code, describePhotoError(result.error), "error");
+    return backTo(code, "Saved.");
+  },
+  FORM_UNREADABLE,
+);
 
-  if (choice === "auto") {
-    await catalog.clearPhotoChoice(admin, productId);
-    backTo(code, "Undone: the product is matched again when its page is read (sync queued).");
-  }
-  const separator = choice.lastIndexOf("|");
-  const wpnName = choice === "none" ? null : choice.slice(0, separator);
-  const photoIndex = choice === "none" ? null : Number(choice.slice(separator + 1));
-  const result = await catalog.choosePhoto(admin, {
-    productId,
-    wpnName,
-    photoIndex: photoIndex === null || photoIndex < 0 ? null : photoIndex,
-  });
-  if (!result.ok) backTo(code, describePhotoError(result.error), "error");
-  backTo(code, "Saved.");
-}
-
-const SlugForm = z.object({
-  code: z.string().regex(/^[A-Z0-9]{2,8}$/),
-  slug: z.string().max(120),
-});
-
-export async function setPageSlugAction(formData: FormData): Promise<void> {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = SlugForm.safeParse({ code: formData.get("code"), slug: formData.get("slug") });
-  if (!form.success) redirect("/admin/photos");
-  const result = await capabilities.catalog.setPageSlug(admin, {
-    setCode: SetCode.of(form.data.code),
-    slug: form.data.slug.trim() === "" ? null : form.data.slug,
-  });
-  if (!result.ok) backTo(form.data.code, describePhotoError(result.error), "error");
-  backTo(form.data.code, "Saved. The page is read at the next sync (queued).");
-}
-
-function backTo(code: string, message: string, tone: "success" | "error" = "success"): never {
-  revalidatePath("/", "layout"); // the store and inventory show these photos
-  const params = new URLSearchParams({ [tone === "error" ? "error" : "message"]: message });
-  redirect(`/admin/photos/${code}?${params.toString()}`);
-}
+export const setPageSlugAction = formRedirect(
+  z.object({ code: z.string().regex(/^[A-Z0-9]{2,8}$/), slug: z.string().max(120) }),
+  async ({ actor: admin, capabilities }, { code, slug }) => {
+    const result = await capabilities.catalog.setPageSlug(admin, {
+      setCode: SetCode.of(code),
+      slug: slug.trim() === "" ? null : slug,
+    });
+    if (!result.ok) return backTo(code, describePhotoError(result.error), "error");
+    return backTo(code, "Saved. The page is read at the next sync (queued).");
+  },
+  FORM_UNREADABLE,
+);

@@ -1,9 +1,11 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CreateInviteError, RevokeInviteError } from "@/modules/accounts";
 import { assertNever } from "@/shared/kernel";
+import { parseForm } from "@/server/form-action";
+import { formVoid } from "@/server/form-action-instance";
 import { readPage } from "@/server/page-instance";
+import { revalidateAdmin } from "../paths";
 
 export type CreateInviteState = {
   error: string | null;
@@ -17,7 +19,7 @@ export async function createInviteAction(
   formData: FormData,
 ): Promise<CreateInviteState> {
   const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = CreateInviteForm.safeParse({ validForDays: formData.get("validForDays") });
+  const form = parseForm(CreateInviteForm, formData);
   if (!form.success)
     return { error: "Choose how many days the invite should last.", created: null };
 
@@ -25,7 +27,7 @@ export async function createInviteAction(
   const invite = await accounts.createInvite(admin, form.data);
   if (!invite.ok) return { error: createMessageFor(invite.error), created: null };
 
-  revalidatePath("/admin/invites");
+  revalidateAdmin("invites");
   const link = new URL(
     `/register?invite=${invite.value.code}`,
     capabilities.site.appUrl,
@@ -38,16 +40,16 @@ export async function createInviteAction(
 
 const RevokeInviteForm = z.object({ code: z.string() });
 
-export async function revokeInviteAction(formData: FormData): Promise<void> {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = RevokeInviteForm.safeParse({ code: formData.get("code") });
-  if (!form.success) return;
-
-  const result = await capabilities.accounts.revokeInvite(admin, form.data);
-  // Revoking an invite that's already used or gone changes nothing; the list shows its state.
-  if (!result.ok) console.warn("revoke invite:", revokeMessageFor(result.error));
-  revalidatePath("/admin/invites");
-}
+export const revokeInviteAction = formVoid(
+  RevokeInviteForm,
+  async ({ actor: admin, capabilities }, input) => {
+    const result = await capabilities.accounts.revokeInvite(admin, input);
+    // Revoking an invite that's already used or gone changes nothing; the list shows its state.
+    if (!result.ok) console.warn("revoke invite:", revokeMessageFor(result.error));
+    revalidateAdmin("invites");
+  },
+  { admin: true },
+);
 
 function createMessageFor(error: CreateInviteError): string {
   switch (error.kind) {
