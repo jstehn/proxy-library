@@ -22,8 +22,11 @@ export type AdminActionContext = Readonly<{
 }>;
 
 export type FormActionSources = Readonly<{
-  /** The signed-in player (sends visitors who aren't signed in to the sign-in page). */
-  requireActor(): Promise<Actor>;
+  /**
+   * The signed-in player (sends visitors who aren't signed in to the sign-in page, and players who
+   * must change their password to that page, unless `allowPasswordChangePending`).
+   */
+  requireActor(options?: Readonly<{ allowPasswordChangePending?: boolean }>): Promise<Actor>;
   /** The signed-in admin; anyone else sees "not found". */
   requireAdminActor(): Promise<AdminActor>;
   capabilities(): Capabilities;
@@ -32,16 +35,30 @@ export type FormActionSources = Readonly<{
   redirect(path: string): never;
 }>;
 
-export type FormActionOptions<Value, Failure> = Readonly<{
-  /** The sentence for each expected failure the handler returns. */
-  describeError(error: Failure): string;
-  /** What the form says when the schema rejects the input, instead of listing the issues. */
-  invalidInput?: string;
-  /** Shown after success. Leave out for a form that redirects or shows nothing. */
-  successMessage?: string | ((value: Value) => string);
-  /** Where to go after success, instead of showing a message. */
-  redirectTo?: string | ((value: Value) => string);
+/** What `formRedirect` and `formVoid` take, besides the schema and the handler. */
+export type PlainFormOptions = Readonly<{
+  /** Lets a player who must still change their password use the form (the change-password form). */
+  allowPasswordChangePending?: boolean;
 }>;
+
+/** What a form with a state takes: the plain options plus how it words each outcome. */
+export type FormActionOptions<Value, Failure> = PlainFormOptions &
+  Readonly<{
+    /** The sentence for each expected failure the handler returns. */
+    describeError(error: Failure): string;
+    /**
+     * What the form says when the schema rejects the input, instead of listing the issues: one
+     * sentence, or one chosen from the first problem (`messageByField`).
+     */
+    invalidInput?: string | ((error: z.ZodError) => string);
+    /** Shown after success. Leave out for a form that redirects or shows nothing. */
+    successMessage?: string | ((value: Value) => string);
+    /** Where to go after success, instead of showing a message (`undefined`: stay and show it). */
+    redirectTo?: string | ((value: Value) => string | undefined);
+  }>;
+
+/** The fields a form can read: an object, or a union of objects told apart by one field. */
+export type FormSchema = z.ZodObject | z.ZodDiscriminatedUnion;
 
 /**
  * What the form calls: with the form's data last, and the form's previous state first when it is
@@ -75,13 +92,33 @@ function holdsList(schema: z.ZodType): boolean {
   return false;
 }
 
+/** Every field the schema names; for a union, the fields of all its options. */
+function fieldsOf(schema: FormSchema): Record<string, z.ZodType> {
+  if ("shape" in schema) return schema.shape as Record<string, z.ZodType>;
+  const fields: Record<string, z.ZodType> = {};
+  for (const option of schema.options) Object.assign(fields, fieldsOf(option as z.ZodObject));
+  return fields;
+}
+
 /** The form's fields as the schema expects them: a list field gets every value, others the first. */
-function readForm(schema: z.ZodObject, formData: FormData): Record<string, unknown> {
+function readForm(schema: FormSchema, formData: FormData): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
-  for (const [key, fieldSchema] of Object.entries(schema.shape)) {
+  for (const [key, fieldSchema] of Object.entries(fieldsOf(schema))) {
     fields[key] = holdsList(fieldSchema) ? formData.getAll(key) : (formData.get(key) ?? undefined);
   }
   return fields;
+}
+
+/**
+ * A sentence per field, for `invalidInput`: the message of the first problem's field, or
+ * `otherwise` when that field has none. (A schema lists its fields in order, so the order of the
+ * form decides which problem comes first.)
+ */
+export function messageByField(messages: Readonly<Record<string, string>>, otherwise: string) {
+  return function choose(error: z.ZodError): string {
+    const field = String(error.issues[0]?.path[0] ?? "");
+    return messages[field] ?? otherwise;
+  };
 }
 
 /** The problems, as one sentence: the same text `action()` builds for its input errors. */
@@ -94,7 +131,7 @@ function problemsAsText(error: z.ZodError): string {
 /** Builds `formAction` from where the actor, the capabilities and `redirect` come from (fakes in tests). */
 export function makeFormAction(sources: FormActionSources) {
   // The admin form first: only an options object that says `admin: true` fits it.
-  function formAction<Schema extends z.ZodObject, Value, Failure>(
+  function formAction<Schema extends FormSchema, Value, Failure>(
     schema: Schema,
     handler: (
       context: AdminActionContext,
@@ -102,12 +139,12 @@ export function makeFormAction(sources: FormActionSources) {
     ) => Promise<Result<Value, Failure>>,
     options: FormActionOptions<Value, Failure> & Readonly<{ admin: true }>,
   ): FormRunner;
-  function formAction<Schema extends z.ZodObject, Value, Failure>(
+  function formAction<Schema extends FormSchema, Value, Failure>(
     schema: Schema,
     handler: (context: ActionContext, input: z.output<Schema>) => Promise<Result<Value, Failure>>,
     options: FormActionOptions<Value, Failure>,
   ): FormRunner;
-  function formAction<Schema extends z.ZodObject, Value, Failure>(
+  function formAction<Schema extends FormSchema, Value, Failure>(
     schema: Schema,
     handler: (
       context: ActionContext & AdminActionContext,
@@ -119,15 +156,25 @@ export function makeFormAction(sources: FormActionSources) {
       const formData = given[given.length - 1] as FormData;
       const actor = options.admin
         ? await sources.requireAdminActor()
-        : await sources.requireActor();
+        : await sources.requireActor({
+            allowPasswordChangePending: options.allowPasswordChangePending,
+          });
       const parsed = schema.safeParse(readForm(schema, formData));
       if (!parsed.success) {
-        return { message: options.invalidInput ?? problemsAsText(parsed.error), tone: "error" };
+        const { invalidInput } = options;
+        const message =
+          typeof invalidInput === "function"
+            ? invalidInput(parsed.error)
+            : (invalidInput ?? problemsAsText(parsed.error));
+        return { message, tone: "error" };
       }
 
       // `actor` is an AdminActor exactly when `options.admin` is set, which the overloads tie to the handler.
       const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
-      const result = await handler(context as ActionContext & AdminActionContext, parsed.data);
+      const result = await handler(
+        context as ActionContext & AdminActionContext,
+        parsed.data as z.output<Schema>,
+      );
       if (!result.ok) return { message: options.describeError(result.error), tone: "error" };
 
       const destination =
@@ -147,4 +194,93 @@ export function makeFormAction(sources: FormActionSources) {
     return run as FormRunner;
   }
   return formAction;
+}
+
+/** What `formVoid` takes for an admin's form. */
+type AdminOption = PlainFormOptions & Readonly<{ admin: true }>;
+
+/** The signed-in player, or the admin when the form says `admin: true`. */
+async function actorFor(
+  sources: FormActionSources,
+  options: PlainFormOptions & Readonly<{ admin?: true }>,
+): Promise<Actor> {
+  if (options.admin) return sources.requireAdminActor();
+  return sources.requireActor({ allowPasswordChangePending: options.allowPasswordChangePending });
+}
+
+/**
+ * `formRedirect(schema, handler, options)`: for a plain `<form action>` that always ends by
+ * redirecting (with `?error=` or `?message=` on the page it came from). The handler returns the
+ * path to go to. A form the schema can't read (one changed by hand) throws, unless
+ * `unreadable` names a path to go to instead.
+ */
+export function makeFormRedirect(sources: FormActionSources) {
+  type RedirectOptions = PlainFormOptions & Readonly<{ unreadable?: string }>;
+  function formRedirect<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<string>,
+    options: RedirectOptions & Readonly<{ admin: true }>,
+  ): (formData: FormData) => Promise<void>;
+  function formRedirect<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (context: ActionContext, input: z.output<Schema>) => Promise<string>,
+    options?: RedirectOptions,
+  ): (formData: FormData) => Promise<void>;
+  function formRedirect<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (
+      context: ActionContext & AdminActionContext,
+      input: z.output<Schema>,
+    ) => Promise<string>,
+    options: RedirectOptions & Readonly<{ admin?: true }> = {},
+  ): (formData: FormData) => Promise<void> {
+    async function run(formData: FormData): Promise<void> {
+      const actor = await actorFor(sources, options);
+      const parsed = schema.safeParse(readForm(schema, formData));
+      if (!parsed.success) {
+        if (options.unreadable !== undefined) sources.redirect(options.unreadable);
+        throw new Error(`The form could not be read. ${problemsAsText(parsed.error)}`);
+      }
+      const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
+      const input = parsed.data as z.output<Schema>;
+      sources.redirect(await handler(context as ActionContext & AdminActionContext, input));
+    }
+    return run;
+  }
+  return formRedirect;
+}
+
+/**
+ * `formVoid(schema, handler, options)`: for a plain `<form action>` that shows nothing after it
+ * is sent (the row just changes). A form the schema can't read does nothing.
+ */
+export function makeFormVoid(sources: FormActionSources) {
+  function formVoid<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<unknown>,
+    options: AdminOption,
+  ): (formData: FormData) => Promise<void>;
+  function formVoid<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (context: ActionContext, input: z.output<Schema>) => Promise<unknown>,
+    options?: PlainFormOptions,
+  ): (formData: FormData) => Promise<void>;
+  function formVoid<Schema extends FormSchema>(
+    schema: Schema,
+    handler: (
+      context: ActionContext & AdminActionContext,
+      input: z.output<Schema>,
+    ) => Promise<unknown>,
+    options: PlainFormOptions & Readonly<{ admin?: true }> = {},
+  ): (formData: FormData) => Promise<void> {
+    async function run(formData: FormData): Promise<void> {
+      const actor = await actorFor(sources, options);
+      const parsed = schema.safeParse(readForm(schema, formData));
+      if (!parsed.success) return;
+      const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
+      await handler(context as ActionContext & AdminActionContext, parsed.data as z.output<Schema>);
+    }
+    return run;
+  }
+  return formVoid;
 }
