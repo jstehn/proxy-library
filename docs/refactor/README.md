@@ -162,6 +162,11 @@ line by line. The package writes new tests against the new design. The P00 refer
 (`docs/refactor/reference/`) describe what the old code returned, so rebuilt features can be
 compared with them. They're a guide, not a gate: a deliberate change is fine, but write it down.
 
+**Standing approval (owner, 2026-11-21):** growth of **under 500 production lines** is accepted
+without asking, when the package is better engineered for it or adds a feature. Say so in the
+handoff with the number and the reason; the project manager raises the baseline. Larger growth, or
+growth with neither reason, still needs the owner.
+
 ### Which tests to run, and when
 
 Run the slow suites at low priority so the desktop stays responsive: `nice -n 19 pnpm test:int` and `nice -n 19 pnpm test:e2e` (2026-11-19: a full end-to-end run on a busy machine reached a load of 36 and crashed the Claude app). Under heavy load, end-to-end tests time out at random; rerun on a quiet machine before calling a failure real.
