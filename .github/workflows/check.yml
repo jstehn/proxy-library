@@ -57,8 +57,6 @@ jobs:
       DATABASE_URL: postgres://tcg:tcg@localhost:5432/tcg_test
       AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
       APP_URL: http://localhost:3000
-      IMAGE_CACHE_DIR: ${{ runner.temp }}/images
-      SYNC_CACHE_DIR: ${{ runner.temp }}/cache
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -68,5 +66,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:int
+        # `runner` isn't available in a job's env, only in its steps.
+        env:
+          IMAGE_CACHE_DIR: ${{ runner.temp }}/images
+          SYNC_CACHE_DIR: ${{ runner.temp }}/cache
 
   # Follow-up: an end-to-end job (`pnpm test:e2e`). Playwright needs browsers installed first.
