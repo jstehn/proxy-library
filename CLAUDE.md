@@ -38,8 +38,9 @@ exercise solution, commit at the end of each lesson. Lessons teach concepts; the
 - `pnpm test` (unit, watch) · `pnpm test:int` (needs `pnpm db:start`) · `pnpm test:e2e` (Playwright,
   Nix browsers; keep `@playwright/test` pinned to nixpkgs' version) · `pnpm test:remote` (the only
   tests that call MTGJSON/Scryfall; never run automatically).
-- `pnpm worker <command>`: `sync`, `schedule`, `draft-timers`, `check-packs`, `check-products`,
-  `check-commanders`, `embed-cards` (see `worker/commands/`).
+- `pnpm worker <command>`: `sync`, `schedule`, `draft-timers`, `sync-rules`, `sync-edhrec`,
+  `embed-cards`, `value-products`, `check-packs`, `check-products`, `check-commanders` (see
+  `worker/index.ts`).
 
 ## Rules that bite
 
