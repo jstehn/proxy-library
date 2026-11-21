@@ -135,7 +135,8 @@ over the clever one.
 ## UI
 
 - **Where UI goes.** A route's own UI lives in its `_components/`. UI shared by two or more routes
-  lives in `src/ui/<area>/` (or `app/_components` for card UI). `src/ui` holds presentational
+  lives in `src/ui/` (general blocks) or `src/ui/mtg/` (cards, sets, mana, prices), or in
+  `app/_components` when it knows the app itself (its routes, menus, the installed PWA). `src/ui` holds presentational
   building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, ...): no
   state machines, no sounds, no query logic. Logic that one route uses sits beside that route.
 - **A page** calls `readPage()`, parses its params, reads through `reads` and capabilities, and
@@ -161,7 +162,7 @@ over the clever one.
   light and dark). Don't write `focus:` or `focus-visible:` classes on a component; the only
   exceptions are the skip link (it reveals itself on focus) and `focus:outline-none` on a
   programmatic focus target (`tabIndex={-1}`).
-- **Images.** Use `CardImage` (`@/ui/card-image`), never a raw `<img>` (lint enforces it). `alt`
+- **Images.** Use `CardImage` (`@/ui/mtg/card-image`), never a raw `<img>` (lint enforces it). `alt`
   is required: the card's name, or `decorative` when the text beside the image already says it.
   Give `width` and `height` or an aspect-ratio class so the page doesn't jump. It stays a plain
   `<img>` because our own image cache already serves resized WebP.

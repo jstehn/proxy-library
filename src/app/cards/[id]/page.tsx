@@ -6,14 +6,14 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { type Finish } from "@/shared/mtg";
 import { LocalTime } from "@/ui/local-time";
-import { ManaStylesheet } from "@/ui/mana";
-import { PriceChart, type ChartMarker } from "@/ui/price-chart";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { ManaStylesheet } from "@/ui/mtg/mana";
+import { PriceChart, type ChartMarker } from "@/ui/mtg/price-chart";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { AddWishForm } from "@/app/wishlist/wish-forms";
 import { RealCopiesBox } from "./real-copies";
 import { BuyForm, SellForm } from "./trade-forms";
 import { Card } from "@/ui/card";
-import { CardView } from "@/ui/card-view";
+import { CardView } from "@/ui/mtg/card-view";
 import { Page } from "@/ui/page";
 
 // One card: what it is, what it's worth over time, what you own, and buying or selling it

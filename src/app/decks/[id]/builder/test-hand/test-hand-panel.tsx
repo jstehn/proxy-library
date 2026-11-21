@@ -17,7 +17,7 @@ import { seededRng } from "@/shared/kernel";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Eyebrow } from "@/ui/eyebrow";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The test hand (design doc 19, section 5.2): deal an opening hand from the deck, mulligan, draw,
 // and see the exact odds of drawing lands and roles. The rules live in the pure reducer

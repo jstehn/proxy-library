@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EXPORTERS, FORMATS, listAndFingerprint } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { WishForShortForm } from "../../wishlist/wish-forms";
 import {
   copyDeckAction,

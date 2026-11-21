@@ -13,7 +13,7 @@ import { valueOr } from "../answer";
 import { tokensAction } from "./actions";
 import { Card } from "@/ui/card";
 import { Badge } from "@/ui/badge";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.

@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { Button } from "@/ui/button";
-import { CardView } from "@/ui/card-view";
-import { ManaText } from "@/ui/mana";
-import { CardImage } from "@/ui/card-image";
+import { CardView } from "@/ui/mtg/card-view";
+import { ManaText } from "@/ui/mtg/mana";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const DIALOG_BOX =
   "border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70";

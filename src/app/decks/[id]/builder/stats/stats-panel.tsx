@@ -13,7 +13,7 @@ import {
   TYPE_ORDER,
   type ManaSource,
 } from "@/modules/decks/client";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { TAG_LABELS } from "@/app/decks/labels";
 import { CastCurve } from "../cast-curve/cast-curve";
 import { Eyebrow } from "@/ui/eyebrow";

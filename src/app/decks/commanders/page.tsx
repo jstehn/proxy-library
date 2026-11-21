@@ -3,7 +3,7 @@ import { SPELL_SLOTS } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { THEME_LABELS } from "@/shared/mtg";
 import { Alert } from "@/ui/form";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { Page } from "@/ui/page";
 import { CommanderFilterForm, SORT_LABELS } from "./_components/commander-filters";
 import { CommanderRow } from "./_components/commander-row";

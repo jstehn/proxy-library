@@ -6,14 +6,14 @@ import type { Capabilities } from "@/server/composition/capabilities";
 import type { Reads } from "@/server/composition/reads";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import type { OpenerPack } from "./_components/machine";
 import { PackOpener } from "./_components/pack-opener";
-import { KeyruneStylesheet } from "@/ui/set-symbol";
+import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
 import { productLabel } from "../../store/labels";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
-import { Price } from "@/ui/price";
+import { Price } from "@/ui/mtg/price";
 
 // What one or more openings produced: packs in reveal order, decks, and what boxes unpacked into.
 // (Phase 8 turns a pack into an animated reveal.)

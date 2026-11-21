@@ -3,7 +3,7 @@ import { SPELL_SLOTS, type CommanderCoverage } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
 import { type Theme, THEME_LABELS } from "@/shared/mtg";
 import { Button } from "@/ui/button";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { planText, TAG_LABELS } from "../../labels";
 import { startDeckAction } from "../actions";
 import { CommanderCards, CommanderThumbnail } from "./commander-cards";

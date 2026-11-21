@@ -4,7 +4,7 @@
 // cards were decided on the server, so nothing here can change a pull.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
-import { ProductImage } from "@/ui/product-image";
+import { ProductImage } from "@/ui/mtg/product-image";
 import { CardBack } from "./card-back";
 import {
   hitLevel,
@@ -18,7 +18,7 @@ import {
   type OpeningState,
 } from "./machine";
 import { makeSounds, useMuted, useReducedMotion } from "./sounds";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const TEAR_MILLISECONDS = 900;
 const PRELOAD_WAIT_MILLISECONDS = 3000; // rule 7: wait this long at most for images

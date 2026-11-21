@@ -5,7 +5,7 @@ import { Cents } from "@/shared/kernel";
 import { NOT_UNDERSTOOD_TEXT, settle, valueOr } from "../answer";
 import { choosePrintingAction, printingsAction } from "./actions";
 import { type BuilderDeck } from "../action-helpers";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // Choose which printing and finish a deck line uses (design doc 24, section 9).
 

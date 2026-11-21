@@ -12,7 +12,7 @@ import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
-import { CardView } from "@/ui/card-view";
+import { CardView } from "@/ui/mtg/card-view";
 import { Badge } from "@/ui/badge";
 import { Eyebrow } from "@/ui/eyebrow";
 

@@ -174,9 +174,10 @@ it, `real` imports no game area, and lint stops it importing any module but `acc
 | Path                      | Holds                                                                                                                      |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/`                | Next.js routes: pages, server actions and API routes. Thin adapters over the capabilities (ADR 0026)                       |
-| `src/app/_components/`    | Components several pages share; a page's own components sit in its route folder (`_components/`)                           |
+| `src/app/_components/`    | Components that know the app (menus, navigation, card filters, the PWA); a page's own components sit in its route folder   |
 | `src/app/_llm-tools/`     | The LLM tools (design doc 28): `bindings/` has one file per tool, named after it; `present/` shapes their answers          |
-| `src/ui/`                 | The building blocks every page uses (buttons, fields, page states, card and price displays); no data access                |
+| `src/ui/`                 | The general building blocks every page uses (buttons, fields, forms, dialogs, page states); no data access                 |
+| `src/ui/mtg/`             | Magic's displays: card images and views, mana, set symbols, prices and sealed products                                     |
 | `src/server/`             | The request helpers adapters use: `readPage()`, `action()`, `formAction()`, `readTool()`, the session                      |
 | `src/server/composition/` | The app's composition root (`container.ts`), the wiring shared with the worker (`core.ts`), and the capabilities it builds |
 | `src/proxy.ts`            | The sign-in guard that runs before every request (Next 16's middleware)                                                    |

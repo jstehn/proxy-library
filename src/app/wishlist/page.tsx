@@ -16,8 +16,8 @@ import { BuyWishForm, EditWishForm, RemoveWishButton } from "./wish-forms";
 import { readPage } from "@/server/page-instance";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
-import { Price } from "@/ui/price";
-import { CardImage } from "@/ui/card-image";
+import { Price } from "@/ui/mtg/price";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The Wishlist page (design doc 26, section 9): each wish at today's price, how far your money
 // is from it, and buying it.

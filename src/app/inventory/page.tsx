@@ -5,11 +5,11 @@ import { type OpenItemError, type UnopenedGroup } from "@/modules/inventory";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { KeyruneStylesheet } from "@/ui/set-symbol";
+import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
 import { openAction } from "./actions";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const ERROR_MESSAGES: Record<OpenItemError["kind"], string> = {
   ItemNotFound: "That item isn't in your inventory.",

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { readPage } from "@/server/page-instance";
 import { LocalTime } from "@/ui/local-time";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { Page } from "@/ui/page";
 import { FriendButtons } from "./_components/friend-buttons";
 import { ProfileAbout } from "./_components/profile-about";

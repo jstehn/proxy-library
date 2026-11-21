@@ -3,7 +3,7 @@ import { COMMANDER_SORTS, type CommanderSort } from "@/modules/decks";
 import { COLORS, type ManaColor, THEME_LABELS, THEMES } from "@/shared/mtg";
 import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/field";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { COMMANDERS_PATH, type CommanderFilters } from "./search";
 
 const COLOR_NAMES: Record<ManaColor, string> = {

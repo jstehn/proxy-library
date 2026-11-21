@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DeckDraft, DraftedSpell, Format } from "@/modules/decks";
 import { formatRules } from "@/modules/decks/client";
 import { Cents } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { draftReasonText, landReasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { buildFromCollectionAction } from "./actions";

@@ -1,9 +1,9 @@
 "use client";
 import type { BrowseCard } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { ownedWords } from "../derive";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // One card in the collection grid: its picture, its name and how many you own.
 
