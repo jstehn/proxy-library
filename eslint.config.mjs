@@ -80,19 +80,6 @@ const elements = [
   { type: "test-setup", pattern: "tests" },
 ];
 
-// Paths like `[id]` and `(auth)` are glob syntax, so they are escaped to match literally.
-const escapeGlob = (path) => path.replace(/[[\]()]/g, "\\$&");
-
-// The rule on `getContainer` in src/app (ADR 0026): adapters get what they need from `action()` or
-// `readPage()`.
-// These keep `getContainer`, each for a reason.
-const CONTAINER_ALLOWED = [
-  // the OAuth endpoints read the app's origin synchronously (resourceMetadataUrl is called from plain functions), so they can't await readPage()
-  "src/app/_oauth/http.ts",
-  // the health check has no player and reads no capability: it asks the container whether it is up
-  "src/app/api/health/route.ts",
-];
-
 // --- Selector helpers ------------------------------------------------------------------
 const el = (type) => ({ element: { type } });
 const layer = (name, { sameModule = false, file } = {}) => ({
@@ -684,10 +671,10 @@ export default defineConfig([
     ignores: [...TESTS, "**/*.d.ts"],
     rules: { "id-denylist": ["error", "ctx", "res", "obj", "val", "tl"] },
   },
-  // The ratchet (ADR 0026): no `getContainer` in src/app, except the files listed above.
+  // The ratchet (ADR 0026): no `getContainer` in src/app, with no exceptions (adapters use `readPage()`, `readCapabilities()` or `readTool()`).
   {
     files: ["src/app/**/*.{ts,tsx}"],
-    ignores: [...TESTS, ...CONTAINER_ALLOWED.map(escapeGlob)],
+    ignores: TESTS,
     rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX, ...CLASS_NAMES] },
   },
   // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a

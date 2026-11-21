@@ -270,6 +270,7 @@ export function buildCore(config: Config) {
   });
 
   const reads = buildReads(db);
+  const checkHealth = makeCheckHealth({ unitOfWork, clock });
 
   return {
     config,
@@ -309,6 +310,7 @@ export function buildCore(config: Config) {
       outsideData,
       seeds,
       appUrl: config.appUrl,
+      checkHealth,
       newPreviewId: randomUUID,
       previews: drizzleChangePreviewRepository(db),
       accounts,
@@ -331,7 +333,7 @@ export function buildCore(config: Config) {
       wishlist,
       youtube,
     }),
-    checkHealth: makeCheckHealth({ unitOfWork, clock }),
+    checkHealth,
     close,
   };
 }
