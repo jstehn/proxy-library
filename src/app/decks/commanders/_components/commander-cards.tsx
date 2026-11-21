@@ -4,6 +4,7 @@ import { Cents } from "@/shared/kernel";
 import type { CommanderCardsView } from "./commander-cards-view";
 import { Card } from "@/ui/card";
 import { Button } from "@/ui/button";
+import { CardImage } from "@/ui/card-image";
 
 // One commander's cards on Find a commander (design docs 36 and 39), loaded when opened:
 // your on-plan cards and why, your cards for each role, and what the rest might cost; plus
@@ -39,10 +40,9 @@ export function CommanderThumbnail(props: { printingId: string; name: string }) 
         onBlur={() => setSpot(null)}
         onClick={() => (spot ? setSpot(null) : show())}
         aria-label={`Preview ${props.name}`}
-        className="shrink-0 self-start rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
+        className="shrink-0 self-start rounded-[4.5%]"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <CardImage
           src={`/api/images/${props.printingId}/small/front`}
           alt={props.name}
           loading="lazy"
@@ -50,10 +50,9 @@ export function CommanderThumbnail(props: { printingId: string; name: string }) 
         />
       </button>
       {spot && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${props.printingId}/normal/front`}
-          alt=""
+          decorative
           aria-hidden
           data-card-preview
           width={PREVIEW_WIDTH}

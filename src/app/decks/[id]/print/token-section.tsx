@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { tokenDescription, type TokenArt, type TokenLine } from "@/modules/decks/client";
 import { chooseTokenAction, tokenArtsAction } from "./actions";
 import { EmptyState } from "@/ui/empty-state";
+import { CardImage } from "@/ui/card-image";
 
 // The print page's tokens (design doc 25): each token the deck's cards make, whether it prints,
 // and its art. Every change is saved for the deck at once.
@@ -237,10 +238,9 @@ type TokenImageProps = Readonly<{ art: TokenArt; className: string }>;
 
 function TokenImage({ art, className }: TokenImageProps) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- served by our image cache
-    <img
+    <CardImage
       src={`/api/images/${art.id}/small/front`}
-      alt=""
+      decorative
       loading="lazy"
       width={146}
       height={204}

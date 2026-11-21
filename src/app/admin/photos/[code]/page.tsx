@@ -7,6 +7,7 @@ import { choosePhotoAction, setPageSlugAction } from "../actions";
 import { readPage } from "@/server/page-instance";
 import { Input, Select } from "@/ui/field";
 import { Page } from "@/ui/page";
+import { CardImage } from "@/ui/card-image";
 
 // One set's WPN page and products (design doc 13): what matched, and the admin's corrections.
 
@@ -94,10 +95,9 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
             <li key={product.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
               <div className="flex h-16 w-12 items-center justify-center">
                 {product.photoIds[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <CardImage
                     src={`/api/artwork/${product.photoIds[0]}/small`}
-                    alt=""
+                    decorative
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
@@ -157,8 +157,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
               <div className="flex flex-wrap gap-1">
                 {offer.photos.map((photoId, index) =>
                   photoId ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <CardImage
                       key={index}
                       src={`/api/artwork/${photoId}/small`}
                       alt={`${offer.name}, photo ${index + 1}`}

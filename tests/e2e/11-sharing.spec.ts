@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { confirmInDialog, signIn } from "./helpers";
 
 // Sharing a deck and commenting on it.
 test.describe.configure({ mode: "serial" });
@@ -40,6 +40,7 @@ test("the admin shares a deck; another player reads it and comments (design doc 
   const adminComments = admin.getByRole("region", { name: "Comments" });
   await expect(adminComments.getByText("Bold choice: 99 Plains!")).toBeVisible();
   await adminComments.getByRole("button", { name: "Delete Rin's comment" }).click();
+  await confirmInDialog(admin, "Delete");
   await expect(adminComments.getByText("Comment removed.")).toBeVisible();
 
   // Private again: Rin can't open it any more.

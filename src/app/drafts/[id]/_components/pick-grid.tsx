@@ -7,6 +7,7 @@ import { EnlargedCard } from "@/app/_components/card-preview";
 import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/field";
 import { decideAction, pickAction } from "../../actions";
+import { CardImage } from "@/ui/card-image";
 
 const CARD_FACE = "bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]";
 const FOIL_SHEEN = "bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40";
@@ -257,10 +258,9 @@ function CardButton(props: {
       }`}
     >
       {card.printing.hasImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${card.printing.id}/normal/front`}
-          alt=""
+          decorative
           width={146}
           height={204}
           className={CARD_FACE}
@@ -357,8 +357,7 @@ export function PickGrid(props: {
 
       {/* On phones a card that opens over the grid would hide it: show the chosen one here. */}
       {chosen !== null && chosen.printing.hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${chosen.printing.id}/normal/front`}
           alt={chosen.printing.name}
           width={488}

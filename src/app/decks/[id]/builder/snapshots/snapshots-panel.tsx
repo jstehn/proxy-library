@@ -16,9 +16,9 @@ import {
 } from "./actions";
 import { settle } from "../answer";
 import { type BuilderDeck } from "../builder-deck";
+import { ConfirmButton } from "@/ui/confirm-button";
 
-const DISCARD_BUTTON =
-  "border-line text-danger-text hover:bg-danger-soft rounded border px-1.5 py-0.5 text-[11px] disabled:opacity-40";
+const SNAPSHOT_BUTTON = "text-[11px]";
 
 const BOARD_NAMES: Readonly<Record<Board, string>> = {
   main: "Main",
@@ -64,7 +64,6 @@ export function SnapshotsPanel(props: {
   const [afterId, setAfterId] = useState<number | null>(null);
   const [comparison, setComparison] = useState<SnapshotComparison | null>(null);
   const [comparing, setComparing] = useState(false);
-  const [confirmRestoreId, setConfirmRestoreId] = useState<number | null>(null);
   const latestCompare = useRef(0);
 
   // Load snapshots when opening the panel.
@@ -151,7 +150,6 @@ export function SnapshotsPanel(props: {
       "That snapshot wasn't understood.",
     );
     setWorking(false);
-    setConfirmRestoreId(null);
     if (!result.ok) {
       onError(result.error.message);
       return;
@@ -268,7 +266,6 @@ export function SnapshotsPanel(props: {
           {snapshots.map((snapshot) => {
             const snapshotId = Number(snapshot.id);
             const isComparing = beforeId === snapshotId;
-            const confirmingRestore = confirmRestoreId === snapshotId;
             return (
               <li
                 key={snapshotId}
@@ -297,43 +294,28 @@ export function SnapshotsPanel(props: {
                     >
                       {isComparing ? "Comparing" : "Compare"}
                     </button>
-                    {confirmingRestore ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void restore(snapshot)}
-                          className="rounded bg-amber-600 px-1.5 py-0.5 text-[11px] font-medium text-white disabled:opacity-40"
-                        >
-                          Confirm restore
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => setConfirmRestoreId(null)}
-                          className="border-line rounded border px-1.5 py-0.5 text-[11px]"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setConfirmRestoreId(snapshotId)}
-                        className="border-line text-muted hover:bg-surface rounded border px-1.5 py-0.5 text-[11px] disabled:opacity-40"
-                      >
-                        Restore
-                      </button>
-                    )}
-                    <button
-                      type="button"
+                    <ConfirmButton
+                      variant="secondary"
+                      size="mini"
                       disabled={busy}
-                      onClick={() => void remove(snapshot)}
-                      className={DISCARD_BUTTON}
+                      className={SNAPSHOT_BUTTON}
+                      question={`Restore “${snapshot.label}”? The deck goes back to that snapshot.`}
+                      confirmLabel="Restore"
+                      onConfirm={() => void restore(snapshot)}
+                    >
+                      Restore
+                    </ConfirmButton>
+                    <ConfirmButton
+                      variant="secondary"
+                      size="mini"
+                      disabled={busy}
+                      className={SNAPSHOT_BUTTON}
+                      question={`Delete the snapshot “${snapshot.label}”? This can't be undone.`}
+                      confirmLabel="Delete"
+                      onConfirm={() => void remove(snapshot)}
                     >
                       Delete
-                    </button>
+                    </ConfirmButton>
                   </div>
                 </div>
               </li>
