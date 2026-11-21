@@ -4,7 +4,7 @@
 // Two groups, small and named in full words:
 //   CardFacts     what is printed on a card (name, type line, cost, rules text, mana it makes).
 //   CardIdentity  which card and which printing of it.
-// A deck line is `CardIdentity`, `CardFacts` and `DeckCount` (in decks/domain/boards.ts) put together.
+// A deck line is `CardIdentity`, `CardFacts` and `DeckCount` (in decks/core/domain/boards.ts) put together.
 
 /** What is printed on a card, for every face joined as the catalog joins them. */
 export type CardFacts = Readonly<{

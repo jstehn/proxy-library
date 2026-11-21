@@ -92,4 +92,46 @@ All of `src/modules/decks/`, `eslint.config.mjs` (boundaries and the new rule), 
 
 ## Handoff
 
-(empty)
+**Done, with two things for the owner:** the ADR is **0029** (0028 is P35's); and production code is
+**+132** (75,505 to 75,637), so the `sizes` ratchet needs approval. `core/domain` and
+`core/application` have 20 source files each, over the 12-file rule (see below).
+
+**Areas** (`src/modules/decks/<area>/{domain,application,infrastructure,queries,testing}`, plus the
+area's `index.ts` and `client.ts`): `core` 54 files, `scoring` 9, `building` 21, `play` 8, `proxies`
+15, `overview` 8 (a sixth area the plan did not name: the files that combine areas). Root:
+`index.ts` (8 lines) and `client.ts` (6) are `export *` of the areas; `wiring.ts`;
+`infrastructure/index.ts`. Arrows: `scoring`, `play`, `proxies` → `core`; `building` → `core`,
+`scoring`, `play`; `overview` → all; `core` → none.
+
+**The rule** (`eslint.config.mjs`, `DECKS_ARROWS` at the top): a decks file imports another area
+only through `<area>/index.ts` or `<area>/client.ts`, along the arrows; `<area>/testing/*` and
+`<area>/infrastructure/schema.ts` are open to all (fakes, table definitions). Domain files import
+`client.ts` only, `client.ts` imports domain only. The area names are in `DECKS_ARROWS`, in
+`DECKS_AREAS` in `scripts/check-cycles.ts` and in the folder names (and `scripts/regex-count.ts`).
+**The cycle check** treats each area as a node (`decks/<area>`); the baseline is still empty.
+
+**Moves worth knowing.** `ports.ts` lost the proxy ports (now `proxies/application/ports.ts`), and the
+token and image fakes went to `proxies/testing/fakes.ts`, so `core` never imports `proxies`.
+`lineToOptimizerCard` moved to `scoring/domain/optimize.ts`; the optimizer read
+(`optimizeDeckForView`) is in `overview/queries/optimize.ts` (it joins the deck view and the
+suggestions; `queries` may not import `application`). `ManaSource` exists twice (`mana-payment` and
+`stats`); `core/client.ts` exports the payment one as `PaymentSource`.
+
+**`draft-deck`** is `build-from-collection` (domain, query, tests, integration test); `draftDeck` is
+`buildFromCollection`; `draftDeckAction` is `buildFromCollectionAction`. `draftForDeck`,
+`DeckDraft` and the tool and page labels are unchanged.
+
+**The P07b2 leftover.** `building/application/suggest-cards.ts` holds `deckSuggestions`,
+`similarCards`, `budgetList`, `budgetReplacements`; each takes a `CandidatePool` (declared in
+`building/domain/suggestion-types.ts`, implemented by `candidatePool(db, userId)` in
+`building/queries/suggestion-pool.ts`, with `suggestionContext`). Same SQL, same order of calls;
+fake-pool tests in `suggest-cards.test.ts`. The integration tests call
+`deckSuggestions(candidatePool(db, userId), deckId)`.
+
+**Checks.** `pnpm check`: all green but `sizes`. Unit 1,721; integration 363/363 on a private
+database. Playwright was not run (not allowed here). knip baseline 380 to 300.
+
+**Left over.** (1) `core/domain` 20 and `core/application` 20 files: sharing and changes (previews,
+snapshots) are separable in principle, but `ports.ts`, `make-decks.ts`, `drizzle-repositories.ts`
+and the fakes reference both; needs the owner's area names. (2) `core/queries` has 8, all others
+are at 12 or fewer. (3) Lessons that mention old paths were not touched (deferred).

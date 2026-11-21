@@ -6,7 +6,7 @@ import { Cents } from "@/shared/kernel";
 import { ManaText } from "@/ui/mana";
 import { draftReasonText, landReasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
-import { draftDeckAction } from "./actions";
+import { buildFromCollectionAction } from "./actions";
 import type { LandsToAdd } from "../mana-base/mana-base-panel";
 
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards
@@ -32,7 +32,7 @@ export function DraftPanel(props: {
     const request = ++latest.current;
     const timer = setTimeout(() => {
       setLoading(true);
-      void draftDeckAction({ deckId, includeStore }).then((result) => {
+      void buildFromCollectionAction({ deckId, includeStore }).then((result) => {
         if (request !== latest.current) return;
         setDraft(valueOr(result, null));
         setLoading(false);

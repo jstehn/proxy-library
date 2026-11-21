@@ -16,8 +16,6 @@ export {
   proxySummary,
   type ProxyLine,
   type ProxyOptions,
-  type ProxyPage,
-  type ProxySummary,
 } from "./domain/proxy-sheet";
 export {
   filterTokenChecklist,
@@ -27,8 +25,6 @@ export {
   tokenDescription,
   type TokenArt,
   type TokenChecklistItem,
-  type TokenChecklistSummary,
-  type TokenChoice,
   type TokenKind,
   type TokenLine,
   type TokenMaker,

@@ -23,14 +23,9 @@ export {
   type PlannedLand,
 } from "./domain/mana-base";
 export type { SynergyQuery } from "./domain/search-for-deck";
-export {
-  EMPTY_LIST,
-  type BudgetReplacementPick,
-  type BudgetReplacementsResult,
-  type ExpensiveCardReplacements,
-  type Suggestion,
-  type SuggestionCard,
-  type SuggestionContext,
-  type SuggestionList,
-  type Wanted,
+export type {
+  BudgetReplacementsResult,
+  Suggestion,
+  SuggestionCard,
+  SuggestionList,
 } from "./domain/suggestion-types";

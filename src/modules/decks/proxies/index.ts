@@ -2,5 +2,5 @@
 export * from "./client";
 export { makeProxyDeck, type ProxyDeck } from "./application/proxy-deck";
 export { makeProxySheets, type ProxySheetInput } from "./application/proxy-sheets";
-export { makeTokenChoices, type ChooseTokenInput } from "./application/token-choices";
+export { makeTokenChoices } from "./application/token-choices";
 export { deckTokenLines, publicDeckTokens, tokenArtOptions } from "./queries/tokens";

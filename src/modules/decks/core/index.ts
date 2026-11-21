@@ -23,29 +23,19 @@ export { makeDeckPlanEdits } from "./application/deck-plan-edits";
 export {
   makeDeckPreviews,
   type ApplyPreviewError,
-  type CardsNotFound,
-  type ChangeNoteInvalid,
-  type LineNotOnBoard,
   type PreviewChangesError,
-  type PreviewExpired,
   type PreviewWarning,
   type SaveChangesError,
   type SavedChanges,
   type StoredPreviewResult,
 } from "./application/deck-previews";
-export type { ChoosePrintingInput } from "./application/deck-printings";
 export { makeDeckSearch } from "./application/deck-search";
 export { makeStartDeck, type StartedDeck } from "./application/deck-start";
 export { deleteAllDecks } from "./application/delete-all-decks";
 export { describeDeckError, type DeckError } from "./application/describe-error";
 export { makeListDecks } from "./application/list-decks";
 export { makeDecks, type Decks } from "./application/make-decks";
-export type {
-  CardLookup,
-  DeckRepository,
-  DecksServices,
-  PreviewRepository,
-} from "./application/ports";
+export type { DeckRepository, DecksServices, PreviewRepository } from "./application/ports";
 export { makeDeckSharing, type DeckSharing } from "./application/sharing";
 export { cardFeaturesOf, withFeatures, type FeaturesOf } from "./queries/card-features";
 export { comboPartnersForDeck, combosForDeck } from "./queries/combos";

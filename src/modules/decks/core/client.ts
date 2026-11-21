@@ -24,7 +24,6 @@ export {
   DeckId,
   FORMATS,
   GROUPINGS,
-  MAX_QUANTITY,
   MAX_ROLE_LENGTH,
   becomesADeck,
   tidyRole,
@@ -41,9 +40,7 @@ export {
   resolveDeckProfileTargets,
   summarizeDeckProfile,
   withoutAvoidCards,
-  type AvoidCard,
   type DeckPlan,
-  type KeyCardPin,
 } from "./domain/deck-profile";
 export {
   bracketReport,
@@ -60,27 +57,12 @@ export type {
 } from "./domain/deck-view";
 export type {
   CardNotFound,
-  CommentNotFound,
-  DeckChanged,
   DeckNotFound,
-  FinishNotAvailable,
-  HeadingInvalid,
-  ListProblems,
-  ListTooLong,
-  NameInvalid,
   NotThatToken,
-  NoteInvalid,
-  QuantityInvalid,
   TokenNotInDeck,
   TooManyDecks,
 } from "./domain/errors";
-export {
-  FORMAT_RULES,
-  formatRules,
-  type DeckSize,
-  type FormatRuleSet,
-  type RoleTargets,
-} from "./domain/format-rules";
+export { FORMAT_RULES, formatRules } from "./domain/format-rules";
 export { copiesToTake } from "./domain/free-copies";
 export { MAX_HEADINGS, MAX_HEADING_LENGTH, headingMoved } from "./domain/headings";
 export {
@@ -89,7 +71,6 @@ export {
   fingerprint,
   shortList,
   type ExportLine,
-  type ShortLine,
 } from "./domain/list-format";
 export {
   canPay,
@@ -118,7 +99,6 @@ export {
   pairProblem,
   type CardRules,
   type DeckProblem,
-  type DeckToCheck,
 } from "./domain/rules";
 export {
   CommentId,

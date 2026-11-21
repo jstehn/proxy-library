@@ -28,12 +28,3 @@ export { manaBasePlan } from "./queries/mana-base";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
 export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
 export { candidatePool } from "./queries/suggestion-pool";
-export {
-  candidateColumns,
-  fitsDeck,
-  ownedCandidates,
-  ownedCandidatesForIds,
-  storeCandidates,
-  toCard,
-  type CandidateRow,
-} from "./queries/suggestion-sql";
