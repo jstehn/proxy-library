@@ -5,7 +5,7 @@ import type { UserId } from "@/shared/kernel";
 import type { WishCatalog, WishRepository } from "../application/ports";
 import { wishFromStored, type WishTarget } from "../domain/wish";
 import { offersOf, ownedOf } from "../queries/for-sale";
-import { printings } from "../../catalog/infrastructure/schema";
+import { printings } from "../../catalog/cards/infrastructure/schema";
 import { wishes, wishlistSettings } from "./schema";
 
 // Real implementations of the wishlist's ports (design doc 26, sections 6 and 8).

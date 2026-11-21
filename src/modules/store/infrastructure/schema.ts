@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
-import { printings, sealedProducts } from "../../catalog/infrastructure/schema";
+import { printings, sealedProducts } from "../../catalog/cards/infrastructure/schema";
 import { timestamptz, cents } from "@/shared/db";
 
 /** The MSRP for every product of one kind, e.g. "booster_box/play" (ADR 0014). */

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import type { MatchedLine, PrintingChoice, UnmatchedReason } from "@/modules/real-collection";
+import type { MatchedLine, PrintingChoice, UnmatchedReason } from "@/modules/collection/real";
 import { Cents, type Finish, assertNever } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import {

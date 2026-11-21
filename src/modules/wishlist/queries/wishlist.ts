@@ -3,7 +3,7 @@ import type { Actor } from "@/modules/accounts";
 import { textArray, type DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { authUsers } from "../../accounts/infrastructure/schema";
-import { printings } from "../../catalog/infrastructure/schema";
+import { printings } from "../../catalog/cards/infrastructure/schema";
 import { countAtTarget, type WishlistAnswers } from "../domain/lines";
 import { wishFromStored, type FinishPreference, type OwnedStack, type Wish } from "../domain/wish";
 import { wishes, wishlistSettings } from "../infrastructure/schema";

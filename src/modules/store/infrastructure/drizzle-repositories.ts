@@ -4,7 +4,7 @@ import {
   productWpnLinks,
   sealedProducts,
   wpnProducts,
-} from "@/modules/catalog/infrastructure/schema";
+} from "@/modules/catalog/cards/infrastructure/schema";
 import { SealedProductId, type PrintingId } from "@/modules/catalog";
 import { type DbExecutor, latestSnapshot, newestPriceDay } from "@/shared/db";
 import { Cents, type Finish, type UserId } from "@/shared/kernel";

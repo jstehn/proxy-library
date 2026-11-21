@@ -4,7 +4,7 @@ import { type DbExecutor, newestDayPrice } from "@/shared/db";
 import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
 import { catalogQueries } from "@/modules/catalog";
 import { parseSearch } from "@/shared/card-search";
-import { foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
+import { foilOwnedBy, searchCondition } from "@/modules/catalog/cards/queries/search-sql";
 import type { SignalCard } from "../domain/signals";
 import { ownedCopies, STANDARD_FIRST } from "@/modules/decks/core";
 

@@ -5,7 +5,11 @@ import { latestPrice } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
 import { type BracketFlag, type Tag, type Theme } from "@/shared/kernel";
 import { parseSearch } from "@/shared/card-search";
-import { foilOwnedBy, searchCondition, featureArray } from "@/shared/card-search/sql";
+import {
+  foilOwnedBy,
+  searchCondition,
+  featureArray,
+} from "@/modules/catalog/cards/queries/search-sql";
 import { bracketLine, flagsOverTarget, type Bracket } from "@/modules/decks/core/client";
 import type { Format } from "@/modules/decks/core/client";
 import {

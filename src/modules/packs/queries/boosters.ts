@@ -1,6 +1,6 @@
 import { asc, desc, eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
+import { boosterConfigs, cardSets } from "@/modules/catalog/cards/infrastructure/schema";
 
 // Read models for the Pack lab's pickers (ADR 0006).
 

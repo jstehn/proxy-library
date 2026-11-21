@@ -1,4 +1,4 @@
-import { MAX_REAL_QUANTITY, type PrintingChoice } from "@/modules/real-collection";
+import { MAX_REAL_QUANTITY, type PrintingChoice } from "@/modules/collection/real";
 import { changeRealPrintingAction, setRealCopiesAction } from "@/app/collection/real/actions";
 import type { Finish } from "@/shared/kernel";
 

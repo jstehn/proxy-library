@@ -1,5 +1,5 @@
 // The regex-count ratchet (doc 66, P11). Card rules read oracle text with regexes spread over many
-// files; P12 to P14 move them into recognizers (`catalog/domain/features/recognizers/`). This counts
+// files; P12 to P14 move them into recognizers (`catalog/cards/domain/features/recognizers/`). This counts
 // what is left: every regex literal (`/…/`) and every `new RegExp(` in the production code of the
 // folders that hold card rules, not counting the recognizers, tests or `testing/` folders.
 // `--update` lowers docs/refactor/regex-baseline.txt to today's count and never raises it.
@@ -13,14 +13,16 @@ const FOLDERS = [
   ),
   "src/shared/card-search",
   "src/modules/drafts/domain",
-  "src/modules/catalog/domain",
+  "src/modules/catalog/cards/domain",
+  "src/modules/catalog/outside/domain",
+  "src/modules/catalog/rules/domain",
 ];
-const RECOGNIZERS = "src/modules/catalog/domain/features/recognizers/";
+const RECOGNIZERS = "src/modules/catalog/cards/domain/features/recognizers/";
 /** Files in those folders that parse something other than card text (the lint rule skips them too). */
 const NOT_CARD_TEXT = [
-  "src/modules/catalog/domain/comprehensive-rules.ts",
-  "src/modules/catalog/domain/edhrec.ts",
-  "src/modules/catalog/domain/wpn.ts",
+  "src/modules/catalog/rules/domain/comprehensive-rules.ts",
+  "src/modules/catalog/outside/domain/edhrec.ts",
+  "src/modules/catalog/cards/domain/wpn.ts",
 ];
 const BASELINE_PATH = "docs/refactor/regex-baseline.txt";
 

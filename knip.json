@@ -5,8 +5,6 @@
   "ignoreDependencies": ["mana-font"],
   "ignoreExportsUsedInFile": true,
   "ignoreIssues": {
-    "src/modules/{accounts,activity,catalog,collection,decks,drafts,real-collection,inventory,packs,social,store,trades,wallet,wishlist}/queries/*.ts": [
-      "exports"
-    ]
+    "src/modules/{*,*/*}/queries/*.ts": ["exports"]
   }
 }

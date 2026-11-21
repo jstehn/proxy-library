@@ -7,19 +7,28 @@ import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
-// The areas of the decks module (ADR 0029) and the areas each may import (always through that
-// area's index.ts or client.ts). Only these names and the cycle check's table
-// (scripts/check-cycles.ts) spell the areas out.
-const DECKS_ARROWS = {
-  core: [],
-  scoring: ["core"],
-  play: ["core"],
-  proxies: ["core"],
-  building: ["core", "scoring", "play"],
-  overview: ["core", "scoring", "play", "proxies", "building"],
+// The modules that are split into areas (ADR 0029 for decks, ADR 0030 for the others), each area
+// with the areas it may import (always through that area's index.ts or client.ts). Only these
+// names and the cycle check's table (scripts/check-cycles.ts) spell the areas out.
+const AREA_ARROWS = {
+  decks: {
+    core: [],
+    scoring: ["core"],
+    play: ["core"],
+    proxies: ["core"],
+    building: ["core", "scoring", "play"],
+    overview: ["core", "scoring", "play", "proxies", "building"],
+  },
+  catalog: { outside: [], rules: ["outside"], cards: ["outside"] },
+  collection: { copies: [], game: ["copies"], real: ["copies"] },
+  research: { reddit: [], youtube: [] },
 };
-const DECKS_AREAS = Object.keys(DECKS_ARROWS);
-const DECKS_AREAS_WITH_DOMAIN = DECKS_AREAS.filter((area) => area !== "overview");
+const AREA_MODULES = Object.keys(AREA_ARROWS);
+const AREA_NAMES = [...new Set(Object.values(AREA_ARROWS).flatMap((areas) => Object.keys(areas)))];
+// Every (module, area) pair, with the areas it may import.
+const AREAS = Object.entries(AREA_ARROWS).flatMap(([module, areas]) =>
+  Object.entries(areas).map(([area, mayImport]) => ({ module, area, mayImport })),
+);
 
 const SOURCE = ["src/**/*.{ts,tsx}", "worker/**/*.ts"];
 // The two card rules (eslint-rules/), one plugin so blocks that overlap agree on it.
@@ -28,10 +37,10 @@ const CARDS_PLUGIN = {
 };
 // The folders that hold card rules (design doc 66): the regex-count ratchet watches the same ones.
 const CARD_RULE_FOLDERS = [
-  ...DECKS_AREAS_WITH_DOMAIN.map((area) => `src/modules/decks/${area}/domain`),
+  "src/modules/decks/!(overview)/domain",
   "src/shared/card-search",
   "src/modules/drafts/domain",
-  "src/modules/catalog/domain",
+  "src/modules/catalog/*/domain",
 ];
 const TESTS = ["**/*.test.ts", "**/*.int.test.ts", "**/*.remote.test.ts", "**/*.contract.ts"];
 
@@ -46,18 +55,18 @@ const elements = [
   { type: "db", pattern: "src/shared/db" },
   { type: "http", pattern: "src/shared/http" },
   { type: "config", pattern: "src/shared/config" },
-  // The card search language and card lists (ADR 0017): index.ts is pure, sql.ts is server-only.
+  // The card search language and card lists (ADR 0017): pure code, safe for the browser.
   { type: "card-search", pattern: "src/shared/card-search" },
-  // The decks module's areas (ADR 0029): src/modules/decks/<area>/<layer>, and the area's own
-  // index.ts and client.ts. A decks file is a module-layer like any other, plus its area.
+  // The areas of the split modules (ADR 0029, 0030): src/modules/<module>/<area>/<layer>, and the
+  // area's own index.ts and client.ts. A file there is a module-layer like any other, plus its area.
   {
     type: "module-layer",
-    pattern: "src/modules/@(decks)/*/@(domain|application|infrastructure|queries|testing)",
+    pattern: `src/modules/@(${AREA_MODULES.join("|")})/*/@(domain|application|infrastructure|queries|testing)`,
     capture: ["module", "area", "layer"],
   },
   {
-    type: "decks-area",
-    pattern: `src/modules/@(decks)/@(${DECKS_AREAS.join("|")})`,
+    type: "module-area",
+    pattern: `src/modules/@(${AREA_MODULES.join("|")})/@(${AREA_NAMES.join("|")})`,
     capture: ["module", "area"],
   },
   // src/modules/<module>/<layer>: domain | application | infrastructure | queries | testing
@@ -93,26 +102,39 @@ const layer = (name, { sameModule = false, file } = {}) => ({
   },
 });
 const from = (selector, ...to) => ({ from: selector, allow: { to } });
-// A file of one area of decks, and an area's public API (its index.ts and client.ts).
-const decksFile = (area) => ({
-  element: { type: "module-layer", captured: { module: "decks", area } },
+// A file of one area of a split module, and an area's public API (its index.ts and client.ts).
+const areaFile = (module, area) => ({
+  element: { type: "module-layer", captured: { module, area } },
 });
-const decksApi = (area, file) => ({
+const areaApi = (module, area, file) => ({
   element: {
-    type: "decks-area",
-    ...(area ? { captured: { area } } : {}),
+    type: "module-area",
+    captured: { module, ...(area ? { area } : {}) },
     ...(file ? { fileInternalPath: file } : {}),
   },
 });
-const anyDecksApi = { element: { type: "decks-area" } };
+// The areas of the module a file is in (a module's own root files, index.ts and wiring.ts).
+const ownAreaApi = {
+  element: { type: "module-area", captured: { module: "{{ from.element.captured.module }}" } },
+};
+// The real collection's door (design doc 16, rule 1): not the module's index.ts, so lint can see
+// who asks. Only the app, the composition roots and the tests may use it.
+const realCollectionApi = areaApi("collection", "real", "index.ts");
 const publicApi = { element: { type: "module", fileInternalPath: "index.ts" } };
 // A module's browser-safe public API (ADR 0016): pure domain code only, for client components.
 // A module's wiring.ts builds its capabilities (ADR 0026); only the composition roots import it.
 const wiringFile = { element: { type: "module", fileInternalPath: "wiring.ts" } };
 const clientApi = { element: { type: "module", fileInternalPath: "client.ts" } };
-// The card search language's pure half, and its SQL half (ADR 0017).
+// The card search language (pure), and the SQL that runs it: it lives in catalog/cards/queries
+// (ADR 0017, 0030), and every module's queries may import that one file.
 const cardSearch = { element: { type: "card-search", fileInternalPath: "index.ts" } };
-const cardSearchSql = { element: { type: "card-search", fileInternalPath: "sql*.ts" } };
+const cardSearchSql = {
+  element: {
+    type: "module-layer",
+    captured: { module: "catalog", area: "cards", layer: "queries" },
+    fileInternalPath: "search-sql.ts",
+  },
+};
 
 // --- no-restricted-syntax selectors ----------------------------------------------------
 const NONDETERMINISM = [
@@ -208,8 +230,6 @@ const policies = [
   from(el("db"), el("kernel"), el("db")),
   from(el("http"), el("kernel"), el("http")),
   from(el("card-search"), el("kernel"), el("card-search")),
-  // sql.ts is card-search's SQL half; it reads prices through the db module's fragments (P03).
-  { from: cardSearchSql, allow: { to: el("db") } },
 
   // module layers: the dependency rule points inward (overview.md)
   from(layer("domain"), el("kernel"), layer("domain", { sameModule: true }), cardSearch),
@@ -273,38 +293,39 @@ const policies = [
   ),
   from(
     el("module"),
+    el("kernel"),
     layer("domain", { sameModule: true }),
     layer("application", { sameModule: true }),
     layer("queries", { sameModule: true }),
-    anyDecksApi,
+    ownAreaApi,
   ),
 
   // wiring.ts (ADR 0026): builds the module's capabilities from its own layers and the readers it
   // takes from other modules' public APIs. It is the one place a module's queries meet its use cases.
   {
     from: wiringFile,
-    allow: { to: [el("kernel"), el("db"), publicApi, anyDecksApi] },
+    allow: { to: [el("kernel"), el("db"), publicApi, ownAreaApi] },
   },
 
-  // The areas of decks (ADR 0029): a file imports another area only through its index.ts or
-  // client.ts (fakes in testing/ too), and only along the arrows of DECKS_ARROWS. The layer rules
-  // above allow any layer of the same module, so these come after them and take it back.
-  ...DECKS_AREAS.flatMap((area) => [
-    ...(DECKS_ARROWS[area].length === 0
+  // The areas of the split modules (ADR 0029, 0030): a file imports another area only through its
+  // index.ts or client.ts (fakes in testing/ too), and only along the arrows of AREA_ARROWS. The
+  // layer rules above allow any layer of the same module, so these come after them and take it back.
+  ...AREAS.flatMap(({ module, area, mayImport }) => [
+    ...(mayImport.length === 0
       ? []
       : [
           {
-            from: decksFile(area),
-            allow: { to: DECKS_ARROWS[area].map((other) => decksApi(other)) },
+            from: areaFile(module, area),
+            allow: { to: mayImport.map((other) => areaApi(module, other)) },
           },
         ]),
     {
-      from: decksFile(area),
+      from: areaFile(module, area),
       disallow: {
         to: {
           element: {
             type: "module-layer",
-            captured: { module: "decks", area: `!(${area})`, layer: "!(testing)" },
+            captured: { module, area: `!(${area})`, layer: "!(testing)" },
             // table definitions are shared on purpose, as with other modules (ADR 0006)
             fileInternalPath: "!(schema.ts)",
           },
@@ -313,28 +334,36 @@ const policies = [
     },
     // An area's own index.ts and client.ts re-export only its own layers.
     {
-      from: decksApi(area),
-      allow: { to: { element: { type: "module-layer", captured: { module: "decks", area } } } },
+      from: areaApi(module, area),
+      allow: { to: { element: { type: "module-layer", captured: { module, area } } } },
     },
   ]),
   // client.ts is pure (ADR 0016): domain code only. A domain file never imports an index.ts.
   {
-    from: decksApi(undefined, "client.ts"),
+    from: areaApi(undefined, undefined, "client.ts"),
     disallow: {
       to: [layer("application"), layer("queries"), layer("infrastructure"), layer("testing")],
     },
   },
-  { from: layer("domain"), disallow: { to: decksApi(undefined, "index.ts") } },
-  { from: clientApi, disallow: { to: decksApi(undefined, "index.ts") } },
+  { from: layer("domain"), disallow: { to: areaApi(undefined, undefined, "index.ts") } },
+  { from: clientApi, disallow: { to: areaApi(undefined, undefined, "index.ts") } },
 
-  // Design doc 16, rule 1: real cards never touch the game. Of the modules, only decks may use
-  // the real collection (its public API, or its tables through schema.ts).
+  // Design doc 16, rule 1: real cards never touch the game or its money. The real collection
+  // (collection/real) is its own area with its own door, not part of the module's index.ts, so no
+  // module may import it; only the app, the composition roots and the tests do (below). The area
+  // imports `copies` and nothing else of its module (the arrows above), and never the wallet or
+  // the store, where the game's money moves.
   {
-    from: { element: { type: "module-layer", captured: { module: "!(decks|real-collection)" } } },
+    from: areaFile("collection", "real"),
     disallow: {
       to: [
-        { element: { type: "module", captured: { module: "real-collection" } } },
-        { element: { type: "module-layer", captured: { module: "real-collection" } } },
+        { element: { type: "module", captured: { module: "!(accounts|catalog|collection)" } } },
+        {
+          element: {
+            type: "module-layer",
+            captured: { module: "!(accounts|catalog|collection)" },
+          },
+        },
       ],
     },
   },
@@ -349,6 +378,7 @@ const policies = [
     el("http"),
     el("config"),
     publicApi,
+    realCollectionApi,
     wiringFile,
     layer("infrastructure", { file: "index.ts" }),
   ),
@@ -374,7 +404,8 @@ const policies = [
     el("kernel"),
     publicApi,
     clientApi,
-    cardSearch, // the pure half only: client components may use it (ADR 0017)
+    realCollectionApi,
+    cardSearch, // client components may use it (ADR 0017)
   ),
   // client.ts re-exports only its own module's domain (no database code reaches the browser).
   {
@@ -394,6 +425,7 @@ const policies = [
     el("config"),
     el("runtime"),
     publicApi,
+    realCollectionApi,
     layer("infrastructure", { file: "index.ts" }),
     // The harness builds its players with testActor (design doc 67, section 6).
     layer("testing", { file: "actors.ts" }),
@@ -446,11 +478,9 @@ export default defineConfig([
     files: [
       "src/shared/kernel/**/*.ts",
       "src/modules/*/domain/**/*.ts",
-      "src/modules/decks/*/domain/**/*.ts",
-      // the card search language's pure half (its sql.ts may use drizzle-orm)
-      "src/shared/card-search/index.ts",
-      "src/shared/card-search/parse.ts",
-      "src/shared/card-search/list.ts",
+      "src/modules/*/*/domain/**/*.ts",
+      // the card search language
+      "src/shared/card-search/**/*.ts",
     ],
     // kernel/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
     // words (finish, color, rarity), shared by every module's parsing code (refactor P02).
@@ -597,12 +627,12 @@ export default defineConfig([
         {
           patterns: [
             {
-              regex: "^@/shared/(db|card-search/sql)",
+              regex: "^@/shared/db",
               message:
                 "src/app never reads the database. Read through `reads` or call a capability (design doc 67).",
             },
             {
-              regex: "^@/modules/[^/]+/queries",
+              regex: "^@/modules/.+/queries",
               message:
                 "src/app never imports a module's queries/ folder. Read through `reads.<module>.<query>` (design doc 67).",
             },
@@ -627,12 +657,12 @@ export default defineConfig([
         {
           patterns: [
             {
-              regex: "^@/modules/[^/]+/(domain|queries|application|infrastructure)",
+              regex: "^@/modules/.+/(domain|queries|application|infrastructure)",
               message:
                 "An adapter imports a module only through its index.ts or client.ts (ADR 0026).",
             },
             {
-              regex: "^@/shared/(db|card-search/sql)",
+              regex: "^@/shared/db",
               message: "An adapter never reads the database. Call a capability (ADR 0026).",
             },
             {
@@ -663,7 +693,7 @@ export default defineConfig([
     ignores: [
       "src/shared/http/**",
       "src/modules/*/infrastructure/**",
-      "src/modules/decks/*/infrastructure/**",
+      "src/modules/*/*/infrastructure/**",
     ],
     rules: {
       "no-restricted-globals": [
@@ -688,9 +718,11 @@ export default defineConfig([
     files: CARD_RULE_FOLDERS.map((folder) => `${folder}/**/*.ts`),
     ignores: [
       ...TESTS,
-      "src/modules/catalog/domain/features/recognizers/**",
+      "src/modules/catalog/cards/domain/features/recognizers/**",
       // Parse the sets list, EDHREC pages and the rules book: not card text.
-      "src/modules/catalog/domain/{comprehensive-rules,edhrec,wpn}.ts",
+      "src/modules/catalog/rules/domain/comprehensive-rules.ts",
+      "src/modules/catalog/outside/domain/edhrec.ts",
+      "src/modules/catalog/cards/domain/wpn.ts",
       ...NOT_YET_RECOGNIZED,
     ],
     plugins: { cards: CARDS_PLUGIN },
@@ -699,7 +731,7 @@ export default defineConfig([
 
   // No card is named in domain code (P14): a rule about one card is a feature or a data table.
   {
-    files: ["src/modules/{catalog,drafts}/domain/**/*.ts", "src/modules/decks/*/domain/**/*.ts"],
+    files: ["src/modules/drafts/domain/**/*.ts", "src/modules/{catalog,decks}/*/domain/**/*.ts"],
     ignores: TESTS,
     plugins: { cards: CARDS_PLUGIN },
     rules: { "cards/card-name-literal": "error" },

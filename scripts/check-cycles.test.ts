@@ -30,7 +30,7 @@ describe("findCycles", () => {
 });
 
 describe("module cycles", () => {
-  it("maps files to modules, and decks files to their area", () => {
+  it("maps files to modules, and files of a split module to their area", () => {
     expect(nodeOf("/p/src/modules/wallet/application/refresh.ts")).toBe("wallet");
     expect(nodeOf("/p/src/modules/decks/play/domain/goldfish.ts")).toBe("decks/play");
     expect(nodeOf("/p/src/modules/decks/play/domain/opening-hand/hand.ts")).toBe("decks/play");
@@ -38,6 +38,10 @@ describe("module cycles", () => {
     expect(nodeOf("/p/src/modules/decks/overview/index.ts")).toBe("decks/overview");
     expect(nodeOf("/p/src/modules/decks/wiring.ts")).toBe("decks");
     expect(nodeOf("/p/src/modules/decks/index.ts")).toBe("decks");
+    expect(nodeOf("/p/src/modules/catalog/rules/application/rules.ts")).toBe("catalog/rules");
+    expect(nodeOf("/p/src/modules/catalog/infrastructure/index.ts")).toBe("catalog");
+    expect(nodeOf("/p/src/modules/collection/real/index.ts")).toBe("collection/real");
+    expect(nodeOf("/p/src/modules/research/youtube/domain/search.ts")).toBe("research/youtube");
     expect(nodeOf("/p/src/server/core.ts")).toBeUndefined();
   });
 

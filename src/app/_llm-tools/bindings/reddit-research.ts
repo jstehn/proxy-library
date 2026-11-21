@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { REDDIT_SORT_MODES, REDDIT_TIMEFRAMES } from "@/modules/reddit";
+import { REDDIT_SORT_MODES, REDDIT_TIMEFRAMES } from "@/modules/research";
 import { err, type Result } from "@/shared/kernel";
 import { defineBinding } from "../binding";
 

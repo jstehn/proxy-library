@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { type Color, PrintingId, type SetCode } from "@/modules/catalog";
-import { boosterConfigs, cardSets } from "@/modules/catalog/infrastructure/schema";
+import { boosterConfigs, cardSets } from "@/modules/catalog/cards/infrastructure/schema";
 import { packMsrp } from "@/modules/store";
 import { type DbExecutor, nonfoilFirstPrice } from "@/shared/db";
 import { Cents, ColorSchema, FinishSchema, RaritySchema, type UserId } from "@/shared/kernel";

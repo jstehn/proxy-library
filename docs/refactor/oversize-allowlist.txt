@@ -8,7 +8,7 @@ src/modules/drafts/application/drafts.ts  # pre-refactor, owned by P20
 src/modules/drafts/domain/draft.ts  # pre-refactor, owned by P20
 src/modules/drafts/domain/steps.ts  # pre-refactor, owned by P20
 src/modules/drafts/infrastructure/drizzle-draft-repository.ts  # pre-refactor, owned by P20
-src/modules/reddit/infrastructure/reddit-http-gateway.ts  # pre-refactor, owned by P20
+src/modules/research/reddit/infrastructure/reddit-http-gateway.ts  # pre-refactor, owned by P20
 src/modules/store/queries/store.ts  # pre-refactor, owned by P20
 src/shared/card-search/parse.ts  # pre-refactor, owned by P13
-src/shared/card-search/sql.ts  # pre-refactor, owned by P03
+src/modules/catalog/cards/queries/search-sql.ts  # pre-refactor, owned by P03

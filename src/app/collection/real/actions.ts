@@ -11,7 +11,7 @@ import {
   type ImportPreview,
   type PrintingChoice,
   type ProductDeck,
-} from "@/modules/real-collection";
+} from "@/modules/collection/real";
 import type { PageContext } from "@/server/page";
 import { readPage } from "@/server/page-instance";
 import { FinishSchema } from "@/shared/kernel";

@@ -4,7 +4,7 @@ import type { BracketFlag } from "@/shared/kernel";
 import { eq, sql } from "drizzle-orm";
 import { parseList } from "@/shared/card-search";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { featureArray, signalIO } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { ColorSchema, type Tag, type Theme, type UserId } from "@/shared/kernel";
 import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "../domain/deck";
 import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";

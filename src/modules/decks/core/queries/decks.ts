@@ -5,7 +5,7 @@ import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { featureArray, signalIO } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { ColorSchema, FinishSchema, type Tag, type Theme, UserId } from "@/shared/kernel";
 import {
   BOARDS,

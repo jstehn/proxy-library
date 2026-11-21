@@ -1,7 +1,7 @@
 import type { SignalIO } from "@/shared/kernel";
 import { bracketFlagsOf } from "@/modules/decks/core/client";
 import type { BracketFlag } from "@/shared/kernel";
-import { featureArray, signalIO } from "@/shared/card-search/sql";
+import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, latestPrice, textArray } from "@/shared/db";
 import { ColorSchema, FinishSchema, type Tag, type Theme, type UserId } from "@/shared/kernel";
