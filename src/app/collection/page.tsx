@@ -8,6 +8,7 @@ import { SECTIONS, SORTS } from "@/ui/collection/options";
 import { CollectionCardGrid, ExportLinks } from "./card-grid";
 import { readCollectionQuery } from "./collection-query";
 import { CollectionTabs } from "./tabs";
+import { Page } from "@/ui/page";
 
 /** "In: Burn (4), Mono Red (2)", so you know which deck to pull a copy from. */
 function deckNote(decks: readonly DeckRef[] | undefined): string | undefined {
@@ -31,7 +32,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -80,6 +81,6 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
         />
       )}
       <Pagination action="/collection" values={values} page={page} pageCount={result.pageCount} />
-    </main>
+    </Page>
   );
 }

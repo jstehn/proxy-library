@@ -11,6 +11,9 @@ import type { OpenerPack } from "@/ui/opening/machine";
 import { PackOpener } from "@/ui/opening/pack-opener";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
 import { productLabel } from "../../store/labels";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
 
 // What one or more openings produced: packs in reveal order, decks, and what boxes unpacked into.
 // (Phase 8 turns a pack into an animated reveal.)
@@ -61,12 +64,15 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           </p>
         )}
         {openings.length === 0 ? (
-          <p className="text-muted text-sm">Nothing to show.</p>
+          <EmptyState>Nothing to show.</EmptyState>
         ) : (
           <p className="text-muted text-sm">
             {packs.length > 0 && `${packs.length} pack${packs.length === 1 ? "" : "s"} · `}
-            cards worth <strong className="tabular-nums">{Cents.format(total)}</strong> at market
-            price ·{" "}
+            cards worth{" "}
+            <strong className="tabular-nums">
+              <Price cents={total} />
+            </strong>{" "}
+            at market price ·{" "}
             <Link href="/inventory" className="underline">
               back to inventory
             </Link>{" "}
@@ -112,7 +118,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
+    <Page width="6xl" spacing="wide">
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
@@ -122,7 +128,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       ) : (
         results
       )}
-    </main>
+    </Page>
   );
 }
 

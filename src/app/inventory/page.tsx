@@ -7,6 +7,8 @@ import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { KeyruneStylesheet } from "@/ui/set-symbol";
 import { openAction } from "./actions";
+import { Button } from "@/ui/button";
+import { Page } from "@/ui/page";
 
 const ERROR_MESSAGES: Record<OpenItemError["kind"], string> = {
   ItemNotFound: "That item isn't in your inventory.",
@@ -33,7 +35,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
   const photos = await photosFor(reads, groups);
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <KeyruneStylesheet />
       <h1 className="text-2xl font-semibold">Inventory</h1>
       {error && <Alert tone="error">{error}</Alert>}
@@ -72,13 +74,13 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                   <form action={openAction}>
                     <input type="hidden" name="itemIds" value={group.itemIds[0]} />
                     <input type="hidden" name="mode" value={isDeckProduct ? "all" : "one"} />
-                    <button
+                    <Button
                       type="submit"
-                      className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
+
                       aria-label={`Open ${group.name}`}
                     >
                       {group.contentKind === "product" && !isDeckProduct ? "Unpack" : "Open"}
-                    </button>
+                    </Button>
                   </form>
                   {canOpenAll && !isDeckProduct && (
                     <form action={openAction}>
@@ -91,15 +93,16 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                         ).join(",")}
                       />
                       <input type="hidden" name="mode" value="all" />
-                      <button
+                      <Button
                         type="submit"
-                        className="border-line rounded-md border px-3 py-1.5 text-sm"
+
                         aria-label={`Open all ${group.name}`}
+                        variant="secondary"
                       >
                         {group.contentKind === "product"
                           ? "Open everything inside"
                           : `Open all ${count}`}
-                      </button>
+                      </Button>
                     </form>
                   )}
                 </li>
@@ -126,7 +129,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
           </ul>
         </section>
       )}
-    </main>
+    </Page>
   );
 }
 

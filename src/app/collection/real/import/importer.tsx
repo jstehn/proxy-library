@@ -10,14 +10,12 @@ import {
   type ApplyAnswer,
   type PreviewAnswer,
 } from "../actions";
+import { Button } from "@/ui/button";
+import { Input, Select, Textarea } from "@/ui/field";
 
 // Importing real cards (design doc 16, sections 4 to 7, and 15.2): paste or upload, see what
 // each line matched, change any line's printing, then import exactly that.
 
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
-const primary =
-  "rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60";
-const secondary = "rounded-md border border-line px-3 py-2 text-sm font-medium disabled:opacity-60";
 /** Lines shown with a printing menu; the rest import as matched (a long file stays quick). */
 const SHOWN_LINES = 300;
 const MAX_FILE_BYTES = 5_000_000;
@@ -120,7 +118,7 @@ export function RealImporter() {
   return (
     <div className="flex flex-col gap-6">
       <section aria-label="What to import" className="flex flex-col gap-3">
-        <textarea
+        <Textarea
           value={text}
           onChange={(event) => {
             setText(event.target.value);
@@ -131,7 +129,7 @@ export function RealImporter() {
           rows={10}
           aria-label="Cards to import"
           placeholder={"4 Lightning Bolt\n1 Sol Ring (C21) 263\n1 Beza, the Bounding Spring *F*"}
-          className={`${field} font-mono`}
+          className="font-mono"
         />
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex items-center gap-2">
@@ -173,14 +171,16 @@ export function RealImporter() {
           </label>
         </fieldset>
         <div>
-          <button
+          <Button
             type="button"
-            className={secondary}
+
             disabled={isWorking || text.trim() === ""}
             onClick={() => preview()}
+            variant="secondary"
+            size="lg"
           >
             {isWorking ? "Reading…" : "Preview"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -228,7 +228,7 @@ export function RealImporter() {
                           )}
                         </td>
                         <td className="py-1">
-                          <select
+                          <Select
                             value={chosen[line.line.index] ?? line.printingId}
                             onChange={(event) =>
                               setChosen((current) => ({
@@ -237,14 +237,14 @@ export function RealImporter() {
                               }))
                             }
                             aria-label={`Printing of ${line.line.name}`}
-                            className={`${field} w-full max-w-xs`}
+                            className="w-full max-w-xs"
                           >
                             {options.map((choice) => (
                               <option key={choice.printingId} value={choice.printingId}>
                                 {choiceLabel(choice, line.line.finish)}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </td>
                       </tr>
                     );
@@ -297,29 +297,29 @@ export function RealImporter() {
                 Also make a deck from this list
               </label>
               {makeDeck && (
-                <input
+                <Input
                   value={deckName}
                   onChange={(event) => setDeckName(event.target.value)}
                   maxLength={60}
                   placeholder="Deck name"
                   aria-label="Deck name"
-                  className={field}
                 />
               )}
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
+            <Button
               type="button"
-              className={primary}
+
               disabled={
                 isWorking || matched.length === 0 || (isList && makeDeck && deckName.trim() === "")
               }
               onClick={importIt}
+              size="lg"
             >
               {isWorking ? "Importing…" : "Import"}
-            </button>
+            </Button>
             <span className="text-muted text-xs">Nothing is saved until you press Import.</span>
           </div>
         </section>

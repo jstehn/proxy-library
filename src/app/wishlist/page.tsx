@@ -14,6 +14,9 @@ import { removeWishAction, setWishlistSharingAction } from "./actions";
 import { offerLabel } from "./labels";
 import { BuyWishForm, EditWishForm, RemoveWishButton } from "./wish-forms";
 import { readPage } from "@/server/page-instance";
+import { Button } from "@/ui/button";
+import { Page } from "@/ui/page";
+import { Price } from "@/ui/price";
 
 // The Wishlist page (design doc 26, section 9): each wish at today's price, how far your money
 // is from it, and buying it.
@@ -51,7 +54,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
   const paid = Number(searchParams.paid);
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Wishlist</h1>
         <p className="text-muted text-sm">
@@ -64,20 +67,22 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
         {lines.length > 0 && (
           <p className="text-sm tabular-nums">
             {lines.length} {lines.length === 1 ? "wish" : "wishes"} · everything still missing{" "}
-            <strong>{Cents.format(sum.all)}</strong> · you have{" "}
-            <strong>{Cents.format(balance)}</strong>
+            <strong>
+              <Price cents={sum.all} />
+            </strong>{" "}
+            · you have{" "}
+            <strong>
+              <Price cents={balance} />
+            </strong>
             {sum.affordable > 0 && <> · you can afford {Cents.format(sum.affordable)} of it now</>}
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
           <form action={setWishlistSharingAction} className="flex items-center gap-2">
             <input type="hidden" name="shared" value={isShared ? "off" : "on"} />
-            <button
-              type="submit"
-              className="border-line hover:bg-surface rounded-md border px-3 py-1 text-sm"
-            >
+            <Button type="submit" variant="secondary" size="sm">
               {isShared ? "Stop sharing with playgroup" : "Share with playgroup"}
-            </button>
+            </Button>
             {isShared && (
               <span className="text-muted text-xs">
                 Trading partners can see your wishes (not your target prices).
@@ -132,7 +137,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
           Paydays assume you spend nothing else and prices stay where they are today.
         </p>
       )}
-    </main>
+    </Page>
   );
 }
 
@@ -184,7 +189,11 @@ function WishRow(props: { line: WishLine }) {
 
         {offer !== null && line.missing > 0 && (
           <p className="tabular-nums">
-            {offerLabel(offer)} · <strong>{Cents.format(offer.price)}</strong> each
+            {offerLabel(offer)} ·{" "}
+            <strong>
+              <Price cents={offer.price} />
+            </strong>{" "}
+            each
             <PriceChange cents={line.changeSinceSaved} />
             {wish.targetPrice !== null && (
               <span className={line.atTarget ? "text-success-text" : "text-muted"}>

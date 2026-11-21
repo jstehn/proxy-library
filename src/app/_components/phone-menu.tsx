@@ -4,6 +4,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef } from "react";
 import { InstallAppButton } from "./install-app-button";
+import { Button } from "@/ui/button";
 
 export function PhoneMenu(props: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,13 +20,15 @@ export function PhoneMenu(props: { children: React.ReactNode }) {
 
   return (
     <div className="relative md:hidden">
-      <button
+      <Button
         type="button"
         popoverTarget={menuId}
-        className="border-line cursor-pointer rounded-md border px-2.5 py-1"
+        variant="secondary"
+        size="xs"
+        className="cursor-pointer"
       >
         Menu
-      </button>
+      </Button>
       <div
         id={menuId}
         ref={menu}

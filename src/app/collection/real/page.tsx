@@ -14,11 +14,11 @@ import {
   removeRealProductAction,
   setRealSharingAction,
 } from "./actions";
+import { Button } from "@/ui/button";
+import { Page } from "@/ui/page";
 
 // The Real tab (design doc 16, section 7): the cards you own physically, with the Game tab's
 // search, filters, sections and totals. Nothing here touches money or the game (rule 1).
-
-const button = "rounded-md border border-line px-3 py-1 text-sm hover:bg-surface";
 
 export default async function RealCollectionPage(props: PageProps<"/collection/real">) {
   const { actor, capabilities, reads } = await readPage();
@@ -37,7 +37,7 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
   const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -132,9 +132,9 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
                         <input type="checkbox" name="removeCards" defaultChecked />
                         Also remove its cards
                       </label>
-                      <button type="submit" className={button}>
+                      <Button type="submit" variant="secondary" size="sm">
                         Remove {product.name}
-                      </button>
+                      </Button>
                     </form>
                   </details>
                 </li>
@@ -152,9 +152,9 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
                 ? "Shared: other players can look at your real collection (not change it)."
                 : "Private: only you can see your real collection."}
             </span>
-            <button type="submit" className={button}>
+            <Button type="submit" variant="secondary" size="sm">
               {isShared ? "Stop sharing" : "Let other players see my real collection"}
-            </button>
+            </Button>
           </form>
           {isShared && (
             <p className="text-sm">
@@ -184,16 +184,13 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
               <p className="text-muted">
                 Removes every real card. Your products list, decks and game collection stay.
               </p>
-              <button
-                type="submit"
-                className="self-start rounded-md bg-red-700 px-3 py-1 text-white"
-              >
+              <Button type="submit" variant="danger" size="sm" className="self-start">
                 Yes, remove every real card
-              </button>
+              </Button>
             </form>
           </details>
         </section>
       </div>
-    </main>
+    </Page>
   );
 }

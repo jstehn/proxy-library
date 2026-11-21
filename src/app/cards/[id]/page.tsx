@@ -11,6 +11,8 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { AddWishForm } from "@/app/wishlist/wish-forms";
 import { RealCopiesBox } from "./real-copies";
 import { BuyForm, SellForm } from "./trade-forms";
+import { Card } from "@/ui/card";
+import { Page } from "@/ui/page";
 
 // One card: what it is, what it's worth over time, what you own, and buying or selling it
 // (design doc 07, section 10).
@@ -58,7 +60,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12">
+    <Page width="5xl" spacing="roomy">
       <KeyruneStylesheet />
       <ManaStylesheet />
       <div className="flex flex-col gap-8 md:flex-row">
@@ -130,10 +132,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
               const copies = owned[finish] ?? 0;
               const payout = price === undefined ? null : payoutPerCopy(price, rateBps);
               return (
-                <div
-                  key={finish}
-                  className="border-border-subtle flex flex-col gap-2 rounded-lg border p-3"
-                >
+                <Card key={finish} padding="md" className="flex flex-col gap-2">
                   <p className="text-sm">
                     <strong>{FINISH_LABELS[finish]}</strong> ·{" "}
                     {price === undefined ? "no market price" : `${Cents.format(price)} market`} ·
@@ -157,7 +156,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                       priceText={`${Cents.format(payout)} each`}
                     />
                   )}
-                </div>
+                </Card>
               );
             })}
             <p className="text-muted text-xs">
@@ -238,7 +237,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
       </section>
 
       {trades.length > 0 && <TradeHistory trades={trades} />}
-    </main>
+    </Page>
   );
 }
 

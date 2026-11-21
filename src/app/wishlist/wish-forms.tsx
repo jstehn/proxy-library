@@ -13,12 +13,12 @@ import {
   type WishState,
 } from "./actions";
 import { FINISH_NAMES, offerLabel } from "./labels";
+import { Input, Select } from "@/ui/field";
 
 // The wishlist's forms (design doc 26, section 9): buying a wish, changing it, and adding one
 // from a card's page.
 
 const initialState: WishState = { message: null, tone: "success" };
-const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 const PREFERENCE_OPTIONS: readonly (readonly [FinishPreference, string])[] = [
   ["nonfoil", "Nonfoil"],
@@ -36,19 +36,18 @@ function Numbers(props: {
   onChange?: (value: number) => void;
 }) {
   return (
-    <select
+    <Select
       name={props.name}
       aria-label={props.label}
       value={props.value}
       onChange={(event) => props.onChange?.(Number(event.target.value))}
-      className={field}
     >
       {Array.from({ length: props.max }, (_, index) => index + 1).map((count) => (
         <option key={count} value={count}>
           {count}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 
@@ -78,18 +77,18 @@ export function BuyWishForm(props: {
       <input type="hidden" name="expectedUnitPrice" value={chosen.price} />
       <div className="flex flex-wrap items-center gap-2">
         {props.options.length > 1 && (
-          <select
+          <Select
             aria-label={`Which printing of ${props.name} to buy`}
             value={offerKey(chosen)}
             onChange={(event) => setChosenKey(event.target.value)}
-            className={`${field} max-w-full`}
+            className="max-w-full"
           >
             {props.options.map((option) => (
               <option key={offerKey(option)} value={offerKey(option)}>
                 {offerLabel(option)}: {Cents.format(option.price)}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         {props.missing > 1 ? (
           <Numbers
@@ -117,36 +116,36 @@ function DetailFields(props: { quantity: number; targetPrice: number | null; not
     <>
       <label className="flex items-center gap-2 text-sm">
         <span className="w-24 shrink-0">Copies wanted</span>
-        <input
+        <Input
           name="quantity"
           type="number"
           min={1}
           max={99}
           defaultValue={props.quantity}
-          className={`${field} w-20`}
+          className="w-20"
         />
       </label>
       <label className="flex items-center gap-2 text-sm">
         <span className="w-24 shrink-0">Target price</span>
-        <input
+        <Input
           name="targetPrice"
           inputMode="decimal"
           placeholder="none"
           defaultValue={
             props.targetPrice === null ? "" : Cents.toPlainDollars(Cents.of(props.targetPrice))
           }
-          className={`${field} w-28`}
+          className="w-28"
         />
         <span className="text-muted text-xs">$ per copy, optional</span>
       </label>
       <label className="flex items-center gap-2 text-sm">
         <span className="w-24 shrink-0">Note</span>
-        <input
+        <Input
           name="note"
           maxLength={200}
           defaultValue={props.note}
           placeholder="optional"
-          className={`${field} min-w-0 flex-1`}
+          className="min-w-0 flex-1"
         />
       </label>
     </>
@@ -218,13 +217,13 @@ export function AddWishForm(props: {
       <label className="flex items-center gap-2 text-sm">
         <span className="w-24 shrink-0">Finish</span>
         {/* `key`: switching kinds starts the menu at its first choice. */}
-        <select key={kind} name="finish" className={field}>
+        <Select key={kind} name="finish">
           {finishOptions.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <DetailFields quantity={1} targetPrice={null} note="" />
       <div>

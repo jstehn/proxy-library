@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 export default async function SetsPage() {
   const { reads } = await readPage();
   const sets = await reads.catalog.enabledSets();
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">
+    <Page width="5xl">
       <KeyruneStylesheet />
       <h1 className="text-2xl font-semibold">Sets</h1>
       {sets.length === 0 && (
@@ -31,6 +32,6 @@ export default async function SetsPage() {
           </li>
         ))}
       </ul>
-    </main>
+    </Page>
   );
 }

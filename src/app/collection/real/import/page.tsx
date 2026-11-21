@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { requireActor } from "@/server/session";
 import { RealImporter } from "./importer";
+import { Page } from "@/ui/page";
 
 // Import real cards (design doc 16, section 7): a pasted list, or a Moxfield or ManaBox file.
 
 export default async function RealImportPage() {
   await requireActor();
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">
+    <Page width="5xl">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Import real cards</h1>
         <p className="text-muted text-sm">
@@ -21,6 +22,6 @@ export default async function RealImportPage() {
         </p>
       </header>
       <RealImporter />
-    </main>
+    </Page>
   );
 }

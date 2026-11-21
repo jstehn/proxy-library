@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { COLOR_COMBINATIONS } from "@/shared/kernel";
+import { Button } from "@/ui/button";
 
 // The filter bar shared by the collection and the singles store. A plain GET form: the filters
 // live in the URL, so a view can be bookmarked, shared, and reached with the back button.
@@ -126,12 +127,7 @@ export function CardFilters(props: {
           />
         )}
         <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
-        <button
-          type="submit"
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-        >
-          Show
-        </button>
+        <Button type="submit">Show</Button>
         <Link href={props.action} className="text-sm underline">
           Clear
         </Link>
