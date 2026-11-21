@@ -14,6 +14,7 @@ import {
   type CardViewMode,
 } from "./card-view-mode";
 import { ManaText } from "./mana";
+import { CardImage } from "./card-image";
 
 /** What a face needs: structurally the catalog's `CardFace`, which `src/ui` can't import. */
 export type CardViewFace = Readonly<{
@@ -112,8 +113,7 @@ export function CardView(props: CardViewProps) {
   return (
     <div className={root}>
       {hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${printingId}/normal/front`}
           alt={name}
           width={488}

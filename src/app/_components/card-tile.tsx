@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { CardPreviewDialog, EnlargedCard } from "./card-preview";
+import { CardImage } from "@/ui/card-image";
 
 const FOIL_SHEEN =
   "pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1";
@@ -86,15 +87,14 @@ export function CardTile(props: CardTileProps) {
         onClick={handleActivate}
         aria-expanded={isOpen || isDialogOpen}
         aria-label={`${printing.name}: show card text`}
-        className="relative block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
+        className="relative block w-full rounded-[4.5%]"
       >
         {printing.hasImage ? (
-          // Plain <img>: pre-sized images from our own cache, lazily loaded. `srcSet` offers both
+          // Pre-sized images from our own cache. `srcSet` offers both
           // sizes and `sizes` says how wide a tile is; the browser picks the sharper "normal"
           // image whenever the small one (146 px) would be blurry, e.g. on wide or high-density
           // screens. (The small one alone was too soft to read.)
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CardImage
             src={`/api/images/${printing.id}/small/front`}
             srcSet={`/api/images/${printing.id}/small/front 146w, /api/images/${printing.id}/normal/front 488w`}
             sizes="(min-width: 1024px) 190px, (min-width: 640px) 30vw, 50vw"

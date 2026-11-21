@@ -9,6 +9,7 @@ import { KeyruneStylesheet } from "@/ui/set-symbol";
 import { openAction } from "./actions";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
+import { CardImage } from "@/ui/card-image";
 
 const ERROR_MESSAGES: Record<OpenItemError["kind"], string> = {
   ItemNotFound: "That item isn't in your inventory.",
@@ -171,10 +172,9 @@ function Thumbnail(props: { photoIds: readonly string[]; itemId: number; setCode
   }
   const imageId = props.photoIds[variantFor(props.itemId, props.photoIds.length)];
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <CardImage
       src={`/api/artwork/${imageId}/small`}
-      alt=""
+      decorative
       loading="lazy"
       className="h-14 w-10 object-contain"
     />

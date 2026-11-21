@@ -144,6 +144,11 @@ const cardSearchSql = {
 // globals.css and a long class string is a block in src/ui, not a copy.
 const CLASS_NAMES = [
   {
+    // refactor P33: one image component (alt, size, lazy loading, fallback tile).
+    selector: "JSXOpeningElement[name.name='img']",
+    message: "Use <CardImage> from @/ui/card-image, not a raw <img>.",
+  },
+  {
     selector: "JSXAttribute[name.name='className'] Literal[value=/zinc-/]",
     message:
       "Use a colour token (text-muted, border-line, bg-surface, ...) or a block from src/ui.",

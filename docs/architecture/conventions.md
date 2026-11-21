@@ -155,6 +155,24 @@ over the clever one.
   `revalidateTrades()`); no `revalidatePath` outside a `paths.ts`. `app/paths.ts` has
   `revalidateHeader()` for the layout.
 
+## Accessibility
+
+- **Focus.** One `:focus-visible` rule in `globals.css` draws the ring (the `--focus-ring` token,
+  light and dark). Don't write `focus:` or `focus-visible:` classes on a component; the only
+  exceptions are the skip link (it reveals itself on focus) and `focus:outline-none` on a
+  programmatic focus target (`tabIndex={-1}`).
+- **Images.** Use `CardImage` (`@/ui/card-image`), never a raw `<img>` (lint enforces it). `alt`
+  is required: the card's name, or `decorative` when the text beside the image already says it.
+  Give `width` and `height` or an aspect-ratio class so the page doesn't jump. It stays a plain
+  `<img>` because our own image cache already serves resized WebP.
+- **Dialogs.** `Dialog` (`@/ui/dialog`) wraps the native `<dialog>`: the browser traps focus and
+  closes it on Escape, and `Dialog` returns focus to the opener. Don't add a dialog library.
+- **Destructive actions** (delete, revoke, reset, sell, decline, cancel) use `ConfirmButton`
+  (`@/ui/confirm-button`), which asks in a dialog and submits its form only after "Confirm". The
+  two typed-word confirmations (start over, reset a player) stay: typing is stricter. Reversible
+  actions (rename, add to a wishlist) don't ask.
+- **Names.** Every icon-only button has an `aria-label`; every field has a label.
+
 ## Comments and docs
 
 - Comments explain **why**, not what. Public functions in `index.ts` get a one-line TSDoc.

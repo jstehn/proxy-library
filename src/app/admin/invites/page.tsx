@@ -5,6 +5,7 @@ import { CreateInviteForm } from "./create-invite-form";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 export default async function AdminInvitesPage() {
   const { actor: admin, capabilities, reads } = await readPage({ admin: true });
@@ -44,9 +45,14 @@ export default async function AdminInvitesPage() {
               {invite.status === "open" && (
                 <form action={revokeInviteAction}>
                   <input type="hidden" name="code" value={invite.code} />
-                  <SubmitButton tone="secondary" pendingText="…">
+                  <ConfirmButton
+                    variant="secondary"
+                    size="sm"
+                    question="Revoke this invite? Its code stops working."
+                    confirmLabel="Revoke"
+                  >
                     Revoke
-                  </SubmitButton>
+                  </ConfirmButton>
                 </form>
               )}
             </li>

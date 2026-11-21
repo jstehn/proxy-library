@@ -4,6 +4,7 @@ import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { Button } from "@/ui/button";
 import { CardView } from "@/ui/card-view";
 import { ManaText } from "@/ui/mana";
+import { CardImage } from "@/ui/card-image";
 
 const DIALOG_BOX =
   "border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70";
@@ -35,10 +36,9 @@ export function EnlargedCard(props: {
       <div className="relative overflow-hidden rounded-[4.5%] shadow-2xl ring-1 ring-black/20">
         {printing.hasImage ? (
           // The sharper "normal" image, only loaded for the card being looked at.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CardImage
             src={`/api/images/${printing.id}/normal/front`}
-            alt=""
+            decorative
             width={488}
             height={680}
             className="bg-surface-raised aspect-[488/680] w-full"
@@ -217,11 +217,10 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
         onClick={handleActivate}
         aria-expanded={isOpen || isDialogOpen}
         aria-label={`${printing.name}: show card text`}
-        className="block w-full rounded-[4.5%] focus:outline-2 focus:outline-offset-2"
+        className="block w-full rounded-[4.5%]"
       >
         {printing.hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CardImage
             src={`/api/images/${printing.id}/normal/front`}
             alt={printing.name}
             loading="lazy"
@@ -314,10 +313,9 @@ export function NamePreview(props: {
         {props.name}
       </button>
       {spot && props.printing?.hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${props.printing.id}/normal/front`}
-          alt=""
+          decorative
           aria-hidden
           data-card-preview
           width={PREVIEW_WIDTH}

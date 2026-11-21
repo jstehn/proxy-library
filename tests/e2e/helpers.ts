@@ -2,6 +2,11 @@ import { expect, type Page } from "@playwright/test";
 
 // Steps the journeys share. The journeys run in order against one database (see 01-accounts).
 
+export /** Answers the confirmation dialog a destructive button opens (see `ConfirmButton`). */
+async function confirmInDialog(page: Page, confirmLabel: string) {
+  await page.getByRole("dialog").getByRole("button", { name: confirmLabel, exact: true }).click();
+}
+
 export /** Admin pages live behind the "Admin" link, in their own menu. */
 async function openAdminPage(page: Page, name: string) {
   await page.locator(`header a[href="/admin"]:visible`).click(); // not the account link, also "Admin"
