@@ -13,7 +13,7 @@ import {
   newestPriceDay,
   nonfoilFirstPrice,
 } from "@/shared/db";
-import { close, db, loadFixtureCatalog } from "./harness";
+import { close, db, loadFixtureCatalog } from "../../../tests/integration/harness";
 
 afterAll(close);
 

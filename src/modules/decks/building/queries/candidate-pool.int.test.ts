@@ -4,7 +4,13 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "@/modules/decks";
 import { UserId } from "@/shared/kernel";
-import { actor, close, db, loadFixtureCatalog, resetPlayers } from "./harness";
+import {
+  actor,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 

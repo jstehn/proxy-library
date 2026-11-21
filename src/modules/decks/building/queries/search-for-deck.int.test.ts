@@ -3,7 +3,15 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeDecks, searchForDeck, type DeckId } from "@/modules/decks";
-import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  unitOfWork,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 beforeAll(loadFixtureCatalog);

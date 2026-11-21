@@ -14,7 +14,7 @@ import {
   resetPlayers,
   storeFeatureArrays,
   unitOfWork,
-} from "./harness";
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 

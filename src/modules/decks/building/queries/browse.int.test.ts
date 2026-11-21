@@ -10,7 +10,15 @@ import {
   type DeckId,
 } from "@/modules/decks";
 import { PrintingId } from "@/modules/catalog";
-import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  unitOfWork,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 beforeAll(loadFixtureCatalog);

@@ -22,7 +22,15 @@ import {
 import { drizzleCardLookup } from "@/modules/decks/infrastructure";
 import { makeStore } from "@/modules/store";
 import { UserId } from "@/shared/kernel";
-import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  unitOfWork,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 

@@ -17,7 +17,7 @@ import { DEFAULT_PROXY_OPTIONS, makeProxySheets, type ProxyLine } from "@/module
 import { pdfLibRenderer } from "@/modules/decks/infrastructure";
 import { makeDrizzleUnitOfWork } from "@/shared/db";
 import { readFileSync } from "node:fs";
-import { clock, close, db, loadFixtureCatalog } from "./harness";
+import { clock, close, db, loadFixtureCatalog } from "../../../../../tests/integration/harness";
 
 afterAll(close);
 beforeAll(loadFixtureCatalog);

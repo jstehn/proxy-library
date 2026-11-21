@@ -13,7 +13,7 @@ import {
   loadFixtureCatalog,
   resetPlayers,
   storeFeatureArrays,
-} from "./harness";
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 

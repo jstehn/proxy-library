@@ -12,7 +12,15 @@ import {
   type DeckId,
   type SuggestionList,
 } from "@/modules/decks";
-import { actor, clock, close, db, loadFixtureCatalog, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  loadFixtureCatalog,
+  resetPlayers,
+  unitOfWork,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 beforeAll(loadFixtureCatalog);

@@ -21,7 +21,7 @@ import {
   loadFixtureCatalog,
   resetPlayers,
   unitOfWork,
-} from "./harness";
+} from "../../../../tests/integration/harness";
 
 afterAll(close);
 beforeAll(loadFixtureCatalog);

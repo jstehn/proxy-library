@@ -432,6 +432,20 @@ const policies = [
     // The harness builds its players with testActor (design doc 67, section 6).
     layer("testing", { file: "actors.ts" }),
   ),
+  // An integration test sits beside the code it covers and wires real adapters, like the
+  // composition roots do: it may import any module's public API and infrastructure.
+  {
+    from: { file: { categories: "int-test" } },
+    allow: {
+      to: [
+        { element: { type: "module" } },
+        { element: { type: "module-layer", captured: { layer: "infrastructure" } } },
+        { element: { type: "module-layer", captured: { layer: "testing" } } },
+        { element: { type: "module-layer", captured: { layer: "application" } } },
+        { element: { type: "module-layer", captured: { layer: "queries" } } },
+      ],
+    },
+  },
   {
     from: { file: { categories: "test" } },
     allow: {
@@ -458,7 +472,10 @@ export default defineConfig([
     plugins: { boundaries },
     settings: {
       "boundaries/elements": elements.map((element) => ({ ...element, partialMatch: false })),
-      "boundaries/files": [{ category: "test", pattern: TESTS }],
+      "boundaries/files": [
+        { category: "test", pattern: TESTS },
+        { category: "int-test", pattern: "**/*.int.test.ts" },
+      ],
     },
     rules: {
       "boundaries/dependencies": [
@@ -708,6 +725,9 @@ export default defineConfig([
   // Type-safety escapes.
   {
     files: SOURCE,
+    // Integration tests moved out of tests/ (where this never applied) keep their `!` on rows they
+    // have just inserted.
+    ignores: ["**/*.int.test.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",

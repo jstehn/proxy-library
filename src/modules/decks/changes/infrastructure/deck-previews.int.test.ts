@@ -3,7 +3,14 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { makeDecks } from "@/modules/decks";
 import { drizzleChangePreviewRepository } from "@/modules/decks/infrastructure";
 import { UserId } from "@/shared/kernel";
-import { actor, clock, close, db, resetPlayers, unitOfWork } from "./harness";
+import {
+  actor,
+  clock,
+  close,
+  db,
+  resetPlayers,
+  unitOfWork,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 beforeEach(() => resetPlayers(["jack", "jill"]));

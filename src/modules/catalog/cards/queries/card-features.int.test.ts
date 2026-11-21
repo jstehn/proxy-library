@@ -1,7 +1,12 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { catalogQueries } from "@/modules/catalog";
-import { close, db, fixtureCatalog, loadFixtureCatalog } from "./harness";
+import {
+  close,
+  db,
+  fixtureCatalog,
+  loadFixtureCatalog,
+} from "../../../../../tests/integration/harness";
 
 afterAll(close);
 // The fixture sync runs the features pass (step 5c), so every oracle card has a row afterwards.

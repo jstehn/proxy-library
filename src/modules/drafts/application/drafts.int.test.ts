@@ -19,7 +19,7 @@ import {
   loadFixtureCatalog,
   resetPlayers,
   unitOfWork,
-} from "./harness";
+} from "../../../../tests/integration/harness";
 
 const subscriptions = pgDraftSubscriptions(loadConfig().databaseUrl);
 afterAll(async () => {
