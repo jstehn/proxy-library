@@ -1,9 +1,9 @@
-import type { Bracket, BracketRuleReason } from "./brackets";
+import type { Bracket, BracketRuleReason } from "../../domain/brackets";
 import type { CardCastability } from "@/modules/decks/play/client";
-import type { Format } from "./deck";
+import type { Format } from "../../domain/deck";
 import type { GoldfishReport } from "@/modules/decks/play/client";
 import type { DeckScore } from "@/modules/decks/scoring/client";
-import type { TargetedTag } from "./stats";
+import type { TargetedTag } from "../../domain/stats";
 
 // What the one-shot deck audit reports (legality, bracket, roles, mana, ownership, goldfish).
 // `queries/audit.ts` builds it; the types live here so the application layer can name them.

@@ -12,7 +12,7 @@ import {
   toCard,
   type CandidateRow,
 } from "./suggestion-sql";
-import { suggestionContext, withinTarget } from "./suggestions";
+import { suggestionContext, withinTarget } from "../../queries/suggestions";
 import { type SuggestionCard } from "../domain/suggestion-types";
 
 export type SemanticSearchPick = Readonly<{

@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/shared/db";
-import type { DeckAuditReport } from "../domain/audit-report";
-import { auditDeckView } from "./audit";
+import type { DeckAuditReport } from "@/modules/decks/building/client";
+import { auditDeckView } from "@/modules/decks/building";
 import { publicDeck } from "./sharing";
 
 export type PublicDeckScorecard = Readonly<{

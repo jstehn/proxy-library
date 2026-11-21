@@ -1,24 +1,24 @@
-import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import { bracketFlagsOf, fitsTarget } from "../../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
 import { featureArray } from "@/shared/card-search/sql";
 import { eq, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { textArray } from "@/shared/db";
 import { COLORS, seededRng, type Tag, type Theme, type UserId } from "@/shared/kernel";
-import { isCounted } from "../domain/boards";
+import { isCounted } from "../../domain/boards";
 import { simulateCastOnCurve } from "@/modules/decks/play/client";
-import { resolveDeckProfileTargets, type DeckPlan } from "../domain/deck-profile";
+import { resolveDeckProfileTargets, type DeckPlan } from "../../domain/deck-profile";
 import {
   planManaBase,
   type LandCandidate,
   type ManaBasePlanWithCastability,
 } from "../domain/mana-base";
-import { decks } from "../infrastructure/schema";
-import { deckStats } from "../domain/stats";
+import { decks } from "../../infrastructure/schema";
+import { deckStats } from "../../domain/stats";
 import { deckProfile } from "@/modules/decks/scoring/client";
 import { cheapestForSale, legalInFormat, notOwned, ownedPerCard } from "./candidate-pool";
-import { suggestionContext } from "./suggestions";
-import { cardFeaturesOf, withFeatures, type FeaturesOf } from "./card-features";
+import { suggestionContext } from "../../queries/suggestions";
+import { cardFeaturesOf, withFeatures, type FeaturesOf } from "../../queries/card-features";
 import { type SuggestionContext } from "../domain/suggestion-types";
 
 // A mana base you could start from (design doc 35, section 9): SQL gathers the lands the deck may

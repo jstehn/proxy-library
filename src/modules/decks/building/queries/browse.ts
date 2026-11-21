@@ -1,7 +1,7 @@
 import type { SignalIO } from "@/shared/kernel";
-import { bracketFlagsOf } from "../domain/brackets";
+import { bracketFlagsOf } from "../../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
-import { formatRules } from "../domain/format-rules";
+import { formatRules } from "../../domain/format-rules";
 import type { BrowseCard } from "../domain/browse-card";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -15,11 +15,11 @@ import {
   type Theme,
   type UserId,
 } from "@/shared/kernel";
-import { FORMATS } from "../domain/deck";
+import { FORMATS } from "../../domain/deck";
 import { parseSearch } from "@/shared/card-search";
 import { featureArray, signalIO, foilOwnedBy, searchCondition } from "@/shared/card-search/sql";
 import { legalInFormat, ownedPerCard } from "./candidate-pool";
-import { STANDARD_FIRST } from "./owned";
+import { STANDARD_FIRST } from "../../queries/owned";
 
 // Browsing cards while building a deck (design doc 14, section 2.1): one entry per card, with
 // what the deck needs to know. The grid searches either the cards you own or every card for sale

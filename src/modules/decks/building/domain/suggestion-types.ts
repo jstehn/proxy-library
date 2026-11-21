@@ -1,9 +1,9 @@
 import { type Tag, type Theme } from "@/shared/kernel";
 import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
-import { type Bracket, type BracketLine } from "./brackets";
-import { type Format } from "./deck";
+import { type Bracket, type BracketLine } from "../../domain/brackets";
+import { type Format } from "../../domain/deck";
 import type { CardRating } from "@/modules/decks/scoring/client";
-import type { EdhrecSignal, ProfileLine } from "./stats";
+import type { EdhrecSignal, ProfileLine } from "../../domain/stats";
 import { type Scored } from "@/modules/decks/scoring/client";
 import type { BrowseCard } from "./browse-card";
 

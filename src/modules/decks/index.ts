@@ -28,8 +28,8 @@ export {
   type Format,
   type Grouping,
 } from "./domain/deck";
-export type { ManaBasePlanWithCastability } from "./domain/mana-base";
-export { type SimilarCards } from "./application/find-replacements";
+export type { ManaBasePlanWithCastability } from "@/modules/decks/building/client";
+export { type SimilarCards } from "@/modules/decks/building";
 export { type DeckFacts } from "./application/deck-facts";
 
 export { type DeckSignals, type SearchSignals } from "@/modules/decks/scoring";
@@ -89,7 +89,7 @@ export {
   type BracketWarning,
   type DeckCombo,
 } from "./domain/brackets";
-export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./queries/candidate-pool";
+export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "@/modules/decks/building";
 export { combosForDeck } from "./queries/combos";
 export {
   decksUsing,
@@ -104,9 +104,9 @@ export type { DeckLine, DeckView, OtherDeckUse } from "./domain/deck-view";
 export { type CutReason } from "@/modules/decks/scoring/client";
 export { type SwapCutMeta, type SwapReason } from "@/modules/decks/scoring/client";
 export { type OptimizeResult } from "@/modules/decks/scoring/client";
-export { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
+export { optimizeDeckForView, type OptimizeDeckPool } from "@/modules/decks/building";
 
-export { auditDeck } from "./queries/audit";
+export { auditDeck } from "@/modules/decks/building";
 
 export { type PowerTier } from "@/modules/decks/scoring/client";
 export {
@@ -117,7 +117,7 @@ export {
   type BrowseSort,
   BROWSE_SOURCES,
   type BrowseSource,
-} from "./queries/browse";
+} from "@/modules/decks/building";
 export { cardPrintings, type PrintingFinish, type PrintingOption } from "./queries/printings";
 export {
   budgetList,
@@ -127,32 +127,41 @@ export {
   type DeckSuggestions,
 } from "./queries/suggestions";
 export { budgetReplacements } from "./queries/budget-replacements";
-export type { BrowseCard } from "./domain/browse-card";
-export type { BudgetReplacementsResult } from "./domain/suggestion-types";
+export type { BrowseCard } from "@/modules/decks/building/client";
+export type { BudgetReplacementsResult } from "@/modules/decks/building/client";
 export {
   type Suggestion,
   type SuggestionCard,
   type SuggestionList,
-} from "./domain/suggestion-types";
-export { embedSimForCards } from "./queries/embeddings";
-export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
+} from "@/modules/decks/building/client";
+export { embedSimForCards } from "@/modules/decks/building";
+export { semanticSearchForDeck, type SemanticSearchResult } from "@/modules/decks/building";
 
 export type { Reason } from "@/modules/decks/scoring/client";
-export { manaBasePlan } from "./queries/mana-base";
-export { draftForDeck } from "./queries/draft-deck";
+export { manaBasePlan } from "@/modules/decks/building";
+export { draftForDeck } from "@/modules/decks/building";
 
-export { type DeckDraft, type DraftedSpell, type DraftReason } from "./domain/draft-deck";
-export { commanderDetails, commandersICanBuild } from "./queries/commanders";
-export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "./domain/commanders";
-export type { CommanderCoverage, CommanderPlan } from "./domain/commanders";
-export type { LandReason, LandTargetReason, ManaBasePlan, PlannedLand } from "./domain/mana-base";
+export {
+  type DeckDraft,
+  type DraftedSpell,
+  type DraftReason,
+} from "@/modules/decks/building/client";
+export { commanderDetails, commandersICanBuild } from "@/modules/decks/building";
+export { COMMANDER_SORTS, SPELL_SLOTS, type CommanderSort } from "@/modules/decks/building/client";
+export type { CommanderCoverage, CommanderPlan } from "@/modules/decks/building/client";
+export type {
+  LandReason,
+  LandTargetReason,
+  ManaBasePlan,
+  PlannedLand,
+} from "@/modules/decks/building/client";
 export { canViewDeck } from "./domain/sharing";
 export { cardsToGetFor, type CommentView } from "./queries/sharing";
 export * as deckQueries from "./queries";
 export * as deckPublicQueries from "./queries/public";
 export { checkOwnedCards, findCard } from "@/modules/decks/scoring";
-export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
-export { type SynergyQuery } from "./domain/search-for-deck";
+export { searchForDeck, type SearchForDeck } from "@/modules/decks/building";
+export { type SynergyQuery } from "@/modules/decks/building/client";
 export { makeProxySheets, type ProxySheetInput } from "@/modules/decks/proxies";
 
 export {

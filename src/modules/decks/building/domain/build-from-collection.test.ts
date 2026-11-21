@@ -1,8 +1,13 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { draftDeck, type DeckDraft, type DraftCandidate, type DraftInput } from "./draft-deck";
+import {
+  buildFromCollection,
+  type DeckDraft,
+  type DraftCandidate,
+  type DraftInput,
+} from "./build-from-collection";
 import type { LandCandidate } from "./mana-base";
-import type { ProfileLine } from "./stats";
+import type { ProfileLine } from "../../domain/stats";
 import { type ManaColor } from "@/shared/kernel";
 
 // Draft a 100-card Commander deck from owned cards first (design doc 37, sections 3-4).
@@ -80,7 +85,7 @@ const BASICS: LandCandidate[] = Object.entries(BASIC_NAMES).map(([color, name]) 
 );
 
 const runDraft = (overrides: Partial<DraftInput> = {}): DeckDraft =>
-  draftDeck({
+  buildFromCollection({
     format: "commander",
     lines: [commanderLine()],
     inDeck: new Map([["Commander", 1]]),
@@ -91,7 +96,7 @@ const runDraft = (overrides: Partial<DraftInput> = {}): DeckDraft =>
     ...overrides,
   });
 
-describe("draftDeck", () => {
+describe("buildFromCollection", () => {
   it("reaches 100 cards from a 1-commander deck using owned cards and satisfies role targets", () => {
     const ownedPool: DraftCandidate[] = [
       ...manyCandidates(12, { roles: ["ramp"], manaCost: "{1}{G}", manaValue: 2 }, "Ramp"),
@@ -289,7 +294,7 @@ describe("draftDeck", () => {
   });
 });
 
-describe("draftDeck properties", () => {
+describe("buildFromCollection properties", () => {
   const arbTag = fc.constantFrom(
     "ramp" as const,
     "draw" as const,
@@ -422,7 +427,7 @@ describe("draftDeck properties", () => {
       ...manyCandidates(8, { ownedCopies: 4, manaCost: "{1}{G}", manaValue: 2 }, "Bear"),
     ];
 
-    const draft = draftDeck({
+    const draft = buildFromCollection({
       format: "modern",
       lines: [
         {
@@ -471,7 +476,7 @@ describe("draftDeck properties", () => {
       manaValue: 1,
       ownedCopies: 4,
     });
-    const draft = draftDeck({
+    const draft = buildFromCollection({
       format: "modern",
       lines: [
         {
@@ -500,7 +505,7 @@ describe("draftDeck properties", () => {
   });
 });
 
-describe("draftDeck curve smoothing uses the one mana curve (0 to 7+)", () => {
+describe("buildFromCollection curve smoothing uses the one mana curve (0 to 7+)", () => {
   it("fills the curve slot by slot and names the slot in each reason", () => {
     const draft = runDraft({
       candidates: [

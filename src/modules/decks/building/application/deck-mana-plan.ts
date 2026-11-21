@@ -1,5 +1,5 @@
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import type { DeckNotFound } from "../domain/errors";
+import type { DeckNotFound } from "../../domain/errors";
 import type { ManaBasePlanWithCastability } from "../domain/mana-base";
 
 // A rough starting land skeleton for a deck: land count, colour sources, which lands to add.

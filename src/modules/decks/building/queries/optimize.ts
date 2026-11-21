@@ -1,15 +1,15 @@
 import type { DbExecutor } from "@/shared/db";
 import { seededRng, type Rng, type UserId } from "@/shared/kernel";
-import { isPlayed } from "../domain/boards";
-import type { Deck } from "../domain/deck";
+import { isPlayed } from "../../domain/boards";
+import type { Deck } from "../../domain/deck";
 import {
   optimizeDeck,
   type OptimizerCard,
   type OptimizeResult,
 } from "@/modules/decks/scoring/client";
-import type { DeckLine } from "../domain/deck-view";
-import { deckView } from "./decks";
-import { deckSuggestions } from "./suggestions";
+import type { DeckLine } from "../../domain/deck-view";
+import { deckView } from "../../queries/decks";
+import { deckSuggestions } from "../../queries/suggestions";
 import { type Suggestion } from "../domain/suggestion-types";
 
 export type OptimizeDeckPool = "owned" | "store" | "both";

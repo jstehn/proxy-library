@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_DECK_PROFILE } from "../domain/deck-profile";
+import { EMPTY_DECK_PROFILE } from "../../domain/deck-profile";
 import type { Suggestion, SuggestionList } from "../domain/suggestion-types";
 import { makeFindReplacements, type FindReplacementsReaders } from "./find-replacements";
 import { UserId } from "@/shared/kernel";

@@ -51,7 +51,7 @@ export {
   type ProxyStreamEvent,
 } from "@/modules/decks/proxies/client";
 export { copiesToTake } from "./domain/free-copies";
-export { landTarget } from "./domain/mana-base";
+export { landTarget } from "@/modules/decks/building/client";
 export {
   rankCuts,
   type CutContext,

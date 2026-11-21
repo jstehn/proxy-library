@@ -13,7 +13,7 @@ import type { EdhrecSignal } from "../domain/stats";
 import { decks, deckSnapshots } from "../infrastructure/schema";
 import type { DeckLine } from "../domain/deck-view";
 import { deckView, loadEdhrecSignals } from "./decks";
-import { lineToOptimizerCard } from "./optimize";
+import { lineToOptimizerCard } from "@/modules/decks/building";
 import { lineToPreview, loadCardsForPreview, viewFingerprint } from "./preview";
 
 // Read models for deck snapshots and before/after comparisons (design doc 41).

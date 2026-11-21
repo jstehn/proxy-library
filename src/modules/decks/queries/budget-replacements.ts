@@ -4,7 +4,7 @@ import {
   candidateColumns,
   toCard,
   ownedCandidatesForIds,
-} from "./suggestion-sql";
+} from "@/modules/decks/building";
 import { suggestionContext, withinTarget } from "./suggestions";
 import { eq, sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice, textArray } from "@/shared/db";
@@ -15,13 +15,13 @@ import { deckEntries, decks } from "../infrastructure/schema";
 import { deckProfile } from "@/modules/decks/scoring/client";
 import { rankBudgetReplacements } from "@/modules/decks/scoring/client";
 import { isLand } from "../domain/stats";
-import { cheapestOfCards } from "./candidate-pool";
+import { cheapestOfCards } from "@/modules/decks/building";
 import type {
   BudgetReplacementPick,
   BudgetReplacementsResult,
   ExpensiveCardReplacements,
   SuggestionCard,
-} from "../domain/suggestion-types";
+} from "@/modules/decks/building/client";
 
 /**
  * Finds cheaper legal replacements for expensive cards in a deck using `card_embeddings`

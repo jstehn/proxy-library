@@ -5,11 +5,17 @@ import {
   manaCurve,
   type Theme,
 } from "@/shared/kernel";
-import { isPlayed } from "./boards";
-import type { Format } from "./deck";
+import { isPlayed } from "../../domain/boards";
+import type { Format } from "../../domain/deck";
 import { landTarget, planManaBase, type LandCandidate, type ManaBasePlan } from "./mana-base";
-import { FORMAT_RULES, formatRules } from "./format-rules";
-import { deckStats, isLand, TARGETED_TAGS, type ProfileLine, type TargetedTag } from "./stats";
+import { FORMAT_RULES, formatRules } from "../../domain/format-rules";
+import {
+  deckStats,
+  isLand,
+  TARGETED_TAGS,
+  type ProfileLine,
+  type TargetedTag,
+} from "../../domain/stats";
 import {
   deckProfile,
   scoreForDeck,
@@ -291,7 +297,7 @@ function pickCurveCandidate(
  * cards, owned on-plan cards, owned curve-smoothing cards, and (when enabled) store cards for
  * remaining gaps, then delegating the land slots to `planManaBase`.
  */
-export function draftDeck(input: DraftInput): DeckDraft {
+export function buildFromCollection(input: DraftInput): DeckDraft {
   const includeStore = input.options?.includeStore ?? "fill-gaps";
   const targetTotal = formatRules(input.format).deckSize.cards;
   const playedLines = input.lines.filter((line) => isPlayed(line.board));

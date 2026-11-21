@@ -1,5 +1,5 @@
 import { formatRules } from "../domain/format-rules";
-import { EMPTY_LIST } from "../domain/suggestion-types";
+import { EMPTY_LIST } from "@/modules/decks/building/client";
 import {
   fitsDeck,
   CandidateRow,
@@ -8,7 +8,7 @@ import {
   ownedCandidatesForIds,
   ownedCandidates,
   storeCandidates,
-} from "./suggestion-sql";
+} from "@/modules/decks/building";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, textArray } from "@/shared/db";
 import { creatureTypes, type Tag, type UserId } from "@/shared/kernel";
@@ -29,16 +29,16 @@ import {
 import { isLand } from "../domain/stats";
 import { comboPartnersForDeck } from "./combos";
 import { deckView } from "./decks";
-import { embedSimForCards } from "./embeddings";
+import { embedSimForCards } from "@/modules/decks/building";
 import { STANDARD_FIRST } from "./owned";
-import { cheapestOfCards } from "./candidate-pool";
+import { cheapestOfCards } from "@/modules/decks/building";
 import type {
   Suggestion,
   SuggestionCard,
   SuggestionContext,
   SuggestionList,
   Wanted,
-} from "../domain/suggestion-types";
+} from "@/modules/decks/building/client";
 
 // Deck suggestions (design doc 20, section 9). SQL narrows the catalog to a few hundred cards
 // that share something with the deck, using the role tags and themes the sync stores on each

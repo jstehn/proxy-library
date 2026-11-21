@@ -14,8 +14,8 @@ import {
   type PoolCard,
   type WithIdentity,
 } from "../domain/commanders";
-import { canBeCommander } from "../domain/rules";
-import { TARGETED_TAGS } from "../domain/stats";
+import { canBeCommander } from "../../domain/rules";
+import { TARGETED_TAGS } from "../../domain/stats";
 import { cheapestOfCards, ownedPerCard } from "./candidate-pool";
 import { tribePattern } from "./suggestion-sql";
 

@@ -1,30 +1,30 @@
 import type { SignalIO } from "@/shared/kernel";
-import { bracketFlagsOf, fitsTarget } from "../domain/brackets";
+import { bracketFlagsOf, fitsTarget } from "../../domain/brackets";
 import type { BracketFlag } from "@/shared/kernel";
 import { featureArray, signalIO } from "@/shared/card-search/sql";
-import { formatRules } from "../domain/format-rules";
+import { formatRules } from "../../domain/format-rules";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
 import { type Tag, type Theme } from "@/shared/kernel";
 import type { UserId } from "@/shared/kernel";
-import { isCounted } from "../domain/boards";
+import { isCounted } from "../../domain/boards";
 import {
-  draftDeck,
+  buildFromCollection,
   type DeckDraft,
   type DraftCandidate,
   type DraftOptions,
-} from "../domain/draft-deck";
-import { TARGETED_TAGS } from "../domain/stats";
+} from "../domain/build-from-collection";
+import { TARGETED_TAGS } from "../../domain/stats";
 import { deckProfile } from "@/modules/decks/scoring/client";
 import { landPoolsForDeck } from "./mana-base";
 import { cheapestForSale, notOwned, ownedPerCard } from "./candidate-pool";
 import { fitsDeck, tribePattern } from "./suggestion-sql";
-import { suggestionContext } from "./suggestions";
+import { suggestionContext } from "../../queries/suggestions";
 
 // Draft a deck (100-card Commander or 60-card Constructed with playsets) from owned cards first
 // (design docs 37 & 44): SQL gathers your legal non-land cards, store non-land candidates, and the
-// mana-base land pools, and the pure draftDeck assembles the deck.
+// mana-base land pools, and the pure buildFromCollection assembles the deck.
 
 const OWNED_SPELL_LIMIT = 1000;
 const STORE_SPELL_LIMIT = 500;
@@ -179,7 +179,7 @@ export async function draftForDeck(
     inDeck.set(line.oracleId, (inDeck.get(line.oracleId) ?? 0) + line.quantity);
   }
 
-  return draftDeck({
+  return buildFromCollection({
     format: context.format,
     lines: context.lines,
     inDeck,

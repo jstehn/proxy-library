@@ -1,13 +1,13 @@
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
-import type { DraftOptions } from "../domain/draft-deck";
-import { browseCollection, type BrowseInput } from "./browse";
+import type { DraftOptions } from "@/modules/decks/building/client";
+import { browseCollection, type BrowseInput } from "@/modules/decks/building";
 import {
   commanderDetails as detailsOfCommander,
   commandersICanBuild as buildable,
-} from "./commanders";
-import type { CommanderSearch } from "./commanders";
-import { draftForDeck } from "./draft-deck";
+} from "@/modules/decks/building";
+import type { CommanderSearch } from "@/modules/decks/building";
+import { draftForDeck } from "@/modules/decks/building";
 import {
   decksFor as decksOf,
   decksUsing as decksUsingPrintings,
@@ -15,7 +15,7 @@ import {
   otherDecksHolding as otherDecksOf,
 } from "./decks";
 import { deckListPreview } from "./preview";
-import { optimizeDeckForView, type OptimizeDeckPool } from "./optimize";
+import { optimizeDeckForView, type OptimizeDeckPool } from "@/modules/decks/building";
 import { cardPrintings } from "./printings";
 import { cardsToGetFor } from "./sharing";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";

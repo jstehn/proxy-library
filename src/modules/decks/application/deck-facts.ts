@@ -2,7 +2,7 @@ import { formatRules } from "../domain/format-rules";
 import { ok, type Result } from "@/shared/kernel";
 import { bracketLine, estimateBracket, type BracketEstimate } from "../domain/brackets";
 import { isPlayed } from "../domain/boards";
-import type { DeckAuditReport } from "../domain/audit-report";
+import type { DeckAuditReport } from "@/modules/decks/building/client";
 import type { DeckLine, DeckView } from "../domain/deck-view";
 
 // The deck-facts diagnostics (legality, bracket, roles, mana, ownership, goldfish) for a deck
