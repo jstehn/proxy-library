@@ -115,7 +115,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-2 font-medium">
               <span>Preview (not saved yet)</span>
               {previewIsStale && (
-                <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                <span className="text-warning-text text-xs font-normal">
                   List edited since preview — click Preview changes again to refresh
                 </span>
               )}

@@ -60,7 +60,8 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
             {theme !== undefined && ` leading ${THEME_LABELS[theme]}`}
             {tribe !== "" && ` matching tribe “${tribe}”`}
             {colors.length > 0 && " with these colors"} · ordered by{" "}
-            {SORT_LABELS[sort].toLowerCase()}.
+            {/* Only the first letter: the labels hold "I" and "EDHREC". */}
+            {SORT_LABELS[sort].charAt(0).toLowerCase() + SORT_LABELS[sort].slice(1)}.
           </p>
           <ul className="divide-border-subtle flex flex-col divide-y">
             {ranked.slice(0, shown).map((coverage) => (

@@ -499,6 +499,95 @@ describe("official photos, key art and details from WPN (design doc 13)", () => 
     );
   });
 
+  it("lets an admin pick a product's photo, and refuses a player", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    const bundle = await productId("Bloomburrow Bundle");
+    const player = testActor({ name: "player" });
+
+    expect(
+      await catalog.choosePhoto(player, {
+        productId: bundle,
+        wpnName: "Bloomburrow Bundle",
+        photoIndex: 0,
+      }),
+    ).toEqual(err({ kind: "Forbidden" }));
+    expect((await links()).find((link) => link.name === "Bloomburrow Bundle")?.match).toBe(
+      "by_kind",
+    );
+
+    expect(
+      await catalog.choosePhoto(admin, {
+        productId: bundle,
+        wpnName: "Bloomburrow Bundle",
+        photoIndex: 0,
+      }),
+    ).toEqual({ ok: true, value: undefined });
+    expect((await links()).find((link) => link.name === "Bloomburrow Bundle")).toMatchObject({
+      wpn_name: "Bloomburrow Bundle",
+      match: "admin",
+    });
+    expect(
+      await catalog.choosePhoto(admin, {
+        productId: "no-such-product",
+        wpnName: null,
+        photoIndex: null,
+      }),
+    ).toEqual(err({ kind: "ProductNotFound" }));
+  });
+
+  it("lets an admin set a set's page slug, which queues a sync to read it", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    await db.execute(sql`delete from sync_runs`);
+
+    expect(
+      await catalog.setPageSlug(admin, { setCode: SetCode.of("FDN"), slug: "  Foundations-Set " }),
+    ).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    const page = async () =>
+      (
+        await db.execute<{ slug_override: string | null; status: string }>(
+          sql`select slug_override, status from wpn_pages where set_code = 'FDN'`,
+        )
+      ).rows[0];
+    expect(await page()).toEqual({ slug_override: "foundations-set", status: "no_page" });
+    expect(await countRows("sync_runs")).toBe(1);
+
+    // A second change doesn't queue a second run while one is waiting; an empty slug goes back to automatic.
+    await catalog.setPageSlug(admin, { setCode: SetCode.of("FDN"), slug: "" });
+    expect((await page()).slug_override).toBeNull();
+    expect(await countRows("sync_runs")).toBe(1);
+  });
+
+  it("refuses a bad page slug, an unknown set and a player", async () => {
+    const catalog = buildCatalog();
+    await catalog.runSync("prices");
+    const fdn = SetCode.of("FDN");
+
+    expect(await catalog.setPageSlug(admin, { setCode: fdn, slug: "not a slug!" })).toEqual(
+      err({ kind: "SlugInvalid" }),
+    );
+    expect(await catalog.setPageSlug(admin, { setCode: fdn, slug: "x".repeat(121) })).toEqual(
+      err({ kind: "SlugInvalid" }),
+    );
+    expect(await catalog.setPageSlug(admin, { setCode: SetCode.of("ZZZ"), slug: "zzz" })).toEqual(
+      err({ kind: "SetNotFound" }),
+    );
+    expect(
+      await catalog.setPageSlug(testActor({ name: "player" }), {
+        setCode: fdn,
+        slug: "foundations",
+      }),
+    ).toEqual(err({ kind: "Forbidden" }));
+    const overrides = await db.execute(
+      sql`select 1 from wpn_pages where slug_override is not null`,
+    );
+    expect(overrides.rows).toEqual([]);
+  });
+
   it("never fails the sync over a missing or changed page (generated art stays)", async () => {
     wpn = fixtureWpnGateway({ broken: ["bloomburrow"] });
     const summary = await buildCatalog().runSync("prices");

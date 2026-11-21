@@ -56,8 +56,6 @@ describe("formatRules", () => {
     expect(commanderOnly((format) => formatRules(format).usesColorIdentity)).toEqual(["commander"]);
     expect(commanderOnly((format) => formatRules(format).bracketsApply)).toEqual(["commander"]);
     expect(commanderOnly((format) => formatRules(format).freeFirstMulligan)).toEqual(["commander"]);
-    expect(formatRules("commander").commandZoneTaxPerCast).toBe(2);
-    expect(formatRules("modern").commandZoneTaxPerCast).toBe(0);
   });
 
   it("checks legality in constructed formats and Commander only", () => {

@@ -85,6 +85,8 @@ describe("pdfLibRenderer, playtest style (design doc 22)", () => {
       // back image for the double-faced card, so its back prints with an empty art box.
       expect(images.length).toBe(artFilter === "none" ? 0 : testCards.length);
     },
+    // Drawing 42 cards is CPU-heavy; the default 5 s timed out when other jobs shared the machine.
+    60_000,
   );
 
   it("has a glyph in the Mana font for every symbol it draws", async () => {

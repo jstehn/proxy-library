@@ -4,14 +4,10 @@ import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { formatLabel } from "../decks/labels";
 import { EmptyState } from "@/ui/empty-state";
+import { rarityTextClass } from "@/ui/mtg/rarity";
 
 // The activity feed (design doc 11): notable pulls, sealed purchases, completed trades,
 // finished drafts (design doc 17), and shared decks and comments on them (design doc 21).
-
-const RARITY_COLORS: Record<string, string> = {
-  rare: "text-amber-600 dark:text-amber-400",
-  mythic: "text-orange-600 dark:text-orange-400",
-};
 
 function ActorName(props: { name: string; username?: string }) {
   if (!props.username) return <strong>{props.name}</strong>;
@@ -35,7 +31,7 @@ function Line(props: { item: FeedItem }) {
               {index > 0 && ", "}
               <Link
                 href={`/cards/${card.printingId}`}
-                className={`underline ${RARITY_COLORS[card.rarity] ?? ""}`}
+                className={`underline ${rarityTextClass(card.rarity)}`}
               >
                 {card.name}
               </Link>

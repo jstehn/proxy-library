@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { basicCredentials, CLIENT_AUTH_METHODS, SCOPES } from "@/modules/accounts";
-import { getContainer } from "@/server/composition/container";
+import { readCapabilities } from "@/server/page-instance";
 import type { RedirectUriNotRegistered, UnknownClient } from "@/modules/accounts";
 import { assertNever } from "@/shared/kernel";
 
@@ -28,7 +28,7 @@ export function preflight(): Response {
 
 /** The app's public origin: the OAuth issuer, and where every endpoint lives. */
 function issuer(): string {
-  return new URL(getContainer().config.appUrl).origin;
+  return new URL(readCapabilities().site.appUrl).origin;
 }
 
 /** Where a client finds out how to sign in to the MCP endpoint (RFC 9728). */
@@ -113,7 +113,7 @@ export async function registerClient(request: Request): Promise<Response> {
     authMethod: parsed.data.token_endpoint_auth_method,
     grantTypes: parsed.data.grant_types,
   };
-  const result = await getContainer().accounts.registerOAuthClient({
+  const result = await readCapabilities().accounts.registerOAuthClient({
     clientName: parsed.data.client_name,
     redirectUris: parsed.data.redirect_uris,
     authMethod: parsed.data.token_endpoint_auth_method,
@@ -201,7 +201,7 @@ export async function exchangeToken(request: Request): Promise<Response> {
   };
   const credentials = clientCredentials(request.headers.get("authorization"), field);
   if (!credentials.ok) return json(credentials.body, credentials.status, credentials.headers);
-  const result = await getContainer().accounts.exchangeAuthorizationCode({
+  const result = await readCapabilities().accounts.exchangeAuthorizationCode({
     grantType: field("grant_type"),
     code: field("code"),
     clientId: credentials.clientId,

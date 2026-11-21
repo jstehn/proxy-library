@@ -53,14 +53,19 @@ export const oracleTextRegex = {
 };
 
 /**
- * Files that still read card text with a regex. Each is deleted from this list by the P12 to P14
- * slice that moves its regexes into recognizers; the list only shrinks (sorted).
+ * Files allowed to keep a regex the rule would flag, each with its reason (sorted). The rule matches
+ * by variable name, so these are not (or not yet) card-feature recognizers.
  */
-export const NOT_YET_RECOGNIZED = [
-  "src/modules/catalog/domain/embedding-text.ts",
+export const REGEX_ALLOWED = [
+  // The deck's origin is stored as "draft:12": a code of ours, not rules text. `text` is only the name.
   "src/modules/decks/core/domain/deck.ts",
+  // Deck legality reads commander and copy-limit rules from `CardRules.text` ("can be your
+  // commander", "Partner", "any number of cards named"). The same check runs in the browser
+  // builder on a deck view that carries no `CardFeatures`, so moving these into recognizers means
+  // adding a commander-rules feature to every `CardRules` loader (a feature of its own, with a
+  // FEATURES_VERSION bump).
   "src/modules/decks/core/domain/rules.ts",
-  "src/modules/decks/proxies/domain/token-proxies.ts",
+  // The search language parser reads the player's query ("rw", "esper", "simic"), not a card's
+  // text; `text` is the name of the query word being parsed.
   "src/shared/card-search/parse.ts",
-  "src/shared/card-search/sql.ts",
 ];

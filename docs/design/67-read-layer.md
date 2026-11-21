@@ -109,7 +109,7 @@ id looks wrong (open question 2).
 | `/api/tools/openapi.json`                         | none               | `readCapabilities()`: `appUrl`, no data                                 |
 | `/api/mcp`, `/api/tools/[name]` (`http.ts`)       | bearer token       | `readTool(request)`: `{ actor, scopes, capabilities, reads }`           |
 | `/d/[token]`, `/d/[token]/scorecard`              | the link token     | `readPage({ allowVisitors: true })` and `reads.decks.publicDeck(token)` |
-| `/api/health`, OAuth endpoints (`_oauth/http.ts`) | none / OAuth form  | `getContainer()` (on `CONTAINER_ALLOWED`, each with its reason)         |
+| `/api/health`, OAuth endpoints (`_oauth/http.ts`) | none / OAuth form  | `readCapabilities()` (`site.checkHealth`, `accounts.*`)                 |
 
 - `readCapabilities()` stays, but only for routes that read nothing from the database for a player
   (images, artwork, OpenAPI).
