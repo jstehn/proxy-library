@@ -393,6 +393,13 @@
       "when": 1795218963079,
       "tag": "0055_oauth_confidential",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795295094785,
+      "tag": "0056_drop_orphan_tables",
+      "breakpoints": true
     }
   ]
 }

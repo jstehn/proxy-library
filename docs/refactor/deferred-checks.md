@@ -256,4 +256,12 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       are refused) in `catalog.int.test.ts`; the drafts use cases `decideCard` and `answerDeal`
       (happy paths, not seated, not your turn or deal, already decided) in
       `drafts/application/conspiracy-answers.test.ts`. The two form actions themselves (the Zod
-      form and the redirect message) are still only covered by e2e.
+      form and the redirect message) have no test of their own; their use cases do.
+- [x] **Done 2026-11-21: the open checks from P33 and P36.** A WCAG AA contrast script (every visible
+      text element against its real background; a planted 1.57:1 control was caught) found no failures
+      in dark or light on home, store, collection, decks, a deck, the commander finder, a set's cards,
+      drafts, wallet and admin economy, except one: rare-pull links in the activity feed (amber-600,
+      3.2:1 on white). Fixed with one shared rarity colour map (`ui/mtg/rarity.ts`, rare on the
+      warning token, mythic orange-700), and the stale-preview note on the warning token. The
+      commander finder's orderings look right in dark at 390px; its "ordered by" line no longer
+      lowercases "I" and "EDHREC".

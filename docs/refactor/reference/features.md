@@ -3,7 +3,7 @@
 A checklist of what the app does today, one line per page, server-action file and LLM tool.
 Milestones tick these off once the rebuilt version works again (docs/refactor/STATUS.md).
 Final pass 2026-11-21: 61 rows matched to a test that drives them; the other 17 checked by eye on the
-e2e database in dark mode at 390px; one row stays open.
+e2e database in dark mode at 390px; the last row got its tests the same day.
 Reference outputs of the LLM tools are in `tools/*.json` (`draw_sample` shuffles, so its card order
 differs between runs; the four tools that call outside services record only their input schema).
 
@@ -71,7 +71,7 @@ differs between runs; the four tools that call outside services record only thei
 - [x] `admin/catalog`: requestSync, enableStandardSets, setSetEnabled
 - [x] `admin/economy`: updateEconomy
 - [x] `admin/invites`: createInvite, revokeInvite
-- [ ] `admin/photos`: choosePhoto, setPageSlug (open: the forms render, but no test or check by eye submits them)
+- [x] `admin/photos`: choosePhoto, setPageSlug (their use cases tested in `catalog.int.test.ts`, 2026-11-21)
 - [x] `admin/players`: player actions, money actions, resetLibrary
 - [x] `admin/store`: setKindPrice, setProductPrice, setPricingMode, setBuylistRate
 - [x] `(auth)/register`: register
