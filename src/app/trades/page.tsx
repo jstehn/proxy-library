@@ -3,6 +3,7 @@ import { type TradeView } from "@/modules/trades";
 import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 function TradeLine(props: {
   trade: TradeView;
@@ -84,7 +85,7 @@ export default async function TradesPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-wrap items-center gap-4">
         <h1 className="flex-1 text-2xl font-semibold">Trades</h1>
         <Link
@@ -97,6 +98,6 @@ export default async function TradesPage() {
       {section("Waiting for you", forYou, "Nothing to decide.")}
       {section("Waiting for them", forThem, "No open offers.")}
       {section("History", history, "No trades yet.")}
-    </main>
+    </Page>
   );
 }

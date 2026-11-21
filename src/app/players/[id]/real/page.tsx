@@ -7,6 +7,8 @@ import { SECTIONS, SORTS } from "@/ui/collection/options";
 import { Cents, UserId } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 // Another player's real collection, read only (design doc 16, rule 5): only while they share it.
 // Not shared looks the same as no such player, so the page doesn't tell who has a collection.
@@ -31,7 +33,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
   const path = `/players/${id}/real`;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{name}&apos;s real collection</h1>
@@ -63,11 +65,11 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
         notes={result.notes}
       />
       {result.rows.length === 0 ? (
-        <p className="text-muted text-sm">No real cards here.</p>
+        <EmptyState>No real cards here.</EmptyState>
       ) : (
         <CollectionCardGrid rows={result.rows} cards={cards} />
       )}
       <Pagination action={path} values={values} page={page} pageCount={result.pageCount} />
-    </main>
+    </Page>
   );
 }

@@ -12,6 +12,10 @@ import {
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 const COLOR_LABELS: Record<string, string> = {
   W: "White",
@@ -39,7 +43,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
       : new Map();
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <ManaStylesheet />
 
       <header className="border-border-subtle flex flex-wrap items-start justify-between gap-4 border-b pb-6">
@@ -71,21 +75,16 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.relation === "none" && (
             <form action={sendFriendRequestAction}>
               <input type="hidden" name="targetUserId" value={profile.userId} />
-              <button
-                type="submit"
-                className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
-              >
-                Add friend
-              </button>
+              <Button type="submit">Add friend</Button>
             </form>
           )}
 
           {profile.relation === "pending_outgoing" && (
             <form action={cancelFriendRequestAction}>
               <input type="hidden" name="targetUserId" value={profile.userId} />
-              <button type="submit" className="border-line rounded-md border px-3 py-1.5">
+              <Button type="submit" variant="secondary">
                 Cancel request
-              </button>
+              </Button>
             </form>
           )}
 
@@ -93,18 +92,13 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
             <>
               <form action={acceptFriendRequestAction}>
                 <input type="hidden" name="targetUserId" value={profile.userId} />
-                <button
-                  type="submit"
-                  className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
-                >
-                  Accept friend request
-                </button>
+                <Button type="submit">Accept friend request</Button>
               </form>
               <form action={declineFriendRequestAction}>
                 <input type="hidden" name="targetUserId" value={profile.userId} />
-                <button type="submit" className="border-line rounded-md border px-3 py-1.5">
+                <Button type="submit" variant="secondary">
                   Decline
-                </button>
+                </Button>
               </form>
             </>
           )}
@@ -214,30 +208,30 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Stats</h2>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="border-border-subtle rounded-lg border p-3">
+            <Card padding="md">
               <dt className="text-muted text-xs">Total cards</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.totalCards.toLocaleString()}
               </dd>
-            </div>
-            <div className="border-border-subtle rounded-lg border p-3">
+            </Card>
+            <Card padding="md">
               <dt className="text-muted text-xs">Unique printings</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.distinctCards.toLocaleString()}
               </dd>
-            </div>
-            <div className="border-border-subtle rounded-lg border p-3">
+            </Card>
+            <Card padding="md">
               <dt className="text-muted text-xs">Packs opened</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.packsOpened.toLocaleString()}
               </dd>
-            </div>
-            <div className="border-border-subtle rounded-lg border p-3">
+            </Card>
+            <Card padding="md">
               <dt className="text-muted text-xs">Shared decks</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.sharedDecks.toLocaleString()}
               </dd>
-            </div>
+            </Card>
           </dl>
         </section>
       )}
@@ -245,9 +239,9 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Shared decks ({profile.sharedDecks.length})</h2>
         {profile.sharedDecks.length === 0 ? (
-          <p className="text-muted text-sm">No shared decks yet.</p>
+          <EmptyState>No shared decks yet.</EmptyState>
         ) : (
-          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
+          <Card as="ul" divided>
             {profile.sharedDecks.map((deck) => (
               <li key={deck.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                 <div>
@@ -261,7 +255,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
                 </span>
               </li>
             ))}
-          </ul>
+          </Card>
         )}
       </section>
 
@@ -278,7 +272,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.wishlist.length === 0 ? (
             <p className="text-muted text-sm">Wishlist is empty.</p>
           ) : (
-            <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
+            <Card as="ul" divided>
               {profile.wishlist.map((item) => (
                 <li
                   key={item.id}
@@ -298,10 +292,10 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
                   )}
                 </li>
               ))}
-            </ul>
+            </Card>
           )}
         </section>
       )}
-    </main>
+    </Page>
   );
 }

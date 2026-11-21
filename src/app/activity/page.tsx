@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActivityList } from "../_components/activity-list";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 export default async function ActivityPage(props: PageProps<"/activity">) {
   const { actor, reads } = await readPage();
@@ -8,7 +9,7 @@ export default async function ActivityPage(props: PageProps<"/activity">) {
   const scope = searchParams.scope === "friends" ? "friends" : "all";
   const items = await reads.activity.feed(actor, { scope });
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
+    <Page width="3xl">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Activity</h1>
@@ -43,6 +44,6 @@ export default async function ActivityPage(props: PageProps<"/activity">) {
         </nav>
       </header>
       <ActivityList items={items} />
-    </main>
+    </Page>
   );
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { type SharedWishLine } from "@/modules/wishlist";
 import { UserId } from "@/shared/kernel";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 // Another player's shared wishlist, read-only (design doc 50). Never exposes targetCents,
 // wallet balance, or paydays.
@@ -32,7 +33,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
   const totalOwnedMatches = shared.lines.filter((line) => line.viewerOwned.length > 0).length;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{shared.ownerName}&apos;s wishlist</h1>
@@ -84,6 +85,6 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
           })}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

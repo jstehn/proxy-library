@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { adjust, draftHref, readDraft, type Draft, type DraftCard } from "../draft";
 import { proposeTradeAction } from "../actions";
+import { Button } from "@/ui/button";
+import { Input, Textarea } from "@/ui/field";
 
 /**
  * The newest draft asked for, while its page is still loading: `router.push` only changes the
@@ -98,12 +100,12 @@ export function DraftTextForm(props: {
     <form action={submit} className="flex items-center gap-2">
       <label className="flex flex-1 items-center gap-1 text-sm">
         {props.prefix}
-        <input
+        <Input
           name={props.name}
           defaultValue={props.defaultValue}
           placeholder={props.placeholder}
           aria-label={props.label}
-          className={`${field} flex-1`}
+          className="flex-1"
         />
       </label>
       <button type="submit" disabled={pending} className={field}>
@@ -125,21 +127,15 @@ export function ProposeForm(props: { isCounter: boolean }) {
   }
   return (
     <form action={submit} className="flex flex-col gap-2">
-      <textarea
+      <Textarea
         name="message"
         rows={2}
         maxLength={300}
         placeholder="A message (optional)"
         aria-label="Message"
-        className={field}
       />
       <div>
-        <button
-          type="submit"
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-        >
-          {props.isCounter ? "Send counter-offer" : "Propose trade"}
-        </button>
+        <Button type="submit">{props.isCounter ? "Send counter-offer" : "Propose trade"}</Button>
       </div>
     </form>
   );
