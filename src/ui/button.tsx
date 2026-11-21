@@ -3,7 +3,7 @@
 import type { ComponentProps } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "quiet";
-export type ButtonSize = "md" | "sm" | "xs" | "lg" | "xl";
+export type ButtonSize = "md" | "sm" | "xs" | "mini" | "lg" | "xl";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-accent text-accent-foreground font-medium hover:bg-accent-hover",
@@ -16,6 +16,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   md: "px-3 py-1.5 text-sm",
   sm: "px-3 py-1 text-sm",
   xs: "px-2.5 py-1 text-xs",
+  mini: "px-2 py-0.5 text-xs",
   lg: "px-3 py-2 text-sm",
   xl: "px-4 py-2 text-sm",
 };

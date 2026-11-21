@@ -2,6 +2,7 @@
 import type { Bracket, BracketEstimate, BracketRule } from "@/modules/decks";
 import { BRACKET_NAMES, BRACKETS, bracketWarning } from "@/modules/decks/client";
 import { estimateLabel, findingText, uncheckedText } from "@/app/decks/labels";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The Commander bracket (design doc 31, section 5.2): the lowest bracket the cards allow, why,
 // and the bracket the owner is aiming for. Worked out in the browser, like the statistics.
@@ -23,7 +24,7 @@ export function BracketPanel(props: {
   return (
     <section aria-label="Commander bracket" className="flex flex-col gap-1 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Bracket</h3>
+        <Eyebrow as="h3">Bracket</Eyebrow>
         {props.onTargetChange !== undefined ? (
           <label className="text-muted flex items-center gap-1 text-xs">
             Target

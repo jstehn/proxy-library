@@ -13,6 +13,7 @@ import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { CardView } from "@/ui/card-view";
 import { Badge } from "@/ui/badge";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -219,9 +220,7 @@ export function SelectedCard(props: {
           <p className="text-muted text-xs">Nothing like it in your collection or the store.</p>
         ) : (
           <>
-            <h4 className="text-muted text-xs font-medium tracking-wide uppercase">
-              Cards like this
-            </h4>
+            <Eyebrow as="h4">Cards like this</Eyebrow>
             <HiddenOverTarget count={props.similar.hiddenOverTarget} />
             <ul aria-label="Cards like this" className="flex flex-col">
               {[...props.similar.owned, ...props.similar.store].map((suggestion) => (
@@ -266,13 +265,14 @@ function OtherDecks(props: {
                     : `has ${use.quantity} (${use.quantity - use.available} as commander)`}
               </span>
               {count > 0 && (
-                <button
+                <Button
                   type="button"
                   onClick={() => props.onTake(use, count)}
-                  className="border-line rounded-md border px-2 py-0.5"
+                  variant="secondary"
+                  size="mini"
                 >
                   Take {count}
-                </button>
+                </Button>
               )}
             </li>
           );

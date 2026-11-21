@@ -13,7 +13,7 @@ import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";
 import { Card } from "@/ui/card";
-import { Button } from "@/ui/button";
+import { Button, buttonClass } from "@/ui/button";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
 import { Badge } from "@/ui/badge";
@@ -64,10 +64,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
 
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {profile.relation === "self" && (
-            <Link
-              href="/account/profile"
-              className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
-            >
+            <Link href="/account/profile" className={buttonClass()}>
               Edit profile
             </Link>
           )}
@@ -118,7 +115,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.relation !== "self" && (
             <Link
               href={`/trades/new?with=${profile.userId}`}
-              className="border-line rounded-md border px-3 py-1.5"
+              className={buttonClass({ variant: "secondary" })}
             >
               Propose trade
             </Link>
@@ -127,7 +124,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {isSharingReal && (
             <Link
               href={`/players/${profile.userId}/real`}
-              className="border-line rounded-md border px-3 py-1.5"
+              className={buttonClass({ variant: "secondary" })}
             >
               Real collection
             </Link>

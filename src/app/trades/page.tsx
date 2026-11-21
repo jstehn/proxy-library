@@ -4,6 +4,7 @@ import { LocalTime } from "@/ui/local-time";
 import { itemText, STATUS_LABELS } from "./summary";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 function TradeLine(props: {
   trade: TradeView;
@@ -88,10 +89,7 @@ export default async function TradesPage() {
     <Page spacing="roomy">
       <header className="flex flex-wrap items-center gap-4">
         <h1 className="flex-1 text-2xl font-semibold">Trades</h1>
-        <Link
-          href="/trades/new"
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-        >
+        <Link href="/trades/new" className={buttonClass()}>
           New trade
         </Link>
       </header>

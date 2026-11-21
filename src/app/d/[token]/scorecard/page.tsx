@@ -5,6 +5,7 @@ import { readPage } from "@/server/page-instance";
 import { FORMAT_LABELS } from "../../../decks/labels";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 export async function generateMetadata(
   props: PageProps<"/d/[token]/scorecard">,
@@ -37,10 +38,7 @@ export default async function PublicDeckScorecardPage(props: PageProps<"/d/[toke
             {FORMAT_LABELS[deck.format]} · shared by {ownerName} · {deck.cardCount} cards
           </p>
         </div>
-        <Link
-          href={`/d/${token}`}
-          className="border-line rounded-md border px-3 py-1.5 text-sm font-medium"
-        >
+        <Link href={`/d/${token}`} className={buttonClass({ variant: "secondary" })}>
           View full list
         </Link>
       </header>

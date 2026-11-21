@@ -3,6 +3,7 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { WishForShortForm } from "../../wishlist/wish-forms";
 import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 // Decks → Cards to get (design doc 21): every card your decks need beyond what you own. One copy
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
@@ -37,7 +38,7 @@ export default async function CardsToGetPage() {
             </p>
             <Link
               href={`/singles/list?list=${encodeURIComponent(toGet.listText)}`}
-              className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
+              className={buttonClass()}
             >
               Buy them all
             </Link>

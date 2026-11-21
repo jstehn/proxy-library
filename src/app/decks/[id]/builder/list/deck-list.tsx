@@ -8,6 +8,8 @@ import type { Board, DeckLine, Grouping } from "@/modules/decks";
 import { groupsByHeading, groupsByRole, groupsOf } from "./groups";
 import { HeadingTitle } from "./heading-title";
 import { LineControls, ListLine } from "./list-line";
+import { Eyebrow } from "@/ui/eyebrow";
+import { Button } from "@/ui/button";
 
 // The deck as Moxfield shows one (design doc 14, section 2.4): the commander as its card, then
 // the cards grouped by type, by the deck's own headings (design doc 34) or by role (design doc
@@ -131,9 +133,7 @@ export function DeckList(props: {
 
       {commanders.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-            Commander ({count(commanders)})
-          </h3>
+          <Eyebrow as="h3">Commander ({count(commanders)})</Eyebrow>
           <div className="grid grid-cols-2 gap-3">
             {commanders.map((line) => {
               const card = props.cards[line.printingId];
@@ -144,14 +144,15 @@ export function DeckList(props: {
                     <div className="flex flex-wrap items-center justify-between gap-1">
                       {/* The picture only shows the card's text; this opens it in the panel
                           (to change its printing, design doc 24). */}
-                      <button
+                      <Button
                         type="button"
                         onClick={() => props.onSelect(line)}
                         aria-label={`Select ${line.name}`}
-                        className="border-line rounded-md border px-2 py-0.5 text-xs"
+                        variant="secondary"
+                        size="mini"
                       >
                         Select
-                      </button>
+                      </Button>
                       <LineControls line={line} onChange={props.onChange} busy={props.busy} />
                     </div>
                   )}
@@ -238,7 +239,7 @@ export function DeckList(props: {
                 onRename={props.onRenameHeading}
               />
             ) : (
-              <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{heading}</h3>
+              <Eyebrow as="h3">{heading}</Eyebrow>
             )}
             {body}
           </div>

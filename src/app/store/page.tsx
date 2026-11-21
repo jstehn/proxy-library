@@ -10,6 +10,7 @@ import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
 import { Price } from "@/ui/price";
+import { buttonClass } from "@/ui/button";
 
 export default async function StorePage(props: PageProps<"/store">) {
   const { capabilities, reads } = await readPage();
@@ -86,7 +87,7 @@ export default async function StorePage(props: PageProps<"/store">) {
               Search
             </button>
             {isSearching && (
-              <Link href="/store" className="border-line rounded-md border px-3 py-1.5 text-sm">
+              <Link href="/store" className={buttonClass({ variant: "secondary" })}>
                 Clear
               </Link>
             )}

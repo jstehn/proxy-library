@@ -7,6 +7,7 @@ import { COLORS } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { saveProfileAction, type ProfileFormState } from "./actions";
 import { Select } from "@/ui/field";
+import { Button } from "@/ui/button";
 
 const COLOR_NAMES: Record<string, string> = {
   W: "White",
@@ -177,13 +178,9 @@ export function ProfileForm(props: {
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
+        <Button type="submit" disabled={pending} size="xl">
           {pending ? "Saving…" : "Save profile"}
-        </button>
+        </Button>
       </div>
     </form>
   );

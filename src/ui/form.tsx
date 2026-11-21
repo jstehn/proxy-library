@@ -3,7 +3,7 @@
 // button shows a "working…" state while its form's server action runs.
 import { useFormStatus } from "react-dom";
 import { Button } from "./button";
-import { Input } from "./field";
+import { Field, Input } from "./field";
 
 type TextFieldProps = {
   label: string;
@@ -18,8 +18,7 @@ type TextFieldProps = {
 export function TextField(props: TextFieldProps) {
   const { label, name, type = "text", defaultValue, autoComplete, hint, required = true } = props;
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium">{label}</span>
+    <Field label={label} hint={hint}>
       <Input
         name={name}
         type={type}
@@ -28,8 +27,7 @@ export function TextField(props: TextFieldProps) {
         required={required}
         controlSize="form"
       />
-      {hint && <span className="text-muted text-xs">{hint}</span>}
-    </label>
+    </Field>
   );
 }
 

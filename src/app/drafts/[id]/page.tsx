@@ -46,6 +46,7 @@ import {
 } from "./pick-grid";
 
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
+import { buttonClass } from "@/ui/button";
 
 // One draft (design docs 17 and 18): the lobby, the pick screen with the table around it, the
 // Deal Broker stage and the finished pool. Names, deadlines and presence come from `reads.drafts.view`;
@@ -603,10 +604,7 @@ function Finished(props: {
                 : ""}
             </p>
             {you.deckId !== null ? (
-              <Link
-                href={`/decks/${you.deckId}`}
-                className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-              >
+              <Link href={`/decks/${you.deckId}`} className={buttonClass()}>
                 Open your deck
               </Link>
             ) : (

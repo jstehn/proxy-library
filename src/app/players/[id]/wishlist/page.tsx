@@ -4,6 +4,7 @@ import { type SharedWishLine } from "@/modules/wishlist";
 import { UserId } from "@/shared/kernel";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 // Another player's shared wishlist, read-only (design doc 50). Never exposes targetCents,
 // wallet balance, or paydays.
@@ -51,10 +52,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
           </p>
         </div>
         {id !== actor.userId && (
-          <Link
-            href={`/trades/new?with=${encodeURIComponent(id)}`}
-            className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-          >
+          <Link href={`/trades/new?with=${encodeURIComponent(id)}`} className={buttonClass()}>
             Propose a trade
           </Link>
         )}

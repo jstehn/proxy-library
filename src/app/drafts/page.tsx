@@ -11,6 +11,7 @@ import { Select } from "@/ui/field";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
+import { buttonClass } from "@/ui/button";
 
 const TIMER_CHOICES = [30, 45, 60, 90, 120, 180, 300];
 const PACKS_PER_PLAYER = 3;
@@ -42,10 +43,7 @@ function DraftRow(props: { draft: DraftSummary; canJoin: boolean }) {
       </span>
       <span className="flex-1" />
       {draft.youAreSeated ? (
-        <Link
-          href={`/drafts/${draft.id}`}
-          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-        >
+        <Link href={`/drafts/${draft.id}`} className={buttonClass()}>
           {draft.status === "lobby" ? "Open your lobby" : "Back to your draft"}
         </Link>
       ) : (

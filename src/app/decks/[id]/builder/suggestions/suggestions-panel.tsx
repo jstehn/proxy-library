@@ -14,9 +14,10 @@ import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { budgetAction, suggestionsAction } from "./actions";
-import { Button } from "@/ui/button";
+import { Button, buttonClass } from "@/ui/button";
 import { Input } from "@/ui/field";
 import { Card } from "@/ui/card";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects
@@ -133,7 +134,7 @@ function SuggestionSection(props: {
   const all = [...props.list.owned, ...props.list.store];
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{props.title}</h3>
+      <Eyebrow as="h3">{props.title}</Eyebrow>
       <HiddenOverTarget count={props.list.hiddenOverTarget} />
       {all.length === 0 ? (
         <p className="text-muted text-xs">{props.empty}</p>
@@ -277,7 +278,7 @@ function BudgetForm(props: {
             </ul>
             <Link
               href={`/singles/list?list=${encodeURIComponent(result.list.listText)}`}
-              className="bg-accent text-accent-foreground self-start rounded-md px-3 py-1"
+              className={buttonClass({ size: "sm", className: "self-start" })}
             >
               Buy these
             </Link>

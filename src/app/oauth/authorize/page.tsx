@@ -7,6 +7,7 @@ import { Alert } from "@/ui/form";
 import { decideAction } from "./actions";
 import { PARAMETER_NAMES, queryOf, readParameters } from "./parameters";
 import { readPage } from "@/server/page-instance";
+import { Button } from "@/ui/button";
 
 // The OAuth approval page (design doc 30): an app such as claude.ai's connector asks to act as
 // you; you choose what it may do. Approving makes an access token for it (design doc 28).
@@ -89,22 +90,12 @@ export default async function AuthorizePage(props: PageProps<"/oauth/authorize">
               </span>
             </fieldset>
             <div className="flex gap-3">
-              <button
-                type="submit"
-                name="decision"
-                value="approve"
-                className="bg-accent text-accent-foreground hover:bg-accent-hover rounded-md px-4 py-2 text-sm font-medium"
-              >
+              <Button type="submit" name="decision" value="approve" size="xl">
                 Approve
-              </button>
-              <button
-                type="submit"
-                name="decision"
-                value="deny"
-                className="border-line hover:bg-surface rounded-md border px-4 py-2 text-sm"
-              >
+              </Button>
+              <Button type="submit" name="decision" value="deny" variant="secondary" size="xl">
                 Deny
-              </button>
+              </Button>
             </div>
           </form>
         </>
