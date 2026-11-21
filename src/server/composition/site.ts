@@ -1,8 +1,9 @@
 import type { Actor } from "@/modules/accounts";
 import type { Wallet } from "@/modules/wallet";
+import type { makeCheckHealth } from "./health";
 import type { Reads } from "./reads";
 
-// The capabilities of the site itself (ADR 0026): the app's address, fresh seeds and the numbers in
+// The capabilities of the site itself (ADR 0026): the app's address, its health, fresh seeds and the numbers in
 // the site header. Randomness stays on the server, so a seed comes from here, not from a page.
 
 export type SiteWiringDependencies = Readonly<{
@@ -10,13 +11,16 @@ export type SiteWiringDependencies = Readonly<{
   wallet: Wallet;
   seeds: Readonly<{ newSeed(): string }>;
   appUrl: string;
+  checkHealth: ReturnType<typeof makeCheckHealth>;
 }>;
 
 export function wireSiteCapabilities(dependencies: SiteWiringDependencies) {
-  const { reads, wallet, seeds, appUrl } = dependencies;
+  const { reads, wallet, seeds, appUrl, checkHealth } = dependencies;
   return {
     site: {
       appUrl,
+      /** Whether the app is up and can reach its database (for the health route). */
+      checkHealth,
       /** A fresh seed, e.g. for the deck builder's test hands (design doc 19). */
       newSeed: () => seeds.newSeed(),
       /**

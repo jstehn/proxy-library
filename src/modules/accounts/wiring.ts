@@ -37,6 +37,8 @@ export function wireAccountCapabilities(dependencies: AccountWiringDependencies)
         "changeOwnPassword",
         "createAccessToken",
         "revokeAccessToken",
+        "registerOAuthClient",
+        "exchangeAuthorizationCode",
         "checkAuthorizationRequest",
         "approveAuthorization",
         "denyAuthorization",

@@ -4,7 +4,7 @@ import type { DeckId, Format } from "../domain/deck";
 import type { CreateDeckError } from "./deck-lifecycle";
 import type { Decks } from "./make-decks";
 
-// Starting a deck in one go: the deck, its target bracket, and optionally a first list.
+// Starting a deck in one go: the deck, its target bracket, real-card use, and optionally a first list.
 
 export type StartDeckInput = Readonly<{
   name: string;
@@ -12,6 +12,8 @@ export type StartDeckInput = Readonly<{
   targetBracket?: 1 | 2 | 3 | 4 | 5;
   /** Cards to start with, in the usual text format; "" for an empty deck. */
   list: string;
+  /** Count the player's real cards as owned (a deck of real cards); defaults to proxies. */
+  usesRealCards?: boolean;
 }>;
 
 export type StartedDeck = Readonly<{
@@ -34,6 +36,8 @@ export function makeStartDeck(decks: Pick<Decks, "createDeck" | "updateDeck" | "
     if (input.targetBracket !== undefined) {
       await decks.updateDeck(actor, { deckId, targetBracket: input.targetBracket });
     }
+    if (input.usesRealCards === true)
+      await decks.updateDeck(actor, { deckId, usesRealCards: true });
     const empty = { deckId, added: 0, unreadable: [], notFound: [], listError: null };
     if (input.list.trim() === "") return ok(empty);
     const imported = await decks.importList(actor, { deckId, text: input.list });

@@ -42,7 +42,7 @@ import type { Clock } from "@/shared/kernel";
 import { accountOverviewReaders } from "./account-overview";
 import { wireLookupCapabilities } from "./lookups";
 import type { Reads } from "./reads";
-import { wireSiteCapabilities } from "./site";
+import { wireSiteCapabilities, type SiteWiringDependencies } from "./site";
 
 // The capabilities (ADR 0026): typed functions that the adapters (server actions, LLM tool
 // bindings, routes, worker commands) call. Each module builds its own in its `wiring.ts`; this
@@ -56,6 +56,7 @@ type CapabilityDependencies = Readonly<{
   outsideData: OutsideDataService;
   seeds: Readonly<{ newSeed(): string }>;
   appUrl: string;
+  checkHealth: SiteWiringDependencies["checkHealth"];
   newPreviewId: () => string;
   previews: PreviewRepository;
   accounts: Accounts;

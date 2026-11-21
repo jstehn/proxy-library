@@ -3,7 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import boundaries from "eslint-plugin-boundaries";
 import { cardNameLiteral } from "./eslint-rules/card-name-literal.mjs";
-import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
+import { REGEX_ALLOWED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
@@ -78,19 +78,6 @@ const elements = [
   { type: "module", pattern: "src/modules/*", capture: ["module"] },
   { type: "worker", pattern: "worker" },
   { type: "test-setup", pattern: "tests" },
-];
-
-// Paths like `[id]` and `(auth)` are glob syntax, so they are escaped to match literally.
-const escapeGlob = (path) => path.replace(/[[\]()]/g, "\\$&");
-
-// The rule on `getContainer` in src/app (ADR 0026): adapters get what they need from `action()` or
-// `readPage()`.
-// These keep `getContainer`, each for a reason.
-const CONTAINER_ALLOWED = [
-  // the OAuth endpoints read the app's origin synchronously (resourceMetadataUrl is called from plain functions), so they can't await readPage()
-  "src/app/_oauth/http.ts",
-  // the health check has no player and reads no capability: it asks the container whether it is up
-  "src/app/api/health/route.ts",
 ];
 
 // --- Selector helpers ------------------------------------------------------------------
@@ -684,10 +671,10 @@ export default defineConfig([
     ignores: [...TESTS, "**/*.d.ts"],
     rules: { "id-denylist": ["error", "ctx", "res", "obj", "val", "tl"] },
   },
-  // The ratchet (ADR 0026): no `getContainer` in src/app, except the files listed above.
+  // The ratchet (ADR 0026): no `getContainer` in src/app, with no exceptions (adapters use `readPage()`, `readCapabilities()` or `readTool()`).
   {
     files: ["src/app/**/*.{ts,tsx}"],
-    ignores: [...TESTS, ...CONTAINER_ALLOWED.map(escapeGlob)],
+    ignores: TESTS,
     rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX, ...CLASS_NAMES] },
   },
   // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a
@@ -790,7 +777,7 @@ export default defineConfig([
   },
 
   // One regex, one place (design doc 66): card text is read by recognizers only. The files in
-  // NOT_YET_RECOGNIZED are the ones P12 to P14 still have to move; the list only shrinks.
+  // REGEX_ALLOWED are the files that keep one, each with its reason.
   {
     files: CARD_RULE_FOLDERS.map((folder) => `${folder}/**/*.ts`),
     ignores: [
@@ -800,7 +787,7 @@ export default defineConfig([
       "src/modules/catalog/rules/domain/comprehensive-rules.ts",
       "src/modules/catalog/outside/domain/edhrec.ts",
       "src/modules/catalog/cards/domain/wpn.ts",
-      ...NOT_YET_RECOGNIZED,
+      ...REGEX_ALLOWED,
     ],
     plugins: { cards: CARDS_PLUGIN },
     rules: { "cards/oracle-text-regex": "error" },

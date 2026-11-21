@@ -16,19 +16,20 @@ function deckName(commander: string): string {
 export const startDeckAction = formRedirect(
   z.object({ name: z.string().default(""), real: z.string().optional() }),
   async ({ actor, capabilities }, { name, real }) => {
-    const decks = capabilities.deckEdits;
-    const created = await decks.createDeck(actor, { name: deckName(name), format: "commander" });
-    if (!created.ok) {
+    const started = await capabilities.startDeck.startDeck(actor, {
+      name: deckName(name),
+      format: "commander",
+      list: `Commander\n1 ${name}`,
+      usesRealCards: real === "1",
+    });
+    if (!started.ok) {
       const message =
-        created.error.kind === "NameInvalid"
+        started.error.kind === "NameInvalid"
           ? "That name doesn't fit a deck name."
-          : `You already have ${created.error.maximum} decks.`;
+          : `You already have ${started.error.maximum} decks.`;
       return `${COMMANDERS_PATH}?error=${encodeURIComponent(message)}`;
     }
-    const deckId = created.value;
-    await decks.importList(actor, { deckId, text: `Commander\n1 ${name}` });
-    if (real === "1") await decks.updateDeck(actor, { deckId, usesRealCards: true });
     revalidateDeckList();
-    return deckPath(deckId);
+    return deckPath(started.value.deckId);
   },
 );
