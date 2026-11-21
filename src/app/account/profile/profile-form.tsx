@@ -6,6 +6,7 @@ import { MAX_BIO_LENGTH, VISIBILITIES, type SectionVisibility } from "@/modules/
 import { COLORS } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { saveProfileAction, type ProfileFormState } from "./actions";
+import { Select } from "@/ui/field";
 
 const COLOR_NAMES: Record<string, string> = {
   W: "White",
@@ -96,11 +97,11 @@ export function ProfileForm(props: {
         <label htmlFor="showcaseDeckId" className="text-sm font-medium">
           Showcase deck
         </label>
-        <select
+        <Select
           id="showcaseDeckId"
           name="showcaseDeckId"
           defaultValue={props.initial.showcaseDeckId ?? ""}
-          className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
+          controlSize="lg"
         >
           <option value="">None</option>
           {props.initial.sharedDecks.map((deck) => (
@@ -108,7 +109,7 @@ export function ProfileForm(props: {
               {deck.name} ({formatLabel(deck.format)})
             </option>
           ))}
-        </select>
+        </Select>
         <span className="text-muted text-xs">
           Only your shared decks can be showcased on your profile.
         </span>
@@ -142,36 +143,36 @@ export function ProfileForm(props: {
           <label htmlFor="statsVisibility" className="text-sm font-medium">
             Who can see your stats
           </label>
-          <select
+          <Select
             id="statsVisibility"
             name="statsVisibility"
             defaultValue={props.initial.statsVisibility}
-            className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
+            controlSize="lg"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
                 {VISIBILITY_LABELS[vis]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="wishlistVisibility" className="text-sm font-medium">
             Who can see your wishlist
           </label>
-          <select
+          <Select
             id="wishlistVisibility"
             name="wishlistVisibility"
             defaultValue={props.initial.wishlistVisibility}
-            className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
+            controlSize="lg"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
                 {VISIBILITY_LABELS[vis]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

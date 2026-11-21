@@ -4,6 +4,8 @@ import { revokeTokenAction } from "./actions";
 import { ConnectSnippets } from "./connect-snippets";
 import { CreateTokenForm } from "./create-token-form";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { EmptyState } from "@/ui/empty-state";
 
 // Access tokens for LLM clients (design doc 28, section 9): make one, see it once, revoke it.
 
@@ -51,9 +53,9 @@ export default async function TokensPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Your tokens</h2>
         {tokens.length === 0 ? (
-          <p className="text-muted text-sm">None yet.</p>
+          <EmptyState>None yet.</EmptyState>
         ) : (
-          <ul className="divide-border-subtle border-border-subtle flex flex-col divide-y rounded-lg border">
+          <Card as="ul" divided className="flex flex-col">
             {tokens.map((token) => (
               <li key={token.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -82,7 +84,7 @@ export default async function TokensPage() {
                 </form>
               </li>
             ))}
-          </ul>
+          </Card>
         )}
       </section>
 

@@ -1,6 +1,7 @@
 // A small price-history chart, drawn as SVG on the server (design doc 07, section 10): one line
 // per finish, and markers for the player's own buys (▲) and sells (▼). No chart library.
 import { Cents } from "@/shared/kernel";
+import { EmptyState } from "@/ui/empty-state";
 
 export type ChartSeries = Readonly<{
   label: string;
@@ -31,7 +32,7 @@ export function PriceChart(props: {
     ...markers.map((marker) => ({ day: marker.day, cents: marker.cents })),
   ];
   if (allPoints.length === 0) {
-    return <p className="text-muted text-sm">No price history yet.</p>;
+    return <EmptyState>No price history yet.</EmptyState>;
   }
 
   const days = allPoints.map((point) => dayNumber(point.day));

@@ -8,6 +8,7 @@ import { describeExternalLinkError } from "@/modules/accounts";
 import { externalSignInName } from "@/server/session";
 import { Alert, SubmitButton } from "@/ui/form";
 import { linkExternalAction, unlinkExternalAction } from "./external-actions";
+import { Price } from "@/ui/price";
 
 /** The player's own account: their password, and starting over. */
 export default async function AccountPage(props: PageProps<"/account">) {
@@ -115,7 +116,10 @@ export default async function AccountPage(props: PageProps<"/account">) {
             <strong>Your balance is set to the starting amount, {startingAmount}.</strong> It does
             not recover all your funds: nothing you spent is refunded, and money above{" "}
             {startingAmount} (saved allowances, sales, trades) is lost. You have{" "}
-            <strong>{Cents.format(wallet.balance)}</strong> now.
+            <strong>
+              <Price cents={wallet.balance} />
+            </strong>{" "}
+            now.
           </li>
           <li>
             Your money totals (spent, self-funded, …) start again from zero. Your history keeps

@@ -2,6 +2,8 @@
 // Small form building blocks shared by every page. Client components, because the submit
 // button shows a "working…" state while its form's server action runs.
 import { useFormStatus } from "react-dom";
+import { Button } from "./button";
+import { Input } from "./field";
 
 type TextFieldProps = {
   label: string;
@@ -18,13 +20,13 @@ export function TextField(props: TextFieldProps) {
   return (
     <label className="flex flex-col gap-1 text-sm">
       <span className="font-medium">{label}</span>
-      <input
+      <Input
         name={name}
         type={type}
         defaultValue={defaultValue}
         autoComplete={autoComplete}
         required={required}
-        className="border-line bg-field rounded-md border px-3 py-2 text-base"
+        controlSize="form"
       />
       {hint && <span className="text-muted text-xs">{hint}</span>}
     </label>
@@ -37,24 +39,14 @@ type SubmitButtonProps = {
   tone?: "primary" | "secondary" | "danger";
 };
 
-const TONES = {
-  primary: "bg-accent text-accent-foreground hover:bg-accent-hover",
-  secondary: "border border-line bg-field hover:bg-surface",
-  danger: "bg-red-700 text-white hover:bg-red-600",
-};
-
 /** A submit button that disables itself while its form is being submitted. */
 export function SubmitButton(props: SubmitButtonProps) {
   const { children, pendingText = "Working…", tone = "primary" } = props;
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={`rounded-md px-3 py-2 text-sm font-medium disabled:opacity-60 ${TONES[tone]}`}
-    >
+    <Button type="submit" variant={tone} size="lg" disabled={pending}>
       {pending ? pendingText : children}
-    </button>
+    </Button>
   );
 }
 

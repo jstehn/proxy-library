@@ -3,6 +3,7 @@ import { useActionState, useState } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
 import { createTokenAction, type CreateTokenState } from "./actions";
 import { ConnectSnippets } from "./connect-snippets";
+import { Button } from "@/ui/button";
 
 const initialState: CreateTokenState = { kind: "idle" };
 
@@ -52,15 +53,16 @@ export function CreateTokenForm(props: { mcpUrl: string; openApiUrl: string }) {
             <code className="bg-surface-raised min-w-0 flex-1 rounded px-2 py-1 text-xs break-all">
               {state.secret}
             </code>
-            <button
+            <Button
               type="button"
               onClick={() => {
                 void navigator.clipboard.writeText(state.secret).then(() => setCopied(true));
               }}
-              className="border-line rounded-md border px-3 py-1 text-sm"
+              variant="secondary"
+              size="sm"
             >
               {copied ? "Copied" : "Copy"}
-            </button>
+            </Button>
           </div>
           <ConnectSnippets
             secret={state.secret}
