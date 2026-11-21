@@ -116,46 +116,31 @@ function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
 const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
 
 /**
- * The files of `decks/domain` by area. `mana-symbols`, `mana-payment` and `deck-profile` are core:
- * the deck's stats and view read them, and the play files read core, never the other way round.
- * (The split P18 makes; files not listed are core, and other files of decks stay "decks".)
+ * The files of `decks/domain` by area (the split P18 makes); a file not listed is core. The mana
+ * and plan files are core: stats and the deck view read them, and play reads core, never the other
+ * way round. Other files of decks (application, queries, ...) stay one node, "decks".
  */
-const DECKS_AREAS: Readonly<Record<string, readonly string[]>> = {
-  play: ["goldfish", "draws", "castability", "cast-by-turn", "cast-effects", "opening-hand/"],
-  proxies: ["proxy-sheet", "playtest-card", "token-proxies", "proxy-progress"],
-  advice: [
-    "rate",
-    "signals",
-    "suggest",
-    "suggestion-types",
-    "cuts",
-    "swaps",
-    "optimize",
-    "replacements",
-    "draft-deck",
-    "mana-base",
-    "commanders",
-    "audit-report",
-    "avoid-cards",
-  ],
+const DECKS_AREAS: Readonly<Record<string, string>> = {
+  play: "goldfish draws castability cast-by-turn cast-effects opening-hand/",
+  proxies: "proxy-sheet playtest-card token-proxies proxy-progress",
+  advice:
+    "rate signals suggest suggestion-types cuts swaps optimize replacements draft-deck mana-base commanders audit-report avoid-cards",
 };
 
-/** The node a file belongs to: its module, or for decks/domain its area (core when unlisted). */
+/** The node a file belongs to: its module, or for decks/domain its area. */
 export function nodeOf(path: string): string | undefined {
-  const match = /(?:^|\/)src\/modules\/([^/]+)\/(.*)$/.exec(path.replaceAll("\\", "/"));
+  const match = /(?:^|\/)src\/modules\/([^/]+)\/(domain\/)?([^.]*)/.exec(
+    path.replaceAll("\\", "/"),
+  );
   if (match === null) return undefined;
-  const [, moduleName, rest] = match;
-  if (moduleName !== "decks" || !rest!.startsWith("domain/")) return moduleName;
-  const name = rest!
-    .slice("domain/".length)
-    .replace(/\.test\.ts$/, "")
-    .replace(/\.ts$/, "");
-  for (const [area, names] of Object.entries(DECKS_AREAS)) {
-    if (names.some((entry) => (entry.endsWith("/") ? name.startsWith(entry) : name === entry))) {
-      return `decks/${area}`;
-    }
-  }
-  return "decks/core";
+  const [, moduleName, isDomain, name] = match;
+  if (moduleName !== "decks" || isDomain === undefined) return moduleName;
+  const area = Object.keys(DECKS_AREAS).find((candidate) =>
+    DECKS_AREAS[candidate]!.split(" ").some(
+      (entry) => name!.startsWith(entry) && (entry.endsWith("/") || name === entry),
+    ),
+  );
+  return `decks/${area ?? "core"}`;
 }
 
 /** The module graph: an edge for every import between two different nodes. */
@@ -165,10 +150,8 @@ export function moduleGraph(fileGraph: ImportGraph): ImportGraph {
     const from = nodeOf(file);
     if (from === undefined) continue;
     const targets = edges.get(from) ?? new Set<string>();
-    for (const imported of imports) {
-      const to = nodeOf(imported);
-      if (to !== undefined && to !== from) targets.add(to);
-    }
+    for (const imported of imports) targets.add(nodeOf(imported) ?? from);
+    targets.delete(from);
     edges.set(from, targets);
   }
   return new Map([...edges].map(([node, targets]) => [node, [...targets].sort()]));
@@ -182,32 +165,19 @@ export function cycleLine(cycle: readonly string[]): string {
 }
 
 function mainModules(projectRoot: string): void {
-  const cycles = findCycles(moduleGraph(readGraph(projectRoot, true)));
-  const lines = cycles.map(cycleLine).sort();
+  const found = findCycles(moduleGraph(readGraph(projectRoot, true))).map(cycleLine);
   const baselinePath = join(projectRoot, MODULES_BASELINE_PATH);
-  const known = existsSync(baselinePath)
-    ? readFileSync(baselinePath, "utf8")
-        .split("\n")
-        .filter((line) => line.trim() !== "")
-    : [];
+  const known = existsSync(baselinePath) ? readFileSync(baselinePath, "utf8").split("\n") : [];
   if (process.argv.includes("--update")) {
-    const kept = known.filter((line) => lines.includes(line));
+    const kept = known.filter((line) => found.includes(line));
     writeFileSync(baselinePath, kept.map((line) => `${line}\n`).join(""));
-    console.log(`Module-cycle baseline: ${kept.length} known (was ${known.length}).`);
+    console.log(`Module-cycle baseline: ${kept.length} known (was ${known.length - 1}).`);
     return;
   }
-  const added = lines.filter((line) => !known.includes(line));
-  if (added.length > 0) {
-    console.error(`${added.length} new module ${added.length === 1 ? "cycle" : "cycles"}:`);
-    for (const line of added) console.error(`  ${line}`);
-    process.exitCode = 1;
-    return;
-  }
-  const fixed = known.filter((line) => !lines.includes(line));
-  console.log(
-    `Module cycles: ${lines.length} (baseline ${known.length})` +
-      (fixed.length > 0 ? "; run with --update to remove the fixed ones." : "."),
-  );
+  const added = found.filter((line) => !known.includes(line));
+  if (added.length > 0) console.error(`New module cycles:\n  ${added.join("\n  ")}`);
+  else console.log(`Module cycles: ${found.length}, all in the baseline.`);
+  process.exitCode = added.length > 0 ? 1 : 0;
 }
 
 function main(): void {
