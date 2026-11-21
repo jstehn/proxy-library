@@ -54,10 +54,24 @@ build", draft-a-deck, search for a deck, and the replacement finder. Code:
     target. Store legends appear only when asked, always with a price and marked not owned. Order is
     deterministic: score, then owned first, then name. The only write is "Start a deck", which
     creates a new deck. (doc 36 §4 rules 5-8; `commanders.test.ts`)
-12. **Filter and sort:** filter by theme (umbrella themes include their sub-themes, such as
+12. **Filter and order.** Filter by theme (umbrella themes include their sub-themes, such as
     politics and tokens) and by tribe (case-insensitive, matching the plan's tribes or the
-    commander's own creature types); sort by coverage, popularity (EDHREC rank, unranked last),
-    power or a combination. (doc 39 §3; `commanders.test.ts`)
+    commander's own creature types). A select box picks the order (`?sort=`), and the finder keeps
+    its own scores, not `rateCard`. All four are in `commanders.ts`; ties go to owned first, then
+    EDHREC rank, then name. (doc 39 §3; owner answer 9; `commanders.test.ts`)
+    - **Blend of popularity and power (default, `combined`):** popularity bonus plus power score.
+      Your collection plays no part.
+    - **Popularity (`popularity`):** Scryfall's EDHREC rank, lowest first, unranked last. The
+      bonus (0 to 25 points) is `25 * (1 - (log10(max(10, rank)) - 1) / 3.5)`, clamped at 0.
+    - **Power (`power`):** a Game Changer is worth 12; plus twice the card strength (rarity prior
+      and price, as in `strength`); 2 per role tag up to 4; up to 3 for mana value 3 or less; and
+      up to 6 for plan richness (2 per theme or tribe in the commander's text). No popularity in
+      it, so the blend counts it once.
+    - **Fits my collection (`coverage`):** `2 * min(on-plan cards, 30) + role cards (each role
+capped at its Commander target) + 0.5 * spell slots your on-colour cards fill (cap 62)`.
+      These are the only weights (`COMMANDER_WEIGHTS`, a table of the coverage part only; not a
+      second copy of the card scorer's weights).
+      The LLM tools do not list commanders, so no tool shows these scores or ranks.
 
 ## Draft a deck
 
@@ -88,6 +102,3 @@ build", draft-a-deck, search for a deck, and the replacement finder. Code:
 
 - Doc 37 puts 60-card formats out of scope for draft-a-deck; doc 44 brought them in and the code
   follows doc 44. Listed so doc 37's out-of-scope line is not read as current.
-- Doc 39 gives the commander coverage and power scores as formulas; the code keeps its own
-  `COMMANDER_WEIGHTS` table (`commanders.ts`), a second weight table beside `RATING_WEIGHTS`.
-  Whether it should merge into the one scorer is not decided here.
