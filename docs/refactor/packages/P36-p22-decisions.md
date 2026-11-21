@@ -46,3 +46,5 @@ P22 did.
 ## Handoff
 
 Parts 1 and 3 done (part 2 is P32's). Role targets: research found only removal (4-8, guide 6) and control draw (about 8) for 60-card decks; ramp, draw and wipe stay 4/6/2 as house guides, one set for all 60-card formats (type holds one number; ranges live in decks-core.md "Role targets (sources)"). Seven design docs marked, module "Disagreements" entries closed.
+
+Part 2 done (commander finder). It already had a select box over four orderings; what changed: the default is now the blend, the blend is popularity bonus plus power score (your collection left out), and power no longer holds a popularity term, so the blend counts it once. Fourth option "Fits my collection" (`coverage`) is the old coverage score. `COMMANDER_WEIGHTS` stays: it is only that coverage score, not a duplicate of `RATING_WEIGHTS`. No LLM tool lists commanders, so no tool change. What each score uses is written in `docs/modules/decks-building.md` rule 12.
