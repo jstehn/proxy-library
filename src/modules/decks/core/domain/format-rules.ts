@@ -35,8 +35,6 @@ export type FormatRuleSet = Readonly<{
   /** Whether a card must be legal in the format (Casual and Limited accept any card). */
   legalityChecked: boolean;
   hasCommandZone: boolean;
-  /** Extra generic mana each time a commander is cast again. */
-  commandZoneTaxPerCast: number;
   /** Whether the commanders' colors limit the deck's cards. */
   usesColorIdentity: boolean;
   /** Whether Commander brackets (and the combos behind them) apply. */
@@ -86,7 +84,6 @@ const SIXTY_CARD_FORMAT = {
   buildsFromOwnedPool: false,
   legalityChecked: true,
   hasCommandZone: false,
-  commandZoneTaxPerCast: 0,
   usesColorIdentity: false,
   bracketsApply: false,
   conspiraciesLeaveDeck: false,
@@ -122,7 +119,6 @@ export const FORMAT_RULES = {
     copyLimit: 1,
     plannedCopyLimit: 1,
     hasCommandZone: true,
-    commandZoneTaxPerCast: 2,
     usesColorIdentity: true,
     bracketsApply: true,
     freeFirstMulligan: true,

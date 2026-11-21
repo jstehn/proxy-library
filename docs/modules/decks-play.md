@@ -66,5 +66,4 @@ simulations that answer "can I cast X by turn Y?" stay (owner D3). The orphaned 
 
 - Doc 61 §4 rules 1-3 and §10 (strict goldfish casts, blitz lifecycle) describe the removed goldfish;
   they are dropped here, not decided.
-- `FormatRuleSet.commandZoneTaxPerCast` was read only by the deleted goldfish; the removal list
-  says P28 keeps it only if the effect registry reads it. Nothing in production reads it now (only its own test), so it is a dead field unless a feature needs it.
+- `FormatRuleSet.commandZoneTaxPerCast` was read only by the deleted goldfish and has been removed.
