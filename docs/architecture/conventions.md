@@ -11,7 +11,7 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   only (e.g. the pack engine works on the catalog's `BoosterConfig`). Using another module's
   vocabulary is fine; running its code is not.
 - 🔒 `testing/` may also import other modules' public `index.ts`, to build sample data.
-- 🔒 Only composition roots (`src/server/`, `worker/`) import `*/infrastructure`.
+- 🔒 Only composition roots (`src/server/composition/`, `worker/`) import `*/infrastructure`.
 - 🔒 Infrastructure may import its own module's layers, `shared/db`/`shared/http`, other modules'
   `infrastructure/schema.ts` (for foreign keys) and other modules' public `index.ts` (for shared
   types like `Actor`), and nothing else.
@@ -24,6 +24,10 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   `src/shared/runtime/`. Only composition roots import them.
 - `src/app/` holds routes, layouts, server actions and route-specific components (`_components/`).
   Shared presentational components live in `src/ui/`.
+- **A folder holds at most 12 source files** (tests not counted; `pnpm sizes` lists the biggest).
+  More than that usually means a second job: give it its own folder. The one exception is
+  `src/app/_llm-tools/bindings/`, one file per LLM tool named after it, so the folder reads as the
+  tool list.
 
 ## TypeScript
 
@@ -132,13 +136,14 @@ over the clever one.
 
 - **Where UI goes.** A route's own UI lives in its `_components/`. UI shared by two or more routes
   lives in `src/ui/<area>/` (or `app/_components` for card UI). `src/ui` holds presentational
-  building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, `PageSkeleton`, ...): no
+  building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, ...): no
   state machines, no sounds, no query logic. Logic that one route uses sits beside that route.
 - **A page** calls `readPage()`, parses its params, reads through `reads` and capabilities, and
   composes components. It holds no rules and no local component over about 60 lines. A component
   file over 300 lines in `src/app` is a lint warning (the 500-line limit stays the gate).
-- **Page states.** `error.tsx`, `not-found.tsx` and `loading.tsx` at the root; `loading.tsx` in the
-  big sections. The error page never shows the message or a stack: the player gets a plain
+- **Page states.** `error.tsx` and `not-found.tsx` at the root. No `loading.tsx`: a loading
+  boundary sends the response before a page can call `notFound()`, so a missing page answered 200
+  (P32). The error page never shows the message or a stack: the player gets a plain
   sentence, "Try again" and a way home.
 - **Every action is written one way.** `formAction(schema, handler, options)` for a form that shows
   a message; `formRedirect(schema, handler, options)` for a plain `<form action>` that goes
