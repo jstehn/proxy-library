@@ -20,9 +20,11 @@ import cycles that made a split impossible.
 
 | Area       | Source files (domain / application / infrastructure / queries / testing) | What it holds                                                                                                                               |
 | ---------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `core`     | 20 / 20 / 4 / 8 / 2                                                      | the deck itself: lists, legality, formats, brackets, headings, boards, stats, snapshots, change previews, sharing, the repositories (ports) |
-| `scoring`  | 7 / 1 / 0 / 1 / 0                                                        | rating and ranking cards for a deck: `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                              |
-| `building` | 7 / 3 / 0 / 11 / 0                                                       | making a deck: `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration, audit report                     |
+| `core`     | 12 / 12 / 2 / 6 / 2                                                      | the deck itself: lists, legality, formats, brackets, headings, boards, stats, snapshots, change previews, sharing, the repositories (ports) |
+| `sharing`  | 1 / 1 / 1 / 1 / 1                                                        | comments, public links, shared-deck reads (P20)                                                                                             |
+| `changes`  | 3 / 4 / 3 / 1 / 1                                                        | previews, snapshots, swap and take, free copies (P20)                                                                                       |
+| `scoring`  | 8 / 3 / 0 / 1 / 0                                                        | rating and ranking cards for a deck: `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                              |
+| `building` | 7 / 5 / 0 / 11 / 0                                                       | making a deck: `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration, audit report                     |
 | `play`     | 7 / 1 / 0 / 0 / 0                                                        | simulating a deck: opening hands, goldfish, odds, castability, cast effects                                                                 |
 | `proxies`  | 5 / 4 / 3 / 1 / 2                                                        | printing a deck: proxy sheets, playtest cards, token proxies, PDF renderer                                                                  |
 | `overview` | 0 / 2 / 0 / 6 / 0                                                        | the reads that combine the others: deck overview and facts, `reads`, snapshot comparison, the optimizer read                                |
@@ -39,6 +41,8 @@ arrow to every other area, and the cycle check would fail.
 
 ```
 overview → building → scoring → core
+overview → sharing  → core
+overview → changes  → core
 overview → building → play    → core
 overview → proxies  → core
 ```
@@ -78,9 +82,14 @@ and the suggestions, so it is in `overview`.
   225-line `index.ts` and 143-line `client.ts` did, and each cross-area import is a multi-name
   statement where a relative single-name one was before.
 
-## Follow-ups
+## Update (P20, owner names accepted: `sharing`, `changes`)
 
-- `core/domain` and `core/application` still have 20 source files each. That is a seventh
-  responsibility: **sharing** and **changes** (previews, snapshots) could be areas, but `core`'s
-  `ports.ts`, `make-decks.ts`, `drizzle-repositories.ts` and the fakes reference both today. Moving
-  them needs the owner's names and a package of its own.
+`core` is at 12 files in `domain` and `application`. `sharing` (comments, public links, shared-deck
+reads) and `changes` (previews, snapshots, swap and take) are new areas, each importing only `core`;
+`overview` imports both. Visibility and `canViewDeck` stay in `core/domain/deck.ts` because the
+repository and the deck list use them. Snapshots left `DeckRepository` for a `SnapshotRepository`
+port in `changes`, and the two tables moved to `changes/infrastructure/schema.ts`. Combos and EDHREC
+research went to `scoring`, plan edits and card search for a deck to `building`. Three small merges
+(`notes` into `headings`, `mana-symbols` and `mana-payment` into `mana`, `deck-reads` into
+`deck-view`) did the rest. The module's root `index.ts` and `client.ts` now list exactly what other
+modules and the app import (the root `index.ts` re-exports `client.ts`).

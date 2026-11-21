@@ -94,4 +94,20 @@ The files above, `worker/`, `tests/e2e/`, `playwright.config.ts` (only if the sp
 
 ## Handoff
 
-(empty)
+**Done:** `decks/core` split (new areas `sharing` and `changes`, arrows `sharing`, `changes` to `core`;
+`overview` to both; ADR 0029 updated), root `index.ts` (79 lines) and `client.ts` (139) narrowed to
+what outside code imports, `worker/index.ts` 262 to under 60 (`worker/commands/{command,sync,checks,schedule}.ts`,
+grouped, not one file per command), `accounts.spec.ts` split into 14 ordered files plus `helpers.ts`
+(24 tests, same names; file names carry the order), 19 single-module integration tests moved into
+their modules (382 tests before and after; harness stays in `tests/integration`; lint got an
+`int-test` category). Also split: `core/queries/decks.ts`, `store/queries/store.ts`, `rate.ts`,
+`playtest-card.ts`, `reddit-http-gateway.ts`.
+
+**Not done (owner's call):** drafts engine files, `parse.ts`, `search-sql.ts`,
+`build-from-collection.ts` stay on the allowlist with reasons. Near-clone groups did not fall (208 to
+216 with new files); most are data tables, so no merges beyond the `rate.ts` helper. Production code
+is about +327 over baseline (explicit root lists cost about +200). knip production 217 vs 212 (root
+exports used only by remaining cross-module tests). `llm-tools.int.test.ts` already sits beside
+`mcp.ts` and `registry.ts`, so it was not moved. Remaining in `tests/integration`: access-rules,
+card-search, collection-real, embeddings, reset, shopping-list, singles, store-and-inventory, trades
+(each spans several modules). Suggest `--near` stays a report, not a gate.
