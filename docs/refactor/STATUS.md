@@ -66,7 +66,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P22   | [Design docs into `docs/modules/`; citation check](packages/P22-design-docs.md)                         | P18, P30                      | P20, P21, P31–P34  | done                                                                                   |
 | P34   | [Repo polish: CI, licence, contributing, README](packages/P34-repo-polish.md)                           | P23 (its CLAUDE.md step: P21) | P20, P22, P32, P33 | steps 1–5 merged; 6–7 wait for the owner (tududi tooling; the lessons repo, after P21) |
 | P35   | [Sign-in and connector OAuth through Authentik (a feature)](packages/P35-authentik.md)                  | P25                           | waves 5 and 6      | app side merged; the homelab Authentik setup waits for the owner's OK                  |
-| P36   | [Decisions from P22: 60-card role targets, commander score with options](packages/P36-p22-decisions.md) | P22, P30                      | wave 6             | in progress (agent: parts 1 and 3; part 2 after P32)                                   |
+| P36   | [Decisions from P22: 60-card role targets, commander score with options](packages/P36-p22-decisions.md) | P22, P30                      | wave 6             | parts 1 and 3 done; part 2 (commander finder options) after P32                        |
 
 ```mermaid
 flowchart LR

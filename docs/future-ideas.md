@@ -157,3 +157,8 @@ design doc (or joins a phase's design) and is removed from this list.
 - **Unused tables.** `goldfish_sessions`, `card_packages` and `card_package_entries` stayed when P24
   removed their features. A migration can drop them once the owner is sure the features won't
   return.
+- **Role targets for 60-card decks from real decklists.** P36 found published 60-card numbers only
+  for removal (4–8) and lands; ramp, draw and sweepers have no good source (most figures are
+  Commander). Option: compute medians per format and archetype from tournament decklists (MTGJSON's
+  deck files, or recorded event lists), using the app's own role tags, and set `FORMAT_RULES` from
+  them, still as guides.
