@@ -3,11 +3,11 @@ import { useActionState } from "react";
 import { Alert } from "@/ui/form";
 import { moneyAction } from "./money-actions";
 import type { FormState } from "@/server/form-action";
+import { Button } from "@/ui/button";
 
 const initialState: FormState = { message: null, tone: null };
 
-const inputClass =
-  "rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+const inputClass = "rounded-md border border-line bg-field px-2 py-1 text-sm";
 
 /** Give or take money from one player. Both buttons submit the same form with a different intent. */
 export function MoneyForm(props: { userId: string; username: string }) {
@@ -45,13 +45,8 @@ export function MoneyForm(props: { userId: string; username: string }) {
  */
 function IntentButton(props: { intent: "give" | "take"; label: string }) {
   return (
-    <button
-      type="submit"
-      name="intent"
-      value={props.intent}
-      className="rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
-    >
+    <Button type="submit" name="intent" value={props.intent} variant="secondary" size="sm">
       {props.label}
-    </button>
+    </Button>
   );
 }

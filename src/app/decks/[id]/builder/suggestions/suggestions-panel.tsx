@@ -14,6 +14,10 @@ import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { budgetAction, suggestionsAction } from "./actions";
+import { Button, buttonClass } from "@/ui/button";
+import { Input } from "@/ui/field";
+import { Card } from "@/ui/card";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects
@@ -53,9 +57,11 @@ export function SuggestionsPanel(props: {
   ];
 
   return (
-    <section
+    <Card
       aria-label="Suggestions"
-      className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      as="section"
+      padding="md"
+      className="flex flex-col gap-4 text-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -105,7 +111,7 @@ export function SuggestionsPanel(props: {
         . Suggestions are ideas to consider, picked by simple rules from rules text and prices, not
         from other players&apos; decks.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -113,7 +119,7 @@ export function SuggestionsPanel(props: {
 export function HiddenOverTarget(props: { count: number }) {
   if (props.count === 0) return null;
   return (
-    <p className="text-xs text-amber-700 dark:text-amber-400">
+    <p className="text-warning-text text-xs">
       Hiding {props.count} {props.count === 1 ? "card" : "cards"} over your target bracket.
     </p>
   );
@@ -128,7 +134,7 @@ function SuggestionSection(props: {
   const all = [...props.list.owned, ...props.list.store];
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{props.title}</h3>
+      <Eyebrow as="h3">{props.title}</Eyebrow>
       <HiddenOverTarget count={props.list.hiddenOverTarget} />
       {all.length === 0 ? (
         <p className="text-muted text-xs">{props.empty}</p>
@@ -166,20 +172,20 @@ export function SuggestionRow(props: {
         type="button"
         onClick={() => props.onSelect(card)}
         aria-label={`${card.name}: ${reasonWords}, ${card.pool === "owned" ? `you own ${card.owned}` : `${Cents.format(Cents.of(card.priceCents ?? 0))} in the store`}`}
-        className="flex w-full items-center gap-2 rounded px-1 py-1 text-left hover:bg-zinc-100 dark:hover:bg-zinc-900"
+        className="hover:bg-surface flex w-full items-center gap-2 rounded px-1 py-1 text-left"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/images/${card.printingId}/small/front`}
           alt=""
           loading="lazy"
-          className="aspect-[146/204] w-9 shrink-0 rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+          className="bg-surface-raised aspect-[146/204] w-9 shrink-0 rounded-[4.5%]"
         />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-center gap-1">
             <span
               title={partsTitle || `Rating ${rating}/100`}
-              className="shrink-0 rounded bg-zinc-200 px-1 text-[11px] font-medium text-zinc-800 tabular-nums dark:bg-zinc-800 dark:text-zinc-200"
+              className="bg-surface-raised text-foreground shrink-0 rounded px-1 text-[11px] font-medium tabular-nums"
             >
               {rating}
             </span>
@@ -232,27 +238,24 @@ function BudgetForm(props: {
   // A list made for an earlier version of the deck may suggest cards it now has.
   const stale = result !== null && result.deckKey !== props.deckKey;
   return (
-    <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+    <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
       <form onSubmit={makeList} className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1">
           Spend up to $
-          <input
+          <Input
             value={dollars}
             onChange={(event) => setDollars(event.target.value)}
             inputMode="decimal"
             aria-label="Budget in dollars"
-            className="w-20 rounded-md border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            controlSize="sm"
+            className="w-20"
           />
         </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-md border border-zinc-300 px-3 py-1 disabled:opacity-40 dark:border-zinc-700"
-        >
+        <Button type="submit" disabled={busy} variant="secondary" size="sm">
           {busy ? "Choosing…" : "Make a list"}
-        </button>
+        </Button>
       </form>
-      {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-danger-text text-xs">{error}</p>}
       {result !== null && <HiddenOverTarget count={result.list.hiddenOverTarget} />}
       {result !== null &&
         (result.list.picks.length === 0 ? (
@@ -275,7 +278,7 @@ function BudgetForm(props: {
             </ul>
             <Link
               href={`/singles/list?list=${encodeURIComponent(result.list.listText)}`}
-              className="self-start rounded-md bg-zinc-900 px-3 py-1 text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className={buttonClass({ size: "sm", className: "self-start" })}
             >
               Buy these
             </Link>

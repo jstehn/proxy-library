@@ -9,7 +9,7 @@ export default async function ChangePasswordPage() {
     <main className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16">
       <h1 className="text-2xl font-semibold">Change password</h1>
       {actor.mustChangePassword && (
-        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+        <p className="border-warning-line bg-warning-soft text-warning-ink rounded-md border px-3 py-2 text-sm">
           An admin reset your password. Choose a new one to continue. Use the temporary password as
           your current password.
         </p>

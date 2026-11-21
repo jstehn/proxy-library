@@ -21,7 +21,7 @@ import { SelectedCard } from "./selected-card";
 // screens it sticks to the bottom of the collection column; on a phone it floats over whichever
 // tab is active (clearing the bottom nav) so inspecting a card keeps your place.
 
-const FIELD_BOX = "border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950";
+const FIELD_BOX = "border-t border-border-subtle bg-background p-3";
 
 export function SelectionSheet(props: {
   deckId: number;
@@ -87,7 +87,7 @@ export function SelectionSheet(props: {
           {line.board !== "maybe" && (
             <div
               key={`role-${line.role ?? ""}`}
-              className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900"
+              className="border-border-subtle mt-3 border-t pt-3"
             >
               <RoleField line={line} busy={changes.isSaving} onSave={changes.setLineDetails} />
             </div>

@@ -4,6 +4,11 @@ import type { PrintingCard } from "@/modules/catalog";
 import type { Board, DeckLine } from "@/modules/decks";
 import { ManaText } from "@/ui/mana";
 
+const BRACKET_BADGE =
+  "shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200";
+const SHOWCASE_BADGE =
+  "shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-black";
+
 // One card in the deck list: its count, name, badges and the buttons that change it.
 
 export function ListLine(props: {
@@ -24,7 +29,7 @@ export function ListLine(props: {
     <li
       title={line.role ? `Role: ${line.role}` : undefined}
       data-highlighted={props.highlighted || undefined}
-      className={`group flex flex-col gap-0.5 rounded px-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
+      className={`group hover:bg-surface flex flex-col gap-0.5 rounded px-1 py-0.5 text-sm ${props.highlighted ? "bg-sky-100 dark:bg-sky-950" : ""}`}
     >
       <div className="flex items-center gap-2">
         <span className="w-5 text-right tabular-nums">{line.quantity}</span>
@@ -37,7 +42,7 @@ export function ListLine(props: {
         {line.finish !== "nonfoil" && (
           <span
             title={`The deck's copy is ${line.finish}: it prints with the foils`}
-            className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-zinc-900"
+            className={SHOWCASE_BADGE}
           >
             {line.finish === "etched" ? "etched" : "foil"}
           </span>
@@ -45,7 +50,7 @@ export function ListLine(props: {
         {line.isGameChanger && (
           <span
             title="On Wizards' Game Changer list: none in brackets 1–2, up to three in bracket 3"
-            className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
+            className={BRACKET_BADGE}
           >
             GC
           </span>
@@ -53,7 +58,7 @@ export function ListLine(props: {
         {line.pinned && (
           <span
             title="Pinned: never suggested as a cut or replacement"
-            className="shrink-0 rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+            className="text-warning-ink shrink-0 rounded bg-amber-100 px-1 text-[10px] font-medium dark:bg-amber-950"
           >
             pinned
           </span>
@@ -62,7 +67,7 @@ export function ListLine(props: {
           <span
             title={problems.join("\n")}
             aria-label={`Problem: ${problems.join(" ")}`}
-            className="text-xs text-red-600 dark:text-red-400"
+            className="text-danger-text text-xs"
           >
             ⚠
           </span>
@@ -74,7 +79,7 @@ export function ListLine(props: {
         )}
         {props.yourCopies !== undefined && (
           <span
-            className={`shrink-0 text-xs tabular-nums ${(props.yourCopies[line.oracleId] ?? 0) > 0 ? "text-green-700 dark:text-green-400" : "text-zinc-500"}`}
+            className={`shrink-0 text-xs tabular-nums ${(props.yourCopies[line.oracleId] ?? 0) > 0 ? "text-success-text" : "text-muted"}`}
             title="How many you own"
           >
             you {props.yourCopies[line.oracleId] ?? 0}
@@ -89,20 +94,13 @@ export function ListLine(props: {
           />
         )}
       </div>
-      {line.role && (
-        <p className="pl-7 text-xs break-words text-zinc-600 italic dark:text-zinc-300">
-          {line.role}
-        </p>
-      )}
-      {line.note !== null && (
-        <p className="pl-7 text-xs break-words text-zinc-500 dark:text-zinc-400">{line.note}</p>
-      )}
+      {line.role && <p className="text-muted pl-7 text-xs break-words italic">{line.role}</p>}
+      {line.note !== null && <p className="text-muted pl-7 text-xs break-words">{line.note}</p>}
     </li>
   );
 }
 
-const control =
-  "rounded border border-zinc-300 px-1.5 text-xs leading-5 disabled:opacity-40 dark:border-zinc-700";
+const control = "rounded border border-line px-1.5 text-xs leading-5 disabled:opacity-40";
 
 /** Where a line's move button sends it: the maybeboard, or back into the deck. */
 function moveTarget(board: Board): Readonly<{ to: Board; label: string; words: string }> | null {

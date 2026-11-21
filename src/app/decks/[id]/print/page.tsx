@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { readPage } from "@/server/page-instance";
 import { ProxyForm } from "./proxy-form";
+import { Page } from "@/ui/page";
 
 // Proxy PDFs (design doc 14, section 3): choose the options, then download the PDF. It prints at
 // exactly the real card size from any PDF viewer (choose "actual size", not "fit to page").
@@ -12,7 +13,7 @@ export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
   if (deck === null) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
+    <Page spacing="tight">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Proxies: {deck.view.deck.name}</h1>
         <p className="text-muted text-sm">
@@ -23,6 +24,6 @@ export default async function PrintPage(props: PageProps<"/decks/[id]/print">) {
         </p>
       </header>
       <ProxyForm deckId={deck.view.deck.id} lines={deck.lines} tokens={deck.tokens} />
-    </main>
+    </Page>
   );
 }

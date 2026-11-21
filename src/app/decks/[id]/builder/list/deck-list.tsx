@@ -8,6 +8,8 @@ import type { Board, DeckLine, Grouping } from "@/modules/decks";
 import { groupsByHeading, groupsByRole, groupsOf } from "./groups";
 import { HeadingTitle } from "./heading-title";
 import { LineControls, ListLine } from "./list-line";
+import { Eyebrow } from "@/ui/eyebrow";
+import { Button } from "@/ui/button";
 
 // The deck as Moxfield shows one (design doc 14, section 2.4): the commander as its card, then
 // the cards grouped by type, by the deck's own headings (design doc 34) or by role (design doc
@@ -105,7 +107,7 @@ export function DeckList(props: {
               type="button"
               aria-pressed={view === option}
               onClick={() => choose(option)}
-              className={`rounded px-2 py-0.5 ${view === option ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+              className={`rounded px-2 py-0.5 ${view === option ? "bg-accent text-accent-foreground" : "border-line border"}`}
             >
               {VIEWS[option]}
             </button>
@@ -121,7 +123,7 @@ export function DeckList(props: {
               type="button"
               aria-pressed={activeTag === tag}
               onClick={() => setTagFilter(tag)}
-              className={`min-h-7 rounded px-2 py-0.5 ${activeTag === tag ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+              className={`min-h-7 rounded px-2 py-0.5 ${activeTag === tag ? "bg-accent text-accent-foreground" : "border-line border"}`}
             >
               {tag ?? "All tags"}
             </button>
@@ -131,9 +133,7 @@ export function DeckList(props: {
 
       {commanders.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-            Commander ({count(commanders)})
-          </h3>
+          <Eyebrow as="h3">Commander ({count(commanders)})</Eyebrow>
           <div className="grid grid-cols-2 gap-3">
             {commanders.map((line) => {
               const card = props.cards[line.printingId];
@@ -144,14 +144,15 @@ export function DeckList(props: {
                     <div className="flex flex-wrap items-center justify-between gap-1">
                       {/* The picture only shows the card's text; this opens it in the panel
                           (to change its printing, design doc 24). */}
-                      <button
+                      <Button
                         type="button"
                         onClick={() => props.onSelect(line)}
                         aria-label={`Select ${line.name}`}
-                        className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-700"
+                        variant="secondary"
+                        size="mini"
                       >
                         Select
-                      </button>
+                      </Button>
                       <LineControls line={line} onChange={props.onChange} busy={props.busy} />
                     </div>
                   )}
@@ -206,7 +207,7 @@ export function DeckList(props: {
                       src={`/api/images/${line.printingId}/small/front`}
                       alt=""
                       loading="lazy"
-                      className={`aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800 ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
+                      className={`bg-surface-raised aspect-[146/204] w-full rounded-[4.5%] ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
                     />
                   </button>
                   {line.quantity > 1 && (
@@ -238,7 +239,7 @@ export function DeckList(props: {
                 onRename={props.onRenameHeading}
               />
             ) : (
-              <h3 className="text-muted text-xs font-medium tracking-wide uppercase">{heading}</h3>
+              <Eyebrow as="h3">{heading}</Eyebrow>
             )}
             {body}
           </div>

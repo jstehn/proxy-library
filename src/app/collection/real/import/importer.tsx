@@ -10,16 +10,12 @@ import {
   type ApplyAnswer,
   type PreviewAnswer,
 } from "../actions";
+import { Button } from "@/ui/button";
+import { Input, Select, Textarea } from "@/ui/field";
 
 // Importing real cards (design doc 16, sections 4 to 7, and 15.2): paste or upload, see what
 // each line matched, change any line's printing, then import exactly that.
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
-const primary =
-  "rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900";
-const secondary =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700";
 /** Lines shown with a printing menu; the rest import as matched (a long file stays quick). */
 const SHOWN_LINES = 300;
 const MAX_FILE_BYTES = 5_000_000;
@@ -122,7 +118,7 @@ export function RealImporter() {
   return (
     <div className="flex flex-col gap-6">
       <section aria-label="What to import" className="flex flex-col gap-3">
-        <textarea
+        <Textarea
           value={text}
           onChange={(event) => {
             setText(event.target.value);
@@ -133,7 +129,7 @@ export function RealImporter() {
           rows={10}
           aria-label="Cards to import"
           placeholder={"4 Lightning Bolt\n1 Sol Ring (C21) 263\n1 Beza, the Bounding Spring *F*"}
-          className={`${field} font-mono`}
+          className="font-mono"
         />
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex items-center gap-2">
@@ -175,14 +171,16 @@ export function RealImporter() {
           </label>
         </fieldset>
         <div>
-          <button
+          <Button
             type="button"
-            className={secondary}
+
             disabled={isWorking || text.trim() === ""}
             onClick={() => preview()}
+            variant="secondary"
+            size="lg"
           >
             {isWorking ? "Reading…" : "Preview"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -221,10 +219,7 @@ export function RealImporter() {
                       choice.finishes.includes(line.line.finish),
                     );
                     return (
-                      <tr
-                        key={line.line.index}
-                        className="border-t border-zinc-200 dark:border-zinc-800"
-                      >
+                      <tr key={line.line.index} className="border-border-subtle border-t">
                         <td className="py-1 pr-2 tabular-nums">{line.line.quantity}</td>
                         <td className="py-1 pr-2">
                           {line.line.name}
@@ -233,7 +228,7 @@ export function RealImporter() {
                           )}
                         </td>
                         <td className="py-1">
-                          <select
+                          <Select
                             value={chosen[line.line.index] ?? line.printingId}
                             onChange={(event) =>
                               setChosen((current) => ({
@@ -242,14 +237,14 @@ export function RealImporter() {
                               }))
                             }
                             aria-label={`Printing of ${line.line.name}`}
-                            className={`${field} w-full max-w-xs`}
+                            className="w-full max-w-xs"
                           >
                             {options.map((choice) => (
                               <option key={choice.printingId} value={choice.printingId}>
                                 {choiceLabel(choice, line.line.finish)}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </td>
                       </tr>
                     );
@@ -273,7 +268,7 @@ export function RealImporter() {
               <summary className="cursor-pointer font-medium">
                 Skipped ({unmatched.length + answer.preview.unreadable.length})
               </summary>
-              <ul className="mt-1 flex flex-col gap-0.5 text-zinc-600 dark:text-zinc-400">
+              <ul className="text-muted mt-1 flex flex-col gap-0.5">
                 {unmatched.map((line) => (
                   <li key={line.line.index}>
                     {line.line.quantity} {line.line.name}
@@ -302,29 +297,29 @@ export function RealImporter() {
                 Also make a deck from this list
               </label>
               {makeDeck && (
-                <input
+                <Input
                   value={deckName}
                   onChange={(event) => setDeckName(event.target.value)}
                   maxLength={60}
                   placeholder="Deck name"
                   aria-label="Deck name"
-                  className={field}
                 />
               )}
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
+            <Button
               type="button"
-              className={primary}
+
               disabled={
                 isWorking || matched.length === 0 || (isList && makeDeck && deckName.trim() === "")
               }
               onClick={importIt}
+              size="lg"
             >
               {isWorking ? "Importing…" : "Import"}
-            </button>
+            </Button>
             <span className="text-muted text-xs">Nothing is saved until you press Import.</span>
           </div>
         </section>

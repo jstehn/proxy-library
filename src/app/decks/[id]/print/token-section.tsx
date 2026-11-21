@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { tokenDescription, type TokenArt, type TokenLine } from "@/modules/decks/client";
 import { chooseTokenAction, tokenArtsAction } from "./actions";
+import { EmptyState } from "@/ui/empty-state";
 
 // The print page's tokens (design doc 25): each token the deck's cards make, whether it prints,
 // and its art. Every change is saved for the deck at once.
@@ -22,7 +23,7 @@ export function TokenList({ deckId, tokens, onTokensChange }: Props) {
   const [message, setMessage] = useState<string | null>(null);
 
   if (tokens.length === 0) {
-    return <p className="text-muted text-sm">None of this deck&apos;s cards make tokens.</p>;
+    return <EmptyState>None of this deck&apos;s cards make tokens.</EmptyState>;
   }
 
   async function save(token: TokenLine, change: TokenChange) {
@@ -39,7 +40,7 @@ export function TokenList({ deckId, tokens, onTokensChange }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {message !== null && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-danger-text text-sm">
           {message}
         </p>
       )}
@@ -87,7 +88,7 @@ function TokenRow({ token, save }: TokenRowProps) {
 
   return (
     <li
-      className={`flex flex-col gap-2 rounded-md border border-zinc-200 p-2 dark:border-zinc-800 ${included ? "" : "opacity-60"}`}
+      className={`border-border-subtle flex flex-col gap-2 rounded-md border p-2 ${included ? "" : "opacity-60"}`}
       aria-busy={isSaving}
     >
       <div className="flex items-start gap-3">
@@ -118,7 +119,7 @@ function TokenRow({ token, save }: TokenRowProps) {
           type="button"
           onClick={togglePicker}
           aria-expanded={isPicking}
-          className="shrink-0 rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
+          className="border-line shrink-0 rounded-md border px-2 py-1 text-xs"
         >
           {isPicking ? "Done" : "Change art"}
         </button>
@@ -167,7 +168,7 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
 
   return (
     <fieldset
-      className="flex flex-col gap-2 rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-2 rounded-md border p-2 text-xs"
       aria-busy={isSaving}
     >
       <legend className="px-1 text-sm font-medium">Choose {token.name} art</legend>
@@ -194,7 +195,7 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
             onChange={(event) => setFilter(event.target.value)}
             placeholder="Filter by set, number or artist"
             aria-label={`Filter ${token.name} art`}
-            className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            className="border-line min-w-0 flex-1 rounded border bg-transparent px-2 py-1"
           />
         )}
         {isSaving && <span className="text-muted">Saving…</span>}
@@ -207,7 +208,7 @@ function ArtPicker({ token, arts, save }: ArtPickerProps) {
           return (
             <li key={art.id}>
               <label
-                className={`flex cursor-pointer flex-col gap-1 rounded-md border p-1 ${isChecked ? "border-sky-600 bg-sky-50 dark:border-sky-500 dark:bg-sky-950" : "border-zinc-200 dark:border-zinc-800"}`}
+                className={`flex cursor-pointer flex-col gap-1 rounded-md border p-1 ${isChecked ? "border-sky-600 bg-sky-50 dark:border-sky-500 dark:bg-sky-950" : "border-border-subtle"}`}
               >
                 <input
                   type="radio"
@@ -243,7 +244,7 @@ function TokenImage({ art, className }: TokenImageProps) {
       loading="lazy"
       width={146}
       height={204}
-      className={`aspect-[146/204] shrink-0 rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800 ${className}`}
+      className={`bg-surface-raised aspect-[146/204] shrink-0 rounded-[4.5%] ${className}`}
     />
   );
 }

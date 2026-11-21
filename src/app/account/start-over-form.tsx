@@ -4,6 +4,7 @@ import { Alert, SubmitButton } from "@/ui/form";
 import { startOverAction } from "./actions";
 import { CONFIRMATION_WORD } from "./confirmation";
 import type { FormState } from "@/server/form-action";
+import { Input } from "@/ui/field";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -14,13 +15,13 @@ export function StartOverForm() {
   return (
     <form action={formAction} className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           name="confirmation"
           aria-label={`Type ${CONFIRMATION_WORD} to confirm`}
           placeholder={CONFIRMATION_WORD}
           autoComplete="off"
           required
-          className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          controlSize="sm"
         />
         <SubmitButton tone="danger" pendingText="Starting over…">
           Start over

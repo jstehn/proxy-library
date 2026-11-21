@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
 import { createInviteAction, type CreateInviteState } from "./actions";
+import { Input } from "@/ui/field";
 
 const initialState: CreateInviteState = { error: null, created: null };
 
@@ -14,13 +15,14 @@ export function CreateInviteForm(props: CreateInviteFormProps) {
     <form action={formAction} className="flex flex-col gap-3">
       <label className="flex items-center gap-2 text-sm">
         Valid for
-        <input
+        <Input
           name="validForDays"
           type="number"
           min={props.minDays}
           max={props.maxDays}
           defaultValue={props.defaultDays}
-          className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          controlSize="sm"
+          className="w-20"
         />
         days
       </label>

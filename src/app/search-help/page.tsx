@@ -7,6 +7,7 @@ import {
   SEARCH_KEYWORDS,
   type SearchHelpRow,
 } from "@/shared/card-search";
+import { Page } from "@/ui/page";
 
 // Every keyword the card search understands (design docs 14, 15 and 28). The rows live in
 // @/shared/card-search/help.ts, which the LLM tools serve too. Linked from every card search box.
@@ -24,7 +25,7 @@ function Table(props: { rows: readonly SearchHelpRow[] }) {
         </thead>
         <tbody>
           {props.rows.map((row) => (
-            <tr key={row.write} className="border-t border-zinc-200 align-top dark:border-zinc-800">
+            <tr key={row.write} className="border-border-subtle border-t align-top">
               <td className="py-1.5 pr-4 font-mono whitespace-nowrap">{row.write}</td>
               <td className="py-1.5 pr-4">{row.finds}</td>
               <td className="py-1.5 font-mono whitespace-nowrap">{row.example}</td>
@@ -39,10 +40,10 @@ function Table(props: { rows: readonly SearchHelpRow[] }) {
 export default async function SearchHelpPage() {
   await requireActor();
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
+    <Page spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Search help</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Every card search (the singles store, your collection, the deck builder) understands the
           same words, modeled on Scryfall&apos;s. Terms side by side must all match. A part the
           search can&apos;t read is skipped, and a note under the box says which.
@@ -73,6 +74,6 @@ export default async function SearchHelpPage() {
           ))}
         </dl>
       </section>
-    </main>
+    </Page>
   );
 }

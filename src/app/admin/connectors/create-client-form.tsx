@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
 import { createClientAction, type CreateClientState } from "./actions";
+import { Textarea } from "@/ui/field";
 
 const initialState: CreateClientState = { error: null, created: null };
 
@@ -13,12 +14,7 @@ export function CreateClientForm() {
       <TextField label="Name" name="name" hint="What the connector is, e.g. Google." />
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Redirect URLs</span>
-        <textarea
-          name="redirectUris"
-          required
-          rows={3}
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
-        />
+        <Textarea name="redirectUris" required rows={3} controlSize="form" />
         <span className="text-muted text-xs">
           Exactly as the connector shows them, one per line (https, or http on localhost). No
           wildcards.

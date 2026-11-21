@@ -6,6 +6,9 @@ import { Alert } from "@/ui/form";
 import { draftHref, readDraft, type Draft, type DraftCard } from "../draft";
 import { DraftButton, DraftSync, DraftTextForm, ProposeForm } from "./draft-controls";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 // The trade builder (design doc 10, section 9). The draft lives in the URL, so the back button
 // undoes a change and a draft can be bookmarked. The buttons and forms (draft-controls.tsx) read
@@ -25,7 +28,7 @@ function Offerable(props: {
   side: "give" | "get";
 }) {
   const { draft, side } = props;
-  if (props.rows.length === 0) return <p className="text-muted text-sm">No cards match.</p>;
+  if (props.rows.length === 0) return <EmptyState>No cards match.</EmptyState>;
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {props.rows.map((row) => {
@@ -72,7 +75,7 @@ function Chosen(props: {
     <div className="flex flex-col gap-1">
       <h3 className="text-sm font-medium">{props.title}</h3>
       {draft[side].length === 0 ? (
-        <p className="text-muted text-sm">No cards yet.</p>
+        <EmptyState>No cards yet.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {draft[side].map((card) => (
@@ -106,9 +109,9 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
 
   if (partner === null) {
     return (
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
+      <Page width="3xl">
         <h1 className="text-2xl font-semibold">New trade</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Who do you want to trade with?</p>
+        <p className="text-muted text-sm">Who do you want to trade with?</p>
         {partners.length === 0 ? (
           <p className="text-muted text-sm">There&apos;s nobody else to trade with yet.</p>
         ) : (
@@ -126,7 +129,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
             ))}
           </ul>
         )}
-      </main>
+      </Page>
     );
   }
 
@@ -151,7 +154,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <header>
         <h1 className="text-2xl font-semibold">
           {draft.replaces ? "Counter-offer" : "Trade"} with {partner.displayName}
@@ -171,10 +174,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
           const isGive = side === "give";
           const queryName = isGive ? "mine" : "theirs";
           return (
-            <section
-              key={side}
-              className="flex flex-1 flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-            >
+            <Card key={side} as="section" padding="lg" stack className="flex-1">
               <h2 className="font-medium">
                 {isGive ? "You give" : `${partner.displayName} gives`}
               </h2>
@@ -200,7 +200,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
                 draft={draft}
                 side={side}
               />
-            </section>
+            </Card>
           );
         })}
       </div>
@@ -209,7 +209,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
       <ProposeForm isCounter={draft.replaces !== null} />
 
       {partnerWishlist !== null && partnerWishlist.lines.length > 0 && (
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <Card as="section" padding="lg" stack>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-medium">Cards {partner.displayName} wants</h2>
             <Link
@@ -250,7 +250,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
                           key={`${copy.printingId}/${copy.finish}`}
                           className="flex items-center gap-1.5 text-xs"
                         >
-                          <span className="text-emerald-700 dark:text-emerald-400">
+                          <span className="text-success-text">
                             you have {copy.quantity} ({cards.get(copy.printingId)?.setCode ?? ""}
                             {copy.finish === "nonfoil" ? "" : ` ${copy.finish}`})
                           </span>
@@ -272,8 +272,8 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
-    </main>
+    </Page>
   );
 }

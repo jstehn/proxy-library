@@ -8,6 +8,11 @@ import { draftReasonText, landReasonText, TAG_LABELS } from "@/app/decks/labels"
 import { valueOr } from "../answer";
 import { buildFromCollectionAction } from "./actions";
 import type { LandsToAdd } from "../mana-base/mana-base-panel";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+
+const NOTICE_BOX =
+  "rounded border border-amber-300 bg-amber-50/70 p-2 text-xs text-amber-950 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200";
 
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards
 // first, then optional store cards for remaining gaps, plus a mana base from planManaBase.
@@ -73,22 +78,19 @@ export function DraftPanel(props: {
   const fullCount = (draft ? sumQuantities(draft.spells) : 0) + landsAddedCount;
 
   return (
-    <section
-      aria-label="Deck draft"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
-    >
+    <Card aria-label="Deck draft" as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Draft deck</h2>
         <button
           type="button"
           onClick={props.onClose}
           aria-label="Close deck draft"
-          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground"
         >
           ✕
         </button>
       </div>
-      <div className="rounded border border-amber-300 bg-amber-50/70 p-2 text-xs text-amber-950 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className={NOTICE_BOX}>
         <p className="font-medium">Heuristic starting point — requires investigation</p>
         <p className="mt-0.5 text-amber-900/90 dark:text-amber-200/90">
           This tool matches simple role/theme tags and mana curve slots without understanding how
@@ -98,12 +100,12 @@ export function DraftPanel(props: {
           real synergies.
         </p>
       </div>
-      <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+      <label className="text-muted flex items-center gap-2 text-xs">
         <input
           type="checkbox"
           checked={includeStore === "fill-gaps"}
           onChange={(event) => setIncludeStore(event.target.checked ? "fill-gaps" : "none")}
-          className="rounded border-zinc-300 dark:border-zinc-700"
+          className="border-line rounded"
         />
         Include store cards for gaps your collection can&apos;t fill
       </label>
@@ -119,7 +121,7 @@ export function DraftPanel(props: {
         <p className="text-muted">This deck already has {draft.existingCount} cards.</p>
       ) : (
         <>
-          <div className="flex flex-col gap-1 rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+          <div className="bg-surface flex flex-col gap-1 rounded p-2 text-xs">
             <p className="font-medium">
               Existing: {draft.existingCount} · Owned spells: +{ownedSpellCount}
               {draft.storeAddedCount > 0 && (
@@ -137,7 +139,7 @@ export function DraftPanel(props: {
                   key={role.tag}
                   className={`rounded px-1.5 py-0.5 ${
                     role.total >= role.target
-                      ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                      ? "bg-surface-raised text-foreground"
                       : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                   }`}
                 >
@@ -150,21 +152,21 @@ export function DraftPanel(props: {
 
           <div className="flex flex-wrap gap-2">
             {fullCount > 0 && (
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
                   props.onAdd(fullAdditions, fullCount, `Added ${fullCount} drafted cards.`)
                 }
-                className="rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                size="sm"
               >
                 {draft.storeAddedCount > 0
                   ? `Add full draft (${fullCount} cards, ${Cents.format(Cents.of(draft.storeCostCents))} store)`
                   : `Add draft to deck (${fullCount} cards)`}
-              </button>
+              </Button>
             )}
             {draft.storeAddedCount > 0 && draft.ownedAddedCount > 0 && (
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
@@ -174,10 +176,11 @@ export function DraftPanel(props: {
                     `Added ${draft.ownedAddedCount} owned cards and lands.`,
                   )
                 }
-                className="rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
+                variant="secondary"
+                size="sm"
               >
                 Add owned + lands only ({draft.ownedAddedCount} cards)
-              </button>
+              </Button>
             )}
           </div>
 
@@ -224,7 +227,7 @@ export function DraftPanel(props: {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -254,7 +257,7 @@ function SpellSection(props: { title: string; spells: readonly DraftedSpell[] })
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted text-xs">
               {[
                 ...spell.reasons.map(draftReasonText),
                 ...(spell.alsoIn.length > 0 ? [`also in ${spell.alsoIn.join(", ")}`] : []),
