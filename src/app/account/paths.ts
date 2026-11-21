@@ -1,0 +1,33 @@
+import { revalidatePath } from "next/cache";
+import { revalidateHeader } from "../paths";
+
+// The account area's paths, and what to refresh after a change.
+
+export const ACCOUNT_PATH = "/account";
+export const TOKENS_PATH = "/account/tokens";
+export const PROFILE_PATH = "/account/profile";
+
+export function playerPath(usernameOrId: string): string {
+  return `/players/${usernameOrId}`;
+}
+
+export function revalidateAccount(): void {
+  revalidatePath(ACCOUNT_PATH);
+}
+
+export function revalidateTokens(): void {
+  revalidatePath(TOKENS_PATH);
+}
+
+/** After a profile change: the player's page under both addresses, the form and the friends list. */
+export function revalidateProfile(player: { username: string; userId: string }): void {
+  revalidatePath(playerPath(player.username));
+  revalidatePath(playerPath(player.userId));
+  revalidatePath(PROFILE_PATH);
+  revalidatePath("/friends");
+}
+
+/** After a reset of the player's own library: every page may show their cards or money. */
+export function revalidateEverything(): void {
+  revalidateHeader();
+}

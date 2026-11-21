@@ -1,9 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ResetPlayerError } from "@/modules/reset";
 import { assertNever, Cents, UserId, err } from "@/shared/kernel";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const ResetForm = z.object({
   userId: z.string().min(1),
@@ -34,7 +34,7 @@ export const resetLibraryAction = formAction(
       return err<ResetFailure>({ kind: "NotConfirmed", username: form.username });
     }
     const result = await capabilities.resetPlayer(admin, UserId.of(form.userId));
-    if (result.ok) revalidatePath("/", "layout"); // every page may show this player's cards or money
+    if (result.ok) revalidateHeader(); // every page may show this player's cards or money
     return result;
   },
   {

@@ -1,10 +1,10 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ResetPlayerError } from "@/modules/reset";
 import { err, Cents } from "@/shared/kernel";
 import { CONFIRMATION_WORD } from "./confirmation";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const StartOverForm = z.object({ confirmation: z.string() });
 
@@ -18,7 +18,7 @@ export const startOverAction = formAction(
       return err<StartOverFailure>({ kind: "NotConfirmed" });
     }
     const result = await capabilities.resetPlayer(actor, actor.userId);
-    if (result.ok) revalidatePath("/", "layout"); // every page may show your cards or money
+    if (result.ok) revalidateHeader(); // every page may show your cards or money
     return result;
   },
   {

@@ -1,9 +1,10 @@
 "use client";
 import { useActionState } from "react";
+import type { FormState } from "@/server/form-action";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
-import { changePasswordAction, type ChangePasswordState } from "./actions";
+import { changePasswordAction } from "./actions";
 
-const initialState: ChangePasswordState = { error: null, success: false };
+const initialState: FormState = { message: null, tone: null };
 
 export function ChangePasswordForm(props: { passwordMinLength: number }) {
   const [state, formAction] = useActionState(changePasswordAction, initialState);
@@ -23,8 +24,7 @@ export function ChangePasswordForm(props: { passwordMinLength: number }) {
         autoComplete="new-password"
         hint={`At least ${props.passwordMinLength} characters.`}
       />
-      {state.error && <Alert tone="error">{state.error}</Alert>}
-      {state.success && <Alert tone="success">Your password has been changed.</Alert>}
+      {state.message && <Alert tone={state.tone}>{state.message}</Alert>}
       <SubmitButton pendingText="Saving…">Change password</SubmitButton>
     </form>
   );

@@ -1,9 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeAddOwnFundsError, type AddOwnFundsError } from "@/modules/wallet";
 import { Cents, err, ok } from "@/shared/kernel";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const AddFundsForm = z.object({ amount: z.string(), note: z.string().default("") });
 
@@ -18,7 +18,7 @@ export const addFundsAction = formAction(
     const result = await capabilities.wallet.addOwnFunds(actor, { amount, note: form.note });
     if (!result.ok) return result;
 
-    revalidatePath("/", "layout"); // the balance in the header changes too
+    revalidateHeader(); // the balance in the header changes too
     return ok(amount);
   },
   {
