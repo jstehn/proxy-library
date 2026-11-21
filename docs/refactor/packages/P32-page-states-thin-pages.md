@@ -105,4 +105,68 @@ New `src/app/{error,not-found,loading}.tsx` and one set per big section (`decks`
 
 ## Handoff
 
-(empty)
+**Done (branch `refactor/P32-page-states`, commits start with `P32:`).**
+
+- **Page states.** `src/app/{error,not-found,loading}.tsx` (new blocks `PageMessage` and
+  `PageSkeleton` in `src/ui`) and a `loading.tsx` for `decks`, `drafts`, `collection`, `store` and
+  `admin`. The error page shows no message or stack, only a sentence, "Try again" (`retry`, the
+  prop this Next version uses) and "Go home". No section `error.tsx`: the wording would not
+  differ. No Suspense was added (no page has an obvious fast head and slow list). Pages already
+  called `notFound()`; the new root page is what they show now. No unit test per area: there is
+  nothing to run without a browser, so by-eye checks are in `deferred-checks.md`.
+- **Form variants** (`src/server/form-action.ts`, tested in `form-variants.test.ts`):
+  `formRedirect(schema, handler, options)` (the handler returns a path, or `undefined` to stay;
+  an unreadable form goes to `options.unreadable` or throws), `formVoid` (silent; an unreadable
+  form does nothing), `parseForm(schema, formData)` for forms that keep their own state,
+  `allowPasswordChangePending`, union schemas (`z.discriminatedUnion`), `messageByField` for
+  `invalidInput`, and `redirectTo` may return `undefined`. `admin: true` works on all of them.
+- **The 20 action files moved, one area per commit:** decks, decks/commanders,
+  decks/edit-as-text, drafts, trades (and `trades/new/draft-controls.tsx`), wishlist,
+  collection/real, inventory, admin (store, photos, catalog, connectors, players, invites),
+  account (password, tokens, profile), friends, oauth/authorize, sign-in, register.
+  `grep -rl "formData.get" src/app` prints nothing; the only file left in `src` is
+  `src/server/form-action.ts`.
+  - `formAction` (message forms): wishlist add, update, buy, wish-for-short-cards (now on the
+    shared `FormState`, so the wish forms start from `{ message: null, tone: null }`), change
+    password (now `FormState`, with `allowPasswordChangePending`).
+  - `formRedirect`: decks (all), commanders "start a deck", drafts (all), trades, inventory open,
+    collection/real, admin store and photos, wishlist sharing, OAuth approve.
+  - `formVoid`: wishlist remove, friends (5, one `friendAction` factory), revoke token, revoke
+    invite, delete connector, set-set-enabled.
+  - `parseForm` (own state): sign-in, register, tokens (secret once), profile, edit-as-text (two
+    actions), admin connectors create, admin players (temporary password), admin invites create,
+    add real product.
+  - **Behaviour that changed (all in error paths):** an unreadable decks, drafts, trades,
+    inventory or photos form goes to that area's list, as the id check did before; a bad `format`
+    or `finish` used to throw and now goes there too. Drafts' Conspiracy forms with a bad pack or
+    seat number go to `/drafts` (they used to pass `NaN` on). A missing quantity or price on a
+    wishlist form is "unreadable" (it used to read as 0). Nothing a person can do from the page
+    changed.
+- **Pages split into `_components/`.** `drafts/[id]/page.tsx` 646 to 108 (components, the old
+  `conspiracy`, `countdown`, `live-updates`, `pick-grid`, `pool` moved in beside them);
+  `decks/commanders/page.tsx` 378 to 90; `players/[id]/page.tsx` 298 to 56. The biggest page left
+  is `trades/new/page.tsx` at 279. The draft page is off the oversize allowlist. `pick-grid.tsx` is
+  on the blocks (`Button`, `Select`, `Input`) and `NOT_YET_ON_BLOCKS` is gone from the lint
+  config.
+- **Reads, not actions.** `commanderCardsAction` is gone: the panel fetches
+  `GET /decks/commanders/cards?oracleId=&real=` (a route that calls `reads.decks.commanderDetails`);
+  the view model is built in `_components/commander-cards-view.ts`.
+- **`paths.ts`.** One each in `decks`, `drafts`, `trades`, `wishlist`, `cards`, `inventory`,
+  `collection/real`, `admin`, `account`, `friends`, plus `app/paths.ts` (`revalidateHeader()`).
+  `revalidatePath(` in `src/app` outside a `paths.ts`: 74 before, 0 after (29 inside the 11 files).
+- **Layout.** `ui/opening/*` moved to `inventory/opened/_components/` (the whole folder: only that
+  route uses it) and `ui/collection/options.ts` to `app/collection/options.ts`. The rule is in
+  `docs/architecture/conventions.md` ("UI"); a component file over 300 lines in `src/app` is a lint
+  warning. Doc and lesson paths were updated.
+
+**Numbers.** Production code 76,920 to 77,393 (**+473** over the baseline, under the 500 the owner
+accepts). Where it goes: the page states and two blocks (about 110), the form variants (about 110),
+11 `paths.ts` files (about 170), the commanders route and view split (about 70), and the extra
+imports of the split pages, less the hand parsing and revalidate strings removed. The baseline was
+not raised. Knip 212 to 211 (lowered). Clones 18 (same). `pnpm check` fails only the sizes gate
+until the owner approves the growth.
+
+**Not checked.** No browser, no `next build`, no e2e, no integration run (no integration test
+covers `src/app` actions). `export const x = formRedirect(...)` in a `"use server"` file is the
+pattern P25 already used for `formAction`, but Next did not compile any of it here. The by-eye list
+is in `deferred-checks.md` under P32.

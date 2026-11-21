@@ -44,7 +44,7 @@ knowing the difference between **integrity** (can't be changed, which matters) a
 The opening has phases: sealed → tearing → revealing → summary → (next pack…) → finished. Rather
 than a tangle of `useState` flags (`isTearing`, `isDone`, `revealedCount`…), the whole state is
 **one value**, and every change goes through **one pure function**. From
-[`machine.ts`](../src/ui/opening/machine.ts):
+[`machine.ts`](../src/app/inventory/opened/_components/machine.ts):
 
 ```ts
 export type OpeningState =
@@ -85,7 +85,7 @@ const [state, send] = useReducer(
 <button onClick={() => send({ type: "revealAll" })}>Reveal all</button>
 ```
 
-Because the reducer is plain TypeScript, [`machine.test.ts`](../src/ui/opening/machine.test.ts)
+Because the reducer is plain TypeScript, [`machine.test.ts`](../src/app/inventory/opened/_components/machine.test.ts)
 tests every transition without rendering anything, including the important non-transitions: a
 stray `revealNext` while the pack is still sealed must do **nothing**.
 
@@ -97,7 +97,7 @@ stray `revealNext` while the pack is still sealed must do **nothing**.
 
 Tearing the pack should take at least 0.9 seconds (so the animation plays), and should also wait
 for the card images to load, **but no longer than 3 seconds** (a slow image shouldn't freeze the
-screen). From [`pack-opener.tsx`](../src/ui/opening/pack-opener.tsx):
+screen). From [`pack-opener.tsx`](../src/app/inventory/opened/_components/pack-opener.tsx):
 
 ```ts
 function waitAtMost(promise: Promise<void>, milliseconds: number): Promise<void> {
@@ -170,7 +170,7 @@ value:
 - `getSnapshot()`: read the current value in the browser.
 - `getServerSnapshot()`: the value to use while rendering on the server (the default).
 
-From [`sounds.ts`](../src/ui/opening/sounds.ts):
+From [`sounds.ts`](../src/app/inventory/opened/_components/sounds.ts):
 
 ```ts
 export function useReducedMotion(): boolean {

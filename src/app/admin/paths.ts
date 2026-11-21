@@ -3,15 +3,7 @@ import { revalidatePath } from "next/cache";
 // The admin area's paths, and what to refresh after a change. (Admin forms that change money or
 // a player's library refresh the header too: `revalidateHeader` in `../paths`.)
 
-export const ADMIN_SECTIONS = [
-  "catalog",
-  "connectors",
-  "invites",
-  "photos",
-  "players",
-  "store",
-] as const;
-export type AdminSection = (typeof ADMIN_SECTIONS)[number];
+export type AdminSection = "catalog" | "connectors" | "invites" | "photos" | "players" | "store";
 
 export function adminPath(section: AdminSection): string {
   return `/admin/${section}`;

@@ -563,6 +563,13 @@ export default defineConfig([
       ],
     },
   },
+  // A component file in src/app that passes 300 lines is a hint to split it (refactor P32); the
+  // 500-line benchmark stays the gate.
+  {
+    files: ["src/app/**/*.tsx"],
+    ignores: TESTS,
+    rules: { "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }] },
+  },
   // Pages and components: the same rules plus the class-name rules above (refactor P31).
   {
     files: ["src/app/**/*.tsx", "src/ui/**/*.tsx"],

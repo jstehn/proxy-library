@@ -205,59 +205,51 @@ export function makeFormAction(sources: FormActionSources) {
   return formAction;
 }
 
-/** What `formVoid` takes for an admin's form. */
-type AdminOption = PlainFormOptions & Readonly<{ admin: true }>;
+/** What `formRedirect` and `formVoid` take, besides the schema and the handler. */
+type PlainOptions = PlainFormOptions &
+  Readonly<{
+    admin?: boolean;
+    /** Where a form the schema can't read (one changed by hand) goes; without it, it throws. */
+    unreadable?: string;
+    /** A form the schema can't read does nothing, instead of throwing. */
+    ignoreUnreadable?: boolean;
+  }>;
 
-/** The signed-in player, or the admin when the form says `admin: true`. */
-async function actorFor(
-  sources: FormActionSources,
-  options: PlainFormOptions & Readonly<{ admin?: true }>,
-): Promise<Actor> {
-  if (options.admin) return sources.requireAdminActor();
-  return sources.requireActor({ allowPasswordChangePending: options.allowPasswordChangePending });
-}
+/** The handler gets an `AdminActor` exactly when the options say `admin: true`. */
+type ContextFor<Options> = Options extends { admin: true } ? AdminActionContext : ActionContext;
 
 /**
  * `formRedirect(schema, handler, options)`: for a plain `<form action>` that goes somewhere after
  * it is sent (back to its page with `?error=` or `?message=`, or on to the next page). The
- * handler returns the path to go to, or `undefined` to stay where it is. A form the schema can't read (one changed by hand) throws, unless
- * `unreadable` names a path to go to instead.
+ * handler returns the path to go to, or `undefined` to stay where it is.
  */
 export function makeFormRedirect(sources: FormActionSources) {
-  type RedirectOptions = PlainFormOptions & Readonly<{ unreadable?: string }>;
-  function formRedirect<Schema extends FormSchema>(
+  return function formRedirect<
+    Schema extends FormSchema,
+    const Options extends PlainOptions = PlainOptions,
+  >(
     schema: Schema,
-    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<string | undefined>,
-    options: RedirectOptions & Readonly<{ admin: true }>,
-  ): (formData: FormData) => Promise<void>;
-  function formRedirect<Schema extends FormSchema>(
-    schema: Schema,
-    handler: (context: ActionContext, input: z.output<Schema>) => Promise<string | undefined>,
-    options?: RedirectOptions,
-  ): (formData: FormData) => Promise<void>;
-  function formRedirect<Schema extends FormSchema>(
-    schema: Schema,
-    handler: (
-      context: ActionContext & AdminActionContext,
-      input: z.output<Schema>,
-    ) => Promise<string | undefined>,
-    options: RedirectOptions & Readonly<{ admin?: true }> = {},
+    handler: (context: ContextFor<Options>, input: z.output<Schema>) => Promise<string | undefined>,
+    options?: Options,
   ): (formData: FormData) => Promise<void> {
-    async function run(formData: FormData): Promise<void> {
-      const actor = await actorFor(sources, options);
+    return async function run(formData) {
+      const actor = options?.admin
+        ? await sources.requireAdminActor()
+        : await sources.requireActor({
+            allowPasswordChangePending: options?.allowPasswordChangePending,
+          });
       const parsed = schema.safeParse(readForm(schema, formData));
       if (!parsed.success) {
-        if (options.unreadable !== undefined) sources.redirect(options.unreadable);
+        if (options?.unreadable !== undefined) sources.redirect(options.unreadable);
+        if (options?.ignoreUnreadable) return;
         throw new Error(`The form could not be read. ${problemsAsText(parsed.error)}`);
       }
       const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
       const input = parsed.data as z.output<Schema>;
-      const destination = await handler(context as ActionContext & AdminActionContext, input);
+      const destination = await handler(context as ContextFor<Options>, input);
       if (destination !== undefined) sources.redirect(destination);
-    }
-    return run;
-  }
-  return formRedirect;
+    };
+  };
 }
 
 /**
@@ -265,32 +257,22 @@ export function makeFormRedirect(sources: FormActionSources) {
  * is sent (the row just changes). A form the schema can't read does nothing.
  */
 export function makeFormVoid(sources: FormActionSources) {
-  function formVoid<Schema extends FormSchema>(
+  const formRedirect = makeFormRedirect(sources);
+  return function formVoid<
+    Schema extends FormSchema,
+    const Options extends PlainFormOptions & Readonly<{ admin?: boolean }> = PlainFormOptions,
+  >(
     schema: Schema,
-    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<unknown>,
-    options: AdminOption,
-  ): (formData: FormData) => Promise<void>;
-  function formVoid<Schema extends FormSchema>(
-    schema: Schema,
-    handler: (context: ActionContext, input: z.output<Schema>) => Promise<unknown>,
-    options?: PlainFormOptions,
-  ): (formData: FormData) => Promise<void>;
-  function formVoid<Schema extends FormSchema>(
-    schema: Schema,
-    handler: (
-      context: ActionContext & AdminActionContext,
-      input: z.output<Schema>,
-    ) => Promise<unknown>,
-    options: PlainFormOptions & Readonly<{ admin?: true }> = {},
+    handler: (context: ContextFor<Options>, input: z.output<Schema>) => Promise<unknown>,
+    options?: Options,
   ): (formData: FormData) => Promise<void> {
-    async function run(formData: FormData): Promise<void> {
-      const actor = await actorFor(sources, options);
-      const parsed = schema.safeParse(readForm(schema, formData));
-      if (!parsed.success) return;
-      const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
-      await handler(context as ActionContext & AdminActionContext, parsed.data as z.output<Schema>);
-    }
-    return run;
-  }
-  return formVoid;
+    return formRedirect(
+      schema,
+      async (context: ContextFor<Options>, input: z.output<Schema>) => {
+        await handler(context, input);
+        return undefined;
+      },
+      { ...options, ignoreUnreadable: true } as unknown as Options,
+    );
+  };
 }

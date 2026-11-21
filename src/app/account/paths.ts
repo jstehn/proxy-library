@@ -1,5 +1,4 @@
 import { revalidatePath } from "next/cache";
-import { revalidateHeader } from "../paths";
 
 // The account area's paths, and what to refresh after a change.
 
@@ -25,9 +24,4 @@ export function revalidateProfile(player: { username: string; userId: string }):
   revalidatePath(playerPath(player.userId));
   revalidatePath(PROFILE_PATH);
   revalidatePath("/friends");
-}
-
-/** After a reset of the player's own library: every page may show their cards or money. */
-export function revalidateEverything(): void {
-  revalidateHeader();
 }

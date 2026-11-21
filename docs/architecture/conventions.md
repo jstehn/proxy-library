@@ -128,6 +128,28 @@ over the clever one.
   fixture test on real card text; consumers read `catalog.cardFeatures`. `pnpm regex-count` keeps the
   number of regexes in card-rule code from rising (ADR 0027).
 
+## UI
+
+- **Where UI goes.** A route's own UI lives in its `_components/`. UI shared by two or more routes
+  lives in `src/ui/<area>/` (or `app/_components` for card UI). `src/ui` holds presentational
+  building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, `PageSkeleton`, ...): no
+  state machines, no sounds, no query logic. Logic that one route uses sits beside that route.
+- **A page** calls `readPage()`, parses its params, reads through `reads` and capabilities, and
+  composes components. It holds no rules and no local component over about 60 lines. A component
+  file over 300 lines in `src/app` is a lint warning (the 500-line limit stays the gate).
+- **Page states.** `error.tsx`, `not-found.tsx` and `loading.tsx` at the root; `loading.tsx` in the
+  big sections. The error page never shows the message or a stack: the player gets a plain
+  sentence, "Try again" and a way home.
+- **Every action is written one way.** `formAction(schema, handler, options)` for a form that shows
+  a message; `formRedirect(schema, handler, options)` for a plain `<form action>` that goes
+  somewhere (the handler returns the path); `formVoid` for a silent one. A form with its own state
+  (it keeps typed values, shows a secret once) reads its fields with `parseForm(schema, formData)`.
+  No file in `src/app` calls `formData.get`. Actions return a `Result`, never a view model; a read
+  is a read, not an action.
+- **`paths.ts` per area** owns the area's paths and what to refresh (`revalidateDeck(deckId)`,
+  `revalidateTrades()`); no `revalidatePath` outside a `paths.ts`. `app/paths.ts` has
+  `revalidateHeader()` for the layout.
+
 ## Comments and docs
 
 - Comments explain **why**, not what. Public functions in `index.ts` get a one-line TSDoc.

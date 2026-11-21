@@ -6,7 +6,7 @@ import {
   type FilterValues,
 } from "@/app/_components/card-filters";
 import type { CollectionFilter } from "@/modules/collection";
-import { SECTION_VALUES, SORT_VALUES } from "@/ui/collection/options";
+import { SECTION_VALUES, SORT_VALUES } from "@/app/collection/options";
 
 /** What the address of a collection page (the game's, the real one, someone else's) asks for. */
 export type CollectionQuery = Readonly<{
