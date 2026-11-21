@@ -134,6 +134,11 @@ describe("formRedirect", () => {
     expect(who).toBe("jack");
   });
 
+  it("stays on the page when the handler returns nothing", async () => {
+    const stay = formRedirect(z.object({}), async () => undefined);
+    expect(await stay(form([]))).toBeUndefined();
+  });
+
   it("sends a form it can't read to the `unreadable` path, or throws without one", async () => {
     const schema = z.object({ deckId: z.coerce.number().int().positive() });
     const handler = async () => "/never";

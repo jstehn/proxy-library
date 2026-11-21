@@ -218,21 +218,21 @@ async function actorFor(
 }
 
 /**
- * `formRedirect(schema, handler, options)`: for a plain `<form action>` that always ends by
- * redirecting (with `?error=` or `?message=` on the page it came from). The handler returns the
- * path to go to. A form the schema can't read (one changed by hand) throws, unless
+ * `formRedirect(schema, handler, options)`: for a plain `<form action>` that goes somewhere after
+ * it is sent (back to its page with `?error=` or `?message=`, or on to the next page). The
+ * handler returns the path to go to, or `undefined` to stay where it is. A form the schema can't read (one changed by hand) throws, unless
  * `unreadable` names a path to go to instead.
  */
 export function makeFormRedirect(sources: FormActionSources) {
   type RedirectOptions = PlainFormOptions & Readonly<{ unreadable?: string }>;
   function formRedirect<Schema extends FormSchema>(
     schema: Schema,
-    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<string>,
+    handler: (context: AdminActionContext, input: z.output<Schema>) => Promise<string | undefined>,
     options: RedirectOptions & Readonly<{ admin: true }>,
   ): (formData: FormData) => Promise<void>;
   function formRedirect<Schema extends FormSchema>(
     schema: Schema,
-    handler: (context: ActionContext, input: z.output<Schema>) => Promise<string>,
+    handler: (context: ActionContext, input: z.output<Schema>) => Promise<string | undefined>,
     options?: RedirectOptions,
   ): (formData: FormData) => Promise<void>;
   function formRedirect<Schema extends FormSchema>(
@@ -240,7 +240,7 @@ export function makeFormRedirect(sources: FormActionSources) {
     handler: (
       context: ActionContext & AdminActionContext,
       input: z.output<Schema>,
-    ) => Promise<string>,
+    ) => Promise<string | undefined>,
     options: RedirectOptions & Readonly<{ admin?: true }> = {},
   ): (formData: FormData) => Promise<void> {
     async function run(formData: FormData): Promise<void> {
@@ -252,7 +252,8 @@ export function makeFormRedirect(sources: FormActionSources) {
       }
       const context = { actor, capabilities: sources.capabilities(), reads: sources.reads() };
       const input = parsed.data as z.output<Schema>;
-      sources.redirect(await handler(context as ActionContext & AdminActionContext, input));
+      const destination = await handler(context as ActionContext & AdminActionContext, input);
+      if (destination !== undefined) sources.redirect(destination);
     }
     return run;
   }

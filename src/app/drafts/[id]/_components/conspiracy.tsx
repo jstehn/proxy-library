@@ -18,7 +18,7 @@ import {
   endDealsAction,
   informantAction,
   sneakAction,
-} from "../actions";
+} from "../../actions";
 import { Card } from "@/ui/card";
 import { Select } from "@/ui/field";
 

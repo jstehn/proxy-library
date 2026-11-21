@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { clockText } from "../labels";
+import { clockText } from "../../labels";
 
 // A pick timer counting down. The browser's own clock may be wrong by minutes, so the page
 // passes the server's time, and this only measures how long it has been showing since, with
