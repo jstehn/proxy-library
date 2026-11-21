@@ -12,8 +12,8 @@ import {
   text,
 } from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
-import { players } from "../../accounts/infrastructure/schema";
-import { printings, sealedProducts } from "../../catalog/infrastructure/schema";
+import { players } from "../../../accounts/infrastructure/schema";
+import { printings, sealedProducts } from "../../../catalog/cards/infrastructure/schema";
 import { timestamptz } from "@/shared/db";
 
 /** The cards a player owns for real, as they recorded them. No ledger: only what's there now. */

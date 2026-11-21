@@ -6,7 +6,7 @@ import { type Finish, FinishSchema, UserId } from "@/shared/kernel";
 import type { PrintingMatcher, RealCollectionRepository } from "../application/ports";
 import type { RealCopy } from "../domain/copies";
 import { normalizedName, type PrintingCandidate } from "../domain/match";
-import { printings } from "../../catalog/infrastructure/schema";
+import { printings } from "../../../catalog/cards/infrastructure/schema";
 import { realCards, realCollectionSettings, realProducts } from "./schema";
 
 // Postgres allows at most 65535 parameters per statement; 500 rows keeps well under that.

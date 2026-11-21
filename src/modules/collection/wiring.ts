@@ -1,5 +1,5 @@
 import { pick } from "@/shared/kernel";
-import type { RealCollection } from "./application/make-real-collection";
+import type { RealCollection } from "./real/application/make-real-collection";
 
 // The real collection's capabilities (ADR 0026): only what callers use.
 

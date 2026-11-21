@@ -10,7 +10,7 @@ import {
   makeRealCollection,
   matchedCopies,
   realCollectionQueries,
-} from "@/modules/real-collection";
+} from "@/modules/collection/real";
 import {
   actor,
   clock,

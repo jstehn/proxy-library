@@ -13,14 +13,14 @@ import {
   readCollectionPage,
   readCopiesOf,
   readOwnedByOracle,
-} from "@/shared/card-search/sql-collection";
+} from "@/modules/collection/copies";
 import { type Finish, type UserId } from "@/shared/kernel";
 import { realCollectionSettings, realProducts } from "../infrastructure/schema";
-import { authUsers } from "../../accounts/infrastructure/schema";
-import { sealedProducts } from "../../catalog/infrastructure/schema";
+import { authUsers } from "../../../accounts/infrastructure/schema";
+import { sealedProducts } from "../../../catalog/cards/infrastructure/schema";
 
 // Read models for the real collection's screens (design doc 16, section 7; ADR 0006). Listing,
-// filtering and exporting are shared with the game collection (@/shared/card-search/sql-collection);
+// filtering and exporting are shared with the game collection (copies-sql.ts);
 // this file says where the real copies live. A real row has no acquisitions: it was added once and
 // changes in place.
 

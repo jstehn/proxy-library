@@ -13,11 +13,11 @@ import {
   readCollectionPage,
   readCopiesOf,
   readOwnedByOracle,
-} from "@/shared/card-search/sql-collection";
+} from "@/modules/collection/copies";
 import { type Finish, type UserId } from "@/shared/kernel";
 
 // Read models for the collection screens (ADR 0006). Listing, filtering and exporting are shared
-// with the real collection (@/shared/card-search/sql-collection); this file says where the game's
+// with the real collection (copies-sql.ts); this file says where the game's
 // copies live.
 
 export type { CollectionFilter, CollectionPage, CollectionRow, OwnedPrintingCopy };

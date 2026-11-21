@@ -13,10 +13,6 @@ export { MAX_REAL_QUANTITY } from "./domain/copies";
 export type { MatchedLine, UnmatchedReason } from "./domain/match";
 export type { ProductDeck } from "./domain/product-cards";
 
-export type {
-  PrintingChoice,
-  RealCollectionPage,
-  RealCollectionRow,
-} from "./queries/real-collection";
+export type { PrintingChoice } from "./queries/real-collection";
 export { realPrintingIds } from "./queries/printing-ids";
 export * as realCollectionQueries from "./queries";
