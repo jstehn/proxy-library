@@ -79,4 +79,4 @@ cards never touch the game's money (owner answers, 2026-11-19). Checked against 
 
 - **Wishlist sharing default:** doc 51 §4 rules 1-2 say a wishlist is private until its owner turns
   `isShared` on; doc 48-social §13.2 and the code (`wishlistVisibility`, default `"friends"`, no
-  `isShared` column on wishlists) make it visible to friends by default. Code followed.
+  `isShared` column on wishlists) make it visible to friends by default. Code followed. Decided 2026-11-20 (owner): the code; doc 51 is marked.

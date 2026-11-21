@@ -109,11 +109,12 @@ The tools are `get_account`, `list_decks`, `get_deck`, `create_deck`, `update_de
 ## Disagreements recorded here (for the project manager)
 
 - **Response size:** doc 61 §4 rule 7 says no response exceeds about 40 KB; the code caps at 14,000
-  bytes (`MAX_TOOL_RESPONSE_BYTES`). Code followed.
+  bytes (`MAX_TOOL_RESPONSE_BYTES`). Code followed (owner, 2026-11-20: whatever is smaller and more effective). Doc 61 carries a "Superseded in part" line.
 - **List limits:** doc 28 §4 rule 7 and §13.9 say pages of 25 (max 100) and `search_for_deck` 8
   queries x 50 cards, 200 merged; the code's `search_cards` takes up to 6 queries and a `limit` of
   1-20 (default 10), `get_cards` up to 100 names, `find_replacements` a limit of 1-20 (default 10).
-- **Redirect URIs:** doc 30 §4 rule 1 says at most 5 per client; the code and doc 69 say 20.
+  Decided 2026-11-20 (owner): batches save queries and tokens; the code stands. Doc 28 is marked.
+- **Redirect URIs:** doc 30 §4 rule 1 says at most 5 per client; the code and doc 69 say 20. Decided 2026-11-20 (owner): 20; doc 30 is marked.
 - **Tools in the docs that no longer exist:** doc 56 (`audit_deck`, `simulate_opening_hands`), doc
   57 (`upgrade_roadmap`, `diff_deck`), doc 47-rating (`suggest_swaps`), doc 59 (mulligan drill) and
   doc 60/61 (`goldfish_start`, `goldfish_step`). The 27 unregistered tools were removed on purpose

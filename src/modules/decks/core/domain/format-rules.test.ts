@@ -85,6 +85,12 @@ describe("formatRules", () => {
     for (const format of [...CONSTRUCTED, "casual"] as const) {
       expect(formatRules(format).roleTargets).toEqual(SIXTY_CARD_TARGETS);
     }
+    // Removal is the one sourced guide: it stays inside the researched 4-8 range (decks-core.md).
+    for (const format of [...CONSTRUCTED, "casual"] as const) {
+      const { removal } = formatRules(format).roleTargets ?? { removal: 0 };
+      expect(removal).toBeGreaterThanOrEqual(4);
+      expect(removal).toBeLessThanOrEqual(8);
+    }
     expect(formatRules("limited").roleTargets).toBeNull();
     expect(formatRules("commander").roleGuideName).toBe("Commander");
     expect(formatRules("modern").roleGuideName).toBe("60-card");

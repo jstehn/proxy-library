@@ -41,7 +41,7 @@ brackets.
 10. **Politeness.** Requests per second: Scryfall 8, MTGJSON 4, card images 10, WPN pages 1,
     EDHREC 1, Commander Spellbook 1, Comprehensive Rules 1, with a descriptive `User-Agent`; the
     Scryfall bulk file is downloaded at most once per Scryfall update and cached on disk; card
-    images are fetched once and then served from disk. (doc 04 §4 rule 10, doc 13 §4 rule 3, doc 45
+    images are fetched once, when first viewed (owner, 2026-11-20), and then served from disk. (doc 04 §4 rule 10, doc 13 §4 rule 3, doc 45
     §4 rule 5, ADR 0007; `core.ts` `politeFetch`)
 11. **Embeddings** (for semantic search and similarity) are computed by the worker, incrementally:
     only cards with no row or a stale `(model, text version)`. (doc 53 §5 rule 4; `embed.test.ts`)
@@ -80,4 +80,4 @@ brackets.
 ## Disagreements recorded here (for the project manager)
 
 - **EDHREC sync cadence:** doc 45 §11.1 says a 14-day refresh and up to 50 missing or stale commanders
-  per night; the code uses `EDHREC_STALE_DAYS = 30` and `EDHREC_NIGHTLY_LIMIT = 200`.
+  per night; the code uses `EDHREC_STALE_DAYS = 30` and `EDHREC_NIGHTLY_LIMIT = 200`. Decided 2026-11-20 (owner): the code; doc 45 is marked.

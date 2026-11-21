@@ -67,6 +67,11 @@ export type FormatRuleSet = Readonly<{
 }>;
 
 const COMMANDER_ROLE_TARGETS: RoleTargets = { ramp: 10, draw: 10, removal: 8, wipe: 3 };
+// One guide number per role, for every 60-card format (a guide, never a rule). Researched 2026-11-21,
+// sources in docs/modules/decks-core.md "Role targets (sources)". Only removal is sourced for
+// 60-card decks (4-6, 6-8, about 8 in control: 6 sits inside every range). Ramp, draw and wipe have
+// no published 60-card count (control decks run about 8 draw); 4/6/2 stay as house guides.
+// Sources give ranges by archetype, not by format, so the formats share one set.
 const SIXTY_CARD_ROLE_TARGETS: RoleTargets = { ramp: 4, draw: 6, removal: 6, wipe: 2 };
 
 /** What every 60-card format shares; the formats below change only what they differ in. */

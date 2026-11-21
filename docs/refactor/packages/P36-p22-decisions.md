@@ -45,4 +45,4 @@ P22 did.
 
 ## Handoff
 
-(empty)
+Parts 1 and 3 done (part 2 is P32's). Role targets: research found only removal (4-8, guide 6) and control draw (about 8) for 60-card decks; ramp, draw and wipe stay 4/6/2 as house guides, one set for all 60-card formats (type holds one number; ranges live in decks-core.md "Role targets (sources)"). Seven design docs marked, module "Disagreements" entries closed.

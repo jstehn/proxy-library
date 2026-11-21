@@ -108,5 +108,5 @@ Money is integer cents everywhere (`Cents`).
 - **Kind-priced products in `msrp` mode:** doc 33 §4 rule 2 says "in both modes, a kind-priced product
   never sells below its resale floor"; the code and its tests (`pricing.test.ts`, "sells a kind-priced
   product at its kind MSRP too, without raising to resale value") sell it at the kind price in `msrp`
-  mode. The code's header comment (`pricing.ts`) agrees with the code. Code followed.
+  mode. The code's header comment (`pricing.ts`) agrees with the code. Code followed. Decided 2026-11-20 (owner): MSRP, not market rate; doc 33 is marked.
 - **Doc 27 §4 rule 1** (no price below resale) holds only in `value` mode, as doc 33 amends it.

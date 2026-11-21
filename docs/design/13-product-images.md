@@ -2,6 +2,7 @@
 
 - **Phase:** 13 (after launch)
 - **Status:** **Approved** (2026-09-30, with the decisions in section 13)
+- **Superseded in part** (2026-11-21, P36): images (card, product photo, key art) download once, when first viewed, and are cached on disk; no sync step prefetches them; owner: download and cache on view; see docs/modules/catalog.md
 - **Related ADRs:** 0007 (external data behind an anti-corruption layer), 0015 (new, proposed:
   Wizards Play Network as a source of product imagery), 0014 (pricing sources)
 
