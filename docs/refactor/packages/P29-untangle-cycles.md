@@ -74,4 +74,40 @@ rule changes), `docs/refactor/` (a new `module-cycles-baseline.txt`).
 
 ## Handoff
 
-(empty)
+**Done.** `pnpm lint:cycles` runs both modes; `docs/refactor/module-cycles-baseline.txt` is empty.
+
+**The check** (`scripts/check-cycles.ts --modules`): nodes are the modules, and inside `decks/domain`
+the areas `play`, `proxies`, `advice` and `core` (the table `DECKS_AREAS`; a file not listed is core;
+non-domain files of `decks` are one node, `decks`). It counts `import type` and `wiring.ts`, and
+leaves out test files. Starting list (15 lines, a DFS report, not every path): `accounts` in a loop
+with `collection`, `wallet`, `wishlist`, `decks`, `catalog`, `activity`, `inventory`, `packs`,
+`store` (all through `accounts/wiring.ts`); `decks` ↔ `advice`/`core`/`play`/`proxies` (test files);
+`advice` ↔ `core`; `core` ↔ `play`.
+
+**Cycles and how they were broken** (one commit each):
+
+1. `accounts/wiring.ts` imported collection, decks, wallet and wishlist for the account overview.
+   It now takes the four readers as `readers` (type `AccountOverviewReaders`). They are built in the
+   new `src/server/account-overview.ts` and passed from `server/capabilities.ts`. `decks` itself was
+   not changed. (P35 touches `accounts`: only `accounts/wiring.ts` changed.)
+2. Test files made fake cycles (decks tests import `application`/`testing`): the module graph skips
+   `*.test.ts`.
+3. `core` → `play`: `mana-symbols`, `mana-payment` and `deck-profile` are core (stats and the deck
+   view read them; they import only each other). Table change only, no file moved.
+4. `core` → `advice`: `EdhrecSignal` moved from `rate.ts` to `stats.ts` (`deck-view`, `preview` read it).
+5. `ProfileLine` moved from `suggest.ts` to `stats.ts` (and `suggest.ts` no longer defines it).
+
+**Already gone when P29 started:** `castability` ↔ `mana-base` and `suggest` ↔ `suggestion-types`
+(P15, P27, P28 rewrote them). `audit-report` still imports play types (`castability`, `goldfish`),
+but it is advice, so that is the arrow advice → play, not a cycle.
+
+**For P18:** the area table in the script is the starting split. Arrows that exist today and the
+ADR must allow: advice → core, advice → play (`audit-report`, `mana-base` types), play → core,
+proxies → core. Nothing in core imports another area. Type cycles remain **inside** an area, which
+P18's rule allows: `brackets` ↔ `deck` ↔ `format-rules` (core), `proxy-sheet` ↔ `playtest-card`
+(proxies). `advice` has 13 domain files (one over the 12-file rule: the scoring/building split
+fixes that); `core` has about 21.
+
+**Lines:** production code 75,422 → 75,505 (+83): the check is about +60 code lines and the accounts
+readers a net of about +10. The cycles were already mostly gone, so there was little to delete. The
+`sizes` ratchet needs the owner's approval.

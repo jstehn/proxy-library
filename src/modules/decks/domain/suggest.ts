@@ -7,21 +7,24 @@ import {
   RATING_WEIGHTS,
   rateCard,
   type CardRating,
-  type EdhrecSignal,
   type RatingCandidate,
   type RatingOptions,
   type RatingProfile,
 } from "./rate";
 import { formatRules } from "./format-rules";
 import { deckSignalProfile } from "./signals";
-import { deckStats, isLand, TARGETED_TAGS, type StatsLine } from "./stats";
+import {
+  deckStats,
+  isLand,
+  TARGETED_TAGS,
+  type EdhrecSignal,
+  type ProfileLine,
+  type StatsLine,
+} from "./stats";
 
 // Deck suggestions (design doc 20, section 3.2): what a deck is about, and how well a card fits
 // it. Pure: the queries fetch candidates, this decides their order and says why. The order always
 // comes from `rateCard` (rate.ts), the one scorer; this file adds the reasons in words.
-
-/** A deck line as the profile reads it: the statistics' line, plus its keyword abilities. */
-export type ProfileLine = StatsLine & Readonly<{ keywords?: readonly string[] }>;
 
 /** A card that could be suggested, from your collection or the store. */
 export type CandidateCard = RatingCandidate &

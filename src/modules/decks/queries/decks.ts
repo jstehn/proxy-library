@@ -18,7 +18,7 @@ import {
 } from "../domain/deck";
 import type { DeckLine, DeckSource, DeckView, OtherDeckUse } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
-import type { EdhrecSignal } from "../domain/rate";
+import type { EdhrecSignal } from "../domain/stats";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
 import { VISIBILITIES, type Visibility } from "../domain/sharing";
 

@@ -11,8 +11,8 @@ import {
   type PowerTier,
   type RatingWeights,
 } from "@/modules/decks/domain/rate";
-import { isLand } from "@/modules/decks/domain/stats";
-import { deckProfile, type CandidateCard, type ProfileLine } from "@/modules/decks/domain/suggest";
+import { isLand, type ProfileLine } from "@/modules/decks/domain/stats";
+import { deckProfile, type CandidateCard } from "@/modules/decks/domain/suggest";
 
 // Fits the rating weights per power tier (logistic regression) against held-out cards of the
 // Commander precons, and prints the result to paste into `RATING_WEIGHTS_BY_TIER` (rate.ts).

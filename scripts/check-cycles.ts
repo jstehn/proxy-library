@@ -7,7 +7,13 @@
 // What counts: imports that run. `import type` / `export type` (and imports whose every name is
 // `type`) are erased when compiled, so they can't make a cycle at runtime. Packages in
 // node_modules are left out: only our own files can form a cycle we can fix.
-import { dirname, relative } from "node:path";
+//
+// `--modules` looks one level up: the nodes are modules (src/modules/<name>) and, inside decks, the
+// areas P18 will split it into. It counts every import, `import type` too, and the `wiring.ts`
+// files (but not test files), and compares with docs/refactor/module-cycles-baseline.txt (a list of known cycles). A new
+// cycle fails; `--update` only removes entries from the baseline.
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import ts from "typescript";
 
 /** Each file and the files it imports at runtime. */
@@ -76,13 +82,16 @@ function isTypeOnly(statement: ts.ImportDeclaration | ts.ExportDeclaration): boo
 }
 
 /** The project's files (from tsconfig.json) and the runtime imports between them. */
-function readGraph(projectRoot: string): ImportGraph {
+function readGraph(projectRoot: string, includeTypes = false): ImportGraph {
   const configPath = ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
   if (configPath === undefined) throw new Error("tsconfig.json not found");
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, dirname(configPath));
   // Next.js's generated route types aren't ours to fix.
-  const files = parsed.fileNames.filter((file) => !/[\\/]\.next[^\\/]*[\\/]/.test(file));
+  const files = parsed.fileNames.filter(
+    (file) =>
+      !/[\\/]\.next[^\\/]*[\\/]/.test(file) && !(includeTypes && /\.test\.tsx?$/.test(file)),
+  );
   const ourFiles = new Set(files);
 
   const graph = new Map<string, string[]>();
@@ -93,7 +102,7 @@ function readGraph(projectRoot: string): ImportGraph {
       if (!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) continue;
       const specifier = statement.moduleSpecifier;
       if (specifier === undefined || !ts.isStringLiteral(specifier)) continue; // `export { a }`
-      if (isTypeOnly(statement)) continue;
+      if (!includeTypes && isTypeOnly(statement)) continue;
       const resolved = ts.resolveModuleName(specifier.text, file, parsed.options, ts.sys);
       const target = resolved.resolvedModule;
       if (target === undefined || target.isExternalLibraryImport) continue;
@@ -104,8 +113,76 @@ function readGraph(projectRoot: string): ImportGraph {
   return graph;
 }
 
+const MODULES_BASELINE_PATH = "docs/refactor/module-cycles-baseline.txt";
+
+/**
+ * The files of `decks/domain` by area (the split P18 makes); a file not listed is core. The mana
+ * and plan files are core: stats and the deck view read them, and play reads core, never the other
+ * way round. Other files of decks (application, queries, ...) stay one node, "decks".
+ */
+const DECKS_AREAS: Readonly<Record<string, string>> = {
+  play: "goldfish draws castability cast-by-turn cast-effects opening-hand/",
+  proxies: "proxy-sheet playtest-card token-proxies proxy-progress",
+  advice:
+    "rate signals suggest suggestion-types cuts swaps optimize replacements draft-deck mana-base commanders audit-report avoid-cards",
+};
+
+/** The node a file belongs to: its module, or for decks/domain its area. */
+export function nodeOf(path: string): string | undefined {
+  const match = /(?:^|\/)src\/modules\/([^/]+)\/(domain\/)?([^.]*)/.exec(
+    path.replaceAll("\\", "/"),
+  );
+  if (match === null) return undefined;
+  const [, moduleName, isDomain, name] = match;
+  if (moduleName !== "decks" || isDomain === undefined) return moduleName;
+  const area = Object.keys(DECKS_AREAS).find((candidate) =>
+    DECKS_AREAS[candidate]!.split(" ").some(
+      (entry) => name!.startsWith(entry) && (entry.endsWith("/") || name === entry),
+    ),
+  );
+  return `decks/${area ?? "core"}`;
+}
+
+/** The module graph: an edge for every import between two different nodes. */
+export function moduleGraph(fileGraph: ImportGraph): ImportGraph {
+  const edges = new Map<string, Set<string>>();
+  for (const [file, imports] of fileGraph) {
+    const from = nodeOf(file);
+    if (from === undefined) continue;
+    const targets = edges.get(from) ?? new Set<string>();
+    for (const imported of imports) targets.add(nodeOf(imported) ?? from);
+    targets.delete(from);
+    edges.set(from, targets);
+  }
+  return new Map([...edges].map(([node, targets]) => [node, [...targets].sort()]));
+}
+
+/** A cycle as one line, rotated to start at its smallest node, so the baseline is stable. */
+export function cycleLine(cycle: readonly string[]): string {
+  const start = cycle.indexOf([...cycle].sort()[0]!);
+  const rotated = [...cycle.slice(start), ...cycle.slice(0, start)];
+  return [...rotated, rotated[0]].join(" -> ");
+}
+
+function mainModules(projectRoot: string): void {
+  const found = findCycles(moduleGraph(readGraph(projectRoot, true))).map(cycleLine);
+  const baselinePath = join(projectRoot, MODULES_BASELINE_PATH);
+  const known = existsSync(baselinePath) ? readFileSync(baselinePath, "utf8").split("\n") : [];
+  if (process.argv.includes("--update")) {
+    const kept = known.filter((line) => found.includes(line));
+    writeFileSync(baselinePath, kept.map((line) => `${line}\n`).join(""));
+    console.log(`Module-cycle baseline: ${kept.length} known (was ${known.length - 1}).`);
+    return;
+  }
+  const added = found.filter((line) => !known.includes(line));
+  if (added.length > 0) console.error(`New module cycles:\n  ${added.join("\n  ")}`);
+  else console.log(`Module cycles: ${found.length}, all in the baseline.`);
+  process.exitCode = added.length > 0 ? 1 : 0;
+}
+
 function main(): void {
   const projectRoot = process.cwd();
+  if (process.argv.includes("--modules")) return mainModules(projectRoot);
   const graph = readGraph(projectRoot);
   const cycles = findCycles(graph);
   if (cycles.length === 0) {
