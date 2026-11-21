@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { CardPreviewDialog, EnlargedCard } from "./card-preview";
 import { CardImage } from "@/ui/mtg/card-image";
+import { rarityTextClass } from "@/ui/mtg/rarity";
 
 const FOIL_SHEEN =
   "pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1";
@@ -12,13 +13,6 @@ const NO_IMAGE_BOX =
 
 // One card in a grid (a set's cards, a pack's pulls). Hovering (or focusing, or tapping) it opens a larger version with
 // its printed text laid over the image, because the small grid image is too small to read.
-
-const RARITY_COLORS: Record<string, string> = {
-  common: "text-muted",
-  uncommon: "text-slate-600 dark:text-slate-400",
-  rare: "text-warning-text",
-  mythic: "text-orange-700 dark:text-orange-400",
-};
 
 type CardTileProps = {
   printing: PrintingCard;
@@ -116,7 +110,7 @@ export function CardTile(props: CardTileProps) {
       ) : (
         <span className="leading-tight font-medium">{printing.name}</span>
       )}
-      <span className={`text-xs ${RARITY_COLORS[printing.rarity] ?? "text-muted"}`}>
+      <span className={`text-xs ${rarityTextClass(printing.rarity)}`}>
         #{printing.collectorNumber} · {printing.rarity}
         {printing.variantLabel && ` · ${printing.variantLabel}`}
       </span>

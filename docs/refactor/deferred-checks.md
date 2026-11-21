@@ -253,3 +253,11 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       sentence the deck page uses; on `/admin/photos` at 390px "No page found" runs into "0 of 0".
       Still open, test gaps: `setPageSlug` and `choosePhoto` are never submitted by a test; the drafts use cases
       `decideCard` and `answerDeal` have no direct test (their domain rules do).
+- [x] **Done 2026-11-21: the open checks from P33 and P36.** A WCAG AA contrast script (every visible
+      text element against its real background; a planted 1.57:1 control was caught) found no failures
+      in dark or light on home, store, collection, decks, a deck, the commander finder, a set's cards,
+      drafts, wallet and admin economy, except one: rare-pull links in the activity feed (amber-600,
+      3.2:1 on white). Fixed with one shared rarity colour map (`ui/mtg/rarity.ts`, rare on the
+      warning token, mythic orange-700), and the stale-preview note on the warning token. The
+      commander finder's orderings look right in dark at 390px; its "ordered by" line no longer
+      lowercases "I" and "EDHREC".
