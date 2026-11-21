@@ -7,6 +7,9 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { BuyForm } from "./[code]/buy-form";
 import { categoryLabel, productLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
 
 export default async function StorePage(props: PageProps<"/store">) {
   const { capabilities, reads } = await readPage();
@@ -21,7 +24,7 @@ export default async function StorePage(props: PageProps<"/store">) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <KeyruneStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Store</h1>
@@ -93,7 +96,7 @@ export default async function StorePage(props: PageProps<"/store">) {
 
       {isSearching ? (
         result.sets.length === 0 && result.products.length === 0 ? (
-          <p className="text-muted text-sm">No sets or products matched your search.</p>
+          <EmptyState>No sets or products matched your search.</EmptyState>
         ) : (
           <div className="flex flex-col gap-8">
             {result.sets.length > 0 && (
@@ -194,10 +197,14 @@ export default async function StorePage(props: PageProps<"/store">) {
                         {product.msrp > product.listPrice ? (
                           <span className="text-sm tabular-nums">
                             {Cents.format(product.msrp)}{" "}
-                            <s className="text-muted">{Cents.format(product.listPrice)}</s>
+                            <s className="text-muted">
+                              <Price cents={product.listPrice} />
+                            </s>
                           </span>
                         ) : (
-                          <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                          <span className="text-sm tabular-nums">
+                            <Price cents={product.msrp} />
+                          </span>
                         )}
                         <BuyForm productId={product.id} productName={product.name} />
                       </li>
@@ -209,7 +216,7 @@ export default async function StorePage(props: PageProps<"/store">) {
           </div>
         )
       ) : result.sets.length === 0 ? (
-        <p className="text-muted text-sm">Nothing is for sale yet.</p>
+        <EmptyState>Nothing is for sale yet.</EmptyState>
       ) : (
         <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {result.sets.map((set) => (
@@ -249,6 +256,6 @@ export default async function StorePage(props: PageProps<"/store">) {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

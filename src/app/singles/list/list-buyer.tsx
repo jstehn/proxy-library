@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { ListQuote, PrintingPreference, QuoteLine } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
 import { buyListAction, quoteListAction, type BuyListResult } from "./actions";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/field";
 
 // The list on the left, what it would buy on the right (design doc 15, section 3.1). The quote
 // follows the text after a pause in typing; buying sends exactly the lines shown.
@@ -62,7 +64,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <section aria-label="Your list" className="flex flex-col gap-3 lg:w-96">
-        <textarea
+        <Textarea
           value={text}
           onChange={(event) => {
             setText(event.target.value);
@@ -72,7 +74,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           rows={14}
           aria-label="Cards to buy"
           placeholder={"4 Lightning Bolt\n1 Sol Ring (C21) 263\n2 The One Ring *F*"}
-          className={`${field} font-mono`}
+          className="font-mono"
         />
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -146,16 +148,16 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
                 {money(balanceAfter)}
               </span>
             </p>
-            <button
+            <Button
               type="button"
               onClick={buy}
               disabled={isBuying || isQuoting || balanceAfter < 0}
-              className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40"
+              size="xl"
             >
               {isBuying
                 ? "Buying…"
                 : `Buy ${quote.cards} ${quote.cards === 1 ? "card" : "cards"} for ${money(quote.totalCents)}`}
-            </button>
+            </Button>
           </div>
         )}
         {quote !== null && balanceAfter < 0 && (

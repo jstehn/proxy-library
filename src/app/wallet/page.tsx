@@ -4,6 +4,10 @@ import { LocalTime } from "@/ui/local-time";
 import { AddFundsForm } from "./add-funds-form";
 import { ledgerKindLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
+import { Card } from "@/ui/card";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
 
 export default async function WalletPage() {
   const { actor, capabilities, reads } = await readPage();
@@ -22,10 +26,12 @@ export default async function WalletPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
+    <Page width="3xl" spacing="roomy">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Wallet</h1>
-        <p className="text-4xl font-semibold tabular-nums">{Cents.format(summary.balance)}</p>
+        <p className="text-4xl font-semibold tabular-nums">
+          <Price cents={summary.balance} />
+        </p>
         {settings.allowance > 0 && (
           <p className="text-muted text-sm">
             Next allowance: {Cents.format(settings.allowance)} on{" "}
@@ -51,18 +57,18 @@ export default async function WalletPage() {
       </section>
 
       {actor.canSelfFund && (
-        <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
+        <Card as="section" padding="lg" stack>
           <h2 className="font-medium">Add your own funds</h2>
           <p className="text-muted text-sm">
             Money you add is recorded as self-funded, which admins can see.
           </p>
           <AddFundsForm limitText={Cents.format(settings.selfFundLimit)} />
-        </section>
+        </Card>
       )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">History</h2>
-        {history.length === 0 && <p className="text-muted text-sm">Nothing yet.</p>}
+        {history.length === 0 && <EmptyState>Nothing yet.</EmptyState>}
         <ul className="divide-border-subtle divide-y">
           {history.map((entry) => (
             <li
@@ -87,15 +93,17 @@ export default async function WalletPage() {
           ))}
         </ul>
       </section>
-    </main>
+    </Page>
   );
 }
 
 function Stat(props: { label: string; value: Cents }) {
   return (
-    <div className="border-border-subtle rounded-lg border p-3">
+    <Card padding="md">
       <dt className="text-muted text-xs">{props.label}</dt>
-      <dd className="text-lg font-medium tabular-nums">{Cents.format(props.value)}</dd>
-    </div>
+      <dd className="text-lg font-medium tabular-nums">
+        <Price cents={props.value} />
+      </dd>
+    </Card>
   );
 }

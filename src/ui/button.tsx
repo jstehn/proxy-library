@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "quiet";
-export type ButtonSize = "md" | "sm" | "xs" | "lg";
+export type ButtonSize = "md" | "sm" | "xs" | "lg" | "xl";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-accent text-accent-foreground font-medium hover:bg-accent-hover",
@@ -17,6 +17,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: "px-3 py-1 text-sm",
   xs: "px-2.5 py-1 text-xs",
   lg: "px-3 py-2 text-sm",
+  xl: "px-4 py-2 text-sm",
 };
 
 type ButtonLook = { variant?: ButtonVariant; size?: ButtonSize; className?: string };

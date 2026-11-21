@@ -12,6 +12,7 @@ import { FINISHES } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 // The singles store (design doc 07): any printing in an enabled set, at market price.
 
@@ -49,7 +50,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Singles</h1>
@@ -88,6 +89,6 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
         })}
       </ul>
       <Pagination action="/singles" values={values} page={page} pageCount={result.pageCount} />
-    </main>
+    </Page>
   );
 }

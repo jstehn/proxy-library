@@ -4,6 +4,7 @@ import { ManaStylesheet } from "@/ui/mana";
 import { MAX_LIST_LINES } from "@/modules/store";
 import { ListBuyer } from "./list-buyer";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 /** Characters accepted from `?list=`: plenty for MAX_LIST_LINES lines. */
 const MAX_LIST_TEXT = 20_000;
@@ -40,7 +41,7 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
   const balance = await wallet.refreshWallet(actor);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Buy a list of cards</h1>
@@ -64,6 +65,6 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
         )}
       </header>
       <ListBuyer startingText={startingText} balanceCents={balance} />
-    </main>
+    </Page>
   );
 }
