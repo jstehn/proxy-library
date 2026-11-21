@@ -27,13 +27,8 @@ import {
   type Pixels,
 } from "../domain/art-filters";
 import { symbolArt, type SymbolArt } from "@/modules/decks/core/client";
-import {
-  STRIPE_TINTS,
-  type DrawnSymbol,
-  type FontStyle,
-  type Measure,
-  type PlaytestDrawing,
-} from "../domain/playtest-card";
+import { STRIPE_TINTS, type PlaytestDrawing } from "../domain/playtest-card";
+import type { DrawnSymbol, FontStyle, Measure } from "../domain/playtest-text";
 import type { Box, Point, ProxyOptions } from "../domain/proxy-sheet";
 
 // Paints playtest proxies (design doc 22) into a pdf-lib document. The layout is already decided
