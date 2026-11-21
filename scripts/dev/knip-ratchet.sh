@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The knip gate (P24): `knip --production` findings must not exceed docs/refactor/knip-baseline.txt.
-# `scripts/knip-ratchet.sh --update` lowers the baseline to today's count (it never raises it).
+# `scripts/dev/knip-ratchet.sh --update` lowers the baseline to today's count (it never raises it).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 baseline_file=docs/refactor/knip-baseline.txt
 count=$(pnpm --silent knip:production 2>&1 |

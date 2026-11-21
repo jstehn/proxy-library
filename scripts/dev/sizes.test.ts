@@ -33,7 +33,7 @@ describe("countProductionCodeLines", () => {
     const files = [
       file("src/modules/a/domain/a.ts", 10, "production"),
       file("worker/index.ts", 5, "production"),
-      file("scripts/sizes.ts", 3, "production"),
+      file("scripts/dev/sizes.ts", 3, "production"),
       file("src/modules/a/domain/a.test.ts", 100, "test"),
       file("src/modules/a/testing/fake.ts", 50, "support"),
       file("tests/fixtures/cards.ts", 70, "support"),

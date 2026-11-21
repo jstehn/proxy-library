@@ -428,7 +428,7 @@ To list clones by file yourself:
 ```bash
 pnpm exec tsx -e '
 import { readFileSync } from "node:fs"; import { execSync } from "node:child_process";
-import { findCloneRuns } from "./scripts/clones.ts";
+import { findCloneRuns } from "./scripts/dev/clones.ts";
 const files = new Map(execSync("git ls-files src worker scripts").toString().split("\n")
   .filter((f) => /\.tsx?$/.test(f) && !/\.(test|spec)\./.test(f) && !/\/(testing|fixtures)\//.test(f))
   .map((f) => [f, readFileSync(f, "utf8")]));

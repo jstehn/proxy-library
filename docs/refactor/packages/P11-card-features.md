@@ -35,8 +35,8 @@ Not deleted here: any other regex. P12–P14 own them.
 `docs/design/66-card-features.md` and `docs/adr/0027-card-features.md` (from the P11 branch; edit
 section 1 and the "How each consumer moves" table), new `src/modules/catalog/domain/features/`,
 `catalog/infrastructure/schema.ts` and a migration (decision 3: precompute), `catalog/application/sync.ts`,
-`worker/index.ts`, the one consumer the first recognizer replaces, new `scripts/regex-count.ts`
-(or an option of `scripts/sizes.ts`) and `docs/refactor/regex-baseline.txt`.
+`worker/index.ts`, the one consumer the first recognizer replaces, new `scripts/dev/regex-count.ts`
+(or an option of `scripts/dev/sizes.ts`) and `docs/refactor/regex-baseline.txt`.
 **Avoid** the other consumers (P12–P14) and `src/shared/kernel/card-types.ts` (P26).
 
 ## Steps
@@ -63,14 +63,14 @@ section 1 and the "How each consumer moves" table), new `src/modules/catalog/dom
    - delete the old function, its tests and its allowlist entry.
      The commit's net lines must be ≤ 0 for the recognizer and its callers together (the model's own
      cost is in earlier commits).
-6. **The regex-count ratchet.** Add a script (a mode of `scripts/sizes.ts` or a small
-   `scripts/regex-count.ts`) that counts regex literals that read oracle text (`/…/` with `.test(`,
+6. **The regex-count ratchet.** Add a script (a mode of `scripts/dev/sizes.ts` or a small
+   `scripts/dev/regex-count.ts`) that counts regex literals that read oracle text (`/…/` with `.test(`,
    `.match(` or `.replace(` on a variable named like `text`, `oracle`, `lower`) in
    `src/modules/decks/domain`, `src/shared/card-search`, `src/modules/drafts/domain` and
    `src/modules/catalog/domain`, **excluding** `catalog/domain/features/recognizers/`. Start from
    the count today (report 4 says about 130, plus the 154 `.test(`/`.match(` hits a plain grep
    finds; define the count precisely in the script). Save it to `docs/refactor/regex-baseline.txt`.
-   `--update` only lowers it. Add it to `scripts/check.sh`. Every P12–P14 slice lowers it.
+   `--update` only lowers it. Add it to `scripts/dev/check.sh`. Every P12–P14 slice lowers it.
 7. **A lint rule** (doc 66 section 10): a regex literal that tests oracle text is an error outside
    `catalog/domain/features/recognizers/`, except the files named in a sorted
    `NOT_YET_RECOGNIZED` list (each deleted by the slice that moves it). Generate the list from

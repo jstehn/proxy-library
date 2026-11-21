@@ -62,7 +62,7 @@ image, like a card Scryfall hasn't caught up with.
   only; `default-cards.jsonl` id `00000000-7a9a-…-00bb`, `lang: "ja"`). It must get its image
   and price, like the real Japanese-only Mystical Archive cards (design doc 04, rule 8).
 
-Regenerate with `scripts/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
+Regenerate with `scripts/dev/fixtures/make-catalog-fixtures.py` (needs freshly downloaded
 `BLB.json.gz`, `SPG.json.gz` and `SetList.json.gz`).
 
 `lists/archidekt-categories.txt` is a real Commander deck list (Jolene, the Plunder Queen) as a

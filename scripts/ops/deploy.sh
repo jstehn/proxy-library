@@ -2,7 +2,7 @@
 # Build the image here, copy it to the Docker server, and create or update the Portainer stack
 # (docs/deploy.md). The image is tagged with the git commit, so every deploy can be rolled back.
 #
-#   scripts/deploy.sh
+#   scripts/ops/deploy.sh
 #
 # Needs your server's settings in deploy/local.env (copy deploy/local.env.example; it's
 # git-ignored), SSH access to the server (to load the image, which isn't in a registry) and a
@@ -12,7 +12,7 @@
 # The first deploy creates the stack with new random secrets, sent straight to Portainer (never
 # printed or saved here). Later deploys keep the stack's settings and only change IMAGE_TAG.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 # Your server's settings: from the environment, else deploy/local.env.
 if [[ -r deploy/local.env ]]; then

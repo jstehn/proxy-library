@@ -28,7 +28,7 @@ Two things had slowed down: `pnpm check` and building a feature. Measured on 202
 
 - ESLint and Prettier run with `--cache --cache-strategy content`, so a file that passed and
   hasn't changed is skipped. Their caches live in `node_modules/.cache/`.
-- `scripts/check.sh` runs typecheck, lint, the cycle check, the format check and the unit tests
+- `scripts/dev/check.sh` runs typecheck, lint, the cycle check, the format check and the unit tests
   in parallel. It prints one line for each check, and prints a check's output only when that
   check fails.
 - Prettier ignores `drizzle/meta/`, which only drizzle-kit writes.

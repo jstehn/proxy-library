@@ -9,7 +9,7 @@ import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-
 
 // The areas of the decks module (ADR 0029) and the areas each may import (always through that
 // area's index.ts or client.ts). Only these names and the cycle check's table
-// (scripts/check-cycles.ts) spell the areas out.
+// (scripts/dev/check-cycles.ts) spell the areas out.
 const DECKS_ARROWS = {
   core: [],
   scoring: ["core"],
@@ -436,7 +436,7 @@ export default defineConfig([
           policies,
         },
       ],
-      // Import cycles are checked by `pnpm lint:cycles` (scripts/check-cycles.ts), not by
+      // Import cycles are checked by `pnpm lint:cycles` (scripts/dev/check-cycles.ts), not by
       // import/no-cycle: that rule took over three minutes of every lint (ADR 0009, 2026-11-10).
     },
   },

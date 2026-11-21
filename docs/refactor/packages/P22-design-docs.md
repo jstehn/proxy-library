@@ -78,7 +78,7 @@ doc map). **Avoid:** `docs/architecture/` (P21), source code.
    `grep -rniE "design doc [0-9]+" src worker tests scripts docs lessons` finds more, because it
    includes tests: use the script's own count. Archiving must never leave a citation pointing
    nowhere.
-   - Add `scripts/check-doc-citations.ts` and `"docs:citations": "tsx scripts/check-doc-citations.ts"`.
+   - Add `scripts/dev/check-doc-citations.ts` and `"docs:citations": "tsx scripts/dev/check-doc-citations.ts"`.
      It scans `src`, `worker`, `tests`, `scripts`, `docs`, `lessons` and the README for
      `design doc NN`, `doc NN` (only when `design` or `docs/design` appears in the same file or the
      phrase is "design doc"), and `design/NN-name.md` links. For each number it checks that
@@ -86,7 +86,7 @@ doc map). **Avoid:** `docs/architecture/` (P21), source code.
      (47, 48) are fine; the missing ones (50, 62, 63) are listed in an allowlist with a reason, and
      any other missing number fails. Links with a path must point to a file that exists.
    - Unit-test the matcher on a few lines, including "design doc 09" and `docs/design/archive/…`.
-   - Add it to `scripts/check.sh` once it exits 0. Run it before **and** after step 5's moves; it
+   - Add it to `scripts/dev/check.sh` once it exits 0. Run it before **and** after step 5's moves; it
      must pass both times.
 7. **Numbering.** Don't renumber (it breaks links from lessons, ADRs and code comments). Note in
    the index that 47 and 48 each have two docs and 50, 62, 63 don't exist.

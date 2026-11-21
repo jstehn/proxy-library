@@ -5,7 +5,7 @@
 # ESLint and Prettier keep a cache in node_modules/.cache: files that haven't changed since they
 # last passed are skipped. `rm -rf node_modules/.cache` forces a full run.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 output_dir=$(mktemp -d)
 trap 'rm -rf "$output_dir"' EXIT
@@ -21,7 +21,7 @@ commands=(
   "pnpm --silent regex-count"
   "pnpm --silent clones"
   # A ratchet, like `sizes`: the finding count may fall, but not rise above the baseline.
-  "scripts/knip-ratchet.sh"
+  "scripts/dev/knip-ratchet.sh"
 )
 
 process_ids=()

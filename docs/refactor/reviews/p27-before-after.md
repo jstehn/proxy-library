@@ -216,4 +216,4 @@ The deliberate differences, for you to judge:
    "no Game Changers at bracket 2 or lower" filter works there too.
 
 Not changed: the weights. `RATING_WEIGHTS` and its tier overrides are the same numbers as before,
-now documented, marked as fitted from data, and tied to `scripts/fit-rating-weights.ts`.
+now documented, marked as fitted from data, and tied to `scripts/dev/fit-rating-weights.ts`.

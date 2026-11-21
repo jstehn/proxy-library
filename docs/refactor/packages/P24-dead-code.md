@@ -26,7 +26,7 @@ Verify each path with `ls` first. Line counts are file lines; code lines are abo
 | Upgrade roadmap                                                                | `decks/domain/upgrade-roadmap.ts` (158) and test (114), `decks/queries/upgrade-roadmap.ts` (114) | 272              |
 | `deckCombosView`                                                               | `src/modules/decks/queries/deck-combos.ts`                                                       | 101              |
 | Rating evaluation (`evaluateHoldout`)                                          | `decks/domain/eval.ts` (96) and test (166)                                                       | 96               |
-| The evaluation half of the rating script (step 4 keeps the `--calibrate` half) | `scripts/eval-ratings.ts`                                                                        | about 150 of 304 |
+| The evaluation half of the rating script (step 4 keeps the `--calibrate` half) | `scripts/dev/eval-ratings.ts`                                                                    | about 150 of 304 |
 | Odds helpers only tests use: `deckOdds`, `chanceByTurn`                        | `decks/domain/draws.ts` (about lines 254–280 and 345–371) and their tests in `draws.test.ts`     | about 90         |
 | Unused client file                                                             | `src/modules/catalog/client.ts`                                                                  | 3                |
 
@@ -70,7 +70,7 @@ helpers, and `mana.ts` as far as `castability` and `mana-base` use it.
 The files above; `src/modules/decks/index.ts` and `client.ts` (remove exports); `src/server/core.ts`;
 `worker/index.ts`; `drizzle/` (one new migration); `tests/integration/embeddings.int.test.ts`;
 `docs/design/60-interactive-goldfish-and-comprehensive-rules-mcp.md` (one line);
-`docs/refactor/removal-list.md`; `scripts/check.sh`.
+`docs/refactor/removal-list.md`; `scripts/dev/check.sh`.
 
 ## Steps
 
@@ -82,12 +82,12 @@ The files above; `src/modules/decks/index.ts` and `client.ts` (remove exports); 
    `decks/index.ts` and `client.ts`. `tests/integration/embeddings.int.test.ts` calls
    `deckCombosView` (step 6 in that test) and `deckUpgradeRoadmap` (step 9): delete those steps.
 3. **Test-only functions:** delete each with its tests, in one commit.
-4. **The rating script.** `scripts/eval-ratings.ts` does two jobs: holdout evaluation
+4. **The rating script.** `scripts/dev/eval-ratings.ts` does two jobs: holdout evaluation
    (`evaluateHoldout`) and `--calibrate` (`fitLogisticWeights`). Keep the second.
-   - Rename the file `scripts/fit-rating-weights.ts`. Remove the evaluation code and the `eval`
+   - Rename the file `scripts/dev/fit-rating-weights.ts`. Remove the evaluation code and the `eval`
      import. Keep `--calibrate`'s behaviour.
    - Add one comment above `RATING_WEIGHTS` in `decks/domain/rate.ts`: the weights were fitted
-     from data by `scripts/fit-rating-weights.ts` (owner answer D5).
+     from data by `scripts/dev/fit-rating-weights.ts` (owner answer D5).
    - Delete `eval.ts` and its test. Search `package.json` and `docs/` for the old script name.
 5. **The interactive goldfish**, in this order, so the tree compiles after every commit:
    1. Remove the worker's prune call and the `goldfishSessions` wiring in `core.ts`.
@@ -110,7 +110,7 @@ The files above; `src/modules/decks/index.ts` and `client.ts` (remove exports); 
    deleted. Search `docs/` and `CLAUDE.md` for the other names (`grep -rn "mulligan trainer\|card
 packages\|interactive goldfish" docs README.md CLAUDE.md`) and fix only statements that are
    now false.
-7. Flip `knip --production` in `scripts/check.sh` from a report to a gate. It must exit 0. Fix the
+7. Flip `knip --production` in `scripts/dev/check.sh` from a report to a gate. It must exit 0. Fix the
    leftovers in this package. If one has to stay, put it in `knip.json` with a reason.
 8. Delete the rows this package closes from `removal-list.md`. Run `pnpm sizes --update`.
 
@@ -145,7 +145,7 @@ refactor/main` over src, worker, scripts, tests: 47 files, +240 / -5,178 (tests 
 `.test.ts` 59, `queries/packages.ts` 18, `upgrade-roadmap.ts` 158 and `.test.ts` 114,
 `queries/upgrade-roadmap.ts` 114, `queries/deck-combos.ts` 101, `eval.ts` 96 and `eval.test.ts` 166,
 `friendship.test.ts` 22 (only tested `viewerRelation`), `catalog/client.ts` 3.
-`scripts/eval-ratings.ts` (304) became `scripts/fit-rating-weights.ts` (the fit only, always runs).
+`scripts/dev/eval-ratings.ts` (304) became `scripts/dev/fit-rating-weights.ts` (the fit only, always runs).
 Test-only functions deleted with their tests: `exportWithTags`, `primerSections`, `preparedForTest`
 (and the `sharesPlan` equivalence test that used it), `msrpFor` (its property tests now compute the
 same expression inline), `viewerRelation`, `defaultProfile`, `chanceByTurn`; plus the unused `spendMana`
@@ -158,7 +158,7 @@ and `addMana` in `mana.ts`.
 became 0 by ignoring test-support directories; 147 exports, 310 types remain). What remains is mostly
 `index.ts` re-exports and types that only integration tests use (e.g. `auditDeck`, `deckStats`,
 `storePage`). Deleting them is not on the package's list and overlaps P26 (types), so I did not.
-`pnpm check` gates knip as a ratchet (`scripts/knip-ratchet.sh`, `knip-baseline.txt` = 457), like
+`pnpm check` gates knip as a ratchet (`scripts/dev/knip-ratchet.sh`, `knip-baseline.txt` = 457), like
 `sizes`. The PM or owner decides whether to cut the rest.
 
 **For P28.** The last commit with `sim-pipeline.ts` is `156a971`. `FormatRuleSet.commandZoneTaxPerCast`

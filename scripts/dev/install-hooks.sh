@@ -4,7 +4,7 @@
 # the lint. No unit tests, so a commit stays under about 30 seconds. Skip it once with
 # `git commit --no-verify`.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 hook_path="$(git rev-parse --git-path hooks)/pre-commit"
 mkdir -p "$(dirname "$hook_path")"

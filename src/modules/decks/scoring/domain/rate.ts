@@ -99,7 +99,7 @@ export const EMBED_SIM_BASELINE = 0.55;
 /**
  * THE weight table: the one scorer (`rateCard`) judges a card for suggestions, cuts, "cards like
  * this one" and draft-a-deck with these numbers. They are FITTED FROM DATA, not tuned by hand:
- * `scripts/fit-rating-weights.ts` runs a class-balanced logistic regression (`fitLogisticWeights`)
+ * `scripts/dev/fit-rating-weights.ts` runs a class-balanced logistic regression (`fitLogisticWeights`)
  * per power tier, on cards held out of real Commander precon decklists (positives) against cards
  * that aren't in the deck (negatives), and prints the numbers pasted here (last fitted
  * 2026-11-13). Only the four the data can't show (the two caps and the two penalties) are set by

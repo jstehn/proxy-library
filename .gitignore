@@ -38,7 +38,7 @@ test-results/
 # Playwright
 /playwright/.cache/
 
-# Database backups (scripts/backup.sh)
+# Database backups (scripts/ops/backup.sh)
 backups/
 
 # Agent worktrees made by Claude Code (other branches checked out here)

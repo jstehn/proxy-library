@@ -77,7 +77,7 @@ download (`Content-Disposition: attachment`).
   `worker` (`pnpm worker schedule`). Volumes: `pgdata`, `images`, `sync-cache`.
 - **Configuration** comes only from environment variables, as since Phase 0. `.env.example`
   documents them, and `AUTH_SECRET` must be set.
-- **Backups:** `scripts/backup.sh` runs `pg_dump` inside the `db` container into `backups/`.
+- **Backups:** `scripts/ops/backup.sh` runs `pg_dump` inside the `db` container into `backups/`.
 - **Tested locally:** build, start, `/api/health` answers, the register page renders, and the
   worker's `health` command passes. A full catalog sync isn't run in the test, because it downloads
   about 80 MB from Scryfall. The README says how to run the first one.

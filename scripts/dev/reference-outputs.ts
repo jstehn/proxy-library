@@ -1,7 +1,7 @@
 // One-off record of what each registered LLM tool returns today (P00, docs/refactor/packages).
 // Rebuilt features are compared with these files; they're a guide, not a test.
 //
-// Run: DATABASE_URL=$TEST_DATABASE_URL pnpm exec tsx scripts/reference-outputs.ts
+// Run: DATABASE_URL=$TEST_DATABASE_URL pnpm exec tsx scripts/dev/reference-outputs.ts
 // It uses the integration test database and the fixture catalog (no network). Tools that call an
 // outside service (EDHREC, Commander Spellbook, YouTube, Reddit, Scryfall rulings) are not called:
 // their file holds the input schema and the reason.
@@ -9,9 +9,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { buildCore } from "@/server/core";
 import { loadConfig } from "@/shared/config";
-import { actor, close, db, loadFixtureCatalog, resetPlayers } from "../tests/integration/harness";
-import { callTool, inputJsonSchema, TOOLS } from "../src/app/_llm-tools/registry";
-import type { ToolContext } from "../src/app/_llm-tools/tool";
+// One line on purpose: wrapped by Prettier it would grow by six lines (the width is 100).
+// prettier-ignore
+import { actor, close, db, loadFixtureCatalog, resetPlayers } from "../../tests/integration/harness";
+import { callTool, inputJsonSchema, TOOLS } from "../../src/app/_llm-tools/registry";
+import type { ToolContext } from "../../src/app/_llm-tools/tool";
 
 const OUTPUT_FOLDER = "docs/refactor/reference/tools";
 const NETWORK_TOOLS: Record<string, string> = {

@@ -46,7 +46,7 @@ A recurring need means the rule or the architecture should change (via an ADR).
 `import/no-cycle` had grown to 195 of the 212 seconds ESLint took, and so most of every
 `pnpm check` (about 4 minutes). Its cost is in building the import graph for every file, so
 neither `ignoreExternal` nor `maxDepth: 2` made it faster. Cycles are now found by
-`scripts/check-cycles.ts` (`pnpm lint:cycles`, run by `pnpm check`): it reads each file of the
+`scripts/dev/check-cycles.ts` (`pnpm lint:cycles`, run by `pnpm check`): it reads each file of the
 tsconfig project once with the TypeScript compiler, resolves imports as tsconfig does (`@/…`
 included), and searches the graph once, in about 2 seconds for 610 files. Like the rule, it
 ignores packages and type-only imports (`import type`, or every name marked `type`), which are

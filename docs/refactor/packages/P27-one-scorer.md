@@ -43,11 +43,11 @@ opening-hand engines (P15, P28).
    - Which callers use which score today (suggestions, cuts, draft-a-deck, optimizer, commanders).
    - What `rateCard` gives each: where it needs a different **input** (a cut asks "how much does
      this card help the deck?") but not a different **weight table**. Different inputs are fine.
-   - The one weight table, marked **fitted from data**, naming `scripts/fit-rating-weights.ts`
+   - The one weight table, marked **fitted from data**, naming `scripts/dev/fit-rating-weights.ts`
      (P24 renames it) and the date and data it was fitted on.
    - The deliberate behaviour changes: a suggestion list and a cut list may reorder. Record
      before/after for the reference decks (`docs/refactor/reference/`, the P00 script
-     `scripts/reference-outputs.ts`) so the owner can look.
+     `scripts/dev/reference-outputs.ts`) so the owner can look.
 2. **Pin today's behaviour** for the reference decks: top 10 suggestions, top 10 cuts, the
    draft-a-deck pick list. Save as test fixtures. After the change, these are allowed to differ,
    but each difference is listed in the handoff.
@@ -112,7 +112,7 @@ lowered; the clone and regex baselines didn't move.
 **The one scorer.** `rateCard` (`rate.ts`) now orders suggestions for the deck, per role, "cards
 like this one", budget picks, cuts, the swap panel's candidates, draft-a-deck and the optimizer.
 One table, `RATING_WEIGHTS` plus the two tier overrides, one line per weight, marked fitted from
-data (`scripts/fit-rating-weights.ts`, last fitted 2026-11-13; only the two caps and the two
+data (`scripts/dev/fit-rating-weights.ts`, last fitted 2026-11-13; only the two caps and the two
 penalties are set by hand). A cut, a role list and "like this one" differ in their **inputs** (the
 deck's profile with this card's role as the only gap, a deck made of one card, an `overBracket`
 flag), never in the weight table.
