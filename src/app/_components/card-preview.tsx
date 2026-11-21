@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
+import { Button } from "@/ui/button";
+import { CardView } from "@/ui/card-view";
 import { ManaText } from "@/ui/mana";
 
 // A card, larger, with its printed text laid over the image: used wherever a card is too small
@@ -120,40 +122,32 @@ export function CardPreviewDialog(props: {
         if (event.target === dialogRef.current) onClose();
       }}
       aria-label={printing.name}
-      className="border-border-subtle m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border bg-zinc-950 p-4 text-white shadow-2xl backdrop:bg-black/70"
+      className="border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70"
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">{printing.name}</span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close card preview"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-zinc-700 px-3 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Close
-        </button>
-      </div>
-      {printing.hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/images/${printing.id}/normal/front`}
-          alt={printing.name}
-          width={488}
-          height={680}
-          className="mb-3 aspect-[488/680] w-full rounded-[4.5%] bg-zinc-800"
-        />
-      )}
-      <div className="flex flex-col gap-3 text-xs">
-        {printing.faces.map((face, index) => (
-          <FaceText key={index} face={face} isBackFace={index > 0} />
-        ))}
-        {(printing.variantLabel || printing.artist) && (
-          <p className="text-[11px] text-white/70">
-            {printing.variantLabel && `${printing.variantLabel} · `}
-            {printing.artist && `Illustrated by ${printing.artist}`}
-          </p>
-        )}
-      </div>
+      <CardView
+        printingId={printing.id}
+        name={printing.name}
+        hasImage={printing.hasImage}
+        faces={printing.faces}
+        credit={[printing.variantLabel, printing.artist && `Illustrated by ${printing.artist}`]
+          .filter(Boolean)
+          .join(" · ")}
+        layout="stacked"
+        heading={
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{printing.name}</span>
+            <Button
+              type="button"
+              onClick={onClose}
+              aria-label="Close card preview"
+              variant="secondary"
+              className="min-h-11 min-w-11"
+            >
+              Close
+            </Button>
+          </div>
+        }
+      />
     </dialog>
   );
 }

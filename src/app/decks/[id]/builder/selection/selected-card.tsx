@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { FaceText } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
 import { copiesToTake } from "@/modules/decks/client";
@@ -12,6 +11,7 @@ import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
+import { CardView } from "@/ui/card-view";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -59,16 +59,12 @@ export function SelectedCard(props: {
       stack
       className="bg-background"
     >
-      <div className="flex gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/api/images/${selection.printingId}/normal/front`}
-          alt={selection.name}
-          width={488}
-          height={680}
-          className="bg-surface-raised aspect-[488/680] h-auto w-32 shrink-0 self-start rounded-[4.5%] shadow-md sm:w-48"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 text-xs">
+      <CardView
+        printingId={selection.printingId}
+        name={selection.name}
+        faces={detail?.faces ?? null}
+        textStyle="panel"
+        heading={
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold">{selection.name}</h3>
             <button
@@ -80,16 +76,9 @@ export function SelectedCard(props: {
               ✕
             </button>
           </div>
-          {/* The card's printed text, on a dark panel like the card previews. */}
-          <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-md bg-zinc-900 p-2 text-white">
-            {detail === null ? (
-              <p className="text-white/60">Loading the card&apos;s text…</p>
-            ) : (
-              detail.faces.map((face, index) => (
-                <FaceText key={index} face={face} isBackFace={index > 0} />
-              ))
-            )}
-          </div>
+        }
+      >
+        <div className="flex flex-col gap-2 text-xs">
           <dl className="flex flex-wrap gap-x-3 gap-y-0.5">
             <Fact
               label="You own"
@@ -144,7 +133,7 @@ export function SelectedCard(props: {
           )}
           {selection.misfit && <p className="text-warning-text">{MISFIT_TEXT[selection.misfit]}</p>}
         </div>
-      </div>
+      </CardView>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1" role="group" aria-label="How many to add">
