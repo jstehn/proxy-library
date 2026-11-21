@@ -12,6 +12,7 @@ import {
 import { valueOr } from "../answer";
 import { tokensAction } from "./actions";
 import { Card } from "@/ui/card";
+import { Badge } from "@/ui/badge";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.
@@ -181,9 +182,9 @@ export function TokensPanel(props: Props) {
                         {KIND_LABELS[item.kind]}
                       </span>
                       {item.sideboardOnly && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        <Badge tone="amber" size="sm">
                           Sideboard only
-                        </span>
+                        </Badge>
                       )}
                       {!item.includedInProxies && (
                         <span className="text-muted text-[11px]">(unchecked for PDF)</span>

@@ -9,6 +9,10 @@ import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/field";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
+import { Badge } from "@/ui/badge";
+
+const SHARED_BADGE =
+  "rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-200";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
   const { actor, reads } = await readPage();
@@ -92,39 +96,31 @@ export default async function DecksPage(props: PageProps<"/decks">) {
               {deck.origin?.kind === "draft" && (
                 <Link
                   href={`/drafts/${deck.origin.draftId}`}
-                  className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  className={SHARED_BADGE}
                   title="Made by a draft: open the draft"
                 >
                   Draft
                 </Link>
               )}
               {deck.visibility === "shared" && (
-                <span
-                  className="rounded bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-950 dark:text-sky-200"
-                  title="Every player can see this deck"
-                >
+                <Badge title="Every player can see this deck" tone="sky">
                   Shared
-                </span>
+                </Badge>
               )}
               <span className="text-muted text-sm">
                 {FORMAT_LABELS[deck.format]} · {deck.cards} cards
               </span>
               {deck.usesRealCards && (
-                <span
-                  className="text-warning-ink rounded bg-amber-100 px-2 py-0.5 text-xs font-medium dark:bg-amber-950"
-                  title="Cards you own for real count as owned in this deck"
-                >
+                <Badge title="Cards you own for real count as owned in this deck" tone="amber">
                   real cards
-                </span>
+                </Badge>
               )}
               {deck.short > 0 ? (
                 <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200">
                   short {deck.short}
                 </span>
               ) : (
-                <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
-                  all owned
-                </span>
+                <Badge tone="green">all owned</Badge>
               )}
               <span className="flex-1" />
               <span className="text-muted text-xs">

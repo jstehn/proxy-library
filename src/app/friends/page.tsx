@@ -13,6 +13,9 @@ import { Card } from "@/ui/card";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
 
+const ONLINE_BADGE =
+  "rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
+
 export default async function FriendsPage(props: PageProps<"/friends">) {
   const { actor, reads } = await readPage();
 
@@ -204,11 +207,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                       </Button>
                     </form>
                   )}
-                  {player.relation === "friend" && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      Friends
-                    </span>
-                  )}
+                  {player.relation === "friend" && <span className={ONLINE_BADGE}>Friends</span>}
                 </div>
               </li>
             ))}

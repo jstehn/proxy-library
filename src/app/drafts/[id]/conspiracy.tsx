@@ -22,6 +22,9 @@ import {
 import { Card } from "@/ui/card";
 import { Select } from "@/ui/field";
 
+const OFFER_BOX =
+  "bg-warning-soft flex flex-col gap-2 rounded-md border border-amber-400 p-3 text-sm dark:border-amber-700";
+
 // The parts of the draft page that Conspiracy's draft-matters cards add (design doc 18): what
 // everyone may see at each seat, the reveal log, prompts, any-time actions and Deal Broker.
 
@@ -160,7 +163,7 @@ export function ColorPrompt(props: {
   names: Names;
 }) {
   return (
-    <section className="bg-warning-soft flex flex-col gap-2 rounded-md border border-amber-400 p-3 text-sm dark:border-amber-700">
+    <section className={OFFER_BOX}>
       <p>
         Choose a color for {props.names.printing(props.prompt.card.printingId)}
         {props.prompt.chosen.length > 0 &&

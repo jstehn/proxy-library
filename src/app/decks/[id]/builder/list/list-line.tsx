@@ -4,6 +4,11 @@ import type { PrintingCard } from "@/modules/catalog";
 import type { Board, DeckLine } from "@/modules/decks";
 import { ManaText } from "@/ui/mana";
 
+const BRACKET_BADGE =
+  "shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200";
+const SHOWCASE_BADGE =
+  "shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-black";
+
 // One card in the deck list: its count, name, badges and the buttons that change it.
 
 export function ListLine(props: {
@@ -37,7 +42,7 @@ export function ListLine(props: {
         {line.finish !== "nonfoil" && (
           <span
             title={`The deck's copy is ${line.finish}: it prints with the foils`}
-            className="shrink-0 rounded bg-gradient-to-r from-amber-200 via-pink-200 to-sky-200 px-1 text-[10px] font-medium text-black"
+            className={SHOWCASE_BADGE}
           >
             {line.finish === "etched" ? "etched" : "foil"}
           </span>
@@ -45,7 +50,7 @@ export function ListLine(props: {
         {line.isGameChanger && (
           <span
             title="On Wizards' Game Changer list: none in brackets 1–2, up to three in bracket 3"
-            className="shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200"
+            className={BRACKET_BADGE}
           >
             GC
           </span>

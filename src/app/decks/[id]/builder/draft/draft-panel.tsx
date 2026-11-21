@@ -11,6 +11,9 @@ import type { LandsToAdd } from "../mana-base/mana-base-panel";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 
+const NOTICE_BOX =
+  "rounded border border-amber-300 bg-amber-50/70 p-2 text-xs text-amber-950 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200";
+
 // Draft deck panel (design doc 37, section 9): fills open slots up to 100 cards from owned cards
 // first, then optional store cards for remaining gaps, plus a mana base from planManaBase.
 
@@ -87,7 +90,7 @@ export function DraftPanel(props: {
           ✕
         </button>
       </div>
-      <div className="rounded border border-amber-300 bg-amber-50/70 p-2 text-xs text-amber-950 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className={NOTICE_BOX}>
         <p className="font-medium">Heuristic starting point — requires investigation</p>
         <p className="mt-0.5 text-amber-900/90 dark:text-amber-200/90">
           This tool matches simple role/theme tags and mana curve slots without understanding how

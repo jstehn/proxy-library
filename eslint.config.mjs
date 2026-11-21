@@ -137,6 +137,30 @@ const cardSearchSql = {
 };
 
 // --- no-restricted-syntax selectors ----------------------------------------------------
+// Class names in pages and components (refactor P31): colours come from the tokens in
+// globals.css and a long class string is a block in src/ui, not a copy.
+const NOT_YET_ON_BLOCKS = [
+  // P20 may split this file; its three long class strings move to blocks or constants after.
+  "src/app/drafts/[id]/pick-grid.tsx",
+];
+
+const CLASS_NAMES = [
+  {
+    selector: "JSXAttribute[name.name='className'] Literal[value=/zinc-/]",
+    message:
+      "Use a colour token (text-muted, border-line, bg-surface, ...) or a block from src/ui.",
+  },
+  {
+    selector: "JSXAttribute[name.name='className'] TemplateElement[value.raw=/zinc-/]",
+    message:
+      "Use a colour token (text-muted, border-line, bg-surface, ...) or a block from src/ui.",
+  },
+  {
+    selector: "JSXAttribute[name.name='className'] > Literal[value=/^.{101,}$/]",
+    message: "A class string over 100 characters: use a block from src/ui (Button, Card, ...).",
+  },
+];
+
 const NONDETERMINISM = [
   {
     selector: "MemberExpression[object.name='Math'][property.name='random']",
@@ -216,6 +240,17 @@ const FORGED_ACTOR = [
     message:
       "Don't cast to Actor or AdminActor: only accounts' toActor and asAdmin make one. Tests use testActor() from @/modules/accounts/testing/actors (design doc 67).",
   },
+];
+
+// What every page and component file is held to (ADR 0026 and the card-rule selectors).
+const APP_SYNTAX = [
+  {
+    selector: "CallExpression[callee.name='getContainer']",
+    message: "Call capabilities through action() or readPage() (ADR 0026).",
+  },
+  ...FORMAT_NAMES,
+  ...TYPE_LINE_WORDS,
+  ...FORGED_ACTOR,
 ];
 
 // --- Policies: who may import whom (everything else is disallowed) -----------------------
@@ -533,6 +568,26 @@ export default defineConfig([
       ],
     },
   },
+  // Pages and components: the same rules plus the class-name rules above (refactor P31).
+  {
+    files: ["src/app/**/*.tsx", "src/ui/**/*.tsx"],
+    ignores: TESTS,
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...NONDETERMINISM,
+        ...BASIC_WORDS,
+        ...MONEY_TEXT,
+        ...PRICE_TABLE,
+        ...CANDIDATE_SQL,
+        ...FORMAT_NAMES,
+        ...TYPE_LINE_WORDS,
+        ...FORGED_ACTOR,
+        ...CLASS_NAMES,
+      ],
+    },
+  },
+
   // The one place that makes an Actor (design doc 67): accounts' domain and its test helpers.
   {
     files: ["src/modules/accounts/domain/player.ts", "src/modules/accounts/testing/**/*.ts"],
@@ -602,18 +657,14 @@ export default defineConfig([
   {
     files: ["src/app/**/*.{ts,tsx}"],
     ignores: [...TESTS, ...CONTAINER_ALLOWED.map(escapeGlob)],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "CallExpression[callee.name='getContainer']",
-          message: "Call capabilities through action() or readPage() (ADR 0026).",
-        },
-        ...FORMAT_NAMES,
-        ...TYPE_LINE_WORDS,
-        ...FORGED_ACTOR,
-      ],
-    },
+    rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX, ...CLASS_NAMES] },
+  },
+  // Files not yet on the blocks: the same rules without the class-name ones (refactor P31). The
+  // list only shrinks; it must be empty when the file's owner has finished with it.
+  {
+    files: NOT_YET_ON_BLOCKS.map(escapeGlob),
+    ignores: TESTS,
+    rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX] },
   },
 
   // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a

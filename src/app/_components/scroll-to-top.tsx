@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
+const TOP_BUTTON =
+  "border-line bg-background/95 text-foreground hover:bg-surface-raised fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur md:right-6 md:bottom-6";
+
 /**
  * Floating "Back to top" button for infinite-scroll pages. Uses an IntersectionObserver on a
  * zero-size top sentinel so it appears only after the user has scrolled down, and jumps back
@@ -32,7 +35,7 @@ export function ScrollToTopButton() {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
           aria-label="Scroll to top"
-          className="border-line bg-background/95 text-foreground hover:bg-surface-raised fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur md:right-6 md:bottom-6"
+          className={TOP_BUTTON}
         >
           <span aria-hidden="true">↑</span>
           Top

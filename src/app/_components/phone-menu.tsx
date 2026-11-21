@@ -6,6 +6,9 @@ import { useEffect, useId, useRef } from "react";
 import { InstallAppButton } from "./install-app-button";
 import { Button } from "@/ui/button";
 
+const MENU_BOX =
+  "phone-menu-popover bg-background text-foreground border-border-subtle [&>a:hover]:bg-surface-raised max-h-[calc(100dvh-5rem)] w-56 gap-1 overflow-y-auto rounded-md border p-2 text-sm shadow-lg [&>a]:rounded [&>a]:px-2 [&>a]:py-1.5";
+
 export function PhoneMenu(props: { children: React.ReactNode }) {
   const pathname = usePathname();
   const menuId = useId();
@@ -29,12 +32,7 @@ export function PhoneMenu(props: { children: React.ReactNode }) {
       >
         Menu
       </Button>
-      <div
-        id={menuId}
-        ref={menu}
-        popover="auto"
-        className="phone-menu-popover bg-background text-foreground border-border-subtle [&>a:hover]:bg-surface-raised max-h-[calc(100dvh-5rem)] w-56 gap-1 overflow-y-auto rounded-md border p-2 text-sm shadow-lg [&>a]:rounded [&>a]:px-2 [&>a]:py-1.5"
-      >
+      <div id={menuId} ref={menu} popover="auto" className={MENU_BOX}>
         {props.children}
         <InstallAppButton variant="menu" />
       </div>

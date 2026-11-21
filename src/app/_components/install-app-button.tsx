@@ -10,6 +10,9 @@ import {
   takeDeferredInstallPrompt,
 } from "./pwa-install-store";
 
+const INSTALL_BUTTON =
+  "border-line hover:bg-surface-raised w-fit rounded-md border px-3 py-1.5 text-sm font-medium aria-disabled:opacity-60";
+
 type InstallAppButtonProps = {
   /** "section" renders the full /account block; "menu" renders a compact item for PhoneMenu. */
   variant?: "section" | "menu";
@@ -96,7 +99,7 @@ export function InstallAppButton({ variant = "section" }: InstallAppButtonProps)
           hidden={!showButton}
           aria-disabled={isInstalling ? "true" : undefined}
           onClick={handleInstallClick}
-          className="border-line hover:bg-surface-raised w-fit rounded-md border px-3 py-1.5 text-sm font-medium aria-disabled:opacity-60"
+          className={INSTALL_BUTTON}
         >
           Install Proxy Library
         </button>

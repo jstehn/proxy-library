@@ -5,6 +5,13 @@ import { Button } from "@/ui/button";
 import { CardView } from "@/ui/card-view";
 import { ManaText } from "@/ui/mana";
 
+const DIALOG_BOX =
+  "border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70";
+const NO_IMAGE_BOX =
+  "bg-surface-raised flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs";
+const TEXT_OVERLAY =
+  "absolute inset-x-0 bottom-0 flex max-h-full flex-col gap-2 overflow-hidden bg-gradient-to-t from-black/95 via-black/85 to-black/60 p-3 text-xs text-white";
+
 // A card, larger, with its printed text laid over the image: used wherever a card is too small
 // (or only a name) to read. Card grids open it on hover; a Commander deck in the store shows its
 // commander this way (design doc 14).
@@ -41,7 +48,7 @@ export function EnlargedCard(props: {
         )}
 
         {/* The overlay: the card's printed text, readable at any size. */}
-        <div className="absolute inset-x-0 bottom-0 flex max-h-full flex-col gap-2 overflow-hidden bg-gradient-to-t from-black/95 via-black/85 to-black/60 p-3 text-xs text-white">
+        <div className={TEXT_OVERLAY}>
           {printing.faces.map((face, index) => (
             <FaceText key={index} face={face} isBackFace={index > 0} />
           ))}
@@ -122,7 +129,7 @@ export function CardPreviewDialog(props: {
         if (event.target === dialogRef.current) onClose();
       }}
       aria-label={printing.name}
-      className="border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70"
+      className={DIALOG_BOX}
     >
       <CardView
         printingId={printing.id}
@@ -223,9 +230,7 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
             className="bg-surface-raised aspect-[488/680] w-full rounded-[4.5%] shadow-md"
           />
         ) : (
-          <div className="bg-surface-raised flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs">
-            {printing.name}
-          </div>
+          <div className={NO_IMAGE_BOX}>{printing.name}</div>
         )}
       </button>
       {props.caption && <p className="text-muted mt-1 text-xs">{props.caption}</p>}

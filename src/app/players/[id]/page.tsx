@@ -16,6 +16,10 @@ import { Card } from "@/ui/card";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
+import { Badge } from "@/ui/badge";
+
+const ONLINE_BADGE =
+  "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
 
 const COLOR_LABELS: Record<string, string> = {
   W: "White",
@@ -51,11 +55,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold">{profile.displayName}</h1>
             <span className="text-muted text-sm">@{profile.username}</span>
-            {profile.relation === "friend" && (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                Friends
-              </span>
-            )}
+            {profile.relation === "friend" && <span className={ONLINE_BADGE}>Friends</span>}
           </div>
           <p className="text-muted text-xs">
             Joined <LocalTime iso={profile.joinedAt} />
@@ -286,9 +286,9 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
                     {item.note && <p className="text-muted text-xs">{item.note}</p>}
                   </div>
                   {profile.relation !== "self" && item.youOwnCount > 0 && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    <Badge tone="green" pill>
                       You own {item.youOwnCount}
-                    </span>
+                    </Badge>
                   )}
                 </li>
               ))}

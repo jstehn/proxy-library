@@ -12,6 +12,7 @@ import { countedCopies, type Selection } from "./selection";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { CardView } from "@/ui/card-view";
+import { Badge } from "@/ui/badge";
 
 // The selected card, large and readable, with what you'd add (design doc 14, section 2.2).
 
@@ -110,24 +111,18 @@ export function SelectedCard(props: {
           {selection.tags.length > 0 && (
             <ul aria-label="Roles" className="flex flex-wrap gap-1">
               {selection.tags.map((tag) => (
-                <li
-                  key={tag}
-                  className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-900 dark:bg-sky-950 dark:text-sky-200"
-                >
+                <Badge key={tag} as="li" tone="sky" size="sm">
                   {TAG_LABELS[tag]}
-                </li>
+                </Badge>
               ))}
             </ul>
           )}
           {selection.bracketFlags.length > 0 && (
             <ul aria-label="Bracket" className="flex flex-wrap gap-1">
               {selection.bracketFlags.map((flag) => (
-                <li
-                  key={flag}
-                  className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] text-violet-900 dark:bg-violet-950 dark:text-violet-200"
-                >
+                <Badge key={flag} as="li" tone="violet" size="sm">
                   {FLAG_LABELS[flag]}
-                </li>
+                </Badge>
               ))}
             </ul>
           )}

@@ -4,6 +4,11 @@ import { useRef, useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { CardPreviewDialog, EnlargedCard } from "./card-preview";
 
+const FOIL_SHEEN =
+  "pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1";
+const NO_IMAGE_BOX =
+  "bg-surface-raised text-muted flex aspect-[146/204] w-full items-center justify-center rounded-md p-2 text-center text-xs";
+
 // One card in a grid (a set's cards, a pack's pulls). Hovering (or focusing, or tapping) it opens a larger version with
 // its printed text laid over the image, because the small grid image is too small to read.
 
@@ -100,9 +105,7 @@ export function CardTile(props: CardTileProps) {
             className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
           />
         ) : (
-          <div className="bg-surface-raised text-muted flex aspect-[146/204] w-full items-center justify-center rounded-md p-2 text-center text-xs">
-            {printing.name}
-          </div>
+          <div className={NO_IMAGE_BOX}>{printing.name}</div>
         )}
         {props.isFoil && <FoilSheen />}
       </button>
@@ -134,10 +137,5 @@ export function CardTile(props: CardTileProps) {
 
 /** A still rainbow sheen for foils. (The animated one comes with the opening effects, Phase 8.) */
 function FoilSheen() {
-  return (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1"
-    />
-  );
+  return <span aria-hidden className={FOIL_SHEEN} />;
 }

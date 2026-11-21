@@ -17,6 +17,9 @@ import {
 import { settle } from "../answer";
 import { type BuilderDeck } from "../builder-deck";
 
+const DISCARD_BUTTON =
+  "border-line text-danger-text hover:bg-danger-soft rounded border px-1.5 py-0.5 text-[11px] disabled:opacity-40";
+
 const BOARD_NAMES: Readonly<Record<Board, string>> = {
   main: "Main",
   side: "Sideboard",
@@ -327,7 +330,7 @@ export function SnapshotsPanel(props: {
                       type="button"
                       disabled={busy}
                       onClick={() => void remove(snapshot)}
-                      className="border-line text-danger-text rounded border px-1.5 py-0.5 text-[11px] hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950"
+                      className={DISCARD_BUTTON}
                     >
                       Delete
                     </button>
