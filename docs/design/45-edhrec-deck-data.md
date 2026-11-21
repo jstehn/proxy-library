@@ -2,6 +2,7 @@
 
 - **Phase:** 45 (backlog task #86)
 - **Status:** **Approved** (2026-11-12)
+- **Superseded in part** (2026-11-20, P22): the sync cadence in section 11 differs from the code (30 days, 200 per night): a decision is open; see docs/modules/catalog.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0007 (External data behind an ACL), 0019 (Precomputed/synced card features)
 - **Lesson:** no
 

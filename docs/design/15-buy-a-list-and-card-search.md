@@ -2,6 +2,7 @@
 
 - **Phase:** 15
 - **Status:** **Built** (approved 2026-10-01 with the recommended answers in section 8; implementation notes in section 9)
+- **Superseded in part** (2026-11-20, P22): the buy-a-list rules are in docs/modules/economy.md; the keyword list (section 4.2) is only here until the search language has its own page (ADR 0017); see docs/modules/economy.md
 - **Related:** design doc 07 (singles store), design doc 09 (deck lists), design doc 14 (search
   language), ADR 0006 (cross-module reads), ADR 0009 (lint boundaries), ADR 0016 (client API)
 

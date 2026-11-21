@@ -579,7 +579,7 @@ first one chose, and keeps it.
 
 ## Further reading
 
-- [Design doc 23](../docs/design/23-edit-deck-as-text.md): the decisions, including price
+- [Design doc 23](../docs/design/archive/23-edit-deck-as-text.md): the decisions, including price
   before foil.
 - [ADR 0009](../docs/adr/) (lint-enforced boundaries) and ADR 0017 (the shared card-search
   library).

@@ -442,8 +442,8 @@ plan instead of trusting the explanation that sounds right.
 
 ## Further reading
 
-- [Design doc 29](../docs/design/29-build-from-every-card.md): the feature and its measurements.
-- [Design doc 24](../docs/design/24-choose-a-printing.md): the standard-art ranking reused here.
+- [Design doc 29](../docs/design/archive/29-build-from-every-card.md): the feature and its measurements.
+- [Design doc 24](../docs/design/archive/24-choose-a-printing.md): the standard-art ranking reused here.
 - PostgreSQL manual: [Using EXPLAIN](https://www.postgresql.org/docs/17/using-explain.html) and
   [`SELECT … DISTINCT ON`](https://www.postgresql.org/docs/17/sql-select.html#SQL-DISTINCT).
 - Markus Winand, [Use The Index, Luke: paging](https://use-the-index-luke.com/sql/partial-results)

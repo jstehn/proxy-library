@@ -341,7 +341,7 @@ Tested. The inner "one of" averages to 200, the outer to (300 + 300) / 2 = 300, 
 
 ## Further reading
 
-- [Design doc 27](../docs/design/27-sealed-value-floor.md) and
+- [Design doc 27](../docs/design/archive/27-sealed-value-floor.md) and
   [ADR 0021](../docs/adr/0021-sealed-value-floor.md).
 - PostgreSQL: [`GREATEST` and `LEAST`](https://www.postgresql.org/docs/current/functions-conditional.html#FUNCTIONS-GREATEST-LEAST)
   and [mathematical operators](https://www.postgresql.org/docs/current/functions-math.html)

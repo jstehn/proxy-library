@@ -2,6 +2,7 @@
 
 - **Phase:** 14
 - **Status:** **Built** (approved 2026-09-30 with the decisions in section 8; implementation notes in section 10)
+- **Superseded in part** (2026-11-20, P22): the builder UI layout (section 10) was rebuilt in P19; its rules live on the pages, but the search keyword list (section 2.3) is only here; see docs/modules/decks-building.md
 - **Related:** design doc 09 (decks), ADR 0007 (Scryfall data), lesson 09
 
 ## 1. Purpose & scope

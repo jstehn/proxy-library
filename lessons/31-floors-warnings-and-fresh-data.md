@@ -552,7 +552,7 @@ flag has a rule, and a test would fail loudly if one didn't.
 
 ## Further reading
 
-- [Design doc 31](../docs/design/31-commander-brackets.md), especially section 15 (what changed
+- [Design doc 31](../docs/design/archive/31-commander-brackets.md), especially section 15 (what changed
   while building).
 - [ADR 0019](../docs/adr/0019-precomputed-card-features.md) and its implementation note on Game
   Changers.
