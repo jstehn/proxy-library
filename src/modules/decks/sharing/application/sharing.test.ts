@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/modules/accounts";
 import { inMemoryEventRecorder } from "@/modules/activity/testing/fakes";
 import { fixedClock, inMemoryUnitOfWork } from "@/shared/kernel/testing";
-import { DeckId } from "../domain/deck";
+import { DeckId } from "@/modules/decks/core/client";
 import { CommentId } from "../domain/sharing";
 import { inMemoryDeckSharing } from "../testing/fakes";
 import { makeDeckSharing } from "./sharing";

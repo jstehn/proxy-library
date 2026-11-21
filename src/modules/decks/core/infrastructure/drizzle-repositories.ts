@@ -18,13 +18,14 @@ import {
   DeckOrigin,
   FORMATS,
   GROUPINGS,
+  isValidPublicToken,
   type Deck,
   type Format,
   type PrintingFacts,
 } from "../domain/deck";
 import { isBracket } from "../domain/brackets";
 import { tidyHeadings } from "../domain/headings";
-import { isValidPublicToken } from "../domain/sharing";
+
 import { SnapshotId, type DeckSnapshot, type SnapshotEntry } from "../domain/snapshots";
 import { deckEntries, decks, deckSnapshots } from "./schema";
 

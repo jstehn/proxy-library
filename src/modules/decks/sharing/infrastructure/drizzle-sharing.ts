@@ -3,9 +3,9 @@ import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
 import type { DeckSharingRepository } from "../application/ports";
-import { DeckId } from "../domain/deck";
-import { CommentId, VISIBILITIES } from "../domain/sharing";
-import { deckComments, decks } from "./schema";
+import { DeckId, VISIBILITIES } from "@/modules/decks/core/client";
+import { deckComments, decks } from "@/modules/decks/core/infrastructure/schema";
+import { CommentId } from "../domain/sharing";
 
 // Sharing decks and comments on them, in Postgres (design doc 21, section 8).
 

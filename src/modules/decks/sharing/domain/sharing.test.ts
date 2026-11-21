@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
-import {
-  canDeleteComment,
-  canViewDeck,
-  cardsToGet,
-  checkCommentBody,
-  isValidPublicToken,
-  MAX_COMMENT_LENGTH,
-} from "./sharing";
+import { canViewDeck, isValidPublicToken } from "@/modules/decks/core/client";
+import { canDeleteComment, cardsToGet, checkCommentBody, MAX_COMMENT_LENGTH } from "./sharing";
 
 const jack = UserId.of("jack");
 const sam = UserId.of("sam");

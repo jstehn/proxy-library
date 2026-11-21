@@ -25,11 +25,15 @@ export {
   FORMATS,
   GROUPINGS,
   MAX_ROLE_LENGTH,
+  VISIBILITIES,
+  canViewDeck,
+  isValidPublicToken,
   becomesADeck,
   tidyRole,
   type Deck,
   type Format,
   type Grouping,
+  type Visibility,
 } from "./domain/deck";
 export {
   EMPTY_DECK_PROFILE,
@@ -57,7 +61,10 @@ export type {
 } from "./domain/deck-view";
 export type {
   CardNotFound,
+  CommentInvalid,
+  CommentNotFound,
   DeckNotFound,
+  NotAllowed,
   NotThatToken,
   TokenNotInDeck,
   TooManyDecks,
@@ -100,13 +107,6 @@ export {
   type CardRules,
   type DeckProblem,
 } from "./domain/rules";
-export {
-  CommentId,
-  MAX_COMMENT_LENGTH,
-  VISIBILITIES,
-  canViewDeck,
-  isValidPublicToken,
-} from "./domain/sharing";
 export {
   MAX_SNAPSHOTS_PER_DECK,
   MAX_SNAPSHOT_LABEL_LENGTH,

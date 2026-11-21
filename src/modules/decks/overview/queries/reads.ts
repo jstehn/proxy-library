@@ -20,8 +20,8 @@ import {
   otherDecksHolding as otherDecksOf,
   deckListPreview,
   cardPrintings,
-  cardsToGetFor,
 } from "@/modules/decks/core";
+import { cardsToGetFor } from "@/modules/decks/sharing";
 import { optimizeDeckForView, type OptimizeDeckPool } from "./optimize";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";
 

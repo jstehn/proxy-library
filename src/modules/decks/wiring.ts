@@ -22,8 +22,8 @@ import {
   decksFor,
   listDeckSources,
   deckChangePreview,
-  deckViewForViewer,
 } from "@/modules/decks/core";
+import { deckViewForViewer } from "@/modules/decks/sharing";
 import { makeDeckFacts, makeDeckOverview } from "@/modules/decks/overview";
 import {
   makeDeckManaPlan,
@@ -46,7 +46,8 @@ import {
   ownedSignalCards,
 } from "@/modules/decks/scoring";
 import { makeDrawSample } from "@/modules/decks/play";
-import type { Decks, PreviewRepository, DeckSharing } from "@/modules/decks/core";
+import type { Decks, PreviewRepository } from "@/modules/decks/core";
+import type { DeckSharing } from "@/modules/decks/sharing";
 import type { makeProxySheets, makeTokenChoices } from "@/modules/decks/proxies";
 import { DeckId } from "@/modules/decks/core/client";
 

@@ -1,15 +1,16 @@
 import type { Actor } from "@/modules/accounts";
 import { recordEvent } from "@/modules/activity";
 import { err, ok, type Result } from "@/shared/kernel";
-import type { DeckId } from "../domain/deck";
-import type { CommentInvalid, CommentNotFound, DeckNotFound, NotAllowed } from "../domain/errors";
-import {
-  canDeleteComment,
-  canViewDeck,
-  checkCommentBody,
-  type CommentId,
-  type Visibility,
-} from "../domain/sharing";
+import type {
+  CommentInvalid,
+  CommentNotFound,
+  DeckId,
+  DeckNotFound,
+  NotAllowed,
+  Visibility,
+} from "@/modules/decks/core/client";
+import { canViewDeck } from "@/modules/decks/core/client";
+import { canDeleteComment, checkCommentBody, type CommentId } from "../domain/sharing";
 import type { DeckSharingDependencies } from "./ports";
 
 // Sharing decks with the playgroup, and comments on them (design doc 21, section 5). A deck

@@ -1,12 +1,7 @@
 import { err, ok, type Brand, type Result, type UserId } from "@/shared/kernel";
-import type { DeckId } from "./deck";
-import type { CommentInvalid } from "./errors";
+import type { CommentInvalid, DeckId, Visibility } from "@/modules/decks/core/client";
 
 // Sharing decks with the playgroup, and comments on them (design doc 21, section 3).
-
-export const VISIBILITIES = ["private", "shared"] as const;
-/** Who can see a deck: only its owner, or every signed-in player. */
-export type Visibility = (typeof VISIBILITIES)[number];
 
 export type CommentId = Brand<number, "CommentId">;
 export const CommentId = {
@@ -29,13 +24,6 @@ export type DeckForSharing = Readonly<{
   publicToken: string | null;
 }>;
 
-const PUBLIC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
-
-/** Whether a candidate URL token has the shape of a generated public deck link token. */
-export function isValidPublicToken(raw: string): boolean {
-  return PUBLIC_TOKEN_PATTERN.test(raw);
-}
-
 export type DeckComment = Readonly<{
   id: CommentId;
   deckId: DeckId;
@@ -52,14 +40,6 @@ export function checkCommentBody(raw: string): Result<string, CommentInvalid> {
     return err({ kind: "CommentInvalid", maximum: MAX_COMMENT_LENGTH });
   }
   return ok(body);
-}
-
-/** Its owner sees a deck; everyone sees a shared one (invariant 1). */
-export function canViewDeck(
-  viewer: UserId,
-  deck: Pick<DeckForSharing, "ownerId" | "visibility">,
-): boolean {
-  return deck.ownerId === viewer || deck.visibility === "shared";
 }
 
 /** A comment's author, the deck's owner and admins may delete it (invariant 4). */

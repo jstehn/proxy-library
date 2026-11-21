@@ -36,7 +36,6 @@ export { describeDeckError, type DeckError } from "./application/describe-error"
 export { makeListDecks } from "./application/list-decks";
 export { makeDecks, type Decks } from "./application/make-decks";
 export type { DeckRepository, DecksServices, PreviewRepository } from "./application/ports";
-export { makeDeckSharing, type DeckSharing } from "./application/sharing";
 export { cardFeaturesOf, withFeatures, type FeaturesOf } from "./queries/card-features";
 export { comboPartnersForDeck, combosForDeck } from "./queries/combos";
 export { getDeckProfile, updateDeckPrimer, updateDeckProfile } from "./queries/deck-profile";
@@ -61,12 +60,3 @@ export {
   type DeckChangePreview,
 } from "./queries/preview";
 export { cardPrintings, type PrintingFinish, type PrintingOption } from "./queries/printings";
-export {
-  cardsToGetFor,
-  deckComments,
-  deckForViewer,
-  deckViewForViewer,
-  publicDeck,
-  sharedDecks,
-  type CommentView,
-} from "./queries/sharing";

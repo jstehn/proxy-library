@@ -13,14 +13,15 @@ import {
   DeckOrigin,
   FORMATS,
   GROUPINGS,
+  VISIBILITIES,
   type Deck,
   type Format,
+  type Visibility,
 } from "../domain/deck";
 import type { DeckLine, DeckSource, DeckView, OtherDeckUse } from "../domain/deck-view";
 import type { CardRules } from "../domain/rules";
 import type { EdhrecSignal } from "../domain/stats";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "./owned";
-import { VISIBILITIES, type Visibility } from "../domain/sharing";
 
 // Read models for the deck screens (design doc 09, section 8). Ownership is counted by oracle
 // card across every printing and finish (ADR 0011); basic lands never count as short (rule 1).

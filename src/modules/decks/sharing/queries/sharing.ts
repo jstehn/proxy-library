@@ -4,10 +4,16 @@ import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { latestPriceRows } from "@/shared/db";
 import { UserId } from "@/shared/kernel";
-import { FORMATS, type Format } from "../domain/deck";
-import { cardsToGet, isValidPublicToken, VISIBILITIES, type Visibility } from "../domain/sharing";
-import type { DeckView } from "../domain/deck-view";
-import { deckView } from "./decks";
+import {
+  FORMATS,
+  VISIBILITIES,
+  isValidPublicToken,
+  type DeckView,
+  type Format,
+  type Visibility,
+} from "@/modules/decks/core/client";
+import { deckView } from "@/modules/decks/core";
+import { cardsToGet } from "../domain/sharing";
 
 // Read models for shared decks, comments and cards to get (design doc 21, section 9).
 
