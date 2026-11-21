@@ -102,3 +102,7 @@ joins P28 (it shows the simulator's distribution).
 battlefield" (Cultivate, Rampant Growth), as a follow-up. **Phone card view:** tapping a card on a
 phone shows it large, image only; a toggle offers image, text, or both (image above text). Joins
 P31 as its `CardView` block.
+
+**P18 (2026-11-20): accepted as recommended.** Area names core, scoring, building, play, proxies and
+the added `overview`; +132 lines; splitting `core` and narrowing the root exports go to P20.
+**P35:** accepted at +967; the homelab Authentik setup happens with milestone 2.

@@ -71,6 +71,16 @@ The files above, `worker/`, `tests/e2e/`, `playwright.config.ts` (only if the sp
 - Don't change a test's behaviour while splitting the spec. Don't rename tests.
 - Don't add a "common" dumping file.
 
+**From P18 (owner, 2026-11-20):**
+
+- **Split `decks/core`.** Its `domain` and `application` folders have 20 files each (the limit is
+  12). Sharing and changes (previews, snapshots) are the likely new areas; `ports.ts`,
+  `make-decks.ts`, `drizzle-repositories.ts` and the fakes reference both, so split those too.
+  Add each new area to `DECKS_ARROWS` (eslint) and `DECKS_AREAS` (cycle check) and ADR 0029.
+- **Narrow `decks`' public API.** The root `index.ts` and `client.ts` are `export *` of every area,
+  so other modules can reach area internals (for example `candidatePool`). List exactly what other
+  modules use (grep), export only that, and let knip confirm nothing else is needed.
+
 ## Done when
 
 - The allowlist has no "pre-refactor" entries. No source folder has more than 12 files, and no
