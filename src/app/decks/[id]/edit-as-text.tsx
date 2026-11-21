@@ -17,8 +17,7 @@ const initialPreviewState: EditAsTextPreviewState = {
   previewedList: null,
 };
 
-const button =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-zinc-700";
+const button = "rounded-md border border-line px-3 py-1.5 text-sm disabled:opacity-50";
 
 type Props = Readonly<{ deckId: number; text: string; fingerprint: string }>;
 
@@ -70,11 +69,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
   }
 
   return (
-    <details
-      ref={details}
-      id="edit-as-text"
-      className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
-    >
+    <details ref={details} id="edit-as-text" className="border-border-subtle rounded-md border p-3">
       <summary className="cursor-pointer font-medium">Edit as text</summary>
       <form action={formAction} className="mt-3 flex flex-col gap-2">
         <input type="hidden" name="deckId" value={deckId} />
@@ -93,13 +88,13 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
           aria-label="The deck's list as text"
           aria-describedby={activeError === null ? undefined : `edit-as-text-error-${deckId}`}
           spellCheck={false}
-          className="w-full rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 font-mono text-sm dark:border-zinc-700"
+          className="border-line w-full rounded-md border bg-transparent px-2 py-1.5 font-mono text-sm"
         />
         {activeError !== null && (
           <div
             id={`edit-as-text-error-${deckId}`}
             role="alert"
-            className="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+            className="border-danger-line bg-danger-soft rounded-md border p-2 text-sm text-red-800 dark:text-red-200"
           >
             <p>{activeError.error}</p>
             {activeError.problems.length > 0 && (
@@ -115,7 +110,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
           <section
             aria-live="polite"
             aria-label="Preview of changes"
-            className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/60"
+            className="border-border-subtle bg-surface rounded-md border p-3 text-sm"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 font-medium">
               <span>Preview (not saved yet)</span>
@@ -150,7 +145,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
               )}
             </div>
             {preview.roles.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">
+              <div className="text-muted mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {preview.roles.map((role) => (
                   <span key={role.tag}>
                     {role.label}: {role.before} → {role.after}
@@ -162,7 +157,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
             {preview.changes.length === 0 ? (
               <p className="text-muted mt-2 text-xs">No card quantities changed.</p>
             ) : (
-              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
+              <p className="text-muted mt-2 text-xs">
                 {preview.changes.length} line{preview.changes.length === 1 ? "" : "s"} changed:{" "}
                 {preview.changes
                   .slice(0, 8)
@@ -175,12 +170,10 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
               </p>
             )}
             {preview.bracketWarningAfter !== null && (
-              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                {preview.bracketWarningAfter}
-              </p>
+              <p className="text-warning-text mt-2 text-xs">{preview.bracketWarningAfter}</p>
             )}
             {preview.problemsAdded.length > 0 && (
-              <div className="mt-2 text-xs text-red-700 dark:text-red-300">
+              <div className="text-danger-text mt-2 text-xs">
                 <p className="font-medium">New problems:</p>
                 <ul className="list-disc pl-5">
                   {preview.problemsAdded.map((problem) => (
@@ -190,7 +183,7 @@ export function EditAsText({ deckId, text, fingerprint }: Props) {
               </div>
             )}
             {preview.problemsResolved.length > 0 && (
-              <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+              <div className="text-success-text mt-2 text-xs">
                 <p className="font-medium">Resolved problems:</p>
                 <ul className="list-disc pl-5">
                   {preview.problemsResolved.map((problem) => (

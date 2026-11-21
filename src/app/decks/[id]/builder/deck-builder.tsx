@@ -157,7 +157,7 @@ export function DeckBuilder(props: {
             role="tab"
             aria-selected={tab === option}
             onClick={() => setTab(option)}
-            className={`flex-1 rounded-md py-1.5 text-sm ${tab === option ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+            className={`flex-1 rounded-md py-1.5 text-sm ${tab === option ? "bg-accent text-accent-foreground" : "border-line border"}`}
           >
             {option === "collection" ? "Collection" : `Deck (${cardTotal})`}
           </button>
@@ -166,13 +166,7 @@ export function DeckBuilder(props: {
 
       <p role="status" className="min-h-5 text-sm">
         {message && (
-          <span
-            className={
-              message.tone === "ok"
-                ? "text-green-700 dark:text-green-400"
-                : "text-red-700 dark:text-red-400"
-            }
-          >
+          <span className={message.tone === "ok" ? "text-success-text" : "text-danger-text"}>
             {message.text}
           </span>
         )}
@@ -200,13 +194,13 @@ export function DeckBuilder(props: {
         >
           <section aria-label="Problems" className="flex flex-col gap-1 text-sm">
             {problems.length === 0 ? (
-              <p className="text-green-700 dark:text-green-400">
+              <p className="text-success-text">
                 {cardTotal === 0
                   ? "Empty so far."
                   : "Ready to play: you own everything, and it follows the format's rules."}
               </p>
             ) : (
-              <ul className="flex flex-col gap-1 text-red-700 dark:text-red-400">
+              <ul className="text-danger-text flex flex-col gap-1">
                 {deckProblems.map((problem) => (
                   <li key={problem.text}>• {problem.text}</li>
                 ))}
@@ -220,7 +214,7 @@ export function DeckBuilder(props: {
             )}
             {/* Over target is a warning, not a problem: the deck still follows the rules. */}
             {warning !== null && (
-              <p className="text-amber-700 dark:text-amber-400">⚠ {bracketWarningText(warning)}</p>
+              <p className="text-warning-text">⚠ {bracketWarningText(warning)}</p>
             )}
           </section>
           {estimate !== null && (

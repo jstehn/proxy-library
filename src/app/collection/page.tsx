@@ -38,14 +38,14 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
           <h1 className="text-2xl font-semibold">Collection</h1>
           <CollectionTabs current="game" />
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           {result.totals.copies} cards ({result.totals.different} different) worth{" "}
           <strong className="tabular-nums">
             {Cents.format(Cents.of(result.totals.valueCents))}
           </strong>{" "}
           at market price{isFiltered && " (matching these filters)"}.
         </p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Export everything: <ExportLinks path="/api/export/collection" />
         </p>
       </header>

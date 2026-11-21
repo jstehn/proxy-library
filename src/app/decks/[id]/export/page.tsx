@@ -39,7 +39,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
           rows={16}
           aria-label="Deck list with printings"
           value={EXPORTERS.printings(lines)}
-          className="rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent p-2 font-mono text-sm"
         />
       </section>
       {view.deck.headings.length > 0 && (
@@ -50,7 +50,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
             rows={16}
             aria-label="Deck list with headings"
             value={exportWithHeadings(lines, view.deck.headings)}
-            className="rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
+            className="border-line rounded-md border bg-transparent p-2 font-mono text-sm"
           />
         </section>
       )}
@@ -61,7 +61,7 @@ export default async function ExportPage(props: PageProps<"/decks/[id]/export">)
           rows={10}
           aria-label="Deck list, names only"
           value={EXPORTERS.names(lines)}
-          className="rounded-md border border-zinc-300 bg-transparent p-2 font-mono text-sm dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent p-2 font-mono text-sm"
         />
       </section>
     </main>

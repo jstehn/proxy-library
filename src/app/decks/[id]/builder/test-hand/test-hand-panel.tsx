@@ -75,13 +75,12 @@ export function TestHandPanel(props: {
 
   const odds = openingHandOdds(cards, { onTheDraw, freeMulligan });
   const canMulligan = hand.turn === 0 && hand.toBottom === 0;
-  const button =
-    "rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700";
+  const button = "rounded-md border border-line px-3 py-1 text-sm disabled:opacity-40";
 
   return (
     <section
       aria-label="Test hand"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium">Test hand</h2>
@@ -122,7 +121,7 @@ export function TestHandPanel(props: {
                   <img
                     src={`/api/images/${card.printingId}/small/front`}
                     alt=""
-                    className="aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+                    className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
                   />
                 </button>
                 <NamePreview

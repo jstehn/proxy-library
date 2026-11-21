@@ -95,11 +95,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
           Printing: {line.setCode} #{line.collectorNumber} · {FINISH_WORDS[line.finish]}
           {line.pinnedPrintingId === null ? " (automatic)" : " (chosen)"}
         </span>
-        <button
-          type="button"
-          onClick={open}
-          className="rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700"
-        >
+        <button type="button" onClick={open} className="border-line rounded-md border px-2 py-1">
           Change printing
         </button>
       </div>
@@ -122,7 +118,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
 
   return (
     <fieldset
-      className="flex flex-col gap-2 rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-2 rounded-md border p-2 text-xs"
       aria-busy={isSaving}
     >
       <legend className="px-1 text-sm font-medium">Choose a printing</legend>
@@ -133,7 +129,7 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
             <select
               value={board}
               onChange={(event) => setBoard(event.target.value as Board)}
-              className="rounded border border-zinc-300 bg-transparent px-1 py-0.5 dark:border-zinc-700"
+              className="border-line rounded border bg-transparent px-1 py-0.5"
             >
               {lines.map((each) => (
                 <option key={each.board} value={each.board}>
@@ -150,20 +146,20 @@ export function PrintingPicker({ deckId, lines, onChosen, onError }: Props) {
             onChange={(event) => setFilter(event.target.value)}
             placeholder="Filter by set, number or style"
             aria-label="Filter printings"
-            className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            className="border-line min-w-0 flex-1 rounded border bg-transparent px-2 py-1"
           />
         )}
         {isSaving && <span className="text-muted">Saving…</span>}
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="ml-auto rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700"
+          className="border-line ml-auto rounded-md border px-2 py-1"
         >
           Done
         </button>
       </div>
 
-      <label className="flex min-h-10 items-center gap-2 rounded px-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
+      <label className="hover:bg-surface flex min-h-10 items-center gap-2 rounded px-1">
         <input
           type="radio"
           name={groupName}
@@ -223,7 +219,7 @@ function PrintingGroup(props: {
         {props.printings.map((printing) => (
           <li
             key={printing.printingId}
-            className="flex gap-2 rounded border border-zinc-200 p-1.5 dark:border-zinc-800"
+            className="border-border-subtle flex gap-2 rounded border p-1.5"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served by our image cache */}
             <img
@@ -232,7 +228,7 @@ function PrintingGroup(props: {
               loading="lazy"
               width={146}
               height={204}
-              className="aspect-[146/204] w-12 shrink-0 rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+              className="bg-surface-raised aspect-[146/204] w-12 shrink-0 rounded-[4.5%]"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <p>
@@ -251,7 +247,7 @@ function PrintingGroup(props: {
                   return (
                     <label
                       key={option.finish}
-                      className={`flex min-h-9 cursor-pointer items-center gap-1 rounded-md border px-2 ${isChecked ? "border-sky-600 bg-sky-50 dark:border-sky-500 dark:bg-sky-950" : "border-zinc-300 dark:border-zinc-700"}`}
+                      className={`flex min-h-9 cursor-pointer items-center gap-1 rounded-md border px-2 ${isChecked ? "border-sky-600 bg-sky-50 dark:border-sky-500 dark:bg-sky-950" : "border-line"}`}
                     >
                       <input
                         type="radio"
@@ -269,7 +265,7 @@ function PrintingGroup(props: {
                         </span>
                       )}
                       {option.owned > 0 && (
-                        <span className="text-green-700 dark:text-green-400">×{option.owned}</span>
+                        <span className="text-success-text">×{option.owned}</span>
                       )}
                     </label>
                   );

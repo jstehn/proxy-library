@@ -48,7 +48,7 @@ export function ManaBasePanel(props: {
   return (
     <section
       aria-label="Mana base"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Mana base</h2>
@@ -56,7 +56,7 @@ export function ManaBasePanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close mana base"
-          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground"
         >
           ✕
         </button>
@@ -77,7 +77,7 @@ export function ManaBasePanel(props: {
                 {plan.lands} of ~{plan.landTarget.lands}
               </span>
             </p>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted text-xs">
               {plan.landTarget.reasons.map(landTargetReasonText).join(" · ")}
             </p>
           </div>
@@ -86,11 +86,7 @@ export function ManaBasePanel(props: {
               {plan.sources.map((source) => (
                 <li key={source.color} className="flex flex-wrap items-center gap-2">
                   <ManaText text={`{${source.color}}`} />
-                  <span
-                    className={
-                      source.have >= source.target ? "" : "text-amber-700 dark:text-amber-400"
-                    }
-                  >
+                  <span className={source.have >= source.target ? "" : "text-warning-text"}>
                     {source.have} of {source.target} sources
                   </span>
                   {source.heaviestCost > 1 && (
@@ -124,7 +120,7 @@ export function ManaBasePanel(props: {
                     adding,
                   )
                 }
-                className="self-start rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                className="bg-accent text-accent-foreground self-start rounded-md px-3 py-1 text-sm disabled:opacity-40"
               >
                 Add these {adding} lands
               </button>
@@ -164,7 +160,7 @@ function LandList(props: { lands: readonly PlannedLand[]; prices?: boolean }) {
               {land.card.name}
             </span>
             {land.tapped !== "never" && (
-              <span className="rounded bg-zinc-100 px-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <span className="bg-surface-raised text-muted rounded px-1 text-xs">
                 {land.tapped === "always" ? "enters tapped" : "sometimes tapped"}
               </span>
             )}
@@ -174,7 +170,7 @@ function LandList(props: { lands: readonly PlannedLand[]; prices?: boolean }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-xs">
             {[
               ...land.reasons.map(landReasonText),
               ...(land.card.alsoIn.length > 0 ? [`also in ${land.card.alsoIn.join(", ")}`] : []),

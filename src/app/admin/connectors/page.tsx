@@ -33,7 +33,7 @@ export default async function AdminConnectorsPage() {
           {clients.map((client) => (
             <li
               key={client.clientId}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+              className="border-border-subtle flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm"
             >
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="font-semibold break-words">{client.name}</span>

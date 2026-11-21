@@ -44,8 +44,7 @@ export function CastCurve(props: {
     );
   }
   if (answer === "loading") return <p className="text-muted text-xs">Simulating games…</p>;
-  if (typeof answer === "string")
-    return <p className="text-xs text-amber-700 dark:text-amber-400">{answer}</p>;
+  if (typeof answer === "string") return <p className="text-warning-text text-xs">{answer}</p>;
 
   const [card] = answer.cards;
   const bars = castBars(card);

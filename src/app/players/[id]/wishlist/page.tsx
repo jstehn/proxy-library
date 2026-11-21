@@ -52,7 +52,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
         {id !== actor.userId && (
           <Link
             href={`/trades/new?with=${encodeURIComponent(id)}`}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
           >
             Propose a trade
           </Link>
@@ -62,7 +62,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
       {shared.lines.length === 0 ? (
         <p className="text-muted text-sm">Their wishlist is empty right now.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {shared.lines.map((line) => {
             const ownedTotal = line.viewerOwned.reduce((sum, copy) => sum + copy.quantity, 0);
             return (
@@ -73,7 +73,7 @@ export default async function PlayerWishlistPage(props: PageProps<"/players/[id]
                   </span>
                   <span className="text-muted text-xs">{targetText(line)}</span>
                   {id !== actor.userId && ownedTotal > 0 && (
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    <span className="text-success-text text-xs font-medium">
                       You own {ownedTotal}
                     </span>
                   )}

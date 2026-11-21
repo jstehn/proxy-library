@@ -20,7 +20,7 @@ export function StartOverForm() {
           placeholder={CONFIRMATION_WORD}
           autoComplete="off"
           required
-          className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className="border-line bg-field rounded-md border px-2 py-1"
         />
         <SubmitButton tone="danger" pendingText="Starting over…">
           Start over

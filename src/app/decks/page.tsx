@@ -6,8 +6,7 @@ import { LocalTime } from "@/ui/local-time";
 import { createDeckAction } from "./actions";
 import { FORMAT_LABELS } from "./labels";
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 export default async function DecksPage(props: PageProps<"/decks">) {
   const { actor, reads } = await readPage();
@@ -23,7 +22,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Decks</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Build from the cards you own, then print proxies to play with. A deck can use every copy
           you own, even if another deck uses them too.
         </p>
@@ -59,7 +58,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
         </select>
         <button
           type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
         >
           Create deck
         </button>
@@ -87,7 +86,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       {decks.length === 0 ? (
         <p className="text-muted text-sm">No decks yet.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {decks.map((deck) => (
             <li key={deck.id} className="flex flex-wrap items-center gap-3 py-3">
               <Link href={`/decks/${deck.id}`} className="font-medium underline">
@@ -115,7 +114,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
               </span>
               {deck.usesRealCards && (
                 <span
-                  className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                  className="text-warning-ink rounded bg-amber-100 px-2 py-0.5 text-xs font-medium dark:bg-amber-950"
                   title="Cards you own for real count as owned in this deck"
                 >
                   real cards

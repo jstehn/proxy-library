@@ -29,7 +29,7 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Welcome, {actor.displayName}</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">Make it out of what you have.</p>
+        <p className="text-muted mt-2">Make it out of what you have.</p>
       </header>
 
       <ul className="grid gap-4 sm:grid-cols-2">
@@ -37,10 +37,10 @@ export default async function Home() {
           <li key={section.name}>
             <Link
               href={section.href}
-              className="block h-full rounded-lg border border-zinc-200 p-4 hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
+              className="border-border-subtle hover:border-muted block h-full rounded-lg border p-4"
             >
               <h2 className="font-medium">{section.name}</h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{section.blurb}</p>
+              <p className="text-muted text-sm">{section.blurb}</p>
             </Link>
           </li>
         ))}

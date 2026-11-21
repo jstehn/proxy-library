@@ -90,9 +90,7 @@ export function SeatAbilities(props: { seat: SeatSeen | undefined; names: Names 
   }
   return (
     <div className="flex flex-col gap-0.5 text-xs">
-      {seat.owesColor && (
-        <span className="text-amber-700 dark:text-amber-300">choosing a color…</span>
-      )}
+      {seat.owesColor && <span className="text-warning-text">choosing a color…</span>}
       {seat.faceUp.length > 0 && (
         <ul className="text-violet-700 dark:text-violet-300" aria-label="Face up">
           {seat.faceUp.map((card) => (
@@ -160,7 +158,7 @@ export function ColorPrompt(props: {
   names: Names;
 }) {
   return (
-    <section className="flex flex-col gap-2 rounded-md border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950">
+    <section className="bg-warning-soft flex flex-col gap-2 rounded-md border border-amber-400 p-3 text-sm dark:border-amber-700">
       <p>
         Choose a color for {props.names.printing(props.prompt.card.printingId)}
         {props.prompt.chosen.length > 0 &&
@@ -189,8 +187,7 @@ export function AnyTimeActions(props: {
 }) {
   const { sneak, informant } = props.options;
   if (sneak === null && informant === null) return null;
-  const field =
-    "rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
+  const field = "rounded border border-line bg-field px-2 py-1";
   return (
     <section className="flex flex-col gap-2 rounded-md border border-violet-300 p-3 text-sm dark:border-violet-800">
       <h2 className="text-xs font-semibold text-violet-700 dark:text-violet-300">
@@ -240,8 +237,7 @@ export function Dealing(props: {
 }) {
   const { deal, you, names } = props;
   const mine = you?.seatNumber;
-  const field =
-    "rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
+  const field = "rounded border border-line bg-field px-2 py-1";
   const cardOptions = (you?.pool ?? []).map((card) => (
     <option key={refValue(card.ref)} value={refValue(card.ref)}>
       {names.printing(card.printingId)}
@@ -253,7 +249,7 @@ export function Dealing(props: {
     </>
   );
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+    <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4 text-sm">
       <h2 className="font-medium">
         Deal Broker: {names.seat(deal.brokerSeat)} may trade one card from their pool
       </h2>

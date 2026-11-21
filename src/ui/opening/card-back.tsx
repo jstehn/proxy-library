@@ -4,7 +4,7 @@ export function CardBack() {
   return (
     <div
       aria-hidden
-      className="flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] border-[6px] border-zinc-900 shadow-md"
+      className="flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] border-[6px] border-black shadow-md"
       style={{
         background:
           "radial-gradient(ellipse at center, #7c3aed 0%, #3b0764 45%, #0f0a1f 80%), #0f0a1f",

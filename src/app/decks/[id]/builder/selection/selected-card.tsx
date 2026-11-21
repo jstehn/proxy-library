@@ -47,12 +47,12 @@ export function SelectedCard(props: {
   const inDeck = countedCopies(selection.inDeck);
   const onMaybeboard = selection.inDeck.maybe ?? 0;
   const button =
-    "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-zinc-300 dark:border-zinc-700";
+    "rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 border border-line";
 
   return (
     <section
       aria-label={`Selected: ${selection.name}`}
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+      className="border-border-subtle bg-background flex flex-col gap-3 rounded-lg border p-3"
     >
       <div className="flex gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -61,7 +61,7 @@ export function SelectedCard(props: {
           alt={selection.name}
           width={488}
           height={680}
-          className="aspect-[488/680] h-auto w-32 shrink-0 self-start rounded-[4.5%] bg-zinc-100 shadow-md sm:w-48 dark:bg-zinc-800"
+          className="bg-surface-raised aspect-[488/680] h-auto w-32 shrink-0 self-start rounded-[4.5%] shadow-md sm:w-48"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-2 text-xs">
           <div className="flex items-start justify-between gap-2">
@@ -70,7 +70,7 @@ export function SelectedCard(props: {
               type="button"
               onClick={props.onClose}
               aria-label="Close the selected card"
-              className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="text-muted hover:text-foreground"
             >
               ✕
             </button>
@@ -137,9 +137,7 @@ export function SelectedCard(props: {
               ))}
             </ul>
           )}
-          {selection.misfit && (
-            <p className="text-amber-700 dark:text-amber-400">{MISFIT_TEXT[selection.misfit]}</p>
-          )}
+          {selection.misfit && <p className="text-warning-text">{MISFIT_TEXT[selection.misfit]}</p>}
         </div>
       </div>
 
@@ -147,7 +145,7 @@ export function SelectedCard(props: {
         <div className="flex items-center gap-1" role="group" aria-label="How many to add">
           <button
             type="button"
-            className="h-8 w-8 rounded-md border border-zinc-300 dark:border-zinc-700"
+            className="border-line h-8 w-8 rounded-md border"
             onClick={() => props.onQuantity(Math.max(1, props.quantity - 1))}
             aria-label="One fewer to add"
           >
@@ -158,7 +156,7 @@ export function SelectedCard(props: {
           </span>
           <button
             type="button"
-            className="h-8 w-8 rounded-md border border-zinc-300 dark:border-zinc-700"
+            className="border-line h-8 w-8 rounded-md border"
             onClick={() => props.onQuantity(Math.min(99, props.quantity + 1))}
             aria-label="One more to add"
           >
@@ -168,7 +166,7 @@ export function SelectedCard(props: {
         <button
           type="button"
           onClick={() => props.onAdd("main")}
-          className={`${button} border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900`}
+          className={`${button} border-accent bg-accent text-accent-foreground`}
         >
           Add to deck
         </button>
@@ -195,13 +193,13 @@ export function SelectedCard(props: {
         )}
       </div>
       {props.copyLimit !== null && inDeck + props.quantity > props.copyLimit && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-warning-text text-xs">
           Adding {props.quantity} puts this card at {inDeck + props.quantity} copies (format limit
           is {props.copyLimit}). You can still add it and adjust later.
         </p>
       )}
       {selection.owned === 0 ? (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-warning-text text-xs">
           You don&apos;t own this card. Add it and the deck marks it short; then{" "}
           <Link href={`/singles/list?deck=${props.deckId}`} className="underline">
             buy what it&apos;s short
@@ -210,7 +208,7 @@ export function SelectedCard(props: {
         </p>
       ) : (
         props.quantity > selection.owned && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-xs">
             That&apos;s more than you own ({selection.owned}). You can add them; the deck marks it.
           </p>
         )
@@ -281,7 +279,7 @@ function OtherDecks(props: {
                 <button
                   type="button"
                   onClick={() => props.onTake(use, count)}
-                  className="rounded-md border border-zinc-300 px-2 py-0.5 dark:border-zinc-700"
+                  className="border-line rounded-md border px-2 py-0.5"
                 >
                   Take {count}
                 </button>

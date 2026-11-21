@@ -11,7 +11,7 @@ import { readPage } from "@/server/page-instance";
 
 function Side(props: { title: string; items: readonly TradeItemView[] }) {
   return (
-    <section className="flex flex-1 flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <section className="border-border-subtle flex flex-1 flex-col gap-2 rounded-lg border p-4">
       <h2 className="font-medium">{props.title}</h2>
       {props.items.length === 0 ? (
         <p className="text-muted text-sm">Nothing.</p>
@@ -115,7 +115,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       </header>
       {typeof error === "string" && <Alert tone="error">{error}</Alert>}
       {trade.message && (
-        <blockquote className="border-l-4 border-zinc-300 pl-3 text-sm italic dark:border-zinc-700">
+        <blockquote className="border-line border-l-4 pl-3 text-sm italic">
           {trade.message}
         </blockquote>
       )}
@@ -128,11 +128,8 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "recipient" && (
         <div className="flex flex-wrap gap-3">
           {decide("accept", "Accept", "bg-green-700 text-white")}
-          {decide("decline", "Decline", "border border-zinc-300 dark:border-zinc-700")}
-          <Link
-            href={counterHref}
-            className={`${button} border border-zinc-300 dark:border-zinc-700`}
-          >
+          {decide("decline", "Decline", "border border-line")}
+          <Link href={counterHref} className={`${button} border-line border`}>
             Counter-offer
           </Link>
         </div>
@@ -140,7 +137,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "proposer" && (
         <div className="flex gap-3">
           <p className="text-muted text-sm">Waiting for {trade.recipient.displayName}.</p>
-          {decide("cancel", "Cancel this offer", "border border-zinc-300 dark:border-zinc-700")}
+          {decide("cancel", "Cancel this offer", "border border-line")}
         </div>
       )}
     </main>

@@ -17,7 +17,7 @@ export function CreateClientForm() {
           name="redirectUris"
           required
           rows={3}
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+          className="border-line bg-field rounded-md border px-3 py-2 text-base"
         />
         <span className="text-muted text-xs">
           Exactly as the connector shows them, one per line (https, or http on localhost). No

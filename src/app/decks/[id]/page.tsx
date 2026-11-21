@@ -21,8 +21,7 @@ import { EditAsText } from "./edit-as-text";
 import { PublicLinkControls } from "./public-link-controls";
 import { SharedDeckView } from "./shared-view";
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { actor, capabilities, reads } = await readPage();
@@ -74,7 +73,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             <input type="hidden" name="deckId" value={deck.id} />
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
             >
               Copy to my decks
             </button>
@@ -157,10 +156,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
                 ? "Shared: every player can see it and comment."
                 : "Private: only you can see it."}
             </span>
-            <button
-              type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-            >
+            <button type="submit" className="border-line rounded-md border px-3 py-1">
               {viewed.visibility === "shared" ? "Make private" : "Share with the playgroup"}
             </button>
           </form>
@@ -175,10 +171,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             ? "Using your real cards: cards you own for real count as owned here."
             : "Game cards only: cards you own for real don't count here."}
         </span>
-        <button
-          type="submit"
-          className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-        >
+        <button type="submit" className="border-line rounded-md border px-3 py-1">
           {deck.usesRealCards ? "Stop using my real cards" : "Use my real cards"}
         </button>
       </form>
@@ -200,7 +193,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       <div className="grid items-start gap-3 md:grid-cols-3">
         <details
           open={deck.entries.length === 0}
-          className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+          className="border-border-subtle rounded-md border p-3"
         >
           <summary className="cursor-pointer font-medium">Paste a list</summary>
           <form action={importListAction} className="mt-3 flex flex-col gap-2">
@@ -220,7 +213,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             Cards you don&apos;t own are added too, and show as short.
           </p>
         </details>
-        <details className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+        <details className="border-border-subtle rounded-md border p-3">
           <summary className="cursor-pointer font-medium">Deck settings</summary>
           <form action={updateDeckAction} className="mt-3 flex flex-col gap-2">
             <input type="hidden" name="deckId" value={deck.id} />
@@ -244,9 +237,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           </form>
           {/* A second click to confirm, so a slip doesn't delete a deck. */}
           <details className="mt-2 text-sm">
-            <summary className="cursor-pointer text-red-700 dark:text-red-400">
-              Delete this deck…
-            </summary>
+            <summary className="text-danger-text cursor-pointer">Delete this deck…</summary>
             <form action={deleteDeckAction} className="mt-2">
               <input type="hidden" name="deckId" value={deck.id} />
               <button type="submit" className="rounded-md bg-red-700 px-3 py-1 text-white">

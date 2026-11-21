@@ -90,7 +90,7 @@ function Line(props: { item: FeedItem }) {
 export function ActivityList(props: { items: readonly FeedItem[] }) {
   if (props.items.length === 0) return <p className="text-muted text-sm">Nothing yet.</p>;
   return (
-    <ul className="flex flex-col divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+    <ul className="divide-border-subtle flex flex-col divide-y text-sm">
       {props.items.map((item) => (
         <li key={item.id} className="flex flex-col gap-0.5 py-2">
           <span>

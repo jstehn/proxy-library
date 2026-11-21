@@ -42,7 +42,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
       <ManaStylesheet />
 
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-6 dark:border-zinc-800">
+      <header className="border-border-subtle flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold">{profile.displayName}</h1>
@@ -62,7 +62,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.relation === "self" && (
             <Link
               href="/account/profile"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
             >
               Edit profile
             </Link>
@@ -73,7 +73,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
               <input type="hidden" name="targetUserId" value={profile.userId} />
               <button
                 type="submit"
-                className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
               >
                 Add friend
               </button>
@@ -83,10 +83,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.relation === "pending_outgoing" && (
             <form action={cancelFriendRequestAction}>
               <input type="hidden" name="targetUserId" value={profile.userId} />
-              <button
-                type="submit"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
-              >
+              <button type="submit" className="border-line rounded-md border px-3 py-1.5">
                 Cancel request
               </button>
             </form>
@@ -98,17 +95,14 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
                 <input type="hidden" name="targetUserId" value={profile.userId} />
                 <button
                   type="submit"
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
                 >
                   Accept friend request
                 </button>
               </form>
               <form action={declineFriendRequestAction}>
                 <input type="hidden" name="targetUserId" value={profile.userId} />
-                <button
-                  type="submit"
-                  className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
-                >
+                <button type="submit" className="border-line rounded-md border px-3 py-1.5">
                   Decline
                 </button>
               </form>
@@ -120,7 +114,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
               <input type="hidden" name="targetUserId" value={profile.userId} />
               <button
                 type="submit"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-zinc-700 hover:border-red-400 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-300"
+                className="border-line text-muted rounded-md border px-3 py-1.5 hover:border-red-400 hover:text-red-600"
               >
                 Unfriend
               </button>
@@ -130,7 +124,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.relation !== "self" && (
             <Link
               href={`/trades/new?with=${profile.userId}`}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
+              className="border-line rounded-md border px-3 py-1.5"
             >
               Propose trade
             </Link>
@@ -139,7 +133,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {isSharingReal && (
             <Link
               href={`/players/${profile.userId}/real`}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
+              className="border-line rounded-md border px-3 py-1.5"
             >
               Real collection
             </Link>
@@ -150,7 +144,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
       {(profile.bio || profile.favoriteColors.length > 0 || profile.favoriteFormats.length > 0) && (
         <section className="flex flex-col gap-3">
           {profile.bio && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+            <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
               {profile.bio}
             </p>
           )}
@@ -185,7 +179,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           <h2 className="font-medium">Showcase deck</h2>
           <Link
             href={`/decks/${profile.showcaseDeck.id}`}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
+            className="border-border-subtle hover:border-muted flex items-center justify-between rounded-lg border p-4"
           >
             <div>
               <div className="font-medium underline">{profile.showcaseDeck.name}</div>
@@ -220,25 +214,25 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Stats</h2>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <div className="border-border-subtle rounded-lg border p-3">
               <dt className="text-muted text-xs">Total cards</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.totalCards.toLocaleString()}
               </dd>
             </div>
-            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <div className="border-border-subtle rounded-lg border p-3">
               <dt className="text-muted text-xs">Unique printings</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.distinctCards.toLocaleString()}
               </dd>
             </div>
-            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <div className="border-border-subtle rounded-lg border p-3">
               <dt className="text-muted text-xs">Packs opened</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.packsOpened.toLocaleString()}
               </dd>
             </div>
-            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <div className="border-border-subtle rounded-lg border p-3">
               <dt className="text-muted text-xs">Shared decks</dt>
               <dd className="mt-1 text-lg font-semibold tabular-nums">
                 {profile.stats.sharedDecks.toLocaleString()}
@@ -253,7 +247,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
         {profile.sharedDecks.length === 0 ? (
           <p className="text-muted text-sm">No shared decks yet.</p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
             {profile.sharedDecks.map((deck) => (
               <li key={deck.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                 <div>
@@ -284,7 +278,7 @@ export default async function PlayerProfilePage(props: PageProps<"/players/[id]"
           {profile.wishlist.length === 0 ? (
             <p className="text-muted text-sm">Wishlist is empty.</p>
           ) : (
-            <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+            <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
               {profile.wishlist.map((item) => (
                 <li
                   key={item.id}

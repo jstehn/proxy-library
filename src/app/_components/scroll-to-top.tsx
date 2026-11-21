@@ -32,7 +32,7 @@ export function ScrollToTopButton() {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
           aria-label="Scroll to top"
-          className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white/95 px-3.5 py-2 text-xs font-medium text-zinc-900 shadow-lg backdrop-blur hover:bg-zinc-100 md:right-6 md:bottom-6 dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          className="border-line bg-background/95 text-foreground hover:bg-surface-raised fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur md:right-6 md:bottom-6"
         >
           <span aria-hidden="true">↑</span>
           Top

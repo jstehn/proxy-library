@@ -38,7 +38,7 @@ const COLOR_NAMES: Readonly<Record<ManaColor, string>> = {
 };
 
 const pill = (pressed: boolean) =>
-  `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`;
+  `rounded-full px-2.5 py-0.5 text-xs ${pressed ? "bg-accent text-accent-foreground" : "border border-line"}`;
 
 export function CollectionFilters(props: {
   browsing: Browsing;
@@ -49,7 +49,7 @@ export function CollectionFilters(props: {
   const { browsing, searchRef } = props;
   const { source, search, setSearch, cardSize, showEverything } = browsing;
   const colorRing = (on: boolean) =>
-    `rounded-full p-0.5 ${on ? "ring-2 ring-zinc-900 dark:ring-zinc-100" : "opacity-35"}`;
+    `rounded-full p-0.5 ${on ? "ring-2 ring-accent" : "opacity-35"}`;
 
   return (
     <div className="flex flex-col gap-2">
@@ -80,7 +80,7 @@ export function CollectionFilters(props: {
           onChange={(event) => setSearch(event.target.value)}
           aria-label={source === "mine" ? "Search your cards" : "Search every card"}
           placeholder='Search: bolt, t:creature mv<=3, o:"draw a card", id<=esper'
-          className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+          className="border-line min-w-0 flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
         />
         <div role="group" aria-label="Card size" className="flex shrink-0 items-center gap-1">
           <span className="text-muted mr-1 hidden text-xs sm:inline">Card size</span>
@@ -99,7 +99,7 @@ export function CollectionFilters(props: {
         </div>
       </div>
       {browsing.notes.length > 0 && (
-        <ul className="text-xs text-amber-700 dark:text-amber-400">
+        <ul className="text-warning-text text-xs">
           {browsing.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -188,7 +188,7 @@ export function CollectionFilters(props: {
           <select
             value={browsing.sort}
             onChange={(event) => browsing.setSort(event.target.value as BrowseSort)}
-            className="rounded border border-zinc-300 bg-transparent px-1 py-0.5 dark:border-zinc-700"
+            className="border-line rounded border bg-transparent px-1 py-0.5"
           >
             {Object.entries(SORT_LABELS).map(([value, label]) => (
               <option key={value} value={value}>

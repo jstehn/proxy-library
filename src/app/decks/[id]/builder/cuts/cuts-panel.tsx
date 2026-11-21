@@ -109,7 +109,7 @@ export function CutsPanel(props: {
   return (
     <section
       aria-label="Possible cuts"
-      className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-2 rounded-lg border p-3 text-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Possible cuts</h2>
@@ -117,7 +117,7 @@ export function CutsPanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close possible cuts"
-          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground"
         >
           ✕
         </button>
@@ -144,7 +144,7 @@ export function CutsPanel(props: {
                   >
                     {cut.name}
                   </button>
-                  <ul className="text-xs text-zinc-600 dark:text-zinc-400">
+                  <ul className="text-muted text-xs">
                     {cut.reasons.map((reason, index) => (
                       <li key={index}>{cutReasonText(reason)}</li>
                     ))}
@@ -156,7 +156,7 @@ export function CutsPanel(props: {
                     disabled={props.busy}
                     onClick={() => props.onMove(line, "maybe")}
                     aria-label={`Move ${cut.name} to the maybeboard`}
-                    className="shrink-0 rounded-md border border-zinc-300 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-zinc-700"
+                    className="border-line shrink-0 rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
                   >
                     To maybeboard
                   </button>
@@ -167,10 +167,8 @@ export function CutsPanel(props: {
         </ol>
       )}
       {cuts.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-            Swaps
-          </h3>
+        <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
+          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Swaps</h3>
           {loadingSwaps && swaps.length === 0 ? (
             <p className="text-muted text-xs">Looking for one-step swaps…</p>
           ) : swaps.length === 0 ? (
@@ -187,7 +185,7 @@ export function CutsPanel(props: {
                       Cut <span className="underline-offset-2">{swap.cut.name}</span> → Add{" "}
                       <span>{swap.add.card.name}</span>
                     </div>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    <p className="text-muted text-xs">
                       {swap.reasons.map(swapReasonText).join(" · ")}
                     </p>
                   </div>
@@ -203,7 +201,7 @@ export function CutsPanel(props: {
                       )
                     }
                     aria-label={`Swap ${swap.cut.name} for ${swap.add.card.name}`}
-                    className="shrink-0 rounded-md border border-zinc-300 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-zinc-700"
+                    className="border-line shrink-0 rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
                   >
                     Swap
                   </button>
@@ -214,9 +212,9 @@ export function CutsPanel(props: {
         </div>
       )}
       {cuts.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+            <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
               Whole-deck optimizer
             </h3>
             <button
@@ -229,14 +227,14 @@ export function CutsPanel(props: {
                   setOptimizing(false);
                 });
               }}
-              className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-zinc-700"
+              className="border-line rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
             >
               {optimizing ? "Optimizing…" : "Run optimizer"}
             </button>
           </div>
           {optimized !== null && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              <p className="text-muted text-xs">
                 Score: {optimized.before.total.toFixed(1)} → {optimized.after.total.toFixed(1)} (
                 {optimized.delta >= 0
                   ? `+${optimized.delta.toFixed(1)}`
@@ -258,7 +256,7 @@ export function CutsPanel(props: {
                         <div className="font-medium">
                           Cut <span>{swap.cut.name}</span> → Add <span>{swap.add.name}</span>
                         </div>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        <p className="text-muted text-xs">
                           Card rating{" "}
                           {swap.netCardRatingGain >= 0
                             ? `+${swap.netCardRatingGain}`
@@ -277,7 +275,7 @@ export function CutsPanel(props: {
                           )
                         }
                         aria-label={`Apply optimized swap ${swap.cut.name} for ${swap.add.name}`}
-                        className="shrink-0 rounded-md border border-zinc-300 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-zinc-700"
+                        className="border-line shrink-0 rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
                       >
                         Swap
                       </button>

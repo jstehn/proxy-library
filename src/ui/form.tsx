@@ -24,7 +24,7 @@ export function TextField(props: TextFieldProps) {
         defaultValue={defaultValue}
         autoComplete={autoComplete}
         required={required}
-        className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+        className="border-line bg-field rounded-md border px-3 py-2 text-base"
       />
       {hint && <span className="text-muted text-xs">{hint}</span>}
     </label>
@@ -38,9 +38,8 @@ type SubmitButtonProps = {
 };
 
 const TONES = {
-  primary: "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900",
-  secondary:
-    "border border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900",
+  primary: "bg-accent text-accent-foreground hover:bg-accent-hover",
+  secondary: "border border-line bg-field hover:bg-surface",
   danger: "bg-red-700 text-white hover:bg-red-600",
 };
 
@@ -64,8 +63,8 @@ type AlertProps = { tone: "error" | "success"; children: React.ReactNode };
 export function Alert(props: AlertProps) {
   const colors =
     props.tone === "error"
-      ? "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100"
-      : "border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100";
+      ? "border-danger-line bg-danger-soft text-danger-ink"
+      : "border-success-line bg-success-soft text-success-ink";
   return (
     <p role="status" aria-live="polite" className={`rounded-md border px-3 py-2 text-sm ${colors}`}>
       {props.children}

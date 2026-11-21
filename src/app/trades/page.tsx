@@ -69,7 +69,7 @@ export default async function TradesPage() {
       {list.length === 0 ? (
         <p className="text-muted text-sm">{empty}</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {list.map((trade) => (
             <TradeLine
               key={trade.id}
@@ -89,7 +89,7 @@ export default async function TradesPage() {
         <h1 className="flex-1 text-2xl font-semibold">Trades</h1>
         <Link
           href="/trades/new"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
         >
           New trade
         </Link>

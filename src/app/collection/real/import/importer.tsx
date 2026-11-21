@@ -14,12 +14,10 @@ import {
 // Importing real cards (design doc 16, sections 4 to 7, and 15.2): paste or upload, see what
 // each line matched, change any line's printing, then import exactly that.
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 const primary =
-  "rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900";
-const secondary =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700";
+  "rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60";
+const secondary = "rounded-md border border-line px-3 py-2 text-sm font-medium disabled:opacity-60";
 /** Lines shown with a printing menu; the rest import as matched (a long file stays quick). */
 const SHOWN_LINES = 300;
 const MAX_FILE_BYTES = 5_000_000;
@@ -221,10 +219,7 @@ export function RealImporter() {
                       choice.finishes.includes(line.line.finish),
                     );
                     return (
-                      <tr
-                        key={line.line.index}
-                        className="border-t border-zinc-200 dark:border-zinc-800"
-                      >
+                      <tr key={line.line.index} className="border-border-subtle border-t">
                         <td className="py-1 pr-2 tabular-nums">{line.line.quantity}</td>
                         <td className="py-1 pr-2">
                           {line.line.name}
@@ -273,7 +268,7 @@ export function RealImporter() {
               <summary className="cursor-pointer font-medium">
                 Skipped ({unmatched.length + answer.preview.unreadable.length})
               </summary>
-              <ul className="mt-1 flex flex-col gap-0.5 text-zinc-600 dark:text-zinc-400">
+              <ul className="text-muted mt-1 flex flex-col gap-0.5">
                 {unmatched.map((line) => (
                   <li key={line.line.index}>
                     {line.line.quantity} {line.line.name}

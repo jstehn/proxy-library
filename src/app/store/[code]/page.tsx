@@ -105,7 +105,7 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
                   )}
                   {isUpcoming(product.releaseDate, today) && (
-                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                    <span className="text-warning-text text-xs">
                       Releases {formatDay(product.releaseDate)}
                     </span>
                   )}
@@ -145,7 +145,7 @@ function ProductDetails(props: { product: ProductForSale }) {
   const { description, contents } = props.product;
   if (description === null && contents.length === 0) return null;
   return (
-    <details className="text-xs text-zinc-600 dark:text-zinc-400">
+    <details className="text-muted text-xs">
       <summary className="cursor-pointer select-none">What&apos;s inside</summary>
       <div className="mt-2 flex flex-col gap-2">
         {contents.length > 0 && (

@@ -49,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </div>
         {/* Required by Wizards' Fan Content Policy (design doc 13). */}
-        <footer className="border-t border-zinc-200 px-4 py-4 text-center text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+        <footer className="border-border-subtle text-muted border-t px-4 py-4 text-center text-xs">
           Proxy Library is unofficial Fan Content permitted under the Fan Content Policy. Not
           approved/endorsed by Wizards. Portions of the materials used are property of Wizards of
           the Coast. ©Wizards of the Coast LLC.

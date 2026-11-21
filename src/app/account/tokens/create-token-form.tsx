@@ -43,13 +43,13 @@ export function CreateTokenForm(props: { mcpUrl: string; openApiUrl: string }) {
 
       {state.kind === "error" && <Alert tone="error">{state.message}</Alert>}
       {state.kind === "created" && (
-        <div className="flex flex-col gap-3 rounded-lg border border-green-300 p-4 dark:border-green-800">
+        <div className="border-success-line flex flex-col gap-3 rounded-lg border p-4">
           <p className="text-sm">
             <strong>{state.name}</strong> is ready. Copy it now:{" "}
             <strong>you won&apos;t see it again</strong>.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 rounded bg-zinc-100 px-2 py-1 text-xs break-all dark:bg-zinc-800">
+            <code className="bg-surface-raised min-w-0 flex-1 rounded px-2 py-1 text-xs break-all">
               {state.secret}
             </code>
             <button
@@ -57,7 +57,7 @@ export function CreateTokenForm(props: { mcpUrl: string; openApiUrl: string }) {
               onClick={() => {
                 void navigator.clipboard.writeText(state.secret).then(() => setCopied(true));
               }}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+              className="border-line rounded-md border px-3 py-1 text-sm"
             >
               {copied ? "Copied" : "Copy"}
             </button>

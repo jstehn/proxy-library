@@ -53,7 +53,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Opened</h1>
         {newDecks !== null && (
-          <p className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+          <p className="border-success-line bg-success-soft text-success-ink rounded-md border px-3 py-2 text-sm">
             Added to your decks: <strong>{newDecks}</strong>.{" "}
             <Link href="/decks" className="underline">
               Open your decks
@@ -63,7 +63,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
         {openings.length === 0 ? (
           <p className="text-muted text-sm">Nothing to show.</p>
         ) : (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             {packs.length > 0 && `${packs.length} pack${packs.length === 1 ? "" : "s"} · `}
             cards worth <strong className="tabular-nums">{Cents.format(total)}</strong> at market
             price ·{" "}
@@ -83,7 +83,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
           <div className="flex flex-col gap-0.5">
             <h2 className="text-lg font-medium">{opening.name}</h2>
             {themes.has(opening.itemId) && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-muted text-sm">
                 Theme: <strong>{themes.get(opening.itemId)}</strong>
               </p>
             )}

@@ -20,7 +20,7 @@ export function CreateInviteForm(props: CreateInviteFormProps) {
           min={props.minDays}
           max={props.maxDays}
           defaultValue={props.defaultDays}
-          className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className="border-line bg-field w-20 rounded-md border px-2 py-1"
         />
         days
       </label>

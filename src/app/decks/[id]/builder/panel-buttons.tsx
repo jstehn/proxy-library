@@ -54,7 +54,7 @@ export function PanelButtons(props: {
           type="button"
           aria-expanded={openPanels[button.panel]}
           onClick={() => dispatch({ type: "panelToggled", panel: button.panel })}
-          className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+          className="border-line rounded-md border px-3 py-1 text-sm"
         >
           {openPanels[button.panel] ? button.hideLabel : button.label}
         </button>

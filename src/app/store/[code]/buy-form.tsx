@@ -21,7 +21,7 @@ export function BuyForm(props: { productId: string; productName: string }) {
             name="quantity"
             defaultValue="1"
             aria-label={`How many ${props.productName}`}
-            className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+            className="border-line rounded-md border bg-transparent px-2 py-1.5 text-sm"
           >
             {QUANTITIES.map((quantity) => (
               <option key={quantity} value={quantity}>

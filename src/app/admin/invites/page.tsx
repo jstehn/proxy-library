@@ -29,7 +29,7 @@ export default async function AdminInvitesPage() {
           {invites.map((invite) => (
             <li
               key={invite.code}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+              className="border-border-subtle flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm"
             >
               <code className="font-semibold">{invite.code}</code>
               <span className="text-muted">{invite.status}</span>

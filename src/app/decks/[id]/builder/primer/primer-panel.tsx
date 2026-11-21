@@ -121,15 +121,13 @@ export function PrimerPanel(props: Props) {
 
   const field = "flex flex-col gap-1";
   const label = "text-muted text-xs font-medium";
-  const input =
-    "rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
-  const button =
-    "rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700";
+  const input = "rounded border border-line bg-transparent px-2 py-1 text-sm";
+  const button = "rounded-md border border-line px-3 py-1 text-sm disabled:opacity-40";
 
   return (
     <section
       aria-label="Plan and primer"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-medium">Plan &amp; primer</h2>
@@ -143,7 +141,7 @@ export function PrimerPanel(props: Props) {
             type="button"
             onClick={props.onClose}
             aria-label="Close plan and primer"
-            className="text-muted min-h-7 min-w-7 rounded px-1.5 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="text-muted hover:text-foreground min-h-7 min-w-7 rounded px-1.5"
           >
             ✕
           </button>
@@ -184,7 +182,7 @@ export function PrimerPanel(props: Props) {
                 <PlanText title="Pilot notes" text={plan.profile.pilotNotes} />
               )}
               {plan.primer.trim() !== "" && (
-                <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
                   {parsePrimer(plan.primer).map((block, index) =>
                     block.kind === "heading" ? (
                       block.level === 2 ? (

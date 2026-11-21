@@ -185,7 +185,7 @@ export function SnapshotsPanel(props: {
   return (
     <section
       aria-label="Deck snapshots"
-      className="flex flex-col gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-3 rounded-md border p-3"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-baseline gap-2">
@@ -199,7 +199,7 @@ export function SnapshotsPanel(props: {
         <button
           type="button"
           onClick={props.onClose}
-          className="text-muted text-xs hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground text-xs"
         >
           Close
         </button>
@@ -224,36 +224,36 @@ export function SnapshotsPanel(props: {
             aria-invalid={labelError !== null ? "true" : "false"}
             aria-describedby={labelError !== null ? labelErrorId : undefined}
             disabled={busy || atLimit}
-            className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+            className="border-line min-w-0 flex-1 rounded border bg-transparent px-2 py-1 text-sm"
           />
           <button
             type="submit"
             disabled={busy || atLimit}
-            className="rounded border border-zinc-300 px-2.5 py-1 text-xs font-medium disabled:opacity-40 dark:border-zinc-700"
+            className="border-line rounded border px-2.5 py-1 text-xs font-medium disabled:opacity-40"
           >
             Save
           </button>
         </div>
         {labelError !== null && (
-          <p id={labelErrorId} role="status" className="text-xs text-red-700 dark:text-red-300">
+          <p id={labelErrorId} role="status" className="text-danger-text text-xs">
             {labelError}
           </p>
         )}
         {atLimit && (
-          <p className="text-xs text-amber-700 dark:text-amber-300">
+          <p className="text-warning-text text-xs">
             Limit of {MAX_SNAPSHOTS_PER_DECK} snapshots reached. Delete an older one to save more.
           </p>
         )}
       </form>
 
       {statusMessage !== null && (
-        <p role="status" className="text-xs text-zinc-600 dark:text-zinc-300">
+        <p role="status" className="text-muted text-xs">
           {statusMessage}
         </p>
       )}
 
       {loadError !== null ? (
-        <p className="text-xs text-red-700 dark:text-red-300">{loadError}</p>
+        <p className="text-danger-text text-xs">{loadError}</p>
       ) : snapshots === null ? (
         <p className="text-muted text-xs">Loading snapshots…</p>
       ) : snapshots.length === 0 ? (
@@ -272,7 +272,7 @@ export function SnapshotsPanel(props: {
                 className={`flex flex-col gap-1 rounded border p-2 ${
                   isComparing
                     ? "border-sky-400 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/30"
-                    : "border-zinc-200 dark:border-zinc-800"
+                    : "border-border-subtle"
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-2">
@@ -290,7 +290,7 @@ export function SnapshotsPanel(props: {
                       type="button"
                       disabled={busy || comparing}
                       onClick={() => void runCompare(snapshotId, null)}
-                      className="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      className="border-line text-muted hover:bg-surface rounded border px-1.5 py-0.5 text-[11px] disabled:opacity-40"
                     >
                       {isComparing ? "Comparing" : "Compare"}
                     </button>
@@ -308,7 +308,7 @@ export function SnapshotsPanel(props: {
                           type="button"
                           disabled={busy}
                           onClick={() => setConfirmRestoreId(null)}
-                          className="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] dark:border-zinc-700"
+                          className="border-line rounded border px-1.5 py-0.5 text-[11px]"
                         >
                           Cancel
                         </button>
@@ -318,7 +318,7 @@ export function SnapshotsPanel(props: {
                         type="button"
                         disabled={busy}
                         onClick={() => setConfirmRestoreId(snapshotId)}
-                        className="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                        className="border-line text-muted hover:bg-surface rounded border px-1.5 py-0.5 text-[11px] disabled:opacity-40"
                       >
                         Restore
                       </button>
@@ -327,7 +327,7 @@ export function SnapshotsPanel(props: {
                       type="button"
                       disabled={busy}
                       onClick={() => void remove(snapshot)}
-                      className="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] text-red-700 hover:bg-red-50 disabled:opacity-40 dark:border-zinc-700 dark:text-red-300 dark:hover:bg-red-950"
+                      className="border-line text-danger-text rounded border px-1.5 py-0.5 text-[11px] hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950"
                     >
                       Delete
                     </button>
@@ -342,7 +342,7 @@ export function SnapshotsPanel(props: {
       {comparison !== null && snapshots !== null && (
         <div
           aria-live="polite"
-          className="flex flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-900/50"
+          className="border-border-subtle bg-surface flex flex-col gap-2 rounded border p-2.5 text-xs"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-medium">
@@ -355,7 +355,7 @@ export function SnapshotsPanel(props: {
                 setAfterId(null);
                 setComparison(null);
               }}
-              className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="text-muted hover:text-foreground"
             >
               Hide diff
             </button>
@@ -370,7 +370,7 @@ export function SnapshotsPanel(props: {
                   const next = event.target.value;
                   void runCompare(beforeId, next === "" ? null : Number(next));
                 }}
-                className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-1.5 py-0.5 text-xs text-zinc-900 dark:border-zinc-700 dark:text-zinc-100"
+                className="border-line text-foreground min-w-0 flex-1 rounded border bg-transparent px-1.5 py-0.5 text-xs"
               >
                 <option value="">Current deck</option>
                 {snapshots
@@ -410,7 +410,7 @@ export function SnapshotsPanel(props: {
           </div>
 
           {comparison.roles.length > 0 && (
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-zinc-600 dark:text-zinc-300">
+            <div className="text-muted flex flex-wrap gap-x-3 gap-y-1">
               {comparison.roles.map((role) => (
                 <span key={role.tag}>
                   {TAG_LABELS[role.tag]}: {role.before} → {role.after}
@@ -434,8 +434,8 @@ export function SnapshotsPanel(props: {
                       <span
                         className={
                           delta > 0
-                            ? "mr-1 font-semibold text-emerald-700 dark:text-emerald-400"
-                            : "mr-1 font-semibold text-red-700 dark:text-red-400"
+                            ? "text-success-text mr-1 font-semibold"
+                            : "text-danger-text mr-1 font-semibold"
                         }
                       >
                         {delta > 0 ? `+${delta}` : delta}
@@ -453,7 +453,7 @@ export function SnapshotsPanel(props: {
           )}
 
           {comparison.problems.added.length > 0 && (
-            <div className="text-red-700 dark:text-red-300">
+            <div className="text-danger-text">
               <p className="font-medium">New problems:</p>
               <ul className="list-disc pl-4">
                 {comparison.problems.added.map((problem) => {
@@ -464,7 +464,7 @@ export function SnapshotsPanel(props: {
             </div>
           )}
           {comparison.problems.resolved.length > 0 && (
-            <div className="text-emerald-700 dark:text-emerald-300">
+            <div className="text-success-text">
               <p className="font-medium">Resolved problems:</p>
               <ul className="list-disc pl-4">
                 {comparison.problems.resolved.map((problem) => {

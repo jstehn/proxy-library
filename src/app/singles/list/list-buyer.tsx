@@ -9,8 +9,7 @@ import { buyListAction, quoteListAction, type BuyListResult } from "./actions";
 // follows the text after a pause in typing; buying sends exactly the lines shown.
 
 const WAIT_MILLISECONDS = 400;
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 const money = (cents: number) => Cents.format(Cents.of(cents));
 
 export function ListBuyer(props: { startingText: string; balanceCents: number }) {
@@ -114,7 +113,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           </p>
         ) : (
           <ul
-            className={`flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800 ${isQuoting ? "opacity-60" : ""}`}
+            className={`divide-border-subtle flex flex-col divide-y ${isQuoting ? "opacity-60" : ""}`}
           >
             {quote.lines.map((line) => (
               <QuoteRow
@@ -128,24 +127,22 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           </ul>
         )}
         {quote !== null && quote.unreadable.length > 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-sm">
             Couldn&apos;t read: {quote.unreadable.join(" | ")}
           </p>
         )}
         {quote !== null && quote.leftOut > 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-warning-text text-sm">
             Only the first {quote.lines.length} lines are bought at once; {quote.leftOut} left out.
           </p>
         )}
 
         {quote !== null && quote.cards > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <p className="text-sm">
               Total <strong className="tabular-nums">{money(quote.totalCents)}</strong> · balance
               after{" "}
-              <span
-                className={`tabular-nums ${balanceAfter < 0 ? "text-red-700 dark:text-red-400" : ""}`}
-              >
+              <span className={`tabular-nums ${balanceAfter < 0 ? "text-danger-text" : ""}`}>
                 {money(balanceAfter)}
               </span>
             </p>
@@ -153,7 +150,7 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
               type="button"
               onClick={buy}
               disabled={isBuying || isQuoting || balanceAfter < 0}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40"
             >
               {isBuying
                 ? "Buying…"
@@ -162,17 +159,13 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
           </div>
         )}
         {quote !== null && balanceAfter < 0 && (
-          <p className="text-sm text-red-700 dark:text-red-400">
+          <p className="text-danger-text text-sm">
             That&apos;s more than your balance: remove some lines, or pick cheaper printings.
           </p>
         )}
         <p role="status" className="min-h-5 text-sm">
           {result !== null && (
-            <span
-              className={
-                result.ok ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-              }
-            >
+            <span className={result.ok ? "text-success-text" : "text-danger-text"}>
               {result.message}
             </span>
           )}
@@ -192,7 +185,7 @@ function QuoteRow(props: { line: QuoteLine; onChoose: (printingId: string) => vo
       <span className="min-w-0 flex-1">
         <span className="font-medium">{choice?.name ?? request.name}</span>
         {line.problem !== null && (
-          <span className="block text-xs text-amber-700 dark:text-amber-400">⚠ {line.problem}</span>
+          <span className="text-warning-text block text-xs">⚠ {line.problem}</span>
         )}
         {choice !== null && line.toBuy < request.quantity && (
           <span className="text-muted block text-xs">

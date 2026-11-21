@@ -53,7 +53,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Singles</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Buy any card from an enabled set at its market price. {result.total} cards match. Have a
           list?{" "}
           <Link href="/singles/list" className="underline">

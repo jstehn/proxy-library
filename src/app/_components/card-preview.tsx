@@ -32,10 +32,10 @@ export function EnlargedCard(props: {
             alt=""
             width={488}
             height={680}
-            className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[488/680] w-full"
           />
         ) : (
-          <div className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800" />
+          <div className="bg-surface-raised aspect-[488/680] w-full" />
         )}
 
         {/* The overlay: the card's printed text, readable at any size. */}
@@ -226,17 +226,15 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
             loading="lazy"
             width={488}
             height={680}
-            className="aspect-[488/680] w-full rounded-[4.5%] bg-zinc-100 shadow-md dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[488/680] w-full rounded-[4.5%] shadow-md"
           />
         ) : (
-          <div className="flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] bg-zinc-100 p-2 text-center text-xs dark:bg-zinc-800">
+          <div className="bg-surface-raised flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs">
             {printing.name}
           </div>
         )}
       </button>
-      {props.caption && (
-        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{props.caption}</p>
-      )}
+      {props.caption && <p className="text-muted mt-1 text-xs">{props.caption}</p>}
       {isOpen && <EnlargedCard printing={printing} align={align} />}
       {isDialogOpen && (
         <CardPreviewDialog

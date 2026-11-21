@@ -10,7 +10,7 @@ export default async function RealImportPage() {
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Import real cards</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Paste a list as deck sites write it (<code>4 Lightning Bolt</code>,{" "}
           <code>1 Sol Ring (C21) 263 *F*</code>), or choose a collection file from Moxfield or
           ManaBox, or one exported from here. A card named without a set becomes its newest regular

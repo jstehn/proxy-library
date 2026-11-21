@@ -27,7 +27,7 @@ export default async function TokensPage() {
           Account
         </Link>
         <h1 className="text-2xl font-semibold">Connect an LLM</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           An access token lets an AI assistant (any app that speaks MCP, or calls tools from an
           OpenAPI description) look at your cards, decks and wishlist and help build decks, as you.
           Give each app its own token, and revoke one you no longer use.
@@ -36,7 +36,7 @@ export default async function TokensPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Claude on the web, and other web connectors</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           No token needed: in claude.ai, open Settings → Connectors → Add custom connector, and give
           it <code className="break-all">{mcpUrl}</code>. It sends you to Proxy Library to approve
           it, and then shows up in the list below.
@@ -53,7 +53,7 @@ export default async function TokensPage() {
         {tokens.length === 0 ? (
           <p className="text-muted text-sm">None yet.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle flex flex-col divide-y rounded-lg border">
             {tokens.map((token) => (
               <li key={token.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -75,7 +75,7 @@ export default async function TokensPage() {
                   <input type="hidden" name="tokenId" value={token.id} />
                   <button
                     type="submit"
-                    className="rounded-md border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                    className="border-danger-line text-danger-text hover:bg-danger-soft rounded-md border px-3 py-1"
                   >
                     Revoke
                   </button>
@@ -88,7 +88,7 @@ export default async function TokensPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Setting it up</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           The address is <code className="break-all">{mcpUrl}</code>. Replace{" "}
           <code>pl_YOUR_TOKEN</code> with the token you made. From outside your home network, the
           app must be served over HTTPS.

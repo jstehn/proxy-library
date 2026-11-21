@@ -50,7 +50,7 @@ export function PriceChart(props: {
     <figure className="flex flex-col gap-2">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full max-w-2xl text-zinc-400"
+        className="text-muted w-full max-w-2xl"
         role="img"
         aria-label="Price history"
       >
@@ -129,7 +129,7 @@ export function PriceChart(props: {
           );
         })}
       </svg>
-      <figcaption className="flex flex-wrap gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+      <figcaption className="text-muted flex flex-wrap gap-4 text-xs">
         {props.series.map((series) => (
           <span key={series.label} className="flex items-center gap-1">
             <span className="inline-block h-0.5 w-4" style={{ background: series.color }} />

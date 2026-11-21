@@ -49,7 +49,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
             .
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-border-subtle flex flex-col divide-y">
             {groups.map((group) => {
               const count = group.itemIds.length;
               // Precons and starter kits hold decks: "Open" goes all the way to the cards (and
@@ -74,7 +74,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                     <input type="hidden" name="mode" value={isDeckProduct ? "all" : "one"} />
                     <button
                       type="submit"
-                      className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                      className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
                       aria-label={`Open ${group.name}`}
                     >
                       {group.contentKind === "product" && !isDeckProduct ? "Unpack" : "Open"}
@@ -93,7 +93,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
                       <input type="hidden" name="mode" value="all" />
                       <button
                         type="submit"
-                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                        className="border-line rounded-md border px-3 py-1.5 text-sm"
                         aria-label={`Open all ${group.name}`}
                       >
                         {group.contentKind === "product"

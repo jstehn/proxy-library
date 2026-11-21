@@ -44,7 +44,7 @@ export default async function BuyListPage(props: PageProps<"/singles/list">) {
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Buy a list of cards</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Paste a list, one card per line, as deck sites write them: <code>4 Lightning Bolt</code>,{" "}
           <code>1 Sol Ring (C21) 263</code>, and <code>*F*</code> for foil. Check what each line
           would buy, then buy it all at once.{" "}

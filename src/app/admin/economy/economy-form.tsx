@@ -54,7 +54,7 @@ export function EconomyForm(props: { values: EconomyFormValues; maxPeriodDays: n
           max={props.maxPeriodDays}
           defaultValue={props.values.allowancePeriodDays}
           required
-          className="w-24 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="border-line bg-field w-24 rounded-md border px-3 py-2"
         />
       </label>
 
@@ -67,7 +67,7 @@ export function EconomyForm(props: { values: EconomyFormValues; maxPeriodDays: n
             // The browser knows your time zone; turn the local time into an exact instant.
             onChange={(event) => setAnchorIso(new Date(event.target.value).toISOString())}
             required
-            className="w-60 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="border-line bg-field w-60 rounded-md border px-3 py-2"
           />
         ) : (
           <span className="text-muted">Loading…</span>

@@ -12,7 +12,7 @@ export default async function SharedDecksPage() {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Shared decks</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Decks the playgroup has shared. Open one to read it, try a test hand, see which cards you
           own, and leave a comment.{" "}
           <Link href="/decks" className="underline">
@@ -26,7 +26,7 @@ export default async function SharedDecksPage() {
           playgroup&quot;.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {decks.map((deck) => (
             <li key={deck.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
               <Link href={`/decks/${deck.id}`} className="font-medium underline">

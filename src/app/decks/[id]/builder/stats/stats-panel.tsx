@@ -22,7 +22,7 @@ import { CastCurve } from "../cast-curve/cast-curve";
 const COLOR_BAR: Record<ManaSource, string> = {
   W: "bg-amber-200",
   U: "bg-sky-500",
-  B: "bg-zinc-500",
+  B: "bg-muted",
   R: "bg-red-500",
   G: "bg-green-600",
   C: "bg-stone-400",
@@ -192,14 +192,14 @@ export function StatsPanel(props: {
               >
                 {TAG_LABELS[tag]}
               </button>
-              <div className="h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+              <div className="bg-surface-raised h-2 overflow-hidden rounded">
                 <div
                   className={`h-full ${count >= target ? "bg-green-600 dark:bg-green-500" : "bg-amber-500"}`}
                   style={{ width: `${Math.min(1, count / target) * 100}%` }}
                 />
               </div>
               <span
-                className={`text-right tabular-nums ${count >= target ? "" : "text-amber-700 dark:text-amber-400"}`}
+                className={`text-right tabular-nums ${count >= target ? "" : "text-warning-text"}`}
                 aria-label={`${count} of about ${target}`}
               >
                 {count} / {target}
@@ -276,11 +276,7 @@ export function StatsPanel(props: {
 
 function Figure(props: { label: string; value: string; tone?: "good" | "warn" }) {
   const color =
-    props.tone === "good"
-      ? "text-green-700 dark:text-green-400"
-      : props.tone === "warn"
-        ? "text-amber-700 dark:text-amber-400"
-        : "";
+    props.tone === "good" ? "text-success-text" : props.tone === "warn" ? "text-warning-text" : "";
   return (
     <div className="flex justify-between gap-2">
       <dt className="text-muted">{props.label}</dt>
@@ -292,7 +288,7 @@ function Figure(props: { label: string; value: string; tone?: "good" | "warn" })
 function Bar(props: { share: number; color: string; label: string }) {
   return (
     <div className="flex items-center gap-1" title={props.label}>
-      <div className="h-2 flex-1 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+      <div className="bg-surface-raised h-2 flex-1 overflow-hidden rounded">
         <div className={`h-full ${props.color}`} style={{ width: `${props.share * 100}%` }} />
       </div>
       <span className="w-6 text-right text-[10px] tabular-nums">{props.label.split(" ")[0]}</span>

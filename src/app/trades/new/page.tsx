@@ -108,7 +108,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
         <h1 className="text-2xl font-semibold">New trade</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Who do you want to trade with?</p>
+        <p className="text-muted text-sm">Who do you want to trade with?</p>
         {partners.length === 0 ? (
           <p className="text-muted text-sm">There&apos;s nobody else to trade with yet.</p>
         ) : (
@@ -173,7 +173,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
           return (
             <section
               key={side}
-              className="flex flex-1 flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
+              className="border-border-subtle flex flex-1 flex-col gap-3 rounded-lg border p-4"
             >
               <h2 className="font-medium">
                 {isGive ? "You give" : `${partner.displayName} gives`}
@@ -209,7 +209,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
       <ProposeForm isCounter={draft.replaces !== null} />
 
       {partnerWishlist !== null && partnerWishlist.lines.length > 0 && (
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-medium">Cards {partner.displayName} wants</h2>
             <Link
@@ -250,7 +250,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
                           key={`${copy.printingId}/${copy.finish}`}
                           className="flex items-center gap-1.5 text-xs"
                         >
-                          <span className="text-emerald-700 dark:text-emerald-400">
+                          <span className="text-success-text">
                             you have {copy.quantity} ({cards.get(copy.printingId)?.setCode ?? ""}
                             {copy.finish === "nonfoil" ? "" : ` ${copy.finish}`})
                           </span>

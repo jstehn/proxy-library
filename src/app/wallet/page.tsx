@@ -27,7 +27,7 @@ export default async function WalletPage() {
         <h1 className="text-2xl font-semibold">Wallet</h1>
         <p className="text-4xl font-semibold tabular-nums">{Cents.format(summary.balance)}</p>
         {settings.allowance > 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Next allowance: {Cents.format(settings.allowance)} on{" "}
             <LocalTime iso={payday.toISOString()} withTime />
           </p>
@@ -43,7 +43,7 @@ export default async function WalletPage() {
           <Stat label="Corrected" value={summary.corrected} />
         </dl>
         {summary.totalsSince !== null && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Totals since your library was reset on <LocalTime iso={summary.totalsSince} />. The
             history below still shows everything.
           </p>
@@ -51,9 +51,9 @@ export default async function WalletPage() {
       </section>
 
       {actor.canSelfFund && (
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
           <h2 className="font-medium">Add your own funds</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Money you add is recorded as self-funded, which admins can see.
           </p>
           <AddFundsForm limitText={Cents.format(settings.selfFundLimit)} />
@@ -63,7 +63,7 @@ export default async function WalletPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">History</h2>
         {history.length === 0 && <p className="text-muted text-sm">Nothing yet.</p>}
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle divide-y">
           {history.map((entry) => (
             <li
               key={entry.id}
@@ -79,9 +79,7 @@ export default async function WalletPage() {
                   <span className="text-muted"> · by @{entry.createdByUsername}</span>
                 )}
               </span>
-              <span
-                className={`tabular-nums ${entry.amount < 0 ? "text-red-700 dark:text-red-400" : ""}`}
-              >
+              <span className={`tabular-nums ${entry.amount < 0 ? "text-danger-text" : ""}`}>
                 {entry.amount > 0 ? "+" : ""}
                 {Cents.format(entry.amount)}
               </span>
@@ -95,7 +93,7 @@ export default async function WalletPage() {
 
 function Stat(props: { label: string; value: Cents }) {
   return (
-    <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+    <div className="border-border-subtle rounded-lg border p-3">
       <dt className="text-muted text-xs">{props.label}</dt>
       <dd className="text-lg font-medium tabular-nums">{Cents.format(props.value)}</dd>
     </div>

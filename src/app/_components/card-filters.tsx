@@ -33,8 +33,7 @@ const FINISHES: Array<[string, string]> = [
   ["etched", "Etched"],
 ];
 
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 function Select(props: {
   name: string;
@@ -129,7 +128,7 @@ export function CardFilters(props: {
         <Select name="sort" label="Sort by" value={value("sort")} options={props.sorts} />
         <button
           type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
         >
           Show
         </button>
@@ -141,7 +140,7 @@ export function CardFilters(props: {
         </Link>
       </div>
       {props.notes !== undefined && props.notes.length > 0 && (
-        <ul className="text-xs text-amber-700 dark:text-amber-400">
+        <ul className="text-warning-text text-xs">
           {props.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}

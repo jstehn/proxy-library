@@ -46,9 +46,8 @@ export function DraftSync() {
   return null;
 }
 
-const smallButton = "rounded border border-zinc-300 px-2 text-sm leading-6 dark:border-zinc-700";
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const smallButton = "rounded border border-line px-2 text-sm leading-6";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 /** "+ add" or "−" for one card on one side. */
 export function DraftButton(props: {
@@ -137,7 +136,7 @@ export function ProposeForm(props: { isCounter: boolean }) {
       <div>
         <button
           type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
         >
           {props.isCounter ? "Send counter-offer" : "Propose trade"}
         </button>

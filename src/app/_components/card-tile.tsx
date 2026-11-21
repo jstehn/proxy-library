@@ -8,9 +8,9 @@ import { CardPreviewDialog, EnlargedCard } from "./card-preview";
 // its printed text laid over the image, because the small grid image is too small to read.
 
 const RARITY_COLORS: Record<string, string> = {
-  common: "text-zinc-600 dark:text-zinc-400",
+  common: "text-muted",
   uncommon: "text-slate-600 dark:text-slate-400",
-  rare: "text-amber-700 dark:text-amber-400",
+  rare: "text-warning-text",
   mythic: "text-orange-700 dark:text-orange-400",
 };
 
@@ -97,10 +97,10 @@ export function CardTile(props: CardTileProps) {
             loading="lazy"
             width={146}
             height={204}
-            className="aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
           />
         ) : (
-          <div className="flex aspect-[146/204] w-full items-center justify-center rounded-md bg-zinc-100 p-2 text-center text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          <div className="bg-surface-raised text-muted flex aspect-[146/204] w-full items-center justify-center rounded-md p-2 text-center text-xs">
             {printing.name}
           </div>
         )}
@@ -117,9 +117,7 @@ export function CardTile(props: CardTileProps) {
         #{printing.collectorNumber} · {printing.rarity}
         {printing.variantLabel && ` · ${printing.variantLabel}`}
       </span>
-      <span className="text-xs text-zinc-600 tabular-nums dark:text-zinc-400">
-        {props.priceLine}
-      </span>
+      <span className="text-muted text-xs tabular-nums">{props.priceLine}</span>
       {props.note && <span className="text-xs text-sky-700 dark:text-sky-400">{props.note}</span>}
 
       {isOpen && <EnlargedCard printing={printing} align={align} />}

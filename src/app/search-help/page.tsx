@@ -24,7 +24,7 @@ function Table(props: { rows: readonly SearchHelpRow[] }) {
         </thead>
         <tbody>
           {props.rows.map((row) => (
-            <tr key={row.write} className="border-t border-zinc-200 align-top dark:border-zinc-800">
+            <tr key={row.write} className="border-border-subtle border-t align-top">
               <td className="py-1.5 pr-4 font-mono whitespace-nowrap">{row.write}</td>
               <td className="py-1.5 pr-4">{row.finds}</td>
               <td className="py-1.5 font-mono whitespace-nowrap">{row.example}</td>
@@ -42,7 +42,7 @@ export default async function SearchHelpPage() {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Search help</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Every card search (the singles store, your collection, the deck builder) understands the
           same words, modeled on Scryfall&apos;s. Terms side by side must all match. A part the
           search can&apos;t read is skipped, and a note under the box says which.

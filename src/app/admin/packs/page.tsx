@@ -79,7 +79,7 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
       <ManaStylesheet />
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Pack lab</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Open packs with the real odds to check a set&apos;s recipe. Nothing is kept and no money
           moves.
         </p>
@@ -109,7 +109,7 @@ function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: 
           name="booster"
           defaultValue={props.booster}
           required
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent px-2 py-1.5"
         >
           <option value="" disabled>
             Choose a booster…
@@ -130,7 +130,7 @@ function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: 
         <select
           name="count"
           defaultValue={String(PACK_COUNTS.includes(props.count) ? props.count : 10)}
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent px-2 py-1.5"
         >
           {PACK_COUNTS.map((packCount) => (
             <option key={packCount} value={packCount}>
@@ -141,7 +141,7 @@ function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: 
       </label>
       <button
         type="submit"
-        className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+        className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
       >
         Open packs
       </button>
@@ -182,14 +182,14 @@ async function Report(props: {
         <h2 className="text-lg font-medium">
           {report.packCount.toLocaleString("en-US")} × {setName} {boosterLabel(report.boosterType)}
         </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           {price === null
             ? "This pack isn't sold on its own. "
             : price.price > price.listPrice
               ? `A pack costs ${Cents.format(price.price)}: its MSRP of ${Cents.format(price.listPrice)}, raised to what its cards sell back for. `
               : `A pack costs ${Cents.format(price.price)} (MSRP). `}
           Cards inside an average pack are worth{" "}
-          <strong className="text-zinc-900 tabular-nums dark:text-zinc-100">
+          <strong className="text-foreground tabular-nums">
             {Cents.format(report.averageValue)}
           </strong>{" "}
           at market price. Seed <code className="text-xs">{report.seed}</code>
@@ -197,7 +197,7 @@ async function Report(props: {
 
         <table className="w-full max-w-lg text-sm">
           <thead>
-            <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+            <tr className="border-border-subtle border-b text-left">
               <th className="py-1 font-medium">Per pack</th>
               <th className="py-1 text-right font-medium">Recipe says</th>
               <th className="py-1 text-right font-medium">We got</th>
@@ -205,7 +205,7 @@ async function Report(props: {
           </thead>
           <tbody>
             {rows.map((key) => (
-              <tr key={key} className="border-b border-zinc-100 dark:border-zinc-900">
+              <tr key={key} className="border-border-subtle border-b">
                 <td className="py-1">{COUNT_LABELS[key]}</td>
                 <td className="py-1 text-right tabular-nums">{report.expected[key].toFixed(3)}</td>
                 <td className="py-1 text-right tabular-nums">{report.observed[key].toFixed(3)}</td>

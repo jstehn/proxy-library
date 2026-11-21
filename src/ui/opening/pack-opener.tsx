@@ -234,20 +234,20 @@ export function PackOpener(props: PackOpenerProps) {
               <button
                 type="button"
                 onClick={revealNext}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
               >
                 Reveal next
               </button>
               <button
                 type="button"
                 onClick={() => send({ type: "revealAll" })}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                className="border-line rounded-md border px-3 py-1.5 text-sm"
               >
                 Reveal all
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="border-border-subtle flex flex-wrap items-center gap-4 rounded-lg border p-4">
               <p>
                 This pack is worth{" "}
                 <strong className="tabular-nums">
@@ -261,7 +261,7 @@ export function PackOpener(props: PackOpenerProps) {
               <button
                 type="button"
                 onClick={() => send({ type: "nextPack" })}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
               >
                 {isLastPack ? "Done" : "Next pack"}
               </button>
@@ -280,13 +280,9 @@ function CardFace(props: { card: OpenerCard }) {
     <div className="relative overflow-hidden rounded-[4.5%]">
       {card.hasImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl(card)}
-          alt=""
-          className="aspect-[488/680] w-full bg-zinc-200 dark:bg-zinc-800"
-        />
+        <img src={imageUrl(card)} alt="" className="bg-surface-raised aspect-[488/680] w-full" />
       ) : (
-        <div className="flex aspect-[488/680] w-full items-center justify-center bg-zinc-200 p-2 text-center dark:bg-zinc-800">
+        <div className="bg-surface-raised flex aspect-[488/680] w-full items-center justify-center p-2 text-center">
           {card.name}
         </div>
       )}
@@ -441,7 +437,7 @@ function RevealSlot(props: RevealSlotProps) {
         onClick={props.isNext ? props.onReveal : props.isFaceUp ? props.onFocus : undefined}
         disabled={!props.isNext && !props.isFaceUp}
         aria-label={props.isFaceUp ? card.name : `Face-down card ${props.index + 1}`}
-        className={`flip-card block w-full rounded-[4.5%] ${props.isNext && !props.isInSuspense ? "cursor-pointer ring-2 ring-zinc-400 ring-offset-2" : ""} ${props.isInSuspense ? "animate-suspense" : ""}`}
+        className={`flip-card block w-full rounded-[4.5%] ${props.isNext && !props.isInSuspense ? "ring-muted cursor-pointer ring-2 ring-offset-2" : ""} ${props.isInSuspense ? "animate-suspense" : ""}`}
       >
         <div className={`flip-inner rounded-[4.5%] ${glow} ${props.isFaceUp ? "is-flipped" : ""}`}>
           <div className="flip-face">

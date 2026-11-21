@@ -26,7 +26,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Friends</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Connect with players in your playgroup, view profiles, and filter the activity feed.
           </p>
         </div>
@@ -38,7 +38,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
       {requests.incoming.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Friend requests ({requests.incoming.length})</h2>
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
             {requests.incoming.map((req) => (
               <li
                 key={req.userId}
@@ -58,7 +58,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                     <input type="hidden" name="targetUserId" value={req.userId} />
                     <button
                       type="submit"
-                      className="rounded-md bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                      className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-xs font-medium"
                     >
                       Accept
                     </button>
@@ -67,7 +67,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                     <input type="hidden" name="targetUserId" value={req.userId} />
                     <button
                       type="submit"
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-xs dark:border-zinc-700"
+                      className="border-line rounded-md border px-3 py-1 text-xs"
                     >
                       Decline
                     </button>
@@ -86,7 +86,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
             No friends yet. Find players in the directory below to send a request.
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
             {friends.map((friend) => (
               <li
                 key={friend.userId}
@@ -107,10 +107,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                   </Link>
                   <form action={unfriendAction}>
                     <input type="hidden" name="targetUserId" value={friend.userId} />
-                    <button
-                      type="submit"
-                      className="text-zinc-600 underline hover:text-red-600 dark:text-zinc-400"
-                    >
+                    <button type="submit" className="text-muted underline hover:text-red-600">
                       Unfriend
                     </button>
                   </form>
@@ -124,7 +121,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
       {requests.outgoing.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Sent requests ({requests.outgoing.length})</h2>
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
             {requests.outgoing.map((req) => (
               <li
                 key={req.userId}
@@ -138,10 +135,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                 </div>
                 <form action={cancelFriendRequestAction}>
                   <input type="hidden" name="targetUserId" value={req.userId} />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-zinc-300 px-3 py-1 text-xs dark:border-zinc-700"
-                  >
+                  <button type="submit" className="border-line rounded-md border px-3 py-1 text-xs">
                     Cancel request
                   </button>
                 </form>
@@ -160,12 +154,9 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
               name="q"
               defaultValue={query}
               placeholder="Search name or @username"
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-1 text-sm dark:border-zinc-700"
+              className="border-line rounded-md border bg-transparent px-3 py-1 text-sm"
             />
-            <button
-              type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-            >
+            <button type="submit" className="border-line rounded-md border px-3 py-1 text-sm">
               Search
             </button>
           </form>
@@ -174,7 +165,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
         {players.length === 0 ? (
           <p className="text-muted text-sm">No matching players found.</p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border-subtle border-border-subtle divide-y rounded-lg border">
             {players.map((player) => (
               <li
                 key={player.userId}
@@ -187,11 +178,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                     </Link>{" "}
                     <span className="text-muted text-xs">@{player.username}</span>
                   </div>
-                  {player.bio && (
-                    <p className="mt-0.5 truncate text-xs text-zinc-600 dark:text-zinc-400">
-                      {player.bio}
-                    </p>
-                  )}
+                  {player.bio && <p className="text-muted mt-0.5 truncate text-xs">{player.bio}</p>}
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   {player.relation === "none" && (
@@ -199,7 +186,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                       <input type="hidden" name="targetUserId" value={player.userId} />
                       <button
                         type="submit"
-                        className="rounded-md bg-zinc-900 px-3 py-1 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                        className="bg-accent text-accent-foreground rounded-md px-3 py-1 font-medium"
                       >
                         Add friend
                       </button>
@@ -213,7 +200,7 @@ export default async function FriendsPage(props: PageProps<"/friends">) {
                       <input type="hidden" name="targetUserId" value={player.userId} />
                       <button
                         type="submit"
-                        className="rounded-md bg-zinc-900 px-3 py-1 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                        className="bg-accent text-accent-foreground rounded-md px-3 py-1 font-medium"
                       >
                         Accept request
                       </button>

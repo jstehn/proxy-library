@@ -18,8 +18,7 @@ import { FINISH_NAMES, offerLabel } from "./labels";
 // from a card's page.
 
 const initialState: WishState = { message: null, tone: "success" };
-const field =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const field = "rounded-md border border-line bg-transparent px-2 py-1.5 text-sm";
 
 const PREFERENCE_OPTIONS: readonly (readonly [FinishPreference, string])[] = [
   ["nonfoil", "Nonfoil"],
@@ -159,7 +158,7 @@ export function EditWishForm(props: { wish: Wish }) {
   const { wish } = props;
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-zinc-600 underline dark:text-zinc-400">Edit</summary>
+      <summary className="text-muted cursor-pointer underline">Edit</summary>
       <form action={formAction} className="mt-2 flex flex-col gap-2">
         <input type="hidden" name="wishId" value={wish.id} />
         <DetailFields quantity={wish.quantity} targetPrice={wish.targetPrice} note={wish.note} />
@@ -245,7 +244,7 @@ export function RemoveWishButton() {
     <button
       type="submit"
       disabled={pending}
-      className="text-sm text-zinc-600 underline disabled:opacity-60 dark:text-zinc-400"
+      className="text-muted text-sm underline disabled:opacity-60"
     >
       {pending ? "Removing…" : "Remove"}
     </button>
@@ -269,7 +268,7 @@ export function WishForShortForm(props: {
       {state.message && (
         <span
           role="status"
-          className={`ml-2 text-xs ${state.tone === "error" ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}
+          className={`ml-2 text-xs ${state.tone === "error" ? "text-danger-text" : "text-success-text"}`}
         >
           {state.message}{" "}
           {state.tone === "success" && (
@@ -288,7 +287,7 @@ function WishForShortButton(props: { label: string; look: "button" | "link" }) {
   const className =
     props.look === "link"
       ? "underline disabled:opacity-60"
-      : "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-60 dark:border-zinc-700";
+      : "rounded-md border border-line px-3 py-1.5 text-sm font-medium disabled:opacity-60";
   return (
     <button type="submit" disabled={pending} className={className}>
       {pending ? "Adding…" : props.label}

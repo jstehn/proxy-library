@@ -75,7 +75,7 @@ export function DraftPanel(props: {
   return (
     <section
       aria-label="Deck draft"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+      className="border-border-subtle flex flex-col gap-3 rounded-lg border p-3 text-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Draft deck</h2>
@@ -83,7 +83,7 @@ export function DraftPanel(props: {
           type="button"
           onClick={props.onClose}
           aria-label="Close deck draft"
-          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground"
         >
           ✕
         </button>
@@ -98,12 +98,12 @@ export function DraftPanel(props: {
           real synergies.
         </p>
       </div>
-      <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+      <label className="text-muted flex items-center gap-2 text-xs">
         <input
           type="checkbox"
           checked={includeStore === "fill-gaps"}
           onChange={(event) => setIncludeStore(event.target.checked ? "fill-gaps" : "none")}
-          className="rounded border-zinc-300 dark:border-zinc-700"
+          className="border-line rounded"
         />
         Include store cards for gaps your collection can&apos;t fill
       </label>
@@ -119,7 +119,7 @@ export function DraftPanel(props: {
         <p className="text-muted">This deck already has {draft.existingCount} cards.</p>
       ) : (
         <>
-          <div className="flex flex-col gap-1 rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+          <div className="bg-surface flex flex-col gap-1 rounded p-2 text-xs">
             <p className="font-medium">
               Existing: {draft.existingCount} · Owned spells: +{ownedSpellCount}
               {draft.storeAddedCount > 0 && (
@@ -137,7 +137,7 @@ export function DraftPanel(props: {
                   key={role.tag}
                   className={`rounded px-1.5 py-0.5 ${
                     role.total >= role.target
-                      ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                      ? "bg-surface-raised text-foreground"
                       : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                   }`}
                 >
@@ -156,7 +156,7 @@ export function DraftPanel(props: {
                 onClick={() =>
                   props.onAdd(fullAdditions, fullCount, `Added ${fullCount} drafted cards.`)
                 }
-                className="rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm disabled:opacity-40"
               >
                 {draft.storeAddedCount > 0
                   ? `Add full draft (${fullCount} cards, ${Cents.format(Cents.of(draft.storeCostCents))} store)`
@@ -174,7 +174,7 @@ export function DraftPanel(props: {
                     `Added ${draft.ownedAddedCount} owned cards and lands.`,
                   )
                 }
-                className="rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
+                className="border-line rounded-md border px-3 py-1 text-sm disabled:opacity-40"
               >
                 Add owned + lands only ({draft.ownedAddedCount} cards)
               </button>
@@ -254,7 +254,7 @@ function SpellSection(props: { title: string; spells: readonly DraftedSpell[] })
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted text-xs">
               {[
                 ...spell.reasons.map(draftReasonText),
                 ...(spell.alsoIn.length > 0 ? [`also in ${spell.alsoIn.join(", ")}`] : []),

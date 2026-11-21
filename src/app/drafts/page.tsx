@@ -8,8 +8,7 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { createDraftAction, joinDraftAction } from "./actions";
 import { boosterLabel, timerLabel } from "./labels";
 
-const field =
-  "rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+const field = "rounded-md border border-line bg-field px-2 py-1.5 text-sm";
 const TIMER_CHOICES = [30, 45, 60, 90, 120, 180, 300];
 const PACKS_PER_PLAYER = 3;
 
@@ -42,7 +41,7 @@ function DraftRow(props: { draft: DraftSummary; canJoin: boolean }) {
       {draft.youAreSeated ? (
         <Link
           href={`/drafts/${draft.id}`}
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium"
         >
           {draft.status === "lobby" ? "Open your lobby" : "Back to your draft"}
         </Link>
@@ -81,7 +80,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       <KeyruneStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Drafts</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Draft live with the playgroup: everyone opens a pack, takes a card and passes the rest,
           for three packs. The entry fee is the price of the packs, and every card you take is
           yours. When it ends, your draft deck is waiting in{" "}
@@ -98,7 +97,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
         {overview.open.length === 0 ? (
           <p className="text-muted text-sm">No drafts right now. Host one below.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-border-subtle flex flex-col divide-y">
             {overview.open.map((draft) => (
               <DraftRow key={draft.id} draft={draft} canJoin={!seatedSomewhere} />
             ))}
@@ -107,7 +106,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
       </section>
 
       {!seatedSomewhere && (
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
           <h2 className="font-medium">Host a draft</h2>
           {choices.length === 0 ? (
             <p className="text-muted text-sm">
@@ -177,7 +176,7 @@ export default async function DraftsPage(props: PageProps<"/drafts">) {
         {overview.finished.length === 0 ? (
           <p className="text-muted text-sm">None yet.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-border-subtle flex flex-col divide-y">
             {overview.finished.map((draft) => (
               <li key={draft.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                 <SetSymbol keyruneCode={draft.keyruneCode} className="text-lg" />

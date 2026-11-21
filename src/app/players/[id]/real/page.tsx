@@ -35,7 +35,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{name}&apos;s real collection</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           {result.totals.copies} cards ({result.totals.different} different) worth{" "}
           <strong className="tabular-nums">
             {Cents.format(Cents.of(result.totals.valueCents))}
@@ -48,7 +48,7 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
           )}
         </p>
         {products.length > 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Products: {products.map((product) => product.name).join(", ")}
           </p>
         )}

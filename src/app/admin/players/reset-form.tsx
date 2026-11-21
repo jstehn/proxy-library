@@ -15,9 +15,9 @@ export function ResetForm(props: { userId: string; username: string }) {
 
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Reset library…</summary>
+      <summary className="text-muted cursor-pointer">Reset library…</summary>
       <form action={formAction} className="mt-2 flex flex-col gap-2">
-        <p className="text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted">
           Removes every card, sealed item and deck @{props.username} has, closes their open trades,
           and sets their balance back to the starting grant. Their money and card history keep a
           record. This can&apos;t be undone.
@@ -31,7 +31,7 @@ export function ResetForm(props: { userId: string; username: string }) {
             placeholder={`Type ${props.username} to confirm`}
             autoComplete="off"
             required
-            className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="border-line bg-field rounded-md border px-2 py-1"
           />
           <SubmitButton tone="danger" pendingText="Resetting…">
             Reset library

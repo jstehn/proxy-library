@@ -37,35 +37,35 @@ export default async function PublicDeckScorecardPage(props: PageProps<"/d/[toke
         </div>
         <Link
           href={`/d/${token}`}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium dark:border-zinc-700"
+          className="border-line rounded-md border px-3 py-1.5 text-sm font-medium"
         >
           View full list
         </Link>
       </header>
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="border-border-subtle rounded-lg border p-4">
           <p className="text-muted text-xs uppercase">Deck Score</p>
           <p className="mt-1 text-2xl font-semibold">{score.total.toFixed(1)}</p>
         </div>
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="border-border-subtle rounded-lg border p-4">
           <p className="text-muted text-xs uppercase">Bracket</p>
           <p className="mt-1 text-2xl font-semibold">
             {bracket ? `B${bracket.floor}${bracket.target ? ` / T${bracket.target}` : ""}` : "—"}
           </p>
         </div>
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="border-border-subtle rounded-lg border p-4">
           <p className="text-muted text-xs uppercase">Cast on Curve</p>
           <p className="mt-1 text-2xl font-semibold">{mana.averageCastOnCurvePct}%</p>
         </div>
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="border-border-subtle rounded-lg border p-4">
           <p className="text-muted text-xs uppercase">Keepable Hands</p>
           <p className="mt-1 text-2xl font-semibold">{goldfish.keepableRatePct}%</p>
         </div>
       </section>
 
       {bracket && bracket.reasons.length > 0 && (
-        <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="border-border-subtle rounded-lg border p-4">
           <h2 className="text-base font-semibold">Bracket Reasons</h2>
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {bracket.reasons.map((reason, index) => (
@@ -78,14 +78,11 @@ export default async function PublicDeckScorecardPage(props: PageProps<"/d/[toke
       )}
 
       {roles.length > 0 && (
-        <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="border-border-subtle rounded-lg border p-4">
           <h2 className="text-base font-semibold">Role Coverage</h2>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {roles.map((role) => (
-              <div
-                key={role.tag}
-                className="rounded border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800"
-              >
+              <div key={role.tag} className="border-border-subtle rounded border px-3 py-2 text-sm">
                 <div className="font-medium capitalize">{role.tag}</div>
                 <div className="text-muted">
                   {role.count} / {role.target}
@@ -96,7 +93,7 @@ export default async function PublicDeckScorecardPage(props: PageProps<"/d/[toke
         </section>
       )}
 
-      <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+      <section className="border-border-subtle rounded-lg border p-4">
         <h2 className="text-base font-semibold">Mana &amp; Legality</h2>
         <p className="mt-1 text-sm">
           {mana.lands} lands (suggested {mana.suggestedLands}) · avg MV{" "}

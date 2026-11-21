@@ -105,7 +105,7 @@ export function DeckList(props: {
               type="button"
               aria-pressed={view === option}
               onClick={() => choose(option)}
-              className={`rounded px-2 py-0.5 ${view === option ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+              className={`rounded px-2 py-0.5 ${view === option ? "bg-accent text-accent-foreground" : "border-line border"}`}
             >
               {VIEWS[option]}
             </button>
@@ -121,7 +121,7 @@ export function DeckList(props: {
               type="button"
               aria-pressed={activeTag === tag}
               onClick={() => setTagFilter(tag)}
-              className={`min-h-7 rounded px-2 py-0.5 ${activeTag === tag ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+              className={`min-h-7 rounded px-2 py-0.5 ${activeTag === tag ? "bg-accent text-accent-foreground" : "border-line border"}`}
             >
               {tag ?? "All tags"}
             </button>
@@ -148,7 +148,7 @@ export function DeckList(props: {
                         type="button"
                         onClick={() => props.onSelect(line)}
                         aria-label={`Select ${line.name}`}
-                        className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-700"
+                        className="border-line rounded-md border px-2 py-0.5 text-xs"
                       >
                         Select
                       </button>
@@ -206,7 +206,7 @@ export function DeckList(props: {
                       src={`/api/images/${line.printingId}/small/front`}
                       alt=""
                       loading="lazy"
-                      className={`aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800 ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
+                      className={`bg-surface-raised aspect-[146/204] w-full rounded-[4.5%] ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
                     />
                   </button>
                   {line.quantity > 1 && (

@@ -13,10 +13,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
       <form action={enablePublicLinkAction} className="flex items-center gap-2 text-sm">
         <input type="hidden" name="deckId" value={props.deckId} />
         <span className="text-muted">Public link: off.</span>
-        <button
-          type="submit"
-          className="rounded-md border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-        >
+        <button type="submit" className="border-line rounded-md border px-3 py-1">
           Create public link
         </button>
       </form>
@@ -41,7 +38,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
       <button
         type="button"
         onClick={copyLink}
-        className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs dark:border-zinc-700"
+        className="border-line rounded-md border px-2.5 py-1 text-xs"
       >
         {copied ? "Copied!" : "Copy"}
       </button>
@@ -49,7 +46,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
         <input type="hidden" name="deckId" value={props.deckId} />
         <button
           type="submit"
-          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs dark:border-zinc-700"
+          className="border-line rounded-md border px-2.5 py-1 text-xs"
           title="Generate a new link and invalidate the current one"
         >
           New link
@@ -59,7 +56,7 @@ export function PublicLinkControls(props: { deckId: number; publicToken: string 
         <input type="hidden" name="deckId" value={props.deckId} />
         <button
           type="submit"
-          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs text-red-700 dark:border-zinc-700 dark:text-red-400"
+          className="border-line text-danger-text rounded-md border px-2.5 py-1 text-xs"
         >
           Turn off
         </button>

@@ -18,8 +18,7 @@ export function HeadingField(props: {
   const [text, setText] = useState(line.heading ?? "");
   const changed = text.trim() !== (line.heading ?? "");
   const listId = `headings-${line.oracleId}`;
-  const button =
-    "rounded-md border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-zinc-700";
+  const button = "rounded-md border border-line px-2 py-1 text-xs disabled:opacity-40";
 
   return (
     <form
@@ -40,7 +39,7 @@ export function HeadingField(props: {
         maxLength={MAX_HEADING_LENGTH}
         placeholder="e.g. Ramp"
         onChange={(event) => setText(event.target.value)}
-        className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+        className="border-line min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 text-sm"
       />
       <datalist id={listId}>
         {props.headings.map((heading) => (

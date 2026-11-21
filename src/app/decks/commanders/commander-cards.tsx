@@ -44,7 +44,7 @@ export function CommanderThumbnail(props: { printingId: string; name: string }) 
           src={`/api/images/${props.printingId}/small/front`}
           alt={props.name}
           loading="lazy"
-          className="aspect-[146/204] w-16 rounded-[4.5%] bg-zinc-100 sm:w-20 dark:bg-zinc-800"
+          className="bg-surface-raised aspect-[146/204] w-16 rounded-[4.5%] sm:w-20"
         />
       </button>
       {spot && (
@@ -56,7 +56,7 @@ export function CommanderThumbnail(props: { printingId: string; name: string }) 
           data-card-preview
           width={PREVIEW_WIDTH}
           height={PREVIEW_HEIGHT}
-          className="pointer-events-none fixed z-50 rounded-[4.5%] bg-zinc-200 shadow-2xl ring-1 ring-black/30 dark:bg-zinc-800"
+          className="bg-surface-raised pointer-events-none fixed z-50 rounded-[4.5%] shadow-2xl ring-1 ring-black/30"
           style={{ left: spot.left, top: spot.top, width: PREVIEW_WIDTH }}
         />
       )}
@@ -85,12 +85,12 @@ export function CommanderCards(props: { oracleId: string; withReal: boolean }) {
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        className="rounded-md border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+        className="border-line rounded-md border px-3 py-1 text-sm"
       >
         {open ? "Hide the cards" : "See the cards"}
       </button>
       {open && (
-        <div className="flex w-full flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+        <div className="border-border-subtle flex w-full flex-col gap-3 rounded-lg border p-3 text-sm">
           {cards === "loading" || cards === null ? (
             <p className="text-muted">Looking through your cards…</p>
           ) : cards === "failed" ? (
@@ -136,10 +136,7 @@ function CardsView(props: { cards: CommanderCardsView }) {
                 {role.label} {role.have} of {role.target}
               </span>
               {role.names.length > 0 && (
-                <span className="text-xs text-zinc-600 dark:text-zinc-400">
-                  {" "}
-                  {role.names.join(", ")}
-                </span>
+                <span className="text-muted text-xs"> {role.names.join(", ")}</span>
               )}
             </li>
           ))}

@@ -53,7 +53,7 @@ export function ProfileForm(props: {
           maxLength={MAX_BIO_LENGTH}
           defaultValue={props.initial.bio}
           placeholder="Tell the playgroup about your playstyle, favorite commanders, or what you're looking to trade for."
-          className="rounded-md border border-zinc-300 bg-transparent p-2.5 text-sm dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent p-2.5 text-sm"
         />
         <span className="text-muted text-xs">Up to {MAX_BIO_LENGTH} characters.</span>
       </div>
@@ -100,7 +100,7 @@ export function ProfileForm(props: {
           id="showcaseDeckId"
           name="showcaseDeckId"
           defaultValue={props.initial.showcaseDeckId ?? ""}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+          className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
         >
           <option value="">None</option>
           {props.initial.sharedDecks.map((deck) => (
@@ -129,7 +129,7 @@ export function ProfileForm(props: {
                 name={`showcaseCard${index + 1}`}
                 defaultValue={existing?.printingId ?? ""}
                 placeholder={`Showcase card ${index + 1} printing ID`}
-                className="rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+                className="border-line rounded-md border bg-transparent px-3 py-1.5 text-sm"
               />
               {existing && <span className="text-muted text-xs">Currently: {existing.name}</span>}
             </div>
@@ -146,7 +146,7 @@ export function ProfileForm(props: {
             id="statsVisibility"
             name="statsVisibility"
             defaultValue={props.initial.statsVisibility}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+            className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
@@ -164,7 +164,7 @@ export function ProfileForm(props: {
             id="wishlistVisibility"
             name="wishlistVisibility"
             defaultValue={props.initial.wishlistVisibility}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+            className="border-line rounded-md border bg-transparent px-3 py-2 text-sm"
           >
             {VISIBILITIES.map((vis) => (
               <option key={vis} value={vis}>
@@ -179,7 +179,7 @@ export function ProfileForm(props: {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save profile"}
         </button>

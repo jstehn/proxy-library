@@ -55,8 +55,7 @@ function chosenTheme(value: string | string[] | undefined): Theme | undefined {
   return canonicalTheme(raw) ?? undefined;
 }
 
-const fieldClass =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
+const fieldClass = "rounded-md border border-line bg-transparent px-2 py-1 text-sm";
 
 export default async function FindCommanderPage(props: PageProps<"/decks/commanders">) {
   const { actor, reads } = await readPage();
@@ -106,7 +105,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
       <ManaStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Find a commander</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Cards that could lead a Commander deck: filter by colors, theme (such as Politics, Voting,
           Treasures, or Blink) or creature tribe, and order by how much of a {SPELL_SLOTS}
           -spell deck your cards already cover, Scryfall EDHREC popularity, or a rough card-power
@@ -177,7 +176,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
         </label>
         <button
           type="submit"
-          className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm font-medium"
         >
           Show
         </button>
@@ -203,7 +202,7 @@ export default async function FindCommanderPage(props: PageProps<"/decks/command
             {colors.length > 0 && " with these colors"} · ordered by{" "}
             {SORT_LABELS[sort].toLowerCase()}.
           </p>
-          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-border-subtle flex flex-col divide-y">
             {ranked.slice(0, shown).map((coverage) => (
               <CommanderRow
                 key={coverage.commander.oracleId}
@@ -264,29 +263,29 @@ function CommanderRow(props: {
             ({<ManaText text={identity} />})
           </span>
           {commander.isGameChanger && (
-            <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <span className="text-warning-ink rounded bg-amber-100 px-1.5 text-xs dark:bg-amber-950">
               Game Changer
             </span>
           )}
           {commander.edhrecRank !== null && commander.edhrecRank !== undefined && (
             <span
-              className="rounded bg-zinc-100 px-1.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+              className="bg-surface-raised text-muted rounded px-1.5 text-xs"
               title="Scryfall EDHREC popularity rank (lower is in more decks)"
             >
               EDHREC #{commander.edhrecRank.toLocaleString("en-US")}
             </span>
           )}
           {commander.ownedCopies === 0 && (
-            <span className="rounded bg-zinc-100 px-1.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="bg-surface-raised text-muted rounded px-1.5 text-xs">
               not owned
               {commander.priceCents !== null &&
                 ` · ${Cents.format(Cents.of(commander.priceCents))}`}
             </span>
           )}
         </div>
-        <p className="text-xs text-zinc-600 italic dark:text-zinc-400">{commander.typeLine}</p>
+        <p className="text-muted text-xs italic">{commander.typeLine}</p>
         {paragraphs.length > 0 && (
-          <div className="flex flex-col gap-1 rounded-md bg-zinc-50 px-2.5 py-1.5 text-xs leading-relaxed text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+          <div className="bg-surface text-foreground flex flex-col gap-1 rounded-md px-2.5 py-1.5 text-xs leading-relaxed">
             {paragraphs.map((paragraph, index) => (
               <p key={index}>
                 <ManaText text={paragraph} />
@@ -294,7 +293,7 @@ function CommanderRow(props: {
             ))}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="text-muted flex flex-wrap items-center gap-1.5 text-xs">
           {plan === "" ? (
             <span>No plan read from its text.</span>
           ) : (
@@ -308,8 +307,8 @@ function CommanderRow(props: {
                   })}
                   className={`rounded px-1.5 py-0.5 ${
                     props.activeTheme === themeItem
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-surface-raised hover:bg-surface-raised"
                   }`}
                 >
                   {THEME_LABELS[themeItem]}
@@ -324,15 +323,15 @@ function CommanderRow(props: {
                   })}
                   className={`rounded px-1.5 py-0.5 ${
                     props.activeTribe.toLowerCase() === tribeItem.toLowerCase()
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-surface-raised hover:bg-surface-raised"
                   }`}
                 >
                   {tribeItem} kindred
                 </Link>
               ))}
               {coverage.plan.keywords.map((keyword) => (
-                <span key={keyword} className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
+                <span key={keyword} className="bg-surface-raised rounded px-1.5 py-0.5">
                   {keyword}
                 </span>
               ))}
@@ -355,11 +354,7 @@ function CommanderRow(props: {
           {coverage.roles.map((role) => (
             <li
               key={role.tag}
-              className={
-                role.have >= role.target
-                  ? "text-zinc-600 dark:text-zinc-400"
-                  : "text-amber-700 dark:text-amber-400"
-              }
+              className={role.have >= role.target ? "text-muted" : "text-warning-text"}
             >
               {TAG_LABELS[role.tag]} {role.have} of {role.target}
             </li>
@@ -374,7 +369,7 @@ function CommanderRow(props: {
             {props.withReal && <input type="hidden" name="real" value="1" />}
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-3 py-1 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm"
             >
               Start a deck
             </button>

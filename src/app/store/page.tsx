@@ -25,7 +25,7 @@ export default async function StorePage(props: PageProps<"/store">) {
       <KeyruneStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Store</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Sealed product at its suggested retail price (MSRP), or at what its cards sell back for
           when that&apos;s more, so buying a pack to sell its cards never pays. What you buy waits
           unopened in your inventory.
@@ -36,7 +36,7 @@ export default async function StorePage(props: PageProps<"/store">) {
         <form
           action="/store"
           method="GET"
-          className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          className="border-border-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3"
         >
           <div className="flex min-w-52 flex-1 flex-col gap-1">
             <label htmlFor="store-search" className="text-xs font-medium">
@@ -52,7 +52,7 @@ export default async function StorePage(props: PageProps<"/store">) {
               autoCapitalize="none"
               spellCheck={false}
               enterKeyHint="search"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+              className="border-line rounded-md border px-3 py-1.5 text-sm"
             />
           </div>
           {result.categories.length > 0 && (
@@ -64,7 +64,7 @@ export default async function StorePage(props: PageProps<"/store">) {
                 id="store-category"
                 name="category"
                 defaultValue={category}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                className="border-line rounded-md border px-3 py-1.5 text-sm"
               >
                 <option value="">All types</option>
                 {result.categories.map((cat) => (
@@ -78,15 +78,12 @@ export default async function StorePage(props: PageProps<"/store">) {
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-4 py-1.5 text-sm font-medium"
             >
               Search
             </button>
             {isSearching && (
-              <Link
-                href="/store"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
-              >
+              <Link href="/store" className="border-line rounded-md border px-3 py-1.5 text-sm">
                 Clear
               </Link>
             )}

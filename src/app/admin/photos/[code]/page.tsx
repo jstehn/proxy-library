@@ -14,9 +14,8 @@ const MATCH_LABELS = {
   admin: "chosen by an admin",
 } as const;
 
-const buttonClass = "rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700";
-const fieldClass =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
+const buttonClass = "rounded-md border border-line px-2 py-1 text-sm";
+const fieldClass = "rounded-md border border-line bg-transparent px-2 py-1 text-sm";
 
 export default async function SetPhotosPage(props: PageProps<"/admin/photos/[code]">) {
   const { actor: admin, reads } = await readPage({ admin: true });
@@ -84,12 +83,12 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Our products</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Products listed first have no photo. Commander decks keep art featuring their commander
           unless you pick a photo; group photos (&quot;Commander Decks&quot;, prerelease packs)
           aren&apos;t labeled, so check which deck or college a photo shows.
         </p>
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-border-subtle flex flex-col divide-y">
           {view.products.map((product) => (
             <li key={product.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
               <div className="flex h-16 w-12 items-center justify-center">
@@ -101,7 +100,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
-                  <span className="text-xs text-zinc-400">none</span>
+                  <span className="text-muted text-xs">none</span>
                 )}
               </div>
               <div className="flex min-w-60 flex-1 flex-col">

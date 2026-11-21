@@ -69,7 +69,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
             alt={card.name}
             width={488}
             height={680}
-            className="aspect-[488/680] w-full max-w-72 self-start rounded-[4.5%] bg-zinc-100 shadow-lg dark:bg-zinc-800"
+            className="bg-surface-raised aspect-[488/680] w-full max-w-72 self-start rounded-[4.5%] shadow-lg"
           />
         ) : null}
 
@@ -96,7 +96,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                   </span>
                 )}
               </p>
-              <p className="text-zinc-600 italic dark:text-zinc-400">{face.typeLine}</p>
+              <p className="text-muted italic">{face.typeLine}</p>
               {face.text.split("\n").map((paragraph, line) => (
                 <p key={line}>
                   <ManaText text={paragraph} />
@@ -132,7 +132,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
               return (
                 <div
                   key={finish}
-                  className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                  className="border-border-subtle flex flex-col gap-2 rounded-lg border p-3"
                 >
                   <p className="text-sm">
                     <strong>{FINISH_LABELS[finish]}</strong> ·{" "}
@@ -186,7 +186,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
                 ))}
               </ul>
             )}
-            <details className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <details className="border-border-subtle rounded-lg border p-3">
               <summary className="cursor-pointer font-medium">
                 {wishes.length > 0 ? "Add or change a wish" : "Add to wishlist"}
               </summary>

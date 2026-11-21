@@ -54,7 +54,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Wishlist</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Cards you want, at today&apos;s prices. Add one from a card&apos;s page in{" "}
           <Link href="/singles" className="underline">
             Singles
@@ -74,7 +74,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
             <input type="hidden" name="shared" value={isShared ? "off" : "on"} />
             <button
               type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className="border-line hover:bg-surface rounded-md border px-3 py-1 text-sm"
             >
               {isShared ? "Stop sharing with playgroup" : "Share with playgroup"}
             </button>
@@ -112,7 +112,7 @@ export default async function WishlistPage(props: PageProps<"/wishlist">) {
       )}
 
       {lines.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-zinc-300 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="border-line text-muted rounded-lg border border-dashed p-6 text-sm">
           Your wishlist is empty. Open any card from{" "}
           <Link href="/singles" className="underline">
             Singles
@@ -144,7 +144,7 @@ function WishRow(props: { line: WishLine }) {
     offer?.printingId ?? (wish.target.kind === "exactPrinting" ? wish.target.printingId : null);
   const highlight = line.atTarget
     ? "border-emerald-400 dark:border-emerald-700"
-    : "border-zinc-200 dark:border-zinc-800";
+    : "border-border-subtle";
 
   return (
     <li className={`flex gap-3 rounded-lg border p-3 ${highlight}`}>
@@ -156,10 +156,10 @@ function WishRow(props: { line: WishLine }) {
           width={146}
           height={204}
           loading="lazy"
-          className="aspect-[146/204] w-16 shrink-0 self-start rounded-[4.5%] bg-zinc-100 sm:w-20 dark:bg-zinc-800"
+          className="bg-surface-raised aspect-[146/204] w-16 shrink-0 self-start rounded-[4.5%] sm:w-20"
         />
       ) : (
-        <div className="aspect-[146/204] w-16 shrink-0 self-start rounded-[4.5%] bg-zinc-100 sm:w-20 dark:bg-zinc-800" />
+        <div className="bg-surface-raised aspect-[146/204] w-16 shrink-0 self-start rounded-[4.5%] sm:w-20" />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
@@ -187,11 +187,7 @@ function WishRow(props: { line: WishLine }) {
             {offerLabel(offer)} · <strong>{Cents.format(offer.price)}</strong> each
             <PriceChange cents={line.changeSinceSaved} />
             {wish.targetPrice !== null && (
-              <span
-                className={
-                  line.atTarget ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500"
-                }
-              >
+              <span className={line.atTarget ? "text-success-text" : "text-muted"}>
                 {" "}
                 · target {Cents.format(wish.targetPrice)}
                 {line.atTarget && " ✓"}
@@ -226,11 +222,7 @@ function PriceChange(props: { cents: number | null }) {
   if (props.cents === null || props.cents === 0) return null;
   const isDown = props.cents < 0;
   return (
-    <span
-      className={
-        isDown ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"
-      }
-    >
+    <span className={isDown ? "text-success-text" : "text-danger-text"}>
       {" "}
       · {isDown ? "▼" : "▲"} {Cents.format(Cents.of(Math.abs(props.cents)))} since you saved it
     </span>
@@ -242,11 +234,7 @@ function Status(props: { status: WishStatus; total: number | null; missing: numb
   const copies = props.missing === 1 ? "" : ` for ${props.missing}`;
   switch (status.kind) {
     case "fulfilled":
-      return (
-        <p className="text-emerald-700 dark:text-emerald-400">
-          ✓ You own this. Remove it when you&apos;re done.
-        </p>
-      );
+      return <p className="text-success-text">✓ You own this. Remove it when you&apos;re done.</p>;
     case "notForSale":
       return (
         <p className="text-muted">
@@ -255,14 +243,14 @@ function Status(props: { status: WishStatus; total: number | null; missing: numb
       );
     case "affordable":
       return (
-        <p className="text-emerald-700 dark:text-emerald-400">
+        <p className="text-success-text">
           You can afford this
           {props.total !== null && copies && ` (${Cents.format(Cents.of(props.total))}${copies})`}.
         </p>
       );
     case "shortBy":
       return (
-        <p className="text-amber-700 dark:text-amber-400">
+        <p className="text-warning-text">
           {Cents.format(status.shortfall)} short
           {copies && ` (${Cents.format(Cents.of(props.total ?? 0))}${copies})`}
           {status.paydays !== null && (
