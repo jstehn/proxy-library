@@ -27,6 +27,7 @@
   --warning-soft: #fffbeb;
   --warning-line: #fcd34d;
   --warning-ink: #78350f;
+  --focus-ring: #1d4ed8;
   --target-size: 24px;
   /* Tells the browser which theme its own controls (dropdowns, scrollbars, date pickers) should
      use. Without it, dark pages got light-grey text on white dropdown lists. */
@@ -95,6 +96,7 @@
     --warning-soft: #451a03;
     --warning-line: #b45309;
     --warning-ink: #fef3c7;
+    --focus-ring: #93c5fd;
   }
 }
 
@@ -124,6 +126,12 @@
   :where(nav a) {
     display: inline-flex;
     align-items: center;
+  }
+
+  /* One focus ring for everything a keyboard can reach (WCAG 2.4.7); no per-component classes. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 
   body {

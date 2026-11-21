@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { confirmInDialog, signIn } from "./helpers";
 
 // Access tokens for an LLM.
 test.describe.configure({ mode: "serial" });
@@ -45,6 +45,7 @@ test("a player makes an access token for an LLM, uses it, and revokes it (design
   await page.screenshot({ path: "test-results/tokens-phone-dark.png", fullPage: true });
 
   await row.getByRole("button", { name: "Revoke" }).click();
+  await confirmInDialog(page, "Revoke");
   await expect(page.getByText("None yet.")).toBeVisible();
   const after = await request.post("/api/tools/list_decks", { headers, data: {} });
   expect(after.status()).toBe(401);

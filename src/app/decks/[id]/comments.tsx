@@ -5,6 +5,7 @@ import { deleteCommentAction, postCommentAction } from "../actions";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/field";
 import { EmptyState } from "@/ui/empty-state";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 // A deck's comments (design doc 21): oldest first, a box to add one, and a delete button for
 // those the viewer may remove (their own, any on their deck, or any at all for an admin).
@@ -50,13 +51,15 @@ export function DeckComments(props: {
                   <form action={deleteCommentAction}>
                     <input type="hidden" name="deckId" value={props.deckId} />
                     <input type="hidden" name="commentId" value={comment.id} />
-                    <button
-                      type="submit"
-                      className="text-danger-text text-xs underline"
+                    <ConfirmButton
+                      variant="quiet"
+                      size="mini"
                       aria-label={`Delete ${comment.authorName}'s comment`}
+                      question="Delete this comment?"
+                      confirmLabel="Delete"
                     >
                       Delete
-                    </button>
+                    </ConfirmButton>
                   </form>
                 )}
               </div>

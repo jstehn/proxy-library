@@ -6,6 +6,7 @@ import { CreateTokenForm } from "./create-token-form";
 import { readPage } from "@/server/page-instance";
 import { Card } from "@/ui/card";
 import { EmptyState } from "@/ui/empty-state";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 // Access tokens for LLM clients (design doc 28, section 9): make one, see it once, revoke it.
 
@@ -75,12 +76,14 @@ export default async function TokensPage() {
                 </div>
                 <form action={revokeTokenAction}>
                   <input type="hidden" name="tokenId" value={token.id} />
-                  <button
-                    type="submit"
-                    className="border-danger-line text-danger-text hover:bg-danger-soft rounded-md border px-3 py-1"
+                  <ConfirmButton
+                    variant="secondary"
+                    size="sm"
+                    question="Revoke this access token? Anything using it stops working."
+                    confirmLabel="Revoke"
                   >
                     Revoke
-                  </button>
+                  </ConfirmButton>
                 </form>
               </li>
             ))}

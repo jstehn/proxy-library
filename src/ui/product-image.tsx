@@ -1,4 +1,5 @@
 import { ASPECT, ProductArt, type ProductArtProps } from "./product-art";
+import { CardImage } from "./card-image";
 
 // A sealed product's picture (design doc 13): Wizards' official photo when the sync downloaded
 // one, otherwise the generated packaging art. Photos are shown whole, never cropped or covered,
@@ -24,9 +25,7 @@ export function ProductImage(props: ProductImageProps) {
   // alone doesn't work here: the box's height comes only from its aspect ratio.)
   return (
     <div className={`relative w-full ${ASPECT[art.shape]}`}>
-      {/* Plain <img>: pre-sized WebP from our own disk, lazily loaded. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <CardImage
         src={`/api/artwork/${imageId}/small`}
         srcSet={`/api/artwork/${imageId}/small 400w, /api/artwork/${imageId}/large 900w`}
         sizes={sizes}
@@ -50,8 +49,7 @@ export function KeyArt(props: {
   sizes?: string;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <CardImage
       src={`/api/artwork/${props.imageId}/small`}
       srcSet={`/api/artwork/${props.imageId}/small 640w, /api/artwork/${props.imageId}/large 1920w`}
       sizes={props.sizes ?? "100vw"}

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { confirmInDialog } from "./helpers";
 
 // Sorting the collection, and selling a copy to the store.
 test.describe.configure({ mode: "serial" });
@@ -28,6 +29,7 @@ test("the admin sorts their collection, opens a card, and sells a copy to the st
     .locator("button:enabled", { hasText: /^Sell \(/ })
     .first()
     .click();
+  await confirmInDialog(page, "Sell");
   await expect(page.getByText(/^Sold for \$\d+\.\d\d\.$/)).toBeVisible();
   await expect(page.getByTitle("Your wallet")).not.toHaveText(balanceBefore);
   await expect(page.getByText(/Your store history for this card/)).toBeVisible();
