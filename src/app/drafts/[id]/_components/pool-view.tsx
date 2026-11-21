@@ -1,6 +1,6 @@
 import type { PrintingCard } from "@/modules/catalog";
 import type { DraftView, SeenCard } from "@/modules/drafts";
-import { curveSlotLabel } from "@/shared/kernel";
+import { curveSlotLabel } from "@/shared/mtg";
 import { COLUMN_LABELS, curveOf, poolColumns, stacksOf } from "./pool";
 
 export const refKey = (card: { ref: { packNumber: number; slot: number } }) =>

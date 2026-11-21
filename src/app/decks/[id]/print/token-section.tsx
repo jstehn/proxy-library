@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { tokenDescription, type TokenArt, type TokenLine } from "@/modules/decks/client";
 import { chooseTokenAction, tokenArtsAction } from "./actions";
 import { EmptyState } from "@/ui/empty-state";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The print page's tokens (design doc 25): each token the deck's cards make, whether it prints,
 // and its art. Every change is saved for the deck at once.

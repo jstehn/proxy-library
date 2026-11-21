@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { cheapestPrice } from "@/shared/db";
-import { COLOR_COMBINATIONS, colorCombination, type ManaColor, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { COLOR_COMBINATIONS, colorCombination, type ManaColor } from "@/shared/mtg";
 import {
   manaSymbols,
   type ComparableField,

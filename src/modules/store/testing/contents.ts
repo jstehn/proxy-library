@@ -1,5 +1,5 @@
 import { PrintingId, SealedProductId, SetCode, type SealedContent } from "@/modules/catalog";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Sealed contents for tests (domain tests can't call the catalog's constructors themselves).
 

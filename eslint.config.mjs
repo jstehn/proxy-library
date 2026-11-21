@@ -52,7 +52,8 @@ const elements = [
   { type: "ui", pattern: "src/ui" },
   { type: "server", pattern: "src/server" },
   { type: "kernel-testing", pattern: "src/shared/kernel/testing" },
-  { type: "kernel", pattern: "src/shared/kernel" },
+  // The kernel and its Magic half (shared/mtg) are one element: pure basics every layer may use.
+  { type: "kernel", pattern: "src/shared/@(kernel|mtg)" },
   { type: "runtime", pattern: "src/shared/runtime" },
   { type: "db", pattern: "src/shared/db" },
   { type: "http", pattern: "src/shared/http" },
@@ -145,7 +146,7 @@ const CLASS_NAMES = [
   {
     // refactor P33: one image component (alt, size, lazy loading, fallback tile).
     selector: "JSXOpeningElement[name.name='img']",
-    message: "Use <CardImage> from @/ui/card-image, not a raw <img>.",
+    message: "Use <CardImage> from @/ui/mtg/card-image, not a raw <img>.",
   },
   {
     selector: "JSXAttribute[name.name='className'] Literal[value=/zinc-/]",
@@ -182,13 +183,13 @@ const BASIC_WORDS = [
     selector:
       "CallExpression[callee.object.name='z'][callee.property.name='enum'] ArrayExpression > Literal[value=/^(nonfoil|foil|etched|W|common|mythic)$/]",
     message:
-      "Don't spell out finishes, colors or rarities: import FinishSchema, ColorSchema or RaritySchema from @/shared/kernel.",
+      "Don't spell out finishes, colors or rarities: import FinishSchema, ColorSchema or RaritySchema from @/shared/mtg.",
   },
   {
     // The dots stand for the backslashes of /\bLand\b/.
     selector: "Literal[regex.pattern=/^.b(Land|Creature|Basic).b$/]",
     message:
-      "Ask the type line with cardTypes, isLand, isCreature or isBasicLand from @/shared/kernel, not a regex.",
+      "Ask the type line with cardTypes, isLand, isCreature or isBasicLand from @/shared/mtg, not a regex.",
   },
 ];
 const MONEY_TEXT = [
@@ -225,12 +226,12 @@ const FORMAT_NAMES = [
   },
 ];
 
-// A type line is read in one place (refactor P26): kernel/card-types.ts. Tests may spell it out.
+// A type line is read in one place (refactor P26): mtg/card-types.ts. Tests may spell it out.
 const TYPE_LINE_WORDS = [
   {
     selector: "Literal[regex.pattern=/\\\\b(Legendary|Creature|Land|Planeswalker)\\\\b/]",
     message:
-      "Read a type line with cardTypes(), isLand(), isCreature() or hasTypeWord() from @/shared/kernel (refactor P26).",
+      "Read a type line with cardTypes(), isLand(), isCreature() or hasTypeWord() from @/shared/mtg (refactor P26).",
   },
 ];
 
@@ -532,14 +533,15 @@ export default defineConfig([
   {
     files: [
       "src/shared/kernel/**/*.ts",
+      "src/shared/mtg/**/*.ts",
       "src/modules/*/domain/**/*.ts",
       "src/modules/*/*/domain/**/*.ts",
       // the card search language
       "src/shared/card-search/**/*.ts",
     ],
-    // kernel/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
+    // mtg/schemas.ts is the one kernel file that may use zod: the Zod schemas of the basic
     // words (finish, color, rarity), shared by every module's parsing code (refactor P02).
-    ignores: [...TESTS, "src/shared/kernel/schemas.ts"],
+    ignores: [...TESTS, "src/shared/mtg/schemas.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -650,13 +652,9 @@ export default defineConfig([
     },
   },
   // The basic words and money text are defined in exactly one place each (refactor P02): the
-  // catalog and the kernel's schemas.ts / money.ts may spell them out (and shared/db/prices.ts the price table). They still follow ADR 0008.
+  // catalog and mtg/schemas.ts and the kernel's money.ts may spell them out (and shared/db/prices.ts the price table). They still follow ADR 0008.
   {
-    files: [
-      "src/modules/catalog/**/*.ts",
-      "src/shared/kernel/schemas.ts",
-      "src/shared/db/prices.ts",
-    ],
+    files: ["src/modules/catalog/**/*.ts", "src/shared/mtg/schemas.ts", "src/shared/db/prices.ts"],
     ignores: TESTS,
     rules: {
       "no-restricted-syntax": [

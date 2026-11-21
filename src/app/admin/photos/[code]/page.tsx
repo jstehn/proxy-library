@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
-import { KeyArt } from "@/ui/product-image";
+import { KeyArt } from "@/ui/mtg/product-image";
 import { choosePhotoAction, setPageSlugAction } from "../actions";
 import { readPage } from "@/server/page-instance";
 import { Input, Select } from "@/ui/field";
 import { Page } from "@/ui/page";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // One set's WPN page and products (design doc 13): what matched, and the admin's corrections.
 

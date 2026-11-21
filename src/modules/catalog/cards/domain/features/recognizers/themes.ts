@@ -3,7 +3,7 @@
 // plays into one ("when this dies"). Umbrella themes (tokens, artifact-tokens, politics) overlap
 // with their sub-themes so specific matches score higher while broad searches still find all of them.
 // Moved from shared/card-search/tags.ts.
-import { hasTypeWord, plainText, type Theme } from "@/shared/kernel";
+import { hasTypeWord, plainText, type Theme } from "@/shared/mtg";
 import type { CardText, Recognizer } from "../types";
 import { grantedKeywords } from "./grants";
 

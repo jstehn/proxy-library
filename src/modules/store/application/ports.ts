@@ -1,7 +1,8 @@
 import type { PrintingId, SealedProductId } from "@/modules/catalog";
 import type { InventoryServices } from "@/modules/inventory";
 import type { WalletServices } from "@/modules/wallet";
-import { type Cents, type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Cents, type Clock, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { PricingMode } from "../domain/pricing";
 
 // Ports: what the store use cases need from outside (design doc 06, section 6).

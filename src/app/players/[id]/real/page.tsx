@@ -5,7 +5,7 @@ import { CollectionCardGrid } from "@/app/collection/card-grid";
 import { readCollectionQuery } from "@/app/collection/collection-query";
 import { SECTIONS, SORTS } from "@/app/collection/options";
 import { Cents, UserId } from "@/shared/kernel";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";

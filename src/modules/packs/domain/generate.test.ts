@@ -1,7 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { PrintingId } from "@/modules/catalog";
-import { COLORS, seededRng } from "@/shared/kernel";
+import { seededRng } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import {
   SAMPLE_BOOSTER,
   SAMPLE_FACTS,

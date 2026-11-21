@@ -6,24 +6,28 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
 
 - 🔒 Feature code lives in `src/modules/<module>/{domain,application,infrastructure,queries,testing}`.
 - 🔒 Other modules and `src/app/` import a module **only via its `index.ts`**.
-- 🔒 `domain/` imports nothing outside `shared/kernel` (no `drizzle-orm`, `next`, `react`, `zod`,
+- 🔒 `domain/` imports nothing outside `shared/kernel` and `shared/mtg` (no `drizzle-orm`, `next`, `react`, `zod`,
   or Node built-ins), except **types** from other modules' public `index.ts`, with `import type`
   only (e.g. the pack engine works on the catalog's `BoosterConfig`). Using another module's
   vocabulary is fine; running its code is not.
 - 🔒 `testing/` may also import other modules' public `index.ts`, to build sample data.
-- 🔒 Only composition roots (`src/server/`, `worker/`) import `*/infrastructure`.
+- 🔒 Only composition roots (`src/server/composition/`, `worker/`) import `*/infrastructure`.
 - 🔒 Infrastructure may import its own module's layers, `shared/db`/`shared/http`, other modules'
   `infrastructure/schema.ts` (for foreign keys) and other modules' public `index.ts` (for shared
   types like `Actor`), and nothing else.
 - 🔒 No import cycles.
-- 🔒 The app composition root (`src/server/container.ts`) starts with `import "server-only"`, so a
+- 🔒 The app composition root (`src/server/composition/container.ts`) starts with `import "server-only"`, so a
   client component can't pull in DB code by accident. (Not in shared code: `server-only` throws
   outside Next.js, which would break the worker and tests.)
-- `src/server/core.ts` holds the wiring shared by both composition roots.
+- `src/server/composition/core.ts` holds the wiring shared by both composition roots.
 - Real adapters for kernel ports that touch the OS (`systemClock`, `randomSeed`) live in
   `src/shared/runtime/`. Only composition roots import them.
 - `src/app/` holds routes, layouts, server actions and route-specific components (`_components/`).
   Shared presentational components live in `src/ui/`.
+- **A folder holds at most 12 source files** (tests not counted; `pnpm sizes` lists the biggest).
+  More than that usually means a second job: give it its own folder. The one exception is
+  `src/app/_llm-tools/bindings/`, one file per LLM tool named after it, so the folder reads as the
+  tool list.
 
 ## TypeScript
 
@@ -131,14 +135,16 @@ over the clever one.
 ## UI
 
 - **Where UI goes.** A route's own UI lives in its `_components/`. UI shared by two or more routes
-  lives in `src/ui/<area>/` (or `app/_components` for card UI). `src/ui` holds presentational
-  building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, `PageSkeleton`, ...): no
+  lives in `src/ui/` (general blocks) or `src/ui/mtg/` (cards, sets, mana, prices), or in
+  `app/_components` when it knows the app itself (its routes, menus, the installed PWA). `src/ui` holds presentational
+  building blocks only (`Button`, `Card`, `Field`, `Page`, `PageMessage`, ...): no
   state machines, no sounds, no query logic. Logic that one route uses sits beside that route.
 - **A page** calls `readPage()`, parses its params, reads through `reads` and capabilities, and
   composes components. It holds no rules and no local component over about 60 lines. A component
   file over 300 lines in `src/app` is a lint warning (the 500-line limit stays the gate).
-- **Page states.** `error.tsx`, `not-found.tsx` and `loading.tsx` at the root; `loading.tsx` in the
-  big sections. The error page never shows the message or a stack: the player gets a plain
+- **Page states.** `error.tsx` and `not-found.tsx` at the root. No `loading.tsx`: a loading
+  boundary sends the response before a page can call `notFound()`, so a missing page answered 200
+  (P32). The error page never shows the message or a stack: the player gets a plain
   sentence, "Try again" and a way home.
 - **Every action is written one way.** `formAction(schema, handler, options)` for a form that shows
   a message; `formRedirect(schema, handler, options)` for a plain `<form action>` that goes
@@ -156,7 +162,7 @@ over the clever one.
   light and dark). Don't write `focus:` or `focus-visible:` classes on a component; the only
   exceptions are the skip link (it reveals itself on focus) and `focus:outline-none` on a
   programmatic focus target (`tabIndex={-1}`).
-- **Images.** Use `CardImage` (`@/ui/card-image`), never a raw `<img>` (lint enforces it). `alt`
+- **Images.** Use `CardImage` (`@/ui/mtg/card-image`), never a raw `<img>` (lint enforces it). `alt`
   is required: the card's name, or `decorative` when the text beside the image already says it.
   Give `width` and `height` or an aspect-ratio class so the page doesn't jump. It stays a plain
   `<img>` because our own image cache already serves resized WebP.

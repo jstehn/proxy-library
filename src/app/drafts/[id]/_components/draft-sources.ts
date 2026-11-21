@@ -1,7 +1,7 @@
 import type { Actor } from "@/modules/accounts";
 import type { DraftSeen, SeenCard } from "@/modules/drafts";
-import type { Capabilities } from "@/server/capabilities";
-import type { Reads } from "@/server/reads";
+import type { Capabilities } from "@/server/composition/capabilities";
+import type { Reads } from "@/server/composition/reads";
 import { Cents } from "@/shared/kernel";
 import { boosterLabel } from "../../labels";
 import type { LoreSources } from "./pick-grid";

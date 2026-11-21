@@ -7,7 +7,7 @@ import {
   type Scored,
   strength,
 } from "@/modules/decks/scoring/client";
-import { creatureTypes } from "@/shared/kernel";
+import { creatureTypes } from "@/shared/mtg";
 import { FORMAT_RULES, isLand, TARGETED_TAGS, type TargetedTag } from "@/modules/decks/core/client";
 import {
   type CardFacts,
@@ -16,7 +16,7 @@ import {
   type ManaColor,
   type Tag,
   type Theme,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.

@@ -2,7 +2,7 @@
 import { NamePreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, DeckLine } from "@/modules/decks";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 
 const BRACKET_BADGE =
   "shrink-0 rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-900 dark:bg-violet-950 dark:text-violet-200";

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { PrintingId, SetCode } from "@/modules/catalog";
 import type { DeckId } from "@/modules/decks";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, ColorSchema, FinishSchema, UserId } from "@/shared/kernel";
+import { Cents, UserId } from "@/shared/kernel";
+import { ColorSchema, FinishSchema } from "@/shared/mtg";
 import type { DraftRepository } from "../application/ports";
 import {
   DraftId,

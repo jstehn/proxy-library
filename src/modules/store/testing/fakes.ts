@@ -1,5 +1,6 @@
 import { SealedProductId, type PrintingId } from "@/modules/catalog";
-import { type Cents, type Finish } from "@/shared/kernel";
+import { type Cents } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   Listing,
   MarketPrices,

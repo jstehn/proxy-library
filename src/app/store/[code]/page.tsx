@@ -3,15 +3,15 @@ import { CardWithPreview } from "@/app/_components/card-preview";
 import { type PrintingCard } from "@/modules/catalog";
 import { type ProductForSale } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
-import { shapeForCategory } from "@/ui/product-art";
-import { KeyArt, ProductImage } from "@/ui/product-image";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { shapeForCategory } from "@/ui/mtg/product-art";
+import { KeyArt, ProductImage } from "@/ui/mtg/product-image";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
 import { RealProductForm } from "./real-product-form";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
-import { Price } from "@/ui/price";
+import { Price } from "@/ui/mtg/price";
 
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   const { actor, capabilities, reads } = await readPage();

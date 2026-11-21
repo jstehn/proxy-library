@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "@/shared/kernel";
-import type { Forbidden, OAuthClientInvalid, OAuthClientNotFound } from "../domain/errors";
-import type { Actor } from "../domain/player";
-import { requireAdmin } from "../domain/rules";
+import type { Forbidden, OAuthClientInvalid, OAuthClientNotFound } from "../../domain/errors";
+import type { Actor } from "../../domain/player";
+import { requireAdmin } from "../../domain/rules";
 import type { makeCreateOAuthClient, RegisteredClient } from "./oauth";
-import type { AccountsDependencies } from "./ports";
+import type { AccountsDependencies } from "../ports";
 
 // Clients an admin makes by hand (design doc 69, section 5): for a connector that asks for an
 // "OAuth client ID and client secret" instead of registering itself.

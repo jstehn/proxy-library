@@ -14,7 +14,8 @@ import {
   readCopiesOf,
   readOwnedByOracle,
 } from "@/modules/collection/copies";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import { realCollectionSettings, realProducts } from "../infrastructure/schema";
 import { authUsers } from "../../../accounts/infrastructure/schema";
 import { sealedProducts } from "../../../catalog/cards/infrastructure/schema";

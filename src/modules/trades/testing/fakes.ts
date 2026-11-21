@@ -1,5 +1,6 @@
 import { PrintingId } from "@/modules/catalog";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { Holdings, NewTrade, TradePlayers, TradeRepository } from "../application/ports";
 import { TradeId, type Trade } from "../domain/trade";
 

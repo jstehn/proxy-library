@@ -3,7 +3,7 @@
 // Scryfall's own list, stored on the printing (Wizards changes the list, and the nightly Scryfall
 // pass keeps it current), so they are not a feature of the card's text. Heuristics: they explain an
 // estimate, they never decide whether a deck is allowed. Moved from shared/card-search/brackets.ts.
-import { plainText, type BracketFlag } from "@/shared/kernel";
+import { plainText, type BracketFlag } from "@/shared/mtg";
 import type { Recognizer } from "../types";
 
 const rule = (source: string) => new RegExp(source, "i");

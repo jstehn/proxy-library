@@ -1,5 +1,6 @@
 import type { Actor } from "@/modules/accounts";
-import { Cents, ok, type Finish, type Result } from "@/shared/kernel";
+import { Cents, ok, type Result } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import { totals, wishLines, type WishLine, type WishlistAnswers } from "../domain/lines";
 import type { FinishPreference, WishDetails, WishId as WishIdOf } from "../domain/wish";
 import type { AddedWish, AddWishError, AddWishInput, WishRequest } from "./manage-wishes";

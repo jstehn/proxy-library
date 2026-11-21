@@ -4,7 +4,7 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { createDraftAction, joinDraftAction } from "./actions";
 import { boosterLabel, timerLabel } from "./labels";
 import { Select } from "@/ui/field";

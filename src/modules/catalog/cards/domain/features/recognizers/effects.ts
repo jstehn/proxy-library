@@ -1,7 +1,7 @@
 // Composable MTG effect primitives extracted from Oracle text and structured card facts.
 // Open-Closed: new mechanics are added as EffectExtractor entries without modifying role/theme rules.
 
-import { plainText } from "@/shared/kernel";
+import { plainText } from "@/shared/mtg";
 
 /** What the extractors read: one face's text, and the mana Scryfall says the card makes. */
 export type EffectFacts = Readonly<{

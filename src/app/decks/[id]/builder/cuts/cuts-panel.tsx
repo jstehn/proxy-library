@@ -1,5 +1,5 @@
 "use client";
-import { isBasicLand } from "@/shared/kernel";
+import { isBasicLand } from "@/shared/mtg";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Bracket,

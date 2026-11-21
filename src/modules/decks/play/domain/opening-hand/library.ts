@@ -1,4 +1,4 @@
-import { cardTypes, type CardFacts, type CardIdentity, type Tag } from "@/shared/kernel";
+import { cardTypes, type CardFacts, type CardIdentity, type Tag } from "@/shared/mtg";
 import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
 import type { DeckCount } from "@/modules/decks/core/client";
 import { isLand } from "@/modules/decks/core/client";

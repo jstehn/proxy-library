@@ -1,6 +1,6 @@
 import type { DeckLine } from "@/modules/decks";
 import { mainType, TYPE_ORDER } from "@/modules/decks/client";
-import { isLand, TAGS } from "@/shared/kernel";
+import { isLand, TAGS } from "@/shared/mtg";
 import { TAG_LABELS } from "@/app/decks/labels";
 
 // How the deck list groups a deck's lines (design doc 14, section 2.4): by type, by the deck's own

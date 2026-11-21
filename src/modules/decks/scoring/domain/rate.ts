@@ -1,14 +1,14 @@
+import { Cents } from "@/shared/kernel";
 import {
   type CardFacts,
   type CardIdentity,
-  Cents,
   curveSlot,
   curveSlotLabel,
   type SignalIO,
   type Tag,
   THEME_LABELS,
   type Theme,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 import type { Bracket, Format, EdhrecSignal, TargetedTag } from "@/modules/decks/core/client";
 import { formatRules } from "@/modules/decks/core/client";
 import {

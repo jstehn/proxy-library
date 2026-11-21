@@ -1,4 +1,5 @@
-import { Cents, type Finish } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 // Exporting a collection (design doc 11, section 3): one shape for every format (Strategy), and
 // one function that quotes CSV fields correctly.
 

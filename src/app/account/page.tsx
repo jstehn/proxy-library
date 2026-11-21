@@ -8,7 +8,7 @@ import { describeExternalLinkError } from "@/modules/accounts";
 import { externalSignInName } from "@/server/session";
 import { Alert, SubmitButton } from "@/ui/form";
 import { linkExternalAction, unlinkExternalAction } from "./external-actions";
-import { Price } from "@/ui/price";
+import { Price } from "@/ui/mtg/price";
 
 /** The player's own account: their password, and starting over. */
 export default async function AccountPage(props: PageProps<"/account">) {

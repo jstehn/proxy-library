@@ -1,5 +1,5 @@
 import type { PrintedCard, PrintedFace } from "../domain/playtest-card";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 
 // Printed cards for playtest proxy tests (design doc 22), from one-line overrides.
 

@@ -5,7 +5,7 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { Page } from "@/ui/page";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { DRAFTS_PATH } from "../paths";
 import { boosterLabel, timerLabel } from "../labels";
 import { Dealing, RevealLog, type Names } from "./_components/conspiracy";

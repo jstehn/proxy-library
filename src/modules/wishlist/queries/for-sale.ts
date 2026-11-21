@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { storeOfferRows, textArray } from "@/shared/db";
-import { Cents, FinishSchema, type UserId } from "@/shared/kernel";
+import { Cents, type UserId } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack } from "../domain/wish";
 

@@ -1,5 +1,6 @@
 import type { PrintingId, SetCode } from "@/modules/catalog";
-import { type Brand, Cents, type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Brand, Cents, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   BotNotFound,
   BotsForAdminsOnly,

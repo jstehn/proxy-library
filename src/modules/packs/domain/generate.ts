@@ -1,12 +1,6 @@
 import type { BoosterConfig, BoosterSheet, Color, PrintingId } from "@/modules/catalog";
-import {
-  COLORS,
-  type Rng,
-  type Weighted,
-  seededRng,
-  weightedPick,
-  weightedSample,
-} from "@/shared/kernel";
+import { type Rng, type Weighted, seededRng, weightedPick, weightedSample } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import { finishFor, type FactsLookup, type Pack, type PackCard } from "./pack";
 import { revealOrder } from "./reveal";
 

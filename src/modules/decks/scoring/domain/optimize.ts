@@ -1,5 +1,6 @@
-import type { BracketFlag } from "@/shared/kernel";
-import { COLORS, randomInt, type Rng, type Tag, type Theme } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
+import { randomInt, type Rng } from "@/shared/kernel";
+import { COLORS, type Tag, type Theme } from "@/shared/mtg";
 import {
   bracketLine,
   estimateBracket,

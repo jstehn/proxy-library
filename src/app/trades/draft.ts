@@ -1,4 +1,4 @@
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 // A trade being put together, kept in the URL (design doc 10, section 9): nothing is stored until
 // you propose it. Cards are written "printingId~finish~quantity", separated by commas.
 

@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { FINISHES, type PrintingCard } from "@/modules/catalog";
-import { Cents, type Finish } from "@/shared/kernel";
-import { ManaStylesheet } from "@/ui/mana";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { Cents } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
+import { ManaStylesheet } from "@/ui/mtg/mana";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { CardTile } from "@/app/_components/card-tile";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";

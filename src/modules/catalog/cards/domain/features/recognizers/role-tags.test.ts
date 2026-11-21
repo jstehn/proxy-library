@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TAGS, type Tag } from "@/shared/kernel";
+import { TAGS, type Tag } from "@/shared/mtg";
 import { extractEffects } from "./effects";
 import { roleTags } from "./role-tags";
 

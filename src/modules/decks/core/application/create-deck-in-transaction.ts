@@ -1,5 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
-import { type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import {
   checkName,
   MAX_DECKS,

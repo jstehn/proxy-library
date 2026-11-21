@@ -1,5 +1,6 @@
 import { PrintingId, SealedProductId, SetCode, type SealedProduct } from "@/modules/catalog";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   CollectionVersion,
   PrintingFacts,

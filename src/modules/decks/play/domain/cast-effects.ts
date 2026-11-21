@@ -1,4 +1,4 @@
-import type { ManaSymbol } from "@/shared/kernel";
+import type { ManaSymbol } from "@/shared/mtg";
 import { isManaSymbol, parseCost, type PaymentSource, type Pip } from "@/modules/decks/core/client";
 import type { LibraryCard } from "./opening-hand/library";
 

@@ -1,5 +1,6 @@
 import { extractFeatures } from "@/modules/catalog";
-import { type Tag, UserId } from "@/shared/kernel";
+import { UserId } from "@/shared/kernel";
+import { type Tag } from "@/shared/mtg";
 import { DeckId } from "../domain/deck";
 import { bracketFlagsOf } from "../domain/brackets";
 import type { DeckLine, DeckView } from "../domain/deck-view";

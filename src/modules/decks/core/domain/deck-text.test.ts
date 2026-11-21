@@ -4,7 +4,7 @@ import { parseList } from "@/shared/card-search";
 import { samplePrintingId } from "../testing/fakes";
 import { BOARDS, replacedEntries, type DeckEntry, type MatchedLine } from "./deck";
 import { deckText, fingerprint, type DeckTextLine } from "./list-format";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Design doc 23: editing a deck as text.
 

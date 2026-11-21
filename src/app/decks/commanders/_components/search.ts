@@ -1,6 +1,6 @@
 import { COMMANDER_SORTS, type CommanderSort } from "@/modules/decks";
 import { canonicalTheme } from "@/shared/card-search";
-import { COLORS, type ManaColor, type Theme } from "@/shared/kernel";
+import { COLORS, type ManaColor, type Theme } from "@/shared/mtg";
 
 // What Find a commander reads from the address (`?colors=…&theme=…`) and how it writes it back.
 

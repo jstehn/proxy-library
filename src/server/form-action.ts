@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { Actor, AdminActor } from "@/modules/accounts";
 import type { Result } from "@/shared/kernel";
 import type { ActionContext } from "./action";
-import type { Capabilities } from "./capabilities";
-import type { Reads } from "./reads";
+import type { Capabilities } from "./composition/capabilities";
+import type { Reads } from "./composition/reads";
 
 // `formAction(schema, handler)`: `action()`'s twin for a `<form>` (design doc 67, section 9). It
 // reads the FormData with the schema's help, checks the session the way `action()` does, parses,

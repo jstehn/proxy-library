@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { formatLabel } from "@/app/decks/labels";
 import { MAX_BIO_LENGTH, VISIBILITIES, type SectionVisibility } from "@/modules/social/client";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import { Alert } from "@/ui/form";
 import { saveProfileAction, type ProfileFormState } from "./actions";
 import { Select } from "@/ui/field";

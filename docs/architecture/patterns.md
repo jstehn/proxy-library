@@ -47,7 +47,7 @@ satisfies `LedgerRepo` if it has the right methods. No `implements` keyword is r
 ## 3. Dependency injection with factory functions + a composition root
 
 **What:** use cases are built by `makeX(dependencies)` functions that close over their dependencies. One
-file per entry point (`src/server/container.ts`, `worker/container.ts`) constructs the real
+file per entry point (`src/server/composition/container.ts`, `worker/container.ts`) constructs the real
 adapters and calls the factories. This is the **composition root**. No DI container library.
 
 ```ts

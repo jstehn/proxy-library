@@ -1,7 +1,8 @@
 import { featureArray } from "@/modules/catalog/cards/queries/search-sql";
 import { sql, type SQL } from "drizzle-orm";
 import { type DbExecutor, cheapestPrice, textArray } from "@/shared/db";
-import { COLORS, type ManaColor, type Tag, type Theme, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { COLORS, type ManaColor, type Tag, type Theme } from "@/shared/mtg";
 import {
   coverageDetails,
   missingCost,

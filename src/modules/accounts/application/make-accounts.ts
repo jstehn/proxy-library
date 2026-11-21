@@ -16,7 +16,11 @@ import { makeSignIn } from "./sign-in";
  * Builds every accounts use case from one set of dependencies.
  * The composition root calls this once; tests call it with fakes.
  */
-import { makeActorFromToken, makeCreateAccessToken, makeRevokeAccessToken } from "./access-tokens";
+import {
+  makeActorFromToken,
+  makeCreateAccessToken,
+  makeRevokeAccessToken,
+} from "./connectors/access-tokens";
 import {
   makeApproveAuthorization,
   makeCheckAuthorizationRequest,
@@ -24,8 +28,8 @@ import {
   makeCreateOAuthClient,
   makeExchangeAuthorizationCode,
   makeRegisterOAuthClient,
-} from "./oauth";
-import { makeCreateManualOAuthClient, makeDeleteOAuthClient } from "./oauth-clients";
+} from "./connectors/oauth";
+import { makeCreateManualOAuthClient, makeDeleteOAuthClient } from "./connectors/oauth-clients";
 import {
   makeHandleExternalCallback,
   makeSetPlayerEmail,

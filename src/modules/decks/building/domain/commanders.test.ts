@@ -10,7 +10,7 @@ import {
   type CommanderCandidate,
   type PoolCard,
 } from "./commanders";
-import { type ManaColor } from "@/shared/kernel";
+import { type ManaColor } from "@/shared/mtg";
 import { featuresOfText } from "../../core/testing/deck-view";
 
 const commander = (

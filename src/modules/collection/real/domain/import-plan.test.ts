@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { samplePrintingId } from "../testing/fakes";
 import { copyKey, MAX_REAL_QUANTITY, sumCopies, type RealCopy } from "./copies";
 import { applyPlan, isEmptyPlan, planImport, planRemoval } from "./import-plan";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 const copy = (printingId: string, quantity: number, finish: Finish = "nonfoil"): RealCopy => ({
   printingId: samplePrintingId(printingId),

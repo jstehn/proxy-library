@@ -6,7 +6,7 @@ import {
   tokenSecret,
   withRead,
   type Scope,
-} from "../domain/access-token";
+} from "../../domain/access-token";
 import type {
   AuthorizationRefused,
   OAuthClientInvalid,
@@ -14,7 +14,7 @@ import type {
   TokenRequestRefused,
   TooManyTokens,
   UnknownClient,
-} from "../domain/errors";
+} from "../../domain/errors";
 import {
   authMethodFor,
   clientAuthenticated,
@@ -31,10 +31,10 @@ import {
   tokenNameFor,
   withQuery,
   type OAuthClient,
-} from "../domain/oauth";
-import { isActive, type Actor } from "../domain/player";
+} from "../../domain/oauth";
+import { isActive, type Actor } from "../../domain/player";
 import type { UserId } from "@/shared/kernel";
-import type { AccountsDependencies } from "./ports";
+import type { AccountsDependencies } from "../ports";
 
 // OAuth for web connectors (design doc 30, section 5). The token at the end is an ordinary
 // access token (design doc 28), so the tool endpoints don't change.

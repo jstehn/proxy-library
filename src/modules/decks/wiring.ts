@@ -56,7 +56,7 @@ import type { makeProxySheets, makeTokenChoices } from "@/modules/decks/proxies"
 import { DeckId } from "@/modules/decks/core/client";
 
 // The decks module's capabilities (ADR 0026), built from its use cases and queries. The app's
-// composition root (src/server/capabilities.ts) calls this once and spreads the result.
+// composition root (src/server/composition/capabilities.ts) calls this once and spreads the result.
 
 type EdhrecReader = Parameters<typeof makeEdhrecResearch>[0]["fetchCommander"];
 type CombosReader = Parameters<typeof makeDeckCombos>[0]["fetchCombos"];

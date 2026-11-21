@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { CardPreviewDialog, EnlargedCard } from "./card-preview";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const FOIL_SHEEN =
   "pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1";

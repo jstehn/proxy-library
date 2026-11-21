@@ -2,7 +2,8 @@
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { MAX_LIST_LINES, describeBuyListError, type ListQuote } from "@/modules/store";
-import { Cents, FinishSchema } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import { readPage } from "@/server/page-instance";
 import { revalidateHeader } from "@/app/paths";
 

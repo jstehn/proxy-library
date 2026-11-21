@@ -1,4 +1,4 @@
-import type { BracketFlag, ManaSymbol, SignalIO, SignalKind, Tag, Theme } from "@/shared/kernel";
+import type { BracketFlag, ManaSymbol, SignalIO, SignalKind, Tag, Theme } from "@/shared/mtg";
 import type { CardFace } from "../types";
 
 /** What the recognizers read: one oracle card's printed faces and Scryfall's `produced_mana`. */

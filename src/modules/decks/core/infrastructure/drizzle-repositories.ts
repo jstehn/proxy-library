@@ -2,7 +2,8 @@ import { and, count, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { type DbExecutor, newestDayPrices } from "@/shared/db";
-import { type Finish, FinishSchema, UserId } from "@/shared/kernel";
+import { UserId } from "@/shared/kernel";
+import { type Finish, FinishSchema } from "@/shared/mtg";
 import type {
   CardLookup,
   CardQuery,

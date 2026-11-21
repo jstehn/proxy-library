@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
-import { Cents, COLORS, type UserId, seededRng } from "@/shared/kernel";
+import { Cents, type UserId, seededRng } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import {
   isPlayed,
   bracketLine,

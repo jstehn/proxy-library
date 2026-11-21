@@ -12,10 +12,10 @@ import {
 } from "@/modules/packs";
 import { Cents, type Result } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
-import { ManaStylesheet } from "@/ui/mana";
-import { KeyruneStylesheet } from "@/ui/set-symbol";
-import type { Capabilities } from "@/server/capabilities";
-import type { Reads } from "@/server/reads";
+import { ManaStylesheet } from "@/ui/mtg/mana";
+import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
+import type { Capabilities } from "@/server/composition/capabilities";
+import type { Reads } from "@/server/composition/reads";
 import { readPage } from "@/server/page-instance";
 import { Button } from "@/ui/button";
 import { Select } from "@/ui/field";

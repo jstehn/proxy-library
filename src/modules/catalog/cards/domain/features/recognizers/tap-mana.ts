@@ -1,4 +1,4 @@
-import { cardTypes } from "@/shared/kernel";
+import { cardTypes } from "@/shared/mtg";
 import type { CardText, Recognizer, TapMana } from "../types";
 
 // Moved unchanged from the tap-mana code that lived in decks/domain/mana.ts.

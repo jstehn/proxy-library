@@ -42,7 +42,7 @@ describe("module cycles", () => {
     expect(nodeOf("/p/src/modules/catalog/infrastructure/index.ts")).toBe("catalog");
     expect(nodeOf("/p/src/modules/collection/real/index.ts")).toBe("collection/real");
     expect(nodeOf("/p/src/modules/research/youtube/domain/search.ts")).toBe("research/youtube");
-    expect(nodeOf("/p/src/server/core.ts")).toBeUndefined();
+    expect(nodeOf("/p/src/server/composition/core.ts")).toBeUndefined();
   });
 
   it("joins files into module edges and finds a loop through wiring", () => {

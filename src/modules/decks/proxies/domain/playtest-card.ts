@@ -11,7 +11,7 @@ import {
   type Measure,
 } from "./playtest-text";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
-import { COLORS, type ManaColor, isLand, type CardFacts } from "@/shared/kernel";
+import { COLORS, type ManaColor, isLand, type CardFacts } from "@/shared/mtg";
 
 // Playtest proxies (design doc 22, section 3): a card drawn from its text instead of its scan.
 // Everything here is pure: given the card, its box on the page and a way to measure text, it

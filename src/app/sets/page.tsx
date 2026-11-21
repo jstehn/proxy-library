@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
+import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 

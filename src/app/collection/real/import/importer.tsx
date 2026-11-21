@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { MatchedLine, PrintingChoice, UnmatchedReason } from "@/modules/collection/real";
-import { Cents, type Finish, assertNever } from "@/shared/kernel";
+import { Cents, assertNever } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import { Alert } from "@/ui/form";
 import {
   applyImportAction,

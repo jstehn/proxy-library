@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleFacts, samplePrintingId } from "../testing/recipes";
 import type { PackCard } from "./pack";
 import { revealOrder } from "./reveal";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 function card(id: string, finish: Finish = "nonfoil"): PackCard {
   return { printingId: samplePrintingId(id), finish, sheet: "any" };

@@ -4,7 +4,7 @@ import { Cents } from "@/shared/kernel";
 import type { CommanderCardsView } from "./commander-cards-view";
 import { Card } from "@/ui/card";
 import { Button } from "@/ui/button";
-import { CardImage } from "@/ui/card-image";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // One commander's cards on Find a commander (design docs 36 and 39), loaded when opened:
 // your on-plan cards and why, your cards for each role, and what the rest might cost; plus

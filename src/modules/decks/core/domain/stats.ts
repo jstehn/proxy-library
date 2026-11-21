@@ -12,7 +12,7 @@ import {
   type Tag,
   TAGS,
   type Theme,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 import { isCounted, isPlayed, type DeckCount } from "./boards";
 import { costSymbols } from "./mana";
 

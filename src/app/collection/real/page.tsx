@@ -4,7 +4,7 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { SECTIONS, SORTS } from "@/app/collection/options";
 import { CollectionCardGrid, ExportLinks } from "../card-grid";
 import { readCollectionQuery } from "../collection-query";

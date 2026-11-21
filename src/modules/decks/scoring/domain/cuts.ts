@@ -1,4 +1,4 @@
-import { type BracketFlag } from "@/shared/kernel";
+import { type BracketFlag } from "@/shared/mtg";
 import type { Board, Format } from "@/modules/decks/core/client";
 import {
   bracketLine,

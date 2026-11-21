@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { getContainer } from "./container";
+import { getContainer } from "./composition/container";
 import { makeFormAction, makeFormRedirect, makeFormVoid } from "./form-action";
 import { requireActor, requireAdminActor } from "./session";
 

@@ -6,7 +6,7 @@ import {
   shortenOracleText,
   typeGroupOf,
   type CompactLineSource,
-} from "./compact-deck";
+} from "./compact-lines";
 
 function line(overrides: Partial<CompactLineSource> = {}): CompactLineSource {
   return {

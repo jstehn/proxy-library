@@ -3,7 +3,7 @@
 // glyphs and colours below are copied from Mana's own stylesheet (mana-font/css/mana.css), so a
 // proxy's symbols look the way they do on Scryfall and other sites that use the font.
 
-import { COLORS, MANA_SYMBOLS, type ManaColor, type ManaSymbol } from "@/shared/kernel";
+import { COLORS, MANA_SYMBOLS, type ManaColor, type ManaSymbol } from "@/shared/mtg";
 
 /** A piece of rules text: plain words, or one symbol such as "T" or "W/U" (without braces). */
 export type TextRun = Readonly<{ kind: "text"; text: string } | { kind: "symbol"; symbol: string }>;

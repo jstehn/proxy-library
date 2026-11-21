@@ -7,7 +7,7 @@
 // their file holds the input schema and the reason.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
-import { buildCore } from "@/server/core";
+import { buildCore } from "@/server/composition/core";
 import { loadConfig } from "@/shared/config";
 import {
   actor,

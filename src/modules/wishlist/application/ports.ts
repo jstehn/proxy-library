@@ -1,5 +1,6 @@
 import type { StoreServices } from "@/modules/store";
-import { type Clock, type Finish, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Clock, type UnitOfWork, type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { Offer } from "../domain/lines";
 import type { OwnedStack, Wish, WishDetails, WishId, WishTarget } from "../domain/wish";
 

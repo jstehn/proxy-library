@@ -112,15 +112,15 @@ flowchart LR
   application --> domain
   queries --> infra_db[shared/db]
   infrastructure --> infra_db
-  domain --> kernel[shared/kernel]
+  domain --> kernel[shared/kernel + shared/mtg]
   application --> kernel
 ```
 
-- `domain` imports only `shared/kernel`. Its code can run in a unit test without anything else.
+- `domain` imports only `shared/kernel` and `shared/mtg`. Its code can run in a unit test without anything else.
 - `application` defines the **ports** it needs (`LedgerRepo`, `Clock`, …) and depends on those
   interfaces, never on Drizzle.
 - `infrastructure` implements the ports. It's the only layer that knows about Postgres or HTTP.
-- Only the **composition root** (`src/server/container.ts`, `worker/container.ts`) imports
+- Only the **composition root** (`src/server/composition/container.ts`, `worker/container.ts`) imports
   `infrastructure` and wires it into use cases.
 
 This is enforced by lint (ADR [0009](../adr/0009-lint-enforced-boundaries.md)).
@@ -169,17 +169,34 @@ exported by the module's `index.ts`: only the app, the composition roots and the
 it, `real` imports no game area, and lint stops it importing any module but `accounts` and
 `catalog`, so never the wallet or the store.
 
+## Outside the modules: the adapters and the composition roots
+
+| Path                      | Holds                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/`                | Next.js routes: pages, server actions and API routes. Thin adapters over the capabilities (ADR 0026)                       |
+| `src/app/_components/`    | Components that know the app (menus, navigation, card filters, the PWA); a page's own components sit in its route folder   |
+| `src/app/_llm-tools/`     | The LLM tools (design doc 28): `bindings/` has one file per tool, named after it; `present/` shapes their answers          |
+| `src/ui/`                 | The general building blocks every page uses (buttons, fields, forms, dialogs, page states); no data access                 |
+| `src/ui/mtg/`             | Magic's displays: card images and views, mana, set symbols, prices and sealed products                                     |
+| `src/server/`             | The request helpers adapters use: `readPage()`, `action()`, `formAction()`, `readTool()`, the session                      |
+| `src/server/composition/` | The app's composition root (`container.ts`), the wiring shared with the worker (`core.ts`), and the capabilities it builds |
+| `src/proxy.ts`            | The sign-in guard that runs before every request (Next 16's middleware)                                                    |
+| `worker/`                 | The background worker: its composition root (`container.ts`) and its commands (`commands/`)                                |
+
 ## Cross-cutting pieces (`src/shared/`)
 
-| Path              | Contents                                                                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared/kernel/`  | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
-| `shared/db/`      | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
-| `shared/runtime/` | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
-| `shared/config/`  | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
-| `shared/http/`    | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
+| Path                  | Contents                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/kernel/`      | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
+| `shared/mtg/`         | Magic's vocabulary: finishes, rarities and colours (with their Zod schemas), card types, the mana curve, tags and signals, plain rules text       |
+| `shared/card-search/` | The card search language and list reader (ADR 0017): pure, so the browser may use it. Its SQL lives in `catalog`                                  |
+| `shared/db/`          | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
+| `shared/runtime/`     | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
+| `shared/config/`      | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
+| `shared/http/`        | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
 
-The kernel is deliberately **tiny and stable**. It isn't a `utils/` dumping ground.
+The kernel is deliberately **tiny and stable**: general basics only. Magic's words live next to it in
+`shared/mtg`, which the lint rules treat as part of the kernel. It isn't a `utils/` dumping ground.
 
 ## Anatomy of a write request
 

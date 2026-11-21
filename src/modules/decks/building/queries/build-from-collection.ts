@@ -1,4 +1,4 @@
-import type { SignalIO } from "@/shared/kernel";
+import type { SignalIO } from "@/shared/mtg";
 import {
   bracketFlagsOf,
   fitsTarget,
@@ -6,12 +6,12 @@ import {
   isCounted,
   TARGETED_TAGS,
 } from "@/modules/decks/core/client";
-import type { BracketFlag } from "@/shared/kernel";
+import type { BracketFlag } from "@/shared/mtg";
 import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice, textArray } from "@/shared/db";
-import { type Tag, type Theme } from "@/shared/kernel";
+import { type Tag, type Theme } from "@/shared/mtg";
 import type { UserId } from "@/shared/kernel";
 import {
   buildFromCollection,

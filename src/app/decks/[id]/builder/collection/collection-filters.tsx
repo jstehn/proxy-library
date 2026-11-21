@@ -2,8 +2,8 @@
 import type { RefObject } from "react";
 import type { BrowseSort } from "@/modules/decks";
 import { hasTerm, toggleTerm } from "@/shared/card-search";
-import { COLORS, type ManaColor } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { COLORS, type ManaColor } from "@/shared/mtg";
+import { ManaText } from "@/ui/mtg/mana";
 import { CARD_SIZE_NAMES, type Browsing } from "./use-browse";
 import { Input } from "@/ui/field";
 

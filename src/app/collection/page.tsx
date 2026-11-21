@@ -3,7 +3,7 @@ import { CardFilters, Pagination } from "@/app/_components/card-filters";
 import { type DeckRef } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { SECTIONS, SORTS } from "@/app/collection/options";
 import { CollectionCardGrid, ExportLinks } from "./card-grid";
 import { readCollectionQuery } from "./collection-query";

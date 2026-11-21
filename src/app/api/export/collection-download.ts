@@ -1,6 +1,6 @@
 import type { Actor } from "@/modules/accounts";
 import { COLLECTION_EXPORTERS, type ExportRow } from "@/modules/collection";
-import type { Reads } from "@/server/reads";
+import type { Reads } from "@/server/composition/reads";
 import { readPage } from "@/server/page-instance";
 
 // The download both collection exports share (design doc 11, section 3, and doc 16, section 7):

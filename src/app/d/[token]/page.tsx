@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EXPORTERS } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { copyPublicDeckAction } from "../../decks/actions";
 import { SharedDeckView } from "../../decks/[id]/shared-view";
 import { FORMAT_LABELS } from "../../decks/labels";

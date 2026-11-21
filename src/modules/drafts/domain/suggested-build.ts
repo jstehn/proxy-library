@@ -12,7 +12,7 @@ import {
 } from "./auto-pick";
 import { isConspiracyLine } from "./abilities";
 import type { DraftCard } from "./draft";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 
 // The deck each player gets when a draft ends (design doc 17, rule 12): the best 23 cards in the
 // pool's two main colors, 17 basic lands split by how many mana symbols of each color the spells
