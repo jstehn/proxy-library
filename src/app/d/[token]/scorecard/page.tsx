@@ -103,9 +103,21 @@ export default async function PublicDeckScorecardPage(props: PageProps<"/d/[toke
             : " · colors balanced"}
         </p>
         <p className="mt-1 text-sm">
-          {legality.problemCount === 0
-            ? "No legality issues."
-            : `${legality.problemCount} legality issue(s): ${legality.problems.join("; ")}`}
+          {legality.problemCount === 0 ? (
+            "No legality issues."
+          ) : (
+            // The report holds only the problems' kinds; the full list says each one in words.
+            <>
+              {legality.problemCount === 1
+                ? "1 legality issue"
+                : `${legality.problemCount} legality issues`}
+              , listed on the{" "}
+              <Link href={`/d/${token}`} className="underline">
+                full list
+              </Link>
+              .
+            </>
+          )}
         </p>
       </Card>
     </Page>

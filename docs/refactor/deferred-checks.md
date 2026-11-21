@@ -248,8 +248,8 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       focus ring shows in light mode.** Still open from P33: a full colour-contrast pass by eye; the
       broken-image tile (it only appears for images that fail after the page is interactive); the
       confirm button has no "working…" state.
-- [ ] **Small things found in the final check by eye (2026-11-21), not fixed:** the scorecard
+- [x] **Fixed the same day: the scorecard now links to the full list for its legality issues, and the photos table has column padding (+11 lines).** Small things found in the final check by eye (2026-11-21): the scorecard
       (`/d/[token]/scorecard`) prints the raw kind "1 legality issue(s): WrongSize" instead of the
       sentence the deck page uses; on `/admin/photos` at 390px "No page found" runs into "0 of 0".
-      Test gaps: `setPageSlug` and `choosePhoto` are never submitted by a test; the drafts use cases
+      Still open, test gaps: `setPageSlug` and `choosePhoto` are never submitted by a test; the drafts use cases
       `decideCard` and `answerDeal` have no direct test (their domain rules do).
