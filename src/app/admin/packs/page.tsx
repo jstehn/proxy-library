@@ -17,6 +17,10 @@ import { KeyruneStylesheet } from "@/ui/set-symbol";
 import type { Capabilities } from "@/server/capabilities";
 import type { Reads } from "@/server/reads";
 import { readPage } from "@/server/page-instance";
+import { Button } from "@/ui/button";
+import { Select } from "@/ui/field";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 // The Pack lab (design doc 05, section 10): open many packs of one booster, keep nothing, and
 // compare what came out with what the recipe promises. The form uses GET, so a run is just a URL.
@@ -74,7 +78,7 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
+    <Page width="6xl" spacing="roomy">
       <KeyruneStylesheet />
       <ManaStylesheet />
       <header className="flex flex-col gap-2">
@@ -93,24 +97,19 @@ export default async function PackLabPage(props: PageProps<"/admin/packs">) {
       {result !== null && result.ok && (
         <Report capabilities={capabilities} reads={reads} report={result.value} choices={choices} />
       )}
-    </main>
+    </Page>
   );
 }
 
 function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: number }) {
   if (props.choices.length === 0) {
-    return <p className="text-muted text-sm">No enabled set has booster recipes yet.</p>;
+    return <EmptyState>No enabled set has booster recipes yet.</EmptyState>;
   }
   return (
     <form method="get" className="flex flex-wrap items-end gap-3 text-sm">
       <label className="flex flex-col gap-1">
         <span className="font-medium">Booster</span>
-        <select
-          name="booster"
-          defaultValue={props.booster}
-          required
-          className="border-line rounded-md border bg-transparent px-2 py-1.5"
-        >
+        <Select name="booster" defaultValue={props.booster} required>
           <option value="" disabled>
             Choose a booster…
           </option>
@@ -123,28 +122,22 @@ function PackLabForm(props: { choices: BoosterChoice[]; booster: string; count: 
               ))}
             </optgroup>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1">
         <span className="font-medium">Packs</span>
-        <select
+        <Select
           name="count"
           defaultValue={String(PACK_COUNTS.includes(props.count) ? props.count : 10)}
-          className="border-line rounded-md border bg-transparent px-2 py-1.5"
         >
           {PACK_COUNTS.map((packCount) => (
             <option key={packCount} value={packCount}>
               {packCount.toLocaleString("en-US")}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
-      <button
-        type="submit"
-        className="bg-accent text-accent-foreground rounded-md px-3 py-1.5 font-medium"
-      >
-        Open packs
-      </button>
+      <Button type="submit">Open packs</Button>
     </form>
   );
 }

@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import { Alert, SubmitButton } from "@/ui/form";
 import { resetLibraryAction } from "./reset-actions";
 import type { FormState } from "@/server/form-action";
+import { Input } from "@/ui/field";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -25,13 +26,13 @@ export function ResetForm(props: { userId: string; username: string }) {
         <input type="hidden" name="userId" value={props.userId} />
         <input type="hidden" name="username" value={props.username} />
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Input
             name="confirmation"
             aria-label={`Type ${props.username} to confirm`}
             placeholder={`Type ${props.username} to confirm`}
             autoComplete="off"
             required
-            className="border-line bg-field rounded-md border px-2 py-1"
+            controlSize="sm"
           />
           <SubmitButton tone="danger" pendingText="Resetting…">
             Reset library

@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import { Alert } from "@/ui/form";
 import { moneyAction } from "./money-actions";
 import type { FormState } from "@/server/form-action";
+import { Button } from "@/ui/button";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -44,13 +45,8 @@ export function MoneyForm(props: { userId: string; username: string }) {
  */
 function IntentButton(props: { intent: "give" | "take"; label: string }) {
   return (
-    <button
-      type="submit"
-      name="intent"
-      value={props.intent}
-      className="border-line bg-field hover:bg-surface rounded-md border px-3 py-1 text-sm"
-    >
+    <Button type="submit" name="intent" value={props.intent} variant="secondary" size="sm">
       {props.label}
-    </button>
+    </Button>
   );
 }

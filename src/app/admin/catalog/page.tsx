@@ -2,6 +2,8 @@ import { type SyncRunRow } from "@/modules/catalog";
 import { LocalTime } from "@/ui/local-time";
 import { EnableStandardButton, RefreshWhileSyncing, SetsTable, SyncButtons } from "./controls";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 export default async function AdminCatalogPage() {
   const { actor: admin, reads } = await readPage({ admin: true });
@@ -13,7 +15,7 @@ export default async function AdminCatalogPage() {
   const isSyncing = runs.some((run) => run.status === "queued" || run.status === "running");
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12">
+    <Page width="5xl" spacing="wide">
       <RefreshWhileSyncing isSyncing={isSyncing} />
       <h1 className="text-2xl font-semibold">Catalog</h1>
 
@@ -36,12 +38,12 @@ export default async function AdminCatalogPage() {
         <EnableStandardButton />
         <SetsTable sets={sets} />
       </section>
-    </main>
+    </Page>
   );
 }
 
 function SyncRunsList(props: { runs: SyncRunRow[] }) {
-  if (props.runs.length === 0) return <p className="text-muted text-sm">No syncs yet.</p>;
+  if (props.runs.length === 0) return <EmptyState>No syncs yet.</EmptyState>;
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {props.runs.map((run) => {

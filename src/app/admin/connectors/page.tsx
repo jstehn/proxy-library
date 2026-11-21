@@ -3,6 +3,8 @@ import { readPage } from "@/server/page-instance";
 import { SubmitButton } from "@/ui/form";
 import { deleteClientAction } from "./actions";
 import { CreateClientForm } from "./create-client-form";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
 
 export const metadata: Metadata = { title: "Connectors" };
 
@@ -14,7 +16,7 @@ export default async function AdminConnectorsPage() {
   const clients = await reads.accounts.listOAuthClients(admin);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12">
+    <Page width="3xl" spacing="roomy">
       <h1 className="text-2xl font-semibold">Connectors</h1>
 
       <section className="flex flex-col gap-3">
@@ -28,7 +30,7 @@ export default async function AdminConnectorsPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">All clients</h2>
-        {clients.length === 0 && <p className="text-muted text-sm">No clients yet.</p>}
+        {clients.length === 0 && <EmptyState>No clients yet.</EmptyState>}
         <ul className="flex flex-col gap-2">
           {clients.map((client) => (
             <li
@@ -58,6 +60,6 @@ export default async function AdminConnectorsPage() {
           ))}
         </ul>
       </section>
-    </main>
+    </Page>
   );
 }

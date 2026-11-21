@@ -3,6 +3,7 @@ import { useActionState, useState, useSyncExternalStore } from "react";
 import { Alert, SubmitButton, TextField } from "@/ui/form";
 import { updateEconomyAction } from "./actions";
 import type { FormState } from "@/server/form-action";
+import { Input } from "@/ui/field";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -47,27 +48,29 @@ export function EconomyForm(props: { values: EconomyFormValues; maxPeriodDays: n
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Paid every (days)</span>
-        <input
+        <Input
           name="allowancePeriodDays"
           type="number"
           min={1}
           max={props.maxPeriodDays}
           defaultValue={props.values.allowancePeriodDays}
           required
-          className="border-line bg-field w-24 rounded-md border px-3 py-2"
+          controlSize="lg"
+          className="w-24"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">One payday, in your local time</span>
         {isBrowser ? (
-          <input
+          <Input
             type="datetime-local"
             defaultValue={toLocalInputValue(new Date(props.values.anchorIso))}
             // The browser knows your time zone; turn the local time into an exact instant.
             onChange={(event) => setAnchorIso(new Date(event.target.value).toISOString())}
             required
-            className="border-line bg-field w-60 rounded-md border px-3 py-2"
+            controlSize="lg"
+            className="w-60"
           />
         ) : (
           <span className="text-muted">Loading…</span>

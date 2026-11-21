@@ -7,6 +7,8 @@ import {
   setProductPriceAction,
 } from "./actions";
 import { readPage } from "@/server/page-instance";
+import { Select } from "@/ui/field";
+import { Page } from "@/ui/page";
 
 // MSRPs (ADR 0014): one price per product kind, and optional per-product overrides.
 
@@ -56,7 +58,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12">
+    <Page width="5xl" spacing="wide">
       <h1 className="text-2xl font-semibold">Store prices</h1>
       {error && <Alert tone="error">{error}</Alert>}
 
@@ -168,12 +170,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           (worked out after each nightly price sync). Its own price is never raised.
         </p>
         <form method="get" className="flex items-center gap-2 text-sm">
-          <select
-            name="set"
-            defaultValue={setCode ?? ""}
-            aria-label="Set"
-            className="border-line rounded-md border bg-transparent px-2 py-1.5"
-          >
+          <Select name="set" defaultValue={setCode ?? ""} aria-label="Set">
             <option value="" disabled>
               Choose a set…
             </option>
@@ -182,7 +179,7 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
                 {set.name} ({set.code})
               </option>
             ))}
-          </select>
+          </Select>
           <button type="submit" className={buttonClass}>
             Show products
           </button>
@@ -248,6 +245,6 @@ export default async function AdminStorePage(props: PageProps<"/admin/store">) {
           </div>
         )}
       </section>
-    </main>
+    </Page>
   );
 }

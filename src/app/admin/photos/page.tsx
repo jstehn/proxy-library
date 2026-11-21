@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 // Admin → Photos (design doc 13): which sets have their WPN page, and how many products got an
 // official photo.
@@ -16,7 +17,7 @@ export default async function PhotosPage() {
   const sets = await reads.catalog.photosOverview(admin);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12">
+    <Page width="5xl">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Photos</h1>
         <p className="text-muted text-sm">
@@ -52,6 +53,6 @@ export default async function PhotosPage() {
           ))}
         </tbody>
       </table>
-    </main>
+    </Page>
   );
 }

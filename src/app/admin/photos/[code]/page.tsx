@@ -5,6 +5,8 @@ import { Alert } from "@/ui/form";
 import { KeyArt } from "@/ui/product-image";
 import { choosePhotoAction, setPageSlugAction } from "../actions";
 import { readPage } from "@/server/page-instance";
+import { Input, Select } from "@/ui/field";
+import { Page } from "@/ui/page";
 
 // One set's WPN page and products (design doc 13): what matched, and the admin's corrections.
 
@@ -15,8 +17,6 @@ const MATCH_LABELS = {
 } as const;
 
 const buttonClass = "rounded-md border border-line px-2 py-1 text-sm";
-const fieldClass = "rounded-md border border-line bg-transparent px-2 py-1 text-sm";
-
 export default async function SetPhotosPage(props: PageProps<"/admin/photos/[code]">) {
   const { actor: admin, reads } = await readPage({ admin: true });
   const { code } = await props.params;
@@ -28,7 +28,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
   const pageUrl = view.slug ? `https://wpn.wizards.com/en/products/${view.slug}` : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12">
+    <Page width="5xl" spacing="roomy">
       <header className="flex flex-col gap-1">
         <Link href="/admin/photos" className="text-sm underline">
           ← All sets
@@ -60,12 +60,13 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
         <form action={setPageSlugAction} className="flex flex-wrap items-center gap-2 text-sm">
           <input type="hidden" name="code" value={view.setCode} />
           <span className="text-muted">wpn.wizards.com/en/products/</span>
-          <input
+          <Input
             name="slug"
             defaultValue={view.slugOverride ?? ""}
             placeholder={view.slug ?? "automatic"}
             aria-label="WPN page address"
-            className={`${fieldClass} w-72`}
+            controlSize="sm"
+            className="w-72"
           />
           <button type="submit" className={buttonClass}>
             Save
@@ -114,7 +115,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
               <form action={choosePhotoAction} className="flex items-center gap-2">
                 <input type="hidden" name="code" value={view.setCode} />
                 <input type="hidden" name="productId" value={product.id} />
-                <select
+                <Select
                   name="choice"
                   aria-label={`Photo for ${product.name}`}
                   defaultValue={
@@ -124,7 +125,8 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
                         : `${product.wpnName}|${product.photoIndex}`
                       : "auto"
                   }
-                  className={`${fieldClass} max-w-64`}
+                  controlSize="sm"
+                  className="max-w-64"
                 >
                   <option value="auto">Automatic</option>
                   <option value="none">Generated art</option>
@@ -137,7 +139,7 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
                       </option>
                     )),
                   )}
-                </select>
+                </Select>
                 <button type="submit" className={buttonClass}>
                   Save
                 </button>
@@ -175,6 +177,6 @@ export default async function SetPhotosPage(props: PageProps<"/admin/photos/[cod
           ))}
         </ul>
       </section>
-    </main>
+    </Page>
   );
 }

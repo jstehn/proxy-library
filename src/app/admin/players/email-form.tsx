@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import type { FormState } from "@/server/form-action";
 import { Alert, SubmitButton } from "@/ui/form";
 import { setPlayerEmailAction } from "./email-actions";
+import { Input } from "@/ui/field";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -25,13 +26,13 @@ export function EmailForm(props: { userId: string; email: string | null }) {
         </p>
         <input type="hidden" name="userId" value={props.userId} />
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Input
             name="email"
             type="email"
             aria-label="Email"
             defaultValue={props.email ?? ""}
             autoComplete="off"
-            className="border-line bg-field rounded-md border px-2 py-1"
+            controlSize="sm"
           />
           <SubmitButton tone="secondary" pendingText="Saving…">
             Save email

@@ -6,6 +6,7 @@ import { EmailForm } from "./email-form";
 import { ResetForm } from "./reset-form";
 import { Alert, SubmitButton } from "@/ui/form";
 import { playerAction, type PlayerActionState } from "./actions";
+import { Card } from "@/ui/card";
 
 const initialState: PlayerActionState = { message: null, tone: "success", temporaryPassword: null };
 
@@ -22,7 +23,7 @@ export function PlayerRow(props: PlayerRowProps) {
   const shared = { formAction, userId: player.userId }; // passed to every ActionButton
 
   return (
-    <li className="border-border-subtle flex flex-col gap-3 rounded-lg border p-4">
+    <Card as="li" padding="lg" stack>
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="font-medium">{player.displayName}</span>
         <span className="text-muted text-sm">@{player.username}</span>
@@ -70,7 +71,7 @@ export function PlayerRow(props: PlayerRowProps) {
           on privately; it won&apos;t be shown again. They must change it when they sign in.
         </Alert>
       )}
-    </li>
+    </Card>
   );
 }
 
