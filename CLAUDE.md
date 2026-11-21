@@ -4,8 +4,9 @@
 
 Self-hosted web app simulating an MTG collection: buy/open virtual sealed product, singles store,
 wallet ledger, deck builder (owned cards only), trades, live drafts, LLM tools. Also a TypeScript
-learning project for a Python/SQL developer: `lessons/` (moving to its own repo) has a lesson for
-each build phase that teaches something new (ADR 0023); follow `lessons/README.md`, verify every
+learning project for a Python/SQL developer: the lessons live in their own repo
+(`../proxy-library-lessons`, https://github.com/jstehn/proxy-library-lessons), a lesson for each build phase that teaches
+something new (ADR 0023); follow its `README.md`, verify every
 exercise solution, commit at the end of each lesson. Lessons teach concepts; they are not changelogs.
 
 ## Read before writing code

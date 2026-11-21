@@ -43,7 +43,7 @@ implementation code until you approve.
   gets no design doc number.
 - **Either size:** delete a template section that doesn't apply instead of writing "none".
 - **Lesson:** write one only when the work teaches a concept that no existing lesson covers.
-  Lessons keep their full format (`lessons/README.md`). The design doc or plan states
+  Lessons keep their full format (the lessons repo's `README.md`). The design doc or plan states
   "Lesson: yes (topics)" or "Lesson: no", so whether to write one is decided when you approve.
 
 ## Consequences
@@ -66,3 +66,8 @@ implementation code until you approve.
   enforced.
 - **Merge the architecture layers:** they cost about 100 lines per feature, and they are part of
   what the project teaches.
+
+## Change log
+
+- **2026-11-21 (refactor P34):** the lessons moved to their own repository,
+  [proxy-library-lessons](https://github.com/jstehn/proxy-library-lessons), linked from the README. The rule above is unchanged.

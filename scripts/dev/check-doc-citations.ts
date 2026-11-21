@@ -1,11 +1,11 @@
-// The design-doc citation check (P22). Code comments, ADRs, lessons and docs cite design docs
+// The design-doc citation check (P22). Code comments, ADRs and docs cite design docs
 // ("design doc 28", "doc 28 §3", `docs/design/28-llm-tools.md`). Moving a doc to
 // `docs/design/archive/` must never leave a citation pointing at nothing. For every number cited,
 // `docs/design/NN-*.md` or `docs/design/archive/NN-*.md` must exist; every cited path must exist.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const FOLDERS = ["src", "worker", "tests", "scripts", "docs", "lessons"];
+const FOLDERS = ["src", "worker", "tests", "scripts", "docs"];
 const SINGLE_FILES = ["README.md", "CONTRIBUTING.md", "CLAUDE.md"];
 const EXTENSIONS = /\.(ts|tsx|md|mjs|sh|json|yml|yaml)$/;
 const SKIPPED_FOLDERS = new Set(["node_modules", ".next", ".dev", "screenshots", "fixtures"]);

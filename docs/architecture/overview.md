@@ -53,7 +53,7 @@ root.
 | `inventory`  | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                                                         | domain + persistence              |
 | `collection` | **game**: owned cards at exact **printing × finish** (ADR 0011) + acquisition log. **real**: cards and sealed products a player owns physically (design doc 16). **copies**: the SQL both share (ADR 0030)                               | domain + persistence              |
 | `store`      | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                                                       | orchestration only                |
-| `decks`      | decks, ownership check, format legality, export formats; also suggestions, building, the simulator and proxy sheets, as six areas (below, ADR 0029)                                                                                      | rich domain                       |
+| `decks`      | decks, ownership check, format legality, export formats; also sharing, snapshots, suggestions, building, the simulator and proxy sheets, as eight areas (below, ADR 0029)                                                                | rich domain                       |
 | `trades`     | proposals, trade lifecycle, atomic execution                                                                                                                                                                                             | rich domain + orchestration       |
 | `activity`   | feed of domain events ("X opened a mythic")                                                                                                                                                                                              | read model                        |
 | `reset`      | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                                                              | orchestration only (no tables)    |
@@ -139,14 +139,16 @@ flowchart LR
   scoring & play & proxies & building & overview --> core
 ```
 
-| Area       | Holds                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| `core`     | the deck, lists, legality, formats, brackets, headings, stats, snapshots, previews, sharing |
-| `scoring`  | `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                   |
-| `building` | `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration  |
-| `play`     | opening hands, goldfish, odds, castability                                                  |
-| `proxies`  | proxy sheets, playtest cards, token proxies, the PDF renderer                               |
-| `overview` | the reads that combine areas: deck overview and facts, snapshot comparison, the optimizer   |
+| Area       | Holds                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `core`     | the deck, lists, legality, formats, brackets, headings, stats                              |
+| `sharing`  | public links, who may read a deck, comments                                                |
+| `changes`  | edit previews, snapshots and restoring them, builder moves                                 |
+| `scoring`  | `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                  |
+| `building` | `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration |
+| `play`     | opening hands, goldfish, odds, castability                                                 |
+| `proxies`  | proxy sheets, playtest cards, token proxies, the PDF renderer                              |
+| `overview` | the reads that combine areas: deck overview and facts, snapshot comparison, the optimizer  |
 
 The module root keeps `index.ts` and `client.ts` (each is `export *` of the areas'), `wiring.ts`
 and `infrastructure/index.ts` (the real adapters, for the composition roots).

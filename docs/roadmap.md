@@ -1,7 +1,7 @@
 # Roadmap
 
 The source of truth for build order. Each phase ends with a commit, and with a lesson
-(`lessons/NN-*.md`) when it teaches something new.
+(in the [lessons repo](https://github.com/jstehn/proxy-library-lessons)) when it teaches something new.
 
 ## The loop every phase follows
 
@@ -31,7 +31,7 @@ flowchart LR
 5. **Infrastructure:** Drizzle repos and gateways, plus contract and integration tests.
 6. **UI:** server actions (parse → actor → use case → map Result) and views.
 7. **Lesson** (only if the plan says yes): a real lesson that teaches the phase's concepts, **not** a log of what was built.
-   It follows the format in [`lessons/README.md`](../lessons/README.md): objectives, concepts built
+   It follows the format in [the lessons repo's README](https://github.com/jstehn/proxy-library-lessons): objectives, concepts built
    up simple → complex with Python comparisons and real repo code, common mistakes, graded
    exercises with verified solutions, a recap, and further reading.
 8. **Commit** once `pnpm check` is green.
@@ -99,7 +99,7 @@ Design artifacts (this commit): [architecture overview](architecture/overview.md
 
 **Review gate:** ✅ ADRs accepted 2026-09-26.
 
-Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-foundation.md)):
+Implementation steps (✅ all done, see [lesson 01](https://github.com/jstehn/proxy-library-lessons/blob/main/01-architecture-foundation.md)):
 
 1. **Shared kernel** (`src/shared/kernel/`): `result.ts`, `brand.ts`, `ids.ts`, `money.ts` (moved
    from `src/lib/money.ts`, now a branded `Cents`), `clock.ts`, `rng.ts` (`seededRng`,

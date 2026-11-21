@@ -43,3 +43,7 @@ backups/
 
 # Agent worktrees made by Claude Code (other branches checked out here)
 .claude/worktrees/
+
+# The owner's own task-board tooling (tududi): kept locally, not part of the project.
+.mcp.json
+scripts/tududi-*
