@@ -15,6 +15,10 @@ export default defineConfig({
           include: ["src/**/*.test.ts", "worker/**/*.test.ts", "scripts/**/*.test.ts"],
           exclude: ["**/*.int.test.ts", "**/*.remote.test.ts"],
           setupFiles: ["tests/setup/no-network.ts"],
+          // The property tests (a draft played by bots, cast-on-curve simulations) take 1 to 2
+          // seconds alone, but over 5 when typecheck and lint share a 2-core CI runner. The limit
+          // is there to catch a hung test, not to time a slow one.
+          testTimeout: 20_000,
         },
       },
       {
