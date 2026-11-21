@@ -2,6 +2,7 @@
 
 - **Phase:** 42 (tududi task `#50`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-proxies.md
 - **Related:** design doc 25 (token proxies), design doc 28 (LLM tool API), design doc 32 (maybeboard & cuts)
 - **Lesson:** no (pure classification/summary helpers on top of existing `TokenLine`, surfaced in deck builder, shared deck view, and MCP tools)
 

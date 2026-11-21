@@ -2,6 +2,7 @@
 
 - **Phase:** 46 (backlog task #53, subtasks #54–#59)
 - **Status:** **Approved** (2026-11-12)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-scoring.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0019 (Precomputed/synced card features)
 - **Lesson:** no
 

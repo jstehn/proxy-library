@@ -3,6 +3,7 @@
 - **Phase:** 36 (tududi task 45, project "Build decks from owned cards"; the first version of
   backlog task 109, "Rank the commanders I own")
 - **Status:** **Approved** (2026-11-11, with the proposals in section 13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-building.md
 - **Related:** design doc 09 (decks, commander rules: `canBeCommander`), design doc 19 (role tags
   and targets), design doc 20 (suggestions: deck profile, `deckFit`, owned pool first), design
   doc 28 (LLM tools), design doc 31 (brackets), design doc 32 (ideas, not verdicts), design doc

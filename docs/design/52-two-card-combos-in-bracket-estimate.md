@@ -2,6 +2,7 @@
 
 - **Phase:** Deck building — Phase 2 (backlog task #79)
 - **Status:** **Approved** (per user instruction to continue roadmap)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0007 (External data behind an ACL), 0025 (Commander Spellbook combo data)
 - **Lesson:** no
 

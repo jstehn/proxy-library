@@ -3,6 +3,8 @@
 **Status:** approved (2026-09-28: you chose "Admin 'Reset player'" when asked how to clean up
 test purchases). A small feature, so this doc is short.
 
+- **Superseded** (2026-11-20, P22): by docs/modules/game-collection.md
+
 ## 1. Purpose
 
 An admin can empty a player's library, for example after testing with real purchases. Before

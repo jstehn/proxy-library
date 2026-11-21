@@ -6,6 +6,7 @@
   50%). Implementation notes in section 14. **Amended by design doc 33 (ADR 0024):** by
   default an official MSRP is sold as published; this rule applies in full only in
   value-based pricing
+- **Superseded** (2026-11-20, P22): by docs/modules/economy.md
 - **Related:** ADR 0014 (sealed product at MSRP; this amends it, see ADR 0021), ADR 0015
   (official MSRPs), design doc 06 (store and inventory), design doc 07 (selling singles back),
   design doc 17 (a draft's entry fee is three packs)

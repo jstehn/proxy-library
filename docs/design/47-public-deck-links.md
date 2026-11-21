@@ -2,6 +2,7 @@
 
 - **Phase:** 47 (Roadmap #88)
 - **Status:** **Approved**
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related ADRs:** 0016, 0023
 - **Lesson:** no
 

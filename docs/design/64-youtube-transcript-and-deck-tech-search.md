@@ -2,6 +2,7 @@
 
 - **Phase:** 64
 - **Status:** **Approved** (2026-11-18 — module in `src/modules/youtube/`, `includeTimestamps` defaults to `false`)
+- **Superseded** (2026-11-20, P22): by docs/modules/llm-tools.md
 - **Related ADRs:** 0003 (Result types), 0007 (External data behind an ACL), 0009 (Lint-enforced boundaries), 0022 (LLM tool registry over MCP & OpenAPI)
 - **Lesson:** no
 

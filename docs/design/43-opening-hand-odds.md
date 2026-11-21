@@ -2,6 +2,7 @@
 
 - **Phase:** 43 (tududi task `#51`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11 — continuing Project #11 roadmap per user confirmation)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-play.md
 - **Related:** design doc 19 (statistics, roles, test hand & `deckOdds`), design doc 28 (LLM tool API), design doc 35 (mana base planner)
 - **Lesson:** no (pure exact hypergeometric & joint bivariate hypergeometric probability math on top of existing `draws.ts`)
 

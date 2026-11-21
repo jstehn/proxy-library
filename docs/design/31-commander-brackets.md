@@ -2,6 +2,7 @@
 
 - **Phase:** 31
 - **Status:** **Approved** (2026-11-10, with the decisions in section 13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks, problems), design doc 19 (role tags), design doc 20 and
   ADR 0019 (features stored per printing), design doc 21 (sharing), design doc 28 and ADR 0022
   (LLM tools), ADR 0007 (external data), ADR 0017 (shared card search). No new ADR: this follows

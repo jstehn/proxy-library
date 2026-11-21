@@ -2,6 +2,7 @@
 
 - **Phase:** 40 (tududi tasks `#44` and `#74`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11), with D1 = include the Edit as text preview
+- **Superseded in part** (2026-11-20, P22): the `apply_changes` tool is now the `edit_deck` preview; the partner rules are in decks-core.md; see docs/modules/decks-core.md
 - **Related:** design doc 09 (deck rules), design doc 19 (role tags & targets), design doc 23 (Edit as text, fingerprints), design doc 28 (LLM tool API), design doc 31 (Commander brackets), design doc 37 (`draft_deck`). No new ADR: the preview is a pure function in `src/modules/decks/domain/`, and saving reuses the unit of work and fingerprint check that `replace_deck_list` already uses.
 - **Lesson:** no.
 

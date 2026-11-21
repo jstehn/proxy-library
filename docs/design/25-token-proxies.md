@@ -3,6 +3,7 @@
 - **Phase:** 25
 - **Status:** **Built** (2026-11-04). Approved the same day, all decisions as recommended
   (section 13); implementation notes in section 14
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-proxies.md
 - **Related:** design doc 14 (proxy sheets), design doc 22 (playtest style), design doc 24
   (choosing a printing; the picker this reuses), ADR 0007 (external data)
 

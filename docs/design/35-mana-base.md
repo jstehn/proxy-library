@@ -4,6 +4,7 @@
   came from backlog task 41)
 - **Status:** **Approved** (2026-11-11, with the proposals in section 13; ownership is shared
   between decks, question 3)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-building.md
 - **Related:** design doc 09 (decks, problems, basic lands need no copies), design doc 19 (role
   tags and targets), design doc 20 (suggestions: owned pool first, then store), design doc 28
   (LLM tools, land cycles in the search language, section 3.6), design doc 31 (brackets), design

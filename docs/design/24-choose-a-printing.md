@@ -3,6 +3,7 @@
 - **Phase:** 24
 - **Status:** **Done** (2026-11-03). Approved the same day. Decisions: section 13, all as recommended, plus
   "Universes Within before Universes Beyond" (section 13, question 5).
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 23 (edit as text; section 14, your most special copy), design doc 14
   (deck builder 2.0, the selected-card panel), design doc 16 (real cards),
   `docs/future-ideas.md` ("Choose a card's variant in the builder", which this phase builds)

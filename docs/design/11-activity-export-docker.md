@@ -3,6 +3,7 @@
 - **Phase:** 11
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
   [decisions-to-review.md](../decisions-to-review.md))
+- **Superseded** (2026-11-20, P22): by docs/modules/game-collection.md
 - **Related ADRs:** 0004 (ledgers), 0005 (unit of work), 0010 (Nix for development; Docker later)
 
 ## 1. Purpose & scope

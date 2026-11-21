@@ -2,6 +2,7 @@
 
 - **Phase:** Deck building — Phase 1 (#58, #150, #85)
 - **Status:** Draft → In review → **Approved** (2026-11-13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-scoring.md
 - **Related ADRs:** 0016 (client-safe module API), 0019 (precomputed card features), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (unless #58 proves embeddings + `pgvector` are needed, in which case: yes — vector similarity & feature tuning)
 

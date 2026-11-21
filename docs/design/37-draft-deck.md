@@ -2,6 +2,7 @@
 
 - **Phase**: 37
 - **Status**: **Approved** (2026-11-11)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-building.md
 - **Related docs**: [09 — Decks](09-decks.md), [19 — Deck Analysis & Validation](19-deck-analysis.md), [20 — Card Tags & Strategy Guides](20-card-tags-and-guides.md), [28 — LLM Tool Suite](28-llm-tools.md), [31 — Commander Brackets](31-commander-brackets.md), [32 — Card Strength & Deck Suggestions](32-card-strength-and-suggestions.md), [35 — Mana Base Planner](35-mana-base.md), [36 — Commanders I Can Build](36-commanders-i-can-build.md)
 - **Lesson**: **no** — reuses the existing functional-core / query-shell split and `planManaBase` / `suggest.ts` scoring; no new architectural pattern introduced.
 

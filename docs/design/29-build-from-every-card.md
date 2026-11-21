@@ -2,6 +2,7 @@
 
 - **Phase:** 29
 - **Status:** **Approved** (2026-11-08)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-building.md
 - **Related:** design doc 14 (deck builder, section 2.1), design doc 15 (buy a list), design doc
   23 (most special copy), design doc 24 (standard art), design doc 28 (search_for_deck's store
   pool). No new ADR.

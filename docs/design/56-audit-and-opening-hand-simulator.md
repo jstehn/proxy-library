@@ -2,6 +2,7 @@
 
 - **Phase:** 56 (Deck-AI Phase 4, tududi #156)
 - **Status:** Draft → In review → **Approved** (2026-11-13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-play.md
 - **Related ADRs:** 0008 (injected `Rng`), 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (composes `draws.ts`, `rules.ts`, `brackets.ts`, `stats.ts`, `cuts.ts`, and `optimize.ts`)
 

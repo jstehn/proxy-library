@@ -2,6 +2,7 @@
 
 - **Phase:** 22
 - **Status:** **Built** (approved 2026-10-06 with the decisions in section 13; implementation notes in section 14)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-proxies.md
 - **Related ADRs:** 0007 (external data), 0016 (client-safe module API)
 - **Inspired by:** [playtestproxies.com](https://playtestproxies.com/)
 

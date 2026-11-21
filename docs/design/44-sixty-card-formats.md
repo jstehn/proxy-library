@@ -2,6 +2,7 @@
 
 - **Phase:** 44 (tududi task `#52`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11 — continuing Project #11 roadmap per user confirmation)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks & rules), design doc 19 (builder insights & role targets), design doc 20 (suggestions), design doc 28 (LLM tool API), design doc 35 (mana base planner), design doc 37 (`draft_deck`), design doc 40 (`apply_changes`)
 - **Lesson:** no (extends existing constructed-format rules, role targets, multi-copy drafting, and MCP/builder visibility across all 60-card formats)
 

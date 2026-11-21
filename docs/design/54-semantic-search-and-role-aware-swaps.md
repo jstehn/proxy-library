@@ -2,6 +2,7 @@
 
 - **Phase:** 54 (Deck-AI Phase 2, tududi #153 & #154)
 - **Status:** Draft → In review → **Approved** (2026-11-13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-scoring.md
 - **Related ADRs:** 0016 (client-safe module API), 0017 (shared card search), 0022 (LLM tool API), 0023 (process sized to feature), 0025 (Commander Spellbook combo data)
 - **Lesson:** no (builds directly on `pgvector` and `swaps.ts` patterns from Phase 53)
 

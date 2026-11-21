@@ -3,6 +3,7 @@
 - **Phase:** 9
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
   [decisions-to-review.md](../decisions-to-review.md))
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related ADRs:** 0011 (ownership by oracle card; decks pin a preferred printing)
 
 ## 1. Purpose & scope

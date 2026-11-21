@@ -2,6 +2,7 @@
 
 - **Phase:** 57 (Deck-AI Phase 5, tududi #157)
 - **Status:** Draft → In review → **Approved** (2026-11-13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-scoring.md
 - **Related ADRs:** 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (extends `rate.ts`, `eval-ratings.ts`, `swaps.ts`, `snapshots.ts`, and `optimize.ts`)
 

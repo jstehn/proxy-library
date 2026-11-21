@@ -3,6 +3,7 @@
 - **Phase:** 32 (tududi tasks 43 and 78, under task 41 "LLM tools: build decks from cards you
   already have")
 - **Status:** **Approved** (2026-11-10, with the proposals in section 13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks, problems), design doc 19 (role tags and targets), design doc
   20 (suggestions: the deck profile and `deckFit` reused here), design doc 23 (edit as text; the
   maybeboard was deferred there, question 2), design doc 28 (LLM tools), design doc 31

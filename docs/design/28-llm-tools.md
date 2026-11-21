@@ -5,6 +5,7 @@
   13, plus one addition: expand the card search language as far as the stored data reasonably
   allows (section 3.6), and `analyze_cards` (section 3.7, added at review). Implementation notes
   in section 14.
+- **Superseded in part** (2026-11-20, P22): section 3's tool layout is replaced by bindings over capabilities (ADR 0026, P05-P09); the 27 unregistered tools were removed on purpose; see docs/modules/llm-tools.md
 - **Related:** ADR 0022 (this phase), ADR 0017 (shared card search), ADR 0019 (stored card
   features), design doc 20 (suggestions), design doc 23 (fingerprints for safe list edits),
   design doc 26 (wishlist), design doc 02 (accounts)

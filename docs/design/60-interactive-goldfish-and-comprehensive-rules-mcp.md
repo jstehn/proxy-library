@@ -2,6 +2,7 @@
 
 - **Phase:** 60
 - **Status:** **Approved**. Superseded in part (2026-11-19): the interactive goldfish was removed (P24)
+- **Superseded** (2026-11-20, P22): by docs/modules/catalog.md
 - **Related ADRs:** 0001, 0002, 0003, 0006, 0007, 0008, 0009, 0022, 0023
 - **Lesson:** no
 

@@ -3,6 +3,7 @@
 - **Phase:** 16
 - **Status:** **Approved** (2026-10-01, with the decisions in section 14; amendment in section 15
   approved 2026-10-29)
+- **Superseded** (2026-11-20, P22): by docs/modules/real-collection.md
 - **Related:** design doc 04 (catalog sync, rule 13), design doc 07 (collection screens), design
   doc 09 and 14 (decks, proxy PDFs), design doc 15 (list parsing and card search), ADR 0006
   (cross-module reads), ADR 0009 (lint boundaries), ADR 0011 (printing × finish)

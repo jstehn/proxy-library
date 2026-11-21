@@ -2,6 +2,7 @@
 
 - **Phase:** 5
 - **Status:** Approved (2026-09-27)
+- **Superseded** (2026-11-20, P22): by docs/modules/economy.md
 - **Related ADRs:** 0008 (server-side, seeded randomness), 0011 (printing × finish), 0003 (Result)
 
 ## 1. Purpose & scope

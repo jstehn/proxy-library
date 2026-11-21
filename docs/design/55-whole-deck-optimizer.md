@@ -2,6 +2,7 @@
 
 - **Phase:** 55 (Deck-AI Phase 3, tududi #155)
 - **Status:** Draft → In review → **Approved** (2026-11-13)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-scoring.md
 - **Related ADRs:** 0008 (injected `Rng`), 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (builds directly on `rate.ts`, `stats.ts`, `signals.ts`, `swaps.ts`, and `suggestions.ts`)
 

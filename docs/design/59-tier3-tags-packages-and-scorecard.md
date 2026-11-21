@@ -2,6 +2,7 @@
 
 - **Phase:** 59
 - **Status:** **Approved** (2026-11-13)
+- **Superseded in part** (2026-11-20, P22): card packages and the mulligan trainer were deleted (P24); only the heading round trip survives, in decks-core.md; see docs/modules/decks-core.md
 - **Related ADRs:** 0001 (modular monolith), 0006 (CQRS-lite reads), 0008 (injected RNG and clock), 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no
 

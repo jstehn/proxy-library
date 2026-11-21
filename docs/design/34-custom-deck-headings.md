@@ -2,6 +2,7 @@
 
 - **Phase:** 34 (tududi task 110)
 - **Status:** **Done** (approved 2026-11-10: your own order for headings; proposals 2–4)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks), 14 (the deck list), 19 (roles), 23 (Edit as text),
   32 (the maybeboard), ADR 0017 (the list reader in `@/shared/card-search`)
 - **Lesson:** no (columns on two tables and changes along an existing path; nothing new to teach)

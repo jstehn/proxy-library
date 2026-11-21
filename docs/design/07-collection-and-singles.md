@@ -3,6 +3,7 @@
 - **Phase:** 7
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
   [decisions-to-review.md](../decisions-to-review.md))
+- **Superseded** (2026-11-20, P22): by docs/modules/economy.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0011 (printing × finish), 0013 (price history and
   store ledger), 0014 (market price for singles)
 

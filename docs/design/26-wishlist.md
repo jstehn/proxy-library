@@ -3,6 +3,7 @@
 - **Phase:** 26
 - **Status:** **Built** (2026-11-06). Approved the same day with every recommendation except
   decision 4: Start over **deletes** the wishlist. Implementation notes in section 14
+- **Superseded** (2026-11-20, P22): by docs/modules/game-collection.md
 - **Related:** design doc 07 (singles store), design doc 15 (buy a list; its candidate ranking),
   design doc 03 (wallet and allowances), design doc 12 (reset), ADR 0013 (price history)
 

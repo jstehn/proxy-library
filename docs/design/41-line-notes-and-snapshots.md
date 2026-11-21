@@ -2,6 +2,7 @@
 
 - **Phase:** 41 (tududi task `#47`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11)
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks), design doc 21 (sharing), design doc 23 (Edit as text, fingerprints), design doc 28 (LLM tool API), design doc 32 (maybeboard & cuts), design doc 34 (custom deck headings), design doc 40 (`apply_changes` dry-run comparison)
 - **Lesson:** no (column on `deck_entries`, new `deck_snapshots` table, and reuses `preview.ts` diffing)
 

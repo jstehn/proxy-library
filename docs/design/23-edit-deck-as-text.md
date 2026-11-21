@@ -3,6 +3,7 @@
 - **Phase:** 23
 - **Status:** **Approved** (2026-11-03). Decisions: section 13 and 14.5, all as recommended,
   except the maybeboard, which is left for a later feature (question 2).
+- **Superseded** (2026-11-20, P22): by docs/modules/decks-core.md
 - **Related:** design doc 09 (decks, list export), design doc 14 (deck builder 2.0), design doc 15
   (list parsing, `@/shared/card-search`, optimistic concurrency), ADR 0017 (the shared
   card-search library)

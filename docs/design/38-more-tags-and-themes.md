@@ -2,6 +2,7 @@
 
 - **Phase:** 38 (tududi tasks `#48` and `#87`, project "Build decks from owned cards")
 - **Status:** **Approved** (2026-11-11)
+- **Superseded** (2026-11-20, P22): by docs/modules/card-features.md
 - **Related:** design doc 19 (role tags), design doc 20 (themes, `CARD_FEATURES_VERSION`, catalog tag pass), design doc 28 (`otag:` / `function:` tagger aliases and card signals), design doc 36 (`commanders_i_can_build`), design doc 37 (`draft_deck`). No new ADR: extends existing data-driven `THEME_RULES` and `TAGGER_ALIASES` tables.
 - **Lesson:** no (data table extension of an already-taught pattern).
 

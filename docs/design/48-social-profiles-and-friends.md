@@ -2,6 +2,7 @@
 
 - **Phase:** 48
 - **Status:** **Approved**
+- **Superseded** (2026-11-20, P22): by docs/modules/accounts.md
 - **Related ADRs:** 0001, 0002, 0003, 0006, 0008, 0009
 - **Lesson:** no
 

@@ -2,6 +2,7 @@
 
 - **Phase:** 17
 - **Status:** **Approved** (2026-10-01, with the decisions in section 14)
+- **Superseded** (2026-11-20, P22): by docs/modules/drafts.md
 - **Related:** design doc 05 (pack engine), 03 (wallet), 09 and 14 (decks), 11 (activity), 12
   (reset), ADR 0005 (unit of work), ADR 0006 (reads), ADR 0008 (injected time and seeds),
   **ADR 0018** (live updates)
