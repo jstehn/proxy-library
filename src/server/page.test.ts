@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { testActor, testAdminActor } from "@/modules/accounts/testing/actors";
-import type { Capabilities } from "./capabilities";
+import type { Capabilities } from "./composition/capabilities";
 import { makeReadPage, type PageSources } from "./page";
-import type { PublicReads, Reads } from "./reads";
+import type { PublicReads, Reads } from "./composition/reads";
 
 const actor = testActor({ name: "jack" });
 const capabilities = { marker: true } as unknown as Capabilities;

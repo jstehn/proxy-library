@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { seededRng, type ManaSymbol } from "@/shared/kernel";
+import { seededRng } from "@/shared/kernel";
+import { type ManaSymbol } from "@/shared/mtg";
 import { simulateCasting, type CastOptions, type CastTarget } from "./cast-by-turn";
 import { effectOf, totalDiscount, type CardEffect } from "./cast-effects";
 import { hypergeometricAtLeast } from "./draws";

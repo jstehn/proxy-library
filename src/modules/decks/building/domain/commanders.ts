@@ -7,7 +7,7 @@ import {
   type Scored,
   strength,
 } from "@/modules/decks/scoring/client";
-import { creatureTypes } from "@/shared/kernel";
+import { creatureTypes } from "@/shared/mtg";
 import { FORMAT_RULES, isLand, TARGETED_TAGS, type TargetedTag } from "@/modules/decks/core/client";
 import {
   type CardFacts,
@@ -16,13 +16,14 @@ import {
   type ManaColor,
   type Tag,
   type Theme,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 
 // Commanders I can build (design docs 36 and 39): for each card that could lead a deck, how
 // much of a Commander deck your owned cards already cover, plus popularity and power heuristics.
 // Pure: the queries gather the rows.
 
-export const COMMANDER_SORTS = ["coverage", "popularity", "power", "combined"] as const;
+/** The orderings the finder offers; the first is the default. "combined" is the blend of popularity and power. */
+export const COMMANDER_SORTS = ["combined", "popularity", "power", "coverage"] as const;
 export type CommanderSort = (typeof COMMANDER_SORTS)[number];
 
 export type RankCommandersOptions = Readonly<{
@@ -83,9 +84,9 @@ export type CommanderCoverage = Readonly<{
   ownedLands: number;
   /** Collection coverage score (design doc 36, section 3.1). */
   score: number;
-  /** Card power heuristic (design doc 39, section 3.1): Game Changer, card strength, plan richness, popularity. */
+  /** Card power heuristic: Game Changer, card strength, roles, cheap cost, plan richness. No popularity in it. */
   powerScore: number;
-  /** Blend of collection coverage + popularity + power (design doc 39, section 3.1). */
+  /** The blend: popularity bonus (0 to 25) plus power score. It leaves your collection out. */
   combinedScore: number;
 }>;
 
@@ -105,7 +106,7 @@ export type MissingCost = Readonly<{ picks: readonly MissingPick[]; totalCents: 
 /** A 99-card deck minus the usual 37 lands (design doc 35's base land count). */
 export const SPELL_SLOTS = 62;
 
-/** The score's parts (section 3.1), in one place to tune. */
+/** The coverage score ("fits my collection"): the only weights the finder keeps, in one place to tune. */
 const COMMANDER_WEIGHTS = {
   onPlan: 2,
   onPlanCap: 30,
@@ -211,8 +212,9 @@ function popularityBonus(edhrecRank: number | null | undefined): number {
 }
 
 /**
- * Heuristic power score for a commander candidate (design doc 39, 3.1): combines Wizards' Game
- * Changer flag, card strength (rarity + low-mana efficiency + roles), plan richness, and popularity.
+ * Heuristic power score for a commander candidate: Wizards' Game Changer flag, card strength
+ * (rarity and price), roles, low mana value and plan richness. Popularity is kept out so the blend
+ * can add it once.
  */
 function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan): number {
   const cardStrength = strength({
@@ -230,8 +232,7 @@ function commanderPowerScore(candidate: CommanderCandidate, plan: CommanderPlan)
     2 * cardStrength +
     roleBonus +
     efficiencyBonus +
-    planRichness +
-    0.4 * popularityBonus(candidate.edhrecRank);
+    planRichness;
   return Math.round(raw * 10) / 10;
 }
 
@@ -268,8 +269,7 @@ function coverageOf(
     keywords: profile.keywords,
   };
   const powerScore = commanderPowerScore(candidate, commanderPlan);
-  const combinedScore =
-    Math.round((score + popularityBonus(candidate.edhrecRank) + 0.5 * powerScore) * 10) / 10;
+  const combinedScore = Math.round((popularityBonus(candidate.edhrecRank) + powerScore) * 10) / 10;
   return {
     commander: candidate,
     plan: commanderPlan,
@@ -334,7 +334,7 @@ export function rankCommanders(
 ): CommanderCoverage[] {
   const cards = prepare(pool);
   const landMasks = ownedLands.map((land) => colorMask(land.colorIdentity));
-  const sort = options.sort ?? "coverage";
+  const sort = options.sort ?? "combined";
   return candidates
     .map((candidate) => coverageOf(candidate, onColor(candidate, cards), landMasks))
     .filter(

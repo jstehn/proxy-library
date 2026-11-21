@@ -1,4 +1,4 @@
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 // The opening sequence as a state machine (design doc 08, section 3): a pure reducer, so every
 // transition is unit-tested and the component only draws the current state.
 

@@ -5,7 +5,7 @@ import {
   TAGS,
   type Theme,
   THEMES,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 
 // The card search language (design docs 14 and 15), modeled on Scryfall's and used by every card
 // search box. Pure: text in, a tree of conditions out, plus notes about anything it couldn't

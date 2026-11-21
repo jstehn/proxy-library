@@ -11,6 +11,7 @@ import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 import { Card } from "@/ui/card";
 import { EmptyState } from "@/ui/empty-state";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 function Side(props: { title: string; items: readonly TradeItemView[] }) {
   return (
@@ -93,6 +94,17 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
     </form>
   );
 
+  // Declining or cancelling ends the offer for good, so those two ask first.
+  const decideWithConfirmation = (decision: string, label: string, question: string) => (
+    <form action={decideTradeAction}>
+      <input type="hidden" name="tradeId" value={trade.id} />
+      <input type="hidden" name="decision" value={decision} />
+      <ConfirmButton variant="secondary" question={question} confirmLabel={label}>
+        {label}
+      </ConfirmButton>
+    </form>
+  );
+
   return (
     <Page>
       <header className="flex flex-col gap-1">
@@ -131,7 +143,7 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "recipient" && (
         <div className="flex flex-wrap gap-3">
           {decide("accept", "Accept", "bg-green-700 text-white")}
-          {decide("decline", "Decline", "border border-line")}
+          {decideWithConfirmation("decline", "Decline", "Decline this offer? It ends the trade.")}
           <Link href={counterHref} className={`${button} border-line border`}>
             Counter-offer
           </Link>
@@ -140,7 +152,11 @@ export default async function TradePage(props: PageProps<"/trades/[id]">) {
       {isOpen && trade.yourSide === "proposer" && (
         <div className="flex gap-3">
           <p className="text-muted text-sm">Waiting for {trade.recipient.displayName}.</p>
-          {decide("cancel", "Cancel this offer", "border border-line")}
+          {decideWithConfirmation(
+            "cancel",
+            "Cancel this offer",
+            "Cancel your offer? It ends the trade.",
+          )}
         </div>
       )}
     </Page>

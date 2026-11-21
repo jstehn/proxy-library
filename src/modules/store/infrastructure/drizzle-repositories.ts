@@ -7,7 +7,8 @@ import {
 } from "@/modules/catalog/cards/infrastructure/schema";
 import { SealedProductId, type PrintingId } from "@/modules/catalog";
 import { type DbExecutor, latestSnapshot, newestPriceDay } from "@/shared/db";
-import { Cents, type Finish, type UserId } from "@/shared/kernel";
+import { Cents, type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   ProductValues,
   Listing,

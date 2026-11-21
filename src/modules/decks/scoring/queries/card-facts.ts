@@ -1,7 +1,8 @@
 import type { OwnedCardCheck } from "../domain/owned-card-check";
 import { sql } from "drizzle-orm";
 import { type DbExecutor, newestDayPrice } from "@/shared/db";
-import type { UserId, CardFacts, CardIdentity } from "@/shared/kernel";
+import type { UserId } from "@/shared/kernel";
+import type { CardFacts, CardIdentity } from "@/shared/mtg";
 import { catalogQueries } from "@/modules/catalog";
 import { parseSearch } from "@/shared/card-search";
 import { foilOwnedBy, searchCondition } from "@/modules/catalog/cards/queries/search-sql";

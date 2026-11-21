@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
-import type { ManaColor } from "@/shared/kernel";
+import type { ManaColor } from "@/shared/mtg";
 import type { ViewerRelation } from "../domain/friendship";
 import { canViewSection, type SectionVisibility } from "../domain/profile";
 

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // End-to-end tests: a real browser driving the real app against its own database (tcg_e2e).
 // See docs/architecture/testing.md.
-const PORT = 3100;
+const PORT = Number(process.env.E2E_PORT ?? 3100);
 const APP_URL = `http://localhost:${PORT}`;
 const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? "";
 // Their own image folder: the setup stores placeholder product photos there, which must never

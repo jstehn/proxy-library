@@ -17,6 +17,7 @@ import { seededRng } from "@/shared/kernel";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Eyebrow } from "@/ui/eyebrow";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The test hand (design doc 19, section 5.2): deal an opening hand from the deck, mulligan, draw,
 // and see the exact odds of drawing lands and roles. The rules live in the pure reducer
@@ -116,10 +117,9 @@ export function TestHandPanel(props: {
                   aria-label={hand.toBottom > 0 ? `Put ${card.name} on the bottom` : card.name}
                   className="block w-full enabled:cursor-pointer enabled:hover:opacity-70"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <CardImage
                     src={`/api/images/${card.printingId}/small/front`}
-                    alt=""
+                    decorative
                     className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
                   />
                 </button>

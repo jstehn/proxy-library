@@ -1,5 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 
 // What the activity feed records (design doc 11, section 2). Money amounts other than card prices
 // are never recorded: they stay private.

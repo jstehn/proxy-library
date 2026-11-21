@@ -2,7 +2,8 @@ import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { latestPrice } from "@/shared/db";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 
 // Read models for the trade screens (design doc 10, section 9).
 

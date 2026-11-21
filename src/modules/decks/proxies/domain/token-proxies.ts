@@ -1,4 +1,4 @@
-import { hasTypeWord } from "@/shared/kernel";
+import { hasTypeWord } from "@/shared/mtg";
 import { isCounted, isPlayed, type Board } from "@/modules/decks/core/client";
 import type { PrintedCard, PrintedFace } from "./playtest-card";
 import { cardsToPrint, type ProxyCard, type ProxyLine, type ProxyOptions } from "./proxy-sheet";

@@ -1,7 +1,7 @@
 // Commander brackets (design doc 31, sections 3.2 and 3.3): the lowest bracket a deck's cards
 // allow, why, and whether it's within the bracket its owner chose. Pure, and safe for the browser.
-import type { CardFacts } from "@/shared/kernel";
-import { BRACKET_FLAGS, type BracketFlag } from "@/shared/kernel";
+import type { CardFacts } from "@/shared/mtg";
+import { BRACKET_FLAGS, type BracketFlag } from "@/shared/mtg";
 import { isPlayed, type Board, type DeckCount } from "./boards";
 import type { Format } from "./deck";
 import { formatRules } from "./format-rules";

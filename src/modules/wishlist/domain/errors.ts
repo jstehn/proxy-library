@@ -1,4 +1,4 @@
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Every expected failure in the wishlist module (design doc 26, section 5).
 

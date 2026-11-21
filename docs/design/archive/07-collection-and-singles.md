@@ -2,7 +2,7 @@
 
 - **Phase:** 7
 - **Status:** **Approved** (self-approved during the unattended run, 2026-09-27; see
-  [decisions-to-review.md](../../decisions-to-review.md))
+  [decisions-to-review.md](../../archive/decisions-to-review.md))
 - **Reviewed by the user** (2026-10-06, docs/decisions-to-review.md): judgement calls reviewed by the user (one changed: the store pays at least 1 cent); the self-approved status above is the build-time record
 - **Superseded** (2026-11-20, P22): by docs/modules/economy.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0011 (printing × finish), 0013 (price history and

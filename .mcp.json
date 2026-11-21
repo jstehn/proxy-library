@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "tududi": {
-      "type": "http",
-      "url": "${TUDUDI_URL:-https://tududi.devstageprod.duckdns.org}/api/mcp",
-      "headersHelper": "bash scripts/tududi-headers.sh"
-    }
-  }
-}

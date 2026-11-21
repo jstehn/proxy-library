@@ -14,7 +14,8 @@ import {
   readCopiesOf,
   readOwnedByOracle,
 } from "@/modules/collection/copies";
-import { type Finish, type UserId } from "@/shared/kernel";
+import { type UserId } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 
 // Read models for the collection screens (ADR 0006). Listing, filtering and exporting are shared
 // with the real collection (copies-sql.ts); this file says where the game's

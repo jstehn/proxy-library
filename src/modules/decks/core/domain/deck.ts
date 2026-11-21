@@ -1,5 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
-import { type Brand, type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Brand, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   CommanderMove,
   EntryNotFound,

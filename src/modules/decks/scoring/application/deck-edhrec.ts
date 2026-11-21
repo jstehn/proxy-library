@@ -1,5 +1,6 @@
 import type { EdhrecCardItem, EdhrecCommanderData } from "@/modules/catalog";
-import { err, ok, type Result, type UserId, type CardFacts } from "@/shared/kernel";
+import { err, ok, type Result, type UserId } from "@/shared/kernel";
+import { type CardFacts } from "@/shared/mtg";
 import { isPlayed } from "@/modules/decks/core/client";
 import { isAvoidCard, type DeckPlan } from "@/modules/decks/core/client";
 import type { DeckView } from "@/modules/decks/core/client";

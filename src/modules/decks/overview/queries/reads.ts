@@ -26,7 +26,7 @@ import { optimizeDeckForView, type OptimizeDeckPool } from "./optimize";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";
 
 // The decks module's player reads (design doc 67, kind P), bound into `reads.decks` by
-// `src/server/reads.ts`. Each takes the `Actor` and passes the actor's own id to the query that
+// `src/server/composition/reads.ts`. Each takes the `Actor` and passes the actor's own id to the query that
 // does the work, so a page can't ask for another player's deck. The queries themselves keep a
 // plain `userId` because capabilities in this module, which already hold the actor, call them too
 // (design doc 67, section 7B). Reads that show a deck to someone else live in `sharing.ts` and

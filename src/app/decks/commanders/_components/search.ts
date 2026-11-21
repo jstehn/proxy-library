@@ -1,6 +1,6 @@
 import { COMMANDER_SORTS, type CommanderSort } from "@/modules/decks";
 import { canonicalTheme } from "@/shared/card-search";
-import { COLORS, type ManaColor, type Theme } from "@/shared/kernel";
+import { COLORS, type ManaColor, type Theme } from "@/shared/mtg";
 
 // What Find a commander reads from the address (`?colors=…&theme=…`) and how it writes it back.
 
@@ -31,7 +31,7 @@ function chosenColors(value: Param): ManaColor[] {
 
 function chosenSort(value: Param): CommanderSort {
   const raw = firstParam(value);
-  return (COMMANDER_SORTS as readonly string[]).includes(raw) ? (raw as CommanderSort) : "coverage";
+  return (COMMANDER_SORTS as readonly string[]).includes(raw) ? (raw as CommanderSort) : "combined";
 }
 
 function chosenTheme(value: Param): Theme | undefined {
@@ -70,7 +70,7 @@ export function commandersUrl(filters: CommanderFilters, overrides: UrlOverrides
   const tribe = overrides.tribe !== undefined ? overrides.tribe : filters.tribe;
   if (tribe !== "") params.set("tribe", tribe);
   const sort = overrides.sort ?? filters.sort;
-  if (sort !== "coverage") params.set("sort", sort);
+  if (sort !== "combined") params.set("sort", sort);
   if (filters.includeStore) params.set("store", "1");
   if (filters.withReal) params.set("real", "1");
   if (overrides.show !== undefined && overrides.show > PAGE) {

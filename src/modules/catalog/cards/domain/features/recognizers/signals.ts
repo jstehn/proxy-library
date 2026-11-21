@@ -5,7 +5,7 @@
 // Moved from shared/card-search/signals.ts and decks/domain/signals.ts, where the second kind had
 // twelve names of its own; themes are now the one vocabulary. `plain-faces` keeps each face's plain
 // text for the recurring-phrase search.
-import { hasTypeWord, plainText, type SignalKind, type Theme } from "@/shared/kernel";
+import { hasTypeWord, plainText, type SignalKind, type Theme } from "@/shared/mtg";
 import type { CardText, Recognizer, SignalFact } from "../types";
 import { grantedKeywords } from "./grants";
 

@@ -4,6 +4,7 @@ import { Alert, SubmitButton } from "@/ui/form";
 import { buySingleAction, sellSingleAction } from "./actions";
 import type { FormState } from "@/server/form-action";
 import { Select } from "@/ui/field";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -67,9 +68,14 @@ export function SellForm(props: TradeFormProps) {
           max={Math.max(1, props.maxQuantity)}
           label={`How many ${props.finishLabel} to sell`}
         />
-        <SubmitButton pendingText="Selling…" tone="secondary">
+        <ConfirmButton
+          variant="secondary"
+          size="lg"
+          question={`Sell ${props.finishLabel} at ${props.priceText}? They leave your collection.`}
+          confirmLabel="Sell"
+        >
           Sell ({props.priceText})
-        </SubmitButton>
+        </ConfirmButton>
       </fieldset>
       {state.message && <Alert tone={state.tone}>{state.message}</Alert>}
     </form>

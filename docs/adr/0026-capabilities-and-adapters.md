@@ -17,7 +17,7 @@ others, and the transports (`mcp.ts`, `openapi.ts`, `http.ts`) were tied to that
    the actor and an input and returning a `Result` (expected failures are `{ kind }` unions;
    defects throw). Each module wires its own in `src/modules/<module>/wiring.ts`
    (`wireDeckCapabilities(dependencies)`), which may use its own `queries/`, `application/` and
-   `infrastructure/` files. `src/server/capabilities.ts` joins the results and adds the few that
+   `infrastructure/` files. `src/server/composition/capabilities.ts` joins the results and adds the few that
    read across modules, and they reach the app as `core.capabilities`. Only `src/server/**` and
    `worker/**` may import a `wiring.ts` (lint). A reader that belongs to another module is passed
    in as a port, or imported through that module's `index.ts`.
@@ -50,7 +50,7 @@ present, describeError })`. `input` is a flat Zod object. `call(capabilities, ac
    `async function (actor, input): Promise<Result<Value, Failure>>`. Test it with fakes.
    Export the factory and its types from the module's `index.ts`.
 2. In the module's `wiring.ts`, add `verbNoun: makeVerbNoun({ ... })`. (A capability that reads
-   across modules goes in `src/server/capabilities.ts`, with the other module's reader passed in.)
+   across modules goes in `src/server/composition/capabilities.ts`, with the other module's reader passed in.)
 3. For an LLM tool, add `src/app/_llm-tools/bindings/<verb-noun>.ts` with `defineBinding`, and
    add it to `bindings/index.ts`. Delete the old tool of the same name from `tools/`.
 4. For a server action, write `action(Schema, async ({ actor, capabilities }, input) => ...)`.
@@ -85,7 +85,7 @@ capabilities.
 1. **Reads are each module's typed query functions.** A module exports its public reads as one
    namespace from `queries/index.ts`. Pages, actions and routes call them as `reads.<module>.<query>`;
    `reads` comes from `readPage()`, `action()` and `formAction()`, and is built once in
-   `src/server/reads.ts` with a generic `bindDb(db, queries)` (it replaces `withDb` and the 14
+   `src/server/composition/reads.ts` with a generic `bindDb(db, queries)` (it replaces `withDb` and the 14
    `*Reads` bundles). Capabilities stay for writes and for anything with rules or permissions.
 2. **Three kinds of read.** A **player** read takes the signed-in `Actor` and filters by it in SQL;
    it never takes a plain `UserId`. A **shared** read checks visibility in SQL (shared deck, shared

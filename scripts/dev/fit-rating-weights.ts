@@ -1,5 +1,5 @@
 import pg from "pg";
-import { type Tag, type Theme } from "@/shared/kernel";
+import { type Tag, type Theme } from "@/shared/mtg";
 import type { Bracket } from "@/modules/decks/core/domain/brackets";
 import { emptyRatingProfile, ratingFeatureVector } from "@/modules/decks/scoring/domain/rate";
 import {

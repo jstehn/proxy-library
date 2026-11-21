@@ -10,7 +10,7 @@ import {
   type ManaBasePlan,
 } from "./mana-base";
 import { deckStats, type ProfileLine } from "@/modules/decks/core/client";
-import { type ManaColor } from "@/shared/kernel";
+import { type ManaColor } from "@/shared/mtg";
 
 // A mana base you could start from (design doc 35, sections 3-4).
 

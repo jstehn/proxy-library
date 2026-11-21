@@ -5,6 +5,7 @@ import { deleteClientAction } from "./actions";
 import { CreateClientForm } from "./create-client-form";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 export const metadata: Metadata = { title: "Connectors" };
 
@@ -52,9 +53,14 @@ export default async function AdminConnectorsPage() {
               </div>
               <form action={deleteClientAction}>
                 <input type="hidden" name="clientId" value={client.clientId} />
-                <SubmitButton tone="danger" pendingText="…">
+                <ConfirmButton
+                  variant="secondary"
+                  size="sm"
+                  question="Delete this connector client? Its tokens stop working."
+                  confirmLabel="Delete"
+                >
                   Delete
-                </SubmitButton>
+                </ConfirmButton>
               </form>
             </li>
           ))}

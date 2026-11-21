@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BRACKET_FLAGS, type BracketFlag } from "@/shared/kernel";
+import { BRACKET_FLAGS, type BracketFlag } from "@/shared/mtg";
 import { bracketFlags as recognizer } from "./bracket-flags";
 
 type BracketFacts = Readonly<{ typeLine: string; text: string; isGameChanger: boolean }>;

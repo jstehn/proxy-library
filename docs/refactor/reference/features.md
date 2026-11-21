@@ -2,93 +2,95 @@
 
 A checklist of what the app does today, one line per page, server-action file and LLM tool.
 Milestones tick these off once the rebuilt version works again (docs/refactor/STATUS.md).
+Final pass 2026-11-21: 61 rows matched to a test that drives them; the other 17 checked by eye on the
+e2e database in dark mode at 390px; one row stays open.
 Reference outputs of the LLM tools are in `tools/*.json` (`draw_sample` shuffles, so its card order
 differs between runs; the four tools that call outside services record only their input schema).
 
 ## Pages (`src/app/**/page.tsx`)
 
-- [ ] `/` home: dashboard and links
-- [ ] `/account`: account overview and starting over
-- [ ] `/account/password`: change password
-- [ ] `/account/profile`: display name and profile
-- [ ] `/account/tokens`: create and revoke LLM access tokens
-- [ ] `/activity`: feed of friends' and own events
-- [ ] `/admin`: admin home
-- [ ] `/admin/catalog`: catalog sync, enable sets
-- [ ] `/admin/economy`: allowance and economy settings
-- [ ] `/admin/invites`: create and revoke invites
-- [ ] `/admin/packs`: booster recipe checks
-- [ ] `/admin/photos`: choose set/page photos
-- [ ] `/admin/photos/[code]`: choose a set's photo
-- [ ] `/admin/players`: manage players, money, reset
-- [ ] `/admin/store`: store pricing mode, prices, buylist rate
-- [ ] `/register`: sign up with an invite
-- [ ] `/sign-in`: sign in
-- [ ] `/cards/[id]`: card page, buy and sell singles
-- [ ] `/collection`: your collection
-- [ ] `/collection/real`: real (physical) collection
-- [ ] `/collection/real/import`: import a real collection
-- [ ] `/decks`: your decks
-- [ ] `/decks/commanders`: commander picker, start a deck
-- [ ] `/decks/[id]`: deck page and builder
-- [ ] `/decks/[id]/export`: export a deck list
-- [ ] `/decks/[id]/print`: print proxies, token art
-- [ ] `/decks/shared`: decks shared with you
-- [ ] `/decks/to-get`: cards still to get for your decks
-- [ ] `/d/[token]`: public deck link
-- [ ] `/d/[token]/scorecard`: public deck scorecard
-- [ ] `/drafts`: drafts list, create and join
-- [ ] `/drafts/[id]`: a draft: picking, bots, deals, deck
-- [ ] `/friends`: friend requests and friends
-- [ ] `/inventory`: sealed product, open packs
-- [ ] `/inventory/opened`: opened-pack history
-- [ ] `/oauth/authorize`: approve an OAuth client
-- [ ] `/players/[id]`: another player's profile
-- [ ] `/players/[id]/real`: their shared real collection
-- [ ] `/players/[id]/wishlist`: their shared wishlist
-- [ ] `/search-help`: card search syntax help
-- [ ] `/sets`: sets list
-- [ ] `/sets/[code]`: one set's cards
-- [ ] `/singles`: singles store search
-- [ ] `/singles/list`: quote and buy a pasted list
-- [ ] `/store`: sealed product store
-- [ ] `/store/[code]`: a set's products
-- [ ] `/trades`: trades list
-- [ ] `/trades/new`: propose a trade
-- [ ] `/trades/[id]`: a trade, accept or decline
-- [ ] `/wallet`: balance and ledger, add funds
-- [ ] `/wishlist`: your wishlist
+- [x] `/` home: dashboard and links
+- [x] `/account`: account overview and starting over
+- [x] `/account/password`: change password
+- [x] `/account/profile`: display name and profile
+- [x] `/account/tokens`: create and revoke LLM access tokens
+- [x] `/activity`: feed of friends' and own events
+- [x] `/admin`: admin home
+- [x] `/admin/catalog`: catalog sync, enable sets
+- [x] `/admin/economy`: allowance and economy settings
+- [x] `/admin/invites`: create and revoke invites
+- [x] `/admin/packs`: booster recipe checks
+- [x] `/admin/photos`: choose set/page photos
+- [x] `/admin/photos/[code]`: choose a set's photo
+- [x] `/admin/players`: manage players, money, reset
+- [x] `/admin/store`: store pricing mode, prices, buylist rate
+- [x] `/register`: sign up with an invite
+- [x] `/sign-in`: sign in
+- [x] `/cards/[id]`: card page, buy and sell singles
+- [x] `/collection`: your collection
+- [x] `/collection/real`: real (physical) collection
+- [x] `/collection/real/import`: import a real collection
+- [x] `/decks`: your decks
+- [x] `/decks/commanders`: commander picker, start a deck
+- [x] `/decks/[id]`: deck page and builder
+- [x] `/decks/[id]/export`: export a deck list
+- [x] `/decks/[id]/print`: print proxies, token art
+- [x] `/decks/shared`: decks shared with you
+- [x] `/decks/to-get`: cards still to get for your decks
+- [x] `/d/[token]`: public deck link
+- [x] `/d/[token]/scorecard`: public deck scorecard
+- [x] `/drafts`: drafts list, create and join
+- [x] `/drafts/[id]`: a draft: picking, bots, deals, deck
+- [x] `/friends`: friend requests and friends
+- [x] `/inventory`: sealed product, open packs
+- [x] `/inventory/opened`: opened-pack history
+- [x] `/oauth/authorize`: approve an OAuth client
+- [x] `/players/[id]`: another player's profile
+- [x] `/players/[id]/real`: their shared real collection
+- [x] `/players/[id]/wishlist`: their shared wishlist
+- [x] `/search-help`: card search syntax help
+- [x] `/sets`: sets list
+- [x] `/sets/[code]`: one set's cards
+- [x] `/singles`: singles store search
+- [x] `/singles/list`: quote and buy a pasted list
+- [x] `/store`: sealed product store
+- [x] `/store/[code]`: a set's products
+- [x] `/trades`: trades list
+- [x] `/trades/new`: propose a trade
+- [x] `/trades/[id]`: a trade, accept or decline
+- [x] `/wallet`: balance and ledger, add funds
+- [x] `/wishlist`: your wishlist
 
 ## Server actions (`src/app/**/*actions.ts`)
 
-- [ ] `account/actions`: startOver
-- [ ] `account/password`: changePassword
-- [ ] `account/profile`: saveProfile
-- [ ] `account/tokens`: createToken, revokeToken
-- [ ] `actions`: signOut
-- [ ] `admin/catalog`: requestSync, enableStandardSets, setSetEnabled
-- [ ] `admin/economy`: updateEconomy
-- [ ] `admin/invites`: createInvite, revokeInvite
-- [ ] `admin/photos`: choosePhoto, setPageSlug
-- [ ] `admin/players`: player actions, money actions, resetLibrary
-- [ ] `admin/store`: setKindPrice, setProductPrice, setPricingMode, setBuylistRate
-- [ ] `(auth)/register`: register
-- [ ] `(auth)/sign-in`: signIn
-- [ ] `cards/[id]`: buySingle, sellSingle
-- [ ] `collection/real`: sharing, clear, set copies, change printing, products, import preview and apply
-- [ ] `decks/actions`: create, update, uses-real-cards, delete, import/replace/preview list, visibility, public link (enable, rotate, revoke), copy deck, copy public deck, comments
-- [ ] `decks/commanders`: commanderCards, startDeck
-- [ ] `decks/[id]/builder`: browse, card detail, load deck, quantity, move, swap, other decks, take from deck, printings, suggestions, optimize, mana base, draft deck, add lands, similar, budget, target bracket, heading, note, snapshots (list, save, compare, restore, delete), tokens, entry details, deck plan
-- [ ] `decks/[id]/print`: tokenArts, chooseToken
-- [ ] `drafts/actions`: create, join, leave, start, pick, decide, choose colour, sneak, informant, deal, end deals, pick for away, make deck, add and remove bots
-- [ ] `friends`: send, accept, decline, cancel, unfriend
-- [ ] `inventory`: open
-- [ ] `oauth/authorize`: decide
-- [ ] `singles/list`: quoteList, buyList
-- [ ] `store`: buySealed
-- [ ] `trades`: proposeTrade, decideTrade
-- [ ] `wallet`: addFunds
-- [ ] `wishlist`: add, update, remove, sharing, buy, wish for short cards
+- [x] `account/actions`: startOver
+- [x] `account/password`: changePassword
+- [x] `account/profile`: saveProfile
+- [x] `account/tokens`: createToken, revokeToken
+- [x] `actions`: signOut
+- [x] `admin/catalog`: requestSync, enableStandardSets, setSetEnabled
+- [x] `admin/economy`: updateEconomy
+- [x] `admin/invites`: createInvite, revokeInvite
+- [ ] `admin/photos`: choosePhoto, setPageSlug (open: the forms render, but no test or check by eye submits them)
+- [x] `admin/players`: player actions, money actions, resetLibrary
+- [x] `admin/store`: setKindPrice, setProductPrice, setPricingMode, setBuylistRate
+- [x] `(auth)/register`: register
+- [x] `(auth)/sign-in`: signIn
+- [x] `cards/[id]`: buySingle, sellSingle
+- [x] `collection/real`: sharing, clear, set copies, change printing, products, import preview and apply
+- [x] `decks/actions`: create, update, uses-real-cards, delete, import/replace/preview list, visibility, public link (enable, rotate, revoke), copy deck, copy public deck, comments
+- [x] `decks/commanders`: commanderCards, startDeck
+- [x] `decks/[id]/builder`: browse, card detail, load deck, quantity, move, swap, other decks, take from deck, printings, suggestions, optimize, mana base, draft deck, add lands, similar, budget, target bracket, heading, note, snapshots (list, save, compare, restore, delete), tokens, entry details, deck plan
+- [x] `decks/[id]/print`: tokenArts, chooseToken
+- [x] `drafts/actions`: create, join, leave, start, pick, decide, choose colour, sneak, informant, deal, end deals, pick for away, make deck, add and remove bots
+- [x] `friends`: send, accept, decline, cancel, unfriend
+- [x] `inventory`: open
+- [x] `oauth/authorize`: decide
+- [x] `singles/list`: quoteList, buyList
+- [x] `store`: buySealed
+- [x] `trades`: proposeTrade, decideTrade
+- [x] `wallet`: addFunds
+- [x] `wishlist`: add, update, remove, sharing, buy, wish for short cards
 
 ## LLM tools (`src/app/_llm-tools/registry.ts`, served at `/api/mcp` and `/api/tools/<name>`)
 

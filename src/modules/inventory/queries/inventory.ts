@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 import { itemOpenings, sealedItems } from "../infrastructure/schema";
 
 // Read models for the inventory screens (ADR 0006).

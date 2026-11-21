@@ -1,5 +1,6 @@
 import type { Actor } from "@/modules/accounts";
-import { ok, type Finish, type Result } from "@/shared/kernel";
+import { ok, type Result } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 
 // Plain card search for a player (audit S1: the search_cards tool outside a deck): their game
 // collection, their real cards, or everything the store sells. The searches are readers; this

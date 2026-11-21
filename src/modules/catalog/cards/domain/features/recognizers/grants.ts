@@ -2,7 +2,7 @@
 // "equipped creature has flying and trample", "target creature gains haste until end of turn").
 // A card's own keywords are Scryfall's list (`CardText.keywords`); this is the other direction
 // (design doc 66, question 5). The names are Scryfall's keyword names.
-import { plainText } from "@/shared/kernel";
+import { plainText } from "@/shared/mtg";
 import type { CardText, Recognizer } from "../types";
 
 /** Keyword abilities that one card commonly gives another. */

@@ -13,6 +13,7 @@ import { valueOr } from "../answer";
 import { tokensAction } from "./actions";
 import { Card } from "@/ui/card";
 import { Badge } from "@/ui/badge";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // Token & emblem checklist (design doc 42): surfaces tokens, emblems, and helper cards created
 // by the deck's counted cards (main, commander, and sideboard), excluding the maybeboard.
@@ -164,10 +165,9 @@ export function TokensPanel(props: Props) {
                   key={item.oracleId}
                   className="border-border-subtle flex items-start gap-2.5 rounded-md border p-2"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- served by our image cache */}
-                  <img
+                  <CardImage
                     src={`/api/images/${item.art.id}/small/front`}
-                    alt=""
+                    decorative
                     loading="lazy"
                     width={146}
                     height={204}

@@ -1,4 +1,5 @@
-import { type ManaSymbol, type Rng } from "@/shared/kernel";
+import { type Rng } from "@/shared/kernel";
+import { type ManaSymbol } from "@/shared/mtg";
 import {
   castRitual,
   colorsOf,

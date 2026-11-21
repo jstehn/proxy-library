@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { packKey, variantFor } from "@/modules/catalog";
-import type { Reads } from "@/server/reads";
+import type { Reads } from "@/server/composition/reads";
 import { type OpenItemError, type UnopenedGroup } from "@/modules/inventory";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { KeyruneStylesheet } from "@/ui/set-symbol";
+import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
 import { openAction } from "./actions";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const ERROR_MESSAGES: Record<OpenItemError["kind"], string> = {
   ItemNotFound: "That item isn't in your inventory.",
@@ -171,10 +172,9 @@ function Thumbnail(props: { photoIds: readonly string[]; itemId: number; setCode
   }
   const imageId = props.photoIds[variantFor(props.itemId, props.photoIds.length)];
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <CardImage
       src={`/api/artwork/${imageId}/small`}
-      alt=""
+      decorative
       loading="lazy"
       className="h-14 w-10 object-contain"
     />

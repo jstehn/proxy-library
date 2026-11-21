@@ -16,7 +16,8 @@ import { BuyWishForm, EditWishForm, RemoveWishButton } from "./wish-forms";
 import { readPage } from "@/server/page-instance";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
-import { Price } from "@/ui/price";
+import { Price } from "@/ui/mtg/price";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The Wishlist page (design doc 26, section 9): each wish at today's price, how far your money
 // is from it, and buying it.
@@ -154,10 +155,9 @@ function WishRow(props: { line: WishLine }) {
   return (
     <li className={`flex gap-3 rounded-lg border p-3 ${highlight}`}>
       {printingId !== null ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <CardImage
           src={`/api/images/${printingId}/small/front`}
-          alt=""
+          decorative
           width={146}
           height={204}
           loading="lazy"

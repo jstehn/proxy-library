@@ -1,5 +1,5 @@
 import type { Color, PrintingId } from "@/modules/catalog";
-import { COLORS } from "@/shared/kernel";
+import { COLORS } from "@/shared/mtg";
 import { sameCard, type CardRef, type Note } from "./abilities";
 import { sneakablePacks } from "./actions";
 import {
@@ -15,7 +15,7 @@ import {
 } from "./draft";
 import { dealWaitsFor } from "./deals";
 import { abilityOfCard, dredgerSeats, faceUpWith, owedColor, type StepContext } from "./steps";
-import type { Finish } from "@/shared/kernel";
+import type { Finish } from "@/shared/mtg";
 
 // Who may see what during a draft (design doc 18, section 4; CR 905.1c and 905.2b–c), in one
 // place: a seat's own pack and pile, everyone's face-up cards and notes, and what was revealed
@@ -131,7 +131,7 @@ function piled(draft: Draft, seatNumber: number): SeenCard[] {
     .sort((a, b) => (a.pick?.pickNumber ?? 0) - (b.pick?.pickNumber ?? 0));
 }
 
-function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOptions {
+function optionsFor(draft: Draft, seatNumber: number, context: StepContext): PickOptions {
   const seat = seatAt(draft, seatNumber);
   const turn = seat.abilities.turn;
   // An extra card has to come from this pack: what's left after this pick and the extras owed.
@@ -139,13 +139,13 @@ function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOpt
   const left = front?.cards.filter((card) => card.pick === null).length ?? 0;
   const room = Math.max(0, left - 1 - (turn?.extraCards ?? 0));
   // Archdemon of Paliano: "you can't look at booster packs", and "can't" beats "may".
-  const blind = faceUpWith(draft, seatNumber, "random", ctx).length > 0;
+  const blind = faceUpWith(draft, seatNumber, "random", context).length > 0;
   const kindOf = (ref: CardRef) => {
     const card = cardAt(draft, ref);
-    return card === null ? null : (abilityOfCard(ctx, card)?.ability ?? null);
+    return card === null ? null : (abilityOfCard(context, card)?.ability ?? null);
   };
-  const removers = faceUpWith(draft, seatNumber, "remove", ctx).map(kindOf);
-  const extras = faceUpWith(draft, seatNumber, "extraCard", ctx).filter(
+  const removers = faceUpWith(draft, seatNumber, "remove", context).map(kindOf);
+  const extras = faceUpWith(draft, seatNumber, "extraCard", context).filter(
     (ref) =>
       !(turn?.librarians ?? []).some((used) => sameCard(used, ref)) &&
       !(turn?.operatives ?? []).some((used) => sameCard(used, ref)),
@@ -155,15 +155,15 @@ function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOpt
       const kind = kindOf(ref);
       return kind?.kind === "extraCard" && kind.then === then;
     }).length;
-  const dredgers = dredgerSeats(draft, ctx);
-  const sneak = faceUpWith(draft, seatNumber, "peekPack", ctx)[0];
-  const informant = faceUpWith(draft, seatNumber, "watchPlayer", ctx)[0];
+  const dredgers = dredgerSeats(draft, context);
+  const sneak = faceUpWith(draft, seatNumber, "peekPack", context)[0];
+  const informant = faceUpWith(draft, seatNumber, "watchPlayer", context)[0];
   return {
     remove: {
       faceDown: removers.some((kind) => kind?.kind === "remove" && !kind.faceUp),
       faceUp: removers.some((kind) => kind?.kind === "remove" && kind.faceUp),
     },
-    noteWith: faceUpWith(draft, seatNumber, "noteDrafted", ctx).flatMap((ref) => {
+    noteWith: faceUpWith(draft, seatNumber, "noteDrafted", context).flatMap((ref) => {
       const kind = kindOf(ref);
       return kind?.kind === "noteDrafted"
         ? [{ ref, what: kind.what, creaturesOnly: kind.creaturesOnly }]
@@ -171,7 +171,7 @@ function optionsFor(draft: Draft, seatNumber: number, ctx: StepContext): PickOpt
     }),
     librarians: turn?.agent ? 0 : Math.min(countExtras("intoPack"), room),
     operatives: turn?.agent ? 0 : Math.min(countExtras("skipPack"), room),
-    wholePack: turn === null && faceUpWith(draft, seatNumber, "wholePack", ctx).length > 0,
+    wholePack: turn === null && faceUpWith(draft, seatNumber, "wholePack", context).length > 0,
     lastCardTo: dredgers.length > 1 ? dredgers : [],
     sneak: sneak === undefined || blind ? null : { card: sneak, packs: sneakablePacks(draft) },
     informant:
@@ -207,7 +207,7 @@ function dealSeen(draft: Draft, viewer: number | null): DealSeen | null {
 }
 
 /** The draft as `viewer` may see it (null: someone not seated, watching). */
-export function visibleTo(draft: Draft, viewer: number | null, ctx: StepContext): DraftSeen {
+export function visibleTo(draft: Draft, viewer: number | null, context: StepContext): DraftSeen {
   const seats = draft.seats.map((seat): SeatSeen => {
     const pile = piled(draft, seat.seatNumber);
     return {
@@ -227,7 +227,7 @@ export function visibleTo(draft: Draft, viewer: number | null, ctx: StepContext)
 
   const seat = seatAt(draft, viewer);
   const front = currentPack(draft, viewer);
-  const atRandom = faceUpWith(draft, viewer, "random", ctx).length > 0;
+  const atRandom = faceUpWith(draft, viewer, "random", context).length > 0;
   const left = front?.cards.filter((card) => card.pick === null) ?? [];
   const owed = owedColor(draft, viewer);
   const owedCard = owed === null ? null : seen(draft, owed.card);
@@ -273,7 +273,7 @@ export function visibleTo(draft: Draft, viewer: number | null, ctx: StepContext)
             },
       pile: piled(draft, viewer),
       pool,
-      options: optionsFor(draft, viewer, ctx),
+      options: optionsFor(draft, viewer, context),
     },
     deal: dealSeen(draft, viewer),
   };

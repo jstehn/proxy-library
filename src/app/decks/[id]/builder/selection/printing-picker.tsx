@@ -5,6 +5,7 @@ import { Cents } from "@/shared/kernel";
 import { NOT_UNDERSTOOD_TEXT, settle, valueOr } from "../answer";
 import { choosePrintingAction, printingsAction } from "./actions";
 import { type BuilderDeck } from "../action-helpers";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // Choose which printing and finish a deck line uses (design doc 24, section 9).
 
@@ -221,10 +222,9 @@ function PrintingGroup(props: {
             key={printing.printingId}
             className="border-border-subtle flex gap-2 rounded border p-1.5"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- served by our image cache */}
-            <img
+            <CardImage
               src={`/api/images/${printing.printingId}/small/front`}
-              alt=""
+              decorative
               loading="lazy"
               width={146}
               height={204}

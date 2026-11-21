@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import type { Actor, Scope } from "@/modules/accounts";
 import type { Result } from "@/shared/kernel";
-import type { Capabilities } from "@/server/capabilities";
+import type { Capabilities } from "@/server/composition/capabilities";
 import { defineTool, type LlmTool, type ToolError, type ToolInputSchema } from "./tool";
 
 // A tool binding (ADR 0026): the LLM adapter over one capability. It may do three things: parse

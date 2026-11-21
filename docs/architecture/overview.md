@@ -53,7 +53,7 @@ root.
 | `inventory`  | owned sealed product, its lifecycle (unopened → opened), opening                                                                                                                                                                         | domain + persistence              |
 | `collection` | **game**: owned cards at exact **printing × finish** (ADR 0011) + acquisition log. **real**: cards and sealed products a player owns physically (design doc 16). **copies**: the SQL both share (ADR 0030)                               | domain + persistence              |
 | `store`      | buying sealed and singles, selling singles to the store, the **store transaction ledger** (ADR 0013): orchestrates wallet + inventory + collection                                                                                       | orchestration only                |
-| `decks`      | decks, ownership check, format legality, export formats; also suggestions, building, the simulator and proxy sheets, as six areas (below, ADR 0029)                                                                                      | rich domain                       |
+| `decks`      | decks, ownership check, format legality, export formats; also sharing, snapshots, suggestions, building, the simulator and proxy sheets, as eight areas (below, ADR 0029)                                                                | rich domain                       |
 | `trades`     | proposals, trade lifecycle, atomic execution                                                                                                                                                                                             | rich domain + orchestration       |
 | `activity`   | feed of domain events ("X opened a mythic")                                                                                                                                                                                              | read model                        |
 | `reset`      | an admin empties a player's library: asks each module to clear its part, in one transaction                                                                                                                                              | orchestration only (no tables)    |
@@ -112,15 +112,15 @@ flowchart LR
   application --> domain
   queries --> infra_db[shared/db]
   infrastructure --> infra_db
-  domain --> kernel[shared/kernel]
+  domain --> kernel[shared/kernel + shared/mtg]
   application --> kernel
 ```
 
-- `domain` imports only `shared/kernel`. Its code can run in a unit test without anything else.
+- `domain` imports only `shared/kernel` and `shared/mtg`. Its code can run in a unit test without anything else.
 - `application` defines the **ports** it needs (`LedgerRepo`, `Clock`, …) and depends on those
   interfaces, never on Drizzle.
 - `infrastructure` implements the ports. It's the only layer that knows about Postgres or HTTP.
-- Only the **composition root** (`src/server/container.ts`, `worker/container.ts`) imports
+- Only the **composition root** (`src/server/composition/container.ts`, `worker/container.ts`) imports
   `infrastructure` and wires it into use cases.
 
 This is enforced by lint (ADR [0009](../adr/0009-lint-enforced-boundaries.md)).
@@ -139,14 +139,16 @@ flowchart LR
   scoring & play & proxies & building & overview --> core
 ```
 
-| Area       | Holds                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| `core`     | the deck, lists, legality, formats, brackets, headings, stats, snapshots, previews, sharing |
-| `scoring`  | `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                   |
-| `building` | `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration  |
-| `play`     | opening hands, goldfish, odds, castability                                                  |
-| `proxies`  | proxy sheets, playtest cards, token proxies, the PDF renderer                               |
-| `overview` | the reads that combine areas: deck overview and facts, snapshot comparison, the optimizer   |
+| Area       | Holds                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `core`     | the deck, lists, legality, formats, brackets, headings, stats                              |
+| `sharing`  | public links, who may read a deck, comments                                                |
+| `changes`  | edit previews, snapshots and restoring them, builder moves                                 |
+| `scoring`  | `rate`, `signals`, `suggest`, `cuts`, `swaps`, `replacements`, `optimize`                  |
+| `building` | `build-from-collection`, `mana-base`, commanders, candidate pool, suggestion orchestration |
+| `play`     | opening hands, goldfish, odds, castability                                                 |
+| `proxies`  | proxy sheets, playtest cards, token proxies, the PDF renderer                              |
+| `overview` | the reads that combine areas: deck overview and facts, snapshot comparison, the optimizer  |
 
 The module root keeps `index.ts` and `client.ts` (each is `export *` of the areas'), `wiring.ts`
 and `infrastructure/index.ts` (the real adapters, for the composition roots).
@@ -169,17 +171,34 @@ exported by the module's `index.ts`: only the app, the composition roots and the
 it, `real` imports no game area, and lint stops it importing any module but `accounts` and
 `catalog`, so never the wallet or the store.
 
+## Outside the modules: the adapters and the composition roots
+
+| Path                      | Holds                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/`                | Next.js routes: pages, server actions and API routes. Thin adapters over the capabilities (ADR 0026)                       |
+| `src/app/_components/`    | Components that know the app (menus, navigation, card filters, the PWA); a page's own components sit in its route folder   |
+| `src/app/_llm-tools/`     | The LLM tools (design doc 28): `bindings/` has one file per tool, named after it; `present/` shapes their answers          |
+| `src/ui/`                 | The general building blocks every page uses (buttons, fields, forms, dialogs, page states); no data access                 |
+| `src/ui/mtg/`             | Magic's displays: card images and views, mana, set symbols, prices and sealed products                                     |
+| `src/server/`             | The request helpers adapters use: `readPage()`, `action()`, `formAction()`, `readTool()`, the session                      |
+| `src/server/composition/` | The app's composition root (`container.ts`), the wiring shared with the worker (`core.ts`), and the capabilities it builds |
+| `src/proxy.ts`            | The sign-in guard that runs before every request (Next 16's middleware)                                                    |
+| `worker/`                 | The background worker: its composition root (`container.ts`) and its commands (`commands/`)                                |
+
 ## Cross-cutting pieces (`src/shared/`)
 
-| Path              | Contents                                                                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared/kernel/`  | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
-| `shared/db/`      | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
-| `shared/runtime/` | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
-| `shared/config/`  | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
-| `shared/http/`    | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
+| Path                  | Contents                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/kernel/`      | `Result`, `Brand`, `UserId`, `Cents`, `Clock` + `Rng` ports, weighted sampling, `UnitOfWork` port, `assertNever`. Test fakes in `kernel/testing/` |
+| `shared/mtg/`         | Magic's vocabulary: finishes, rarities and colours (with their Zod schemas), card types, the mana curve, tags and signals, plain rules text       |
+| `shared/card-search/` | The card search language and list reader (ADR 0017): pure, so the browser may use it. Its SQL lives in `catalog`                                  |
+| `shared/db/`          | Drizzle client factory, `DbExecutor` type, `UnitOfWork` implementation, migration runner                                                          |
+| `shared/runtime/`     | Real OS-backed adapters for kernel ports: `systemClock`, `randomSeed`                                                                             |
+| `shared/config/`      | Zod-parsed environment. The only place that reads `process.env`.                                                                                  |
+| `shared/http/`        | (Phase 4) `fetchJson` + composable decorators (`withRateLimit`, `withRetry`, `withUserAgent`)                                                     |
 
-The kernel is deliberately **tiny and stable**. It isn't a `utils/` dumping ground.
+The kernel is deliberately **tiny and stable**: general basics only. Magic's words live next to it in
+`shared/mtg`, which the lint rules treat as part of the kernel. It isn't a `utils/` dumping ground.
 
 ## Anatomy of a write request
 
@@ -214,9 +233,14 @@ to UI. No business rules live in `app/`.
 
 ## Anatomy of a read request
 
-Server Component → `collection/queries.getCollectionPage(db, userId, filters)` → one SQL query →
-plain serializable view objects → render. Reads skip repositories and use cases on purpose
-(ADR [0006](../adr/0006-cqrs-lite-reads.md)).
+A page calls `readPage()` (the session and the actor), then `reads.<module>.<query>(actor, ...)`:
+`reads` is each module's query functions with the database filled in (`src/server/composition/reads.ts`).
+One SQL query returns plain serializable view objects, and the page renders them. A read that
+shows one player's data takes the `Actor` and filters by it in SQL. Anything with rules, or any
+write, goes through a **capability** instead (`capabilities.decks.listDecks(actor, input)`),
+and the same capability serves the page, a server action and an LLM tool binding: those are the
+adapters, and each only parses input, calls, and presents (ADR 0026). Reads skip repositories and
+use cases on purpose (ADR [0006](../adr/0006-cqrs-lite-reads.md)).
 
 ## Where state and nondeterminism live
 

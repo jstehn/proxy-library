@@ -5,15 +5,8 @@ import {
   type DeckPlan,
   parseCost,
 } from "@/modules/decks/core/client";
-import {
-  err,
-  ok,
-  seededRng,
-  type Clock,
-  type Result,
-  type UserId,
-  type CardFacts,
-} from "@/shared/kernel";
+import { err, ok, seededRng, type Clock, type Result, type UserId } from "@/shared/kernel";
+import { type CardFacts } from "@/shared/mtg";
 import type { DeckLine, DeckView, DeckNotFound } from "@/modules/decks/core/client";
 import { COMMANDER_KEEP, dealHand, MAX_MULLIGANS } from "../domain/opening-hand/hand";
 import { library, OPENING_HAND } from "../domain/opening-hand/library";

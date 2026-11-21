@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { THEME_LABELS, THEMES, type Theme } from "@/shared/kernel";
+import { THEME_LABELS, THEMES, type Theme } from "@/shared/mtg";
 import { leaderThemes as leaderThemesRecognizer, themes as themesRecognizer } from "./themes";
 
 // Themes (design docs 20 and 38), with quoted Oracle text: what a commander leads, and what a

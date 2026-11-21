@@ -4,7 +4,7 @@ import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { SECTIONS, SORTS } from "@/app/collection/options";
 import { CollectionCardGrid, ExportLinks } from "../card-grid";
 import { readCollectionQuery } from "../collection-query";
@@ -16,6 +16,7 @@ import {
 } from "./actions";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 // The Real tab (design doc 16, section 7): the cards you own physically, with the Game tab's
 // search, filters, sections and totals. Nothing here touches money or the game (rule 1).
@@ -132,9 +133,14 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
                         <input type="checkbox" name="removeCards" defaultChecked />
                         Also remove its cards
                       </label>
-                      <Button type="submit" variant="secondary" size="sm">
+                      <ConfirmButton
+                        variant="secondary"
+                        size="sm"
+                        question={`Remove ${product.name} from your products? This can't be undone.`}
+                        confirmLabel="Remove"
+                      >
                         Remove {product.name}
-                      </Button>
+                      </ConfirmButton>
                     </form>
                   </details>
                 </li>
@@ -177,18 +183,20 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
               ))}
             </p>
           )}
-          {/* A second click to confirm, so a slip doesn't empty the collection. */}
-          <details className="text-sm">
-            <summary className="text-danger-text cursor-pointer">Clear real collection…</summary>
-            <form action={clearRealCollectionAction} className="mt-2 flex flex-col gap-2">
-              <p className="text-muted">
-                Removes every real card. Your products list, decks and game collection stay.
-              </p>
-              <Button type="submit" variant="danger" size="sm" className="self-start">
-                Yes, remove every real card
-              </Button>
-            </form>
-          </details>
+          <form action={clearRealCollectionAction} className="flex flex-col gap-2 text-sm">
+            <p className="text-muted">
+              Removes every real card. Your products list, decks and game collection stay.
+            </p>
+            <ConfirmButton
+              variant="secondary"
+              size="sm"
+              className="self-start"
+              question="Remove every real card? This can't be undone."
+              confirmLabel="Remove every real card"
+            >
+              Clear real collection
+            </ConfirmButton>
+          </form>
         </section>
       </div>
     </Page>

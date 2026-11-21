@@ -1,6 +1,6 @@
 import type { Board } from "@/modules/decks";
 import { BOARDS, isCounted } from "@/modules/decks/client";
-import { type BracketFlag, type Tag } from "@/shared/kernel";
+import { type BracketFlag, type Tag } from "@/shared/mtg";
 
 // The card the builder has selected: what the selected-card sheet shows (design doc 14, 2.2).
 // Plain data, so the reducer and the sheet can both use it.

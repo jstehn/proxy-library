@@ -2,6 +2,11 @@ import { expect, type Page } from "@playwright/test";
 
 // Steps the journeys share. The journeys run in order against one database (see 01-accounts).
 
+export /** Answers the confirmation dialog a destructive button opens (see `ConfirmButton`). */
+async function confirmInDialog(page: Page, confirmLabel: string) {
+  await page.getByRole("dialog").getByRole("button", { name: confirmLabel, exact: true }).click();
+}
+
 export /** Admin pages live behind the "Admin" link, in their own menu. */
 async function openAdminPage(page: Page, name: string) {
   await page.locator(`header a[href="/admin"]:visible`).click(); // not the account link, also "Admin"
@@ -41,11 +46,11 @@ async function pickFirstCard(page: Page): Promise<boolean> {
   const before = await pickHeading(page);
   await pack.getByRole("button").first().dblclick();
   // The last pick doesn't change the heading: the page shows the finished text instead. Finishing
-  // a draft builds every player's deck, which can take longer than the default 5 seconds.
+  // a draft builds every player's deck, which took over 20 seconds on a busy machine (2026-11-21).
   const finished = page.getByText(/Your \d+ cards are in your collection/);
   await expect
     .poll(async () => (await finished.isVisible()) || (await pickHeading(page)) !== before, {
-      timeout: 20_000,
+      timeout: 45_000,
     })
     .toBe(true);
   return true;

@@ -1,5 +1,6 @@
 import type { Actor } from "@/modules/accounts";
-import { type Finish, type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Result, type UserId, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type {
   CardNotFound,
   FinishNotAvailable,

@@ -3,7 +3,7 @@ import { parseList } from "@/shared/card-search";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { storeOfferRows, textArray } from "@/shared/db";
-import { FinishSchema } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import {
   nameKey,
   quoteList,

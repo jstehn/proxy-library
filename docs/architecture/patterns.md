@@ -47,7 +47,7 @@ satisfies `LedgerRepo` if it has the right methods. No `implements` keyword is r
 ## 3. Dependency injection with factory functions + a composition root
 
 **What:** use cases are built by `makeX(dependencies)` functions that close over their dependencies. One
-file per entry point (`src/server/container.ts`, `worker/container.ts`) constructs the real
+file per entry point (`src/server/composition/container.ts`, `worker/container.ts`) constructs the real
 adapters and calls the factories. This is the **composition root**. No DI container library.
 
 ```ts
@@ -200,6 +200,15 @@ does. It also lets `packs` depend on a clean `BoosterConfig` instead of raw JSON
 
 In TS a strategy is usually **just a function type**: `type PackGenerator = (config, rng) => PackCard[]`.
 Pick with a lookup table, not an `if` chain.
+
+**Worked examples of the lookup table.** `FORMAT_RULES` (`decks/core/domain/format-rules.ts`) is
+one rule set per format, written `satisfies Record<Format, FormatRuleSet>`: adding a format doesn't
+compile until every rule is filled in, and no other file compares a format's name (lint).
+`CAST_EFFECTS` (`decks/play/domain/cast-effects.ts`) is the cast simulator's effect registry: one
+handler per effect kind (`ritual`, `reducer`, `tapMana`, `landFetch`), typed
+`{ [Kind in EffectKind]: EffectHandler<...> }` so a new kind is a compile error until it has a
+handler. Card features (`catalog/cards/domain/features/registry.ts`) work the same way: one
+recognizer per ability, and tags, themes and signals read the features, never the oracle text.
 
 ## 12. Composite
 

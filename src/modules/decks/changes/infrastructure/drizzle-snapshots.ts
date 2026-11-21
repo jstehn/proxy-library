@@ -1,7 +1,7 @@
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
-import { FinishSchema } from "@/shared/kernel";
+import { FinishSchema } from "@/shared/mtg";
 import type { DbExecutor } from "@/shared/db";
 import { BOARDS, DeckId, FORMATS, GROUPINGS, isBracket } from "@/modules/decks/core/client";
 import { SnapshotId, type DeckSnapshot, type SnapshotEntry } from "../domain/snapshots";

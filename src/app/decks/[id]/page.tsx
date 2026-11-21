@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EXPORTERS, FORMATS, listAndFingerprint } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { WishForShortForm } from "../../wishlist/wish-forms";
 import {
   copyDeckAction,
@@ -23,6 +23,7 @@ import { SharedDeckView } from "./shared-view";
 import { Button } from "@/ui/button";
 import { Input, Select, Textarea } from "@/ui/field";
 import { Page } from "@/ui/page";
+import { ConfirmButton } from "@/ui/confirm-button";
 
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { actor, capabilities, reads } = await readPage();
@@ -225,16 +226,17 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
               Save
             </Button>
           </form>
-          {/* A second click to confirm, so a slip doesn't delete a deck. */}
-          <details className="mt-2 text-sm">
-            <summary className="text-danger-text cursor-pointer">Delete this deck…</summary>
-            <form action={deleteDeckAction} className="mt-2">
-              <input type="hidden" name="deckId" value={deck.id} />
-              <Button type="submit" variant="danger" size="sm">
-                Yes, delete {deck.name}
-              </Button>
-            </form>
-          </details>
+          <form action={deleteDeckAction} className="mt-2">
+            <input type="hidden" name="deckId" value={deck.id} />
+            <ConfirmButton
+              variant="secondary"
+              size="sm"
+              question={`Delete “${deck.name}”? This can't be undone.`}
+              confirmLabel="Delete deck"
+            >
+              Delete this deck
+            </ConfirmButton>
+          </form>
         </details>
         {commentSection}
       </div>

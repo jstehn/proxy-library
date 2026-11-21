@@ -1,8 +1,9 @@
 "use client";
 import type { BrowseCard } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { ownedWords } from "../derive";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // One card in the collection grid: its picture, its name and how many you own.
 
@@ -33,10 +34,9 @@ export function GridCard(props: {
           <span
             className={`relative block rounded-[5%] transition ${props.isSelected ? "ring-4 ring-sky-500" : "group-hover:scale-[1.03]"} ${card.misfit ? "opacity-45" : ""}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <CardImage
               src={`/api/images/${card.printingId}/normal/front`}
-              alt=""
+              decorative
               loading="lazy"
               width={488}
               height={680}

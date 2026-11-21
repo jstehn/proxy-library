@@ -1,4 +1,4 @@
-import { hasTypeWord, isCreature, type CardFacts } from "@/shared/kernel";
+import { hasTypeWord, isCreature, type CardFacts } from "@/shared/mtg";
 import { parseCost } from "./mana";
 
 export const FIXED_CARD_ROLE_TAGS = [

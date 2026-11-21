@@ -20,7 +20,7 @@ Licensed under [0BSD](LICENSE) · [Contributing](CONTRIBUTING.md) · [Code of co
 
 ## Features
 
-- **Playgroup economy & sealed store** — Weekly play-money allowance tracked in an append-only ledger, sealed product priced at official MSRP, and pack opening with realistic odds from real booster recipes, animations, foils, and synthesized sound.
+- **Playgroup economy & sealed store** — A recurring play-money allowance (a payday every few days, set by the admin) tracked in an append-only ledger, sealed product priced at official MSRP, and pack opening with realistic odds from real booster recipes, animations, foils, and synthesized sound.
 - **Collection, singles & trading** — Track owned cards at exact printing × finish granularity (plus a separate tracker for your real physical collection), buy and sell singles at market price, manage a wishlist, and trade cards and money with other players.
 - **Deck builder & analysis** — Build decks from your virtual collection, your real collection, or the entire Magic catalog. Includes a Scryfall-style search language, Commander legality & bracket checks, role tags, hypergeometric draw odds, synergy/budget suggestions, and a whole-deck optimizer.
 - **Proxy PDFs** — Generate print-ready proxy sheets (including double-faced cards, tokens, and playtest proxies) with cutting guides.
@@ -67,7 +67,7 @@ flowchart LR
   subgraph server[Next.js app and worker, one codebase]
     app[Pages, server actions<br/>and LLM tools]
     core[Capabilities and reads<br/>src/server/]
-    modules[Feature modules<br/>domain · application · infrastructure · queries<br/>money, cards and collections, decks,<br/>packs, trades, drafts, social]
+    modules[Feature modules<br/>domain · application · infrastructure · queries<br/>wallet, catalog and collection, decks,<br/>packs, trades, drafts, social]
     worker[Worker<br/>nightly sync, queued syncs,<br/>draft timers]
     app --> core --> modules
     worker --> modules
@@ -86,18 +86,18 @@ are in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 The codebase is structured as a **modular monolith** with ports & adapters around a functional core:
 
-| Practice                                                       | Where to look                                                                                                 |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Modular monolith, ports & adapters, functional core            | [docs/architecture/overview.md](docs/architecture/overview.md), [ADR 0001](docs/adr/0001-modular-monolith.md) |
-| Architecture boundaries enforced by ESLint                     | [ADR 0009](docs/adr/0009-lint-enforced-boundaries.md), `eslint.config.mjs`                                    |
-| Expected failures as values (`Result`), not exceptions         | [ADR 0003](docs/adr/0003-result-types.md)                                                                     |
-| Money as integer cents in an append-only ledger with row locks | [ADR 0004](docs/adr/0004-append-only-ledger.md), [lesson 03](lessons/03-wallet-ledger-and-time.md)            |
-| Cross-module transactions (Unit of Work)                       | [ADR 0005](docs/adr/0005-unit-of-work.md), [lesson 06](lessons/06-transactions-across-modules.md)             |
-| External data behind anti-corruption layers                    | [ADR 0007](docs/adr/0007-external-data-acl.md), [lesson 04](lessons/04-pulling-in-outside-data.md)            |
-| Replayable randomness (injected RNG & clock)                   | [ADR 0008](docs/adr/0008-injected-rng-clock.md), [lesson 05](lessons/05-randomness-you-can-trust.md)          |
-| Shared card search language (parser → AST → parameterized SQL) | [ADR 0017](docs/adr/0017-shared-card-search.md), [lesson 14](lessons/14-a-search-language-and-paper.md)       |
-| Unified LLM tool registry (MCP + OpenAPI + OAuth 2.1)          | [ADR 0022](docs/adr/0022-llm-tool-api.md), [lesson 28](lessons/28-tools-for-a-model.md)                       |
-| Reproducible dev environment (Nix flakes + direnv)             | [ADR 0010](docs/adr/0010-nix-dev-environment.md)                                                              |
+| Practice                                                       | Where to look                                                                                                                                             |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Modular monolith, ports & adapters, functional core            | [docs/architecture/overview.md](docs/architecture/overview.md), [ADR 0001](docs/adr/0001-modular-monolith.md)                                             |
+| Architecture boundaries enforced by ESLint                     | [ADR 0009](docs/adr/0009-lint-enforced-boundaries.md), `eslint.config.mjs`                                                                                |
+| Expected failures as values (`Result`), not exceptions         | [ADR 0003](docs/adr/0003-result-types.md)                                                                                                                 |
+| Money as integer cents in an append-only ledger with row locks | [ADR 0004](docs/adr/0004-append-only-ledger.md), [lesson 03](https://github.com/jstehn/proxy-library-lessons/blob/main/03-wallet-ledger-and-time.md)      |
+| Cross-module transactions (Unit of Work)                       | [ADR 0005](docs/adr/0005-unit-of-work.md), [lesson 06](https://github.com/jstehn/proxy-library-lessons/blob/main/06-transactions-across-modules.md)       |
+| External data behind anti-corruption layers                    | [ADR 0007](docs/adr/0007-external-data-acl.md), [lesson 04](https://github.com/jstehn/proxy-library-lessons/blob/main/04-pulling-in-outside-data.md)      |
+| Replayable randomness (injected RNG & clock)                   | [ADR 0008](docs/adr/0008-injected-rng-clock.md), [lesson 05](https://github.com/jstehn/proxy-library-lessons/blob/main/05-randomness-you-can-trust.md)    |
+| Shared card search language (parser → AST → parameterized SQL) | [ADR 0017](docs/adr/0017-shared-card-search.md), [lesson 14](https://github.com/jstehn/proxy-library-lessons/blob/main/14-a-search-language-and-paper.md) |
+| Unified LLM tool registry (MCP + OpenAPI + OAuth 2.1)          | [ADR 0022](docs/adr/0022-llm-tool-api.md), [lesson 28](https://github.com/jstehn/proxy-library-lessons/blob/main/28-tools-for-a-model.md)                 |
+| Reproducible dev environment (Nix flakes + direnv)             | [ADR 0010](docs/adr/0010-nix-dev-environment.md)                                                                                                          |
 
 **Testing** is layered by cost: fast unit and property tests (`fast-check`) over pure domain logic and in-memory fakes, integration tests against a real PostgreSQL instance, and end-to-end browser tests with Playwright. Automated tests never hit the network; external APIs use recorded fixtures, with an opt-in `pnpm test:remote` suite and worker data-integrity checks (`check-packs`, `check-products`, `check-commanders`).
 
@@ -123,7 +123,7 @@ Every significant feature follows the process in [docs/roadmap.md](docs/roadmap.
 1. **Design document** ([`docs/design/`](docs/design/)) — Written before implementation, ending with open questions and trade-offs.
 2. **Approval gate** — I review and approve every design document before code is written.
 3. **Implementation & verification** — Domain logic first (pure functions + property tests), then application use cases with in-memory fakes, infrastructure adapters with Postgres integration tests, and UI.
-4. **Documentation** — Cross-cutting choices are recorded as Architecture Decision Records ([`docs/adr/`](docs/adr/README.md)), and concepts are captured in companion lessons ([`lessons/`](lessons/README.md)).
+4. **Documentation** — Cross-cutting choices are recorded as Architecture Decision Records ([`docs/adr/`](docs/adr/README.md)), and concepts are captured in companion lessons ([`lessons/`](https://github.com/jstehn/proxy-library-lessons)).
 
 What I handle directly:
 
@@ -142,15 +142,15 @@ This is a **personal playgroup project, not a commercial product**. It serves an
 
 ## Repository Tour
 
-| Path                                               | What's there                                                                                                                                                                                                                                                                                                                                                   |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`src/modules/`](src/modules/)                     | Feature modules, each layered into `domain`, `application`, `infrastructure`, `queries`, and `testing` with a public `index.ts` (accounts, wallet, catalog, packs, inventory, collections, store, decks, trades, drafts, wishlist, social, activity, and the research gateways). The list is in [docs/architecture/overview.md](docs/architecture/overview.md) |
-| [`src/app/`](src/app/)                             | Next.js pages, API routes (including MCP/OAuth), and server actions                                                                                                                                                                                                                                                                                            |
-| [`src/server/`](src/server/), [`worker/`](worker/) | Composition roots for the web app and background worker, and the capabilities and reads that pages and tools use                                                                                                                                                                                                                                               |
-| [`docs/`](docs/README.md)                          | Architecture docs, design docs, ADRs, roadmap, and deployment guide                                                                                                                                                                                                                                                                                            |
-| [`lessons/`](lessons/README.md)                    | Companion TypeScript & software design lessons with a [glossary](lessons/GLOSSARY.md)                                                                                                                                                                                                                                                                          |
-| [`scripts/`](scripts/)                             | `dev/` (the `pnpm check` gate, database, ratchets) and `ops/` (deploy, backup)                                                                                                                                                                                                                                                                                 |
-| [`tests/`](tests/)                                 | Integration tests, Playwright E2E tests, and recorded fixtures                                                                                                                                                                                                                                                                                                 |
+| Path                                                                  | What's there                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`src/modules/`](src/modules/)                                        | Feature modules, each layered into `domain`, `application`, `infrastructure`, `queries`, and `testing` with a public `index.ts` (accounts, wallet, catalog, packs, inventory, collection, store, decks, trades, drafts, wishlist, social, activity, reset, and the research gateways). The list is in [docs/architecture/overview.md](docs/architecture/overview.md) |
+| [`src/app/`](src/app/)                                                | Next.js pages, API routes (including MCP/OAuth), and server actions                                                                                                                                                                                                                                                                                                  |
+| [`src/server/`](src/server/), [`worker/`](worker/)                    | Composition roots for the web app and background worker, and the capabilities and reads that pages and tools use                                                                                                                                                                                                                                                     |
+| [`docs/`](docs/README.md)                                             | Architecture docs, design docs, ADRs, roadmap, and deployment guide                                                                                                                                                                                                                                                                                                  |
+| [lessons](https://github.com/jstehn/proxy-library-lessons) (own repo) | Companion TypeScript & software design lessons with a [glossary](https://github.com/jstehn/proxy-library-lessons/blob/main/GLOSSARY.md)                                                                                                                                                                                                                              |
+| [`scripts/`](scripts/)                                                | `dev/` (the `pnpm check` gate, database, ratchets) and `ops/` (deploy, backup)                                                                                                                                                                                                                                                                                       |
+| [`tests/`](tests/)                                                    | Integration tests, Playwright E2E tests, and recorded fixtures                                                                                                                                                                                                                                                                                                       |
 
 ---
 

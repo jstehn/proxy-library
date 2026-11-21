@@ -239,3 +239,17 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       (game and real) and a player's real collection sort and section as before.
 - [ ] **Run `pnpm test:e2e`.** `tests/e2e` was not touched, so a changed message or redirect shows
       up there first.
+- [ ] **The commander finder's orderings (P36 part 2), in dark mode and at phone width.** The select
+      reads "Blend of popularity and power" by default and the "ordered by …" line matches;
+      `?sort=coverage` shows "Reset filters"; with a real collection the blend lists popular,
+      strong commanders first even when few of their cards are owned.
+- [x] **Done 2026-11-21 (e2e database, 390px): the delete-deck dialog fits, its danger button shows
+      the focus ring in dark mode, Escape closes it and focus goes back to "Delete this deck"; the
+      focus ring shows in light mode.** Still open from P33: a full colour-contrast pass by eye; the
+      broken-image tile (it only appears for images that fail after the page is interactive); the
+      confirm button has no "working…" state.
+- [x] **Fixed the same day: the scorecard now links to the full list for its legality issues, and the photos table has column padding (+11 lines).** Small things found in the final check by eye (2026-11-21): the scorecard
+      (`/d/[token]/scorecard`) prints the raw kind "1 legality issue(s): WrongSize" instead of the
+      sentence the deck page uses; on `/admin/photos` at 390px "No page found" runs into "0 of 0".
+      Still open, test gaps: `setPageSlug` and `choosePhoto` are never submitted by a test; the drafts use cases
+      `decideCard` and `answerDeal` have no direct test (their domain rules do).

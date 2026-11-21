@@ -8,8 +8,9 @@ import type {
   SuggestionCard,
   SuggestionList,
 } from "@/modules/decks";
-import { Cents, THEME_LABELS } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { Cents } from "@/shared/kernel";
+import { THEME_LABELS } from "@/shared/mtg";
+import { ManaText } from "@/ui/mtg/mana";
 import { plural } from "@/modules/decks/client";
 import { reasonText, TAG_LABELS } from "@/app/decks/labels";
 import { valueOr } from "../answer";
@@ -18,6 +19,7 @@ import { Button, buttonClass } from "@/ui/button";
 import { Input } from "@/ui/field";
 import { Card } from "@/ui/card";
 import { Eyebrow } from "@/ui/eyebrow";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // Suggestions (design doc 20, section 5.1): cards for this deck and for the roles it's short of,
 // your own first, then the store's; and a shopping list within a budget. Clicking a card selects
@@ -174,10 +176,9 @@ export function SuggestionRow(props: {
         aria-label={`${card.name}: ${reasonWords}, ${card.pool === "owned" ? `you own ${card.owned}` : `${Cents.format(Cents.of(card.priceCents ?? 0))} in the store`}`}
         className="hover:bg-surface flex w-full items-center gap-2 rounded px-1 py-1 text-left"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <CardImage
           src={`/api/images/${card.printingId}/small/front`}
-          alt=""
+          decorative
           loading="lazy"
           className="bg-surface-raised aspect-[146/204] w-9 shrink-0 rounded-[4.5%]"
         />

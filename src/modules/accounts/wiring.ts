@@ -7,7 +7,7 @@ import {
 } from "./application/get-account-overview";
 
 // The accounts module's capabilities (ADR 0026). The account overview needs readers from other
-// modules; the composition root (`src/server/account-overview.ts`) passes them in, so accounts
+// modules; the composition root (`src/server/composition/account-overview.ts`) passes them in, so accounts
 // imports none of them.
 
 /** The overview's readers that belong to other modules (all but the balance). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { type Tag } from "@/shared/kernel";
+import { type Tag } from "@/shared/mtg";
 import { useState } from "react";
 import { CardWithPreview } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
@@ -10,6 +10,7 @@ import { HeadingTitle } from "./heading-title";
 import { LineControls, ListLine } from "./list-line";
 import { Eyebrow } from "@/ui/eyebrow";
 import { Button } from "@/ui/button";
+import { CardImage } from "@/ui/mtg/card-image";
 
 // The deck as Moxfield shows one (design doc 14, section 2.4): the commander as its card, then
 // the cards grouped by type, by the deck's own headings (design doc 34) or by role (design doc
@@ -202,10 +203,9 @@ export function DeckList(props: {
                     aria-label={`${line.quantity} ${line.name}`}
                     className="block w-full"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <CardImage
                       src={`/api/images/${line.printingId}/small/front`}
-                      alt=""
+                      decorative
                       loading="lazy"
                       className={`bg-surface-raised aspect-[146/204] w-full rounded-[4.5%] ${props.problemsByName.has(line.name) ? "ring-2 ring-red-500" : isHighlighted(line) ? "ring-2 ring-sky-500" : ""}`}
                     />

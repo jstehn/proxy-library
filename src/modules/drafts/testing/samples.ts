@@ -1,5 +1,6 @@
 import { PrintingId, SetCode, type Color } from "@/modules/catalog";
-import { Cents, type Rarity, UserId } from "@/shared/kernel";
+import { Cents, UserId } from "@/shared/kernel";
+import { type Rarity } from "@/shared/mtg";
 import type { DraftCardFacts } from "../domain/auto-pick";
 import {
   DraftId,

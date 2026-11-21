@@ -1,4 +1,4 @@
-import { getContainer } from "@/server/container";
+import { getContainer } from "@/server/composition/container";
 
 // A controller: call the use case, map the Result to HTTP. No logic of its own.
 export async function GET() {

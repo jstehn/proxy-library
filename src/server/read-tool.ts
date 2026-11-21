@@ -1,8 +1,8 @@
 import "server-only";
 import { allows, type Actor, type Scope } from "@/modules/accounts";
-import type { Capabilities } from "./capabilities";
-import { getContainer } from "./container";
-import type { Reads } from "./reads";
+import type { Capabilities } from "./composition/capabilities";
+import { getContainer } from "./composition/container";
+import type { Reads } from "./composition/reads";
 
 /** Who is calling a tool endpoint, what their token may do, and what the app can do for them. */
 export type ToolRequest = Readonly<{

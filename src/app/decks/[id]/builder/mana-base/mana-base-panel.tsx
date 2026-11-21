@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ManaBasePlan, PlannedLand } from "@/modules/decks";
 import { Cents } from "@/shared/kernel";
-import { ManaText } from "@/ui/mana";
+import { ManaText } from "@/ui/mtg/mana";
 import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { manaBaseAction } from "./actions";

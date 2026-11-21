@@ -1,5 +1,5 @@
 import { DraftId } from "@/modules/drafts";
-import { getDraftSubscriptions } from "@/server/container";
+import { getDraftSubscriptions } from "@/server/composition/container";
 import { readPage } from "@/server/page-instance";
 
 // Live updates for one draft, as Server-Sent Events (ADR 0018). The stream says only "the

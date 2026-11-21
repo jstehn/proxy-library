@@ -1,10 +1,11 @@
 import type { Actor } from "@/modules/accounts";
-import { ok, type Finish, type Result, type CardFacts, type CardIdentity } from "@/shared/kernel";
+import { ok, type Result } from "@/shared/kernel";
+import { type Finish, type CardFacts, type CardIdentity } from "@/shared/mtg";
 
 // Looking cards up by name or id for a player: the card itself, its price trend and store
 // printings, and what the player has of it (audit S1: the get_cards tool and any page that
 // answers the same question). What belongs to other modules (copies, decks, wishes) comes
-// through ports wired in src/server/capabilities.ts.
+// through ports wired in src/server/composition/capabilities.ts.
 
 export type FoundCard = CardIdentity &
   Pick<CardFacts, "name" | "typeLine" | "manaCost"> &

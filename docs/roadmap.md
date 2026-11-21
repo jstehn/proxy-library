@@ -1,7 +1,7 @@
 # Roadmap
 
 The source of truth for build order. Each phase ends with a commit, and with a lesson
-(`lessons/NN-*.md`) when it teaches something new.
+(in the [lessons repo](https://github.com/jstehn/proxy-library-lessons)) when it teaches something new.
 
 ## The loop every phase follows
 
@@ -31,7 +31,7 @@ flowchart LR
 5. **Infrastructure:** Drizzle repos and gateways, plus contract and integration tests.
 6. **UI:** server actions (parse → actor → use case → map Result) and views.
 7. **Lesson** (only if the plan says yes): a real lesson that teaches the phase's concepts, **not** a log of what was built.
-   It follows the format in [`lessons/README.md`](../lessons/README.md): objectives, concepts built
+   It follows the format in [the lessons repo's README](https://github.com/jstehn/proxy-library-lessons): objectives, concepts built
    up simple → complex with Python comparisons and real repo code, common mistakes, graded
    exercises with verified solutions, a recap, and further reading.
 8. **Commit** once `pnpm check` is green.
@@ -99,7 +99,7 @@ Design artifacts (this commit): [architecture overview](architecture/overview.md
 
 **Review gate:** ✅ ADRs accepted 2026-09-26.
 
-Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-foundation.md)):
+Implementation steps (✅ all done, see [lesson 01](https://github.com/jstehn/proxy-library-lessons/blob/main/01-architecture-foundation.md)):
 
 1. **Shared kernel** (`src/shared/kernel/`): `result.ts`, `brand.ts`, `ids.ts`, `money.ts` (moved
    from `src/lib/money.ts`, now a branded `Cents`), `clock.ts`, `rng.ts` (`seededRng`,
@@ -111,8 +111,8 @@ Implementation steps (✅ all done, see [lesson 01](../lessons/01-architecture-f
 3. **Config:** `shared/config/` with a Zod-parsed env and a fail-fast startup error message.
 4. **DB foundation:** Drizzle client factory, drizzle-kit config, migrations folder, `UnitOfWork`
    (Drizzle implementation + in-memory implementation, with rollback-on-err integration tests).
-5. **Composition roots:** `src/server/container.ts` (with the `globalThis` dev cache and
-   `server-only`) and `worker/container.ts`, both built on the shared wiring in `src/server/core.ts`.
+5. **Composition roots:** `src/server/composition/container.ts` (with the `globalThis` dev cache and
+   `server-only`) and `worker/container.ts`, both built on the shared wiring in `src/server/composition/core.ts`.
 6. **Lint boundaries:** `eslint-plugin-boundaries`, `import/no-cycle`, and the restricted
    globals/imports from ADR 0009, each proven by a deliberately failing fixture that is then removed.
 7. **Walking skeleton:** a `/health` route that goes through container → UoW → DB, proving the wiring.

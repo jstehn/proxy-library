@@ -1,7 +1,8 @@
 import { PrintingId, SealedProductId, SetCode, type SealedContent } from "@/modules/catalog";
 import type { CardGain } from "@/modules/collection";
 import { valueBooster } from "@/modules/packs";
-import { type Finish, type Result, ok } from "@/shared/kernel";
+import { type Result, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import {
   collectReferences,
   contentsValue,

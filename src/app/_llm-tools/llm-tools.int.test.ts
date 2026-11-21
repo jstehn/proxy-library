@@ -6,7 +6,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { allows, type Scope } from "@/modules/accounts";
-import { buildCore } from "@/server/core";
+import { buildCore } from "@/server/composition/core";
 import { loadConfig } from "@/shared/config";
 import {
   actor,

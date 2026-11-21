@@ -6,7 +6,8 @@ import {
   type BoosterSheet,
   type Color,
 } from "@/modules/catalog";
-import { Cents, type Finish, type Rarity } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { type Finish, type Rarity } from "@/shared/mtg";
 import { factsLookup, type FactsLookup, type PrintingFacts } from "../domain/pack";
 
 // A small, made-up booster whose odds are easy to work out by hand, for the engine's tests.

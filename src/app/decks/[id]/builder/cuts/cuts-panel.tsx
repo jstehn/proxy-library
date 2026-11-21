@@ -1,5 +1,5 @@
 "use client";
-import { isBasicLand } from "@/shared/kernel";
+import { isBasicLand } from "@/shared/mtg";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Bracket,
@@ -229,8 +229,8 @@ export function CutsPanel(props: {
               disabled={props.busy || optimizing}
               onClick={() => {
                 setOptimizing(true);
-                void optimizeDeckAction({ deckId, pool: "owned" }).then((res) => {
-                  setOptimized(valueOr(res, null));
+                void optimizeDeckAction({ deckId, pool: "owned" }).then((result) => {
+                  setOptimized(valueOr(result, null));
                   setOptimizing(false);
                 });
               }}

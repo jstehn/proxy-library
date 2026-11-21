@@ -10,7 +10,7 @@ import {
   type CommanderCandidate,
   type PoolCard,
 } from "./commanders";
-import { type ManaColor } from "@/shared/kernel";
+import { type ManaColor } from "@/shared/mtg";
 import { featuresOfText } from "../../core/testing/deck-view";
 
 const commander = (
@@ -131,7 +131,9 @@ describe("rankCommanders", () => {
   it("orders by score, then owned first, then by name", () => {
     const pool = [card("Maker", { themes: ["tokens"] })];
     const store = commander("A Store Legend", { ownedCopies: 0, priceCents: 300 });
-    const ranked = rankCommanders([commander("B Legend"), store, tokens], pool, []);
+    const ranked = rankCommanders([commander("B Legend"), store, tokens], pool, [], {
+      sort: "coverage",
+    });
     expect(ranked.map((coverage) => coverage.commander.name)).toEqual([
       "Token Leader",
       "B Legend",
@@ -156,7 +158,7 @@ describe("rankCommanders", () => {
     });
     const candidates = [tokens, votingCommander, goadCommander];
     expect(
-      rankCommanders(candidates, [], [], { theme: "politics" }).map(
+      rankCommanders(candidates, [], [], { theme: "politics", sort: "coverage" }).map(
         (entry) => entry.commander.name,
       ),
     ).toEqual(["Marisi", "Tivit"]);
@@ -181,7 +183,9 @@ describe("rankCommanders", () => {
     });
     const candidates = [tokens, elfLord, elfNonLord];
     expect(
-      rankCommanders(candidates, [], [], { tribe: "elf" }).map((entry) => entry.commander.name),
+      rankCommanders(candidates, [], [], { tribe: "elf", sort: "coverage" }).map(
+        (entry) => entry.commander.name,
+      ),
     ).toEqual(["Ezuri", "Lonis"]);
     expect(
       rankCommanders(candidates, [], [], { tribe: "DRAGON" }).map((entry) => entry.commander.name),
@@ -223,12 +227,20 @@ describe("rankCommanders", () => {
 
     expect(
       rankCommanders(candidates, pool, [], { sort: "power" }).map((entry) => entry.commander.name),
-    ).toEqual(["Powerhouse Legend", "Popular Legend", "Covered Legend", "Unranked Legend"]);
+    ).toEqual(["Powerhouse Legend", "Covered Legend", "Popular Legend", "Unranked Legend"]);
 
+    // The blend adds the popularity bonus and the power score; your collection plays no part.
     const combined = rankCommanders(candidates, pool, [], { sort: "combined" });
-    // Covered Legend has +20 coverage, Popular Legend has +22.2 popularity, Powerhouse has +18.3 popularity + 0.5*powerScore
-    expect(combined[0].commander.name).toBe("Powerhouse Legend");
-    expect(combined[combined.length - 1].commander.name).toBe("Unranked Legend");
+    expect(combined.map((entry) => entry.commander.name)).toEqual([
+      "Powerhouse Legend",
+      "Popular Legend",
+      "Covered Legend",
+      "Unranked Legend",
+    ]);
+    // The blend is the default.
+    expect(rankCommanders(candidates, pool, []).map((entry) => entry.commander.name)).toEqual(
+      combined.map((entry) => entry.commander.name),
+    );
   });
 });
 
@@ -307,7 +319,7 @@ describe("invariants (design doc 36, section 4)", () => {
               typeLine: row.land ? "Land" : "Creature — Bear",
             }),
           );
-          const ranked = rankCommanders(candidates, pool, []);
+          const ranked = rankCommanders(candidates, pool, [], { sort: "coverage" });
           for (const coverage of ranked) {
             const mask = colorMask(coverage.commander.colorIdentity);
             const counted = pool.filter(
@@ -320,8 +332,10 @@ describe("invariants (design doc 36, section 4)", () => {
             expect(coverage.onPlan).toBeLessThanOrEqual(counted.length);
             for (const role of coverage.roles) expect(role.have).toBeLessThanOrEqual(role.target);
           }
-          expect(rankCommanders(candidates, pool, [])).toEqual(ranked);
-          const reversed = rankCommanders([...candidates].reverse(), pool, []);
+          expect(rankCommanders(candidates, pool, [], { sort: "coverage" })).toEqual(ranked);
+          const reversed = rankCommanders([...candidates].reverse(), pool, [], {
+            sort: "coverage",
+          });
           expect(reversed.map((entry) => entry.score)).toEqual(ranked.map((entry) => entry.score));
         },
       ),

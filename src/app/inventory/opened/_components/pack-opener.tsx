@@ -4,7 +4,7 @@
 // cards were decided on the server, so nothing here can change a pull.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
-import { ProductImage } from "@/ui/product-image";
+import { ProductImage } from "@/ui/mtg/product-image";
 import { CardBack } from "./card-back";
 import {
   hitLevel,
@@ -18,6 +18,7 @@ import {
   type OpeningState,
 } from "./machine";
 import { makeSounds, useMuted, useReducedMotion } from "./sounds";
+import { CardImage } from "@/ui/mtg/card-image";
 
 const TEAR_MILLISECONDS = 900;
 const PRELOAD_WAIT_MILLISECONDS = 3000; // rule 7: wait this long at most for images
@@ -279,8 +280,11 @@ function CardFace(props: { card: OpenerCard }) {
   return (
     <div className="relative overflow-hidden rounded-[4.5%]">
       {card.hasImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl(card)} alt="" className="bg-surface-raised aspect-[488/680] w-full" />
+        <CardImage
+          src={imageUrl(card)}
+          decorative
+          className="bg-surface-raised aspect-[488/680] w-full"
+        />
       ) : (
         <div className="bg-surface-raised flex aspect-[488/680] w-full items-center justify-center p-2 text-center">
           {card.name}

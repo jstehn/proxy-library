@@ -1,6 +1,6 @@
 import type { PrintingCard } from "@/modules/catalog";
 import type { CardRules, DeckCombo, DeckLine, Grouping } from "@/modules/decks";
-import type { Capabilities } from "@/server/capabilities";
+import type { Capabilities } from "@/server/composition/capabilities";
 import type { Actor } from "@/modules/accounts";
 
 /** The deck as the builder shows it, with what the browser needs to check its rules. */

@@ -17,7 +17,7 @@ hierarchies. TypeScript interfaces are structural, like Python `Protocol`s.
 - **Adapters:** also factories (`drizzleLedgerRepo(db)`). A class is allowed only when an
   adapter genuinely owns mutable internal state _and_ a factory would be awkward (expected to be
   rare, e.g. a token-bucket rate limiter).
-- **Composition roots:** `src/server/container.ts` (app) and `worker/container.ts` (worker) are
+- **Composition roots:** `src/server/composition/container.ts` (app) and `worker/container.ts` (worker) are
   the only places that construct real adapters and call factories. The app container is cached
   on `globalThis` in dev so hot reload doesn't create new DB pools.
 

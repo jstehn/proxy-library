@@ -8,12 +8,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function findLargestArrayKey(obj: Record<string, unknown>): string | null {
+function findLargestArrayKey(record: Record<string, unknown>): string | null {
   let bestKey: string | null = null;
   let bestBytes = 0;
-  for (const [key, val] of Object.entries(obj)) {
-    if (Array.isArray(val) && val.length > 0) {
-      const bytes = jsonBytes(val);
+  for (const [key, entryValue] of Object.entries(record)) {
+    if (Array.isArray(entryValue) && entryValue.length > 0) {
+      const bytes = jsonBytes(entryValue);
       if (bytes > bestBytes) {
         bestBytes = bytes;
         bestKey = key;
@@ -116,10 +116,10 @@ function paginateArray<R>(
 }
 
 function shrinkOversizedObject(
-  obj: Record<string, unknown>,
+  record: Record<string, unknown>,
   preserveKey?: string,
 ): Record<string, unknown> {
-  const copy: Record<string, unknown> = { ...obj };
+  const copy: Record<string, unknown> = { ...record };
   const omitted: string[] = [];
 
   // Sort other keys by byte size descending and drop until under half the budget

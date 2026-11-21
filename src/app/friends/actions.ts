@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { Capabilities } from "@/server/capabilities";
+import type { Capabilities } from "@/server/composition/capabilities";
 import { formVoid } from "@/server/form-action-instance";
 import { UserId } from "@/shared/kernel";
 import { revalidateSocial } from "./paths";

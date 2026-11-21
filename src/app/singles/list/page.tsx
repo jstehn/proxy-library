@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { deckProblems, shortList } from "@/modules/decks";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { MAX_LIST_LINES } from "@/modules/store";
 import { ListBuyer } from "./list-buyer";
 import { readPage } from "@/server/page-instance";

@@ -1,11 +1,11 @@
+import { type Rng } from "@/shared/kernel";
 import {
   type ManaColor,
-  type Rng,
   cardTypes,
   type CardFacts,
   type CardIdentity,
   type Tag,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 import type { CardFeatures, EntersTapped, TapMana } from "@/modules/catalog";
 import {
   isPlayed,

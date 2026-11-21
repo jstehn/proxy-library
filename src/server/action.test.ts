@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { testActor } from "@/modules/accounts/testing/actors";
 import { makeAction } from "./action";
-import type { Capabilities } from "./capabilities";
-import type { Reads } from "./reads";
+import type { Capabilities } from "./composition/capabilities";
+import type { Reads } from "./composition/reads";
 
 const actor = testActor({ name: "jack" });
 const capabilities = { marker: true } as unknown as Capabilities;

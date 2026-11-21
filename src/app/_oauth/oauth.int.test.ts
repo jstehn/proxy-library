@@ -2,7 +2,7 @@
 // registration and token endpoints as Next calls them, against real Postgres, then the token
 // signing in to the MCP endpoint. The approval page's use case stands in for the browser.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildCore } from "@/server/core";
+import { buildCore } from "@/server/composition/core";
 import { loadConfig } from "@/shared/config";
 import { actor, close, db, resetPlayers } from "../../../tests/integration/harness";
 import { sql } from "drizzle-orm";

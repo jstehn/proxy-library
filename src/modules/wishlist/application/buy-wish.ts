@@ -1,7 +1,8 @@
 import type { Actor } from "@/modules/accounts";
 import { PrintingId } from "@/modules/catalog";
 import { buySingleIn, type BuySingleInError, type SingleReceipt } from "@/modules/store";
-import { type Cents, type Finish, type Result, err, ok } from "@/shared/kernel";
+import { type Cents, type Result, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import type { AlreadyOwned, BuyQuantityInvalid, DoesNotFit, WishNotFound } from "../domain/errors";
 import { fits, ownedToward, type WishId } from "../domain/wish";
 import type { WishlistDependencies } from "./ports";

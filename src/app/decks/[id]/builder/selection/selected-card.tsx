@@ -3,7 +3,8 @@ import Link from "next/link";
 import type { PrintingCard } from "@/modules/catalog";
 import type { Board, OtherDeckUse, SuggestionCard, SuggestionList } from "@/modules/decks";
 import { copiesToTake } from "@/modules/decks/client";
-import { type BracketFlag, Cents } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { type BracketFlag } from "@/shared/mtg";
 import { TAG_LABELS } from "@/app/decks/labels";
 import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-panel";
 import { ownedWords } from "../derive";
@@ -11,7 +12,7 @@ import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
-import { CardView } from "@/ui/card-view";
+import { CardView } from "@/ui/mtg/card-view";
 import { Badge } from "@/ui/badge";
 import { Eyebrow } from "@/ui/eyebrow";
 

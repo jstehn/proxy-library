@@ -7,7 +7,7 @@ import { readPage } from "@/server/page-instance";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/page";
 import { EmptyState } from "@/ui/empty-state";
-import { Price } from "@/ui/price";
+import { Price } from "@/ui/mtg/price";
 
 export default async function WalletPage() {
   const { actor, capabilities, reads } = await readPage();

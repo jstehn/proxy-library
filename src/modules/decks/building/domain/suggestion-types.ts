@@ -1,5 +1,5 @@
-import { type Tag, type Theme } from "@/shared/kernel";
-import type { ManaColor, CardFacts, CardIdentity } from "@/shared/kernel";
+import { type Tag, type Theme } from "@/shared/mtg";
+import type { ManaColor, CardFacts, CardIdentity } from "@/shared/mtg";
 import {
   bracketLine,
   fitsTarget,

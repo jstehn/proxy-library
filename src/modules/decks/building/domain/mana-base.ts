@@ -15,7 +15,7 @@ import {
   type ManaColor,
   type Tag,
   type Theme,
-} from "@/shared/kernel";
+} from "@/shared/mtg";
 
 // A mana base you could start from (design doc 35): how many lands, how many sources of each
 // color, and which lands to add, owned non-basics first, then basics. Pure: the query gathers

@@ -3,7 +3,8 @@ import type { Actor, AdminActor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import { FOIL_IN_CATALOG, searchCondition } from "@/modules/catalog/cards/queries/search-sql";
-import { Cents, colorCombination, type ManaColor, type CardFacts } from "@/shared/kernel";
+import { Cents } from "@/shared/kernel";
+import { colorCombination, type ManaColor, type CardFacts } from "@/shared/mtg";
 import type { Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 import {

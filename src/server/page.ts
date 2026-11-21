@@ -1,6 +1,6 @@
 import type { Actor, AdminActor } from "@/modules/accounts";
-import type { Capabilities } from "./capabilities";
-import type { PublicReads, Reads } from "./reads";
+import type { Capabilities } from "./composition/capabilities";
+import type { PublicReads, Reads } from "./composition/reads";
 
 // `action()`'s twin for pages and routes (ADR 0026): find out who is looking, and hand over the
 // capabilities and the reads. A page reads through `reads`, never through `getContainer().db`.

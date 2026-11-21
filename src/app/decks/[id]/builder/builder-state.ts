@@ -1,4 +1,4 @@
-import { type Tag } from "@/shared/kernel";
+import { type Tag } from "@/shared/mtg";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Board,

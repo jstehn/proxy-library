@@ -81,4 +81,27 @@ P20), `docs/architecture/conventions.md` (a short "Accessibility" section). **Av
 
 ## Handoff
 
-(empty)
+- **Net lines:** production code 77,844 against the baseline 77,683: **+161**. It buys `Dialog`
+  (+58), `ConfirmButton` (+55), `CardImage` (+47), the focus rule and token, and the confirmations,
+  against about 60 lines removed (hand-written focus classes, the two-click `<details>` confirms,
+  the snapshot restore state). `pnpm sizes --update` refuses to raise the baseline, so **the owner
+  must approve and edit `sizes-baseline.txt`**; `pnpm check` fails only on that line until then.
+- **Done:** one `:focus-visible` rule and `--focus-ring` token (light and dark); `Dialog` on the
+  native `<dialog>`; `ConfirmButton` (form-submit mode and `onConfirm` mode) used for delete deck,
+  clear real collection, remove real product, revoke token, revoke invite, delete connector client,
+  delete comment, delete and restore snapshot, sell a copy, decline or cancel a trade; `CardImage`
+  replaces all raw `<img>`; lint bans `<img` in `src/app` and `src/ui`; "Accessibility" section in
+  `conventions.md`; e2e `15-accessibility.spec.ts` (Tab never leaves the dialog, Escape closes it
+  and returns focus, Cancel and Escape don't delete, Confirm does). Three existing specs confirm
+  through the new `confirmInDialog` helper.
+- **Deviations:** (1) Start over and reset a player keep their typed-word confirmation (stricter
+  than a dialog). (2) There is no "remove all decks" action. (3) Friend-request decline/cancel,
+  wishlist remove and the public-link "Turn off" are reversible, so they don't ask. (4) The skip
+  link keeps its `focus:` classes (it reveals itself on focus), and `layout.tsx` keeps
+  `focus:outline-none` on the programmatic `#main-content` target. (5) `playwright.config.ts` reads
+  `E2E_PORT` (default 3100). (6) `commander-cards.tsx` was edited (focus classes, `CardImage`) because
+  the Done-when needs it; the other session may get a small merge conflict there.
+- **Open findings:** `CardImage`'s fallback only fires for images that fail after hydration; no
+  per-image width/height was added where an aspect-ratio class already holds the space; no full
+  contrast audit was run by eye (the `text-muted` tokens compute to about 6.9:1 and 7:1 on
+  `surface`); the ConfirmButton has no pending state while the action runs.

@@ -1,4 +1,4 @@
-import { hasTypeWord } from "@/shared/kernel";
+import { hasTypeWord } from "@/shared/mtg";
 import type { Color } from "@/modules/catalog";
 
 // Cards that do something during the draft (design doc 18, section 3), as data: the pick engine
@@ -109,5 +109,5 @@ export function guessedRight(note: Extract<Note, { kind: "guess" }>): boolean {
   return note.guess.trim().toLowerCase() === note.actual.trim().toLowerCase();
 }
 
-export { isCreature as isCreatureLine } from "@/shared/kernel";
+export { isCreature as isCreatureLine } from "@/shared/mtg";
 export const isConspiracyLine = (typeLine: string) => hasTypeWord(typeLine, ["Conspiracy"]);

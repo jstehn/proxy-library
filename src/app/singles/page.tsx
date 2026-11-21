@@ -10,7 +10,7 @@ import {
 import { CardTile } from "@/app/_components/card-tile";
 import { FINISHES } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
-import { ManaStylesheet } from "@/ui/mana";
+import { ManaStylesheet } from "@/ui/mtg/mana";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
 

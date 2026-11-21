@@ -6,7 +6,8 @@ import type {
   SetCode,
 } from "@/modules/catalog";
 import type { ListSection } from "@/shared/card-search";
-import { type Finish, type Result, assertNever, err, ok } from "@/shared/kernel";
+import { type Result, assertNever, err, ok } from "@/shared/kernel";
+import { type Finish } from "@/shared/mtg";
 import { sumCopies, type RealCopy } from "./copies";
 import type { ChoiceNeeded, ProductUnavailable } from "./errors";
 
