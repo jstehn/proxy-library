@@ -30,11 +30,11 @@ export {
 } from "./domain/deck";
 export type { ManaBasePlanWithCastability } from "@/modules/decks/building/client";
 export { type SimilarCards } from "@/modules/decks/building";
-export { type DeckFacts } from "./application/deck-facts";
+export { type DeckFacts } from "@/modules/decks/overview";
 
 export { type DeckSignals, type SearchSignals } from "@/modules/decks/scoring";
 
-export { type DeckOverview, type OverviewParts } from "./application/deck-overview";
+export { type DeckOverview, type OverviewParts } from "@/modules/decks/overview";
 export { listAndFingerprint, problemsOfLines } from "./domain/deck-reads";
 export { describeDeckError, type DeckError } from "./application/describe-error";
 export { MAX_HEADING_LENGTH, MAX_HEADINGS } from "./domain/headings";
@@ -157,8 +157,7 @@ export type {
 } from "@/modules/decks/building/client";
 export { canViewDeck } from "./domain/sharing";
 export { cardsToGetFor, type CommentView } from "./queries/sharing";
-export * as deckQueries from "./queries";
-export * as deckPublicQueries from "./queries/public";
+export { deckQueries, deckPublicQueries } from "@/modules/decks/overview";
 export { checkOwnedCards, findCard } from "@/modules/decks/scoring";
 export { searchForDeck, type SearchForDeck } from "@/modules/decks/building";
 export { type SynergyQuery } from "@/modules/decks/building/client";
@@ -190,7 +189,7 @@ export {
   compareDeckSnapshot,
   listDeckSnapshots,
   type SnapshotComparison,
-} from "./queries/snapshots";
+} from "@/modules/decks/overview";
 export type { ProxyProgress, ProxyStreamEvent } from "@/modules/decks/proxies/client";
 export { openingHandOdds } from "@/modules/decks/play/client";
 export { library, type LibraryCard } from "@/modules/decks/play/client";

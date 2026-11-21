@@ -7,6 +7,7 @@ export {
   type RankedCut,
 } from "./domain/cuts";
 export {
+  lineToOptimizerCard,
   optimizeDeck,
   scoreDeck,
   type DeckScore,

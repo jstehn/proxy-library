@@ -6,8 +6,8 @@ import {
   optimizeDeck,
   type OptimizerCard,
   type OptimizeResult,
+  lineToOptimizerCard,
 } from "@/modules/decks/scoring/client";
-import type { DeckLine } from "../../domain/deck-view";
 import { deckView } from "../../queries/decks";
 import { deckSuggestions } from "../../queries/suggestions";
 import { type Suggestion } from "../domain/suggestion-types";
@@ -28,31 +28,6 @@ export type OptimizeDeckViewResult = Readonly<{
   deck: Deck;
   result: OptimizeResult;
 }>;
-
-export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
-  return {
-    oracleId: line.oracleId,
-    name: line.name,
-    typeLine: line.typeLine,
-    manaValue: line.manaValue,
-    manaCost: line.manaCost,
-    text: line.text,
-    producedMana: line.producedMana,
-    keywords: line.keywords,
-    roles: line.roles,
-    themes: line.themes,
-    signals: line.signals,
-    leaderThemes: line.leaderThemes,
-    rarity: line.rarity,
-    priceCents: line.priceCents,
-    isGameChanger: line.isGameChanger,
-    bracketFlags: line.bracketFlags,
-    edhrec: line.edhrec,
-    edhrecRank: line.edhrecRank,
-    board: line.board,
-    quantity: line.quantity,
-  };
-}
 
 export function suggestionToOptimizerCard(s: Suggestion): OptimizerCard {
   const c = s.card;

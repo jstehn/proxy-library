@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UserId } from "@/shared/kernel";
 import type { DeckAuditReport } from "@/modules/decks/building/client";
 import type { ManaBasePlanWithCastability } from "@/modules/decks/building/client";
-import { aDeckView, aLine } from "../testing/deck-view";
+import { aDeckView, aLine } from "../../testing/deck-view";
 import { makeDeckFacts } from "./deck-facts";
 import { makeDeckManaPlan } from "@/modules/decks/building";
 import { makeDeckSignals } from "@/modules/decks/scoring";

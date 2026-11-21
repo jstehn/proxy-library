@@ -1,9 +1,9 @@
-import { formatRules } from "../domain/format-rules";
+import { formatRules } from "../../domain/format-rules";
 import { ok, type Result } from "@/shared/kernel";
-import { bracketLine, estimateBracket, type BracketEstimate } from "../domain/brackets";
-import { isPlayed } from "../domain/boards";
+import { bracketLine, estimateBracket, type BracketEstimate } from "../../domain/brackets";
+import { isPlayed } from "../../domain/boards";
 import type { DeckAuditReport } from "@/modules/decks/building/client";
-import type { DeckLine, DeckView } from "../domain/deck-view";
+import type { DeckLine, DeckView } from "../../domain/deck-view";
 
 // The deck-facts diagnostics (legality, bracket, roles, mana, ownership, goldfish) for a deck
 // already read: the audit's numbers, plus the cards behind each role count and the bracket

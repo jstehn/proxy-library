@@ -5,6 +5,7 @@ import type { Format } from "../../domain/deck";
 import { rateCard, type RatingProfile } from "./rate";
 import { NO_SIGNALS, synergyMatches } from "./signals";
 import { formatRules } from "../../domain/format-rules";
+import type { DeckLine } from "../../domain/deck-view";
 import {
   deckStats,
   isLand,
@@ -449,5 +450,31 @@ export function optimizeDeck(
     iterationsRun: iterations,
     acceptedMoves,
     improvedMoves,
+  };
+}
+
+/** A deck line as the optimizer reads a card. */
+export function lineToOptimizerCard(line: DeckLine): OptimizerCard {
+  return {
+    oracleId: line.oracleId,
+    name: line.name,
+    typeLine: line.typeLine,
+    manaValue: line.manaValue,
+    manaCost: line.manaCost,
+    text: line.text,
+    producedMana: line.producedMana,
+    keywords: line.keywords,
+    roles: line.roles,
+    themes: line.themes,
+    signals: line.signals,
+    leaderThemes: line.leaderThemes,
+    rarity: line.rarity,
+    priceCents: line.priceCents,
+    isGameChanger: line.isGameChanger,
+    bracketFlags: line.bracketFlags,
+    edhrec: line.edhrec,
+    edhrecRank: line.edhrecRank,
+    board: line.board,
+    quantity: line.quantity,
   };
 }

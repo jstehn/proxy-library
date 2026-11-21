@@ -13,13 +13,13 @@ import {
   decksUsing as decksUsingPrintings,
   deckView as viewOfOwnDeck,
   otherDecksHolding as otherDecksOf,
-} from "./decks";
-import { deckListPreview } from "./preview";
+} from "../../queries/decks";
+import { deckListPreview } from "../../queries/preview";
 import { optimizeDeckForView, type OptimizeDeckPool } from "@/modules/decks/building";
-import { cardPrintings } from "./printings";
-import { cardsToGetFor } from "./sharing";
+import { cardPrintings } from "../../queries/printings";
+import { cardsToGetFor } from "../../queries/sharing";
 import { compareDeckSnapshot, listDeckSnapshots } from "./snapshots";
-import { budgetList as budgetOf, deckSuggestions, similarCards } from "./suggestions";
+import { budgetList as budgetOf, deckSuggestions, similarCards } from "../../queries/suggestions";
 
 // The decks module's player reads (design doc 67, kind P), bound into `reads.decks` by
 // `src/server/reads.ts`. Each takes the `Actor` and passes the actor's own id to the query that

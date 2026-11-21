@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { EdhrecCommanderData, SpellbookCombosResult } from "@/modules/catalog";
 import { UserId } from "@/shared/kernel";
 import { fixedClock } from "@/shared/kernel/testing";
-import type { DeckPlan } from "../domain/deck-profile";
-import type { DeckView } from "../domain/deck-view";
-import { makeDeckCombos } from "./deck-combos";
-import { makeEdhrecResearch } from "./deck-edhrec";
+import type { DeckPlan } from "../../domain/deck-profile";
+import type { DeckView } from "../../domain/deck-view";
+import { makeDeckCombos } from "../../application/deck-combos";
+import { makeEdhrecResearch } from "../../application/deck-edhrec";
 import { makeDrawSample } from "@/modules/decks/play";
 
 const userId = UserId.of("1");

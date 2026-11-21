@@ -1,20 +1,24 @@
-import { formatRules } from "../domain/format-rules";
+import { formatRules } from "../../domain/format-rules";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DbExecutor } from "@/shared/db";
 import type { UserId } from "@/shared/kernel";
-import { isPlayed } from "../domain/boards";
-import { isBracket, type Bracket } from "../domain/brackets";
-import { BOARDS, DeckId, FORMATS, type Format } from "../domain/deck";
-import { scoreDeck, type DeckScore, type OptimizerCard } from "@/modules/decks/scoring/client";
-import { compareDeckStates, type ChangePreview, type PreviewLine } from "../domain/preview";
-import { SnapshotId, type SnapshotSummary } from "../domain/snapshots";
-import type { EdhrecSignal } from "../domain/stats";
-import { decks, deckSnapshots } from "../infrastructure/schema";
-import type { DeckLine } from "../domain/deck-view";
-import { deckView, loadEdhrecSignals } from "./decks";
-import { lineToOptimizerCard } from "@/modules/decks/building";
-import { lineToPreview, loadCardsForPreview, viewFingerprint } from "./preview";
+import { isPlayed } from "../../domain/boards";
+import { isBracket, type Bracket } from "../../domain/brackets";
+import { BOARDS, DeckId, FORMATS, type Format } from "../../domain/deck";
+import {
+  lineToOptimizerCard,
+  scoreDeck,
+  type DeckScore,
+  type OptimizerCard,
+} from "@/modules/decks/scoring/client";
+import { compareDeckStates, type ChangePreview, type PreviewLine } from "../../domain/preview";
+import { SnapshotId, type SnapshotSummary } from "../../domain/snapshots";
+import type { EdhrecSignal } from "../../domain/stats";
+import { decks, deckSnapshots } from "../../infrastructure/schema";
+import type { DeckLine } from "../../domain/deck-view";
+import { deckView, loadEdhrecSignals } from "../../queries/decks";
+import { lineToPreview, loadCardsForPreview, viewFingerprint } from "../../queries/preview";
 
 // Read models for deck snapshots and before/after comparisons (design doc 41).
 

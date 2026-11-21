@@ -13,7 +13,7 @@ import { resolveDeckProfileTargets, type DeckPlan } from "../../domain/deck-prof
 import { decks } from "../../infrastructure/schema";
 import { library } from "@/modules/decks/play/client";
 import { simulateOpeningHands } from "@/modules/decks/play/client";
-import { scoreDeck } from "@/modules/decks/scoring/client";
+import { lineToOptimizerCard, scoreDeck } from "@/modules/decks/scoring/client";
 import { deckProblems } from "../../domain/rules";
 import { formatRules } from "../../domain/format-rules";
 import { deckStats, TARGETED_TAGS } from "../../domain/stats";
@@ -21,7 +21,6 @@ import type { AuditFinding, AuditRoleStatus, DeckAuditReport } from "../domain/a
 import { combosForDeck } from "../../queries/combos";
 import type { DeckView } from "../../domain/deck-view";
 import { deckView } from "../../queries/decks";
-import { lineToOptimizerCard } from "./optimize";
 import { withFeatures } from "../../queries/card-features";
 
 /**

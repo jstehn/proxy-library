@@ -17,11 +17,7 @@ export { cheapestForSale, cheapestOfCards, notOwned, ownedPerCard } from "./quer
 export { commanderDetails, commandersICanBuild, type CommanderSearch } from "./queries/commanders";
 export { embedSimForCards } from "./queries/embeddings";
 export { manaBasePlan } from "./queries/mana-base";
-export {
-  lineToOptimizerCard,
-  optimizeDeckForView,
-  type OptimizeDeckPool,
-} from "./queries/optimize";
+export { optimizeDeckForView, type OptimizeDeckPool } from "./queries/optimize";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
 export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
 export {
