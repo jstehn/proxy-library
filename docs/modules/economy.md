@@ -2,7 +2,7 @@
 
 The virtual money, the store (sealed products and singles), the pack engine, the inventory of
 unopened items and the opening experience. Code: `src/modules/{wallet,store,packs,inventory}/` and
-`src/ui/opening/`. Written by responsibility; what a player owns afterwards is in
+`src/app/inventory/opened/_components/`. Written by responsibility; what a player owns afterwards is in
 `game-collection.md`. Checked against `refactor/main` (2026-11-20) by the tests named in brackets.
 Money is integer cents everywhere (`Cents`).
 

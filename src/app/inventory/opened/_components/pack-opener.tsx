@@ -4,7 +4,7 @@
 // cards were decided on the server, so nothing here can change a pull.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Cents } from "@/shared/kernel";
-import { ProductImage } from "../product-image";
+import { ProductImage } from "@/ui/product-image";
 import { CardBack } from "./card-back";
 import {
   hitLevel,

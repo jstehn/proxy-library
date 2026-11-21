@@ -1,10 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SetCode, type SetSetEnabledError } from "@/modules/catalog";
 import { assertNever } from "@/shared/kernel";
-import { formAction } from "@/server/form-action-instance";
-import { readPage } from "@/server/page-instance";
+import { formAction, formVoid } from "@/server/form-action-instance";
+import { revalidateAdmin } from "../paths";
 
 const SyncForm = z.object({ kind: z.enum(["prices", "full"]) });
 
@@ -12,7 +11,7 @@ export const requestSyncAction = formAction(
   SyncForm,
   async ({ actor: admin, capabilities }, form) => {
     const result = await capabilities.catalog.requestSync(admin, form.kind);
-    revalidatePath("/admin/catalog");
+    revalidateAdmin("catalog");
     return result;
   },
   {
@@ -31,7 +30,7 @@ export const enableStandardSetsAction = formAction(
   z.object({}),
   async ({ actor: admin, capabilities }) => {
     const result = await capabilities.catalog.enableStandardSets(admin);
-    revalidatePath("/admin/catalog");
+    revalidateAdmin("catalog");
     return result;
   },
   {
@@ -47,17 +46,18 @@ export const enableStandardSetsAction = formAction(
 const SetForm = z.object({ code: z.string().min(1), enabled: z.enum(["true", "false"]) });
 
 /** Enable/disable buttons in the sets list. No message: the list itself shows the new state. */
-export async function setSetEnabledAction(formData: FormData): Promise<void> {
-  const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = SetForm.safeParse({ code: formData.get("code"), enabled: formData.get("enabled") });
-  if (!form.success) return;
-  const result = await capabilities.catalog.setSetEnabled(admin, {
-    code: SetCode.of(form.data.code),
-    enabled: form.data.enabled === "true",
-  });
-  if (!result.ok) console.warn("set enable:", setMessageFor(result.error));
-  revalidatePath("/admin/catalog");
-}
+export const setSetEnabledAction = formVoid(
+  SetForm,
+  async ({ actor: admin, capabilities }, { code, enabled }) => {
+    const result = await capabilities.catalog.setSetEnabled(admin, {
+      code: SetCode.of(code),
+      enabled: enabled === "true",
+    });
+    if (!result.ok) console.warn("set enable:", setMessageFor(result.error));
+    revalidateAdmin("catalog");
+  },
+  { admin: true },
+);
 
 function setMessageFor(error: SetSetEnabledError): string {
   switch (error.kind) {

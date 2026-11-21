@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { CardFilters, Pagination } from "@/app/_components/card-filters";
 import { CollectionCardGrid } from "@/app/collection/card-grid";
 import { readCollectionQuery } from "@/app/collection/collection-query";
-import { SECTIONS, SORTS } from "@/ui/collection/options";
+import { SECTIONS, SORTS } from "@/app/collection/options";
 import { Cents, UserId } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mana";
 import { readPage } from "@/server/page-instance";

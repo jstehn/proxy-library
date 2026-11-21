@@ -3,22 +3,17 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { FinishPreference, Offer, Wish } from "@/modules/wishlist";
+import type { FormState } from "@/server/form-action";
 import { Cents, type Finish } from "@/shared/kernel";
 import { Alert, SubmitButton } from "@/ui/form";
-import {
-  addWishAction,
-  buyWishAction,
-  updateWishAction,
-  wishForShortCardsAction,
-  type WishState,
-} from "./actions";
+import { addWishAction, buyWishAction, updateWishAction, wishForShortCardsAction } from "./actions";
 import { FINISH_NAMES, offerLabel } from "./labels";
 import { Input, Select } from "@/ui/field";
 
 // The wishlist's forms (design doc 26, section 9): buying a wish, changing it, and adding one
 // from a card's page.
 
-const initialState: WishState = { message: null, tone: "success" };
+const initialState: FormState = { message: null, tone: null };
 
 const PREFERENCE_OPTIONS: readonly (readonly [FinishPreference, string])[] = [
   ["nonfoil", "Nonfoil"],

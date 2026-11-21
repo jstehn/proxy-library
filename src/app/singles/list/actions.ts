@@ -1,10 +1,10 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PrintingId } from "@/modules/catalog";
 import { MAX_LIST_LINES, describeBuyListError, type ListQuote } from "@/modules/store";
 import { Cents, FinishSchema } from "@/shared/kernel";
 import { readPage } from "@/server/page-instance";
+import { revalidateHeader } from "@/app/paths";
 
 // Buying a list of singles (design doc 15, section 3). The quote is read only; buying runs the
 // store's all-or-nothing purchase, which prices everything again.
@@ -68,7 +68,7 @@ export async function buyListAction(input: z.input<typeof BuyInput>): Promise<Bu
       pricesChanged: result.error.kind === "PricesChanged",
     };
   }
-  revalidatePath("/", "layout"); // the balance in the header
+  revalidateHeader(); // the balance in the header
   const { cards, total } = result.value;
   return {
     ok: true,

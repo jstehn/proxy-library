@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { describeRegisterPlayerError } from "@/modules/accounts";
+import { parseForm } from "@/server/form-action";
 import { readPage } from "@/server/page-instance";
 
 export type RegisterState = {
@@ -21,12 +22,7 @@ export async function registerAction(
   _previousState: RegisterState,
   formData: FormData,
 ): Promise<RegisterState> {
-  const form = RegisterForm.safeParse({
-    username: formData.get("username"),
-    displayName: formData.get("displayName"),
-    password: formData.get("password"),
-    inviteCode: formData.get("inviteCode") ?? undefined,
-  });
+  const form = parseForm(RegisterForm, formData);
   if (!form.success) {
     return {
       error: "Please fill in every field.",

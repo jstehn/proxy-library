@@ -2,7 +2,7 @@ import { CardTile } from "@/app/_components/card-tile";
 import type { PrintingCard } from "@/modules/catalog";
 import type { CollectionRow } from "@/modules/collection";
 import { Cents } from "@/shared/kernel";
-import { FINISH_NAMES, sectionsOf } from "@/ui/collection/options";
+import { FINISH_NAMES, sectionsOf } from "@/app/collection/options";
 
 /**
  * A page of owned cards in sections: the Game and Real tabs' grid, and the real collection shown

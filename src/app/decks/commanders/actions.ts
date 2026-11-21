@@ -1,57 +1,11 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { readPage } from "@/server/page-instance";
-import { planText, reasonText, TAG_LABELS } from "../labels";
+import { z } from "zod";
+import { formRedirect } from "@/server/form-action-instance";
+import { DECKS_PATH, deckPath, revalidateDeckList } from "../paths";
 
-// Find a commander (design doc 36, section 9): one commander's cards on request, and starting a
-// deck led by it.
+// Find a commander (design doc 36, section 9): starting a deck led by a commander.
 
-/** One commander's cards, as the page shows them. */
-export type CommanderCardsView = Readonly<{
-  plan: string;
-  onPlan: ReadonlyArray<Readonly<{ name: string; reasons: string }>>;
-  roles: ReadonlyArray<
-    Readonly<{ label: string; have: number; target: number; names: readonly string[] }>
-  >;
-  missing: Readonly<{
-    picks: ReadonlyArray<Readonly<{ name: string; fills: string; priceCents: number | null }>>;
-    totalCents: number;
-  }>;
-}>;
-
-/** How many names each list shows. */
-const SHOWN = 40;
-
-export async function commanderCardsAction(
-  oracleId: string,
-  withReal: boolean,
-): Promise<CommanderCardsView | null> {
-  const { actor, reads } = await readPage();
-  const details = await reads.decks.commanderDetails(actor, oracleId, withReal);
-  if (details === null) return null;
-  return {
-    plan: planText(details.coverage.plan),
-    onPlan: details.onPlan.slice(0, SHOWN).map((entry) => ({
-      name: entry.card.name,
-      reasons: entry.reasons.map(reasonText).join(" · "),
-    })),
-    roles: details.coverage.roles.map((role) => ({
-      label: TAG_LABELS[role.tag],
-      have: role.have,
-      target: role.target,
-      names: details.byRole[role.tag].slice(0, SHOWN).map((card) => card.name),
-    })),
-    missing: {
-      picks: details.missing.picks.map((pick) => ({
-        name: pick.card.name,
-        fills: pick.fills === "plan" ? "on-plan" : TAG_LABELS[pick.fills],
-        priceCents: pick.card.priceCents,
-      })),
-      totalCents: details.missing.totalCents,
-    },
-  };
-}
+const COMMANDERS_PATH = `${DECKS_PATH}/commanders`;
 
 /** A deck's name from a commander's: the front face, cut to the deck name limit. */
 function deckName(commander: string): string {
@@ -59,22 +13,22 @@ function deckName(commander: string): string {
 }
 
 /** Start a Commander deck led by this card, and open it in the builder. */
-export async function startDeckAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const decks = capabilities.deckEdits;
-  const name = String(formData.get("name") ?? "");
-  const withReal = formData.get("real") === "1";
-  const created = await decks.createDeck(actor, { name: deckName(name), format: "commander" });
-  if (!created.ok) {
-    const message =
-      created.error.kind === "NameInvalid"
-        ? "That name doesn't fit a deck name."
-        : `You already have ${created.error.maximum} decks.`;
-    redirect(`/decks/commanders?error=${encodeURIComponent(message)}`);
-  }
-  const deckId = created.value;
-  await decks.importList(actor, { deckId, text: `Commander\n1 ${name}` });
-  if (withReal) await decks.updateDeck(actor, { deckId, usesRealCards: true });
-  revalidatePath("/decks");
-  redirect(`/decks/${deckId}`);
-}
+export const startDeckAction = formRedirect(
+  z.object({ name: z.string().default(""), real: z.string().optional() }),
+  async ({ actor, capabilities }, { name, real }) => {
+    const decks = capabilities.deckEdits;
+    const created = await decks.createDeck(actor, { name: deckName(name), format: "commander" });
+    if (!created.ok) {
+      const message =
+        created.error.kind === "NameInvalid"
+          ? "That name doesn't fit a deck name."
+          : `You already have ${created.error.maximum} decks.`;
+      return `${COMMANDERS_PATH}?error=${encodeURIComponent(message)}`;
+    }
+    const deckId = created.value;
+    await decks.importList(actor, { deckId, text: `Commander\n1 ${name}` });
+    if (real === "1") await decks.updateDeck(actor, { deckId, usesRealCards: true });
+    revalidateDeckList();
+    return deckPath(deckId);
+  },
+);

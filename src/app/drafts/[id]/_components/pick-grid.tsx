@@ -3,8 +3,14 @@ import { useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { CardRef, PickChoices, PickOptions } from "@/modules/drafts";
 import { abilityOf, isCreatureLine } from "@/modules/drafts/client";
-import { EnlargedCard } from "../../_components/card-preview";
-import { decideAction, pickAction } from "../actions";
+import { EnlargedCard } from "@/app/_components/card-preview";
+import { Button } from "@/ui/button";
+import { Input, Select } from "@/ui/field";
+import { decideAction, pickAction } from "../../actions";
+
+const CARD_FACE = "bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]";
+const FOIL_SHEEN = "bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40";
+const DASHED_BOX = "flex flex-col items-start gap-2 rounded-md border border-dashed p-4 text-sm";
 
 // The pack in front of you (design docs 17 and 18). Tap a card to see it large and the choices
 // its draft abilities give you, then "Pick"; a double click picks with no choices. While an
@@ -29,7 +35,6 @@ export type ChoiceContext = Readonly<{
 
 const refKey = (ref: CardRef) => `${ref.packNumber}:${ref.slot}`;
 const typeLineOf = (printing: PrintingCard) => printing.faces[0]?.typeLine ?? "";
-const field = "rounded border border-line bg-field px-2 py-1";
 
 /** The choices a player can make about one card, from what's face up in front of them. */
 function Choices(props: {
@@ -75,8 +80,8 @@ function Choices(props: {
     if (count === 0 || choices.wholePack || context.turn?.wholePack) continue;
     rows.push(
       <label key={kind} className="flex flex-wrap items-center gap-2">
-        <select
-          className={field}
+        <Select
+          controlSize="sm"
           value={choices[kind] ?? 0}
           onChange={(event) => set({ [kind]: Number(event.target.value) })}
         >
@@ -85,7 +90,7 @@ function Choices(props: {
               {n === 0 ? "don't use" : `use ${n}`}
             </option>
           ))}
-        </select>
+        </Select>
         {label}
       </label>,
     );
@@ -93,8 +98,8 @@ function Choices(props: {
   if (options.remove.faceDown || options.remove.faceUp) {
     rows.push(
       <label key="remove" className="flex flex-wrap items-center gap-2">
-        <select
-          className={field}
+        <Select
+          controlSize="sm"
           value={choices.remove ?? ""}
           onChange={(event) => {
             const value = event.target.value;
@@ -108,7 +113,7 @@ function Choices(props: {
           {options.remove.faceUp && (
             <option value="faceUp">remove it face up (Animus of Predation)</option>
           )}
-        </select>
+        </Select>
         Removed cards stay in your collection, but not in this draft&apos;s pool.
       </label>,
     );
@@ -138,8 +143,8 @@ function Choices(props: {
     rows.push(
       <label key="guess" className="flex flex-wrap items-center gap-2">
         Spire Phantasm: guess the next card drafted from this pack
-        <input
-          className={field}
+        <Input
+          controlSize="sm"
           list="phantasm-guesses"
           value={choices.guess ?? ""}
           onChange={(event) => set({ guess: event.target.value })}
@@ -163,8 +168,8 @@ function Choices(props: {
     rows.push(
       <label key="lore" className="flex flex-wrap items-center gap-2">
         Lore Seeker: add a booster pack (your next pick comes from it)
-        <select
-          className={field}
+        <Select
+          controlSize="sm"
           value={value}
           onChange={(event) => {
             const [source, first, second] = event.target.value.split("|");
@@ -197,7 +202,7 @@ function Choices(props: {
               </option>
             ))}
           </optgroup>
-        </select>
+        </Select>
       </label>,
     );
   }
@@ -205,8 +210,8 @@ function Choices(props: {
     rows.push(
       <label key="dredger" className="flex flex-wrap items-center gap-2">
         If this leaves one card, pass it to
-        <select
-          className={field}
+        <Select
+          controlSize="sm"
           value={choices.lastCardTo ?? options.lastCardTo[0]}
           onChange={(event) => set({ lastCardTo: Number(event.target.value) })}
         >
@@ -215,7 +220,7 @@ function Choices(props: {
               {context.seatNames[seat] ?? `seat ${seat + 1}`}
             </option>
           ))}
-        </select>
+        </Select>
         (Canal Dredger)
       </label>,
     );
@@ -258,17 +263,17 @@ function CardButton(props: {
           alt=""
           width={146}
           height={204}
-          className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
+          className={CARD_FACE}
         />
       ) : (
-        <span className="bg-surface-raised flex aspect-[146/204] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs">
+        <span className={`${CARD_FACE} flex items-center justify-center p-2 text-center text-xs`}>
           {card.printing.name}
         </span>
       )}
       {card.finish !== "nonfoil" && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40"
+          className={`${FOIL_SHEEN} pointer-events-none absolute inset-0 rounded-[4.5%]`}
         />
       )}
     </button>
@@ -324,14 +329,14 @@ export function PickGrid(props: {
           </p>
         ) : (
           <>
-            <button
+            <Button
               type="button"
+              size="xl"
               onClick={() => pick(chosen.slot, choices)}
               disabled={isPicking}
-              className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
             >
               {isPicking ? "Picking…" : `Pick ${chosen.printing.name}`}
-            </button>
+            </Button>
             <button type="button" onClick={() => select(null)} className="text-sm underline">
               Cancel
             </button>
@@ -394,13 +399,14 @@ export function RandomPick(props: { draftId: number; packNumber: number; count: 
   const [error, setError] = useState<string | null>(null);
   const [isPicking, startPicking] = useTransition();
   return (
-    <div className="flex flex-col items-start gap-2 rounded-md border border-dashed border-red-400 p-4 text-sm dark:border-red-800">
+    <div className={`${DASHED_BOX} border-red-400 dark:border-red-800`}>
       <p>
         Your Archdemon of Paliano is face up: you can&apos;t look at this pack ({props.count}{" "}
         cards). You draft at random, and see the card once it&apos;s yours.
       </p>
-      <button
+      <Button
         type="button"
+        size="xl"
         disabled={isPicking}
         onClick={() =>
           startPicking(async () => {
@@ -413,10 +419,9 @@ export function RandomPick(props: { draftId: number; packNumber: number; count: 
             setError(result.error);
           })
         }
-        className="bg-accent text-accent-foreground rounded-md px-4 py-2 font-medium disabled:opacity-60"
       >
         {isPicking ? "Drawing…" : "Draft at random"}
-      </button>
+      </Button>
       {error !== null && <span className="text-danger-text">{error}</span>}
     </div>
   );
@@ -450,8 +455,9 @@ export function AwaitingCard(props: {
         onChange={setChoices}
       />
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="button"
+          size="xl"
           disabled={isDeciding}
           onClick={() =>
             startDeciding(async () => {
@@ -459,10 +465,9 @@ export function AwaitingCard(props: {
               setError(result.error);
             })
           }
-          className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
         >
           {isDeciding ? "Saving…" : "Done"}
-        </button>
+        </Button>
         {error !== null && <span className="text-danger-text text-sm">{error}</span>}
       </div>
     </div>

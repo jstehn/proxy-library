@@ -1,9 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SealedProductId } from "@/modules/catalog";
 import { describeBuySealedError } from "@/modules/store";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const BuyForm = z.object({
   productId: z.string().min(1),
@@ -17,7 +17,7 @@ export const buySealedAction = formAction(
       productId: SealedProductId.of(form.productId),
       quantity: form.quantity,
     });
-    if (result.ok) revalidatePath("/", "layout"); // the balance in the header changes
+    if (result.ok) revalidateHeader(); // the balance in the header changes
     return result;
   },
   {

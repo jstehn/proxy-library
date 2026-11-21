@@ -1,9 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeCorrectBalanceError, type CorrectBalanceError } from "@/modules/wallet";
 import { Cents, UserId, err, ok } from "@/shared/kernel";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateAdmin } from "../paths";
 
 const MoneyForm = z.object({
   userId: z.string().min(1),
@@ -30,7 +30,7 @@ export const moneyAction = formAction(
         : await wallet.correctBalance(admin, input);
     if (!result.ok) return result;
 
-    revalidatePath("/admin/players");
+    revalidateAdmin("players");
     return ok(`${form.intent === "give" ? "Gave" : "Took away"} ${Cents.format(amount)}.`);
   },
   {

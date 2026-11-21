@@ -180,3 +180,62 @@ old `dark:` ones, so nothing should have moved.
       headings (`Eyebrow`) in the builder panels.
 - [ ] **Left alone, still raw colours:** `pick-grid.tsx` (P20's) keeps three long class strings and
       its own `field` string; check it still looks as it did.
+
+## Left by P32 (page states, thin pages, every action written one way: all by eye)
+
+None of this was run in a browser (`next build` and e2e can't run in the agent's worktree).
+Check each in **dark mode and at phone width (375)** unless it says otherwise.
+
+- [ ] **Error page.** Make a page throw (stop Postgres with `pnpm db:stop`, open `/wallet`).
+      Expect "Something went wrong", one plain sentence, a "Try again" button and "Go home"; no
+      error text and no stack. "Try again" reloads the page once the database is back.
+- [ ] **Not-found page.** Open `/decks/999999` and `/nowhere`. Expect "Not found", "There is
+      nothing at this address, or it belongs to someone else.", and "Go home". The header and
+      footer stay. Check `/d/<bad token>` too.
+- [ ] **Loading states.** Throttle the network (or add a delay) and open `/decks`, `/drafts`,
+      `/collection`, `/store`, `/admin` and another page (the root skeleton). Expect grey bars the
+      width of the page, no layout jump when the page arrives, and "Loading" read by a screen
+      reader.
+- [ ] **Find a commander.** The list, filters and "Show more" look as before. "See the cards"
+      (now `GET /decks/commanders/cards`): opens, shows "Looking through your cards…", then the
+      three sections; a bad `oracleId` shows "Couldn't look this commander up." "Start a deck"
+      opens the new deck (with "real" on when the box was ticked).
+- [ ] **A draft, all five stages** (lobby, drafting, dealing, finished, cancelled), including the
+      pick grid, the "Pick" and "Done" buttons (now `Button`: `font-medium text-sm` everywhere;
+      "Draft at random" gained `text-sm`), the select and text fields in the ability choices
+      (now `bg-transparent`, not `bg-field`), and a foil card's sheen.
+- [ ] **A player's profile** (`/players/<name>`): friend, pending, incoming and self views; bio,
+      colours, showcase, stats, shared decks, wishlist.
+- [ ] **Each migrated form shows the same messages, colours and redirects.** Do each once; for
+      the ones with an error, trigger it.
+  - Decks: create (empty name, then 11th deck), rename (empty name), "use my real cards", delete,
+    import a list (the `?imported=` banner), share and unshare, public link on, rotate, off, copy
+    a deck, copy a public deck (at the deck limit), post and delete a comment (`#comments`).
+  - Drafts: create (no set chosen), join, leave, start, each Conspiracy form (colour, Sneak,
+    Informant, Deal Broker steps, end deals), act for an away player, add and remove a bot, make
+    a deck from the draft. An unreadable form now goes to `/drafts`.
+  - Trades: propose with bad money ("Enter money like 2.50."), propose, counter, accept, decline,
+    cancel. Add and remove cards in the builder.
+  - Wishlist: add (no printing: "Choose a printing and finish."; bad quantity: "Choose how many
+    copies you want."; bad price: "Write the target price like 20 or 19.99."), update, remove
+    (silent), share toggle, buy (a rise in price, a filled wish: the `?bought=` banner), "wish for
+    short cards" for a deck and for all ("That deck is gone.", "Nothing to wish for: you own it
+    all."). The forms start with no message and show success in green and errors in red.
+  - Real collection: sharing toggle, clear, set copies and change printing on a card page
+    (`?realError=`), remove a product with and without its cards, "I own this for real" on a set
+    page, the importer.
+  - Inventory: open one item, open all, the "ItemNotFound" error.
+  - Admin: store (kind price, product price, mode, buylist rate: a bad price, a bad percentage),
+    photos (choose, undo, set slug), catalog (set on/off, sync, "enable Standard"), connectors
+    (create, delete), players (each intent, temporary password), invites (create, revoke).
+  - Account: change password (empty, wrong password, success; and as a player who must change
+    it, which now goes to `/` on success), tokens (create shows the secret once, revoke), profile
+    (save, bad showcase deck), link and unlink Authentik.
+  - Friends (send, accept, decline, cancel, unfriend: silent) and the OAuth approval page
+    (approve with scopes, deny, too many tokens).
+  - Sign-in (keeps the typed username after a wrong password, `?next=` honoured) and register
+    (keeps typed values after an error).
+- [ ] **Moved files.** The pack opener (`/inventory/opened`) plays as before; the collection
+      (game and real) and a player's real collection sort and section as before.
+- [ ] **Run `pnpm test:e2e`.** `tests/e2e` was not touched, so a changed message or redirect shows
+      up there first.

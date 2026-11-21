@@ -1,5 +1,4 @@
 # Source files allowed to be over 500 lines (docs/refactor/README.md). Format: path  # reason
-src/app/drafts/[id]/page.tsx  # a page, owned by P32
 src/modules/drafts/domain/steps.ts  # the draft step engine: every step shares StepContext and the draft state; splitting needs a drafts/domain/steps/ folder (the folder is at 12 files), left for the owner's OK on the name
 src/modules/drafts/domain/draft.ts  # the draft's data model and its transitions; same folder limit as steps.ts
 src/modules/drafts/application/drafts.ts  # one factory whose use cases share withDraft/save/contextFor; splitting by job (lobby, picks, timers) needs a shared support factory first

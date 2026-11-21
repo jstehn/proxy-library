@@ -1,55 +1,41 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Capabilities } from "@/server/capabilities";
+import { formVoid } from "@/server/form-action-instance";
 import { UserId } from "@/shared/kernel";
-import { readPage } from "@/server/page-instance";
+import { revalidateSocial } from "./paths";
 
-const userIdSchema = z.string().min(1);
+// Each friends button sends one player's id and does one thing with it. A form that can't be read
+// does nothing.
 
-function revalidateSocialPaths() {
-  revalidatePath("/friends");
-  revalidatePath("/players", "layout");
-  revalidatePath("/activity");
-  revalidatePath("/", "layout");
+/** The five buttons differ only in what they ask `social` to do. */
+function friendAction(
+  change: (social: Capabilities["social"], me: UserId, other: UserId) => Promise<unknown>,
+) {
+  return formVoid(
+    z.object({ targetUserId: z.string().min(1) }),
+    async ({ actor, capabilities }, { targetUserId }) => {
+      await change(capabilities.social, actor.userId, UserId.of(targetUserId));
+      revalidateSocial();
+    },
+  );
 }
 
-export async function sendFriendRequestAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const target = userIdSchema.safeParse(formData.get("targetUserId"));
-  if (!target.success) return;
-  await capabilities.social.sendFriendRequest(actor.userId, UserId.of(target.data));
-  revalidateSocialPaths();
-}
+export const sendFriendRequestAction = friendAction((social, me, other) =>
+  social.sendFriendRequest(me, other),
+);
 
-export async function acceptFriendRequestAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const requester = userIdSchema.safeParse(formData.get("targetUserId"));
-  if (!requester.success) return;
-  await capabilities.social.acceptFriendRequest(actor.userId, UserId.of(requester.data));
-  revalidateSocialPaths();
-}
+export const acceptFriendRequestAction = friendAction((social, me, other) =>
+  social.acceptFriendRequest(me, other),
+);
 
-export async function declineFriendRequestAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const requester = userIdSchema.safeParse(formData.get("targetUserId"));
-  if (!requester.success) return;
-  await capabilities.social.declineFriendRequest(actor.userId, UserId.of(requester.data));
-  revalidateSocialPaths();
-}
+export const declineFriendRequestAction = friendAction((social, me, other) =>
+  social.declineFriendRequest(me, other),
+);
 
-export async function cancelFriendRequestAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const addressee = userIdSchema.safeParse(formData.get("targetUserId"));
-  if (!addressee.success) return;
-  await capabilities.social.cancelFriendRequest(actor.userId, UserId.of(addressee.data));
-  revalidateSocialPaths();
-}
+export const cancelFriendRequestAction = friendAction((social, me, other) =>
+  social.cancelFriendRequest(me, other),
+);
 
-export async function unfriendAction(formData: FormData): Promise<void> {
-  const { actor, capabilities } = await readPage();
-  const friend = userIdSchema.safeParse(formData.get("targetUserId"));
-  if (!friend.success) return;
-  await capabilities.social.unfriend(actor.userId, UserId.of(friend.data));
-  revalidateSocialPaths();
-}
+export const unfriendAction = friendAction((social, me, other) => social.unfriend(me, other));

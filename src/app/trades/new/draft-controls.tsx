@@ -92,7 +92,8 @@ export function DraftTextForm(props: {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   function submit(formData: FormData) {
-    const next = { ...currentDraft(), [props.name]: String(formData.get(props.name) ?? "").trim() };
+    const typed = Object.fromEntries(formData)[props.name];
+    const next = { ...currentDraft(), [props.name]: String(typed ?? "").trim() };
     startTransition(() => goTo(router, next));
   }
   return (

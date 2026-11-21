@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   describeUpdateEconomySettingsError,
@@ -7,6 +6,7 @@ import {
 } from "@/modules/wallet";
 import { Cents, err } from "@/shared/kernel";
 import { formAction } from "@/server/form-action-instance";
+import { revalidateHeader } from "@/app/paths";
 
 const EconomyForm = z.object({
   allowance: z.string(),
@@ -35,7 +35,7 @@ export const updateEconomyAction = formAction(
       startingGrant,
       selfFundLimit,
     });
-    if (result.ok) revalidatePath("/", "layout");
+    if (result.ok) revalidateHeader();
     return result;
   },
   {

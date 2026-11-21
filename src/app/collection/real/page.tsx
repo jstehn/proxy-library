@@ -5,7 +5,7 @@ import { Cents } from "@/shared/kernel";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { ManaStylesheet } from "@/ui/mana";
-import { SECTIONS, SORTS } from "@/ui/collection/options";
+import { SECTIONS, SORTS } from "@/app/collection/options";
 import { CollectionCardGrid, ExportLinks } from "../card-grid";
 import { readCollectionQuery } from "../collection-query";
 import { CollectionTabs } from "../tabs";

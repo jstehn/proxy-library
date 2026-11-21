@@ -141,11 +141,6 @@ const cardSearchSql = {
 // --- no-restricted-syntax selectors ----------------------------------------------------
 // Class names in pages and components (refactor P31): colours come from the tokens in
 // globals.css and a long class string is a block in src/ui, not a copy.
-const NOT_YET_ON_BLOCKS = [
-  // P20 may split this file; its three long class strings move to blocks or constants after.
-  "src/app/drafts/[id]/pick-grid.tsx",
-];
-
 const CLASS_NAMES = [
   {
     selector: "JSXAttribute[name.name='className'] Literal[value=/zinc-/]",
@@ -588,6 +583,13 @@ export default defineConfig([
       ],
     },
   },
+  // A component file in src/app that passes 300 lines is a hint to split it (refactor P32); the
+  // 500-line benchmark stays the gate.
+  {
+    files: ["src/app/**/*.tsx"],
+    ignores: TESTS,
+    rules: { "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }] },
+  },
   // Pages and components: the same rules plus the class-name rules above (refactor P31).
   {
     files: ["src/app/**/*.tsx", "src/ui/**/*.tsx"],
@@ -679,14 +681,6 @@ export default defineConfig([
     ignores: [...TESTS, ...CONTAINER_ALLOWED.map(escapeGlob)],
     rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX, ...CLASS_NAMES] },
   },
-  // Files not yet on the blocks: the same rules without the class-name ones (refactor P31). The
-  // list only shrinks; it must be empty when the file's owner has finished with it.
-  {
-    files: NOT_YET_ON_BLOCKS.map(escapeGlob),
-    ignores: TESTS,
-    rules: { "no-restricted-syntax": ["error", ...APP_SYNTAX] },
-  },
-
   // Everything in src/app reads through `reads` and capabilities (design doc 67): no file there, a
   // component included, imports the database or a module's `queries/` folder.
   {

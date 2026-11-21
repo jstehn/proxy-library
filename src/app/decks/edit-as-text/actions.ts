@@ -1,12 +1,21 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { DeckId } from "@/modules/decks";
+import { parseForm } from "@/server/form-action";
 import { readPage } from "@/server/page-instance";
-import { deckPath } from "../paths";
+import { DECKS_PATH, deckPath, revalidateDeck, revalidateDeckList } from "../paths";
 import { presentListPreview, type ListPreviewSummary } from "./list-preview";
 
-// The Edit as text box's server actions (design doc 23, design doc 40).
+// The Edit as text box's server actions (design doc 23, design doc 40). Both keep their own state
+// (the problems, the preview), so they read the form with `parseForm`. A form that can't be read
+// goes back to the deck list.
+
+const EditForm = z.object({
+  deckId: z.coerce.number().int().positive(),
+  list: z.string().default(""),
+  fingerprint: z.string().default(""),
+});
 
 /** What the Edit as text box shows after a save that didn't go through (design doc 23). */
 export type EditAsTextState = Readonly<{ error: string | null; problems: string[] }>;
@@ -21,18 +30,19 @@ export async function replaceListAction(
   formData: FormData,
 ): Promise<EditAsTextState> {
   const { actor, capabilities } = await readPage();
-  const deckId = Number(formData.get("deckId"));
-  if (!Number.isSafeInteger(deckId) || deckId <= 0) redirect("/decks");
+  const form = parseForm(EditForm, formData);
+  if (!form.success) redirect(DECKS_PATH);
+  const { deckId, list, fingerprint } = form.data;
   const result = await capabilities.deckEdits.replaceList(actor, {
     deckId: DeckId.of(deckId),
-    text: String(formData.get("list") ?? ""),
-    fingerprint: String(formData.get("fingerprint") ?? ""),
+    text: list,
+    fingerprint,
   });
   if (!result.ok) {
     const { error } = result;
     switch (error.kind) {
       case "DeckNotFound":
-        redirect("/decks");
+        redirect(DECKS_PATH);
       case "DeckChanged":
         return {
           error:
@@ -51,8 +61,8 @@ export async function replaceListAction(
         };
     }
   }
-  revalidatePath("/decks");
-  revalidatePath(deckPath(deckId));
+  revalidateDeckList();
+  revalidateDeck(deckId);
   redirect(
     `${deckPath(deckId)}?imported=${encodeURIComponent(`Saved: ${result.value.cards} cards.`)}`,
   );
@@ -71,20 +81,15 @@ export async function previewListAction(
   formData: FormData,
 ): Promise<EditAsTextPreviewState> {
   const { actor, reads } = await readPage();
-  const deckId = Number(formData.get("deckId"));
-  if (!Number.isSafeInteger(deckId) || deckId <= 0) redirect("/decks");
-  const listText = String(formData.get("list") ?? "");
-  const result = await reads.decks.listPreview(
-    actor,
-    deckId,
-    listText,
-    String(formData.get("fingerprint") ?? ""),
-  );
+  const form = parseForm(EditForm, formData);
+  if (!form.success) redirect(DECKS_PATH);
+  const { deckId, list: listText, fingerprint } = form.data;
+  const result = await reads.decks.listPreview(actor, deckId, listText, fingerprint);
   if (!result.ok) {
     const { error } = result;
     switch (error.kind) {
       case "DeckNotFound":
-        redirect("/decks");
+        redirect(DECKS_PATH);
       case "DeckChanged":
         return {
           error:

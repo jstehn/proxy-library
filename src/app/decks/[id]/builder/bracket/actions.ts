@@ -1,11 +1,11 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DeckId, describeDeckError } from "@/modules/decks";
 import { action } from "@/server/action-instance";
 import { err, ok } from "@/shared/kernel";
 import { DeckIdInput } from "../action-helpers";
 import { rejected } from "../answer";
+import { revalidateDeck } from "@/app/decks/paths";
 
 const TargetBracketInput = z.object({
   deckId: DeckIdInput,
@@ -22,7 +22,7 @@ export const setTargetBracketAction = action(
     });
     if (!result.ok) return err(rejected(describeDeckError(result.error)));
     // The shared view shows the target too.
-    revalidatePath(`/decks/${input.deckId}`);
+    revalidateDeck(input.deckId);
     return ok(null);
   },
 );

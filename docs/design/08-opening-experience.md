@@ -30,7 +30,7 @@ special effects per foil treatment (galaxy, surge…), which are in future-ideas
 
 ## 3. The client state machine
 
-A pure reducer, `openingReducer(state, event)`, in `src/ui/opening/machine.ts`. It's plain
+A pure reducer, `openingReducer(state, event)`, in `src/app/inventory/opened/_components/machine.ts`. It's plain
 TypeScript, with no React inside, so it's unit-tested like the domain code.
 
 ```ts
@@ -87,12 +87,12 @@ type OpeningEvent =
 
 ## 6. Components
 
-- `src/ui/opening/machine.ts`: the reducer, plus `hitLevel(card)` (none, rare, mythic).
-- `src/ui/opening/sounds.ts`: `makeSounds()` builds the Web Audio sounds (tear: a burst of noise
+- `src/app/inventory/opened/_components/machine.ts`: the reducer, plus `hitLevel(card)` (none, rare, mythic).
+- `src/app/inventory/opened/_components/sounds.ts`: `makeSounds()` builds the Web Audio sounds (tear: a burst of noise
   sweeping down; flip: a short click; rare: a rising two-note chime; mythic: a three-note chord),
   and `useMuted()` remembers the toggle.
-- `src/ui/opening/pack-opener.tsx`: the client component (packs in, animation out).
-- `src/ui/opening/card-back.tsx`: a generated card back (our own design, not the real one).
+- `src/app/inventory/opened/_components/pack-opener.tsx`: the client component (packs in, animation out).
+- `src/app/inventory/opened/_components/card-back.tsx`: a generated card back (our own design, not the real one).
 - CSS keyframes in `globals.css`: `tear`, `deal`, `flip`, `shake`, `glow`, `foil-shimmer`.
 
 ## 7. Persistence and ports

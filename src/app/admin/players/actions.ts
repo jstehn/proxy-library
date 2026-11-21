@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   ResetPasswordError,
@@ -9,7 +8,9 @@ import {
   describePlayerActionError,
 } from "@/modules/accounts";
 import { assertNever, UserId, type Result } from "@/shared/kernel";
+import { parseForm } from "@/server/form-action";
 import { readPage } from "@/server/page-instance";
+import { revalidateAdmin } from "../paths";
 
 export type PlayerActionState = {
   message: string | null;
@@ -39,10 +40,7 @@ export async function playerAction(
   formData: FormData,
 ): Promise<PlayerActionState> {
   const { actor: admin, capabilities } = await readPage({ admin: true });
-  const form = PlayerActionForm.safeParse({
-    userId: formData.get("userId"),
-    intent: formData.get("intent"),
-  });
+  const form = parseForm(PlayerActionForm, formData);
   if (!form.success) return failure("That action wasn't understood.");
 
   const { accounts } = capabilities;
@@ -80,7 +78,7 @@ export async function playerAction(
   }
 
   if (!result.ok) return failure(describePlayerActionError(result.error));
-  revalidatePath("/admin/players");
+  revalidateAdmin("players");
   return { message: "Saved.", tone: "success", temporaryPassword };
 }
 
