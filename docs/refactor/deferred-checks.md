@@ -243,3 +243,8 @@ Check each in **dark mode and at phone width (375)** unless it says otherwise.
       reads "Blend of popularity and power" by default and the "ordered by …" line matches;
       `?sort=coverage` shows "Reset filters"; with a real collection the blend lists popular,
       strong commanders first even when few of their cards are owned.
+- [x] **Done 2026-11-21 (e2e database, 390px): the delete-deck dialog fits, its danger button shows
+      the focus ring in dark mode, Escape closes it and focus goes back to "Delete this deck"; the
+      focus ring shows in light mode.** Still open from P33: a full colour-contrast pass by eye; the
+      broken-image tile (it only appears for images that fail after the page is interactive); the
+      confirm button has no "working…" state.
