@@ -2,7 +2,7 @@
 
 - **Phase:** 30
 - **Status:** **Approved** (2026-11-10; the user asked for it to be built straight away)
-- **Superseded in part** (2026-11-20, P22): the redirect URI limit is now 20 and confidential clients exist (doc 69, P35); see docs/modules/llm-tools.md
+- **Superseded in part** (2026-11-20, P22): the redirect URI limit is 20, not 5 (owner: the most efficient answer, 2026-11-21) and confidential clients exist (doc 69, P35); see docs/modules/llm-tools.md
 - **Related:** design doc 28 (LLM tools, access tokens), ADR 0022 (one tool registry), ADR 0012
   (Better Auth for sessions). No new ADR: this adds a sign-in route to tokens design doc 28
   already defined.

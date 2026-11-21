@@ -2,7 +2,7 @@
 
 - **Phase:** 33 (tududi task 119)
 - **Status:** **Approved** (2026-11-10, with both proposals in section 13)
-- **Superseded in part** (2026-11-20, P22): in `msrp` mode the code never raises a kind price to the resale floor (section 4 rule 2 says it does): a decision is open; see docs/modules/economy.md
+- **Superseded in part** (2026-11-20, P22): in `msrp` mode the code never raises a kind price to the resale floor (section 4 rule 2 says it does); owner: MSRP, not market rate (2026-11-21); see docs/modules/economy.md
 - **Related:** ADR 0014 (sealed product at MSRP), ADR 0015 (official MSRPs), design doc 27 and
   ADR 0021 (the value floor, amended here by ADR 0024), design doc 06 (store)
 - **Lesson:** no (a setting, a migration and a changed pure function)

@@ -53,7 +53,7 @@ modern, legacy, vintage, pauper, commander and limited.
     not count toward the size (CR 905.4). (doc 09 §4 rule 4, doc 17 §4; `FORMAT_RULES`,
     `rules.test.ts`)
 11. **Role targets exist for Commander (10 ramp, 10 draw, 8 removal, 3 wipe) and for the 60-card
-    formats (4, 6, 6, 2); Limited has none.** See the disagreement noted under "Open decisions".
+    formats (4, 6, 6, 2); Limited has none.** Guides, not rules; see "Role targets (sources)".
     (doc 19 §13.2, doc 44 §4 rule 1; `FORMAT_RULES`)
 12. **"Which 60-card formats is this legal in"** counts main plus sideboard against each of
     standard, pioneer, modern, legacy, vintage and pauper. (doc 44 §3.2; `rules.test.ts`)
@@ -147,5 +147,30 @@ status comes only from stored Scryfall data, never a list in our code.
 
 - Doc 09 decision 5 allows up to two commanders with no pair check; doc 40 added the pair check and
   the code follows doc 40. Not a conflict now, listed so doc 09's line is not read as current.
-- Rule 11: doc 19 §13.2 (changed 2026-10-06) says role targets for Commander only; doc 44 and the
-  code give 60-card formats targets of 4/6/6/2. Reported to the project manager as a decision.
+- Rule 11: doc 19 §13.2 says role targets for Commander only; doc 44 and the code give 60-card
+  formats 4/6/6/2. Decided 2026-11-20 (owner): research targets; see "Role targets (sources)".
+
+## Role targets (sources)
+
+Researched 2026-11-21 (P36). Targets are **guides, not rules**. The sources give ranges by deck type
+(aggro, midrange, control), never by format, so every 60-card format shares one guide number.
+
+| Role      | Guide                 | What the sources say                                                                                                                                                                                                                                                     |
+| --------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lands     | 24 (`suggestedLands`) | Draftsim: aggro 23-24, midrange 24-25, control 26+; Modern 18-23, Legacy about 18, Pauper 18-23. Karsten: 19.59 + 1.90 x average mana value - 0.28 per cheap draw or ramp spell. The count follows the curve already. Limited (40 cards): 17, as few as 15-16 for aggro. |
+| Removal   | 6 (range 4-8)         | Casual Planeswalker: 4-6, and 6-8 "at least"; gamertagmythras: about 8 in control, 14 in midrange (burn included).                                                                                                                                                       |
+| Card draw | 6 (house guide)       | Only control is sourced: about 8 (gamertagmythras).                                                                                                                                                                                                                      |
+| Ramp      | 4 (house guide)       | No 60-card count found; ramp is optional in fast aggro. Karsten: one land less per 3-4 cheap ramp or draw spells.                                                                                                                                                        |
+| Sweepers  | 2 (house guide)       | No 60-card count found (the 2-4 figures are Commander).                                                                                                                                                                                                                  |
+
+Sources (read 2026-11-21):
+
+- Frank Karsten, "How Many Lands Do You Need in Your Deck? An Updated Analysis", ChannelFireball
+  (article page returned 404; the formula is as quoted by search summaries, so unverified at the
+  source). "How Many Lands Do You Need to Consistently Hit Your Land Drops?" (2017, not opened).
+- Draftsim, "How many lands in MTG" (updated 2026-06-11) and "MTG control deck" (updated 2026-05-28).
+- gamertagmythras.com, "MTG deckbuilding ratios" (2026-06-10).
+- casualplaneswalker.com, deck checklist and quick tricks articles (2026-02-18).
+
+Not verified: tournament-decklist statistics (not reached), so removal, draw, ramp and sweeper
+counts are casual-guide figures. Revisit with decklist data if the owner wants firmer numbers.
