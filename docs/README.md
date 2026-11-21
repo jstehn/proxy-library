@@ -19,7 +19,7 @@
 | [adr/](adr/README.md)                                      | you want to know **why** something is the way it is                                                                                            |
 | [modules/](modules/README.md)                              | you want the product rules the code must keep, one page per responsibility                                                                     |
 | [design/](design/README.md)                                | the record of why: each design doc and its status; starting a big feature (write its design doc first, from [TEMPLATE.md](design/TEMPLATE.md)) |
-| [../lessons/](../lessons/)                                 | learning: a lesson per phase that teaches something new                                                                                        |
+| [lessons](https://github.com/jstehn/proxy-library-lessons) | learning: a lesson per phase that teaches something new                                                                                        |
 
 ## Contribute
 

@@ -209,8 +209,8 @@ over the clever one.
 
 - Comments explain **why**, not what. Public functions in `index.ts` get a one-line TSDoc.
 - A non-obvious decision gets an ADR, not a long comment.
-- When a phase that teaches something new is finished, its lesson (`lessons/NN-*.md`) is written
-  or updated (ADR 0023).
+- When a phase that teaches something new is finished, its lesson is written or updated in the
+  [lessons repo](https://github.com/jstehn/proxy-library-lessons) (ADR 0023).
 
 ## Git
 
