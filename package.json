@@ -11,6 +11,7 @@
     "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "lint:cycles": "tsx scripts/dev/check-cycles.ts && tsx scripts/dev/check-cycles.ts --modules",
     "sizes": "tsx scripts/dev/sizes.ts",
+    "docs:citations": "tsx scripts/dev/check-doc-citations.ts",
     "regex-count": "tsx scripts/dev/regex-count.ts",
     "knip": "knip",
     "knip:production": "knip --production",

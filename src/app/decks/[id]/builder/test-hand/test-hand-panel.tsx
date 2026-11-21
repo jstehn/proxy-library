@@ -14,6 +14,9 @@ import {
   type HandState,
 } from "@/modules/decks/client";
 import { seededRng } from "@/shared/kernel";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The test hand (design doc 19, section 5.2): deal an opening hand from the deck, mulligan, draw,
 // and see the exact odds of drawing lands and roles. The rules live in the pure reducer
@@ -75,14 +78,9 @@ export function TestHandPanel(props: {
 
   const odds = openingHandOdds(cards, { onTheDraw, freeMulligan });
   const canMulligan = hand.turn === 0 && hand.toBottom === 0;
-  const button =
-    "rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700";
 
   return (
-    <section
-      aria-label="Test hand"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
-    >
+    <Card aria-label="Test hand" as="section" padding="md" stack className="text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium">Test hand</h2>
         <p className="text-muted text-xs">
@@ -122,7 +120,7 @@ export function TestHandPanel(props: {
                   <img
                     src={`/api/images/${card.printingId}/small/front`}
                     alt=""
-                    className="aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+                    className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
                   />
                 </button>
                 <NamePreview
@@ -134,20 +132,28 @@ export function TestHandPanel(props: {
             ))}
           </ul>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={button} onClick={() => newHand()}>
+            <Button type="button" onClick={() => newHand()} variant="secondary" size="sm">
               New hand
-            </button>
-            <button type="button" className={button} disabled={!canMulligan} onClick={mulligan}>
-              Mulligan
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={button}
+              disabled={!canMulligan}
+              onClick={mulligan}
+              variant="secondary"
+              size="sm"
+            >
+              Mulligan
+            </Button>
+            <Button
+              type="button"
+
               disabled={hand.toBottom > 0 || hand.library.length === 0}
               onClick={draw}
+              variant="secondary"
+              size="sm"
             >
               Draw
-            </button>
+            </Button>
             <label className="flex items-center gap-1 text-xs">
               <input
                 type="checkbox"
@@ -164,9 +170,7 @@ export function TestHandPanel(props: {
           {odds !== null && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-                  Odds ({odds.librarySize}-card library)
-                </h3>
+                <Eyebrow as="h3">Odds ({odds.librarySize}-card library)</Eyebrow>
                 <label className="flex items-center gap-1 text-xs">
                   <input
                     type="checkbox"
@@ -246,6 +250,6 @@ export function TestHandPanel(props: {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }

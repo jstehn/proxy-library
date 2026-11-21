@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActivityList } from "../_components/activity-list";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 export default async function ActivityPage(props: PageProps<"/activity">) {
   const { actor, reads } = await readPage();
@@ -8,24 +9,24 @@ export default async function ActivityPage(props: PageProps<"/activity">) {
   const scope = searchParams.scope === "friends" ? "friends" : "all";
   const items = await reads.activity.feed(actor, { scope });
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12">
+    <Page width="3xl">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Activity</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-sm">
             Big pulls, sealed purchases and trades around the playgroup.
           </p>
         </div>
         <nav
           aria-label="Activity scope"
-          className="flex gap-1 rounded-md border border-zinc-200 p-1 text-sm dark:border-zinc-800"
+          className="border-border-subtle flex gap-1 rounded-md border p-1 text-sm"
         >
           <Link
             href="/activity"
             className={`rounded px-3 py-1 ${
               scope === "all"
-                ? "bg-zinc-900 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                ? "bg-accent text-accent-foreground font-medium"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Everyone
@@ -34,8 +35,8 @@ export default async function ActivityPage(props: PageProps<"/activity">) {
             href="/activity?scope=friends"
             className={`rounded px-3 py-1 ${
               scope === "friends"
-                ? "bg-zinc-900 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                ? "bg-accent text-accent-foreground font-medium"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Friends
@@ -43,6 +44,6 @@ export default async function ActivityPage(props: PageProps<"/activity">) {
         </nav>
       </header>
       <ActivityList items={items} />
-    </main>
+    </Page>
   );
 }

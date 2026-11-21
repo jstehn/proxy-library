@@ -375,7 +375,7 @@ prices depending on how you sold it. Rounding per copy makes the price of a copy
 
 ## Further reading
 
-- [Design doc 07: collection & singles](../docs/design/07-collection-and-singles.md), section 14
+- [Design doc 07: collection & singles](../docs/design/archive/07-collection-and-singles.md), section 14
 - [ADR 0006: CQRS-lite reads](../docs/adr/0006-cqrs-lite-reads.md),
   [ADR 0013: price history and store ledger](../docs/adr/0013-price-history-and-store-ledger.md)
 - Drizzle docs: "Magic sql`` operator" (`sql.join`, `sql.param`)

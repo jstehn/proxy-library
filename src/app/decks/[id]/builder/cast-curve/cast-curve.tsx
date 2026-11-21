@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { CastReport } from "@/modules/decks";
 import { castCurveAction } from "./actions";
 import { castBars, castCaption, castMedian } from "./cast-bars";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // The chance of casting a card by each turn (the draw_sample tool's measurement): bars for turns
 // 1 to 10 and the median turn. The commander's loads when the panel opens; a card's, when asked.
@@ -44,16 +45,13 @@ export function CastCurve(props: {
     );
   }
   if (answer === "loading") return <p className="text-muted text-xs">Simulating games…</p>;
-  if (typeof answer === "string")
-    return <p className="text-xs text-amber-700 dark:text-amber-400">{answer}</p>;
+  if (typeof answer === "string") return <p className="text-warning-text text-xs">{answer}</p>;
 
   const [card] = answer.cards;
   const bars = castBars(card);
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-        {castCaption(answer)}
-      </h3>
+      <Eyebrow as="h3">{castCaption(answer)}</Eyebrow>
       <div
         className="flex h-20 items-end gap-1"
         role="img"

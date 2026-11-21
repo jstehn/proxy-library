@@ -105,4 +105,61 @@ fits):
 
 ## Handoff
 
-(empty)
+**Done (branch `refactor/P31-ui-blocks`, commits start with `P31:`).**
+
+- **Tokens** in `globals.css` (light value, `prefers-color-scheme: dark` value, mapped in
+  `@theme inline`, so no `dark:` needed): `surface-raised`, `field`, `line`, `accent`,
+  `accent-hover`, `accent-foreground`, `danger`/`-hover`/`-foreground`, and the `danger`, `success`,
+  `warning` families (`-text`, `-soft`, `-line`, `-ink`). The earlier `surface`, `border-subtle`,
+  `muted` are used as before. No dark-mode toggle. A focus-ring token was not added (a global
+  focus style would change every page; P33).
+- **Blocks** in `src/ui` (presentational, a few props, `className` for the rare override):
+  `Button` + `buttonClass` (variants primary, secondary, danger, quiet; sizes md, sm, xs, mini, lg,
+  xl), `Input` / `Select` / `Textarea` / `Field` (+ `controlClass`; sizes md, sm, xs, lg, form),
+  `Card` (padding, stack, divided, `as`), `Page` (the centred column), `Badge`, `Eyebrow`,
+  `EmptyState`, `Price`. `SubmitButton`, `TextField` and `Alert` in `form.tsx` now sit on them.
+- **CardView** (`src/ui/card-view.tsx`, logic in `card-view-mode.ts`, tested): see below.
+- **Lint:** `no-restricted-syntax` for `src/app` and `src/ui`: a `className` literal over 100
+  characters or containing `zinc-` is an error (`CLASS_NAMES` in `eslint.config.mjs`). One file is
+  allow-listed in `NOT_YET_ON_BLOCKS`: `src/app/drafts/[id]/pick-grid.tsx` (P20 may split it; three
+  long strings and its own `const field`). Delete the entry when P20 is done with the file.
+- **Not built, on purpose:** `Table` (only 7 `<table>`s, each different), `FilterBar` (one filter
+  form; `card-filters.tsx` already is the shared one), `ConfirmButton` and `Dialog` (P33).
+  `Field` is used by `TextField` only; most forms keep their own label markup.
+
+**Numbers.** `zinc-` in `src/app` + `src/ui`: 468 lines (about 1,100 occurrences with the pairs)
+before, **0** after; `dark:` classes 777 before, 82 after (the remaining ones are the
+violet/blue/orange chips and the `Badge` tones). The button string
+`bg-accent text-accent-foreground rounded-md px-3 py-1.5 text-sm font-medium` was 13 copies, now 0; `const field` is gone from every
+`.tsx` except `pick-grid.tsx`. Class strings over 100 characters: 48 before, 3 now.
+
+**Lines (production).** Blocks: +231 lines of new files, and the pages shrank about 340 lines
+(net **-106**; the review's -600 to -800 counted class strings that prettier keeps on one line, so
+line count falls far less than character count). CardView: +312 lines (`card-view.tsx`,
+`card-view-mode.ts`), partly offset by the three views it replaced. Net of both: **+206** over the
+sizes baseline (76,815 against 76,609), so `pnpm check` fails the sizes gate until the owner
+approves the growth (the CardView feature). The baseline was not changed.
+
+**CardView.** One block for a card shown large. Props: the printing id, name, the faces (or null
+while loading), an optional credit line, a `heading` slot and `children` (facts, actions), `layout`
+("responsive" or "stacked"), `textStyle` ("panel" or "plain"). Below `md` (or always when
+"stacked") it shows a three-button group (Image / Text / Both, `aria-pressed`) and the mode picks
+what shows; image is the default, a card with no image shows its text. A part hidden by the mode
+is `sr-only`, so screen readers still get the text. From `md` up there is no toggle and the layout
+is today's (image left, heading, text and details right). The mode is stored per device in
+`localStorage` under `card-view-mode`, read and written inside try/catch, shared by every CardView
+on the page through a tiny store (`useSyncExternalStore`, so there is no hydration mismatch).
+Used in: `card-preview.tsx` (`CardPreviewDialog`, stacked), the deck builder's `selected-card.tsx`
+(panel), and the card page `/cards/[id]` (plain). `CastCurve` ("When can I cast this?", P28) is
+still rendered under the selected card. Kept: `EnlargedCard` (the desktop hover overlay),
+`FaceText`, `NamePreview` and `CardWithPreview` in `card-preview.tsx`, and `selection-sheet.tsx`
+(the sheet also holds the heading, note, role and printing fields, so it can't be replaced; its
+card part is CardView). Not changed: the deck page's other card views.
+
+**Skipped / for others.** `src/app/drafts/[id]/pick-grid.tsx` (P20) and `drafts/[id]/page.tsx`
+(P32) were not migrated except for the token substitution of their colours (a few lines).
+`pack-opener.tsx`: one ring colour. Some buttons and fields with odd padding, `rounded` (not
+`-md`) or `text-[11px]` were left as class strings. A few look changes are listed in
+`deferred-checks.md` (P31). Not run: `pnpm test:e2e`, the integration suite, and any browser
+check; the by-eye list is in `deferred-checks.md`. `pnpm sizes --update` was not run (it only
+lowers).

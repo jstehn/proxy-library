@@ -7,6 +7,8 @@ import { ManaText } from "@/ui/mana";
 import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
 import { valueOr } from "../answer";
 import { manaBaseAction } from "./actions";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 // Mana base (design doc 35, section 9): how many lands and sources of each color to aim for,
 // and lands you could add: yours first (decks share cards), then basics; and store lands to
@@ -46,17 +48,14 @@ export function ManaBasePanel(props: {
   const adding = plan?.add.reduce((sum, land) => sum + land.quantity, 0) ?? 0;
 
   return (
-    <section
-      aria-label="Mana base"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
-    >
+    <Card aria-label="Mana base" as="section" padding="md" stack className="text-sm">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">Mana base</h2>
         <button
           type="button"
           onClick={props.onClose}
           aria-label="Close mana base"
-          className="text-muted hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-muted hover:text-foreground"
         >
           ✕
         </button>
@@ -77,7 +76,7 @@ export function ManaBasePanel(props: {
                 {plan.lands} of ~{plan.landTarget.lands}
               </span>
             </p>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted text-xs">
               {plan.landTarget.reasons.map(landTargetReasonText).join(" · ")}
             </p>
           </div>
@@ -86,11 +85,7 @@ export function ManaBasePanel(props: {
               {plan.sources.map((source) => (
                 <li key={source.color} className="flex flex-wrap items-center gap-2">
                   <ManaText text={`{${source.color}}`} />
-                  <span
-                    className={
-                      source.have >= source.target ? "" : "text-amber-700 dark:text-amber-400"
-                    }
-                  >
+                  <span className={source.have >= source.target ? "" : "text-warning-text"}>
                     {source.have} of {source.target} sources
                   </span>
                   {source.heaviestCost > 1 && (
@@ -112,7 +107,7 @@ export function ManaBasePanel(props: {
             <div className="flex flex-col gap-2">
               <h3 className="text-muted text-xs font-medium uppercase">Lands you could add</h3>
               <LandList lands={plan.add} />
-              <button
+              <Button
                 type="button"
                 disabled={props.busy}
                 onClick={() =>
@@ -124,10 +119,11 @@ export function ManaBasePanel(props: {
                     adding,
                   )
                 }
-                className="self-start rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                size="sm"
+                className="self-start"
               >
                 Add these {adding} lands
-              </button>
+              </Button>
             </div>
           )}
           {plan.over === 0 && plan.add.length === 0 && (
@@ -149,7 +145,7 @@ export function ManaBasePanel(props: {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -164,7 +160,7 @@ function LandList(props: { lands: readonly PlannedLand[]; prices?: boolean }) {
               {land.card.name}
             </span>
             {land.tapped !== "never" && (
-              <span className="rounded bg-zinc-100 px-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <span className="bg-surface-raised text-muted rounded px-1 text-xs">
                 {land.tapped === "always" ? "enters tapped" : "sometimes tapped"}
               </span>
             )}
@@ -174,7 +170,7 @@ function LandList(props: { lands: readonly PlannedLand[]; prices?: boolean }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted text-xs">
             {[
               ...land.reasons.map(landReasonText),
               ...(land.card.alsoIn.length > 0 ? [`also in ${land.card.alsoIn.join(", ")}`] : []),

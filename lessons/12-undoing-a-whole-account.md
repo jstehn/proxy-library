@@ -181,6 +181,6 @@ if (!(actor.isAdmin || isSelf)) return forbidden;
 
 ## Further reading
 
-- [Design doc 12](../docs/design/12-reset-player.md)
+- [Design doc 12](../docs/design/archive/12-reset-player.md)
 - MDN: [Negative zero](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number#number_encoding),
   [`Object.is`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is)

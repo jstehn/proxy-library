@@ -438,7 +438,7 @@ are stored, but as **dated snapshots** (a history), not one value to keep fresh.
 
 ## Further reading
 
-- [Design doc 20](../docs/design/20-deck-suggestions.md): the weights, profile rules and budget
+- [Design doc 20](../docs/design/archive/20-deck-suggestions.md): the weights, profile rules and budget
   rule.
 - PostgreSQL manual: "GIN Indexes", `DISTINCT ON` (in `SELECT`), `jsonb_to_recordset`.
 - The knapsack problem (Wikipedia): why the exact answer is hard, and the dynamic-programming

@@ -502,7 +502,7 @@ and an owned one can have several (one per finish, game and real). Ranking the c
 
 ## Further reading
 
-- [Design doc 24](../docs/design/24-choose-a-printing.md): the tiers and the decisions taken
+- [Design doc 24](../docs/design/archive/24-choose-a-printing.md): the tiers and the decisions taken
   while building.
 - PostgreSQL: [window functions](https://www.postgresql.org/docs/current/tutorial-window.html)
   and [sorting rows](https://www.postgresql.org/docs/current/queries-order.html) (`NULLS LAST`).

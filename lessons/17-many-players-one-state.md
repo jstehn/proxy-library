@@ -715,7 +715,7 @@ These are the cases in `src/modules/drafts/domain/basics.test.ts`.
 
 ## Further reading
 
-- [Design doc 17](../docs/design/17-drafts.md) and [ADR 0018](../docs/adr/0018-live-updates.md).
+- [Design doc 17](../docs/design/archive/17-drafts.md) and [ADR 0018](../docs/adr/0018-live-updates.md).
 - MDN: [Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
   and [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream).
 - PostgreSQL: [`NOTIFY`](https://www.postgresql.org/docs/current/sql-notify.html) (see "NOTIFY

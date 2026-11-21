@@ -40,7 +40,7 @@ export function GridCard(props: {
               loading="lazy"
               width={488}
               height={680}
-              className="aspect-[488/680] w-full rounded-[4.5%] bg-zinc-200 dark:bg-zinc-800"
+              className="bg-surface-raised aspect-[488/680] w-full rounded-[4.5%]"
             />
             {props.inThisDeck > 0 && (
               <span className="absolute top-1 right-1 rounded bg-green-700 px-1.5 text-[11px] font-semibold text-white">
@@ -67,7 +67,7 @@ export function GridCard(props: {
           <span className="text-muted block text-xs">
             {card.owned === 0 ? (
               <>
-                <span className="font-medium text-amber-700 dark:text-amber-400">Not owned</span>
+                <span className="text-warning-text font-medium">Not owned</span>
                 {card.priceCents !== null && ` · ${Cents.format(Cents.of(card.priceCents))}`}
               </>
             ) : (

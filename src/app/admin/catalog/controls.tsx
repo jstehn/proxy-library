@@ -5,6 +5,9 @@ import type { AdminSetRow } from "@/modules/catalog";
 import { Alert, SubmitButton } from "@/ui/form";
 import { enableStandardSetsAction, requestSyncAction, setSetEnabledAction } from "./actions";
 import type { FormState } from "@/server/form-action";
+import { Card } from "@/ui/card";
+import { Input } from "@/ui/field";
+import { Button } from "@/ui/button";
 
 const initialState: FormState = { message: null, tone: null };
 
@@ -13,22 +16,12 @@ export function SyncButtons() {
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          name="kind"
-          value="prices"
-          className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-        >
+        <Button type="submit" name="kind" value="prices" size="lg">
           Sync prices now
-        </button>
-        <button
-          type="submit"
-          name="kind"
-          value="full"
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-        >
+        </Button>
+        <Button type="submit" name="kind" value="full" variant="secondary" size="lg">
           Full sync now
-        </button>
+        </Button>
       </div>
       {state.message && <Alert tone={state.tone}>{state.message}</Alert>}
     </form>
@@ -74,12 +67,13 @@ export function SetsTable(props: { sets: AdminSetRow[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-4 text-sm">
-        <input
+        <Input
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           placeholder="Filter by name or code"
           aria-label="Filter sets"
-          className="w-64 rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          controlSize="lg"
+          className="w-64"
         />
         <label className="flex items-center gap-2">
           <input
@@ -91,7 +85,7 @@ export function SetsTable(props: { sets: AdminSetRow[] }) {
         </label>
         <span className="text-muted">{shown.length} sets</span>
       </div>
-      <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
+      <Card as="ul" divided className="text-sm">
         {shown.map((set) => (
           <li key={set.code} className="flex flex-wrap items-center gap-3 px-3 py-2">
             <span className="w-14 font-mono text-xs">{set.code}</span>
@@ -112,13 +106,11 @@ export function SetsTable(props: { sets: AdminSetRow[] }) {
             </form>
           </li>
         ))}
-      </ul>
+      </Card>
     </div>
   );
 }
 
 function Tag(props: { children: React.ReactNode }) {
-  return (
-    <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">{props.children}</span>
-  );
+  return <span className="bg-surface-raised rounded px-1.5 py-0.5">{props.children}</span>;
 }

@@ -17,7 +17,7 @@ export function HeadingTitle(props: {
   const [name, setName] = useState(props.heading);
   const index = props.headings.indexOf(props.heading);
   const small =
-    "rounded border border-zinc-300 px-1.5 text-xs leading-5 normal-case disabled:opacity-40 dark:border-zinc-700";
+    "rounded border border-line px-1.5 text-xs leading-5 normal-case disabled:opacity-40";
 
   if (renaming) {
     const merges = name.trim() !== props.heading && props.headings.includes(name.trim());
@@ -36,7 +36,7 @@ export function HeadingTitle(props: {
           aria-label={`New name for ${props.heading}`}
           maxLength={40}
           autoFocus
-          className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-1.5 py-0.5 text-sm dark:border-zinc-700"
+          className="border-line min-w-0 flex-1 rounded border bg-transparent px-1.5 py-0.5 text-sm"
         />
         <button type="submit" className={small}>
           {merges ? "Merge" : "Save"}

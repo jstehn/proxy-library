@@ -10,6 +10,8 @@ import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
 import { RealProductForm } from "./real-product-form";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { Price } from "@/ui/price";
 
 export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   const { actor, capabilities, reads } = await readPage();
@@ -40,7 +42,7 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
+    <Page width="6xl" spacing="roomy">
       <KeyruneStylesheet />
       {set.keyArtId && (
         <KeyArt
@@ -95,17 +97,21 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     <span className="flex flex-col text-sm tabular-nums">
                       <span>
                         {Cents.format(product.msrp)}{" "}
-                        <s className="text-muted">{Cents.format(product.listPrice)}</s>
+                        <s className="text-muted">
+                          <Price cents={product.listPrice} />
+                        </s>
                       </span>
                       <span className="text-muted text-xs">
                         Priced at what its contents sell back for
                       </span>
                     </span>
                   ) : (
-                    <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                    <span className="text-sm tabular-nums">
+                      <Price cents={product.msrp} />
+                    </span>
                   )}
                   {isUpcoming(product.releaseDate, today) && (
-                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                    <span className="text-warning-text text-xs">
                       Releases {formatDay(product.releaseDate)}
                     </span>
                   )}
@@ -122,7 +128,7 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
           </ul>
         </section>
       ))}
-    </main>
+    </Page>
   );
 }
 
@@ -145,7 +151,7 @@ function ProductDetails(props: { product: ProductForSale }) {
   const { description, contents } = props.product;
   if (description === null && contents.length === 0) return null;
   return (
-    <details className="text-xs text-zinc-600 dark:text-zinc-400">
+    <details className="text-muted text-xs">
       <summary className="cursor-pointer select-none">What&apos;s inside</summary>
       <div className="mt-2 flex flex-col gap-2">
         {contents.length > 0 && (

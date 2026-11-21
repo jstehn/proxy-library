@@ -3,6 +3,7 @@ import type { FeedItem } from "@/modules/activity";
 import { Cents } from "@/shared/kernel";
 import { LocalTime } from "@/ui/local-time";
 import { formatLabel } from "../decks/labels";
+import { EmptyState } from "@/ui/empty-state";
 
 // The activity feed (design doc 11): notable pulls, sealed purchases, completed trades,
 // finished drafts (design doc 17), and shared decks and comments on them (design doc 21).
@@ -88,9 +89,9 @@ function Line(props: { item: FeedItem }) {
 }
 
 export function ActivityList(props: { items: readonly FeedItem[] }) {
-  if (props.items.length === 0) return <p className="text-muted text-sm">Nothing yet.</p>;
+  if (props.items.length === 0) return <EmptyState>Nothing yet.</EmptyState>;
   return (
-    <ul className="flex flex-col divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+    <ul className="divide-border-subtle flex flex-col divide-y text-sm">
       {props.items.map((item) => (
         <li key={item.id} className="flex flex-col gap-0.5 py-2">
           <span>

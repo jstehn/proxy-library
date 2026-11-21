@@ -7,6 +7,7 @@ import { Alert } from "@/ui/form";
 import { decideAction } from "./actions";
 import { PARAMETER_NAMES, queryOf, readParameters } from "./parameters";
 import { readPage } from "@/server/page-instance";
+import { Button } from "@/ui/button";
 
 // The OAuth approval page (design doc 30): an app such as claude.ai's connector asks to act as
 // you; you choose what it may do. Approving makes an access token for it (design doc 28).
@@ -45,9 +46,9 @@ export default async function AuthorizePage(props: PageProps<"/oauth/authorize">
             <h1 className="text-2xl font-semibold break-words">
               Connect {checked.value.client.name}?
             </h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted text-sm">
               It wants to use your Proxy Library account as you. Approving sends you back to{" "}
-              <strong className="break-all text-zinc-900 dark:text-zinc-100">
+              <strong className="text-foreground break-all">
                 {new URL(checked.value.redirectUri).host}
               </strong>
               . Only approve if you just asked to connect it there.
@@ -89,22 +90,12 @@ export default async function AuthorizePage(props: PageProps<"/oauth/authorize">
               </span>
             </fieldset>
             <div className="flex gap-3">
-              <button
-                type="submit"
-                name="decision"
-                value="approve"
-                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-              >
+              <Button type="submit" name="decision" value="approve" size="xl">
                 Approve
-              </button>
-              <button
-                type="submit"
-                name="decision"
-                value="deny"
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-              >
+              </Button>
+              <Button type="submit" name="decision" value="deny" variant="secondary" size="xl">
                 Deny
-              </button>
+              </Button>
             </div>
           </form>
         </>

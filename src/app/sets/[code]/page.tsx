@@ -5,6 +5,7 @@ import { ManaStylesheet } from "@/ui/mana";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { CardTile } from "@/app/_components/card-tile";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
 
 const FINISH_LABELS: Record<Finish, string> = {
   nonfoil: "Nonfoil",
@@ -31,7 +32,7 @@ export default async function SetPage(props: PageProps<"/sets/[code]">) {
   const printings = await reads.catalog.setPrintings(set.code);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <KeyruneStylesheet />
       <ManaStylesheet />
       <header className="flex items-center gap-3">
@@ -50,6 +51,6 @@ export default async function SetPage(props: PageProps<"/sets/[code]">) {
           <CardTile key={printing.id} printing={printing} priceLine={priceLine(printing)} />
         ))}
       </ul>
-    </main>
+    </Page>
   );
 }

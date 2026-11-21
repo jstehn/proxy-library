@@ -121,3 +121,6 @@ the added `overview`; +132 lines; splitting `core` and narrowing the root export
 8. Card images: **download and cache on view** (the code already does; doc 13 is corrected).
 9. Commanders: **found by their own score**, not the card scorer. Popularity and power are good
    metrics, **with options** for the player (P36).
+
+**Line growth (2026-11-21):** P22 (+105) and P31 (+206) accepted. Standing rule: growth under 500
+lines is fine when the code is better engineered or gains a feature.

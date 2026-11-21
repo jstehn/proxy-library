@@ -15,6 +15,7 @@ import {
 import { ManaText } from "@/ui/mana";
 import { TAG_LABELS } from "@/app/decks/labels";
 import { CastCurve } from "../cast-curve/cast-curve";
+import { Eyebrow } from "@/ui/eyebrow";
 
 // Live deck statistics (design doc 14, section 2.5): recomputed in the browser from the deck in
 // hand, so they change the moment a card goes in or out.
@@ -22,7 +23,7 @@ import { CastCurve } from "../cast-curve/cast-curve";
 const COLOR_BAR: Record<ManaSource, string> = {
   W: "bg-amber-200",
   U: "bg-sky-500",
-  B: "bg-zinc-500",
+  B: "bg-muted",
   R: "bg-red-500",
   G: "bg-green-600",
   C: "bg-stone-400",
@@ -88,7 +89,7 @@ export function StatsPanel(props: {
       </dl>
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Mana curve</h3>
+        <Eyebrow as="h3">Mana curve</Eyebrow>
         <div
           className="flex h-24 items-end gap-1"
           role="img"
@@ -136,9 +137,7 @@ export function StatsPanel(props: {
 
       {neededColors.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-            Colors: needed vs. made
-          </h3>
+          <Eyebrow as="h3">Colors: needed vs. made</Eyebrow>
           {neededColors.map((color) => (
             <div key={color} className="grid grid-cols-[1.5rem_1fr_1fr] items-center gap-2">
               <ManaText text={`{${color}}`} />
@@ -162,7 +161,7 @@ export function StatsPanel(props: {
       )}
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Roles</h3>
+        <Eyebrow as="h3">Roles</Eyebrow>
         {TARGETED_TAGS.map((tag) => {
           const count = stats.tags[tag];
           if (targets === null) {
@@ -192,14 +191,14 @@ export function StatsPanel(props: {
               >
                 {TAG_LABELS[tag]}
               </button>
-              <div className="h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+              <div className="bg-surface-raised h-2 overflow-hidden rounded">
                 <div
                   className={`h-full ${count >= target ? "bg-green-600 dark:bg-green-500" : "bg-amber-500"}`}
                   style={{ width: `${Math.min(1, count / target) * 100}%` }}
                 />
               </div>
               <span
-                className={`text-right tabular-nums ${count >= target ? "" : "text-amber-700 dark:text-amber-400"}`}
+                className={`text-right tabular-nums ${count >= target ? "" : "text-warning-text"}`}
                 aria-label={`${count} of about ${target}`}
               >
                 {count} / {target}
@@ -232,7 +231,7 @@ export function StatsPanel(props: {
       </div>
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-muted text-xs font-medium tracking-wide uppercase">Types</h3>
+        <Eyebrow as="h3">Types</Eyebrow>
         <dl className="flex flex-wrap gap-x-3 gap-y-1">
           {[...TYPE_ORDER, "Other"]
             .filter((type) => (stats.types[type] ?? 0) > 0)
@@ -247,9 +246,7 @@ export function StatsPanel(props: {
 
       {handOdds !== null && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-muted text-xs font-medium tracking-wide uppercase">
-            Opening-hand odds (play)
-          </h3>
+          <Eyebrow as="h3">Opening-hand odds (play)</Eyebrow>
           <dl className="flex flex-col gap-0.5">
             <Figure
               label="2–5 lands in opening 7"
@@ -276,11 +273,7 @@ export function StatsPanel(props: {
 
 function Figure(props: { label: string; value: string; tone?: "good" | "warn" }) {
   const color =
-    props.tone === "good"
-      ? "text-green-700 dark:text-green-400"
-      : props.tone === "warn"
-        ? "text-amber-700 dark:text-amber-400"
-        : "";
+    props.tone === "good" ? "text-success-text" : props.tone === "warn" ? "text-warning-text" : "";
   return (
     <div className="flex justify-between gap-2">
       <dt className="text-muted">{props.label}</dt>
@@ -292,7 +285,7 @@ function Figure(props: { label: string; value: string; tone?: "good" | "warn" })
 function Bar(props: { share: number; color: string; label: string }) {
   return (
     <div className="flex items-center gap-1" title={props.label}>
-      <div className="h-2 flex-1 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+      <div className="bg-surface-raised h-2 flex-1 overflow-hidden rounded">
         <div className={`h-full ${props.color}`} style={{ width: `${props.share * 100}%` }} />
       </div>
       <span className="w-6 text-right text-[10px] tabular-nums">{props.label.split(" ")[0]}</span>

@@ -2,6 +2,7 @@
 
 - **Phase:** 58
 - **Status:** **Approved** (2026-11-13)
+- **Superseded in part** (2026-11-20, P22): the audit, diff and transparent-bracket tools are gone; cast on curve is doc 68 (P28); see docs/modules/decks-play.md
 - **Related ADRs:** 0006 (CQRS-lite reads), 0008 (injected RNG and clock), 0016 (client-safe module API), 0022 (LLM tool API), 0023 (process sized to feature)
 - **Lesson:** no (extends existing `decks/domain`, `decks/queries`, and `_llm-tools`)
 

@@ -29,7 +29,7 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
           </SubmitButton>
         </form>
       )}
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-muted text-sm">
         New here?{" "}
         <Link href="/register" className="underline">
           Register with an invite code

@@ -29,8 +29,7 @@ export type ChoiceContext = Readonly<{
 
 const refKey = (ref: CardRef) => `${ref.packNumber}:${ref.slot}`;
 const typeLineOf = (printing: PrintingCard) => printing.faces[0]?.typeLine ?? "";
-const field =
-  "rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
+const field = "rounded border border-line bg-field px-2 py-1";
 
 /** The choices a player can make about one card, from what's face up in front of them. */
 function Choices(props: {
@@ -248,7 +247,7 @@ function CardButton(props: {
       aria-label={`${card.printing.name}${card.finish === "nonfoil" ? "" : ` (${card.finish})`}`}
       className={`relative block w-full rounded-[4.5%] transition ${
         props.selected
-          ? "ring-4 ring-sky-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
+          ? "ring-offset-background ring-4 ring-sky-500 ring-offset-2"
           : "hover:-translate-y-0.5"
       }`}
     >
@@ -259,10 +258,10 @@ function CardButton(props: {
           alt=""
           width={146}
           height={204}
-          className="aspect-[146/204] w-full rounded-[4.5%] bg-zinc-100 dark:bg-zinc-800"
+          className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
         />
       ) : (
-        <span className="flex aspect-[146/204] w-full items-center justify-center rounded-[4.5%] bg-zinc-100 p-2 text-center text-xs dark:bg-zinc-800">
+        <span className="bg-surface-raised flex aspect-[146/204] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs">
           {card.printing.name}
         </span>
       )}
@@ -329,7 +328,7 @@ export function PickGrid(props: {
               type="button"
               onClick={() => pick(chosen.slot, choices)}
               disabled={isPicking}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
             >
               {isPicking ? "Picking…" : `Pick ${chosen.printing.name}`}
             </button>
@@ -338,7 +337,7 @@ export function PickGrid(props: {
             </button>
           </>
         )}
-        {error !== null && <span className="text-sm text-red-700 dark:text-red-300">{error}</span>}
+        {error !== null && <span className="text-danger-text text-sm">{error}</span>}
       </div>
 
       {chosen !== null && (
@@ -414,11 +413,11 @@ export function RandomPick(props: { draftId: number; packNumber: number; count: 
             setError(result.error);
           })
         }
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+        className="bg-accent text-accent-foreground rounded-md px-4 py-2 font-medium disabled:opacity-60"
       >
         {isPicking ? "Drawing…" : "Draft at random"}
       </button>
-      {error !== null && <span className="text-red-700 dark:text-red-300">{error}</span>}
+      {error !== null && <span className="text-danger-text">{error}</span>}
     </div>
   );
 }
@@ -460,11 +459,11 @@ export function AwaitingCard(props: {
               setError(result.error);
             })
           }
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          className="bg-accent text-accent-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
         >
           {isDeciding ? "Saving…" : "Done"}
         </button>
-        {error !== null && <span className="text-sm text-red-700 dark:text-red-300">{error}</span>}
+        {error !== null && <span className="text-danger-text text-sm">{error}</span>}
       </div>
     </div>
   );

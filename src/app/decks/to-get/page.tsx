@@ -2,6 +2,8 @@ import Link from "next/link";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { WishForShortForm } from "../../wishlist/wish-forms";
+import { Page } from "@/ui/page";
+import { buttonClass } from "@/ui/button";
 
 // Decks → Cards to get (design doc 21): every card your decks need beyond what you own. One copy
 // serves every deck, so a card counts as many times as the deck that uses the most of it.
@@ -12,10 +14,10 @@ export default async function CardsToGetPage() {
   const copies = toGet.cards.reduce((sum, card) => sum + card.missing, 0);
   const unpriced = toGet.cards.filter((card) => card.priceCents === null).length;
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-12">
+    <Page>
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Cards to get</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           What all your decks need that you don&apos;t own yet. A copy can be in every deck at once,
           so each card is counted for the deck that uses the most of it.{" "}
           <Link href="/decks" className="underline">
@@ -24,9 +26,7 @@ export default async function CardsToGetPage() {
         </p>
       </header>
       {toGet.cards.length === 0 ? (
-        <p className="text-sm text-green-700 dark:text-green-400">
-          Nothing: you own every card your decks use.
-        </p>
+        <p className="text-success-text text-sm">Nothing: you own every card your decks use.</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3">
@@ -38,7 +38,7 @@ export default async function CardsToGetPage() {
             </p>
             <Link
               href={`/singles/list?list=${encodeURIComponent(toGet.listText)}`}
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className={buttonClass()}
             >
               Buy them all
             </Link>
@@ -53,7 +53,7 @@ export default async function CardsToGetPage() {
                 <th className="py-1 text-right font-medium">Each</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <tbody className="divide-border-subtle divide-y">
               {toGet.cards.map((card) => (
                 <tr key={card.oracleId}>
                   <td className="py-1.5">
@@ -93,6 +93,6 @@ export default async function CardsToGetPage() {
           </p>
         </>
       )}
-    </main>
+    </Page>
   );
 }

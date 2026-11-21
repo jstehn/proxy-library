@@ -5,7 +5,28 @@
   --foreground: #171717;
   --muted: #52525b;
   --surface: #f4f4f5;
+  --surface-raised: #f4f4f5;
+  --field: #ffffff;
   --border-subtle: #e4e4e7;
+  --line: #d4d4d8;
+  --accent: #18181b;
+  --accent-hover: #3f3f46;
+  --accent-foreground: #ffffff;
+  --danger: #b91c1c;
+  --danger-hover: #dc2626;
+  --danger-foreground: #ffffff;
+  --danger-text: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-line: #fca5a5;
+  --danger-ink: #7f1d1d;
+  --success-text: #15803d;
+  --success-soft: #f0fdf4;
+  --success-line: #86efac;
+  --success-ink: #14532d;
+  --warning-text: #b45309;
+  --warning-soft: #fffbeb;
+  --warning-line: #fcd34d;
+  --warning-ink: #78350f;
   --target-size: 24px;
   /* Tells the browser which theme its own controls (dropdowns, scrollbars, date pickers) should
      use. Without it, dark pages got light-grey text on white dropdown lists. */
@@ -23,7 +44,28 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-field: var(--field);
   --color-border-subtle: var(--border-subtle);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-text: var(--danger-text);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-danger-ink: var(--danger-ink);
+  --color-success-text: var(--success-text);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-success-ink: var(--success-ink);
+  --color-warning-text: var(--warning-text);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-warning-ink: var(--warning-ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -34,7 +76,25 @@
     --foreground: #ededed;
     --muted: #a1a1aa;
     --surface: #18181b;
+    --surface-raised: #27272a;
+    --field: #18181b;
     --border-subtle: #27272a;
+    --line: #3f3f46;
+    --accent: #f4f4f5;
+    --accent-hover: #d4d4d8;
+    --accent-foreground: #18181b;
+    --danger-text: #f87171;
+    --danger-soft: #450a0a;
+    --danger-line: #991b1b;
+    --danger-ink: #fee2e2;
+    --success-text: #4ade80;
+    --success-soft: #052e16;
+    --success-line: #166534;
+    --success-ink: #dcfce7;
+    --warning-text: #fbbf24;
+    --warning-soft: #451a03;
+    --warning-line: #b45309;
+    --warning-ink: #fef3c7;
   }
 }
 

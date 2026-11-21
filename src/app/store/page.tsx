@@ -7,6 +7,10 @@ import { KeyruneStylesheet, SetSymbol } from "@/ui/set-symbol";
 import { BuyForm } from "./[code]/buy-form";
 import { categoryLabel, productLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
+import { Page } from "@/ui/page";
+import { EmptyState } from "@/ui/empty-state";
+import { Price } from "@/ui/price";
+import { buttonClass } from "@/ui/button";
 
 export default async function StorePage(props: PageProps<"/store">) {
   const { capabilities, reads } = await readPage();
@@ -21,11 +25,11 @@ export default async function StorePage(props: PageProps<"/store">) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12">
+    <Page width="6xl">
       <KeyruneStylesheet />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Store</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted text-sm">
           Sealed product at its suggested retail price (MSRP), or at what its cards sell back for
           when that&apos;s more, so buying a pack to sell its cards never pays. What you buy waits
           unopened in your inventory.
@@ -36,7 +40,7 @@ export default async function StorePage(props: PageProps<"/store">) {
         <form
           action="/store"
           method="GET"
-          className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          className="border-border-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3"
         >
           <div className="flex min-w-52 flex-1 flex-col gap-1">
             <label htmlFor="store-search" className="text-xs font-medium">
@@ -52,7 +56,7 @@ export default async function StorePage(props: PageProps<"/store">) {
               autoCapitalize="none"
               spellCheck={false}
               enterKeyHint="search"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+              className="border-line rounded-md border px-3 py-1.5 text-sm"
             />
           </div>
           {result.categories.length > 0 && (
@@ -64,7 +68,7 @@ export default async function StorePage(props: PageProps<"/store">) {
                 id="store-category"
                 name="category"
                 defaultValue={category}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                className="border-line rounded-md border px-3 py-1.5 text-sm"
               >
                 <option value="">All types</option>
                 {result.categories.map((cat) => (
@@ -78,15 +82,12 @@ export default async function StorePage(props: PageProps<"/store">) {
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="bg-accent text-accent-foreground rounded-md px-4 py-1.5 text-sm font-medium"
             >
               Search
             </button>
             {isSearching && (
-              <Link
-                href="/store"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
-              >
+              <Link href="/store" className={buttonClass({ variant: "secondary" })}>
                 Clear
               </Link>
             )}
@@ -96,7 +97,7 @@ export default async function StorePage(props: PageProps<"/store">) {
 
       {isSearching ? (
         result.sets.length === 0 && result.products.length === 0 ? (
-          <p className="text-muted text-sm">No sets or products matched your search.</p>
+          <EmptyState>No sets or products matched your search.</EmptyState>
         ) : (
           <div className="flex flex-col gap-8">
             {result.sets.length > 0 && (
@@ -197,10 +198,14 @@ export default async function StorePage(props: PageProps<"/store">) {
                         {product.msrp > product.listPrice ? (
                           <span className="text-sm tabular-nums">
                             {Cents.format(product.msrp)}{" "}
-                            <s className="text-muted">{Cents.format(product.listPrice)}</s>
+                            <s className="text-muted">
+                              <Price cents={product.listPrice} />
+                            </s>
                           </span>
                         ) : (
-                          <span className="text-sm tabular-nums">{Cents.format(product.msrp)}</span>
+                          <span className="text-sm tabular-nums">
+                            <Price cents={product.msrp} />
+                          </span>
                         )}
                         <BuyForm productId={product.id} productName={product.name} />
                       </li>
@@ -212,7 +217,7 @@ export default async function StorePage(props: PageProps<"/store">) {
           </div>
         )
       ) : result.sets.length === 0 ? (
-        <p className="text-muted text-sm">Nothing is for sale yet.</p>
+        <EmptyState>Nothing is for sale yet.</EmptyState>
       ) : (
         <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {result.sets.map((set) => (
@@ -252,6 +257,6 @@ export default async function StorePage(props: PageProps<"/store">) {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

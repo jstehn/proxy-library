@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # `pnpm check`: everything that must pass before a commit (ADR 0023).
-# The nine checks don't depend on each other, so they run at the same time. Each one's output is
+# The ten checks don't depend on each other, so they run at the same time. Each one's output is
 # kept in a file and printed only if that check fails, so a green run prints one line per check.
 # ESLint and Prettier keep a cache in node_modules/.cache: files that haven't changed since they
 # last passed are skipped. `rm -rf node_modules/.cache` forces a full run.
@@ -10,7 +10,7 @@ cd "$(dirname "$0")/../.."
 output_dir=$(mktemp -d)
 trap 'rm -rf "$output_dir"' EXIT
 
-names=(typecheck lint cycles format tests sizes regexes clones knip)
+names=(typecheck lint cycles format tests sizes regexes clones knip citations)
 commands=(
   "pnpm --silent typecheck"
   "pnpm --silent lint"
@@ -22,6 +22,8 @@ commands=(
   "pnpm --silent clones"
   # A ratchet, like `sizes`: the finding count may fall, but not rise above the baseline.
   "scripts/dev/knip-ratchet.sh"
+  # Every "design doc NN" cited anywhere points at a doc that exists (live or archived).
+  "pnpm --silent docs:citations"
 )
 
 process_ids=()

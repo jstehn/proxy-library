@@ -32,7 +32,7 @@ export function RoleField(props: {
         <label htmlFor={inputId} className="text-muted text-xs font-medium">
           Role in this deck
         </label>
-        <span className="text-[11px] text-zinc-400 tabular-nums">
+        <span className="text-muted text-[11px] tabular-nums">
           {draft.length}/{MAX_ROLE_LENGTH}
         </span>
       </div>
@@ -46,12 +46,12 @@ export function RoleField(props: {
           placeholder="e.g. Free sac outlet for Avacyn"
           maxLength={MAX_ROLE_LENGTH}
           disabled={props.busy}
-          className="min-w-0 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+          className="border-line min-w-0 flex-1 rounded border bg-transparent px-2 py-1 text-sm"
         />
         <button
           type="submit"
           disabled={props.busy || unchanged}
-          className="rounded border border-zinc-300 px-2.5 py-1 text-xs disabled:opacity-40 dark:border-zinc-700"
+          className="border-line rounded border px-2.5 py-1 text-xs disabled:opacity-40"
         >
           Save
         </button>

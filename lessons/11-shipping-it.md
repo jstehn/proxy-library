@@ -459,7 +459,7 @@ from **existence**.
 
 ## Further reading
 
-- [Design doc 11](../docs/design/11-activity-export-docker.md), especially section 8
+- [Design doc 11](../docs/design/archive/11-activity-export-docker.md), especially section 8
 - [docs/deploy.md](../docs/deploy.md)
 - RFC 4180 (CSV); MDN: `Content-Disposition`
 - Docker docs: "Multi-stage builds", "Compose file reference: depends_on", "Interpolation"

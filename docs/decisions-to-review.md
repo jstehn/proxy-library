@@ -156,7 +156,7 @@ The full checklist is in [requirements-audit.md](requirements-audit.md).
 
 **Reviewed by you (2026-10-06).**
 
-Design: [design/12-reset-player.md](design/12-reset-player.md).
+Design: [design/archive/12-reset-player.md](design/archive/12-reset-player.md).
 
 | Decision                                                                                                                                                                | Why                                                             | Where to change it              | Good alternative                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -252,7 +252,7 @@ before the run; these are the calls made while building it.
 
 ### Deck suggestions and a budget list (2026-10-03, overnight)
 
-Design: [design/20-deck-suggestions.md](design/20-deck-suggestions.md). Self-approved overnight;
+Design: [design/archive/20-deck-suggestions.md](design/archive/20-deck-suggestions.md). Self-approved overnight;
 **approved by you (2026-10-06)**.
 
 | Decision                                                                                                                                                                                                                        | Why                                                                                                                                                                | Where to change it                                                                                  | Good alternative                                        |
@@ -277,7 +277,7 @@ Design: [design/20-deck-suggestions.md](design/20-deck-suggestions.md). Self-app
 
 ### Sharing decks, comments, and cards to get (2026-10-03, overnight)
 
-Design: [design/21-sharing-decks.md](design/21-sharing-decks.md). Self-approved overnight;
+Design: [design/archive/21-sharing-decks.md](design/archive/21-sharing-decks.md). Self-approved overnight;
 **approved by you (2026-10-06)**.
 
 | Decision                                                                                                                                                                                                                                       | Why                                                                                                          | Where to change it                                   | Good alternative                                                      |
