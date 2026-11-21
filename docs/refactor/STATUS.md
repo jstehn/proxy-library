@@ -65,7 +65,7 @@ its own worktree. The order was revised by the [plan review](reviews/plan-review
 | P21   | [Naming sweep, README fact check, trimmed `CLAUDE.md`](packages/P21-naming-docs.md)      | P18, P20, P30, P33            | P22, P34           | free                                                                    |
 | P22   | [Design docs into `docs/modules/`; citation check](packages/P22-design-docs.md)          | P18, P30                      | P20, P21, P31–P34  | free                                                                    |
 | P34   | [Repo polish: CI, licence, contributing, README](packages/P34-repo-polish.md)            | P23 (its CLAUDE.md step: P21) | P20, P22, P32, P33 | free (several answers needed from the owner)                            |
-| P35   | [Sign-in and connector OAuth through Authentik (a feature)](packages/P35-authentik.md)   | P25                           | waves 5 and 6      | in progress (agent: app side; doc 69 accepted, option A)                |
+| P35   | [Sign-in and connector OAuth through Authentik (a feature)](packages/P35-authentik.md)   | P25                           | waves 5 and 6      | app side merged; the homelab Authentik setup waits for the owner's OK   |
 
 ```mermaid
 flowchart LR
