@@ -36,12 +36,6 @@ is still open. Mirrored in tududi (task "Removal register").
 | `FormatRuleSet.commandZoneTaxPerCast`: read by the deleted goldfish cast modifier; check it has a user                                                                                                                       | `decks/domain/format-rules.ts`   | P24      | P28 (keep if the effect registry reads it, else delete)                                     |
 | The last commit that had `sim-pipeline.ts`: `156a971` (refactor/main before P24), for P28 to read                                                                                                                            | P24 handoff                      | P24      | P28                                                                                         |
 
-## Duplicates to fold
-
-| What                                                                             | Where                             | Remove in                                                                  |
-| -------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------- |
-| `startDeckAction` repeats `startDeck`'s create-and-import (adds `usesRealCards`) | `app/decks/commanders/actions.ts` | **P32** (it splits the commanders page and actions; replaces "P11 or P19") |
-
 ## Removed from this list by the plan revision
 
 - **Dead-code candidates** (`planPackageInsert`, `dealMulliganDrill`, `evaluateMulliganDecision`,
