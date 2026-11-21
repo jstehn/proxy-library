@@ -3,7 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import boundaries from "eslint-plugin-boundaries";
 import { cardNameLiteral } from "./eslint-rules/card-name-literal.mjs";
-import { NOT_YET_RECOGNIZED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
+import { REGEX_ALLOWED, oracleTextRegex } from "./eslint-rules/oracle-text-regex.mjs";
 
 // Architecture rules. Each block maps to a decision in docs/adr/0009-lint-enforced-boundaries.md.
 
@@ -777,7 +777,7 @@ export default defineConfig([
   },
 
   // One regex, one place (design doc 66): card text is read by recognizers only. The files in
-  // NOT_YET_RECOGNIZED are the ones P12 to P14 still have to move; the list only shrinks.
+  // REGEX_ALLOWED are the files that keep one, each with its reason.
   {
     files: CARD_RULE_FOLDERS.map((folder) => `${folder}/**/*.ts`),
     ignores: [
@@ -787,7 +787,7 @@ export default defineConfig([
       "src/modules/catalog/rules/domain/comprehensive-rules.ts",
       "src/modules/catalog/outside/domain/edhrec.ts",
       "src/modules/catalog/cards/domain/wpn.ts",
-      ...NOT_YET_RECOGNIZED,
+      ...REGEX_ALLOWED,
     ],
     plugins: { cards: CARDS_PLUGIN },
     rules: { "cards/oracle-text-regex": "error" },
