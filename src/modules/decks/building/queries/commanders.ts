@@ -33,7 +33,7 @@ export type CommanderSearch = Readonly<{
   theme?: Theme;
   /** Only commanders whose plan or creature subtypes include this tribe (design doc 39). */
   tribe?: string;
-  /** Ordering heuristic (default "coverage", design doc 39). */
+  /** Ordering heuristic (default "combined", the popularity and power blend). */
   sort?: CommanderSort;
 }>;
 

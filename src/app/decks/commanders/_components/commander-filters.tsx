@@ -15,10 +15,10 @@ const COLOR_NAMES: Record<ManaColor, string> = {
 };
 
 export const SORT_LABELS: Readonly<Record<CommanderSort, string>> = {
-  coverage: "Cards I own (coverage)",
-  combined: "Blend (coverage + popularity + power)",
+  combined: "Blend of popularity and power",
   popularity: "Popularity (EDHREC rank)",
-  power: "Power heuristic (Game Changer & card strength)",
+  power: "Power (Game Changer, card strength, roles)",
+  coverage: "Fits my collection (cards I own)",
 };
 
 /** The filter form: colours, theme, tribe, order, and whether to include legends you don't own. */
@@ -84,7 +84,7 @@ export function CommanderFilterForm(props: { filters: CommanderFilters }) {
       <Button type="submit" size="sm">
         Show
       </Button>
-      {(colors.length > 0 || theme !== undefined || tribe !== "" || sort !== "coverage") && (
+      {(colors.length > 0 || theme !== undefined || tribe !== "" || sort !== "combined") && (
         <Link href={COMMANDERS_PATH} className="text-muted text-xs underline">
           Reset filters
         </Link>
