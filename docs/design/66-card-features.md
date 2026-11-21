@@ -3,7 +3,7 @@
 - **Phase:** refactor package P11 (doc 65, F4 and D12; steps 2 to 4 are P12 to P14)
 - **Status:** Accepted (user, 2026-11-19), with the answers in section 12. Steps 2 to 4 of P11 may start.
 - **Related ADRs:** 0017, 0019 (this extends it), 0026, 0027 (the decision, short)
-- **Lesson:** no (deferred, like the rest of the refactor: see `docs/refactor/STATUS.md`)
+- **Lesson:** no (deferred, like the rest of the refactor: see `docs/archive/refactor/STATUS.md`)
 
 Measured on `refactor/main` at `38c360e`, 2026-11-19, against the dev database in `.dev/`.
 
@@ -317,7 +317,7 @@ current version. The sync summary reports `featuresComputed`.
 Features reach consumers through `catalog.cardFeatures(oracleIds)`; deck queries add them to
 their rows. A card's features are about 1 to 3 KB as JSON, so a 100-card deck adds well under
 300 KB, and the builder gets tags, bracket flags and mana facts without running a recognizer in
-the browser. The LLM tools' output stays the same (`docs/refactor/reference/tools/`). No
+the browser. The LLM tools' output stays the same (`docs/archive/refactor/reference/tools/`). No
 events are emitted.
 
 ## 10. Patterns applied

@@ -1,6 +1,6 @@
 # The refactor: how to run a session
 
-This folder turns the audit ([design doc 65](../design/65-codebase-audit-and-refactor.md)) into
+This folder turns the audit ([design doc 65](../../design/65-codebase-audit-and-refactor.md)) into
 **work packages** small enough for one session each. A session, or an agent, can start from a
 clean context, read three or four short files, and work without reading the whole audit.
 

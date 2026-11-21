@@ -1,9 +1,9 @@
-// The size report (docs/refactor/README.md, "File size"). `pnpm sizes` lists source files over 500
-// lines and fails when one isn't in docs/refactor/oversize-allowlist.txt. It also prints the
-// totals that docs/refactor/STATUS.md tracks. Test files are reported but never fail the check.
+// The size report (docs/archive/refactor/README.md, "File size"). `pnpm sizes` lists source files over 500
+// lines and fails when one isn't in scripts/dev/baselines/oversize-allowlist.txt. It also prints the
+// totals that docs/archive/refactor/STATUS.md tracks. Test files are reported but never fail the check.
 //
 // It is also a ratchet: the production code lines (no blanks or comments; no tests, `testing/`
-// folders or fixtures) must not exceed docs/refactor/sizes-baseline.txt. `--update` lowers the
+// folders or fixtures) must not exceed scripts/dev/baselines/sizes-baseline.txt. `--update` lowers the
 // baseline to today's count and never raises it.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -12,8 +12,8 @@ const LINE_LIMIT = 500;
 const INDEX_LIMIT = 150;
 const ROOTS = ["src", "worker", "scripts", "tests"];
 const PRODUCTION_ROOTS = ["src", "worker", "scripts"];
-const ALLOWLIST_PATH = "docs/refactor/oversize-allowlist.txt";
-const BASELINE_PATH = "docs/refactor/sizes-baseline.txt";
+const ALLOWLIST_PATH = "scripts/dev/baselines/oversize-allowlist.txt";
+const BASELINE_PATH = "scripts/dev/baselines/sizes-baseline.txt";
 
 export type SourceFile = {
   path: string;

@@ -1,5 +1,10 @@
 # Refactor status
 
+> **Finished and archived 2026-11-21.** Every package is done, both milestones are merged into
+> `main` and deployed (last `979ffee`). The ratchet baselines moved to `scripts/dev/baselines/`.
+> What stays open is in [removal-list.md](removal-list.md) (one regex file the owner may move into
+> card features) and nothing else.
+
 > Read [README.md](README.md) first. Update this file at the start and end of every session (on
 > `refactor/main`). Statuses: **free**, **in progress (session name)**, **done**, **blocked
 > (reason)**.

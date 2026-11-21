@@ -2,7 +2,7 @@
 // files; P12 to P14 move them into recognizers (`catalog/cards/domain/features/recognizers/`). This counts
 // what is left: every regex literal (`/…/`) and every `new RegExp(` in the production code of the
 // folders that hold card rules, not counting the recognizers, tests or `testing/` folders.
-// `--update` lowers docs/refactor/regex-baseline.txt to today's count and never raises it.
+// `--update` lowers scripts/dev/baselines/regex-baseline.txt to today's count and never raises it.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
@@ -24,7 +24,7 @@ const NOT_CARD_TEXT = [
   "src/modules/catalog/outside/domain/edhrec.ts",
   "src/modules/catalog/cards/domain/wpn.ts",
 ];
-const BASELINE_PATH = "docs/refactor/regex-baseline.txt";
+const BASELINE_PATH = "scripts/dev/baselines/regex-baseline.txt";
 
 /** The production files to count: not tests, not `testing/` folders, not the recognizers. */
 function filesToCount(projectRoot: string): string[] {

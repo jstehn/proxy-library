@@ -23,10 +23,10 @@
 
 ## Contribute
 
-| Doc                                      | Read it when…                                                                |
-| ---------------------------------------- | ---------------------------------------------------------------------------- |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md) | you want to contribute: setup, commands, the process, the rules              |
-| [refactor/](refactor/README.md)          | you're working on the refactor (read README, then STATUS, then your package) |
+| Doc                                             | Read it when…                                                                           |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md)        | you want to contribute: setup, commands, the process, the rules                         |
+| [archive/refactor/](archive/refactor/STATUS.md) | the history of the 2026-11 refactor (finished 2026-11-21): packages, reviews, decisions |
 
 ## Notes
 
