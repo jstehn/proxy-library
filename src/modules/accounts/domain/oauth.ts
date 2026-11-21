@@ -1,16 +1,26 @@
 import type { UserId } from "@/shared/kernel";
-import { SCOPES, TOKEN_NAME_MAX_LENGTH, withRead, type Scope } from "./access-token";
+import { SCOPES, TOKEN_NAME_MAX_LENGTH, tokenHash, withRead, type Scope } from "./access-token";
 
 // OAuth for web connectors (design doc 30): the rules, as pure functions. The token a client
 // ends up with is an ordinary access token (design doc 28).
 
-/** An app that registered itself (RFC 7591), such as claude.ai's connector. */
+/** How a client proves who it is at the token endpoint (RFC 7591, design doc 69, section 5). */
+export const CLIENT_AUTH_METHODS = ["none", "client_secret_basic", "client_secret_post"] as const;
+export type ClientAuthMethod = (typeof CLIENT_AUTH_METHODS)[number];
+
+/** An app that registered itself (RFC 7591), such as claude.ai's connector, or an admin did. */
 export type OAuthClient = Readonly<{
   clientId: string;
   /** What the client called itself. Anyone can choose any name (rule 5). */
   name: string;
   redirectUris: readonly string[];
   createdAt: Date;
+  /** `none` is a public client (PKCE only); the others hold a secret. */
+  authMethod: ClientAuthMethod;
+  /** The SHA-256 of the client secret; null for a public client. The secret is never stored. */
+  secretHash: string | null;
+  /** The admin who made it by hand; null when the app registered itself. */
+  createdBy: UserId | null;
 }>;
 
 /** A one-time code from the approval page, as stored (only its hash is the key). */
@@ -24,11 +34,13 @@ export type AuthorizationCode = Readonly<{
   expiresAt: Date;
 }>;
 
-export const MAX_REDIRECT_URIS = 5;
+/** Design doc 69: some vendors register one URI per region or product. Matched exactly. */
+export const MAX_REDIRECT_URIS = 20;
 const REDIRECT_URI_MAX_LENGTH = 500;
 /** Rule 4: a code lives ten minutes. */
 const CODE_LIFETIME_MILLISECONDS = 10 * 60_000;
 const CLIENT_ID_PREFIX = "plc_";
+const CLIENT_SECRET_PREFIX = "pls_";
 /** RFC 7636: a verifier is 43 to 128 of these characters. */
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 /** base64url of a SHA-256: 43 characters. */
@@ -44,6 +56,61 @@ function base64Url(bytes: Uint8Array): string {
 export function clientIdFor(randomBytes: Uint8Array): string {
   if (randomBytes.length !== 32) throw new RangeError("a client id needs 32 random bytes");
   return CLIENT_ID_PREFIX + base64Url(randomBytes);
+}
+
+/** A new client secret from 32 random bytes; shown once, stored as a hash. */
+export function clientSecretFor(randomBytes: Uint8Array): string {
+  if (randomBytes.length !== 32) throw new RangeError("a client secret needs 32 random bytes");
+  return CLIENT_SECRET_PREFIX + base64Url(randomBytes);
+}
+
+/** The method a registration asked for; none given means a public client. Null: not supported. */
+export function authMethodFor(requested: string | undefined): ClientAuthMethod | null {
+  if (requested === undefined) return "none";
+  return CLIENT_AUTH_METHODS.find((method) => method === requested) ?? null;
+}
+
+export function isConfidential(client: Pick<OAuthClient, "authMethod">): boolean {
+  return client.authMethod !== "none";
+}
+
+/** Text compared without stopping at the first difference (both are fixed-length hashes). */
+function sameText(first: string, second: string): boolean {
+  if (first.length !== second.length) return false;
+  let difference = 0;
+  for (let index = 0; index < first.length; index += 1) {
+    difference |= first.charCodeAt(index) ^ second.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+/**
+ * Whether the client proved itself at the token endpoint: a public client sends no secret, a
+ * confidential one sends the secret it was given.
+ */
+export async function clientAuthenticated(
+  client: Pick<OAuthClient, "authMethod" | "secretHash">,
+  presentedSecret: string | null,
+): Promise<boolean> {
+  if (!isConfidential(client)) return presentedSecret === null;
+  if (presentedSecret === null || client.secretHash === null) return false;
+  return sameText(await tokenHash(presentedSecret), client.secretHash);
+}
+
+/** The id and secret in an `Authorization: Basic` header (RFC 6749, section 2.3.1), or null. */
+export function basicCredentials(header: string | null): { id: string; secret: string } | null {
+  const match = /^Basic\s+(\S+)\s*$/i.exec(header ?? "");
+  if (match === null) return null;
+  try {
+    const decoded = atob(match[1]);
+    const colon = decoded.indexOf(":");
+    if (colon < 0) return null;
+    // Both halves are form-encoded before they're joined.
+    const unform = (text: string) => decodeURIComponent(text.replace(/\+/g, " "));
+    return { id: unform(decoded.slice(0, colon)), secret: unform(decoded.slice(colon + 1)) };
+  } catch {
+    return null;
+  }
 }
 
 /** A new authorization code from 32 random bytes. */

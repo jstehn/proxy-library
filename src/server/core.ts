@@ -110,7 +110,12 @@ import { makeCheckHealth } from "./health";
 export function buildCore(config: Config) {
   const { db, close } = createDatabase(config.databaseUrl);
   const clock = systemClock();
-  const auth = createAuth({ db, secret: config.authSecret, appUrl: config.appUrl });
+  const auth = createAuth({
+    db,
+    secret: config.authSecret,
+    appUrl: config.appUrl,
+    oidc: config.oidc,
+  });
 
   // Called at the start of every transaction: builds each module's services so that all
   // of their database work happens inside that one transaction (ADR 0005).

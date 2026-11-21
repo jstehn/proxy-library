@@ -10,7 +10,12 @@ import type {
 import { AccessTokenId, withRead, type AccessToken } from "../domain/access-token";
 import type { DisplayName, Username } from "../domain/credentials";
 import type { Invite, InviteCode } from "../domain/invite";
-import type { AuthorizationCode, OAuthClient } from "../domain/oauth";
+import {
+  CLIENT_AUTH_METHODS,
+  type AuthorizationCode,
+  type ClientAuthMethod,
+  type OAuthClient,
+} from "../domain/oauth";
 import type { Player } from "../domain/player";
 import { accessTokens, authUsers, invites, oauthClients, oauthCodes, players } from "./schema";
 
@@ -193,17 +198,26 @@ export function drizzleAccessTokenRepository(db: DbExecutor): AccessTokenReposit
     async touch(id, at) {
       await db.update(accessTokens).set({ lastUsedAt: at }).where(eq(accessTokens.id, id));
     },
-    async revokeForClient(userId, clientId, at) {
+    async revokeForClient(clientId, at, userId) {
       const rows = await db
         .update(accessTokens)
         .set({ revokedAt: at })
         .where(
-          and(eq(accessTokens.userId, userId), eq(accessTokens.oauthClientId, clientId), isLive),
+          and(
+            eq(accessTokens.oauthClientId, clientId),
+            userId === undefined ? undefined : eq(accessTokens.userId, userId),
+            isLive,
+          ),
         )
         .returning({ id: accessTokens.id });
       return rows.length;
     },
   };
+}
+
+/** The stored method; anything unknown is treated as a public client (the column's default). */
+function clientAuthMethod(stored: string): ClientAuthMethod {
+  return CLIENT_AUTH_METHODS.find((method) => method === stored) ?? "none";
 }
 
 /** OAuth clients and codes (design doc 30), in `oauth_clients` and `oauth_codes`. */
@@ -214,7 +228,19 @@ export function drizzleOAuthRepository(db: DbExecutor): OAuthRepository {
     },
     async findClient(clientId) {
       const [row] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
-      return row ?? null;
+      if (row === undefined) return null;
+      return {
+        ...row,
+        authMethod: clientAuthMethod(row.authMethod),
+        createdBy: row.createdBy === null ? null : UserId.of(row.createdBy),
+      };
+    },
+    async deleteClient(clientId) {
+      const rows = await db
+        .delete(oauthClients)
+        .where(eq(oauthClients.clientId, clientId))
+        .returning({ clientId: oauthClients.clientId });
+      return rows.length > 0;
     },
     async insertCode(hash, code: AuthorizationCode) {
       await db.insert(oauthCodes).values({ ...code, codeHash: hash, scopes: [...code.scopes] });

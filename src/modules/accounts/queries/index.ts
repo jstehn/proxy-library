@@ -3,3 +3,4 @@
 // `public.ts` holds the one a visitor may call, so it is bound separately (`PublicReads`).
 export * from "./access-tokens";
 export * from "./admin";
+export * from "./external-sign-in";

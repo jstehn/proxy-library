@@ -69,4 +69,24 @@ Written in the design doc's own plan; the package is updated then.
 
 ## Handoff
 
-(empty)
+App side built on `feature/P35-build` from design doc 69 (option A, owner's answers in section 13).
+
+- **Registration log:** one `oauth registration {json}` line per attempt (outcome, reason, client
+  name, redirect URIs, auth method, grant types, user agent; never a secret). The approval page
+  names the sent and the registered redirect URIs.
+- **Option A:** `client_secret_basic` and `client_secret_post` at registration (`pls_` secret,
+  SHA-256 stored, shown once); the token endpoint authenticates the client before it touches the
+  code (invalid_client, 401 with `WWW-Authenticate: Basic`); metadata lists none, basic and post;
+  `MAX_REDIRECT_URIS` is 20, exact match. Migration `0055_oauth_confidential` (`auth_method`,
+  `client_secret_hash`, `created_by`). Admin page **Connectors** (create, list, delete; delete
+  revokes every token of the client).
+- **Authentik sign-in:** Better Auth `genericOAuth` (discovery, PKCE, nonce, verified ID token,
+  `disableSignUp`), on only when `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all
+  set (`OIDC_PROVIDER_NAME` optional). Link from the Account page, or by an admin-set verified
+  email (Admin → Players → Email). ADR 0028 mounts `GET /api/auth/callback/[provider]` only;
+  `/sign-in/finish` is a route that ends the session of a disabled player.
+- **Size:** production code +967 lines over `sizes-baseline.txt` (a feature; the baseline is not
+  edited). Every other `pnpm check` step passes (knip stays at 380).
+- **Not verified:** the real Authentik (discovery shape, `email_verified`, token auth method); the
+  fake issuer's documents are generated, not recorded. Better Auth reads discovery at start-up, so
+  an Authentik outage then disables the button until a restart.

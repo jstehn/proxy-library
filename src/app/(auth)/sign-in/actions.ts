@@ -11,6 +11,16 @@ export type SignInState = { error: string | null; username: string };
 
 const SignInForm = z.object({ username: z.string(), password: z.string() });
 
+/** Starts signing in with Authentik: sends the browser to it (design doc 69, section 4.5). */
+export async function signInWithExternalAction(formData: FormData): Promise<void> {
+  const { capabilities } = await readPage({ allowVisitors: true });
+  const url = await capabilities.accounts.startExternalSignIn(
+    { next: safeNextPath(formData.get("next")) },
+    await headers(),
+  );
+  redirect(url ?? "/sign-in?error=unavailable");
+}
+
 export async function signInAction(
   _previousState: SignInState,
   formData: FormData,

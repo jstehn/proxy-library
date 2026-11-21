@@ -4,6 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import type { Actor, AdminActor } from "@/modules/accounts";
 import { getContainer } from "./container";
 
+/** What the sign-in button calls the outside provider (Authentik), or null when none is set up. */
+export function externalSignInName(): string | null {
+  return getContainer().config.oidc?.providerName ?? null;
+}
+
 /** The signed-in player, or null. */
 export async function getCurrentActor(): Promise<Actor | null> {
   return getContainer().accounts.getActor(await headers());

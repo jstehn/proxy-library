@@ -115,9 +115,10 @@ export function inMemoryAccessTokenRepository(): AccessTokenRepository {
         tokens.set(id, { ...stored, token: { ...stored.token, lastUsedAt: at } });
       }
     },
-    async revokeForClient(userId, clientId, at) {
+    async revokeForClient(clientId, at, userId) {
       const theirs = live().filter(
-        (stored) => stored.token.userId === userId && stored.clientId === clientId,
+        (stored) =>
+          (userId === undefined || stored.token.userId === userId) && stored.clientId === clientId,
       );
       for (const stored of theirs) {
         tokens.set(stored.token.id, { ...stored, token: { ...stored.token, revokedAt: at } });
@@ -137,6 +138,9 @@ function inMemoryOAuthRepository(): OAuthRepository {
     },
     async findClient(clientId) {
       return clients.get(clientId) ?? null;
+    },
+    async deleteClient(clientId) {
+      return clients.delete(clientId);
     },
     async insertCode(hash, code) {
       codes.set(hash, { code, used: false });
@@ -159,6 +163,8 @@ const SESSION_HEADER = "x-test-session";
 export function inMemoryIdentityProvider() {
   const users = new Map<UserId, { username: Username; password: Password }>();
   const sessions = new Map<string, UserId>();
+  const emails = new Map<UserId, { email: string; verified: boolean }>();
+  const links = new Set<UserId>();
   const deletedUserIds: UserId[] = [];
   let nextId = 1;
 
@@ -219,6 +225,30 @@ export function inMemoryIdentityProvider() {
         if (owner === userId) sessions.delete(token);
       }
     },
+    async startExternalSignIn({ callbackPath }) {
+      return `https://idp.test/authorize?callback=${encodeURIComponent(callbackPath)}`;
+    },
+    async startExternalLink({ callbackPath }, requestHeaders) {
+      const userId = userIdFrom(requestHeaders);
+      if (userId === null) return null;
+      links.add(userId);
+      return `https://idp.test/authorize?link=${userId}&callback=${encodeURIComponent(callbackPath)}`;
+    },
+    async unlinkExternal(requestHeaders) {
+      const userId = userIdFrom(requestHeaders);
+      if (userId !== null) links.delete(userId);
+    },
+    async handleExternalCallback() {
+      return new Response(null, { status: 302, headers: { Location: "/sign-in/finish" } });
+    },
+    async setEmail(userId, input) {
+      const taken = [...emails].some(
+        ([owner, row]) => owner !== userId && row.email === input.email,
+      );
+      if (taken) return err({ kind: "EmailTaken" });
+      emails.set(userId, input);
+      return ok();
+    },
   };
 
   return {
@@ -234,6 +264,12 @@ export function inMemoryIdentityProvider() {
       return [...sessions.values()].filter((owner) => owner === userId).length;
     },
     deletedUserIds,
+    emailOf(userId: UserId) {
+      return emails.get(userId);
+    },
+    isLinked(userId: UserId): boolean {
+      return links.has(userId);
+    },
   };
 }
 

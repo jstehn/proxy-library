@@ -17,7 +17,9 @@ export type {
   RegisterClientInput,
   TokenRequest,
 } from "./application/oauth";
-export { type OAuthClient } from "./domain/oauth";
+export type { CreateManualClientError } from "./application/oauth-clients";
+export type { RedirectUriNotRegistered, UnknownClient } from "./domain/errors";
+export { basicCredentials, CLIENT_AUTH_METHODS, type OAuthClient } from "./domain/oauth";
 export {
   AccessTokenId,
   allows,
@@ -61,6 +63,9 @@ export type { InviteListItem, PlayerListItem } from "./queries/admin";
 export {
   describeChangeOwnPasswordError,
   describeSignInError,
+  describeExternalSignInError,
+  describeExternalLinkError,
+  describeSetPlayerEmailError,
   describeRegisterPlayerError,
   describePlayerActionError,
   type PlayerActionError,

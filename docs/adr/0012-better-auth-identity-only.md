@@ -1,6 +1,6 @@
 # 0012. Use Better Auth for identity only, behind a port
 
-- **Status:** Accepted
+- **Status:** Accepted (amended by 0028)
 - **Date:** 2026-09-27
 
 ## Context

@@ -111,11 +111,10 @@ export default async function AuthorizePage(props: PageProps<"/oauth/authorize">
       ) : (
         <>
           <h1 className="text-2xl font-semibold">Can&apos;t connect this app</h1>
-          <Alert tone="error">
-            {problemWords(
-              checked.error.kind === "UnknownClient" ? "UnknownClient" : "RedirectUriNotRegistered",
-            )}
-          </Alert>
+          {/* A refused request was redirected above, so only these two are shown. */}
+          {checked.error.kind !== "AuthorizationRefused" && (
+            <Alert tone="error">{problemWords(checked.error)}</Alert>
+          )}
         </>
       )}
     </main>

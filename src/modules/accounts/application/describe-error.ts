@@ -1,5 +1,6 @@
 import { assertNever } from "@/shared/kernel";
 import type { ChangeOwnPasswordError } from "./change-own-password";
+import type { SetPlayerEmailError } from "./external-sign-in";
 import type { SignInError } from "./sign-in";
 import type { RegisterPlayerError } from "./register-player";
 import type {
@@ -34,6 +35,51 @@ export function describeSignInError(error: SignInError): string {
       return "That username and password don't match.";
     case "AccountDisabled":
       return "This account has been disabled. Ask an admin if you think that's a mistake.";
+    default:
+      return assertNever(error);
+  }
+}
+
+/**
+ * What a failed sign-in with Authentik says. The code is Better Auth's `?error=`, which is
+ * whatever the provider or the library sent: only the ones that mean something get their own words.
+ */
+export function describeExternalSignInError(code: string | undefined): string | null {
+  if (code === undefined) return null;
+  switch (code) {
+    case "signup_disabled":
+    case "account_not_linked":
+      return (
+        "No Proxy Library player is linked to this Authentik account. Sign in with your " +
+        "password and link it from your Account page, or ask an admin."
+      );
+    case "disabled":
+      return describeSignInError({ kind: "AccountDisabled" });
+    case "unavailable":
+      return "Signing in with Authentik isn't available right now. Use your password.";
+    default:
+      return "Signing in with Authentik didn't work. Try again, or use your password.";
+  }
+}
+
+/** The same for linking from the Account page. */
+export function describeExternalLinkError(code: string | undefined): string | null {
+  if (code === undefined) return null;
+  return code === "account_already_linked_to_different_user"
+    ? "That Authentik account is already linked to another player."
+    : "Linking your Authentik account didn't work. Try again.";
+}
+
+export function describeSetPlayerEmailError(error: SetPlayerEmailError): string {
+  switch (error.kind) {
+    case "Forbidden":
+      return "Only admins can change a player's email.";
+    case "PlayerNotFound":
+      return "That player could not be found.";
+    case "EmailInvalid":
+      return `Email ${error.reason}.`;
+    case "EmailTaken":
+      return "Another player already has that email.";
     default:
       return assertNever(error);
   }

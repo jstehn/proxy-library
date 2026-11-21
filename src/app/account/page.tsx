@@ -4,10 +4,20 @@ import { InstallAppButton } from "../_components/install-app-button";
 import { CONFIRMATION_WORD } from "./confirmation";
 import { StartOverForm } from "./start-over-form";
 import { readPage } from "@/server/page-instance";
+import { describeExternalLinkError } from "@/modules/accounts";
+import { externalSignInName } from "@/server/session";
+import { Alert, SubmitButton } from "@/ui/form";
+import { linkExternalAction, unlinkExternalAction } from "./external-actions";
 
 /** The player's own account: their password, and starting over. */
-export default async function AccountPage() {
+export default async function AccountPage(props: PageProps<"/account">) {
   const { actor, reads } = await readPage();
+  const externalName = externalSignInName();
+  const external = externalName === null ? null : await reads.accounts.externalSignInStatus(actor);
+  const query = await props.searchParams;
+  const linkError = describeExternalLinkError(
+    typeof query.error === "string" ? query.error : undefined,
+  );
 
   const [wallet, economy] = await Promise.all([
     reads.wallet.summary(actor),
@@ -45,6 +55,37 @@ export default async function AccountPage() {
           Change password
         </Link>
       </section>
+
+      {externalName !== null && external !== null && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium">Sign in with {externalName}</h2>
+          {linkError !== null && <Alert tone="error">{linkError}</Alert>}
+          {external.linked ? (
+            <>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Your {externalName} account is linked. You can still sign in with your password.
+              </p>
+              <form action={unlinkExternalAction}>
+                <SubmitButton tone="secondary" pendingText="Unlinking…">
+                  Unlink {externalName}
+                </SubmitButton>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Link your {externalName} account to sign in with it. You will be sent there to sign
+                in, then back here.
+              </p>
+              <form action={linkExternalAction}>
+                <SubmitButton tone="secondary" pendingText="Opening…">
+                  Link {externalName}
+                </SubmitButton>
+              </form>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Connect an LLM</h2>
