@@ -104,6 +104,8 @@ test("the admin aims a Commander deck at a bracket and is warned when it goes ov
   await bracket.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/bracket-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
+  // On a phone the selected card is a pop-up over a dimmed page: close it to reach the tabs.
+  await page.getByRole("button", { name: "Close the selected card" }).click();
   await page.getByRole("tab", { name: /Deck/ }).click();
   await bracket.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/bracket-phone-dark.png" });

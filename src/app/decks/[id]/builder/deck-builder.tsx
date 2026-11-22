@@ -21,6 +21,8 @@ import { OpenPanels } from "./open-panels";
 import { PanelButtons } from "./panel-buttons";
 import { countedCopies } from "./selection/selection";
 import { SelectionSheet } from "./selection/selection-sheet";
+import type { DeckStepping } from "./selection/deck-steps";
+import { deckOrder } from "./list/groups";
 import { StatsPanel } from "./stats/stats-panel";
 import { useDeckChanges } from "./use-deck-changes";
 import { useSelection } from "./use-selection";
@@ -94,8 +96,34 @@ export function DeckBuilder(props: {
     .join(",");
   const [browsing, endRef] = useBrowse(deckId, isCommanderDeck, commanderColors);
 
+  // Previous and Next on the selected card walk the deck list's order, wrapping at the ends.
+  const order = deckOrder(deck.lines, deck.grouping, deck.headings);
+  const position =
+    selected === null
+      ? -1
+      : order.findIndex((line) => line.oracleId === selected.selection.oracleId);
+  function stepBy(by: 1 | -1) {
+    const next = order[(position + by + order.length) % order.length];
+    if (next !== undefined) selecting.selectFromDeck(next);
+  }
+  const stepping: DeckStepping | null =
+    position === -1
+      ? null
+      : {
+          position: position + 1,
+          total: order.length,
+          onPrevious: () => stepBy(-1),
+          onNext: () => stepBy(1),
+        };
+  // The key handler is added once, so it reads the latest stepping through a ref.
+  const steppingRef = useRef(stepping);
+  useEffect(() => {
+    steppingRef.current = stepping;
+  });
+
   // "/" jumps to the search box from anywhere on the page, as on Scryfall and GitHub; "H" opens
-  // or closes the test hand, "S" the suggestions, and Escape closes the selected card.
+  // or closes the test hand, "S" the suggestions, Escape closes the selected card, and the left
+  // and right arrows step to the deck's previous and next card while one is selected.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -112,6 +140,12 @@ export function DeckBuilder(props: {
         dispatch({ type: "panelToggled", panel: "suggestions" });
       } else if (event.key === "Escape") {
         dispatch({ type: "selectionCleared" });
+      } else if (event.key === "ArrowLeft" && steppingRef.current !== null) {
+        event.preventDefault();
+        steppingRef.current.onPrevious();
+      } else if (event.key === "ArrowRight" && steppingRef.current !== null) {
+        event.preventDefault();
+        steppingRef.current.onNext();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -141,6 +175,7 @@ export function DeckBuilder(props: {
         isLargeScreen={isLargeScreen}
         changes={changes}
         selecting={selecting}
+        stepping={stepping}
         dispatch={dispatch}
       />
     ) : null;

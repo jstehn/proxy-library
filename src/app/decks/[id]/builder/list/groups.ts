@@ -1,4 +1,4 @@
-import type { DeckLine } from "@/modules/decks";
+import type { DeckLine, Grouping } from "@/modules/decks";
 import { mainType, TYPE_ORDER } from "@/modules/decks/client";
 import { isLand, TAGS } from "@/shared/mtg";
 import { TAG_LABELS } from "@/app/decks/labels";
@@ -85,4 +85,28 @@ function typeGroups(main: readonly DeckLine[]): Group[] {
       title: type === "Other" ? "Other" : plural(type),
       lines: sortedByCost(byType.get(type) ?? []),
     }));
+}
+
+/**
+ * Every card of the deck once, in the order the deck list shows them: the commanders, then the
+ * groups of the deck's grouping (by type or by heading), then the sideboard and maybeboard. The
+ * selected card's Previous and Next buttons step through it. A card on two boards comes once, where
+ * it shows first.
+ */
+export function deckOrder(
+  lines: readonly DeckLine[],
+  grouping: Grouping,
+  headings: readonly string[],
+): DeckLine[] {
+  const groups = grouping === "custom" ? groupsByHeading(lines, headings) : groupsOf(lines);
+  const shown = [
+    ...lines.filter((line) => line.board === "commander"),
+    ...groups.flatMap((group) => group.lines),
+  ];
+  const seen = new Set<string>();
+  return shown.filter((line) => {
+    if (seen.has(line.oracleId)) return false;
+    seen.add(line.oracleId);
+    return true;
+  });
 }
