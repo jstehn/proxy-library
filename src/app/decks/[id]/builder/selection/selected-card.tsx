@@ -10,6 +10,7 @@ import { HiddenOverTarget, SuggestionRow } from "../suggestions/suggestions-pane
 import { ownedWords } from "../derive";
 import { CastCurve } from "../cast-curve/cast-curve";
 import { countedCopies, type Selection } from "./selection";
+import { DeckSteps, type DeckStepping } from "./deck-steps";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { CardView } from "@/ui/mtg/card-view";
@@ -47,8 +48,10 @@ export function SelectedCard(props: {
   otherDecks: readonly OtherDeckUse[] | "loading";
   /** Take `count` copies out of another deck, so they're free for this one. */
   onTake: (use: OtherDeckUse, count: number) => void;
+  /** Previous and Next through the deck list: null when the card isn't in the deck. */
+  stepping: DeckStepping | null;
 }) {
-  const { selection, detail } = props;
+  const { selection, detail, stepping } = props;
   const inDeck = countedCopies(selection.inDeck);
   const onMaybeboard = selection.inDeck.maybe ?? 0;
   const button =
@@ -70,14 +73,17 @@ export function SelectedCard(props: {
         heading={
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold">{selection.name}</h3>
-            <button
-              type="button"
-              onClick={props.onClose}
-              aria-label="Close the selected card"
-              className="text-muted hover:text-foreground"
-            >
-              ✕
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              {stepping !== null && <DeckSteps stepping={stepping} />}
+              <button
+                type="button"
+                onClick={props.onClose}
+                aria-label="Close the selected card"
+                className="text-muted hover:text-foreground flex h-11 w-11 items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         }
       >
