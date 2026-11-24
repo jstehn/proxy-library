@@ -8,6 +8,7 @@ import {
   type BracketEstimate,
   type BracketSource,
   type BracketWarning,
+  type DeckCombo,
 } from "@/modules/decks/core/client";
 import { isPlayed } from "@/modules/decks/core/client";
 import { BOARDS, type Board, type Format } from "@/modules/decks/core/client";
@@ -137,6 +138,7 @@ function snapshotOf(
   lines: readonly PreviewLine[],
   rulesLookup: (oracleId: string) => CardRules,
   ownedLookup: (oracleId: string) => number,
+  combos?: readonly DeckCombo[],
 ): PreviewSnapshot {
   const entries = lines.map((line) => ({
     oracleId: line.oracleId,
@@ -151,7 +153,11 @@ function snapshotOf(
   return {
     stats: deckStats(lines),
     problems,
-    bracket: estimateBracket(format, lines.map(bracketLine)),
+    bracket: estimateBracket(
+      format,
+      lines.map(bracketLine),
+      combos === undefined ? undefined : { combos },
+    ),
     shortTotal: shortCount(problems),
   };
 }
@@ -189,6 +195,11 @@ function cardsBehindRoleChanges(
   return { added, removed };
 }
 
+type PreviewCombos = Readonly<{
+  before?: readonly DeckCombo[];
+  after?: readonly DeckCombo[];
+}>;
+
 function buildComparison(input: {
   format: Format;
   targetBracket: Bracket | null;
@@ -196,6 +207,7 @@ function buildComparison(input: {
   after: readonly PreviewLine[];
   changes: readonly AppliedChange[];
   roleTargets?: Readonly<Record<TargetedTag, number>> | null;
+  combos?: PreviewCombos;
 }): ChangePreview {
   const rulesByCard = new Map<string, CardRules>();
   const ownedByCard = new Map<string, number>();
@@ -210,8 +222,20 @@ function buildComparison(input: {
   };
   const ownedLookup = (oracleId: string) => ownedByCard.get(oracleId) ?? 0;
 
-  const before = snapshotOf(input.format, input.before, rulesLookup, ownedLookup);
-  const after = snapshotOf(input.format, input.after, rulesLookup, ownedLookup);
+  const before = snapshotOf(
+    input.format,
+    input.before,
+    rulesLookup,
+    ownedLookup,
+    input.combos?.before,
+  );
+  const after = snapshotOf(
+    input.format,
+    input.after,
+    rulesLookup,
+    ownedLookup,
+    input.combos?.after,
+  );
 
   const beforeKeys = new Set(before.problems.map(problemKey));
   const afterKeys = new Set(after.problems.map(problemKey));
@@ -286,6 +310,7 @@ export function compareDeckStates(input: {
   before: readonly PreviewLine[];
   after: readonly PreviewLine[];
   roleTargets?: Readonly<Record<TargetedTag, number>> | null;
+  combos?: PreviewCombos;
 }): ChangePreview {
   const key = (oracleId: string, board: Board) => `${board}:${oracleId}`;
   const beforeMap = new Map<string, PreviewLine>();
@@ -328,6 +353,7 @@ export function compareDeckStates(input: {
     after: input.after,
     changes,
     roleTargets: input.roleTargets,
+    combos: input.combos,
   });
 }
 
@@ -343,6 +369,7 @@ export function previewChanges(input: {
   changes: readonly DeckChange[];
   facts: (oracleId: string) => PreviewLine;
   roleTargets?: Readonly<Record<TargetedTag, number>> | null;
+  combos?: PreviewCombos;
 }): ChangePreview {
   const known = new Map<string, PreviewLine>();
   for (const line of input.before) {
@@ -402,6 +429,7 @@ export function previewChanges(input: {
     after: working,
     changes,
     roleTargets: input.roleTargets,
+    combos: input.combos,
   });
 }
 

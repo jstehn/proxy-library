@@ -28,9 +28,9 @@ Rules marked 🔒 are enforced by tooling (lint, typecheck, or tests). The rest 
   More than that usually means a second job: give it its own folder. The one exception is
   `src/app/_llm-tools/bindings/`, one file per LLM tool named after it, so the folder reads as the
   tool list.
-- **Files stay under about 500 lines** (the benchmark; `pnpm sizes` lists the biggest and the
-  production-line ratchet in `scripts/dev/baselines/sizes-baseline.txt` only goes down). A longer file needs a
-  reason in its header comment.
+- **Files stay under about 500 lines** (the benchmark; `pnpm sizes` lists the biggest and enforces
+  `scripts/dev/baselines/oversize-allowlist.txt`). A longer file needs a reason in its header
+  comment.
 - **Adapters stay thin** (ADR 0026). A server action, a page, an LLM tool binding, an API route and
   a worker command each parse input, call a capability or a `reads` query, and present the result.
   They hold no rules, don't call each other, and import a module only through `index.ts` or

@@ -6,11 +6,15 @@ import { type Finish } from "@/shared/mtg";
 // collection, their real cards, or everything the store sells. The searches are readers; this
 // puts the two collections together and names each card.
 
+export type CatalogSearchSort = "name" | "price_desc" | "added_desc" | "mv";
+
 export type CopyRow = Readonly<{
   printingId: string;
   finish: Finish;
   quantity: number;
   price: number | null;
+  manaValue?: number;
+  lastAcquiredAt?: Date | null;
 }>;
 
 export type CollectionAnswer = Readonly<{
@@ -29,14 +33,26 @@ export type PrintingFacts = Readonly<{
   prices: Readonly<Record<string, number | undefined>>;
 }>;
 
+export type CollectionSearchOptions = Readonly<{
+  page: number;
+  search: string;
+  sort: CatalogSearchSort;
+  addedSince?: Date;
+}>;
+
+export type StoreSearchOptions = Readonly<{
+  search: string;
+  page: number;
+  oneRowPerCard: boolean;
+  sort: CatalogSearchSort;
+}>;
+
 export type SearchCatalogReaders = Readonly<{
-  collection(actor: Actor, page: number, search: string): Promise<CollectionAnswer>;
-  realCollection(actor: Actor, page: number, search: string): Promise<CollectionAnswer>;
+  collection(actor: Actor, options: CollectionSearchOptions): Promise<CollectionAnswer>;
+  realCollection(actor: Actor, options: CollectionSearchOptions): Promise<CollectionAnswer>;
   store(
     actor: Actor,
-    search: string,
-    page: number,
-    oneRowPerCard: boolean,
+    options: StoreSearchOptions,
   ): Promise<
     Readonly<{
       printingIds: readonly string[];
@@ -57,6 +73,8 @@ export type OwnedCardRow = Readonly<{
   source: "game" | "real";
   text: string | undefined;
   price: number | null;
+  manaValue?: number;
+  lastAcquiredAt?: Date | null;
 }>;
 
 export type StoreCardRow = Readonly<{
@@ -90,18 +108,55 @@ export type CatalogSearchRequest = Readonly<{
   where: "owned" | "game" | "real" | "store";
   page: number;
   oneRowPerCard: boolean;
+  sort?: CatalogSearchSort;
+  addedSince?: Date;
 }>;
+
+function compareOwnedRows(
+  sort: CatalogSearchSort,
+  left: OwnedCardRow,
+  right: OwnedCardRow,
+): number {
+  const byName = () =>
+    left.name.localeCompare(right.name) || (left.set ?? "").localeCompare(right.set ?? "");
+  switch (sort) {
+    case "price_desc": {
+      const leftPrice = left.price ?? -1;
+      const rightPrice = right.price ?? -1;
+      return rightPrice - leftPrice || byName();
+    }
+    case "added_desc": {
+      const leftTime = left.lastAcquiredAt?.getTime() ?? -1;
+      const rightTime = right.lastAcquiredAt?.getTime() ?? -1;
+      return rightTime - leftTime || byName();
+    }
+    case "mv": {
+      const leftMana = left.manaValue ?? Number.MAX_SAFE_INTEGER;
+      const rightMana = right.manaValue ?? Number.MAX_SAFE_INTEGER;
+      return leftMana - rightMana || byName();
+    }
+    case "name":
+      return byName();
+  }
+}
 
 export function makeSearchCatalog(readers: SearchCatalogReaders) {
   async function searchCatalog(
     actor: Actor,
     request: CatalogSearchRequest,
   ): Promise<Result<CatalogSearch, never>> {
-    const { search, where, page } = request;
+    const { search, where, page, addedSince } = request;
+    const sort = request.sort ?? "name";
     if (where !== "store") {
+      const options: CollectionSearchOptions = {
+        page,
+        search,
+        sort,
+        ...(addedSince !== undefined ? { addedSince } : {}),
+      };
       const [game, real] = await Promise.all([
-        where === "real" ? null : readers.collection(actor, page, search),
-        where === "game" ? null : readers.realCollection(actor, page, search),
+        where === "real" ? null : readers.collection(actor, options),
+        where === "game" ? null : readers.realCollection(actor, options),
       ]);
       const rows = [
         ...(game?.rows.map((row) => ({ ...row, source: "game" as const })) ?? []),
@@ -120,9 +175,11 @@ export function makeSearchCatalog(readers: SearchCatalogReaders) {
             source: row.source,
             text: card?.faces.map((face) => face.text).join("\n"),
             price: row.price,
+            ...(row.manaValue !== undefined ? { manaValue: row.manaValue } : {}),
+            ...(row.lastAcquiredAt !== undefined ? { lastAcquiredAt: row.lastAcquiredAt } : {}),
           };
         })
-        .sort((a, b) => a.name.localeCompare(b.name) || (a.set ?? "").localeCompare(b.set ?? ""));
+        .sort((left, right) => compareOwnedRows(sort, left, right));
       return ok({
         kind: "owned",
         notes: game?.notes ?? real?.notes ?? [],
@@ -134,7 +191,12 @@ export function makeSearchCatalog(readers: SearchCatalogReaders) {
         cards: named,
       });
     }
-    const found = await readers.store(actor, search, page, request.oneRowPerCard);
+    const found = await readers.store(actor, {
+      search,
+      page,
+      oneRowPerCard: request.oneRowPerCard,
+      sort,
+    });
     const cards = await readers.printings(found.printingIds);
     return ok({
       kind: "store",

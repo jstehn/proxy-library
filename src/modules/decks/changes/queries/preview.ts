@@ -7,7 +7,7 @@ import { type DbExecutor, latestPrice } from "@/shared/db";
 import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { type UserId } from "@/shared/kernel";
 import { ColorSchema, type Tag, type Theme } from "@/shared/mtg";
-import { MAX_LIST_LINES, MAX_QUANTITY, type Board } from "@/modules/decks/core/client";
+import { isPlayed, MAX_LIST_LINES, MAX_QUANTITY, type Board } from "@/modules/decks/core/client";
 import { resolveDeckProfileTargets, type DeckPlan } from "@/modules/decks/core/client";
 import type {
   DeckChanged,
@@ -26,7 +26,7 @@ import type { CardRules } from "@/modules/decks/core/client";
 import { formatRules } from "@/modules/decks/core/client";
 import { decks } from "@/modules/decks/core/infrastructure/schema";
 import type { DeckLine, DeckView } from "@/modules/decks/core/client";
-import { deckView } from "@/modules/decks/core";
+import { combosForDeck, deckView } from "@/modules/decks/core";
 import { MOST_SPECIAL_FIRST, ownedCopies, STANDARD_FIRST } from "@/modules/decks/core";
 
 // Read model for dry-run change previews (design doc 40, section 3.3). Shares `deckView` and the
@@ -199,6 +199,28 @@ export async function loadCardsForPreview(
   return loaded;
 }
 
+function playedOracleIdsAfter(
+  before: readonly PreviewLine[],
+  changes: readonly DeckChange[],
+): string[] {
+  const counts = new Map<string, number>();
+  const key = (oracleId: string, board: Board) => `${board}:${oracleId}`;
+  for (const line of before) {
+    if (isPlayed(line.board)) counts.set(key(line.oracleId, line.board), line.quantity);
+  }
+  for (const change of changes) {
+    if (!isPlayed(change.board)) continue;
+    const entryKey = key(change.oracleId, change.board);
+    if (change.quantity === 0) counts.delete(entryKey);
+    else counts.set(entryKey, change.quantity);
+  }
+  const ids = new Set<string>();
+  for (const entryKey of counts.keys()) {
+    ids.add(entryKey.slice(entryKey.indexOf(":") + 1));
+  }
+  return [...ids];
+}
+
 async function previewFromView(
   db: DbExecutor,
   userId: UserId,
@@ -211,13 +233,20 @@ async function previewFromView(
   const missingIds = changes
     .map((change) => change.oracleId)
     .filter((oracleId) => !inDeck.has(oracleId));
-  const [extra, profileRows] = await Promise.all([
+  const checkCombos = formatRules(view.deck.format).bracketsApply;
+  const beforePlayedIds = before
+    .filter((line) => isPlayed(line.board))
+    .map((line) => line.oracleId);
+  const afterPlayedIds = playedOracleIdsAfter(before, changes);
+  const [extra, profileRows, beforeCombos, afterCombos] = await Promise.all([
     loadCardsForPreview(db, userId, view.deck.usesRealCards, missingIds),
     db
       .select({ profileJson: decks.profileJson })
       .from(decks)
       .where(eq(decks.id, Number(view.deck.id)))
       .limit(1),
+    checkCombos ? combosForDeck(db, beforePlayedIds) : Promise.resolve(undefined),
+    checkCombos ? combosForDeck(db, afterPlayedIds) : Promise.resolve(undefined),
   ]);
   const deckProfile = (profileRows[0]?.profileJson as DeckPlan | null | undefined) ?? null;
   const baseTargets = formatRules(view.deck.format).roleTargets;
@@ -235,6 +264,7 @@ async function previewFromView(
     before,
     changes,
     roleTargets: resolvedTargets,
+    combos: { before: beforeCombos, after: afterCombos },
     facts: (oracleId) => {
       const found = extra.get(oracleId);
       if (found === undefined) throw new Error(`unknown card ${oracleId}`);

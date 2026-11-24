@@ -84,4 +84,19 @@ describe("lookUpCards", () => {
       high: null,
     });
   });
+
+  it("loads distinct set codes only when includeSets is requested", async () => {
+    const withSets = await makeCardLookup(readers({ sets: async () => ["CMM", "FDN", "RAV"] }))(
+      actor,
+      { queries: ["Sol Ring"], includeSets: true },
+    );
+    const [entry] = withSets.ok ? withSets.value : [];
+    expect(entry?.found && entry.sets).toEqual(["CMM", "FDN", "RAV"]);
+
+    const withoutSets = await makeCardLookup(readers({ sets: async () => ["CMM"] }))(actor, {
+      queries: ["Sol Ring"],
+    });
+    const [plain] = withoutSets.ok ? withoutSets.value : [];
+    expect(plain?.found && plain.sets).toBeUndefined();
+  });
 });

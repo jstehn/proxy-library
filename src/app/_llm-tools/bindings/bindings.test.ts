@@ -354,3 +354,207 @@ describe("research bindings", () => {
     ).toEqual({ ok: false, error: { kind: "RateLimited", message: "slow down" } });
   });
 });
+
+describe("token efficiency & bug fix bindings", () => {
+  it("manage_wishlist formats shortBy paydays count without [object Object]", async () => {
+    const context = contextWith({
+      wishlistView: async () =>
+        ok({
+          balance: 100,
+          totalForMissing: 300,
+          lines: [
+            {
+              wish: { id: 1, quantity: 1, targetPrice: null, note: "" },
+              name: "Doubling Season",
+              owned: 0,
+              missing: 1,
+              offer: { price: 161 },
+              total: 161,
+              atTarget: false,
+              status: {
+                kind: "shortBy",
+                shortfall: 61,
+                paydays: { count: 1, date: new Date("2026-11-30T00:00:00Z") },
+              },
+            },
+            {
+              wish: { id: 2, quantity: 1, targetPrice: null, note: "" },
+              name: "Sol Ring",
+              owned: 0,
+              missing: 1,
+              offer: { price: 150 },
+              total: 150,
+              atTarget: false,
+              status: { kind: "shortBy", shortfall: 50, paydays: null },
+            },
+          ],
+        }),
+    });
+    const result = await callTool(context, "manage_wishlist", { action: "list" });
+    expect(result).toMatchObject({
+      kind: "outcome",
+      outcome: {
+        ok: true,
+        value: {
+          wishes: [
+            { name: "Doubling Season", status: "shortBy:61c/1p" },
+            { name: "Sol Ring", status: "shortBy:50c" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("edit_deck returns a minimal ack when committing via previewId", async () => {
+    const context = contextWith({
+      deckPreviews: {
+        applyPreview: async () =>
+          ok({
+            fingerprint: "fp-next",
+            warnings: [],
+            preview: {
+              deck: { id: 60, name: "Kudo", format: "commander" },
+              after: { stats: { cardCount: 100 }, shortTotal: 2 },
+            },
+          }),
+      },
+    });
+    const result = await callTool(context, "edit_deck", {
+      deckId: 60,
+      previewId: "p-1",
+      save: true,
+    });
+    expect(result).toEqual({
+      kind: "outcome",
+      outcome: {
+        ok: true,
+        value: {
+          saved: true,
+          deckId: 60,
+          fingerprint: "fp-next",
+          cardCount: 100,
+          shortTotal: 2,
+        },
+      },
+    });
+  });
+
+  it("get_cards includes deduplicated sets on detail='compact' only when includeSets is true", async () => {
+    const asked: unknown[] = [];
+    const context = contextWith({
+      lookUpCards: async (_actor: Actor, request: unknown) => {
+        asked.push(request);
+        return ok([
+          {
+            query: "Doubling Season",
+            found: true,
+            card: {
+              name: "Doubling Season",
+              oracleId: "o1",
+              printingId: "p1",
+              typeLine: "Enchantment",
+              manaCost: "{4}{G}",
+              colorIdentity: ["G"],
+            },
+            faces: [{ text: "If an effect would create one or more tokens..." }],
+            set: { code: "FDN", name: "Foundations" },
+            priceTrend: [],
+            owned: { total: 0, game: 0, real: 0, printings: [] },
+            ownedOfThisPrinting: {},
+            decksUsing: [],
+            wishes: [],
+            printingsForSale: [],
+            sets: ["CMM", "FDN", "RAV"],
+          },
+        ]);
+      },
+    });
+    const withSets = await callTool(context, "get_cards", {
+      cards: ["Doubling Season"],
+      detail: "compact",
+      includeSets: true,
+    });
+    expect(asked[0]).toEqual({ queries: ["Doubling Season"], includeSets: true });
+    expect(withSets).toMatchObject({
+      kind: "outcome",
+      outcome: {
+        ok: true,
+        value: { cards: [{ name: "Doubling Season", sets: ["CMM", "FDN", "RAV"] }] },
+      },
+    });
+
+    const withoutSets = await callTool(context, "get_cards", {
+      cards: ["Doubling Season"],
+      detail: "compact",
+    });
+    expect(withoutSets.kind === "outcome" && withoutSets.outcome.ok).toBe(true);
+    if (withoutSets.kind === "outcome" && withoutSets.outcome.ok) {
+      const value = withoutSets.outcome.value as { cards: Record<string, unknown>[] };
+      expect(value.cards[0]?.sets).toBeUndefined();
+    }
+  });
+
+  it("search_cards parses addedSince shorthand, forwards sort, and shows prices for price_desc", async () => {
+    const now = new Date("2026-11-24T12:00:00Z");
+    const calls: unknown[] = [];
+    const context = contextWith({
+      now: () => now,
+      searchCatalog: async (_actor: Actor, request: unknown) => {
+        calls.push(request);
+        return ok({
+          kind: "owned",
+          notes: [],
+          totals: { cards: 1, copies: 1 },
+          pageCount: 1,
+          cards: [
+            {
+              name: "Doubling Season",
+              printingId: "p1",
+              set: "FDN",
+              finish: "nonfoil",
+              quantity: 1,
+              source: "game",
+              text: "Tokens",
+              price: 3500,
+            },
+          ],
+        });
+      },
+    });
+    const result = await callTool(context, "search_cards", {
+      where: "owned",
+      addedSince: "24h",
+      sort: "price_desc",
+    });
+    expect(calls[0]).toEqual({
+      search: "",
+      where: "owned",
+      page: 1,
+      oneRowPerCard: true,
+      sort: "price_desc",
+      addedSince: new Date("2026-11-23T12:00:00Z"),
+    });
+    expect(result).toMatchObject({
+      kind: "outcome",
+      outcome: {
+        ok: true,
+        value: { cards: [{ name: "Doubling Season", priceCents: 3500 }] },
+      },
+    });
+
+    const badDate = await callTool(context, "search_cards", { addedSince: "yesterday" });
+    expect(badDate).toMatchObject({
+      kind: "outcome",
+      outcome: { ok: false, error: { kind: "InvalidInput" } },
+    });
+
+    const onStore = await callTool(context, "search_cards", {
+      where: "store",
+      addedSince: "7d",
+    });
+    expect(onStore).toMatchObject({
+      kind: "outcome",
+      outcome: { ok: false, error: { kind: "InvalidInput" } },
+    });
+  });
+});

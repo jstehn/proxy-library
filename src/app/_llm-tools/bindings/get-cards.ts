@@ -24,6 +24,12 @@ export const getCardsBinding = defineBinding({
       .boolean()
       .default(false)
       .describe("Include store price in cents (default false; always included in detail='full')."),
+    includeSets: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Include a flat deduplicated list of enabled set codes per card (for detail='compact').",
+      ),
     cursor: z.number().int().min(0).optional().describe("Pagination cursor if capped."),
   }),
   async call(capabilities, actor, input) {
@@ -35,6 +41,7 @@ export const getCardsBinding = defineBinding({
     }
     const cards = await capabilities.lookUpCards(actor, {
       queries: input.cards.slice(0, 25),
+      includeSets: input.includeSets && input.detail === "compact",
     });
     if (!cards.ok) return cards;
     return ok<Answer>({ detail: input.detail, cards: cards.value });
@@ -44,6 +51,9 @@ export const getCardsBinding = defineBinding({
       ? presentOwnedCards(answer.checked, input.includePrice)
       : answer.detail === "full"
         ? presentFullCards(answer.cards)
-        : presentCompactCards(answer.cards, input.includePrice),
+        : presentCompactCards(answer.cards, {
+            includePrice: input.includePrice,
+            includeSets: input.includeSets,
+          }),
   describeError: () => ({ kind: "Unexpected", message: "get_cards cannot fail." }),
 });

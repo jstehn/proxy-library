@@ -15,7 +15,9 @@ function lineView(line: Line) {
     atTarget: line.atTarget,
     status:
       line.status.kind === "shortBy"
-        ? `shortBy:${Math.round(line.status.shortfall)}c/${line.status.paydays}p`
+        ? line.status.paydays === null
+          ? `shortBy:${Math.round(line.status.shortfall)}c`
+          : `shortBy:${Math.round(line.status.shortfall)}c/${line.status.paydays.count}p`
         : line.status.kind,
     ...(line.wish.note ? { note: line.wish.note } : {}),
   };

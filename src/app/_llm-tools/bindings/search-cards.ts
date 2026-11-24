@@ -31,6 +31,27 @@ type Answer =
     }>
   | Readonly<{ mode: "catalog"; result: CatalogSearch }>;
 
+const SHORTHAND_UNITS: Readonly<Record<string, number>> = {
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+  w: 7 * 24 * 60 * 60 * 1000,
+};
+
+function parseAddedSince(raw: string, now: Date): Date | null {
+  const trimmed = raw.trim();
+  const shorthand = /^(\d+)\s*([mhdw])$/i.exec(trimmed);
+  if (shorthand !== null) {
+    const amount = Number(shorthand[1]);
+    const unitMilliseconds = SHORTHAND_UNITS[shorthand[2].toLowerCase()];
+    if (!Number.isFinite(amount) || amount <= 0 || unitMilliseconds === undefined) return null;
+    return new Date(now.getTime() - amount * unitMilliseconds);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return null;
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export const searchCardsBinding = defineBinding({
   name: "search_cards",
   title: "Search cards (catalog, deck-filtered, semantic, or signals)",
@@ -93,6 +114,20 @@ export const searchCardsBinding = defineBinding({
       .boolean()
       .default(true)
       .describe("Store search: cheapest printing per card (true) or all printings (false)."),
+    sort: z
+      .enum(["price_desc", "added_desc", "mv", "name"])
+      .optional()
+      .describe(
+        "Sort order for catalog/collection search: 'price_desc', 'added_desc' (owned only), 'mv', or 'name' (default).",
+      ),
+    addedSince: z
+      .string()
+      .min(1)
+      .max(40)
+      .optional()
+      .describe(
+        "Filter owned cards acquired since an ISO date (e.g. '2026-11-23') or shorthand ('24h', '7d', '2w').",
+      ),
     page: z.number().int().min(1).default(1).describe("Page number for plain syntax search."),
   }),
   async call(capabilities, actor, input) {
@@ -157,25 +192,50 @@ export const searchCardsBinding = defineBinding({
       return found.ok ? ok<Answer>({ mode: "deck", ...found.value }) : found;
     }
 
-    if (!input.search) {
+    let addedSince: Date | undefined;
+    if (input.addedSince !== undefined) {
+      if (input.where === "store") {
+        return err<Failure>({
+          kind: "InvalidInput",
+          message: "`addedSince` only applies to owned cards (where: 'owned', 'game', or 'real').",
+        });
+      }
+      const parsed = parseAddedSince(input.addedSince, capabilities.now());
+      if (parsed === null) {
+        return err<Failure>({
+          kind: "InvalidInput",
+          message:
+            "Invalid `addedSince`. Use an ISO date (e.g. '2026-11-23') or shorthand like '24h' or '7d'.",
+        });
+      }
+      addedSince = parsed;
+    }
+
+    if (!input.search && addedSince === undefined && input.sort === undefined) {
       return err<Failure>({
         kind: "InvalidInput",
-        message: "Provide `search` (or `deckId` + `queries`).",
+        message: "Provide `search` (or `deckId` + `queries`, or `addedSince` / `sort`).",
       });
     }
+    const where =
+      input.where === "owned" || input.where === "game" || input.where === "real"
+        ? input.where
+        : addedSince !== undefined || input.sort === "added_desc"
+          ? "owned"
+          : "store";
     const result = await capabilities.searchCatalog(actor, {
-      search: input.search,
-      where:
-        input.where === "owned" || input.where === "game" || input.where === "real"
-          ? input.where
-          : "store",
+      search: input.search ?? "",
+      where,
       page: input.page,
       oneRowPerCard: input.oneRowPerCard,
+      ...(input.sort !== undefined ? { sort: input.sort } : {}),
+      ...(addedSince !== undefined ? { addedSince } : {}),
     });
     return result.ok ? ok<Answer>({ mode: "catalog", result: result.value }) : result;
   },
   present: (answer, { input }) => {
-    const showPrice = input.includePrice || input.maxPriceCents !== undefined;
+    const showPrice =
+      input.includePrice || input.maxPriceCents !== undefined || input.sort === "price_desc";
     switch (answer.mode) {
       case "signals":
         return presentSignals(answer.result);

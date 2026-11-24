@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  compareToBaseline,
-  countCodeLines,
-  countProductionCodeLines,
-  nextBaseline,
-  parseAllowlist,
-  type SourceFile,
-} from "./sizes";
+import { countCodeLines, countProductionCodeLines, parseAllowlist, type SourceFile } from "./sizes";
 
 function file(path: string, codeLines: number, kind: "production" | "test" | "support") {
   const result: SourceFile = {
@@ -40,23 +33,6 @@ describe("countProductionCodeLines", () => {
       file("tests/e2e/a.spec.ts", 40, "test"),
     ];
     expect(countProductionCodeLines(files)).toBe(18);
-  });
-});
-
-describe("the baseline", () => {
-  it("passes at the baseline, reports growth, and reports room to lower it", () => {
-    expect(compareToBaseline(100, 100)).toEqual({ kind: "ok" });
-    expect(compareToBaseline(105, 100)).toEqual({ kind: "over", difference: 5 });
-    expect(compareToBaseline(90, 100)).toEqual({ kind: "lower", difference: 10 });
-  });
-
-  it("treats a missing baseline as room to write one", () => {
-    expect(compareToBaseline(100, Infinity)).toEqual({ kind: "lower", difference: Infinity });
-  });
-
-  it("only ever lowers", () => {
-    expect(nextBaseline(90, 100)).toBe(90);
-    expect(nextBaseline(110, 100)).toBe(100);
   });
 });
 

@@ -4,7 +4,9 @@ import {
   makeRulesLookup,
   makeSearchCatalog,
   printingCards,
+  setCodesOfCard,
   storePrintingsOfCard,
+  type CatalogSearchSort,
 } from "@/modules/catalog";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
 import { decksUsing, findCard } from "@/modules/decks";
@@ -21,6 +23,20 @@ export type LookupWiringDependencies = Readonly<{
   textEmbedder: (texts: readonly string[]) => Promise<number[][]>;
   outsideData: OutsideDataService;
 }>;
+
+const COLLECTION_SORT: Record<CatalogSearchSort, "name" | "price" | "newest" | "mana"> = {
+  name: "name",
+  price_desc: "price",
+  added_desc: "newest",
+  mv: "mana",
+};
+
+const STORE_SORT: Record<CatalogSearchSort, "name" | "price" | "mana"> = {
+  name: "name",
+  price_desc: "price",
+  added_desc: "name",
+  mv: "mana",
+};
 
 export function wireLookupCapabilities(dependencies: LookupWiringDependencies) {
   const { db, reads, textEmbedder, outsideData } = dependencies;
@@ -41,19 +57,32 @@ export function wireLookupCapabilities(dependencies: LookupWiringDependencies) {
         (await decksUsing(db, actor.userId, [printingId])).get(printingId) ?? [],
       wishes: (actor, printingId) => reads.wishlist.forCard(actor, printingId),
       storePrintings: (actor, name) => storePrintingsOfCard(db, actor, name, 20),
+      sets: (oracleId) => setCodesOfCard(db, oracleId),
     }),
     searchCatalog: makeSearchCatalog({
-      collection: (actor, page, search) =>
-        reads.collection.page(actor, { search, sections: "none", sort: "name", page }),
-      realCollection: (actor, page, search) =>
-        reads.realCollection.page(actor, actor.userId, {
-          search,
+      collection: (actor, options) =>
+        reads.collection.page(actor, {
+          search: options.search,
           sections: "none",
-          sort: "name",
-          page,
+          sort: COLLECTION_SORT[options.sort],
+          page: options.page,
+          ...(options.addedSince !== undefined ? { addedSince: options.addedSince } : {}),
         }),
-      store: (actor, search, page, oneRowPerCard) =>
-        reads.catalog.searchPrintings(actor, { search, sort: "name", page, oneRowPerCard }),
+      realCollection: (actor, options) =>
+        reads.realCollection.page(actor, actor.userId, {
+          search: options.search,
+          sections: "none",
+          sort: COLLECTION_SORT[options.sort],
+          page: options.page,
+          ...(options.addedSince !== undefined ? { addedSince: options.addedSince } : {}),
+        }),
+      store: (actor, options) =>
+        reads.catalog.searchPrintings(actor, {
+          search: options.search,
+          sort: STORE_SORT[options.sort],
+          page: options.page,
+          oneRowPerCard: options.oneRowPerCard,
+        }),
       printings: (ids) => printingCards(db, ids),
     }),
   };

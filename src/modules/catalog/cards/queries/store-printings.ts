@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import type { Actor } from "@/modules/accounts";
 import { searchPrintings } from "./catalog";
@@ -39,4 +40,16 @@ export async function storePrintingsOfCard(
       },
     ];
   });
+}
+
+/** Distinct enabled set codes where a card (by oracle id) was printed, sorted alphabetically. */
+export async function setCodesOfCard(db: DbExecutor, oracleId: string): Promise<string[]> {
+  const rows = await db.execute<{ set_code: string }>(sql`
+    select distinct p.set_code
+      from printings p
+      join card_sets s on s.code = p.set_code and s.is_enabled
+     where p.oracle_id = ${oracleId}
+     order by p.set_code
+  `);
+  return rows.rows.map((row) => row.set_code);
 }

@@ -90,6 +90,7 @@ export function compactDeckPayload(
       ...(stats.sideboardCount ? { sideboard: stats.sideboardCount } : {}),
       lands: stats.lands,
       averageManaValue: stats.averageManaValue,
+      ...(missingCopies > 0 ? { shortTotal: missingCopies } : {}),
       ...(bracket !== null
         ? {
             bracket: {
@@ -125,7 +126,7 @@ export function compactDeckPayload(
       roles: stats.roles,
     },
     ...(otherProblems.length > 0 ? { problems: otherProblems } : {}),
-    ...(missingLines.length > 0
+    ...(input.include.includes("short") && missingLines.length > 0
       ? {
           short: {
             copies: missingCopies,
@@ -139,7 +140,7 @@ export function compactDeckPayload(
         }
       : {}),
     ...includedSections(view, input, fullPayload),
-    more: 'cards: [names] for full detail; boards: ["maybe"] for maybeboard text; include: prices | ids | owners | tokens | odds | sources | legality | list | formatRules.',
+    more: 'cards: [names] for full detail; boards: ["maybe"] for maybeboard text; include: short | prices | ids | owners | tokens | odds | sources | legality | list | formatRules.',
   };
   const budget =
     MAX_TOOL_RESPONSE_BYTES - jsonByteLength(header) - jsonByteLength(footer) - PAGE_MARGIN_BYTES;

@@ -28,6 +28,7 @@ export const getDeckBinding = defineBinding({
           "mana_plan",
           "primer",
           "text",
+          "short",
           "owners",
           "prices",
           "ids",
@@ -40,7 +41,7 @@ export const getDeckBinding = defineBinding({
       )
       .optional()
       .describe(
-        "Optional extra sections: 'facts', 'signals', 'mana_plan', 'primer', 'text', 'owners', 'prices', 'ids', 'tokens', 'odds', 'sources', 'formatRules', 'legality'.",
+        "Optional extra sections: 'facts', 'signals', 'mana_plan', 'primer', 'text', 'short', 'owners', 'prices', 'ids', 'tokens', 'odds', 'sources', 'formatRules', 'legality'.",
       ),
     view: z
       .enum(["compact", "full"])

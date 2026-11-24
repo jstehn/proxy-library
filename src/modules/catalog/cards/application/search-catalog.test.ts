@@ -66,4 +66,80 @@ describe("searchCatalog", () => {
       { name: "Banana", cheapest: 200 },
     ]);
   });
+
+  it("sorts merged owned cards by price_desc, added_desc, and mv and forwards addedSince", async () => {
+    const seen: unknown[] = [];
+    const earlier = new Date("2026-11-20T00:00:00Z");
+    const later = new Date("2026-11-24T00:00:00Z");
+    const customReaders = readers({
+      collection: async (_actor, options) => {
+        seen.push(options);
+        return {
+          rows: [
+            {
+              printingId: "p-b",
+              finish: "nonfoil",
+              quantity: 1,
+              price: 100,
+              manaValue: 5,
+              lastAcquiredAt: earlier,
+            },
+          ],
+          notes: [],
+          totals: { different: 1, copies: 1 },
+          pageCount: 1,
+        };
+      },
+      realCollection: async () => ({
+        rows: [
+          {
+            printingId: "p-a",
+            finish: "nonfoil",
+            quantity: 1,
+            price: 500,
+            manaValue: 1,
+            lastAcquiredAt: later,
+          },
+        ],
+        notes: [],
+        totals: { different: 1, copies: 1 },
+        pageCount: 1,
+      }),
+    });
+    const search = makeSearchCatalog(customReaders);
+    const byPrice = await search(actor, {
+      search: "",
+      where: "owned",
+      page: 1,
+      oneRowPerCard: true,
+      sort: "price_desc",
+      addedSince: earlier,
+    });
+    expect(
+      byPrice.ok && byPrice.value.kind === "owned" && byPrice.value.cards.map((card) => card.name),
+    ).toEqual(["Apple", "Banana"]);
+    expect(seen[0]).toEqual({ page: 1, search: "", sort: "price_desc", addedSince: earlier });
+
+    const byAdded = await search(actor, {
+      search: "",
+      where: "owned",
+      page: 1,
+      oneRowPerCard: true,
+      sort: "added_desc",
+    });
+    expect(
+      byAdded.ok && byAdded.value.kind === "owned" && byAdded.value.cards.map((card) => card.name),
+    ).toEqual(["Apple", "Banana"]);
+
+    const byMana = await search(actor, {
+      search: "",
+      where: "owned",
+      page: 1,
+      oneRowPerCard: true,
+      sort: "mv",
+    });
+    expect(
+      byMana.ok && byMana.value.kind === "owned" && byMana.value.cards.map((card) => card.name),
+    ).toEqual(["Apple", "Banana"]);
+  });
 });

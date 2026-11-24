@@ -48,6 +48,7 @@ export type CardLookupReaders = Readonly<{
   ): Promise<readonly { id: number; name: string; quantity: number }[]>;
   wishes(actor: Actor, printingId: string): Promise<readonly { id: unknown; quantity: number }[]>;
   storePrintings(actor: Actor, name: string): Promise<readonly StorePrintingOf[]>;
+  sets?(oracleId: string): Promise<readonly string[]>;
 }>;
 
 export type CardLookup =
@@ -77,25 +78,39 @@ export type CardLookup =
       decksUsing: readonly { id: number; name: string; quantity: number }[];
       wishes: readonly { id: unknown; quantity: number }[];
       printingsForSale: readonly StorePrintingOf[];
+      sets?: readonly string[];
     }>;
 
 export function makeCardLookup(readers: CardLookupReaders) {
-  async function lookUpOne(actor: Actor, query: string): Promise<CardLookup> {
+  async function lookUpOne(actor: Actor, query: string, includeSets: boolean): Promise<CardLookup> {
     const card = await readers.find(query);
     if (card === null) return { query, found: false };
-    const [detail, history, ownedOfThisPrinting, game, real, decksUsing, wishes, printingsForSale] =
-      await Promise.all([
-        readers.detail(card.printingId),
-        readers.history(card.printingId),
-        readers.ownedOfPrinting(actor, card.printingId),
-        readers.gameCopies(actor, card.oracleId),
-        readers.realCopies(actor, card.oracleId),
-        readers.decksUsing(actor, card.printingId),
-        readers.wishes(actor, card.printingId),
-        readers.storePrintings(actor, card.name),
-      ]);
+    const [
+      detail,
+      history,
+      ownedOfThisPrinting,
+      game,
+      real,
+      decksUsing,
+      wishes,
+      printingsForSale,
+      sets,
+    ] = await Promise.all([
+      readers.detail(card.printingId),
+      readers.history(card.printingId),
+      readers.ownedOfPrinting(actor, card.printingId),
+      readers.gameCopies(actor, card.oracleId),
+      readers.realCopies(actor, card.oracleId),
+      readers.decksUsing(actor, card.printingId),
+      readers.wishes(actor, card.printingId),
+      readers.storePrintings(actor, card.name),
+      includeSets && readers.sets ? readers.sets(card.oracleId) : Promise.resolve(undefined),
+    ]);
     const sum = (copies: readonly CopyOfPrinting[]) =>
       copies.reduce((total, copy) => total + copy.quantity, 0);
+    const resolvedSets = includeSets
+      ? (sets ?? [...new Set(printingsForSale.map((printing) => printing.set))].sort())
+      : undefined;
     return {
       query,
       found: true,
@@ -127,14 +142,18 @@ export function makeCardLookup(readers: CardLookupReaders) {
       decksUsing,
       wishes,
       printingsForSale,
+      ...(resolvedSets !== undefined ? { sets: resolvedSets } : {}),
     };
   }
 
   async function lookUpCards(
     actor: Actor,
-    request: Readonly<{ queries: readonly string[] }>,
+    request: Readonly<{ queries: readonly string[]; includeSets?: boolean }>,
   ): Promise<Result<CardLookup[], never>> {
-    return ok(await Promise.all(request.queries.map((query) => lookUpOne(actor, query))));
+    const includeSets = request.includeSets ?? false;
+    return ok(
+      await Promise.all(request.queries.map((query) => lookUpOne(actor, query, includeSets))),
+    );
   }
   return lookUpCards;
 }

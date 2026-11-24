@@ -43,10 +43,12 @@ export type CollectionFilter = Readonly<{
    */
   color?: string;
   finish?: Finish;
+  /** Only copies acquired at or after this instant. */
+  addedSince?: Date;
   /** How the page is divided into sections (feedback 2026-09-27: colors matter most). */
   sections: keyof typeof COLLECTION_SECTIONS;
   /** The order within each section. */
-  sort: "newest" | "value" | "name" | "mana" | "set";
+  sort: "newest" | "value" | "price" | "name" | "mana" | "set";
   page: number; // from 1
 }>;
 
@@ -60,6 +62,10 @@ export type CollectionRow = Readonly<{
   price: number | null;
   /** The section this card is in ("Blue", "Creatures", …), or "" without sections. */
   section: string;
+  /** Mana value of the printing, for cross-collection sorting. */
+  manaValue: number;
+  /** When the newest copy of this stack arrived, or null if unknown. */
+  lastAcquiredAt: Date | null;
 }>;
 
 export type CollectionPage = Readonly<{
@@ -118,6 +124,7 @@ export async function readCollectionPage(
   if (filter.rarity) conditions.push(sql`p.rarity = ${filter.rarity}`);
   if (filter.finish) conditions.push(sql`c.finish = ${filter.finish}`);
   if (filter.color) conditions.push(colorFilter(filter.color));
+  if (filter.addedSince) conditions.push(sql`${source.newestArrival} >= ${filter.addedSince}`);
   const where = sql.join(conditions, sql` and `);
 
   // The newest price of this finish, and the newest arrival of this stack.
@@ -134,10 +141,15 @@ export async function readCollectionPage(
   const order = {
     newest: sql`last_acquired_at desc nulls last, name`,
     value: sql`price * quantity desc nulls last, name`,
+    price: sql`price desc nulls last, name`,
     name: sql`name, set_code, finish`,
     mana: sql`mana_value, name, finish`,
     set: sql`set_code, nullif(regexp_replace(collector_number, '\\D', '', 'g'), '')::int nulls last, collector_number, finish`,
   }[filter.sort];
+  const outerOrder =
+    filter.sections === "set"
+      ? sql`section_order, release_date desc, set_code, ${order}`
+      : sql`section_order, ${order}`;
   const offset = (Math.max(1, filter.page) - 1) * COLLECTION_PAGE_SIZE;
 
   const [rows, totals] = await Promise.all([
@@ -147,10 +159,12 @@ export async function readCollectionPage(
       quantity: number;
       price: number | null;
       section: string;
+      mana_value: number;
+      last_acquired_at: Date | string | null;
     }>(sql`
-      select printing_id, finish, quantity, price, section from (${owned}) owned
+      select printing_id, finish, quantity, price, section, mana_value, last_acquired_at from (${owned}) owned
        -- Sections first (a set's section by newest set), then the chosen order within each.
-       order by section_order, release_date desc, set_code, ${order}
+       order by ${outerOrder}
        limit ${COLLECTION_PAGE_SIZE} offset ${offset}
     `),
     db.execute<{ different: number; copies: number; value_cents: number }>(sql`
@@ -167,6 +181,13 @@ export async function readCollectionPage(
       quantity: row.quantity,
       price: row.price === null ? null : Number(row.price),
       section: row.section,
+      manaValue: Number(row.mana_value),
+      lastAcquiredAt:
+        row.last_acquired_at === null
+          ? null
+          : row.last_acquired_at instanceof Date
+            ? row.last_acquired_at
+            : new Date(row.last_acquired_at),
     })),
     totals: {
       different: summary.different,

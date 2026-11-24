@@ -157,14 +157,16 @@ describe("the MCP server", () => {
     expect(textLines.find((line) => line.includes("Banishing Light"))).toMatch(/ — .*exile/i);
     expect(allLines.find((line) => line.includes("Plains"))).toBe("3 Plains · Basic Land — Plains");
     expect(deck.maybe).toEqual(["Carrot Cake"]);
-    expect(deck.short.cards.some((card: string) => card.startsWith("Beza"))).toBe(true);
+    expect(deck.deck.shortTotal).toBeGreaterThan(0);
+    expect(deck.short).toBeUndefined();
     expect(deck.prices).toBeUndefined();
 
     const withPrices = await call(client, "get_deck", {
       deckId: created.deckId,
       text: false,
-      include: ["prices", "ids"],
+      include: ["prices", "ids", "short"],
     });
+    expect(withPrices.short.cards.some((card: string) => card.startsWith("Beza"))).toBe(true);
     expect(
       Object.values(withPrices.cards as Record<string, string[]>)
         .flat()

@@ -23,6 +23,7 @@ const HEADING_RULE = `A heading starts with a letter, has at most ${MAX_HEADING_
 type Answer =
   | Readonly<{ kind: "replaced"; deckId: number; report: ReplaceReport }>
   | Readonly<{ kind: "previewed"; stored: StoredPreviewResult }>
+  | Readonly<{ kind: "applied"; saved: SavedChanges }>
   | Readonly<{ kind: "saved"; saved: SavedChanges }>;
 
 type Failure =
@@ -36,7 +37,7 @@ export const editDeckBinding = defineBinding({
   name: "edit_deck",
   title: "Preview/apply deck changes or replace deck list",
   description:
-    "Edit a deck's cards via batch `changes` (save=false previews and returns previewId; commit with { deckId, previewId, save: true }) OR replace the full `list` with `fingerprint` from get_deck.",
+    "Edit a deck's cards via batch `changes` (save=false previews and returns previewId; commit with { deckId, previewId, save: true } for a minimal ack, or pass changes + fingerprint + save: true in one step) OR replace the full `list` with `fingerprint` from get_deck.",
   scope: "decks:write",
   readOnly: false,
   input: z.object({
@@ -100,7 +101,7 @@ export const editDeckBinding = defineBinding({
         previewId: input.previewId,
         fingerprint: input.fingerprint,
       });
-      return applied.ok ? ok<Answer>({ kind: "saved", saved: applied.value }) : applied;
+      return applied.ok ? ok<Answer>({ kind: "applied", saved: applied.value }) : applied;
     }
     if (changes.length === 0) {
       return err<Failure>({
@@ -136,6 +137,17 @@ export const editDeckBinding = defineBinding({
         ...presentChangePreview(preview, { saved: false, fingerprint: preview.fingerprint }),
         ...(warnings.length > 0 ? { warnings: presentPreviewWarnings(warnings) } : {}),
         previewId,
+      };
+    }
+    if (answer.kind === "applied") {
+      const { preview, warnings, fingerprint } = answer.saved;
+      return {
+        saved: true,
+        deckId: preview.deck.id,
+        fingerprint,
+        cardCount: preview.after.stats.cardCount,
+        shortTotal: preview.after.shortTotal,
+        ...(warnings.length > 0 ? { warnings: presentPreviewWarnings(warnings) } : {}),
       };
     }
     const { preview, warnings, fingerprint } = answer.saved;

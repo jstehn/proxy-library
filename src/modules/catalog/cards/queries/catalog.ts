@@ -143,7 +143,7 @@ export type PrintingSearch = Readonly<{
    * combination's code such as "GU" (exactly those colors).
    */
   color?: string;
-  sort: "name" | "number" | "price";
+  sort: "name" | "number" | "price" | "mana";
   page: number; // from 1
   /** One row per card (its cheapest printing in the store) instead of one per printing. */
   oneRowPerCard?: boolean;
@@ -204,6 +204,7 @@ export async function searchPrintings(
     price: sql`(select max(s.usd_cents) from price_snapshots s
                  where s.printing_id = p.id
                    and s.day = (select max(day) from price_snapshots)) desc nulls last, p.name`,
+    mana: sql`p.mana_value, p.name, p.set_code, p.collector_number`,
   }[search.sort];
   const offset = (Math.max(1, search.page) - 1) * SEARCH_PAGE_SIZE;
 

@@ -45,12 +45,17 @@ function fullCard(card: CardLookup): Record<string, unknown> {
   };
 }
 
-function compactCard(card: Found, includePrice: boolean) {
+type CompactCardOptions = Readonly<{ includePrice: boolean; includeSets: boolean }>;
+
+function compactCard(card: Found, options: CompactCardOptions) {
   const text = card.faces
     .map((face) => (face as { text?: string }).text ?? "")
     .filter(Boolean)
     .join("\n---\n");
   const cents = card.printingsForSale.flatMap((printing) => Object.values(printing.prices));
+  const sets = options.includeSets
+    ? (card.sets ?? [...new Set(card.printingsForSale.map((printing) => printing.set))].sort())
+    : undefined;
   return {
     name: card.card.name,
     manaCost: card.card.manaCost,
@@ -59,7 +64,10 @@ function compactCard(card: Found, includePrice: boolean) {
     text,
     ownedGame: card.owned.game,
     ownedReal: card.owned.real,
-    ...(includePrice ? { cheapestPriceCents: cents.length > 0 ? Math.min(...cents) : null } : {}),
+    ...(options.includePrice
+      ? { cheapestPriceCents: cents.length > 0 ? Math.min(...cents) : null }
+      : {}),
+    ...(sets !== undefined ? { sets } : {}),
     decksUsing: card.decksUsing,
     wishes: card.wishes.map((wish) => ({ wishId: wish.id, quantity: wish.quantity })),
   };
@@ -70,11 +78,14 @@ export function presentFullCards(cards: readonly CardLookup[]): unknown {
   return compactMoneyFields({ cards: cards.map(fullCard) });
 }
 
-/** get_cards with detail "compact" (the default): the short card, with a price only on request. */
-export function presentCompactCards(cards: readonly CardLookup[], includePrice: boolean): unknown {
+/** get_cards with detail "compact" (the default): the short card, with price/sets only on request. */
+export function presentCompactCards(
+  cards: readonly CardLookup[],
+  options: CompactCardOptions,
+): unknown {
   return {
     cards: cards.map((card) =>
-      card.found ? compactCard(card, includePrice) : compactMoneyFields(fullCard(card)),
+      card.found ? compactCard(card, options) : compactMoneyFields(fullCard(card)),
     ),
   };
 }

@@ -228,4 +228,31 @@ describe("previewChanges (design doc 40, section 3)", () => {
     });
     expect(preview.newlyShort).toEqual([]);
   });
+
+  it("includes two-card combos in before/after bracket estimates", () => {
+    const bolt = makeCard("bolt", { name: "Lightning Bolt", owned: 1 });
+    const combo = {
+      id: "c1",
+      cards: ["Rosie Cotton of South Lane", "Basking Broodscale"] as const,
+      produces: ["Infinite Mana"],
+      forces: 4 as const,
+    };
+    const preview = previewChanges({
+      format: "commander",
+      targetBracket: 2,
+      before: [commander, bolt],
+      changes: [],
+      facts: () => bolt,
+      combos: { before: [combo], after: [combo] },
+    });
+    expect(preview.bracket.before?.floor).toBe(4);
+    expect(preview.bracket.after?.floor).toBe(4);
+    expect(preview.bracket.after?.findings).toContainEqual({
+      rule: "twoCardCombos",
+      cards: ["Rosie Cotton of South Lane", "Basking Broodscale"],
+      count: 1,
+      forces: 4,
+    });
+    expect(preview.bracket.warningAfter?.target).toBe(2);
+  });
 });
