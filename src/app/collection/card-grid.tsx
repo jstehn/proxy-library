@@ -12,6 +12,7 @@ export function CollectionCardGrid(props: {
   rows: readonly CollectionRow[];
   cards: ReadonlyMap<string, PrintingCard>;
   noteFor?: (printingId: string) => string | undefined;
+  footerFor?: (row: CollectionRow, printing: PrintingCard) => React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-8">
@@ -31,6 +32,7 @@ export function CollectionCardGrid(props: {
                   href={`/cards/${row.printingId}`}
                   priceLine={`${row.quantity}× · ${FINISH_NAMES[row.finish]}${price}`}
                   note={props.noteFor?.(row.printingId)}
+                  footer={props.footerFor?.(row, printing)}
                 />
               );
             })}

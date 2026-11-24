@@ -1,5 +1,6 @@
 // The store module's public API: the only file other modules and the app may import.
 export type { BuyListError } from "./application/buy-list";
+export { MAX_SELL_LINES, MAX_SELL_QUANTITY } from "./application/sell-list";
 
 export { makeStore, type Store } from "./application/make-store";
 
@@ -31,5 +32,6 @@ export {
   describeBuyListError,
   describeBuySealedError,
   describeBuySingleError,
+  describeSellListError,
   describeSellSingleError,
 } from "./application/describe-error";

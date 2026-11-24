@@ -190,15 +190,85 @@ dialog::backdrop {
   transform: rotateY(180deg);
 }
 
-@keyframes tear-strip {
-  to {
-    transform: translate(40%, -140%) rotate(-14deg);
+.pack-tear-top {
+  clip-path: polygon(
+    0% 0%,
+    100% 0%,
+    100% 16%,
+    88% 17.5%,
+    74% 16%,
+    58% 18%,
+    42% 15.5%,
+    26% 18%,
+    12% 15.5%,
+    0% 17%
+  );
+}
+.pack-tear-bottom {
+  clip-path: polygon(
+    0% 17%,
+    12% 15.5%,
+    26% 18%,
+    42% 15.5%,
+    58% 18%,
+    74% 16%,
+    88% 17.5%,
+    100% 16%,
+    100% 100%,
+    0% 100%
+  );
+}
+
+@keyframes pack-tear-top {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  35% {
+    transform: translate(12%, -18%) rotate(-6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(55%, -75%) rotate(-22deg);
     opacity: 0;
   }
 }
-@keyframes pack-away {
-  to {
-    transform: translateY(40px) scale(0.9);
+@keyframes pack-tear-bottom {
+  0%,
+  30% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(48px) scale(0.92);
+    opacity: 0;
+  }
+}
+@keyframes pack-tear-flash {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0;
+  }
+  25% {
+    transform: scaleX(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1.25);
+    opacity: 0;
+  }
+}
+@keyframes pack-cards-emerge {
+  0% {
+    transform: translateY(18px) scale(0.86);
+    opacity: 0;
+  }
+  45% {
+    transform: translateY(-22px) scale(0.94);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-38px) scale(1);
     opacity: 0;
   }
 }
@@ -234,11 +304,17 @@ dialog::backdrop {
   }
 }
 
-.animate-tear-strip {
-  animation: tear-strip 0.6s ease-in forwards;
+.animate-pack-tear-top {
+  animation: pack-tear-top 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-.animate-pack-away {
-  animation: pack-away 0.5s ease-in 0.35s forwards;
+.animate-pack-tear-bottom {
+  animation: pack-tear-bottom 0.85s ease-in forwards;
+}
+.animate-pack-tear-flash {
+  animation: pack-tear-flash 0.55s ease-out forwards;
+}
+.animate-pack-cards-emerge {
+  animation: pack-cards-emerge 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
 }
 .animate-deal {
   animation: deal 0.45s ease-out backwards;
@@ -286,8 +362,10 @@ dialog::backdrop {
   .flip-inner {
     transition: none;
   }
-  .animate-tear-strip,
-  .animate-pack-away,
+  .animate-pack-tear-top,
+  .animate-pack-tear-bottom,
+  .animate-pack-tear-flash,
+  .animate-pack-cards-emerge,
   .animate-deal,
   .animate-suspense,
   .animate-flip-in,

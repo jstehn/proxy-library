@@ -2,6 +2,7 @@ import { makeBuyList } from "./buy-list";
 import { makeBuySealed } from "./buy-sealed";
 import { makeManagePrices } from "./manage-prices";
 import type { StoreDependencies } from "./ports";
+import { makeSellList } from "./sell-list";
 import { makeBuySingle, makeSellSingle, makeSetBuylistRate } from "./singles";
 import { makeValueProducts } from "./value-products";
 
@@ -17,6 +18,7 @@ export function makeStore(dependencies: StoreDependencies) {
     buySingle: makeBuySingle(dependencies),
     buyList: makeBuyList(dependencies),
     sellSingle: makeSellSingle(dependencies),
+    sellList: makeSellList(dependencies),
     setBuylistRate: makeSetBuylistRate(dependencies),
     valueProducts,
     valueProductsIfStale,

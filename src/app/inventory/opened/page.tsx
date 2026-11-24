@@ -1,30 +1,21 @@
-import Link from "next/link";
-import { CardTile } from "@/app/_components/card-tile";
 import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
-import { type OpenedCard, type OpeningView } from "@/modules/inventory";
+import { type OpeningView } from "@/modules/inventory";
 import type { Capabilities } from "@/server/composition/capabilities";
 import type { Reads } from "@/server/composition/reads";
 import { readPage } from "@/server/page-instance";
-import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mtg/mana";
 import type { OpenerPack } from "./_components/machine";
+import { OpenedResults } from "./_components/opened-results";
+import type { SerializedOpening } from "./_components/opened-summary";
 import { PackOpener } from "./_components/pack-opener";
 import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
 import { productLabel } from "../../store/labels";
 import { Page } from "@/ui/page";
-import { EmptyState } from "@/ui/empty-state";
-import { Price } from "@/ui/mtg/price";
 
 // What one or more openings produced: packs in reveal order, decks, and what boxes unpacked into.
 // (Phase 8 turns a pack into an animated reveal.)
 
 const MAX_SHOWN = 100;
-const FINISH_NAMES = { nonfoil: "", foil: "Foil ", etched: "Etched " };
-
-function valueOf(card: OpenedCard, printing: PrintingCard | undefined): Cents {
-  const each = printing?.prices[card.finish] ?? Cents.zero;
-  return Cents.of(each * card.quantity);
-}
 
 export default async function OpenedPage(props: PageProps<"/inventory/opened">) {
   const { actor, capabilities, reads } = await readPage();
@@ -40,81 +31,43 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
   const openings = (
     await Promise.all(ids.map((id) => reads.inventory.openingView(actor, id)))
   ).filter((opening): opening is OpeningView => opening !== null);
-  const cards = await capabilities.printingDetails(
-    openings.flatMap((opening) => opening.cards.map((card) => card.printingId)),
+
+  const allPrintingIds = openings.flatMap((opening) =>
+    opening.cards.map((card) => card.printingId),
   );
   const packs = openings.filter((opening) => opening.contentKind === "pack");
-  const themes = await reads.packs.themes(packs);
-  const total = Cents.sum(
-    openings.flatMap((opening) =>
-      opening.cards.map((card) => valueOf(card, cards.get(card.printingId))),
-    ),
-  );
+
+  const [cards, themes, owned] = await Promise.all([
+    capabilities.printingDetails(allPrintingIds),
+    reads.packs.themes(packs),
+    reads.collection.ownedCounts(actor, allPrintingIds),
+  ]);
+
+  const serializedOpenings: SerializedOpening[] = openings.map((opening) => ({
+    itemId: opening.itemId,
+    name: opening.name,
+    contentKind: opening.contentKind,
+    theme: themes.get(opening.itemId) ?? null,
+    children: opening.children,
+    extras: opening.extras,
+    cards: opening.cards.map((card) => ({
+      printingId: card.printingId,
+      finish: card.finish,
+      quantity: card.quantity,
+    })),
+  }));
+
+  const cardsById: Record<string, PrintingCard> = Object.fromEntries(cards);
+  const ownedByKey: Record<string, number> = Object.fromEntries(owned);
 
   const results = (
-    <>
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Opened</h1>
-        {newDecks !== null && (
-          <p className="border-success-line bg-success-soft text-success-ink rounded-md border px-3 py-2 text-sm">
-            Added to your decks: <strong>{newDecks}</strong>.{" "}
-            <Link href="/decks" className="underline">
-              Open your decks
-            </Link>
-          </p>
-        )}
-        {openings.length === 0 ? (
-          <EmptyState>Nothing to show.</EmptyState>
-        ) : (
-          <p className="text-muted text-sm">
-            {packs.length > 0 && `${packs.length} pack${packs.length === 1 ? "" : "s"} · `}
-            cards worth{" "}
-            <strong className="tabular-nums">
-              <Price cents={total} />
-            </strong>{" "}
-            at market price ·{" "}
-            <Link href="/inventory" className="underline">
-              back to inventory
-            </Link>{" "}
-            ·{" "}
-            <Link href="/collection" className="underline">
-              your collection
-            </Link>
-          </p>
-        )}
-      </header>
-
-      {openings.map((opening) => (
-        <section key={opening.itemId} aria-label={opening.name} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-lg font-medium">{opening.name}</h2>
-            {themes.has(opening.itemId) && (
-              <p className="text-muted text-sm">
-                Theme: <strong>{themes.get(opening.itemId)}</strong>
-              </p>
-            )}
-          </div>
-          {opening.contentKind === "product" && <Unpacked opening={opening} />}
-          {opening.cards.length > 0 && (
-            <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-              {opening.cards.map((card, position) => {
-                const printing = cards.get(card.printingId);
-                if (printing === undefined) return null;
-                const quantity = card.quantity > 1 ? `${card.quantity}× · ` : "";
-                return (
-                  <CardTile
-                    key={position}
-                    printing={printing}
-                    isFoil={card.finish !== "nonfoil"}
-                    priceLine={`${quantity}${FINISH_NAMES[card.finish]}${Cents.format(printing.prices[card.finish] ?? Cents.zero)}`}
-                  />
-                );
-              })}
-            </ol>
-          )}
-        </section>
-      ))}
-    </>
+    <OpenedResults
+      openings={serializedOpenings}
+      cardsById={cardsById}
+      ownedByKey={ownedByKey}
+      packCount={packs.length}
+      newDecks={newDecks}
+    />
   );
 
   return (
@@ -195,27 +148,4 @@ async function openerPacks(
       }),
     };
   });
-}
-
-function Unpacked(props: { opening: OpeningView }) {
-  const { opening } = props;
-  return (
-    <div className="flex flex-col gap-1 text-sm">
-      {opening.children.length > 0 && (
-        <p>
-          Unpacked into:{" "}
-          {opening.children.map((child, index) => (
-            <span key={child.itemId}>
-              {index > 0 && ", "}
-              {child.name}
-              {child.status === "opened" && " (opened)"}
-            </span>
-          ))}
-        </p>
-      )}
-      {opening.extras.length > 0 && (
-        <p className="text-muted">Also inside: {opening.extras.join(", ")}</p>
-      )}
-    </div>
-  );
 }

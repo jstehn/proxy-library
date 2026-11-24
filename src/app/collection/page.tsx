@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { CardFilters, Pagination } from "@/app/_components/card-filters";
 import { type DeckRef } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
 import { ManaStylesheet } from "@/ui/mtg/mana";
 import { SECTIONS, SORTS } from "@/app/collection/options";
-import { CollectionCardGrid, ExportLinks } from "./card-grid";
+import { ExportLinks } from "./card-grid";
 import { readCollectionQuery } from "./collection-query";
+import { CollectionSellWorkspace } from "./sell-cart";
 import { CollectionTabs } from "./tabs";
 import { Page } from "@/ui/page";
 
@@ -21,15 +21,23 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
   const searchParams = await props.searchParams;
   const { values, page, filter, isFiltered } = readCollectionQuery(searchParams);
 
-  const [result, sets] = await Promise.all([
+  const [result, sets, buylistRateBps] = await Promise.all([
     reads.collection.page(actor, filter),
     reads.catalog.enabledSets(),
+    reads.store.buylistRate(),
   ]);
   const printingIds = result.rows.map((row) => row.printingId);
   const [cards, inDecks] = await Promise.all([
     capabilities.printingDetails(printingIds),
     reads.decks.decksUsing(actor, printingIds),
   ]);
+
+  const cardsById = Object.fromEntries(cards);
+  const notesByPrinting: Record<string, string> = {};
+  for (const id of printingIds) {
+    const note = deckNote(inDecks.get(id));
+    if (note) notesByPrinting[id] = note;
+  }
 
   return (
     <Page width="6xl">
@@ -61,25 +69,12 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
         notes={result.notes}
       />
 
-      {result.rows.length === 0 ? (
-        <p className="text-muted text-sm">
-          No cards here.{" "}
-          <Link href="/store" className="underline">
-            Buy a pack
-          </Link>{" "}
-          or{" "}
-          <Link href="/singles" className="underline">
-            a single
-          </Link>
-          .
-        </p>
-      ) : (
-        <CollectionCardGrid
-          rows={result.rows}
-          cards={cards}
-          noteFor={(printingId) => deckNote(inDecks.get(printingId))}
-        />
-      )}
+      <CollectionSellWorkspace
+        rows={result.rows}
+        cardsById={cardsById}
+        notesByPrinting={notesByPrinting}
+        buylistRateBps={buylistRateBps}
+      />
       <Pagination action="/collection" values={values} page={page} pageCount={result.pageCount} />
     </Page>
   );

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
-import type { DbExecutor } from "@/shared/db";
+import { type DbExecutor, newestDayPrices } from "@/shared/db";
 import {
   type CollectionExportRow,
   type CollectionFilter,
@@ -75,6 +75,24 @@ export function ownedCopies(
   return readCopiesOf(db, actor.userId, GAME_COPIES, printingId);
 }
 
+/** How many copies the actor owns for a batch of printings, keyed by `${printingId}/${finish}`. */
+export async function ownedCounts(
+  db: DbExecutor,
+  actor: Actor,
+  printingIds: readonly string[],
+): Promise<Map<string, number>> {
+  const unique = [...new Set(printingIds)];
+  if (unique.length === 0) return new Map();
+  const rows = await db.execute<{ printing_id: string; finish: string; quantity: number }>(sql`
+    select printing_id, finish, quantity
+      from collection_cards
+     where user_id = ${actor.userId}
+       and printing_id = any(${sql.param(unique)}::text[])
+       and quantity > 0
+  `);
+  return new Map(rows.rows.map((row) => [`${row.printing_id}/${row.finish}`, row.quantity]));
+}
+
 /** Every copy of a card (any printing) the actor owns in their game collection. */
 export function ownedByOracle(
   db: DbExecutor,
@@ -87,4 +105,55 @@ export function ownedByOracle(
 /** Every card the actor owns, with what the exporters need, in set and number order. */
 export function exportRows(db: DbExecutor, actor: Actor): Promise<CollectionExportRow[]> {
   return readCollectionExport(db, actor.userId, GAME_COPIES);
+}
+
+type DuplicateStack = Readonly<{
+  printingId: string;
+  finish: Finish;
+  quantity: number;
+  name: string;
+  setCode: string;
+  collectorNumber: string;
+  rarity: string;
+  marketCents: number | null;
+}>;
+
+/**
+ * Every stack in the actor's game collection with more than `keep` copies, paired with its latest
+ * market price so the duplicate sell cart can stage extras in one click.
+ */
+export async function duplicateStacks(
+  db: DbExecutor,
+  actor: Actor,
+  keep: number,
+): Promise<DuplicateStack[]> {
+  const rows = await db.execute<{
+    printing_id: string;
+    finish: Finish;
+    quantity: number;
+    name: string;
+    set_code: string;
+    collector_number: string;
+    rarity: string;
+    usd_cents: string | number | null;
+  }>(sql`
+    select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.rarity,
+           s.usd_cents
+      from collection_cards c
+      join printings p on p.id = c.printing_id
+      left join ${newestDayPrices()} s on s.printing_id = c.printing_id and s.finish = c.finish
+     where c.user_id = ${actor.userId}
+       and c.quantity > ${keep}
+     order by coalesce(s.usd_cents, 0) desc, p.name asc
+  `);
+  return rows.rows.map((row) => ({
+    printingId: row.printing_id,
+    finish: row.finish,
+    quantity: row.quantity,
+    name: row.name,
+    setCode: row.set_code,
+    collectorNumber: row.collector_number,
+    rarity: row.rarity,
+    marketCents: row.usd_cents === null ? null : Number(row.usd_cents),
+  }));
 }

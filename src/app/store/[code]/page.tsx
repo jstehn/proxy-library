@@ -8,6 +8,7 @@ import { KeyArt, ProductImage } from "@/ui/mtg/product-image";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { categoryLabel, productLabel } from "../labels";
 import { BuyForm } from "./buy-form";
+import { ProductContentsModal } from "./product-contents-modal";
 import { RealProductForm } from "./real-product-form";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
@@ -121,7 +122,7 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
                     productName={product.name}
                     ownedForReal={ownedForReal.get(product.id) ?? 0}
                   />
-                  <ProductDetails product={product} />
+                  <ProductContentsModal productId={product.id} productName={product.name} />
                 </li>
               );
             })}
@@ -144,31 +145,4 @@ function formatDay(day: string): string {
     day: "numeric",
     timeZone: "UTC",
   });
-}
-
-/** WPN's description and contents, as plain text, folded away until asked for. */
-function ProductDetails(props: { product: ProductForSale }) {
-  const { description, contents } = props.product;
-  if (description === null && contents.length === 0) return null;
-  return (
-    <details className="text-muted text-xs">
-      <summary className="cursor-pointer select-none">What&apos;s inside</summary>
-      <div className="mt-2 flex flex-col gap-2">
-        {contents.length > 0 && (
-          <ul className="flex flex-col gap-0.5">
-            {contents.map((line, index) => (
-              <li key={index} style={{ paddingLeft: `${line.depth * 0.75}rem` }}>
-                {line.depth > 0 ? "· " : ""}
-                {line.text}
-              </li>
-            ))}
-          </ul>
-        )}
-        {description?.split("\n").map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
-        <p className="text-muted text-[10px]">From Wizards of the Coast&apos;s product page.</p>
-      </div>
-    </details>
-  );
 }

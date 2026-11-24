@@ -23,6 +23,10 @@ type CardTileProps = {
   href?: string;
   /** An extra line under the price, e.g. which decks use this card. */
   note?: string;
+  /** Optional corner pill rendered over the top-right of the card image (e.g. duplicate count). */
+  badge?: React.ReactNode;
+  /** Optional interactive footer below the tile details (e.g. quick sell controls). */
+  footer?: React.ReactNode;
 };
 
 export function CardTile(props: CardTileProps) {
@@ -102,6 +106,11 @@ export function CardTile(props: CardTileProps) {
           <div className={NO_IMAGE_BOX}>{printing.name}</div>
         )}
         {props.isFoil && <FoilSheen />}
+        {props.badge && (
+          <span className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex items-center gap-1">
+            {props.badge}
+          </span>
+        )}
       </button>
       {props.href ? (
         <Link href={props.href} className="leading-tight font-medium hover:underline">
@@ -116,6 +125,7 @@ export function CardTile(props: CardTileProps) {
       </span>
       <span className="text-muted text-xs tabular-nums">{props.priceLine}</span>
       {props.note && <span className="text-xs text-sky-700 dark:text-sky-400">{props.note}</span>}
+      {props.footer && <div className="mt-0.5">{props.footer}</div>}
 
       {isOpen && <EnlargedCard printing={printing} align={align} />}
       {isDialogOpen && (

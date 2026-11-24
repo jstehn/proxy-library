@@ -7,7 +7,7 @@ import type { Store } from "./application/make-store";
 export function wireStoreCapabilities({ store }: Readonly<{ store: Store }>) {
   return {
     store: {
-      ...pick(store, "buySingle", "sellSingle", "buySealed", "buyList"),
+      ...pick(store, "buySingle", "sellSingle", "buySealed", "buyList", "sellList"),
       ...pickForAdmin(store, "setBuylistRate", "setKindPrice", "setPricingMode", "setProductPrice"),
     },
   };

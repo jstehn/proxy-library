@@ -1,6 +1,7 @@
 import { assertNever, Cents } from "@/shared/kernel";
 import type { BuyListError } from "./buy-list";
 import type { BuySealedError } from "./buy-sealed";
+import type { SellListError } from "./sell-list";
 import type { BuySingleError, SellSingleError } from "./singles";
 
 // What each expected failure says to the player, in one place per module (ADR 0026, audit S7).
@@ -65,5 +66,28 @@ export function describeBuyListError(error: BuyListError): string {
       return `Prices changed since you looked: it's now ${Cents.format(error.total)}. Nothing was bought; check the new total and buy again.`;
     case "InsufficientFunds":
       return `That's ${Cents.format(error.required)}, and you have ${Cents.format(error.balance)}. Nothing was bought.`;
+  }
+}
+
+export function describeSellListError(error: SellListError): string {
+  switch (error.kind) {
+    case "ListEmpty":
+      return "Your sell cart is empty.";
+    case "ListTooLong":
+      return `You can sell at most ${error.max} different cards at once.`;
+    case "QuantityInvalid":
+      return `Each line can sell 1 to ${error.max} copies.`;
+    case "NotBuying":
+      return "The store isn't buying cards right now.";
+    case "NoPrice":
+      return "One of the cards in your sell cart has no market price. Remove it and try again.";
+    case "WorthNothing":
+      return "One of the cards in your sell cart pays $0.00 at the buylist rate. Remove it and try again.";
+    case "NotEnoughCopies":
+      return `You only have ${error.owned} copies of one of those cards. Nothing was sold.`;
+    case "PricesChanged":
+      return `Buylist prices changed: the payout is now ${Cents.format(error.total)}. Nothing was sold; review and try again.`;
+    default:
+      return assertNever(error);
   }
 }

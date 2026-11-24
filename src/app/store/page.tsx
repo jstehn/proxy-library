@@ -5,6 +5,7 @@ import { ProductArt, shapeForCategory } from "@/ui/mtg/product-art";
 import { KeyArt, ProductImage } from "@/ui/mtg/product-image";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
 import { BuyForm } from "./[code]/buy-form";
+import { ProductContentsModal } from "./[code]/product-contents-modal";
 import { categoryLabel, productLabel } from "./labels";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
@@ -208,6 +209,7 @@ export default async function StorePage(props: PageProps<"/store">) {
                           </span>
                         )}
                         <BuyForm productId={product.id} productName={product.name} />
+                        <ProductContentsModal productId={product.id} productName={product.name} />
                       </li>
                     );
                   })}
