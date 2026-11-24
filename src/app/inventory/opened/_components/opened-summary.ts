@@ -1,4 +1,5 @@
 import type { PrintingCard } from "@/modules/catalog";
+import { assertNever } from "@/shared/kernel";
 import type { Finish } from "@/shared/mtg";
 
 export type OpenedSort = "value" | "rarity" | "duplicates" | "color" | "order";
@@ -151,6 +152,8 @@ export function sortOpenedCards(
         );
       case "order":
         return a.packOrder - b.packOrder;
+      default:
+        return assertNever(sort);
     }
   });
   return copy;

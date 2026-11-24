@@ -6,25 +6,15 @@ import {
   MAX_SELL_LINES,
   MAX_SELL_QUANTITY,
   describeSellListError,
-  payoutPerCopy,
+  selectDuplicatesToSell,
+  type DuplicateSellLine,
 } from "@/modules/store";
 import { readPage } from "@/server/page-instance";
 import { Cents } from "@/shared/kernel";
-import { FinishSchema, type Finish } from "@/shared/mtg";
+import { FinishSchema } from "@/shared/mtg";
 import { revalidateHeader } from "@/app/paths";
 
-export type SellCartItem = Readonly<{
-  printingId: string;
-  finish: Finish;
-  name: string;
-  setCode: string;
-  collectorNumber: string;
-  rarity: string;
-  owned: number;
-  quantity: number;
-  unitPayoutCents: number;
-  deckNote?: string;
-}>;
+export type SellCartItem = DuplicateSellLine;
 
 const FindDuplicatesInput = z.object({
   keep: z.number().int().min(1).max(4),
@@ -63,50 +53,16 @@ export async function findDuplicatesToSellAction(
     stacks.map((stack) => stack.printingId),
   );
 
-  const items: SellCartItem[] = [];
-  let skippedUnpriced = 0;
-
-  for (const stack of stacks) {
-    if (keepFoils && stack.finish !== "nonfoil") continue;
-
-    const decks = decksByPrinting.get(stack.printingId) ?? [];
-    const copiesInDecks = decks.reduce((sum, deck) => sum + deck.quantity, 0);
-    const reserved = protectInDecks ? Math.max(keep, copiesInDecks) : keep;
-    const sellQuantity = Math.min(stack.quantity - reserved, MAX_SELL_QUANTITY);
-    if (sellQuantity <= 0) continue;
-
-    if (stack.marketCents === null) {
-      skippedUnpriced += 1;
-      continue;
-    }
-    const unitPayoutCents = Number(payoutPerCopy(Cents.of(stack.marketCents), rateBps));
-    if (unitPayoutCents <= 0) {
-      skippedUnpriced += 1;
-      continue;
-    }
-
-    const deckNote =
-      decks.length > 0
-        ? `In: ${decks.map((d) => `${d.name} (${d.quantity})`).join(", ")}`
-        : undefined;
-
-    items.push({
-      printingId: stack.printingId,
-      finish: stack.finish,
-      name: stack.name,
-      setCode: stack.setCode,
-      collectorNumber: stack.collectorNumber,
-      rarity: stack.rarity,
-      owned: stack.quantity,
-      quantity: sellQuantity,
-      unitPayoutCents,
-      deckNote,
-    });
-  }
+  const selection = selectDuplicatesToSell(stacks, decksByPrinting, rateBps, {
+    keep,
+    protectInDecks,
+    keepFoils,
+    maxLines: MAX_SELL_LINES,
+    maxQuantity: MAX_SELL_QUANTITY,
+  });
 
   return {
-    items: items.slice(0, MAX_SELL_LINES),
-    skippedUnpriced,
+    ...selection,
     buylistRateBps: rateBps,
   };
 }

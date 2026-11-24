@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { CollectionRow } from "@/modules/collection";
-import { payoutPerCopy } from "@/modules/store";
+import { payoutPerCopy } from "@/modules/store/client";
 import { Cents } from "@/shared/kernel";
 import type { Finish } from "@/shared/mtg";
 import { Button } from "@/ui/button";

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { BoosterSheet, SealedContent } from "@/modules/catalog";
 import { type DbExecutor, newestDayPrices } from "@/shared/db";
+import { assertNever } from "@/shared/kernel";
 import type { Finish } from "@/shared/mtg";
 
 type ProductDeckCard = Readonly<{
@@ -171,6 +172,8 @@ export async function productContents(
             );
           }
           break;
+        default:
+          return assertNever(item);
       }
     }
   }

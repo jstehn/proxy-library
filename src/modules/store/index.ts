@@ -16,6 +16,7 @@ export {
 } from "./application/singles";
 export type { PricesChanged } from "./domain/errors";
 export { payoutPerCopy } from "./domain/singles";
+export { selectDuplicatesToSell, type DuplicateSellLine } from "./domain/duplicates";
 export {
   MAX_LIST_LINES,
   type Candidate,
