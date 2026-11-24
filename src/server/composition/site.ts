@@ -1,5 +1,6 @@
 import type { Actor } from "@/modules/accounts";
 import type { Wallet } from "@/modules/wallet";
+import type { Clock } from "@/shared/kernel";
 import type { makeCheckHealth } from "./health";
 import type { Reads } from "./reads";
 
@@ -9,13 +10,14 @@ import type { Reads } from "./reads";
 export type SiteWiringDependencies = Readonly<{
   reads: Reads;
   wallet: Wallet;
+  clock: Clock;
   seeds: Readonly<{ newSeed(): string }>;
   appUrl: string;
   checkHealth: ReturnType<typeof makeCheckHealth>;
 }>;
 
 export function wireSiteCapabilities(dependencies: SiteWiringDependencies) {
-  const { reads, wallet, seeds, appUrl, checkHealth } = dependencies;
+  const { reads, wallet, clock, seeds, appUrl, checkHealth } = dependencies;
   return {
     site: {
       appUrl,
@@ -26,11 +28,15 @@ export function wireSiteCapabilities(dependencies: SiteWiringDependencies) {
       /**
        * The numbers in the site header, in one round trip. Showing the balance also pays any
        * allowance that has come due (design doc 03, section 5): a write inside a read, so it is a
-       * capability.
+       * capability. When the wallet is already open and no payday is due, we read without taking
+       * a row lock or opening a write transaction.
        */
       headerSummary: async (actor: Actor) => {
+        const balancePromise = reads.wallet
+          .currentBalanceIfUpToDate(actor, clock.now())
+          .then((cached) => cached ?? wallet.refreshWallet(actor));
         const [balance, waitingTrades, wishesOnTarget, draft, friendRequests] = await Promise.all([
-          wallet.refreshWallet(actor),
+          balancePromise,
           reads.trades.waitingForYou(actor),
           reads.wishlist.atTarget(actor),
           reads.drafts.activeDraftOf(actor),

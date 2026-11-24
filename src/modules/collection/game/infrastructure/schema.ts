@@ -45,6 +45,12 @@ export const acquisitions = pgTable(
   },
   (table) => [
     index("acquisitions_user_created_idx").on(table.userId, table.createdAt.desc()),
+    index("acquisitions_user_printing_finish_idx").on(
+      table.userId,
+      table.printingId,
+      table.finish,
+      table.createdAt.desc(),
+    ),
     check("acquisitions_quantity_nonzero", sql`${table.quantity} <> 0`),
     check(
       "acquisitions_source_known",

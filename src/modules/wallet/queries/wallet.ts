@@ -3,7 +3,7 @@ import type { Actor, AdminActor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import { Cents } from "@/shared/kernel";
 import { authUsers, players } from "../../accounts/infrastructure/schema";
-import type { EconomySettings } from "../domain/economy";
+import { paydaysBetween, type EconomySettings } from "../domain/economy";
 import type { LedgerKind } from "../domain/ledger";
 import {
   economySettings as economySettingsTable,
@@ -162,4 +162,35 @@ export async function economySettings(db: DbExecutor): Promise<EconomySettings> 
     startingGrant: Cents.of(row.startingGrantCents),
     selfFundLimit: Cents.of(row.selfFundLimitCents),
   };
+}
+
+/**
+ * The actor's balance when their wallet is already open and no allowance payday is due yet,
+ * or null when a write transaction (`refreshWallet`) is needed to open it or pay an allowance.
+ */
+export async function currentBalanceIfUpToDate(
+  db: DbExecutor,
+  actor: Actor,
+  now: Date,
+): Promise<Cents | null> {
+  const [row] = await db
+    .select({
+      allowancePaidThrough: walletAccounts.allowancePaidThrough,
+      allowancePeriodDays: economySettingsTable.allowancePeriodDays,
+      allowanceAnchor: economySettingsTable.allowanceAnchor,
+      balance:
+        sql`coalesce((select sum(${ledgerEntries.amountCents}) from ${ledgerEntries} where ${ledgerEntries.userId} = ${actor.userId}), 0)`.mapWith(
+          Number,
+        ),
+    })
+    .from(walletAccounts)
+    .innerJoin(economySettingsTable, eq(economySettingsTable.id, 1))
+    .where(eq(walletAccounts.userId, actor.userId));
+  if (row === undefined) return null;
+  const schedule = {
+    anchor: row.allowanceAnchor,
+    periodDays: row.allowancePeriodDays,
+  };
+  if (paydaysBetween(schedule, row.allowancePaidThrough, now).length > 0) return null;
+  return Cents.of(row.balance);
 }

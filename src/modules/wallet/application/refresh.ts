@@ -52,7 +52,10 @@ export async function bringUpToDate(
   }
 
   if (entries.length > 0) await wallets.appendEntries(entries);
-  if (account.allowancePaidThrough.getTime() < now.getTime()) {
+  if (
+    (duePaydays.length > 0 || settingsOverride !== undefined) &&
+    account.allowancePaidThrough.getTime() < now.getTime()
+  ) {
     await wallets.updateAccount({ ...account, allowancePaidThrough: now });
   }
 }

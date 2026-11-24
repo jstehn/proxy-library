@@ -86,6 +86,8 @@ export type DeckOverviewRequest = Readonly<{
    * to be their own. The deck page uses it after `deckForViewer`; tools never do.
    */
   asViewer?: boolean;
+  /** Already-loaded view (e.g. from `deckForViewer`), so the deck page doesn't query `deckView` twice. */
+  view?: DeckView;
 }>;
 
 export function makeDeckOverview(readers: DeckOverviewReaders) {
@@ -95,9 +97,11 @@ export function makeDeckOverview(readers: DeckOverviewReaders) {
   ): Promise<Result<DeckOverview, DeckNotFound>> {
     const { deckId } = request;
     const parts = request.parts ?? {};
-    const view = request.asViewer
-      ? await readers.viewableDeckView(actor, deckId)
-      : await readers.deckView(actor, deckId);
+    const view =
+      request.view ??
+      (request.asViewer
+        ? await readers.viewableDeckView(actor, deckId)
+        : await readers.deckView(actor, deckId));
     if (view === null) return err({ kind: "DeckNotFound" });
 
     const makers = view.lines.map((line) => ({

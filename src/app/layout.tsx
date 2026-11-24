@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PwaRegistration } from "./_components/pwa-registration";
@@ -44,7 +46,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <PwaRegistration />
-        <SiteHeader />
+        <Suspense
+          fallback={
+            <header className="border-border-subtle border-b">
+              <nav
+                aria-label="Primary"
+                className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"
+              >
+                <Link href="/" className="font-semibold">
+                  Proxy Library
+                </Link>
+              </nav>
+            </header>
+          }
+        >
+          <SiteHeader />
+        </Suspense>
         <div id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
           {children}
         </div>

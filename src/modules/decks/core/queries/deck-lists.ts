@@ -41,30 +41,54 @@ export async function decksFor(db: DbExecutor, userId: UserId): Promise<DeckSumm
     visibility: string;
     uses_real_cards: boolean;
   }>(sql`
-    with owned as (
-      select p.oracle_id,
-             sum(c.quantity) filter (where not c.is_real) as game,
-             sum(c.quantity) filter (where c.is_real) as real
-        from ${ownedCopies(userId, sql`true`)} c join printings p on p.id = c.printing_id
-       group by p.oracle_id
-    ),
-    basics as (select distinct p.oracle_id from printings p where ${IS_BASIC_LAND}),
-    needs as (
+    with needs as (
       select e.deck_id, e.oracle_id, sum(e.quantity) as quantity
         from deck_entries e join decks d on d.id = e.deck_id
        where d.owner_id = ${userId} and e.board <> 'maybe'
        group by e.deck_id, e.oracle_id
+    ),
+    needed_oracles as (
+      select distinct oracle_id from needs
+    ),
+    -- Check basic lands only for the cards actually in the player's decks (indexed by oracle_id),
+    -- instead of scanning every printing in the catalog.
+    basic_oracles as (
+      select no.oracle_id
+        from needed_oracles no
+       where exists (
+         select 1 from printings p
+          where p.oracle_id = no.oracle_id and ${IS_BASIC_LAND}
+       )
+    ),
+    owned as (
+      select p.oracle_id,
+             sum(c.quantity) filter (where not c.is_real) as game,
+             sum(c.quantity) filter (where c.is_real) as real
+        from ${ownedCopies(userId, sql`true`)} c join printings p on p.id = c.printing_id
+       where p.oracle_id in (select oracle_id from needed_oracles)
+       group by p.oracle_id
+    ),
+    deck_totals as (
+      select n.deck_id,
+             sum(n.quantity)::int as cards,
+             -- Real copies count only in decks with the switch on (design doc 16, rule 2).
+             coalesce(sum(
+               case when bo.oracle_id is not null then 0
+                    else greatest(0, n.quantity - coalesce(o.game, 0)
+                                     - case when d.uses_real_cards then coalesce(o.real, 0) else 0 end)
+               end
+             ), 0)::int as short
+        from needs n
+        join decks d on d.id = n.deck_id
+        left join owned o on o.oracle_id = n.oracle_id
+        left join basic_oracles bo on bo.oracle_id = n.oracle_id
+       group by n.deck_id
     )
     select d.id, d.name, d.format, d.updated_at, d.origin, d.visibility, d.uses_real_cards,
-           coalesce((select sum(e.quantity) from deck_entries e
-                      where e.deck_id = d.id and e.board <> 'maybe'), 0)::int as cards,
-           -- Real copies count only in decks with the switch on (design doc 16, rule 2).
-           coalesce((select sum(greatest(0, n.quantity - coalesce(o.game, 0)
-                                            - case when d.uses_real_cards then coalesce(o.real, 0) else 0 end))
-                       from needs n left join owned o on o.oracle_id = n.oracle_id
-                      where n.deck_id = d.id
-                        and n.oracle_id not in (select oracle_id from basics)), 0)::int as short
+           coalesce(t.cards, 0)::int as cards,
+           coalesce(t.short, 0)::int as short
       from decks d
+      left join deck_totals t on t.deck_id = d.id
      where d.owner_id = ${userId}
      order by d.updated_at desc, d.id desc
   `);

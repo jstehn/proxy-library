@@ -19,16 +19,20 @@ async function answersFor(
   db: DbExecutor,
   userId: UserId,
   wished: readonly Wish[],
+  options: { includeNames?: boolean } = {},
 ): Promise<WishlistAnswers> {
   const oracleIds = [...new Set(wished.map((wish) => wish.target.oracleId))];
   if (oracleIds.length === 0) return { wishes: [], names: new Map(), forSale: [], owned: [] };
+  const includeNames = options.includeNames ?? true;
   const [forSale, owned, names] = await Promise.all([
     offersOf(db, oracleIds),
     ownedOf(db, userId, oracleIds),
-    db.execute<{ oracle_id: string; name: string }>(sql`
-      select distinct on (oracle_id) oracle_id, name from printings
-       where oracle_id = any(${textArray(oracleIds)})
-    `),
+    includeNames
+      ? db.execute<{ oracle_id: string; name: string }>(sql`
+          select distinct on (oracle_id) oracle_id, name from printings
+           where oracle_id = any(${textArray(oracleIds)})
+        `)
+      : Promise.resolve({ rows: [] as Array<{ oracle_id: string; name: string }> }),
   ]);
   return {
     wishes: wished,
@@ -55,7 +59,9 @@ export async function atTarget(db: DbExecutor, actor: Actor): Promise<number> {
     .from(wishes)
     .where(and(eq(wishes.userId, actor.userId), isNotNull(wishes.targetCents)));
   if (rows.length === 0) return 0;
-  return countAtTarget(await answersFor(db, actor.userId, rows.map(wishFromStored)));
+  return countAtTarget(
+    await answersFor(db, actor.userId, rows.map(wishFromStored), { includeNames: false }),
+  );
 }
 
 /** Your wishes for the card this printing is (any kind), for the card page. */

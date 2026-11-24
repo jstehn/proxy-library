@@ -63,7 +63,7 @@ export async function enabledSets(db: DbExecutor): Promise<SetSummary[]> {
       name: cardSets.name,
       releaseDate: cardSets.releaseDate,
       keyruneCode: cardSets.keyruneCode,
-      printingCount: count(printings.id),
+      printingCount: count(),
     })
     .from(cardSets)
     .innerJoin(printings, eq(printings.setCode, cardSets.code))
@@ -208,9 +208,12 @@ export async function searchPrintings(
   }[search.sort];
   const offset = (Math.max(1, search.page) - 1) * SEARCH_PAGE_SIZE;
 
-  // The matching printings, or each matching card's cheapest printing (unpriced ones last).
+  // The matching printings (narrow columns only so sorting stays in memory), or each matching
+  // card's cheapest printing (unpriced ones last).
   const matching = search.oneRowPerCard
-    ? sql`select distinct on (p.oracle_id) p.* from printings p
+    ? sql`select distinct on (p.oracle_id)
+                 p.id, p.name, p.set_code, p.collector_number, p.mana_value
+            from printings p
             join card_sets s on s.code = p.set_code and s.is_enabled
            where ${where}
            order by p.oracle_id,
@@ -218,7 +221,18 @@ export async function searchPrintings(
                       where snapshot.printing_id = p.id
                         and snapshot.day = (select max(day) from price_snapshots)) asc nulls last,
                     p.id`
-    : sql`select p.* from printings p
+    : sql`select p.id, p.name, p.set_code, p.collector_number, p.mana_value
+            from printings p
+            join card_sets s on s.code = p.set_code and s.is_enabled
+           where ${where}`;
+
+  const totalQuery = search.oneRowPerCard
+    ? sql`select count(distinct p.oracle_id)::int as total
+            from printings p
+            join card_sets s on s.code = p.set_code and s.is_enabled
+           where ${where}`
+    : sql`select count(*)::int as total
+            from printings p
             join card_sets s on s.code = p.set_code and s.is_enabled
            where ${where}`;
 
@@ -229,10 +243,7 @@ export async function searchPrintings(
        order by ${order}
        limit ${SEARCH_PAGE_SIZE} offset ${offset}
     `),
-    db.execute<{ total: number }>(sql`
-      with matching as (${matching})
-      select count(*)::int as total from matching
-    `),
+    db.execute<{ total: number }>(totalQuery),
   ]);
   const total = totals.rows[0].total;
   return {

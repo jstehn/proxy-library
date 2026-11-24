@@ -105,6 +105,9 @@ export const draftSeats = pgTable(
     // The worker looks for passed deadlines every few seconds.
     index("draft_seats_deadline_idx").on(table.deadline),
     index("draft_seats_prompt_deadline_idx").on(table.promptDeadline),
+    index("draft_seats_user_draft_idx")
+      .on(table.userId, table.draftId)
+      .where(sql`${table.botNumber} = 0`),
     check("draft_seats_pack_source_known", sql`${table.packSource} in ('entryFee')`),
   ],
 );

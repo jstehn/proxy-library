@@ -227,12 +227,12 @@ export async function commandersICanBuild(
   userId: UserId,
   search: CommanderSearch = {},
 ): Promise<CommanderCoverage[]> {
-  const { pool, lands } = await ownedPool(db, userId, search.withReal ?? false);
-  const candidates = [
-    ...(await ownedCandidates(db, userId, search)),
-    ...(search.includeStore === true ? await storeCandidates(db, userId, search) : []),
-  ];
-  return rankCommanders(candidates, pool, lands, {
+  const [{ pool, lands }, owned, store] = await Promise.all([
+    ownedPool(db, userId, search.withReal ?? false),
+    ownedCandidates(db, userId, search),
+    search.includeStore === true ? storeCandidates(db, userId, search) : Promise.resolve([]),
+  ]);
+  return rankCommanders([...owned, ...store], pool, lands, {
     sort: search.sort,
     theme: search.theme,
     tribe: search.tribe,
@@ -283,7 +283,7 @@ export async function commanderDetails(
            case when owned.owned is null then ${cheapestPrice("p.id")} end as price_cents,
            ${leadsDecks(userId, sql`p.oracle_id`)} as leads
       from printings p
-      left join ${ownedPerCard(userId, withReal)} owned on owned.oracle_id = p.oracle_id
+      left join ${ownedPerCard(userId, withReal, [oracleId])} owned on owned.oracle_id = p.oracle_id
      where p.oracle_id = ${oracleId} and ${COMMANDER_LEGAL}
      order by owned.owned is null, ${cheapestPrice("p.id")} nulls last, p.id
      limit 1

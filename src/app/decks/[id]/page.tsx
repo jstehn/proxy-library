@@ -33,11 +33,13 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const searchParams = await props.searchParams;
 
   // The owner gets the builder; anyone else, a shared deck read-only (design doc 21).
-  const viewed = await reads.decks.deckForViewer(actor, deckId);
+  const [viewed, comments] = await Promise.all([
+    reads.decks.deckForViewer(actor, deckId),
+    reads.decks.deckComments(actor, deckId),
+  ]);
   if (viewed === null) notFound();
   const { view } = viewed;
   const { deck } = view;
-  const comments = await reads.decks.deckComments(actor, deckId);
   const commentSection = (
     <DeckComments
       deckId={deck.id}
@@ -54,6 +56,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     const shared = await capabilities.deckOverview(actor, {
       deckId: deck.id,
       asViewer: true,
+      view,
       parts: { printings: true, tokens: true },
     });
     if (!shared.ok) notFound();
@@ -97,7 +100,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
     );
   }
 
-  const builderDeck = await builderDeckFor(capabilities, actor, deckId);
+  const builderDeck = await builderDeckFor(capabilities, actor, deckId, view);
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries

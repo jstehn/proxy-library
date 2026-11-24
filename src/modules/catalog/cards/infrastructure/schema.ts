@@ -82,6 +82,8 @@ export const printings = pgTable(
   (table) => [
     index("printings_set_number_idx").on(table.setCode, table.collectorNumber),
     index("printings_oracle_idx").on(table.oracleId),
+    index("printings_lower_name_idx").on(sql`lower(${table.name})`),
+    index("printings_name_set_number_idx").on(table.name, table.setCode, table.collectorNumber),
     index("printings_game_changer_idx")
       .on(table.isGameChanger)
       .where(sql`${table.isGameChanger}`),
@@ -151,6 +153,8 @@ export const priceSnapshots = pgTable(
     primaryKey({ columns: [table.printingId, table.finish, table.day] }),
     // "The newest price day" is asked often, and the table grows every day (ADR 0013).
     index("price_snapshots_day_idx").on(table.day),
+    // Covers per-printing lookups on the newest price day (Singles sort/dedup, Store featured art).
+    index("price_snapshots_day_printing_idx").on(table.day, table.printingId, table.usdCents),
   ],
 );
 

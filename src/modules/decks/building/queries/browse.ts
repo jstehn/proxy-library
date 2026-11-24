@@ -9,12 +9,7 @@ import { latestPrice } from "@/shared/db";
 import { type UserId } from "@/shared/kernel";
 import { ColorSchema, FinishSchema, type ManaColor, type Tag, type Theme } from "@/shared/mtg";
 import { parseSearch } from "@/shared/card-search";
-import {
-  featureArray,
-  signalIO,
-  foilOwnedBy,
-  searchCondition,
-} from "@/modules/catalog/cards/queries/search-sql";
+import { foilOwnedBy, searchCondition } from "@/modules/catalog/cards/queries/search-sql";
 import { legalInFormat, ownedPerCard } from "./candidate-pool";
 import { STANDARD_FIRST } from "@/modules/decks/core";
 
@@ -157,10 +152,12 @@ export async function browseCollection(
   })} and ${colorFilter} and (${!input.onlyLegal} or ${legal})`;
 
   // One page of candidates: (oracle_id, printing_id shown, owned, owned_real, newest, total).
+  const needOwnedNewest = input.source === "mine" && input.sort === "newest";
   // Your cards: the printing shown is your most special copy, and it's the one searched.
   const mineCandidates = sql`
     candidates as (
-      select owned.oracle_id, owned.printing_id, owned.owned, owned.owned_real, owned.newest,
+      select owned.oracle_id, owned.printing_id, owned.finish as owned_finish,
+             owned.owned, owned.owned_real, owned.newest,
              count(*) over ()::int as total
         from owned join printings p on p.id = owned.printing_id
        where ${matches}
@@ -196,10 +193,17 @@ export async function browseCollection(
                select p.id from printings p join card_sets s on s.code = p.set_code and s.is_enabled
                 where p.oracle_id = paged.oracle_id and ${matches}
                 order by ${STANDARD_FIRST} limit 1)) as printing_id,
+             owned.finish as owned_finish,
              coalesce(owned.owned, 0) as owned, coalesce(owned.owned_real, 0) as owned_real,
              paged.newest, paged.total
         from paged left join owned on owned.oracle_id = paged.oracle_id
     )`;
+
+  const ownedNewest = needOwnedNewest
+    ? sql`(select max(a.created_at) from acquisitions a
+             join printings ap on ap.id = a.printing_id
+            where a.user_id = ${userId} and ap.oracle_id = o.oracle_id)`
+    : sql`null::timestamptz`;
 
   const rows = await db.execute<{
     oracle_id: string;
@@ -234,27 +238,27 @@ export async function browseCollection(
   }>(sql`
     with owned as (
       -- Your most special copy is the one shown and added (design doc 23, section 14).
-      select o.*,
-             (select max(a.created_at) from acquisitions a
-               join printings ap on ap.id = a.printing_id
-              where a.user_id = ${userId} and ap.oracle_id = o.oracle_id) as newest
+      select o.*, ${ownedNewest} as newest
         from ${ownedPerCard(userId, context.usesRealCards)} o
     ),
-    ${input.source === "mine" ? mineCandidates : allCandidates}
+    ${input.source === "mine" ? mineCandidates : allCandidates},
+    deck_usage as (
+      select e.oracle_id,
+             coalesce(sum(e.quantity) filter (where d.id = ${input.deckId}), 0)::int as in_this_deck,
+             count(distinct d.id) filter (where d.id <> ${input.deckId})::int as other_decks,
+             coalesce(sum(e.quantity) filter (where d.id <> ${input.deckId}), 0)::int as used_elsewhere
+        from deck_entries e
+        join decks d on d.id = e.deck_id
+       where d.owner_id = ${userId}
+         and e.board <> 'maybe'
+         and e.oracle_id in (select oracle_id from candidates)
+       group by e.oracle_id
+    )
     select card.oracle_id, p.id as printing_id, p.name, p.mana_cost, p.mana_value, p.type_line,
            card.owned, card.owned_real,
-           coalesce((select sum(e.quantity) from deck_entries e
-                      where e.deck_id = ${input.deckId} and e.oracle_id = card.oracle_id
-                        and e.board <> 'maybe'), 0)::int
-             as in_this_deck,
-           (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
-             where d.owner_id = ${userId} and d.id <> ${input.deckId}
-               and e.oracle_id = card.oracle_id and e.board <> 'maybe')::int as other_decks,
-           greatest(card.owned - coalesce((select sum(e.quantity) from deck_entries e
-                                             join decks d on d.id = e.deck_id
-                                            where d.owner_id = ${userId} and d.id <> ${input.deckId}
-                                              and e.oracle_id = card.oracle_id
-                                              and e.board <> 'maybe'), 0), 0)::int as free,
+           coalesce(du.in_this_deck, 0)::int as in_this_deck,
+           coalesce(du.other_decks, 0)::int as other_decks,
+           greatest(card.owned - coalesce(du.used_elsewhere, 0), 0)::int as free,
            ${identityFits} as fits_identity,
            ${legal} as is_legal,
            p.color_identity, p.legalities->>${context.format} as legality,
@@ -262,16 +266,23 @@ export async function browseCollection(
            exists (select 1 from jsonb_array_elements(p.faces) f
                     where f->>'power' is not null and f->>'toughness' is not null) as has_power_toughness,
            p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
-           p.produced_mana, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags,
-           ${featureArray("bracket_flags")} as bracket_flags, ${signalIO()} as signals, p.is_game_changer, p.set_code, p.collector_number, shown.finish,
+           p.produced_mana,
+           coalesce(cf.role_tags, '{}'::text[]) as role_tags,
+           coalesce(cf.theme_tags, '{}'::text[]) as theme_tags,
+           coalesce(cf.bracket_flags, '{}'::text[]) as bracket_flags,
+           coalesce(cf.features->'signalIO', '{"makes": [], "uses": []}'::jsonb) as signals,
+           p.is_game_changer, p.set_code, p.collector_number, shown.finish,
            ${latestPrice("p.id", "shown.finish")} as price_cents,
            card.total
-      from candidates card join printings p on p.id = card.printing_id
+      from candidates card
+      join printings p on p.id = card.printing_id
+      left join card_features cf on cf.oracle_id = card.oracle_id
+      left join deck_usage du on du.oracle_id = card.oracle_id
       -- The finish a new deck line shows, as the deck view picks it when nothing is pinned: your
       -- most special copy's, or nonfoil for a card you don't own (design doc 29, rule 4).
       cross join lateral (
         select coalesce(
-                 (select o.finish from owned o where o.printing_id = p.id),
+                 card.owned_finish,
                  case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
                ) as finish
       ) shown

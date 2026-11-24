@@ -5,7 +5,6 @@ import { formatRules } from "../domain/format-rules";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { type DbExecutor, latestPrice } from "@/shared/db";
-import { featureArray, signalIO } from "@/modules/catalog/cards/queries/search-sql";
 import { UserId } from "@/shared/kernel";
 import { ColorSchema, FinishSchema, type Tag, type Theme } from "@/shared/mtg";
 import { BOARDS, DeckId, FORMATS, GROUPINGS, type Deck } from "../domain/deck";
@@ -123,16 +122,48 @@ export async function deckView(
     owned_real: number;
     other_decks: unknown;
   }>(sql`
+    with deck_oracles as (
+      select distinct oracle_id from deck_entries where deck_id = ${deckId}
+    ),
+    user_owned as (
+      select c.printing_id, c.finish, c.quantity, c.is_real, p.oracle_id
+        from ${owned} c join printings p on p.id = c.printing_id
+       where p.oracle_id in (select oracle_id from deck_oracles)
+    ),
+    owned_totals as (
+      select oracle_id,
+             sum(quantity)::int as owned,
+             coalesce(sum(quantity) filter (where is_real), 0)::int as owned_real
+        from user_owned
+       group by oracle_id
+    ),
+    other_uses as (
+      select used.oracle_id,
+             json_agg(json_build_object('deckId', other.id, 'name', other.name,
+                                        'quantity', used.quantity, 'available', used.available)
+                      order by other.name, other.id) as uses
+        from (select e2.oracle_id, e2.deck_id, sum(e2.quantity)::int as quantity,
+                     coalesce(sum(e2.quantity) filter (where e2.board <> 'commander'), 0)::int as available
+                from deck_entries e2
+                join decks other on other.id = e2.deck_id
+               where other.owner_id = ${userId}
+                 and e2.deck_id <> ${deckId}
+                 and e2.board <> 'maybe'
+                 and e2.oracle_id in (select oracle_id from deck_oracles)
+               group by e2.oracle_id, e2.deck_id) used
+        join decks other on other.id = used.deck_id
+       group by used.oracle_id
+    )
     select e.oracle_id, e.board, e.quantity, e.printing_id as pinned_printing, e.finish as pinned_finish,
            e.heading, e.note, e.tags, e.role, e.pinned, shown.id as printing_id,
            coalesce(e.finish, owned_finish.finish,
                     case when 'nonfoil' = any(shown.finishes) then 'nonfoil' else shown.finishes[1] end) as finish,
            shown.name, shown.type_line, shown.mana_value, shown.mana_cost, shown.produced_mana,
-           ${featureArray("role_tags", "shown")} as role_tags,
-           ${featureArray("bracket_flags", "shown")} as bracket_flags,
-           ${signalIO("shown")} as signals,
-           ${featureArray("theme_tags", "shown")} as theme_tags,
-           ${featureArray("leader_themes", "shown")} as leader_themes,
+           coalesce(cf.role_tags, '{}'::text[]) as role_tags,
+           coalesce(cf.bracket_flags, '{}'::text[]) as bracket_flags,
+           coalesce(cf.features->'signalIO', '{"makes": [], "uses": []}'::jsonb) as signals,
+           coalesce(cf.theme_tags, '{}'::text[]) as theme_tags,
+           coalesce(cf.leader_themes, '{}'::text[]) as leader_themes,
            ${latestPrice(
              "shown.id",
              `coalesce(e.finish, owned_finish.finish,
@@ -147,12 +178,13 @@ export async function deckView(
            exists (select 1 from printings g
                     where g.oracle_id = e.oracle_id and g.is_game_changer) as is_game_changer,
            newest.color_identity, newest.legalities,
-           coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
-                      where p.oracle_id = e.oracle_id), 0)::int as owned,
-           coalesce((select sum(c.quantity) from ${owned} c join printings p on p.id = c.printing_id
-                      where c.is_real and p.oracle_id = e.oracle_id), 0)::int as owned_real,
-           ${otherDeckUses(userId, sql`e.deck_id`, sql`e.oracle_id`)} as other_decks
+           coalesce(ot.owned, 0)::int as owned,
+           coalesce(ot.owned_real, 0)::int as owned_real,
+           ou.uses as other_decks
       from deck_entries e
+      left join card_features cf on cf.oracle_id = e.oracle_id
+      left join owned_totals ot on ot.oracle_id = e.oracle_id
+      left join other_uses ou on ou.oracle_id = e.oracle_id
       -- The newest printing carries the current rules facts (legalities, identity).
       join lateral (
         select p.type_line ~ '^Basic\\y.*\\yLand\\y' as is_basic_land,
@@ -175,21 +207,23 @@ export async function deckView(
       ) newest on true
       -- Unpinned: show your most special copy of the card (design doc 23, section 14).
       left join lateral (
-        select c.printing_id, c.finish from ${owned} c join printings p on p.id = c.printing_id
-         where p.oracle_id = e.oracle_id
+        select c.printing_id, c.finish from user_owned c join printings p on p.id = c.printing_id
+         where e.printing_id is null and c.oracle_id = e.oracle_id
          order by ${MOST_SPECIAL_FIRST} limit 1
       ) owned_printing on true
-      -- Else the card's standard printing (design doc 24, rule 2).
-      join lateral (
-        select p.* from printings p join card_sets s on s.code = p.set_code
-         where p.id = coalesce(e.printing_id, owned_printing.printing_id)
-            or (e.printing_id is null and owned_printing.printing_id is null and p.oracle_id = e.oracle_id)
+      -- Else the card's standard printing (design doc 24, rule 2). Kept separate from the PK join
+      -- below so Postgres uses printings_oracle_idx instead of an OR scan.
+      left join lateral (
+        select p.id from printings p join card_sets s on s.code = p.set_code
+         where e.printing_id is null and owned_printing.printing_id is null
+           and p.oracle_id = e.oracle_id
          order by ${STANDARD_FIRST} limit 1
-      ) shown on true
+      ) standard_printing on true
+      join printings shown on shown.id = coalesce(e.printing_id, owned_printing.printing_id, standard_printing.id)
       -- The finish of the copy shown: your most special copy of that printing, so a pinned
       -- printing never borrows the finish of another one.
       left join lateral (
-        select c.finish from ${owned} c join printings p on p.id = c.printing_id
+        select c.finish from user_owned c join printings p on p.id = c.printing_id
          where c.printing_id = shown.id
          order by ${MOST_SPECIAL_FIRST} limit 1
       ) owned_finish on true

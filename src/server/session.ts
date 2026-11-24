@@ -1,4 +1,5 @@
 // Helpers every page and server action uses to find out who is signed in.
+import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Actor, AdminActor } from "@/modules/accounts";
@@ -9,10 +10,10 @@ export function externalSignInName(): string | null {
   return getContainer().config.oidc?.providerName ?? null;
 }
 
-/** The signed-in player, or null. */
-export async function getCurrentActor(): Promise<Actor | null> {
+/** The signed-in player, or null. Memoized per request so layout and page share one lookup. */
+export const getCurrentActor = cache(async function getCurrentActor(): Promise<Actor | null> {
   return getContainer().accounts.getActor(await headers());
-}
+});
 
 /**
  * The signed-in player. Signed-out visitors are sent to /sign-in, and players who must

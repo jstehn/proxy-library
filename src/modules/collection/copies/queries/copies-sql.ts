@@ -127,13 +127,15 @@ export async function readCollectionPage(
   if (filter.addedSince) conditions.push(sql`${source.newestArrival} >= ${filter.addedSince}`);
   const where = sql.join(conditions, sql` and `);
 
-  // The newest price of this finish, and the newest arrival of this stack.
+  // The newest price of this finish; compute newest arrival only before paging when sorting or
+  // filtering by it, otherwise only for the 60 rows on the page.
   const [sectionOrder, sectionLabel] = COLLECTION_SECTIONS[filter.sections];
+  const needsArrivalUpfront = filter.sort === "newest" || filter.addedSince !== undefined;
   const owned = sql`
-    select c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
+    select c.user_id, c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
            s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,
-           ${latestPrice("c.printing_id", "c.finish")} as price,
-           ${source.newestArrival} as last_acquired_at
+           ${latestPrice("c.printing_id", "c.finish")} as price
+           ${needsArrivalUpfront ? sql`, ${source.newestArrival} as last_acquired_at` : sql``}
       from ${source.table} c
       join printings p on p.id = c.printing_id
       join card_sets s on s.code = p.set_code
@@ -152,6 +154,35 @@ export async function readCollectionPage(
       : sql`section_order, ${order}`;
   const offset = (Math.max(1, filter.page) - 1) * COLLECTION_PAGE_SIZE;
 
+  const pageQuery = needsArrivalUpfront
+    ? sql`
+      select printing_id, finish, quantity, price, section, mana_value, last_acquired_at
+        from (${owned}) owned
+       -- Sections first (a set's section by newest set), then the chosen order within each.
+       order by ${outerOrder}
+       limit ${COLLECTION_PAGE_SIZE} offset ${offset}
+    `
+    : sql`
+      with paged as (
+        select user_id, printing_id, finish, quantity, price, section, mana_value,
+               section_order, release_date, set_code, name, collector_number
+          from (${owned}) owned
+         order by ${outerOrder}
+         limit ${COLLECTION_PAGE_SIZE} offset ${offset}
+      )
+      select paged.printing_id, paged.finish, paged.quantity, paged.price, paged.section,
+             paged.mana_value, arrival.last_acquired_at
+        from paged
+        join lateral (
+          select ${source.newestArrival} as last_acquired_at
+            from ${source.table} c
+           where c.user_id = paged.user_id
+             and c.printing_id = paged.printing_id
+             and c.finish = paged.finish
+        ) arrival on true
+       order by ${outerOrder}
+    `;
+
   const [rows, totals] = await Promise.all([
     db.execute<{
       printing_id: string;
@@ -161,16 +192,14 @@ export async function readCollectionPage(
       section: string;
       mana_value: number;
       last_acquired_at: Date | string | null;
-    }>(sql`
-      select printing_id, finish, quantity, price, section, mana_value, last_acquired_at from (${owned}) owned
-       -- Sections first (a set's section by newest set), then the chosen order within each.
-       order by ${outerOrder}
-       limit ${COLLECTION_PAGE_SIZE} offset ${offset}
-    `),
+    }>(pageQuery),
     db.execute<{ different: number; copies: number; value_cents: number }>(sql`
-      select count(*)::int as different, coalesce(sum(quantity), 0)::int as copies,
-             coalesce(sum(price * quantity), 0)::bigint as value_cents
-        from (${owned}) owned
+      select count(*)::int as different, coalesce(sum(c.quantity), 0)::int as copies,
+             coalesce(sum(${latestPrice("c.printing_id", "c.finish")} * c.quantity), 0)::bigint as value_cents
+        from ${source.table} c
+        join printings p on p.id = c.printing_id
+        join card_sets s on s.code = p.set_code
+       where ${where}
     `),
   ]);
   const summary = totals.rows[0];

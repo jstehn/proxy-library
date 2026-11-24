@@ -1,5 +1,5 @@
 import type { PrintingCard } from "@/modules/catalog";
-import type { CardRules, DeckCombo, DeckLine, Grouping } from "@/modules/decks";
+import type { CardRules, DeckCombo, DeckLine, DeckView, Grouping } from "@/modules/decks";
 import type { Capabilities } from "@/server/composition/capabilities";
 import type { Actor } from "@/modules/accounts";
 
@@ -22,8 +22,13 @@ export async function builderDeckFor(
   capabilities: Capabilities,
   actor: Actor,
   deckId: number,
+  preloadedView?: DeckView,
 ): Promise<BuilderDeck | null> {
-  const result = await capabilities.deckOverview(actor, { deckId, parts: { printings: true } });
+  const result = await capabilities.deckOverview(actor, {
+    deckId,
+    parts: { printings: true },
+    ...(preloadedView !== undefined ? { view: preloadedView } : {}),
+  });
   if (!result.ok) return null;
   const { view, printings, combos } = result.value;
   return {

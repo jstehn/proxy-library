@@ -77,5 +77,8 @@ export const friendships = pgTable(
     index("friendships_addressee_pending_idx")
       .on(table.addresseeId)
       .where(sql`${table.status} = 'pending'`),
+    index("friendships_addressee_accepted_idx")
+      .on(table.addresseeId, table.requesterId)
+      .where(sql`${table.status} = 'accepted'`),
   ],
 );
