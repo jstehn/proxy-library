@@ -3,6 +3,7 @@ import type { ProxyPdfRenderer } from "../application/ports";
 import { playtestCard } from "../domain/playtest-card";
 import { proxyImageKey, type Placement } from "../domain/proxy-sheet";
 import { drawable, makePlaytestPainter, readManaFont } from "./playtest-painter";
+import { readKeyruneFont, type KeyruneFont } from "./keyrune-font";
 
 // Draws proxy pages with pdf-lib (design doc 14, decision 5). The layout is already decided
 // (domain/proxy-sheet.ts); this only paints it: the cards, then the guides on top. Each card is
@@ -15,10 +16,12 @@ const MISSING_FILL = rgb(0.92, 0.92, 0.92);
 export type PdfLibRendererDependencies = {
   /** The Mana symbol font's bytes (default: from the installed `mana-font` package). */
   manaFont?: () => Promise<Uint8Array>;
+  /** The Keyrune set-symbol font and CSS map (default: from the installed `keyrune` package). */
+  keyruneFont?: () => Promise<KeyruneFont>;
 };
 
 export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): ProxyPdfRenderer {
-  const { manaFont = readManaFont } = dependencies;
+  const { manaFont = readManaFont, keyruneFont = readKeyruneFont } = dependencies;
 
   async function render(
     pages: Parameters<ProxyPdfRenderer["render"]>[0],
@@ -32,7 +35,12 @@ export function pdfLibRenderer(dependencies: PdfLibRendererDependencies = {}): P
     const font = await document.embedFont(StandardFonts.Helvetica);
     const painter =
       options.style === "playtest"
-        ? await makePlaytestPainter(document, await manaFont(), options.artFilter)
+        ? await makePlaytestPainter(
+            document,
+            await manaFont(),
+            await keyruneFont(),
+            options.artFilter,
+          )
         : null;
 
     // Each image is embedded once and drawn as often as needed (four Bolts, one copy in the file).

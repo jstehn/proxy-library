@@ -30,7 +30,17 @@ checklist. Code: `src/modules/decks/proxies/` (ADR 0029). Checked against `refac
    fit at the smallest size the text box takes space from the art, down to none, never cutting text);
    stripe colours come only from the card's colours, or for lands from the mana they make, and a card
    with neither is grey; a missing art crop leaves an empty outlined art box and never stops the
-   sheet; stripes are not offered on the scan style. (doc 22 §4 and §13; `playtest-card.test.ts`)
+   sheet; stripes are not offered on the scan style. Double-faced cards and double-faced tokens show
+   a Mana-font DFC icon in the title bar and a bottom hint bar naming the other side (with its cost
+   or stats). Cards with two faces on one side use dedicated frame strategies: Adventure/Omen gets
+   an inset spell panel on the left and creature rules on the right; Prepare gets creature rules on
+   the left and the inset prepare spell on the right; Split/Room/Aftermath gets two equal stacked
+   half-cards; Kamigawa Flip rotates the bottom half 180 degrees. Sagas place chapters on the left
+   and tall art on the right; Classes and Cases place tall art on the left and level/solve text on
+   the right. Tokens, emblems and helpers get a centered title with a `TOKEN`/`EMBLEM`/`HELPER`
+   badge, and textless tokens omit the empty text box even with art off. Each type bar shows the
+   card's set symbol on the right using the Keyrune font, tinted by rarity. (doc 22 §4 and §13;
+   `playtest-card.test.ts`)
 8. **Filters never change an image's size,** and every output pixel is 0-255; images use `jpeg-js`
    with our own filter functions; mana symbols use the real Mana font artwork. (doc 22 §4 rule 4,
    §13.2 and §13.4; `art-filters.test.ts`)

@@ -53,10 +53,12 @@ export function makeProxyDeck(readers: ProxyDeckReaders) {
         // still gets a card with its name, rather than stopping the sheet.
         printed: {
           faces: card?.faces ?? [nameOnlyFace(line.name)],
+          layout: card?.layout ?? "normal",
           doubleFaced: card?.hasBackImage ?? false,
           colors: card?.colors ?? [],
           producedMana: card?.producedMana ?? [],
           setCode: card?.setCode ?? "",
+          rarity: card?.rarity ?? "common",
           collectorNumber: card?.collectorNumber ?? "",
           artist: card?.artist ?? null,
           isToken: false,

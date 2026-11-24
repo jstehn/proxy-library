@@ -7,6 +7,7 @@ import { symbolArt } from "@/modules/decks/core/client";
 import { DEFAULT_PROXY_OPTIONS, type ProxyLine, type ProxyOptions } from "../domain/proxy-sheet";
 import { fakeProxyImages } from "../testing/fakes";
 import { colorTestCards, printedCard } from "../testing/printed-cards";
+import { keyruneGlyph, readKeyruneFont } from "./keyrune-font";
 import { pdfLibRenderer } from "./pdf-lib-renderer";
 import { readManaFont } from "./playtest-painter";
 
@@ -94,8 +95,16 @@ describe("pdfLibRenderer, playtest style (design doc 22)", () => {
     const symbols = JSON.parse(readFileSync("tests/fixtures/scryfall/symbology.json", "utf8")) as {
       data: { symbol: string }[];
     };
-    const glyphs = symbols.data.flatMap(({ symbol }) => {
-      const art = symbolArt(symbol.slice(1, -1));
+    const keys = [
+      ...symbols.data.map(({ symbol }) => symbol.slice(1, -1)),
+      "DFC_FRONT",
+      "DFC_BACK",
+      "MDFC_FRONT",
+      "MDFC_BACK",
+      "DFC_MELD",
+    ];
+    const glyphs = keys.flatMap((key) => {
+      const art = symbolArt(key);
       if (art === null) return [];
       return art.kind === "single" ? [art.glyph] : [...art.glyphs];
     });
@@ -103,6 +112,16 @@ describe("pdfLibRenderer, playtest style (design doc 22)", () => {
       (glyph) => font.glyphForCodePoint(glyph.codePointAt(0) ?? 0).id === 0,
     );
     expect(missing).toEqual([]);
+  });
+
+  it("has a Keyrune glyph for real set codes and token set codes", async () => {
+    const keyrune = await readKeyruneFont();
+    const font = fontkit.create(keyrune.bytes);
+    for (const code of ["blb", "dsk", "fdn", "eld", "neo", "tblb", "pmh2"]) {
+      const glyph = keyruneGlyph(keyrune.glyphs, code);
+      expect(glyph, `missing keyrune glyph for ${code}`).not.toBeNull();
+      expect(font.glyphForCodePoint(glyph?.codePointAt(0) ?? 0).id).toBeGreaterThan(0);
+    }
   });
 
   it("prints a card whose art is missing, with an empty art box", async () => {

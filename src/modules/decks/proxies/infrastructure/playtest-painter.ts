@@ -28,8 +28,10 @@ import {
 } from "../domain/art-filters";
 import { symbolArt, type SymbolArt } from "@/modules/decks/core/client";
 import { STRIPE_TINTS, type PlaytestDrawing } from "../domain/playtest-card";
+import type { DrawnSetIcon } from "../domain/playtest-chrome";
 import type { DrawnSymbol, FontStyle, Measure } from "../domain/playtest-text";
 import type { Box, Point, ProxyOptions } from "../domain/proxy-sheet";
+import { keyruneGlyph, type KeyruneFont } from "./keyrune-font";
 
 // Paints playtest proxies (design doc 22) into a pdf-lib document. The layout is already decided
 // (domain/playtest-card.ts); this draws it: stripes, white panels, art, words and Mana symbols.
@@ -47,6 +49,15 @@ const WHITE = rgb(1, 1, 1);
 const PANEL_LINE = 0.5;
 /** Quality of re-encoded colour art: high, since it's printed. */
 const JPEG_QUALITY = 90;
+
+const RARITY_COLORS: Readonly<Record<string, string>> = {
+  common: "#111111",
+  uncommon: "#5a7a8a",
+  rare: "#b58d3b",
+  mythic: "#c45324",
+  special: "#7b4fa0",
+  bonus: "#7b4fa0",
+};
 
 function color(hex: string): Color {
   const value = Number.parseInt(hex.slice(1), 16);
@@ -86,6 +97,7 @@ export type PlaytestPainter = Readonly<{
 export async function makePlaytestPainter(
   document: PDFDocument,
   manaFontBytes: Uint8Array,
+  keyruneFont: KeyruneFont,
   filter: ArtFilter,
 ): Promise<PlaytestPainter> {
   document.registerFontkit(fontkit);
@@ -95,8 +107,10 @@ export async function makePlaytestPainter(
     italic: await document.embedFont(StandardFonts.HelveticaOblique),
   };
   const mana = await document.embedFont(manaFontBytes, { subset: true });
+  const keyrune = await document.embedFont(keyruneFont.bytes, { subset: true });
   // pdf-lib can't tell where a glyph's ink is; fontkit reads it from the font, to centre symbols.
   const manaOutlines = fontkit.create(manaFontBytes);
+  const keyruneOutlines = fontkit.create(keyruneFont.bytes);
 
   function measure(text: string, font: FontStyle, size: number): number {
     return fonts[font].widthOfTextAtSize(drawable(fonts[font], text), size);
@@ -272,16 +286,30 @@ export async function makePlaytestPainter(
     };
   }
 
-  async function paint(
+  function paintSetIcon(page: PDFPage, icon: DrawnSetIcon) {
+    const character = keyruneGlyph(keyruneFont.glyphs, icon.setCode);
+    if (character === null) return;
+    const outline = keyruneOutlines.glyphForCodePoint(character.codePointAt(0) ?? 0);
+    if (outline.id === 0) return;
+    const { minX, maxX, minY, maxY } = outline.bbox;
+    const largestSpan = Math.max(maxX - minX, maxY - minY, 1);
+    const scale = icon.size / largestSpan;
+    const size = scale * keyruneOutlines.unitsPerEm;
+    const tint = color(RARITY_COLORS[icon.rarity.toLowerCase()] ?? "#111111");
+    page.drawText(character, {
+      x: icon.x - ((minX + maxX) / 2) * scale,
+      y: icon.y - ((minY + maxY) / 2) * scale,
+      size,
+      font: keyrune,
+      color: tint,
+    });
+  }
+
+  function paintElements(
     page: PDFPage,
-    drawing: PlaytestDrawing,
-    art: Uint8Array | null,
-    artKey: string,
+    elements: Pick<PlaytestDrawing, "panels" | "texts" | "rules" | "symbols" | "setIcons">,
   ) {
-    page.drawRectangle({ ...drawing.bleed, color: WHITE });
-    for (const stripe of drawing.stripes)
-      polygon(page, stripe.points, color(STRIPE_TINTS[stripe.color]));
-    for (const panel of drawing.panels) {
+    for (const panel of elements.panels) {
       page.drawRectangle({
         ...panel,
         color: WHITE,
@@ -289,15 +317,7 @@ export async function makePlaytestPainter(
         borderWidth: PANEL_LINE,
       });
     }
-    if (drawing.art !== null) {
-      const box = drawing.art;
-      const key = `${artKey}@${(box.width / box.height).toFixed(3)}`;
-      if (!artObjects.has(key))
-        artObjects.set(key, art === null ? null : await artDrawer(art, box));
-      artObjects.get(key)?.(page, box);
-      page.drawRectangle({ ...box, borderColor: PANEL_BORDER, borderWidth: PANEL_LINE });
-    }
-    for (const text of drawing.texts) {
+    for (const text of elements.texts) {
       const font = fonts[text.font];
       page.drawText(drawable(font, text.text), {
         x: text.x,
@@ -307,10 +327,40 @@ export async function makePlaytestPainter(
         color: INK,
       });
     }
-    for (const rule of drawing.rules) {
+    for (const rule of elements.rules) {
       page.drawLine({ start: rule.from, end: rule.to, thickness: PANEL_LINE, color: PANEL_BORDER });
     }
-    for (const drawn of drawing.symbols) symbol(page, drawn);
+    for (const drawn of elements.symbols) symbol(page, drawn);
+    for (const icon of elements.setIcons) paintSetIcon(page, icon);
+  }
+
+  async function paint(
+    page: PDFPage,
+    drawing: PlaytestDrawing,
+    art: Uint8Array | null,
+    artKey: string,
+  ) {
+    page.drawRectangle({ ...drawing.bleed, color: WHITE });
+    for (const stripe of drawing.stripes)
+      polygon(page, stripe.points, color(STRIPE_TINTS[stripe.color]));
+    if (drawing.art !== null) {
+      const box = drawing.art;
+      const key = `${artKey}@${(box.width / box.height).toFixed(3)}`;
+      if (!artObjects.has(key))
+        artObjects.set(key, art === null ? null : await artDrawer(art, box));
+      artObjects.get(key)?.(page, box);
+      page.drawRectangle({ ...box, borderColor: PANEL_BORDER, borderWidth: PANEL_LINE });
+    }
+    paintElements(page, drawing);
+    for (const section of drawing.rotatedSections) {
+      const { x, y } = section.center;
+      page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(-1, 0, 0, -1, 2 * x, 2 * y),
+      );
+      paintElements(page, section);
+      page.pushOperators(popGraphicsState());
+    }
   }
 
   return { measure, paint };

@@ -78,4 +78,12 @@ describe("symbolArt", () => {
     expect(symbolArt("W/U/B")).toBeNull();
     expect(symbolArt("NOPE")).toBeNull();
   });
+
+  it("draws double-faced card icons (front dark-on-light, back light-on-dark)", () => {
+    expect(symbolArt("DFC_FRONT")).toMatchObject({ kind: "single", foreground: "#111111" });
+    expect(symbolArt("DFC_BACK")).toMatchObject({ kind: "single", foreground: "#ffffff" });
+    expect(symbolArt("MDFC_FRONT")).toMatchObject({ kind: "single", foreground: "#111111" });
+    expect(symbolArt("MDFC_BACK")).toMatchObject({ kind: "single", foreground: "#ffffff" });
+    expect(symbolArt("DFC_MELD")).toMatchObject({ kind: "single", foreground: "#111111" });
+  });
 });

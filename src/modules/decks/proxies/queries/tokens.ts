@@ -20,6 +20,7 @@ type TokenArtRow = {
   set_code: string;
   set_name: string;
   collector_number: string;
+  layout: string;
   colors: string[];
   faces: TokenArt["faces"];
   artist: string | null;
@@ -29,7 +30,7 @@ type TokenArtRow = {
 
 /** The columns of a TokenArtRow, from token_printings "t". */
 const TOKEN_ART_COLUMNS: SQL = sql`
-  t.id, t.oracle_id, t.name, t.set_code, t.collector_number, t.colors, t.faces, t.artist,
+  t.id, t.oracle_id, t.name, t.set_code, t.collector_number, t.layout, t.colors, t.faces, t.artist,
   t.released_at,
   -- Token sets are listed in card_sets in capitals ("TBLB"); some aren't listed at all.
   coalesce((select s.name from card_sets s where s.code = upper(t.set_code)), upper(t.set_code))
@@ -44,6 +45,7 @@ function toTokenArt(row: TokenArtRow): TokenArt {
     setCode: row.set_code,
     setName: row.set_name,
     collectorNumber: row.collector_number,
+    layout: row.layout,
     colors: row.colors,
     // Written by the catalog's sync as CardFace[], the shape a PrintedFace has.
     faces: row.faces,

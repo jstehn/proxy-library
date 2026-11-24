@@ -32,6 +32,7 @@ function art(id: string, changes: Partial<TokenArt> = {}): TokenArt {
     setCode: "tm13",
     setName: "Magic 2013 Tokens",
     collectorNumber: "1",
+    layout: "token",
     colors: ["R"],
     faces: [
       printedFace({

@@ -111,6 +111,45 @@ const GLYPH_COLOR = "#111111";
 /** `.ms-cost.ms-p::before { transform: scale(1.2) }` */
 const PHYREXIAN_SCALE = 1.2;
 
+/** Double-faced card icons from Mana's stylesheet (`.ms-dfc-*`). */
+const DFC_SYMBOLS: Readonly<Record<string, SymbolArt>> = {
+  DFC_FRONT: {
+    kind: "single",
+    glyph: "\ue9d3",
+    background: "#e8e8e8",
+    foreground: GLYPH_COLOR,
+    scale: 1,
+  },
+  DFC_BACK: {
+    kind: "single",
+    glyph: "\ue9d4",
+    background: "#222222",
+    foreground: "#ffffff",
+    scale: 1,
+  },
+  MDFC_FRONT: {
+    kind: "single",
+    glyph: "\ue983",
+    background: "#e8e8e8",
+    foreground: GLYPH_COLOR,
+    scale: 1,
+  },
+  MDFC_BACK: {
+    kind: "single",
+    glyph: "\ue984",
+    background: "#222222",
+    foreground: "#ffffff",
+    scale: 1,
+  },
+  DFC_MELD: {
+    kind: "single",
+    glyph: "\ue9d5",
+    background: "#e8e8e8",
+    foreground: GLYPH_COLOR,
+    scale: 1,
+  },
+};
+
 /** The glyph for a number from 0 to 20 (Mana has one per number). */
 function numberGlyph(symbol: string): string | null {
   if (!/^\d+$/.test(symbol)) return null;
@@ -124,9 +163,12 @@ function glyphFor(part: string): string | null {
   return COLOR_GLYPHS[part] ?? numberGlyph(part) ?? OTHER_GLYPHS[part] ?? null;
 }
 
-/** How to draw a symbol ("W", "2/U", "G/U/P", "T"), or null if the Mana font has no glyph for it. */
+/** How to draw a symbol ("W", "2/U", "G/U/P", "T", "DFC_FRONT"), or null if Mana has no glyph. */
 export function symbolArt(symbol: string): SymbolArt | null {
-  const parts = symbol.toUpperCase().split("/");
+  const normalized = symbol.toUpperCase();
+  const dfc = DFC_SYMBOLS[normalized];
+  if (dfc !== undefined) return dfc;
+  const parts = normalized.split("/");
   const phyrexian = parts.length > 1 && parts.at(-1) === "P";
   const halves = phyrexian ? parts.slice(0, -1) : parts;
 

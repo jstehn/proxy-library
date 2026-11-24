@@ -1,15 +1,7 @@
-import { colorsOfCost, costSymbols } from "@/modules/decks/core/client";
-import {
-  fittingFlow,
-  fittingSize,
-  flow,
-  statsOf,
-  TEXT_SIZES,
-  textBoxParagraphs,
-  type DrawnSymbol,
-  type DrawnText,
-  type Measure,
-} from "./playtest-text";
+import { colorsOfCost } from "@/modules/decks/core/client";
+import type { DrawnSetIcon, RotatedSection } from "./playtest-chrome";
+import { classifyFrame, FRAME_LAYOUTS } from "./playtest-layouts";
+import type { DrawnSymbol, DrawnText, Measure } from "./playtest-text";
 import type { Box, GuideLine, Point } from "./proxy-sheet";
 import { COLORS, type ManaColor, isLand, type CardFacts } from "@/shared/mtg";
 
@@ -31,12 +23,15 @@ export type PrintedFace = Pick<CardFacts, "name" | "manaCost" | "typeLine" | "te
 /** What a playtest proxy needs to know about a printing. */
 export type PrintedCard = Readonly<{
   faces: readonly PrintedFace[];
+  /** Scryfall's layout: "normal", "split", "adventure", "flip", "transform", "modal_dfc", … */
+  layout: string;
   /** Whether each face has its own side (transform, modal…), rather than sharing one (split). */
   doubleFaced: boolean;
   colors: readonly string[];
   /** Colours of mana it makes ("W", …, "C"): a land's colour. */
   producedMana: readonly string[];
   setCode: string;
+  rarity: string;
   collectorNumber: string;
   artist: string | null;
   /**
@@ -152,35 +147,22 @@ export function stripes(box: Box, colors: readonly ManaColor[]): Stripe[] {
 // ---------------------------------------------------------------------------------------------
 // The card.
 
-/** Mana cost symbols: 3.0 mm across, 0.3 mm apart, as measured on real cards (section 3.4). */
-export const COST_SYMBOL_DIAMETER = (3.0 / 25.4) * 72;
-const COST_SYMBOL_GAP = (0.3 / 25.4) * 72;
-
-const MARGIN = 7;
-const GAP = 3;
-const TITLE_HEIGHT = 16;
-const TYPE_HEIGHT = 14;
-const FOOTER_HEIGHT = 12;
-const FOOTER_BOTTOM = 5;
-const ART_HEIGHT = 105;
-/** Below this the art is too small to be worth printing, and the text gets its space. */
-const SMALLEST_ART = 30;
-const PADDING = 4;
-/** The text size a token's art leaves room for: about a real card's. */
-const TOKEN_TEXT_SIZE = 7.5;
-
 export type PlaytestDrawing = Readonly<{
   /** The card and its bleed: the stripes reach this far, so an off cut shows stripes. */
   bleed: Box;
   stripes: readonly Stripe[];
-  /** White boxes with a thin border: title, type line, text box, stats. */
+  /** White boxes with a thin border: title, type line, text box, stats, DFC hint bar. */
   panels: readonly Box[];
   /** Where the art goes, or null when there's none. */
   art: Box | null;
   texts: readonly DrawnText[];
   symbols: readonly DrawnSymbol[];
-  /** Lines between the faces of a split or adventure card. */
+  /** Set icons drawn on the right of each type bar using the Keyrune font. */
+  setIcons: readonly DrawnSetIcon[];
+  /** Divider lines inside adventure or multi-section panels. */
   rules: readonly GuideLine[];
+  /** Sections rotated 180 degrees around their center (Kamigawa flip cards' bottom half). */
+  rotatedSections: readonly RotatedSection[];
 }>;
 
 export type PlaytestStyle = Readonly<{ art: boolean; stripes: boolean }>;
@@ -198,190 +180,18 @@ export function playtestCard(
   bleed: Box = frame,
 ): PlaytestDrawing {
   const faces = facesOnSide(card, side);
-  const face = faces[0] ?? card.faces[0];
-  const texts: DrawnText[] = [];
-  const symbols: DrawnSymbol[] = [];
-  const panels: Box[] = [];
-  const innerX = frame.x + MARGIN;
-  const innerWidth = frame.width - 2 * MARGIN;
-  const top = frame.y + frame.height;
-
-  // Title bar: the name, shrunk to fit beside the mana cost on the right.
-  const title: Box = {
-    x: innerX,
-    y: top - MARGIN - TITLE_HEIGHT,
-    width: innerWidth,
-    height: TITLE_HEIGHT,
-  };
-  panels.push(title);
-  const cost = costSymbols(face?.manaCost ?? null);
-  const costWidth =
-    cost.length === 0
-      ? 0
-      : cost.length * COST_SYMBOL_DIAMETER + (cost.length - 1) * COST_SYMBOL_GAP;
-  cost.forEach((symbol, index) => {
-    const fromRight = cost.length - 1 - index;
-    symbols.push({
-      symbol,
-      x:
-        title.x +
-        title.width -
-        PADDING -
-        COST_SYMBOL_DIAMETER / 2 -
-        fromRight * (COST_SYMBOL_DIAMETER + COST_SYMBOL_GAP),
-      y: title.y + title.height / 2,
-      diameter: COST_SYMBOL_DIAMETER,
-      shadow: true,
-    });
-  });
-  const name = face?.name ?? "";
-  const nameWidth = title.width - 2 * PADDING - costWidth - (costWidth > 0 ? GAP : 0);
-  const nameSize = fittingSize(name, "bold", nameWidth, 9, 4, measure);
-  texts.push({
-    text: name,
-    x: title.x + PADDING,
-    y: title.y + title.height / 2 - nameSize * 0.36,
-    size: nameSize,
-    font: "bold",
-  });
-
-  // Footer: set, number and artist on the stripes; the stats in a box on the right.
-  const footerY = frame.y + FOOTER_BOTTOM;
-  const stats = face === undefined ? null : statsOf(face);
-  let statsWidth = 0;
-  if (stats !== null) {
-    const statsSize = 9;
-    statsWidth = measure(stats, "bold", statsSize) + 2 * PADDING;
-    const statsBox: Box = {
-      x: innerX + innerWidth - statsWidth,
-      y: footerY,
-      width: statsWidth,
-      height: FOOTER_HEIGHT,
-    };
-    panels.push(statsBox);
-    texts.push({
-      text: stats,
-      x: statsBox.x + PADDING,
-      y: statsBox.y + FOOTER_HEIGHT / 2 - statsSize * 0.36,
-      size: statsSize,
-      font: "bold",
-    });
-  }
-  const credit = [card.setCode.toUpperCase(), card.collectorNumber, card.artist]
-    .filter((part) => part !== null && part !== "")
-    .join(" · ");
-  const creditSize = fittingSize(
-    credit,
-    "regular",
-    innerWidth - statsWidth - GAP,
-    5.5,
-    3.5,
-    measure,
-  );
-  texts.push({
-    text: credit,
-    x: innerX,
-    y: footerY + FOOTER_HEIGHT / 2 - creditSize * 0.36,
-    size: creditSize,
-    font: "regular",
-  });
-
-  // Between the title and the footer: art, type line, text box. The text box gets what's left,
-  // and if the text won't fit even at the smallest size, it takes space from the art.
-  const bodyTop = title.y - GAP;
-  const bodyBottom = footerY + FOOTER_HEIGHT + GAP;
-  const paragraphs = textBoxParagraphs(faces.length > 0 ? faces : card.faces.slice(0, 1));
-  const textWidth = innerWidth - 2 * PADDING;
-  const textHeightWith = (artHeight: number) =>
-    bodyTop - bodyBottom - TYPE_HEIGHT - GAP - (artHeight > 0 ? artHeight + GAP : 0) - 2 * PADDING;
-
-  let artHeight = style.art ? ART_HEIGHT : 0;
-  // Everything between the title and the footer except the type line: the art and text share it.
-  const artAndText = bodyTop - bodyBottom - TYPE_HEIGHT - GAP;
-  const textless = paragraphs.length === 0;
-  if (card.isToken && style.art) {
-    // Room for the text at a real card's size (none without text); the art takes the rest,
-    // and never less than a card's art.
-    const textNeeds = textless
-      ? 0
-      : GAP + flow(paragraphs, textWidth, TOKEN_TEXT_SIZE, measure).height + 2 * PADDING;
-    artHeight = Math.max(artHeight, artAndText - textNeeds);
-  }
-  const hasTextBox = !(card.isToken && textless && artHeight > 0);
-  let flowed = hasTextBox
-    ? fittingFlow(
-        paragraphs,
-        textWidth,
-        textHeightWith(artHeight),
-        measure,
-        TEXT_SIZES.largest,
-        TEXT_SIZES.smallest,
-      )
-    : flow(paragraphs, textWidth, TEXT_SIZES.largest, measure);
-  if (flowed === null) {
-    const needed = flow(paragraphs, textWidth, TEXT_SIZES.smallest, measure);
-    const shrunk = artHeight - (needed.height - textHeightWith(artHeight));
-    artHeight = shrunk >= SMALLEST_ART ? shrunk : 0;
-    flowed =
-      fittingFlow(
-        paragraphs,
-        textWidth,
-        textHeightWith(artHeight),
-        measure,
-        TEXT_SIZES.smallest,
-        TEXT_SIZES.lastResort,
-      ) ?? flow(paragraphs, textWidth, TEXT_SIZES.lastResort, measure);
-  }
-
-  const art: Box | null =
-    artHeight > 0
-      ? { x: innerX, y: bodyTop - artHeight, width: innerWidth, height: artHeight }
-      : null;
-  const typeBox: Box = {
-    x: innerX,
-    y: (art === null ? bodyTop : art.y - GAP) - TYPE_HEIGHT,
-    width: innerWidth,
-    height: TYPE_HEIGHT,
-  };
-  panels.push(typeBox);
-  const typeLine = face?.typeLine ?? "";
-  const typeSize = fittingSize(typeLine, "bold", innerWidth - 2 * PADDING, 7.5, 4, measure);
-  texts.push({
-    text: typeLine,
-    x: typeBox.x + PADDING,
-    y: typeBox.y + TYPE_HEIGHT / 2 - typeSize * 0.36,
-    size: typeSize,
-    font: "bold",
-  });
-
-  const textBox: Box = {
-    x: innerX,
-    y: bodyBottom,
-    width: innerWidth,
-    height: typeBox.y - GAP - bodyBottom,
-  };
-  if (hasTextBox) panels.push(textBox);
-  // Short text sits in the middle of the box, as on real cards; long text starts at the top.
-  const areaHeight = textBox.height - 2 * PADDING;
-  const areaTop =
-    textBox.y + textBox.height - PADDING - Math.max(0, (areaHeight - flowed.height) / 2);
-  const areaLeft = textBox.x + PADDING;
-  for (const text of flowed.texts)
-    texts.push({ ...text, x: areaLeft + text.x, y: areaTop - text.y });
-  for (const symbol of flowed.symbols)
-    symbols.push({ ...symbol, x: areaLeft + symbol.x, y: areaTop - symbol.y });
-  const rules = flowed.dividers.map((offset) => ({
-    from: { x: textBox.x + PADDING, y: areaTop - offset },
-    to: { x: textBox.x + textBox.width - PADDING, y: areaTop - offset },
-  }));
+  const frameKind = classifyFrame(card, faces);
+  const laidOut = FRAME_LAYOUTS[frameKind]({ card, side, faces, frame, style, measure });
 
   return {
     bleed,
     stripes: style.stripes ? stripes(bleed, stripeColors(card, side)) : [],
-    panels,
-    art,
-    texts,
-    symbols,
-    rules,
+    panels: laidOut.fragment.panels,
+    art: laidOut.art,
+    texts: laidOut.fragment.texts,
+    symbols: laidOut.fragment.symbols,
+    setIcons: laidOut.fragment.setIcons,
+    rules: laidOut.fragment.rules,
+    rotatedSections: laidOut.rotatedSections,
   };
 }

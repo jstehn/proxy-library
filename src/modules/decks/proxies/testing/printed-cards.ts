@@ -23,10 +23,12 @@ export function printedCard(
 ): PrintedCard {
   return {
     faces: faces.map(printedFace),
+    layout: "normal",
     doubleFaced: false,
     colors: [],
     producedMana: [],
     setCode: "tst",
+    rarity: "common",
     collectorNumber: "1",
     artist: "Test Artist",
     isToken: false,
@@ -123,7 +125,7 @@ export function colorTestCards(): { name: string; printed: PrintedCard }[] {
         toughness: null,
       },
     ]),
-    printedCard({ colors: ["R"] }, [
+    printedCard({ colors: ["R"], layout: "split" }, [
       {
         name: "Fire",
         manaCost: "{1}{R}",
@@ -141,7 +143,7 @@ export function colorTestCards(): { name: string; printed: PrintedCard }[] {
         toughness: null,
       },
     ]),
-    printedCard({ colors: ["R"] }, [
+    printedCard({ colors: ["R"], layout: "adventure" }, [
       {
         name: "Bonecrusher Giant",
         manaCost: "{2}{R}",
@@ -159,7 +161,25 @@ export function colorTestCards(): { name: string; printed: PrintedCard }[] {
         toughness: null,
       },
     ]),
-    printedCard({ colors: ["U"], doubleFaced: true }, [
+    printedCard({ colors: ["B"], layout: "flip" }, [
+      {
+        name: "Nezumi Graverobber",
+        manaCost: "{1}{B}",
+        typeLine: "Creature — Rat Rogue",
+        text: "{1}{B}: Exile target card from an opponent's graveyard. If no cards are in that graveyard, flip Nezumi Graverobber.",
+        power: "2",
+        toughness: "1",
+      },
+      {
+        name: "Nighteyes the Desecrator",
+        manaCost: null,
+        typeLine: "Legendary Creature — Rat Wizard",
+        text: "{4}{B}: Put target creature card from a graveyard onto the battlefield under your control.",
+        power: "4",
+        toughness: "2",
+      },
+    ]),
+    printedCard({ colors: ["U"], layout: "transform", doubleFaced: true }, [
       {
         name: "Delver of Secrets",
         manaCost: "{U}",
@@ -175,6 +195,24 @@ export function colorTestCards(): { name: string; printed: PrintedCard }[] {
         text: "Flying",
         power: "3",
         toughness: "2",
+      },
+    ]),
+    printedCard({ colors: ["B"], layout: "modal_dfc", doubleFaced: true }, [
+      {
+        name: "Malakir Rebirth",
+        manaCost: "{B}",
+        typeLine: "Instant",
+        text: 'Choose target creature. Until end of turn, that creature gains "When this creature dies, return it to the battlefield tapped under its owner\'s control." You lose 2 life.',
+        power: null,
+        toughness: null,
+      },
+      {
+        name: "Malakir Mire",
+        manaCost: null,
+        typeLine: "Land",
+        text: "Malakir Mire enters tapped.\n{T}: Add {B}.",
+        power: null,
+        toughness: null,
       },
     ]),
     printedCard({ colors: ["W", "U", "B", "R", "G"] }, [

@@ -1,4 +1,4 @@
-import { costSymbols, splitSymbols } from "@/modules/decks/core/client";
+import { splitSymbols } from "@/modules/decks/core/client";
 import type { PrintedFace } from "./playtest-card";
 
 // Playtest proxies, the text of a card (design doc 22, section 3): words and symbols, wrapping,
@@ -17,7 +17,7 @@ type Piece = Readonly<
 >;
 /** Pieces with no space between them, which wrap together: "{T}:" is one word. */
 type Word = readonly Piece[];
-type Paragraph = Readonly<{ kind: "words"; words: readonly Word[] } | { kind: "divider" }>;
+export type Paragraph = Readonly<{ kind: "words"; words: readonly Word[] } | { kind: "divider" }>;
 
 /** Symbols in rules text are about 0.8 × the text size across, as measured on real cards. */
 export const TEXT_SYMBOL_RATIO = 0.8;
@@ -64,7 +64,7 @@ function wordsOf(text: string, baseFont: FontStyle): Word[] {
   return words.filter((word) => word.length > 0);
 }
 
-function paragraphsOf(text: string): Paragraph[] {
+export function paragraphsOf(text: string): Paragraph[] {
   return text
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -75,31 +75,6 @@ function paragraphsOf(text: string): Paragraph[] {
 export function statsOf(face: PrintedFace): string | null {
   if (face.power !== null && face.toughness !== null) return `${face.power}/${face.toughness}`;
   return face.loyalty ?? face.defense;
-}
-
-/**
- * The text box's paragraphs: the first face's rules text, then for each further face on this
- * side (split, adventure, flip) a dividing line, its name and cost, its type and its text.
- */
-export function textBoxParagraphs(faces: readonly PrintedFace[]): Paragraph[] {
-  const [first, ...others] = faces;
-  return [
-    ...paragraphsOf(first?.text ?? ""),
-    ...others.flatMap((face): Paragraph[] => {
-      const stats = statsOf(face);
-      const heading: Word[] = [
-        ...wordsOf(face.name, "bold"),
-        ...costSymbols(face.manaCost).map((symbol): Word => [{ kind: "symbol", symbol }]),
-      ];
-      const typeLine = stats === null ? face.typeLine : `${face.typeLine} (${stats})`;
-      return [
-        { kind: "divider" },
-        { kind: "words", words: heading },
-        { kind: "words", words: wordsOf(typeLine, "italic") },
-        ...paragraphsOf(face.text),
-      ];
-    }),
-  ];
 }
 
 export type DrawnText = Readonly<{
@@ -118,7 +93,7 @@ export type DrawnSymbol = Readonly<{
   shadow: boolean;
 }>;
 
-type FlowedText = Readonly<{
+export type FlowedText = Readonly<{
   height: number;
   /** Positions relative to the top-left of the text area (y downwards from the top). */
   texts: readonly DrawnText[];
@@ -205,6 +180,20 @@ export function fittingFlow(
     if (flowed.height <= height) return flowed;
   }
   return null;
+}
+
+/** Fits paragraphs inside `height`, falling back to `lastResort` size when needed. */
+export function fitParagraphs(
+  paragraphs: readonly Paragraph[],
+  width: number,
+  height: number,
+  measure: Measure,
+): FlowedText {
+  return (
+    fittingFlow(paragraphs, width, height, measure, TEXT_SIZES.largest, TEXT_SIZES.smallest) ??
+    fittingFlow(paragraphs, width, height, measure, TEXT_SIZES.smallest, TEXT_SIZES.lastResort) ??
+    flow(paragraphs, width, TEXT_SIZES.lastResort, measure)
+  );
 }
 
 /** The largest size, from `largest` down to `smallest`, at which one line fits `width`. */

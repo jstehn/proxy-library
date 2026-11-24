@@ -17,6 +17,8 @@ export type TokenArt = Readonly<{
   setCode: string;
   setName: string;
   collectorNumber: string;
+  /** Scryfall's layout: "token", "double_faced_token", "emblem", "normal" (helper). */
+  layout: string;
   colors: readonly string[];
   faces: readonly PrintedFace[];
   artist: string | null;
@@ -156,10 +158,12 @@ function byName(one: TokenLine, other: TokenLine): number {
 export function printedToken(art: TokenArt): PrintedCard {
   return {
     faces: art.faces,
+    layout: art.layout,
     doubleFaced: art.hasBack,
     colors: art.colors,
     producedMana: [],
     setCode: art.setCode,
+    rarity: "common",
     collectorNumber: art.collectorNumber,
     artist: art.artist,
     isToken: true,
