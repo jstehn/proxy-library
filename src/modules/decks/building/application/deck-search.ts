@@ -21,6 +21,7 @@ export type SemanticRequest = Readonly<{
   excludeTypes?: readonly string[];
   maxPriceCents?: number;
   limit?: number;
+  where?: "owned" | "store" | "both";
 }>;
 
 type Named = Readonly<{ name: string }>;
@@ -29,6 +30,7 @@ type Pick = Readonly<{ card: Named }>;
 export type DeckSearchReaders<Found extends { cards: readonly Named[] }, Semantic> = Readonly<{
   searchForDeck(userId: UserId, request: DeckSearchRequest): Promise<Found | null>;
   semantic(userId: UserId, deckId: number, request: SemanticRequest): Promise<Semantic | null>;
+  semanticCatalog(userId: UserId, request: SemanticRequest): Promise<Semantic>;
   profile(userId: UserId, deckId: number): Promise<DeckPlan | null>;
 }>;
 
@@ -47,13 +49,22 @@ export function makeDeckSearch<
   }
 
   async function semantic(
-    request: Readonly<{ userId: UserId; deckId: number } & SemanticRequest>,
+    request: Readonly<{ userId: UserId; deckId?: number } & SemanticRequest>,
   ): Promise<
     Result<
       { result: Semantic; owned: Semantic["owned"]; store: Semantic["store"]; avoided: string[] },
       DeckNotFound
     >
   > {
+    if (request.deckId === undefined) {
+      const result = await readers.semanticCatalog(request.userId, request);
+      return ok({
+        result,
+        owned: result.owned,
+        store: result.store,
+        avoided: [],
+      });
+    }
     const result = await readers.semantic(request.userId, request.deckId, request);
     if (result === null) return err({ kind: "DeckNotFound" });
     const profile = await readers.profile(request.userId, request.deckId);

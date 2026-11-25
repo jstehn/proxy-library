@@ -28,6 +28,7 @@ import {
   auditDeckView,
   manaBasePlan,
   searchForDeck,
+  semanticSearchCatalog,
   semanticSearchForDeck,
 } from "@/modules/decks/building";
 import { makeProxyDeck, deckTokenLines } from "@/modules/decks/proxies";
@@ -222,6 +223,8 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
         }),
       semantic: (userId, deckId, request) =>
         semanticSearchForDeck(db, textEmbedder, userId, deckId, request),
+      semanticCatalog: (userId, request) =>
+        semanticSearchCatalog(db, textEmbedder, userId, request),
       profile: readPlan,
     }),
     searchSignals: makeSearchSignals({

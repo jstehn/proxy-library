@@ -27,5 +27,9 @@ export { commanderDetails, commandersICanBuild, type CommanderSearch } from "./q
 export { embedSimForCards } from "./queries/embeddings";
 export { manaBasePlan } from "./queries/mana-base";
 export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
-export { semanticSearchForDeck, type SemanticSearchResult } from "./queries/semantic-search";
+export {
+  semanticSearchCatalog,
+  semanticSearchForDeck,
+  type SemanticSearchResult,
+} from "./queries/semantic-search";
 export { candidatePool } from "./queries/suggestion-pool";

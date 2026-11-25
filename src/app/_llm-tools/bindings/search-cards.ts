@@ -56,7 +56,7 @@ export const searchCardsBinding = defineBinding({
   name: "search_cards",
   title: "Search cards (catalog, deck-filtered, semantic, or signals)",
   description:
-    "Search cards in the collection or store. Pass `deckId` to auto-filter to deck colors/format/bracket and exclude cards already in the deck. Modes: 'syntax' (default, Scryfall-style `search` or `queries`), 'semantic' (natural-language `query`; lists ideas in the search's own order, with no scores, some of them poor fits), or 'signals' (recurring mechanics in owned `search`).",
+    "Search cards in the collection or store. Pass `deckId` to auto-filter to deck colors/format/bracket and exclude cards already in the deck. Modes: 'syntax' (default, Scryfall-style `search` or `queries`), 'semantic' (natural-language `query` with optional `deckId`, `where`, and `maxPriceCents`; lists ideas in the search's own order, with no scores, some of them poor fits), or 'signals' (recurring mechanics in owned `search`).",
   scope: "read",
   readOnly: true,
   input: z.object({
@@ -156,16 +156,17 @@ export const searchCardsBinding = defineBinding({
     }
 
     if (input.mode === "semantic") {
-      if (!input.deckId || !input.query) {
+      if (!input.query) {
         return err<Failure>({
           kind: "InvalidInput",
-          message: "Semantic search requires `deckId` and `query`.",
+          message: "Semantic search requires `query`.",
         });
       }
       const found = await capabilities.deckSearch.semantic({
         userId,
         deckId: input.deckId,
         concept: input.query,
+        where: input.where === "owned" || input.where === "store" ? input.where : "both",
         limit: input.maxPerQuery,
         maxPriceCents: input.maxPriceCents,
       });

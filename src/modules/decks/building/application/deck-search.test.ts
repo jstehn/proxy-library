@@ -19,6 +19,7 @@ describe("deckSearch", () => {
     const { searchForDeck } = makeDeckSearch({
       searchForDeck: async () => ({ cards: [{ name: "Mortuary" }, { name: "Kept" }] }),
       semantic: async () => null,
+      semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => profile,
     });
     const result = await searchForDeck(request);
@@ -31,6 +32,7 @@ describe("deckSearch", () => {
     const { semantic } = makeDeckSearch({
       searchForDeck: async () => null,
       semantic: async () => ({ owned: [pick("Mortuary"), pick("A")], store: [pick("Mortuary")] }),
+      semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => profile,
     });
     const result = await semantic({ userId, deckId: 1, concept: "x" });
@@ -39,10 +41,25 @@ describe("deckSearch", () => {
     expect(result.ok && result.value.avoided).toEqual(["Mortuary"]);
   });
 
+  it("supports deck-free semantic search across collection and store", async () => {
+    const pick = (name: string) => ({ card: { name } });
+    const { semantic } = makeDeckSearch({
+      searchForDeck: async () => null,
+      semantic: async () => null,
+      semanticCatalog: async () => ({ owned: [pick("Ephemerate")], store: [pick("Cloudshift")] }),
+      profile: async () => null,
+    });
+    const result = await semantic({ userId, concept: "blink creatures", where: "both" });
+    expect(result.ok && result.value.owned).toEqual([pick("Ephemerate")]);
+    expect(result.ok && result.value.store).toEqual([pick("Cloudshift")]);
+    expect(result.ok && result.value.avoided).toEqual([]);
+  });
+
   it("says when the deck isn't the player's", async () => {
     const { searchForDeck, semantic } = makeDeckSearch({
       searchForDeck: async () => null,
       semantic: async () => null,
+      semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => null,
     });
     expect(await searchForDeck(request)).toEqual({ ok: false, error: { kind: "DeckNotFound" } });
