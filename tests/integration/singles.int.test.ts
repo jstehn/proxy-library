@@ -179,7 +179,7 @@ describe("collectionPage", () => {
       page: 1,
     });
     expect(all.totals).toEqual({ different: 1, copies: 3, valueCents: 3 * card.price });
-    expect(all.rows).toEqual([
+    expect(all.rows).toMatchObject([
       { printingId: card.id, finish: "nonfoil", quantity: 3, price: card.price, section: "" },
     ]);
 

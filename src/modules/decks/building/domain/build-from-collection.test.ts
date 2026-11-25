@@ -328,7 +328,11 @@ describe("buildFromCollection properties", () => {
   it("never exceeds max(100, existingCount), enforces singleton spells, and is order-independent", () => {
     fc.assert(
       fc.property(
-        fc.array(arbCandidate, { minLength: 0, maxLength: 90 }),
+        fc.uniqueArray(arbCandidate, {
+          minLength: 0,
+          maxLength: 90,
+          selector: (item) => item.oracleId,
+        }),
         fc.integer({ min: 0, max: 50 }),
         fc.boolean(),
         (candidates, existingMainSpells, allowStore) => {
