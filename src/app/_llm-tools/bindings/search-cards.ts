@@ -243,6 +243,7 @@ export const searchCardsBinding = defineBinding({
       search: input.search ?? "",
       where,
       page: input.page,
+      pageSize: input.maxPerQuery,
       oneRowPerCard: input.oneRowPerCard,
       ...(input.sort !== undefined ? { sort: input.sort } : {}),
       ...(addedSince !== undefined ? { addedSince } : {}),
@@ -277,7 +278,7 @@ export const searchCardsBinding = defineBinding({
         return presentCatalogSearch(answer.result, {
           includeText: input.includeText,
           showPrice,
-          limit: input.maxPerQuery * 2,
+          limit: input.maxPerQuery,
         });
     }
   },

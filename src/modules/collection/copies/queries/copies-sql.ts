@@ -50,6 +50,8 @@ export type CollectionFilter = Readonly<{
   /** The order within each section. */
   sort: "newest" | "value" | "price" | "name" | "mana" | "set";
   page: number; // from 1
+  /** Optional override for rows per page (1–60; defaults to 60). */
+  pageSize?: number;
 }>;
 
 const COLLECTION_PAGE_SIZE = 60;
@@ -152,7 +154,11 @@ export async function readCollectionPage(
     filter.sections === "set"
       ? sql`section_order, release_date desc, set_code, ${order}`
       : sql`section_order, ${order}`;
-  const offset = (Math.max(1, filter.page) - 1) * COLLECTION_PAGE_SIZE;
+  const pageSize = Math.min(
+    COLLECTION_PAGE_SIZE,
+    Math.max(1, filter.pageSize ?? COLLECTION_PAGE_SIZE),
+  );
+  const offset = (Math.max(1, filter.page) - 1) * pageSize;
 
   const pageQuery = needsArrivalUpfront
     ? sql`
@@ -160,7 +166,7 @@ export async function readCollectionPage(
         from (${owned}) owned
        -- Sections first (a set's section by newest set), then the chosen order within each.
        order by ${outerOrder}
-       limit ${COLLECTION_PAGE_SIZE} offset ${offset}
+       limit ${pageSize} offset ${offset}
     `
     : sql`
       with paged as (
@@ -168,7 +174,7 @@ export async function readCollectionPage(
                section_order, release_date, set_code, name, collector_number
           from (${owned}) owned
          order by ${outerOrder}
-         limit ${COLLECTION_PAGE_SIZE} offset ${offset}
+         limit ${pageSize} offset ${offset}
       )
       select paged.printing_id, paged.finish, paged.quantity, paged.price, paged.section,
              paged.mana_value, arrival.last_acquired_at
@@ -223,7 +229,7 @@ export async function readCollectionPage(
       copies: summary.copies,
       valueCents: Number(summary.value_cents),
     },
-    pageCount: Math.max(1, Math.ceil(summary.different / COLLECTION_PAGE_SIZE)),
+    pageCount: Math.max(1, Math.ceil(summary.different / pageSize)),
     notes: parsed.notes,
   };
 }

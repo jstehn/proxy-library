@@ -96,19 +96,19 @@ export function presentOwnedCards(
   includePrice: boolean,
 ): unknown {
   return {
-    cards: checked.map((entry) =>
-      entry.inCatalog
-        ? {
-            name: entry.name,
-            inCatalog: true,
-            ownedGame: entry.ownedGame,
-            ownedReal: entry.ownedReal,
-            ...(includePrice
-              ? { priceCents: priceCents(entry.cheapestPriceCents as number | null) }
-              : {}),
-            decks: entry.decks,
-          }
-        : entry,
-    ),
+    cards: checked.map((entry) => {
+      if (!entry.inCatalog) return entry;
+      const decks = Array.isArray(entry.decks) ? entry.decks : [];
+      return {
+        name: entry.name,
+        inCatalog: true,
+        ownedGame: entry.ownedGame,
+        ownedReal: entry.ownedReal,
+        ...(includePrice
+          ? { priceCents: priceCents(entry.cheapestPriceCents as number | null) }
+          : {}),
+        ...(decks.length > 0 ? { decks } : {}),
+      };
+    }),
   };
 }

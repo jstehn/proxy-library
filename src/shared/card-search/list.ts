@@ -37,10 +37,11 @@ const HEADERS: ReadonlyArray<[RegExp, ListSection]> = [
   [new RegExp(String.raw`^(sideboard|side|sb)` + COUNT, "i"), "side"],
   [new RegExp(String.raw`^(maybeboard|maybe|considering)` + COUNT, "i"), "maybe"],
 ];
-// Any other "Name (count)" line is a category heading from Archidekt or Moxfield ("Lands (36)",
-// "Ramp & Mana Fixers (9)"): it starts with a letter, not a quantity, and no card name ends in
-// "(digits)". Its cards are in the main deck, under that heading (design doc 34).
-const CATEGORY = /^([^\d\s].*)\s\((\d+)\)$/;
+// Any other "Name (count)" or "Name:" line is a category heading from Archidekt, Moxfield, or
+// plain text ("Lands (36)", "Ramp & Mana Fixers (9)", "Ramp:"): it starts with a letter, not a
+// quantity, and no card name ends in "(digits)" or ":". Its cards are in the main deck, under
+// that heading (design doc 34).
+const CATEGORY = /^([^\d\s].*?)(?:\s\((\d+)\)|:)$/;
 // Titles of the built-in groups by card type: their cards get no heading, since grouping by
 // type shows them that way anyway.
 const TYPE_TITLE =

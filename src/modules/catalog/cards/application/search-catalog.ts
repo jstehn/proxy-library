@@ -35,6 +35,7 @@ export type PrintingFacts = Readonly<{
 
 export type CollectionSearchOptions = Readonly<{
   page: number;
+  pageSize?: number;
   search: string;
   sort: CatalogSearchSort;
   addedSince?: Date;
@@ -43,6 +44,7 @@ export type CollectionSearchOptions = Readonly<{
 export type StoreSearchOptions = Readonly<{
   search: string;
   page: number;
+  pageSize?: number;
   oneRowPerCard: boolean;
   sort: CatalogSearchSort;
 }>;
@@ -107,6 +109,7 @@ export type CatalogSearchRequest = Readonly<{
   search: string;
   where: "owned" | "game" | "real" | "store";
   page: number;
+  pageSize?: number;
   oneRowPerCard: boolean;
   sort?: CatalogSearchSort;
   addedSince?: Date;
@@ -150,6 +153,7 @@ export function makeSearchCatalog(readers: SearchCatalogReaders) {
     if (where !== "store") {
       const options: CollectionSearchOptions = {
         page,
+        ...(request.pageSize !== undefined ? { pageSize: request.pageSize } : {}),
         search,
         sort,
         ...(addedSince !== undefined ? { addedSince } : {}),
@@ -194,6 +198,7 @@ export function makeSearchCatalog(readers: SearchCatalogReaders) {
     const found = await readers.store(actor, {
       search,
       page,
+      ...(request.pageSize !== undefined ? { pageSize: request.pageSize } : {}),
       oneRowPerCard: request.oneRowPerCard,
       sort,
     });

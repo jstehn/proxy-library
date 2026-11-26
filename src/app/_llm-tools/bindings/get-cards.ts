@@ -30,7 +30,14 @@ export const getCardsBinding = defineBinding({
       .describe(
         "Include a flat deduplicated list of enabled set codes per card (for detail='compact').",
       ),
-    cursor: z.number().int().min(0).optional().describe("Pagination cursor if capped."),
+    cursor: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe(
+        "Pagination cursor from a previous capped response's `next` field; re-send the same `cards` list with this cursor to get the remaining items.",
+      ),
   }),
   async call(capabilities, actor, input) {
     if (input.detail === "owned") {

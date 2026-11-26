@@ -530,6 +530,7 @@ describe("token efficiency & bug fix bindings", () => {
       search: "",
       where: "owned",
       page: 1,
+      pageSize: 10,
       oneRowPerCard: true,
       sort: "price_desc",
       addedSince: new Date("2026-11-23T12:00:00Z"),

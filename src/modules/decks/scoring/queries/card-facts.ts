@@ -20,39 +20,18 @@ export type CardReference = CardIdentity &
     colorIdentity: string[];
   }>;
 
-/**
- * Finds a card by its name (any letter case; a double-faced card's front name works too), its
- * oracle id, or one printing's id. A printing id gives that printing; otherwise the card's
- * standard printing. Null when nothing matches.
- */
-export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardReference | null> {
-  const text = nameOrId.trim();
-  if (text === "") return null;
-  const [row] = (
-    await db.execute<{
-      oracle_id: string;
-      printing_id: string;
-      scryfall_id: string;
-      name: string;
-      type_line: string;
-      mana_cost: string | null;
-      face_text: string;
-      color_identity: string[];
-    }>(sql`
-      select p.oracle_id, p.id as printing_id, p.scryfall_id, p.name, p.type_line, p.mana_cost,
-             p.color_identity,
-             coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '')
-               as face_text
-        from printings p join card_sets s on s.code = p.set_code
-       where p.id = ${text} or p.oracle_id = ${text}
-          or lower(p.name) = lower(${text})
-          or lower(split_part(p.name, ' // ', 1)) = lower(${text})
-          or lower(split_part(p.name, ' // ', 2)) = lower(${text})
-       order by (p.id = ${text}) desc, ${STANDARD_FIRST}
-       limit 1
-    `)
-  ).rows;
-  if (row === undefined) return null;
+type CardReferenceRow = {
+  oracle_id: string;
+  printing_id: string;
+  scryfall_id: string;
+  name: string;
+  type_line: string;
+  mana_cost: string | null;
+  face_text: string;
+  color_identity: string[];
+};
+
+function toCardReference(row: CardReferenceRow): CardReference {
   return {
     oracleId: row.oracle_id,
     printingId: row.printing_id,
@@ -63,6 +42,70 @@ export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardRe
     text: row.face_text,
     colorIdentity: row.color_identity,
   };
+}
+
+/**
+ * Finds a card by its name (any letter case; a double-faced card's front name works too), its
+ * oracle id, or one printing's id. A printing id gives that printing; otherwise the card's
+ * standard printing. Null when nothing matches.
+ */
+export async function findCard(db: DbExecutor, nameOrId: string): Promise<CardReference | null> {
+  const found = await findCards(db, [nameOrId]);
+  return found.get(nameOrId) ?? null;
+}
+
+/**
+ * Batched version of `findCard` for many names/ids at once (used by `edit_deck` previews/saves).
+ * Preserves the same specificity priority: printing id > oracle id > exact name > front face > back face.
+ */
+export async function findCards(
+  db: DbExecutor,
+  namesOrIds: readonly string[],
+): Promise<Map<string, CardReference>> {
+  const cleaned = [...new Set(namesOrIds.map((value) => value.trim()).filter(Boolean))];
+  if (cleaned.length === 0) return new Map();
+  const lowered = cleaned.map((value) => value.toLowerCase());
+  const rows = await db.execute<CardReferenceRow & { query_key: string }>(sql`
+    with wanted as (
+      select raw_key, lower_key
+        from unnest(${sql.param(cleaned)}::text[], ${sql.param(lowered)}::text[])
+          as input(raw_key, lower_key)
+    )
+    select distinct on (w.raw_key)
+           w.raw_key as query_key,
+           p.oracle_id, p.id as printing_id, p.scryfall_id, p.name, p.type_line, p.mana_cost,
+           p.color_identity,
+           coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '')
+             as face_text
+      from wanted w
+      join printings p
+        on p.id = w.raw_key
+        or p.oracle_id = w.raw_key
+        or lower(p.name) = w.lower_key
+        or (p.name like '% // %' and lower(split_part(p.name, ' // ', 1)) = w.lower_key)
+        or (p.name like '% // %' and lower(split_part(p.name, ' // ', 2)) = w.lower_key)
+      join card_sets s on s.code = p.set_code
+     order by
+       w.raw_key,
+       case
+         when p.id = w.raw_key then 0
+         when p.oracle_id = w.raw_key then 1
+         when lower(p.name) = w.lower_key then 2
+         when lower(split_part(p.name, ' // ', 1)) = w.lower_key then 3
+         else 4
+       end,
+       ${STANDARD_FIRST}
+  `);
+  const byTrimmed = new Map<string, CardReference>();
+  for (const row of rows.rows) {
+    byTrimmed.set(row.query_key, toCardReference(row));
+  }
+  const results = new Map<string, CardReference>();
+  for (const original of namesOrIds) {
+    const matched = byTrimmed.get(original.trim());
+    if (matched !== undefined) results.set(original, matched);
+  }
+  return results;
 }
 
 /** At most this many cards are read for one analysis. */

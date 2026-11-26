@@ -18,4 +18,10 @@ export {
   type DeckSignals,
   type SearchSignals,
 } from "./application/deck-signals";
-export { checkOwnedCards, deckSignalCards, findCard, ownedSignalCards } from "./queries/card-facts";
+export {
+  checkOwnedCards,
+  deckSignalCards,
+  findCard,
+  findCards,
+  ownedSignalCards,
+} from "./queries/card-facts";

@@ -144,6 +144,8 @@ export type PrintingSearch = Readonly<{
   color?: string;
   sort: "name" | "number" | "price" | "mana";
   page: number; // from 1
+  /** Optional override for rows per page (1–60; defaults to 60). */
+  pageSize?: number;
   /** One row per card (its cheapest printing in the store) instead of one per printing. */
   oneRowPerCard?: boolean;
 }>;
@@ -205,7 +207,8 @@ export async function searchPrintings(
                    and s.day = (select max(day) from price_snapshots)) desc nulls last, p.name`,
     mana: sql`p.mana_value, p.name, p.set_code, p.collector_number`,
   }[search.sort];
-  const offset = (Math.max(1, search.page) - 1) * SEARCH_PAGE_SIZE;
+  const pageSize = Math.min(SEARCH_PAGE_SIZE, Math.max(1, search.pageSize ?? SEARCH_PAGE_SIZE));
+  const offset = (Math.max(1, search.page) - 1) * pageSize;
 
   // The matching printings (narrow columns only so sorting stays in memory), or each matching
   // card's cheapest printing (unpriced ones last).
@@ -240,7 +243,7 @@ export async function searchPrintings(
       with matching as (${matching})
       select p.id from matching p
        order by ${order}
-       limit ${SEARCH_PAGE_SIZE} offset ${offset}
+       limit ${pageSize} offset ${offset}
     `),
     db.execute<{ total: number }>(totalQuery),
   ]);
@@ -248,7 +251,7 @@ export async function searchPrintings(
   return {
     printingIds: rows.rows.map((row) => row.id),
     total,
-    pageCount: Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE)),
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
     notes,
   };
 }

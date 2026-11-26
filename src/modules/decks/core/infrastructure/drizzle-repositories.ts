@@ -207,19 +207,20 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
           named as (
             select p.id from candidates p join card_sets s on s.code = p.set_code
              where p.set_code = ${setCode}
-             order by (p.collector_number = ${collectorNumber}) desc, s.release_date desc, p.id
+             order by (lower(p.name) = lower(${query.name})) desc,
+                      (p.collector_number = ${collectorNumber}) desc, s.release_date desc, p.id
              limit 1
           ),
           -- Otherwise your most special copy (design doc 23, section 14).
           special as (
             select c.printing_id as id, c.finish from ${owned} c
               join candidates p on p.id = c.printing_id
-             order by ${MOST_SPECIAL_FIRST} limit 1
+             order by (lower(p.name) = lower(${query.name})) desc, ${MOST_SPECIAL_FIRST} limit 1
           ),
           -- Otherwise the card's standard printing (design doc 24, rule 2), or its cheapest.
           standard as (
             select p.id from candidates p join card_sets s on s.code = p.set_code
-             order by ${unnamedOrder} limit 1
+             order by (lower(p.name) = lower(${query.name})) desc, ${unnamedOrder} limit 1
           ),
           chosen as (
             select coalesce((select id from named), (select id from special), (select id from standard)) as id

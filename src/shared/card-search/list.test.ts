@@ -116,6 +116,25 @@ describe("parseList", () => {
     ]);
   });
 
+  it("reads category headings with a trailing colon and switches back to the main board", () => {
+    const { lines, unreadable } = parseList(
+      [
+        "Commander:",
+        "1 Jolene, the Plunder Queen",
+        "Ramp:",
+        "1 Sol Ring",
+        "Lands:",
+        "1 Forest",
+      ].join("\n"),
+    );
+    expect(unreadable).toEqual([]);
+    expect(lines.map((line) => [line.name, line.board, line.heading])).toEqual([
+      ["Jolene, the Plunder Queen", "commander", null],
+      ["Sol Ring", "main", "Ramp"],
+      ["Forest", "main", null],
+    ]);
+  });
+
   it("still reads a card line that has a quantity and a set, not a heading", () => {
     const { lines } = parseList("1 Sol Ring (C21) 263\n2 Opt (XLN)");
     expect(lines.map((line) => [line.name, line.setCode])).toEqual([

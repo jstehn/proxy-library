@@ -11,6 +11,7 @@ import {
   type DeckId,
   type MatchedLine,
 } from "../domain/deck";
+import type { Board } from "../domain/boards";
 import { checkHeading, tidyHeadings } from "../domain/headings";
 import type { DeckChanged, DeckNotFound, ListProblems, ListTooLong } from "../domain/errors";
 import { parseList } from "@/shared/card-search";
@@ -31,7 +32,12 @@ export type ReplaceListInput = Readonly<{
 /** How many cards the deck holds after the save. */
 export type ReplaceReport = Readonly<{ cards: number }>;
 
-export type ImportReport = Readonly<{ added: number; unreadable: string[]; notFound: string[] }>;
+export type ImportReport = Readonly<{
+  added: number;
+  unreadable: string[];
+  notFound: string[];
+  boards?: Readonly<Partial<Record<Board, number>>>;
+}>;
 
 /** A heading read from a pasted list, if the deck can use it: not too long, not a board name. */
 function usableHeading(heading: string | null): string | null {
@@ -62,6 +68,7 @@ export function makeDeckLists(dependencies: DecksDependencies) {
 
       const notFound: string[] = [];
       let added = 0;
+      const boards: Partial<Record<Board, number>> = {};
       let updated = deck;
       const hadHeadings = deck.headings.length > 0;
       // `entries()` gives [index, line] pairs, like Python's enumerate().
@@ -86,12 +93,13 @@ export function makeDeckLists(dependencies: DecksDependencies) {
           ...(heading !== null ? { heading } : {}),
         });
         added += line.quantity;
+        boards[line.board] = (boards[line.board] ?? 0) + line.quantity;
       }
       // A deck's first headings, from a list, switch it to grouping by them (design doc 34).
       const tidied = tidyHeadings(updated);
       if (!hadHeadings && tidied.headings.length > 0) updated = { ...tidied, grouping: "custom" };
       await decks.save(updated, clock.now());
-      return ok({ added, unreadable: parsed.unreadable, notFound });
+      return ok({ added, unreadable: parsed.unreadable, notFound, boards });
     });
   }
 

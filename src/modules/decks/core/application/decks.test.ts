@@ -244,7 +244,12 @@ describe("decks (design doc 09)", () => {
     });
     expect(report).toEqual({
       ok: true,
-      value: { added: 6, unreadable: ["0 Nothing"], notFound: ["Black Lotus"] },
+      value: {
+        added: 6,
+        boards: { main: 4, side: 2 },
+        unreadable: ["0 Nothing"],
+        notFound: ["Black Lotus"],
+      },
     });
     expect(repository.get(id)?.entries).toEqual(
       expect.arrayContaining([

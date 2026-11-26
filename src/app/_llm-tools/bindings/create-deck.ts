@@ -10,8 +10,8 @@ export const createDeckBinding = defineBinding({
   title: "Create a deck",
   description: [
     "Makes a new, empty deck and returns its id. Optionally fills it from a list in the usual text format.",
-    'Use it when: the player wants a new deck. Then add cards with set_deck_entry, or pass a whole list here ("Commander" / "Deck" / "Sideboard" / "Maybeboard" headings, or headings of the player\'s own such as "Ramp (2)", then lines like "1 Sol Ring").',
-    `Rules: cards you don't own may be added; they show as short. ${HEADING_RULE} (So "Lands (37)" or "Creatures (25)" are ignored as custom headings; use e.g. "Mana base" if you want a custom heading.)`,
+    'Use it when: the player wants a new deck. Pass a list here with board headers ("Commander", "Deck", "Sideboard", "Maybeboard" — always include "Deck" after "Commander") or custom main-deck headings ("Ramp (9)" or "Ramp:"), then lines like "1 Sol Ring".',
+    `Rules: cards you don't own may be added; they show as short. ${HEADING_RULE} (So "Lands (37)" or "Creatures (25)" are ignored as custom headings; use e.g. "Mana base:" if you want a custom heading.)`,
   ].join("\n"),
   scope: "decks:write",
   readOnly: false,
@@ -29,7 +29,7 @@ export const createDeckBinding = defineBinding({
       .string()
       .default("")
       .describe(
-        'Optional cards to start with, one per line: "1 Sol Ring". Headings: Commander, Deck, Sideboard, Maybeboard.',
+        'Optional cards to start with, one per line: "1 Sol Ring". Board headers: Commander, Deck, Sideboard, Maybeboard (put Deck after Commander). Custom headings: "Ramp (9)" or "Ramp:".',
       ),
   }),
   call: (capabilities, actor, input) =>
@@ -52,6 +52,12 @@ export const createDeckBinding = defineBinding({
     return {
       deckId: started.deckId,
       added: started.added,
+      ...(started.boards !== undefined && Object.keys(started.boards).length > 0
+        ? { boards: started.boards }
+        : {}),
+      ...(started.warnings !== undefined && started.warnings.length > 0
+        ? { warnings: started.warnings }
+        : {}),
       unreadable: started.unreadable,
       notFound: started.notFound,
     };

@@ -41,6 +41,7 @@ import {
   checkOwnedCards,
   deckSignalCards,
   findCard,
+  findCards,
   ownedSignalCards,
 } from "@/modules/decks/scoring";
 import { makeDrawSample } from "@/modules/decks/play";
@@ -107,12 +108,8 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       clock,
       newPreviewId,
       findCards: async (names) => {
-        const found = await Promise.all(
-          names.map(async (name) => [name, await findCard(db, name)] as const),
-        );
-        return new Map(
-          found.flatMap(([name, card]) => (card === null ? [] : [[name, card.oracleId]])),
-        );
+        const found = await findCards(db, names);
+        return new Map([...found].map(([name, card]) => [name, card.oracleId]));
       },
       deckView: readDeck,
       changePreview: (userId, deckId, changes) => deckChangePreview(db, userId, deckId, changes),

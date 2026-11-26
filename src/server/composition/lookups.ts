@@ -31,6 +31,23 @@ const COLLECTION_SORT: Record<CatalogSearchSort, "name" | "price" | "newest" | "
   mv: "mana",
 };
 
+function toCollectionFilter(options: {
+  search: string;
+  sort: CatalogSearchSort;
+  page: number;
+  pageSize?: number;
+  addedSince?: Date;
+}) {
+  return {
+    search: options.search,
+    sections: "none" as const,
+    sort: COLLECTION_SORT[options.sort],
+    page: options.page,
+    ...(options.pageSize !== undefined ? { pageSize: options.pageSize } : {}),
+    ...(options.addedSince !== undefined ? { addedSince: options.addedSince } : {}),
+  };
+}
+
 const STORE_SORT: Record<CatalogSearchSort, "name" | "price" | "mana"> = {
   name: "name",
   price_desc: "price",
@@ -60,27 +77,15 @@ export function wireLookupCapabilities(dependencies: LookupWiringDependencies) {
       sets: (oracleId) => setCodesOfCard(db, oracleId),
     }),
     searchCatalog: makeSearchCatalog({
-      collection: (actor, options) =>
-        reads.collection.page(actor, {
-          search: options.search,
-          sections: "none",
-          sort: COLLECTION_SORT[options.sort],
-          page: options.page,
-          ...(options.addedSince !== undefined ? { addedSince: options.addedSince } : {}),
-        }),
+      collection: (actor, options) => reads.collection.page(actor, toCollectionFilter(options)),
       realCollection: (actor, options) =>
-        reads.realCollection.page(actor, actor.userId, {
-          search: options.search,
-          sections: "none",
-          sort: COLLECTION_SORT[options.sort],
-          page: options.page,
-          ...(options.addedSince !== undefined ? { addedSince: options.addedSince } : {}),
-        }),
+        reads.realCollection.page(actor, actor.userId, toCollectionFilter(options)),
       store: (actor, options) =>
         reads.catalog.searchPrintings(actor, {
           search: options.search,
           sort: STORE_SORT[options.sort],
           page: options.page,
+          ...(options.pageSize !== undefined ? { pageSize: options.pageSize } : {}),
           oneRowPerCard: options.oneRowPerCard,
         }),
       printings: (ids) => printingCards(db, ids),
