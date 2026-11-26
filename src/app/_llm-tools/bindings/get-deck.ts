@@ -35,13 +35,14 @@ export const getDeckBinding = defineBinding({
           "tokens",
           "odds",
           "sources",
+          "list",
           "formatRules",
           "legality",
         ]),
       )
       .optional()
       .describe(
-        "Optional extra sections: 'facts', 'signals', 'mana_plan', 'primer', 'text', 'short', 'owners', 'prices', 'ids', 'tokens', 'odds', 'sources', 'formatRules', 'legality'.",
+        "Optional extra sections: 'facts', 'signals', 'mana_plan', 'primer', 'text', 'short', 'owners', 'prices', 'ids', 'tokens', 'odds', 'sources', 'list', 'formatRules', 'legality'.",
       ),
     view: z
       .enum(["compact", "full"])

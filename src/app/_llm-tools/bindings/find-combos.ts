@@ -29,6 +29,12 @@ export const findCombosBinding = defineBinding({
       .boolean()
       .default(false)
       .describe("Include cards on the maybeboard when checking for combos."),
+    ownedOnly: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Only return one-card-away combos whose missing piece you already own (owned pieces are always sorted first).",
+      ),
     bracket: z
       .enum(["E", "P", "O", "S", "R", "C"])
       .optional()
@@ -47,6 +53,7 @@ export const findCombosBinding = defineBinding({
       userId: actor.userId,
       deckId: input.deckId,
       includeMaybe: input.includeMaybe,
+      ownedOnly: input.ownedOnly,
       bracket: input.bracket,
       limit: input.limit,
       offset: input.offset,
@@ -72,6 +79,7 @@ export const findCombosBinding = defineBinding({
       oneCardAway: combos.oneAway.map((combo) => ({
         id: combo.id,
         status: "oneAway" as const,
+        ...(combo.maybePieces !== undefined ? { maybePieces: combo.maybePieces } : {}),
         missingPiece: {
           name: combo.missingPiece.name,
           inCatalog: combo.missingPiece.inCatalog,

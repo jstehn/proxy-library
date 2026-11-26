@@ -29,6 +29,7 @@ const SpellbookProducesSchema = z.object({
 const SpellbookVariantSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
   uses: z.array(SpellbookUseSchema).optional().default([]),
+  requires: z.array(z.unknown()).optional().default([]),
   produces: z.array(SpellbookProducesSchema).optional().default([]),
   bracketTag: z.string().nullable().optional().default(null),
   manaNeeded: z.string().nullable().optional().default(null),
@@ -64,16 +65,14 @@ export function parseManaNeededValue(manaNeeded: string | null): number | null {
 
 function addVariantToMap(rawVariant: unknown, byPair: Map<string, SpellbookTwoCardCombo>): void {
   // Fast pre-filter before running Zod over hundreds of thousands of 3+ card variants.
-  if (
-    typeof rawVariant !== "object" ||
-    rawVariant === null ||
-    !Array.isArray((rawVariant as { uses?: unknown }).uses) ||
-    (rawVariant as { uses: unknown[] }).uses.length !== 2
-  ) {
-    return;
-  }
+  // Variants with `requires` (template pieces like "a creature with persist") need 3+ cards.
+  if (typeof rawVariant !== "object" || rawVariant === null) return;
+  const candidate = rawVariant as { uses?: unknown; requires?: unknown };
+  if (!Array.isArray(candidate.uses) || candidate.uses.length !== 2) return;
+  if (Array.isArray(candidate.requires) && candidate.requires.length > 0) return;
 
   const variant = SpellbookVariantSchema.parse(rawVariant);
+  if (variant.requires.length > 0) return;
   if (variant.legalities?.commander === false) return;
   const [u1, u2] = variant.uses;
   if (!u1 || !u2) return;

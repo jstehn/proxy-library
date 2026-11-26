@@ -57,6 +57,17 @@ describe("parseSpellbookVariantsJson", () => {
             { quantity: 1, card: { name: "Y", oracleId: "y" } },
           ],
         },
+        // 2 named cards + 1 template requirement -> 3+ card combo, excluded
+        {
+          id: "105",
+          bracketTag: "R",
+          uses: [
+            { quantity: 1, card: { name: "Cathars' Crusade", oracleId: "crusade" } },
+            { quantity: 1, card: { name: "Goblin Bombardment", oracleId: "bombardment" } },
+          ],
+          requires: [{ quantity: 1, template: { name: "A creature with persist" } }],
+          produces: [{ feature: { name: "Infinite damage" } }],
+        },
         // Missing oracleId -> excluded
         {
           id: "104",
