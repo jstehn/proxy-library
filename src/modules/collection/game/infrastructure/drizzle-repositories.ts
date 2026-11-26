@@ -2,39 +2,53 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { PrintingId } from "@/modules/catalog";
 import type { DbExecutor } from "@/shared/db";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
-import type { CollectionRepository } from "../application/ports";
-import type { Acquisition, CardGain } from "../domain/cards";
+import type { CardGainBatch, CollectionRepository } from "../application/ports";
+import { combineGains, type Acquisition, type CardGain } from "../domain/cards";
 import type { NotEnoughCopies } from "../domain/errors";
 import { acquisitions, collectionCards } from "./schema";
 
 export function drizzleCollectionRepository(db: DbExecutor): CollectionRepository {
+  async function receiveBatch(userId: UserId, batches: readonly CardGainBatch[]): Promise<void> {
+    if (batches.length === 0) return;
+    const combined = combineGains(batches.flatMap((batch) => batch.gains));
+    if (combined.length > 0) {
+      await db
+        .insert(collectionCards)
+        .values(
+          combined.map((gain) => ({
+            userId,
+            printingId: gain.printingId,
+            finish: gain.finish,
+            quantity: gain.quantity,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [collectionCards.userId, collectionCards.printingId, collectionCards.finish],
+          set: { quantity: sql`${collectionCards.quantity} + excluded.quantity` },
+        });
+    }
+    const acquisitionRows = batches.flatMap((batch) =>
+      batch.gains.map((gain) => ({
+        userId,
+        printingId: gain.printingId,
+        finish: gain.finish,
+        quantity: gain.quantity,
+        source: batch.acquisition.source,
+        ref: batch.acquisition.ref,
+        createdAt: batch.acquisition.at,
+      })),
+    );
+    if (acquisitionRows.length > 0) {
+      await db.insert(acquisitions).values(acquisitionRows);
+    }
+  }
+
   async function receive(
     userId: UserId,
     gains: readonly CardGain[],
     acquisition: Acquisition,
   ): Promise<void> {
-    const rows = gains.map((gain) => ({
-      userId,
-      printingId: gain.printingId,
-      finish: gain.finish,
-      quantity: gain.quantity,
-    }));
-    // Add to existing stacks: "on conflict" turns the insert into quantity = quantity + n.
-    await db
-      .insert(collectionCards)
-      .values(rows)
-      .onConflictDoUpdate({
-        target: [collectionCards.userId, collectionCards.printingId, collectionCards.finish],
-        set: { quantity: sql`${collectionCards.quantity} + excluded.quantity` },
-      });
-    await db.insert(acquisitions).values(
-      rows.map((row) => ({
-        ...row,
-        source: acquisition.source,
-        ref: acquisition.ref,
-        createdAt: acquisition.at,
-      })),
-    );
+    await receiveBatch(userId, [{ gains, acquisition }]);
   }
 
   async function remove(
@@ -115,5 +129,5 @@ export function drizzleCollectionRepository(db: DbExecutor): CollectionRepositor
     }));
   }
 
-  return { receive, remove, everything };
+  return { receive, receiveBatch, remove, everything };
 }

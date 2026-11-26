@@ -5,12 +5,23 @@ import type { NotEnoughCopies } from "../domain/errors";
 // Ports: what the collection needs from outside. Real version in ../infrastructure, fake in
 // ../testing.
 
+/** One acquisition batch: combined positive gains together with where they came from. */
+export type CardGainBatch = Readonly<{
+  gains: readonly CardGain[];
+  acquisition: Acquisition;
+}>;
+
 export interface CollectionRepository {
   /**
    * Adds copies to a player's collection and logs where they came from, in the caller's
    * transaction. `gains` are already combined, with positive quantities.
    */
   receive(userId: UserId, gains: readonly CardGain[], acquisition: Acquisition): Promise<void>;
+  /**
+   * Adds copies from several acquisitions in one batched upsert + insert, preserving each
+   * batch's source and ref in the acquisition log.
+   */
+  receiveBatch(userId: UserId, batches: readonly CardGainBatch[]): Promise<void>;
   /**
    * Takes copies out of a player's collection and logs them (as negative quantities), in the
    * caller's transaction. Locks the rows first, and changes nothing unless the player owns

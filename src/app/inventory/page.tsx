@@ -6,8 +6,7 @@ import { readPage } from "@/server/page-instance";
 import { Alert } from "@/ui/form";
 import { LocalTime } from "@/ui/local-time";
 import { KeyruneStylesheet } from "@/ui/mtg/set-symbol";
-import { openAction } from "./actions";
-import { Button } from "@/ui/button";
+import { OpenGroupButtons, OpeningScope } from "./open-controls";
 import { Page } from "@/ui/page";
 import { CardImage } from "@/ui/mtg/card-image";
 
@@ -52,64 +51,40 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
             .
           </p>
         ) : (
-          <ul className="divide-border-subtle flex flex-col divide-y">
-            {groups.map((group) => {
-              const count = group.itemIds.length;
-              // Precons and starter kits hold decks: "Open" goes all the way to the cards (and
-              // the deck list). Boxes and bundles can still be unpacked into packs first.
-              const isDeckProduct =
-                group.contentKind === "product" && /deck/.test(group.category ?? "");
-              // "Open all" goes inside products; for several packs it opens every one.
-              const canOpenAll = group.contentKind === "product" || count > 1;
-              return (
-                <li key={group.itemIds[0]} className="flex flex-wrap items-center gap-3 py-3">
-                  <Thumbnail
-                    photoIds={photos.get(group.itemIds[0]) ?? []}
-                    itemId={group.itemIds[0]}
-                    setCode={group.setCode}
-                  />
-                  <span className="flex-1 font-medium">
-                    {group.name}
-                    {count > 1 && <span className="text-muted"> × {count}</span>}
-                  </span>
-                  <form action={openAction}>
-                    <input type="hidden" name="itemIds" value={group.itemIds[0]} />
-                    <input type="hidden" name="mode" value={isDeckProduct ? "all" : "one"} />
-                    <Button
-                      type="submit"
-
-                      aria-label={`Open ${group.name}`}
-                    >
-                      {group.contentKind === "product" && !isDeckProduct ? "Unpack" : "Open"}
-                    </Button>
-                  </form>
-                  {canOpenAll && !isDeckProduct && (
-                    <form action={openAction}>
-                      <input
-                        type="hidden"
-                        name="itemIds"
-                        value={(group.contentKind === "product"
-                          ? group.itemIds.slice(0, 1)
-                          : group.itemIds
-                        ).join(",")}
-                      />
-                      <input type="hidden" name="mode" value="all" />
-                      <Button
-                        type="submit"
-
-                        aria-label={`Open all ${group.name}`}
-                        variant="secondary"
-                      >
-                        {group.contentKind === "product"
-                          ? "Open everything inside"
-                          : `Open all ${count}`}
-                      </Button>
-                    </form>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <OpeningScope>
+            <ul className="divide-border-subtle flex flex-col divide-y">
+              {groups.map((group) => {
+                const count = group.itemIds.length;
+                // Precons and starter kits hold decks: "Open" goes all the way to the cards (and
+                // the deck list). Boxes and bundles can still be unpacked into packs first.
+                const isDeckProduct =
+                  group.contentKind === "product" && /deck/.test(group.category ?? "");
+                // "Open all" goes inside products; for several packs it opens every one.
+                const canOpenAll = group.contentKind === "product" || count > 1;
+                return (
+                  <li key={group.itemIds[0]} className="flex flex-wrap items-center gap-3 py-3">
+                    <Thumbnail
+                      photoIds={photos.get(group.itemIds[0]) ?? []}
+                      itemId={group.itemIds[0]}
+                      setCode={group.setCode}
+                    />
+                    <span className="flex-1 font-medium">
+                      {group.name}
+                      {count > 1 && <span className="text-muted"> × {count}</span>}
+                    </span>
+                    <OpenGroupButtons
+                      groupKey={group.itemIds[0]}
+                      name={group.name}
+                      contentKind={group.contentKind}
+                      isDeckProduct={isDeckProduct}
+                      canOpenAll={canOpenAll}
+                      itemIds={group.itemIds}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </OpeningScope>
         )}
       </section>
 

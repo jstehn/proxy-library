@@ -45,7 +45,7 @@ export type StoreSet = Readonly<{
 }>;
 
 /** The most valuable rare or mythic with an image, per set, on the newest price day. */
-async function featuredArt(db: DbExecutor, setCodes: readonly string[]) {
+export async function featuredArt(db: DbExecutor, setCodes: readonly string[]) {
   if (setCodes.length === 0) return new Map<string, FeaturedArt>();
   const rows = await db.execute<{
     set_code: string;

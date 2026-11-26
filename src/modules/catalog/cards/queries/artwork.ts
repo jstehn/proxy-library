@@ -39,22 +39,42 @@ export async function packPhotos(
   db: DbExecutor,
   packs: ReadonlyArray<{ setCode: string; boosterType: string }>,
 ): Promise<Map<string, string[]>> {
-  const photos = new Map<string, string[]>();
+  const uniqueKeys = new Set<string>();
+  const setCodes = new Set<string>();
   for (const pack of packs) {
-    const key = packKey(pack.setCode, pack.boosterType);
-    if (photos.has(key)) continue;
-    const contents = JSON.stringify([
-      { kind: "pack", setCode: pack.setCode, boosterType: pack.boosterType },
-    ]);
-    const [product] = (
-      await db.execute<{ id: string }>(sql`
-        select id from sealed_products
-         where contents = ${contents}::jsonb and is_listed
-         order by id limit 1
-      `)
-    ).rows;
-    if (product === undefined) continue;
-    const found = (await productPhotos(db, [product.id])).get(product.id);
+    uniqueKeys.add(packKey(pack.setCode, pack.boosterType));
+    setCodes.add(pack.setCode);
+  }
+  if (uniqueKeys.size === 0) return new Map();
+
+  const rows = await db.execute<{
+    id: string;
+    set_code: string;
+    booster_type: string;
+  }>(sql`
+    select distinct on (contents->0->>'setCode', contents->0->>'boosterType')
+           id,
+           contents->0->>'setCode' as set_code,
+           contents->0->>'boosterType' as booster_type
+      from sealed_products
+     where is_listed
+       and jsonb_array_length(contents) = 1
+       and contents->0->>'kind' = 'pack'
+       and contents->0->>'setCode' = any(${sql.param([...setCodes])}::text[])
+     order by contents->0->>'setCode', contents->0->>'boosterType', id
+  `);
+
+  const productIdByKey = new Map<string, string>();
+  for (const row of rows.rows) {
+    const key = packKey(row.set_code, row.booster_type);
+    if (uniqueKeys.has(key)) productIdByKey.set(key, row.id);
+  }
+  if (productIdByKey.size === 0) return new Map();
+
+  const byProduct = await productPhotos(db, [...productIdByKey.values()]);
+  const photos = new Map<string, string[]>();
+  for (const [key, productId] of productIdByKey) {
+    const found = byProduct.get(productId);
     if (found) photos.set(key, found);
   }
   return photos;

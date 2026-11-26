@@ -20,6 +20,7 @@ import type {
   DeckContents,
   ItemRepository,
   NewItemsInput,
+  OpenedItemRecord,
   ProductCatalog,
   StoredOpening,
 } from "../application/ports";
@@ -95,25 +96,48 @@ export function drizzleItemRepository(db: DbExecutor): ItemRepository {
     return rows.map(toItem);
   }
 
-  async function lock(itemId: ItemId): Promise<Item | null> {
-    const [row] = await db
+  async function lockMany(itemIds: readonly ItemId[]): Promise<Map<ItemId, Item>> {
+    if (itemIds.length === 0) return new Map();
+    const unique = [...new Set(itemIds)];
+    const rows = await db
       .select()
       .from(sealedItems)
-      .where(eq(sealedItems.id, itemId))
+      .where(inArray(sealedItems.id, unique))
       .for("update");
-    return row === undefined ? null : toItem(row);
+    return new Map(rows.map((row) => [ItemId.of(row.id), toItem(row)]));
+  }
+
+  async function lock(itemId: ItemId): Promise<Item | null> {
+    return (await lockMany([itemId])).get(itemId) ?? null;
+  }
+
+  async function markOpenedMany(records: readonly OpenedItemRecord[]): Promise<void> {
+    if (records.length === 0) return;
+    // Group by openedAt (a single timestamp in `openAll`) so one UPDATE covers the whole batch.
+    const byTimestamp = new Map<number, { openedAt: Date | null; ids: ItemId[] }>();
+    for (const { item } of records) {
+      const key = item.openedAt?.getTime() ?? -1;
+      const group = byTimestamp.get(key) ?? { openedAt: item.openedAt, ids: [] };
+      group.ids.push(item.id);
+      byTimestamp.set(key, group);
+    }
+    for (const group of byTimestamp.values()) {
+      await db
+        .update(sealedItems)
+        .set({ status: "opened", openedAt: group.openedAt })
+        .where(inArray(sealedItems.id, group.ids));
+    }
+    await db.insert(itemOpenings).values(
+      records.map(({ item, opening }) => ({
+        itemId: item.id,
+        seed: opening.kind === "deck" ? null : opening.seed,
+        result: opening,
+      })),
+    );
   }
 
   async function markOpened(item: Item, opening: StoredOpening): Promise<void> {
-    await db
-      .update(sealedItems)
-      .set({ status: "opened", openedAt: item.openedAt })
-      .where(eq(sealedItems.id, item.id));
-    await db.insert(itemOpenings).values({
-      itemId: item.id,
-      seed: opening.kind === "deck" ? null : opening.seed,
-      result: opening,
-    });
+    await markOpenedMany([{ item, opening }]);
   }
 
   async function removeAllOf(ownerId: UserId): Promise<number> {
@@ -131,7 +155,7 @@ export function drizzleItemRepository(db: DbExecutor): ItemRepository {
     return ids.length;
   }
 
-  return { add, lock, markOpened, removeAllOf };
+  return { add, lock, lockMany, markOpened, markOpenedMany, removeAllOf };
 }
 
 // Stored catalog JSON, checked again on the way in ("parse, don't validate").

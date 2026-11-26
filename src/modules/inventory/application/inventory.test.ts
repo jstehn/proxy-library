@@ -173,6 +173,58 @@ describe("openAll", () => {
     const seeds = result.value.map((opening) => (opening.kind === "pack" ? opening.pack.seed : ""));
     expect(new Set(seeds).size).toBe(3);
   });
+
+  it("loads each booster recipe once and batches locks, collection writes, and openings", async () => {
+    const baseBoosters = services.boosters;
+    const baseItems = services.items;
+    const baseCollection = services.collection;
+    let configReads = 0;
+    let factsReads = 0;
+    let lockManyCalls = 0;
+    let markOpenedManyCalls = 0;
+    let receiveBatchCalls = 0;
+    services.boosters = {
+      boosterConfig: async (key) => {
+        configReads += 1;
+        return baseBoosters.boosterConfig(key);
+      },
+      printingFacts: async (printingIds) => {
+        factsReads += 1;
+        return baseBoosters.printingFacts(printingIds);
+      },
+      boosterKeys: () => baseBoosters.boosterKeys(),
+    };
+    services.items = {
+      ...baseItems,
+      lockMany: async (itemIds) => {
+        lockManyCalls += 1;
+        return baseItems.lockMany(itemIds);
+      },
+      markOpenedMany: async (records) => {
+        markOpenedManyCalls += 1;
+        return baseItems.markOpenedMany(records);
+      },
+    };
+    services.collection = {
+      ...baseCollection,
+      receiveBatch: async (userId, batches) => {
+        receiveBatchCalls += 1;
+        return baseCollection.receiveBatch(userId, batches);
+      },
+    };
+
+    const packs = await give("pack", 5);
+    const result = await inventory.openAll(
+      jack,
+      packs.map((pack) => pack.id),
+    );
+    expect(result.ok).toBe(true);
+    expect(configReads).toBe(1);
+    expect(factsReads).toBe(1);
+    expect(lockManyCalls).toBe(1);
+    expect(markOpenedManyCalls).toBe(1);
+    expect(receiveBatchCalls).toBe(1);
+  });
 });
 
 describe("nothing inside (found with real data: an empty precon)", () => {

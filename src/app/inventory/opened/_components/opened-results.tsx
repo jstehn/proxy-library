@@ -39,9 +39,8 @@ type OpenedResultsProps = {
 export function OpenedResults(props: OpenedResultsProps) {
   const { openings, cardsById, ownedByKey, packCount, newDecks } = props;
   const hasMultipleOpenings = openings.length > 1;
-  const [viewMode, setViewMode] = useState<"combined" | "by-pack">(
-    hasMultipleOpenings ? "combined" : "by-pack",
-  );
+  const singleOpening = openings.length === 1 ? openings[0] : null;
+  const [viewMode, setViewMode] = useState<"combined" | "by-pack">("combined");
   const [sort, setSort] = useState<OpenedSort>("value");
   const [onlyDuplicates, setOnlyDuplicates] = useState(false);
 
@@ -61,7 +60,14 @@ export function OpenedResults(props: OpenedResultsProps) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Opened</h1>
+        <h1 className="text-2xl font-semibold">
+          {singleOpening !== null ? singleOpening.name : "Opened"}
+        </h1>
+        {singleOpening?.theme !== null && singleOpening?.theme !== undefined && (
+          <p className="text-muted text-sm">
+            Theme: <strong>{singleOpening.theme}</strong>
+          </p>
+        )}
         {newDecks !== null && (
           <p className="border-success-line bg-success-soft text-success-ink rounded-md border px-3 py-2 text-sm">
             Added to your decks: <strong>{newDecks}</strong>.{" "}
@@ -112,7 +118,16 @@ export function OpenedResults(props: OpenedResultsProps) {
                   {opening.children.map((child, index) => (
                     <span key={child.itemId}>
                       {index > 0 && ", "}
-                      {child.name}
+                      {child.status === "opened" ? (
+                        <Link
+                          href={`/inventory/opened?items=${child.itemId}`}
+                          className="underline"
+                        >
+                          {child.name}
+                        </Link>
+                      ) : (
+                        child.name
+                      )}
                       {child.status === "opened" && " (opened)"}
                     </span>
                   ))}
@@ -126,7 +141,7 @@ export function OpenedResults(props: OpenedResultsProps) {
         </section>
       )}
 
-      {hasMultipleOpenings && summary.highlights.length > 0 && (
+      {summary.highlights.length > 0 && (
         <section
           aria-label="Top pulls"
           className="border-border-subtle bg-surface/60 flex flex-col gap-3 rounded-xl border p-4"

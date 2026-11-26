@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
 import type { Finish } from "@/shared/mtg";
@@ -114,13 +114,15 @@ type StoredResult = {
   extras?: string[];
 };
 
-/** What one of the player's openings produced, or null if it isn't theirs or isn't opened. */
-export async function openingView(
+/** What the player's openings produced, in the requested id order (missing or others' omitted). */
+export async function openingViews(
   db: DbExecutor,
   actor: Actor,
-  itemId: number,
-): Promise<OpeningView | null> {
-  const [row] = await db
+  itemIds: readonly number[],
+): Promise<OpeningView[]> {
+  if (itemIds.length === 0) return [];
+  const uniqueIds = [...new Set(itemIds)];
+  const rows = await db
     .select({
       itemId: sealedItems.id,
       name: sealedItems.name,
@@ -133,32 +135,67 @@ export async function openingView(
     })
     .from(sealedItems)
     .innerJoin(itemOpenings, eq(itemOpenings.itemId, sealedItems.id))
-    .where(and(eq(sealedItems.id, itemId), eq(sealedItems.ownerId, actor.userId)));
-  if (row === undefined) return null;
+    .where(and(inArray(sealedItems.id, uniqueIds), eq(sealedItems.ownerId, actor.userId)));
+  if (rows.length === 0) return [];
 
-  // Written by this module as a StoredOpening, so this shape is known.
-  const result = row.result as StoredResult;
-  const children = await db
-    .select({ itemId: sealedItems.id, name: sealedItems.name, status: sealedItems.status })
+  const foundIds = rows.map((row) => row.itemId);
+  const childRows = await db
+    .select({
+      parentId: sealedItems.parentId,
+      itemId: sealedItems.id,
+      name: sealedItems.name,
+      status: sealedItems.status,
+    })
     .from(sealedItems)
-    .where(eq(sealedItems.parentId, row.itemId))
+    .where(inArray(sealedItems.parentId, foundIds))
     .orderBy(sealedItems.id);
 
-  return {
-    itemId: row.itemId,
-    name: row.name,
-    setCode: row.setCode,
-    boosterType: row.boosterType,
-    contentKind: row.contentKind as OpeningView["contentKind"],
-    openedAt: (row.openedAt ?? new Date(0)).toISOString(),
-    seed: row.seed,
-    variantIndex: result.variantIndex ?? null,
-    cards: (result.cards ?? []).map((card) => ({
-      printingId: card.printingId,
-      finish: card.finish,
-      quantity: card.quantity ?? 1,
-    })),
-    extras: result.extras ?? [],
-    children,
-  };
+  const childrenByParent = new Map<
+    number,
+    Array<{ itemId: number; name: string; status: string }>
+  >();
+  for (const child of childRows) {
+    if (child.parentId === null) continue;
+    const list = childrenByParent.get(child.parentId) ?? [];
+    list.push({ itemId: child.itemId, name: child.name, status: child.status });
+    childrenByParent.set(child.parentId, list);
+  }
+
+  const byId = new Map<number, OpeningView>();
+  for (const row of rows) {
+    // Written by this module as a StoredOpening, so this shape is known.
+    const result = row.result as StoredResult;
+    byId.set(row.itemId, {
+      itemId: row.itemId,
+      name: row.name,
+      setCode: row.setCode,
+      boosterType: row.boosterType,
+      contentKind: row.contentKind as OpeningView["contentKind"],
+      openedAt: (row.openedAt ?? new Date(0)).toISOString(),
+      seed: row.seed,
+      variantIndex: result.variantIndex ?? null,
+      cards: (result.cards ?? []).map((card) => ({
+        printingId: card.printingId,
+        finish: card.finish,
+        quantity: card.quantity ?? 1,
+      })),
+      extras: result.extras ?? [],
+      children: childrenByParent.get(row.itemId) ?? [],
+    });
+  }
+
+  return itemIds.flatMap((id) => {
+    const view = byId.get(id);
+    return view === undefined ? [] : [view];
+  });
+}
+
+/** What one of the player's openings produced, or null if it isn't theirs or isn't opened. */
+export async function openingView(
+  db: DbExecutor,
+  actor: Actor,
+  itemId: number,
+): Promise<OpeningView | null> {
+  const [view] = await openingViews(db, actor, [itemId]);
+  return view ?? null;
 }

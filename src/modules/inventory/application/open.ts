@@ -1,7 +1,19 @@
 import type { Actor } from "@/modules/accounts";
 import { isNotable, recordEvent } from "@/modules/activity";
-import { receiveCards, type CardGain } from "@/modules/collection";
-import { openBooster, type Pack } from "@/modules/packs";
+import {
+  receiveCardBatches,
+  receiveCards,
+  type CardGain,
+  type CardGainBatch,
+} from "@/modules/collection";
+import {
+  loadBooster,
+  openPack,
+  type BoosterKey,
+  type FactsLookup,
+  type LoadedBooster,
+  type Pack,
+} from "@/modules/packs";
 import { assertNever, err, ok, seededRng, type Result } from "@/shared/kernel";
 import type {
   AlreadyOpened,
@@ -13,7 +25,12 @@ import type {
 } from "../domain/errors";
 import { openTransition, type Item, type ItemId } from "../domain/item";
 import { nestedProductIds, unpack } from "../domain/unpack";
-import type { DeckCardGain, InventoryDependencies, InventoryServices } from "./ports";
+import type {
+  DeckCardGain,
+  InventoryDependencies,
+  InventoryServices,
+  OpenedItemRecord,
+} from "./ports";
 
 // Opening items (design doc 06, section 5). Each opening is one transaction: the item is locked,
 // marked opened, and what came out of it is saved, or nothing changes at all.
@@ -49,17 +66,35 @@ function packGains(pack: Pack): CardGain[] {
   }));
 }
 
+/** Per-transaction cache and write buffers so multi-pack opens batch their SQL calls. */
+type OpenBatch = {
+  boosterCache: Map<string, LoadedBooster | null>;
+  cardBatches: CardGainBatch[];
+  openedItems: OpenedItemRecord[];
+};
+
+async function getBooster(
+  services: InventoryServices,
+  key: BoosterKey,
+  batch?: OpenBatch,
+): Promise<LoadedBooster | null> {
+  const cacheKey = `${key.setCode}\0${key.boosterType}`;
+  if (batch?.boosterCache.has(cacheKey)) return batch.boosterCache.get(cacheKey) ?? null;
+  const loaded = await loadBooster(services, key);
+  batch?.boosterCache.set(cacheKey, loaded);
+  return loaded;
+}
+
 /** Tells the activity feed about a pack's notable cards, if it had any (design doc 11). */
 async function recordPull(
   services: InventoryServices,
   item: Item,
   pack: Pack,
+  facts: FactsLookup,
   now: Date,
 ): Promise<void> {
-  const facts = await services.boosters.printingFacts(pack.cards.map((card) => card.printingId));
   const cards = pack.cards.flatMap((card) => {
-    const printing = facts.get(card.printingId);
-    if (printing === undefined) return [];
+    const printing = facts(card.printingId);
     const pulled = {
       printingId: card.printingId,
       name: printing.name,
@@ -71,9 +106,28 @@ async function recordPull(
   });
   await recordEvent(
     services,
-    { kind: "pull", actorId: item.ownerId, itemName: item.name, cards },
+    { kind: "pull", actorId: item.ownerId, itemId: item.id, itemName: item.name, cards },
     now,
   );
+}
+
+async function saveOpening(
+  services: InventoryServices,
+  item: Item,
+  gains: readonly CardGain[],
+  source: "pack" | "deck" | "product",
+  now: Date,
+  record: OpenedItemRecord,
+  batch?: OpenBatch,
+): Promise<void> {
+  const acquisition = { source, ref: `item:${item.id}`, at: now };
+  if (batch !== undefined) {
+    if (gains.length > 0) batch.cardBatches.push({ gains, acquisition });
+    batch.openedItems.push(record);
+    return;
+  }
+  await receiveCards(services, item.ownerId, gains, acquisition);
+  await services.items.markOpened(record.item, record.opening);
 }
 
 /**
@@ -85,29 +139,35 @@ async function openContent(
   item: Item,
   now: Date,
   newSeed: () => string,
+  batch?: OpenBatch,
 ): Promise<Result<Opening, ContentError>> {
-  const ref = `item:${item.id}`;
   const content = item.content;
 
   switch (content.kind) {
     case "pack": {
+      const loaded = await getBooster(services, content, batch);
+      if (loaded === null) return err({ kind: "BoosterUnavailable" });
       const seed = newSeed();
-      const opened = await openBooster(services, {
-        setCode: content.setCode,
-        boosterType: content.boosterType,
-        seed,
-      });
-      if (!opened.ok) return opened;
-      const pack = opened.value;
+      const pack = openPack(loaded.config, loaded.facts, seed);
       if (pack.cards.length === 0) return err({ kind: "NothingInside" });
-      await receiveCards(services, item.ownerId, packGains(pack), { source: "pack", ref, at: now });
-      await recordPull(services, item, pack, now);
-      await services.items.markOpened(item, {
-        kind: "pack",
-        seed,
-        variantIndex: pack.variantIndex,
-        cards: pack.cards,
-      });
+      await saveOpening(
+        services,
+        item,
+        packGains(pack),
+        "pack",
+        now,
+        {
+          item,
+          opening: {
+            kind: "pack",
+            seed,
+            variantIndex: pack.variantIndex,
+            cards: pack.cards,
+          },
+        },
+        batch,
+      );
+      await recordPull(services, item, pack, loaded.facts, now);
       return ok({ kind: "pack", item, pack });
     }
 
@@ -115,8 +175,15 @@ async function openContent(
       const deck = await services.productCatalog.deckCards(content.setCode, content.deckName);
       if (deck === null) return err({ kind: "DeckUnavailable" });
       if (deck.cards.length === 0) return err({ kind: "NothingInside" });
-      await receiveCards(services, item.ownerId, deck.cards, { source: "deck", ref, at: now });
-      await services.items.markOpened(item, { kind: "deck", cards: deck.cards });
+      await saveOpening(
+        services,
+        item,
+        deck.cards,
+        "deck",
+        now,
+        { item, opening: { kind: "deck", cards: deck.cards } },
+        batch,
+      );
       return ok({ kind: "deck", item, deckType: deck.type, cards: deck.cards });
     }
 
@@ -139,14 +206,24 @@ async function openContent(
         parentId: item.id,
         at: now,
       });
-      await receiveCards(services, item.ownerId, plan.cards, { source: "product", ref, at: now });
-      await services.items.markOpened(item, {
-        kind: "product",
-        seed,
-        childIds: children.map((child) => child.id),
-        cards: plan.cards,
-        extras: plan.extras,
-      });
+      await saveOpening(
+        services,
+        item,
+        plan.cards,
+        "product",
+        now,
+        {
+          item,
+          opening: {
+            kind: "product",
+            seed,
+            childIds: children.map((child) => child.id),
+            cards: plan.cards,
+            extras: plan.extras,
+          },
+        },
+        batch,
+      );
       return ok({ kind: "product", item, children, cards: plan.cards, extras: plan.extras });
     }
 
@@ -198,18 +275,33 @@ export function makeOpenAll(dependencies: InventoryDependencies) {
   ): Promise<Result<Opening[], OpenItemError>> {
     return unitOfWork.run<Opening[], OpenItemError>(async (services) => {
       const now = clock.now();
+      const batch: OpenBatch = {
+        boosterCache: new Map(),
+        cardBatches: [],
+        openedItems: [],
+      };
+      const lockedItems = await services.items.lockMany(itemIds.slice(0, OPEN_ALL_LIMIT));
       const openings: Opening[] = [];
       const waiting: ItemId[] = [...itemIds];
       // A queue, oldest first: each opened product adds its children to the end.
       for (let next = waiting.shift(); next !== undefined; next = waiting.shift()) {
         if (openings.length >= OPEN_ALL_LIMIT) break; // the rest stay unopened, safe to open later
-        const opened = await openInTransaction(services, actor, next, now, seeds.newSeed);
+        const locked = lockedItems.get(next) ?? null;
+        const transition = openTransition(locked, actor.userId, now);
+        if (!transition.ok) return transition;
+        lockedItems.set(next, transition.value);
+        const opened = await openContent(services, transition.value, now, seeds.newSeed, batch);
         if (!opened.ok) return opened;
         openings.push(opened.value);
         if (opened.value.kind === "product") {
-          waiting.push(...opened.value.children.map((child) => child.id));
+          for (const child of opened.value.children) {
+            lockedItems.set(child.id, child);
+            waiting.push(child.id);
+          }
         }
       }
+      await receiveCardBatches(services, actor.userId, batch.cardBatches);
+      await services.items.markOpenedMany(batch.openedItems);
       return ok(openings);
     });
   }

@@ -14,7 +14,13 @@ export type PulledCard = Readonly<{
 }>;
 
 export type ActivityEvent =
-  | Readonly<{ kind: "pull"; actorId: UserId; itemName: string; cards: readonly PulledCard[] }>
+  | Readonly<{
+      kind: "pull";
+      actorId: UserId;
+      itemId?: number;
+      itemName: string;
+      cards: readonly PulledCard[];
+    }>
   | Readonly<{ kind: "purchase"; actorId: UserId; productName: string; quantity: number }>
   | Readonly<{
       kind: "trade";

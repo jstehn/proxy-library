@@ -11,6 +11,8 @@ export type FeedItem =
       at: string;
       actor: string;
       actorUsername?: string;
+      isOwn: boolean;
+      itemId?: number;
       itemName: string;
       cards: FeedCard[];
     }>
@@ -78,6 +80,7 @@ type Row = {
   occurred_at: Date;
   actor: string;
   actor_username: string;
+  is_own: boolean;
   other: string | null;
   payload: Record<string, unknown>;
 };
@@ -115,6 +118,7 @@ export async function feed(
   const rows = await db.execute<Row>(sql`
     select e.id, e.kind, e.occurred_at, a.name as actor,
            coalesce(a.username, a.id) as actor_username,
+           e.actor_id = ${viewerId} as is_own,
            o.name as other, e.payload
       from activity_events e
       join auth_users a on a.id = e.actor_id
@@ -136,15 +140,19 @@ export async function feed(
     const payload = row.payload;
     // Written by this module's recorder, so these shapes are known.
     switch (row.kind) {
-      case "pull":
+      case "pull": {
+        const rawItemId = Number(payload.itemId);
         return [
           {
             ...base,
             kind: "pull",
+            isOwn: row.is_own,
+            ...(Number.isSafeInteger(rawItemId) && rawItemId > 0 ? { itemId: rawItemId } : {}),
             itemName: String(payload.itemName),
             cards: payload.cards as FeedCard[],
           },
         ];
+      }
       case "purchase":
         return [
           {

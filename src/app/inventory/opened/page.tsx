@@ -1,6 +1,5 @@
 import { packKey, variantFor, type PrintingCard } from "@/modules/catalog";
 import { type OpeningView } from "@/modules/inventory";
-import type { Capabilities } from "@/server/composition/capabilities";
 import type { Reads } from "@/server/composition/reads";
 import { readPage } from "@/server/page-instance";
 import { ManaStylesheet } from "@/ui/mtg/mana";
@@ -28,9 +27,19 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
     .filter((id) => Number.isSafeInteger(id) && id > 0)
     .slice(0, MAX_SHOWN);
 
-  const openings = (
-    await Promise.all(ids.map((id) => reads.inventory.openingView(actor, id)))
-  ).filter((opening): opening is OpeningView => opening !== null);
+  const initialOpenings = await reads.inventory.openingViews(actor, ids);
+  // Clicking an opened box or bundle from history expands its opened packs into the full summary.
+  const openedChildIds =
+    initialOpenings.length === 1 && initialOpenings[0].contentKind === "product"
+      ? initialOpenings[0].children
+          .filter((child) => child.status === "opened")
+          .map((child) => child.itemId)
+          .slice(0, MAX_SHOWN - 1)
+      : [];
+  const openings =
+    openedChildIds.length > 0
+      ? [...initialOpenings, ...(await reads.inventory.openingViews(actor, openedChildIds))]
+      : initialOpenings;
 
   const allPrintingIds = openings.flatMap((opening) =>
     opening.cards.map((card) => card.printingId),
@@ -75,9 +84,7 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
       <KeyruneStylesheet />
       <ManaStylesheet />
       {animate && packs.length > 0 ? (
-        <PackOpener packs={await openerPacks(capabilities, reads, packs, cards, themes)}>
-          {results}
-        </PackOpener>
+        <PackOpener packs={await openerPacks(reads, packs, cards, themes)}>{results}</PackOpener>
       ) : (
         results
       )}
@@ -90,36 +97,29 @@ export default async function OpenedPage(props: PageProps<"/inventory/opened">) 
  * card from inside it, so the front of the pack gives nothing away.
  */
 async function openerPacks(
-  capabilities: Capabilities,
   reads: Reads,
   packs: readonly OpeningView[],
   cards: Map<string, PrintingCard>,
   themes: ReadonlyMap<number, string>,
 ): Promise<OpenerPack[]> {
   const setCodes = [...new Set(packs.flatMap((pack) => (pack.setCode ? [pack.setCode] : [])))];
-  const sets = new Map(
-    await Promise.all(
-      setCodes.map(async (code) => {
-        const [set, page] = await Promise.all([
-          reads.catalog.findSet(code),
-          reads.store.page(code),
-        ]);
-        return [code, { set, featured: page?.set.featured ?? null }] as const;
-      }),
+  const [setEntries, featuredBySet, photos] = await Promise.all([
+    Promise.all(setCodes.map(async (code) => [code, await reads.catalog.findSet(code)] as const)),
+    reads.store.featuredArt(setCodes),
+    reads.catalog.packPhotos(
+      packs.flatMap((pack) =>
+        pack.setCode && pack.boosterType
+          ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]
+          : [],
+      ),
     ),
-  );
-
-  const photos = await reads.catalog.packPhotos(
-    packs.flatMap((pack) =>
-      pack.setCode && pack.boosterType
-        ? [{ setCode: pack.setCode, boosterType: pack.boosterType }]
-        : [],
-    ),
-  );
+  ]);
+  const sets = new Map(setEntries);
 
   return packs.map((pack) => {
-    const info = pack.setCode === null ? undefined : sets.get(pack.setCode);
-    const setName = info?.set?.name ?? pack.setCode ?? "";
+    const set = pack.setCode === null ? undefined : sets.get(pack.setCode);
+    const setName = set?.name ?? pack.setCode ?? "";
+    const featured = pack.setCode === null ? undefined : featuredBySet.get(pack.setCode);
     const photoIds =
       (pack.setCode && pack.boosterType && photos.get(packKey(pack.setCode, pack.boosterType))) ||
       [];
@@ -128,9 +128,9 @@ async function openerPacks(
       name: pack.name,
       setCode: pack.setCode ?? "",
       setName,
-      keyruneCode: info?.set?.keyruneCode ?? "",
+      keyruneCode: set?.keyruneCode ?? "",
       label: productLabel(pack.name, setName),
-      featuredPrintingId: info?.featured?.printingId ?? null,
+      featuredPrintingId: featured?.printingId ?? null,
       photoIds,
       photoVariant: variantFor(pack.itemId, photoIds.length),
       theme: themes.get(pack.itemId) ?? null,

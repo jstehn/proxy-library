@@ -28,6 +28,15 @@ export function inMemoryCollectionRepository() {
       }
       log.push({ ...acquisition, userId, gains });
     },
+    async receiveBatch(userId, batches) {
+      for (const batch of batches) {
+        for (const gain of batch.gains) {
+          const key = `${userId}/${gain.printingId}/${gain.finish}`;
+          quantities.set(key, (quantities.get(key) ?? 0) + gain.quantity);
+        }
+        log.push({ ...batch.acquisition, userId, gains: batch.gains });
+      }
+    },
     async remove(userId, losses, acquisition) {
       const key = (loss: CardGain) => `${userId}/${loss.printingId}/${loss.finish}`;
       for (const loss of losses) {

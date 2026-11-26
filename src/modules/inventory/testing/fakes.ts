@@ -42,9 +42,23 @@ export function inMemoryItemRepository() {
     async lock(itemId) {
       return items.get(itemId) ?? null;
     },
+    async lockMany(itemIds) {
+      const found = new Map<ItemId, Item>();
+      for (const itemId of itemIds) {
+        const item = items.get(itemId);
+        if (item !== undefined) found.set(itemId, item);
+      }
+      return found;
+    },
     async markOpened(item, opening) {
       items.set(item.id, item);
       openings.set(item.id, opening);
+    },
+    async markOpenedMany(records) {
+      for (const { item, opening } of records) {
+        items.set(item.id, item);
+        openings.set(item.id, opening);
+      }
     },
     async removeAllOf(ownerId) {
       const owned = [...items.values()].filter((item) => item.ownerId === ownerId);

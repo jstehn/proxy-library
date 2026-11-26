@@ -25,7 +25,15 @@ function Line(props: { item: FeedItem }) {
     case "pull":
       return (
         <>
-          {actor} opened {item.itemName} and pulled{" "}
+          {actor} opened{" "}
+          {item.isOwn && item.itemId !== undefined ? (
+            <Link href={`/inventory/opened?items=${item.itemId}`} className="underline">
+              {item.itemName}
+            </Link>
+          ) : (
+            item.itemName
+          )}{" "}
+          and pulled{" "}
           {item.cards.map((card, index) => (
             <span key={card.printingId + index}>
               {index > 0 && ", "}

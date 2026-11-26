@@ -27,13 +27,22 @@ export type NewItemsInput = Readonly<{
   at: Date;
 }>;
 
+export type OpenedItemRecord = Readonly<{
+  item: Item;
+  opening: StoredOpening;
+}>;
+
 export interface ItemRepository {
   /** Creates items and returns them with their ids, in the same order. */
   add(input: NewItemsInput): Promise<Item[]>;
   /** Reads an item and locks it until the transaction ends (null if there's no such item). */
   lock(itemId: ItemId): Promise<Item | null>;
+  /** Reads and locks several items in one query; missing ids are absent from the returned map. */
+  lockMany(itemIds: readonly ItemId[]): Promise<Map<ItemId, Item>>;
   /** Saves an item as opened, with what the opening produced. */
   markOpened(item: Item, opening: StoredOpening): Promise<void>;
+  /** Saves several items as opened in one batched update + insert. */
+  markOpenedMany(records: readonly OpenedItemRecord[]): Promise<void>;
   /** Deletes every item a player has, opened or not, with its opening. Returns how many. */
   removeAllOf(ownerId: UserId): Promise<number>;
 }
