@@ -40,7 +40,9 @@ export const sealedItems = pgTable(
     index("sealed_items_owner_opened_idx")
       .on(table.ownerId, table.openedAt.desc(), table.id.desc())
       .where(sql`${table.status} = 'opened'`),
-    index("sealed_items_parent_idx").on(table.parentId),
+    index("sealed_items_parent_idx")
+      .on(table.parentId)
+      .where(sql`${table.parentId} is not null`),
     check("sealed_items_status_known", sql`${table.status} in ('unopened', 'opened')`),
     check("sealed_items_origin_known", sql`${table.origin} in ('purchase', 'unpacked')`),
     // Exactly the columns each kind needs (design doc 06, section 8).

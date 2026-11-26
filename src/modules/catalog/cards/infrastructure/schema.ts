@@ -92,6 +92,9 @@ export const printings = pgTable(
     index("printings_set_number_idx").on(table.setCode, table.collectorNumber),
     index("printings_oracle_idx").on(table.oracleId),
     index("printings_lower_name_idx").on(sql`lower(${table.name})`),
+    index("printings_lower_front_name_idx")
+      .on(sql`lower(split_part(${table.name}, ' // ', 1))`)
+      .where(sql`${table.name} like '% // %'`),
     index("printings_name_set_number_idx").on(table.name, table.setCode, table.collectorNumber),
     index("printings_game_changer_idx")
       .on(table.isGameChanger)
@@ -160,10 +163,20 @@ export const priceSnapshots = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.printingId, table.finish, table.day] }),
-    // "The newest price day" is asked often, and the table grows every day (ADR 0013).
-    index("price_snapshots_day_idx").on(table.day),
-    // Covers per-printing lookups on the newest price day (Singles sort/dedup, Store featured art).
-    index("price_snapshots_day_printing_idx").on(table.day, table.printingId, table.usdCents),
+    // Covers per-printing latest-price lookups (ORDER BY finish ASC, day DESC) without sorting.
+    index("price_snapshots_printing_finish_day_desc_idx").on(
+      table.printingId,
+      table.finish,
+      table.day.desc(),
+      table.usdCents,
+    ),
+    // Covers newest-day price scans and per-printing/finish lookups on the newest day.
+    index("price_snapshots_day_printing_idx").on(
+      table.day,
+      table.printingId,
+      table.finish,
+      table.usdCents,
+    ),
   ],
 );
 

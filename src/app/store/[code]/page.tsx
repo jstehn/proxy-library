@@ -19,21 +19,22 @@ export default async function StoreSetPage(props: PageProps<"/store/[code]">) {
   const { code } = await props.params;
 
   const page = await reads.store.page(code);
+  if (page === null) notFound();
+  const { set } = page;
   const today = capabilities.now().toISOString().slice(0, 10);
+  const [commanders, ownedForReal] = await Promise.all([
+    capabilities.printingDetails(
+      page.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])),
+    ),
+    reads.realCollection.productCounts(
+      actor,
+      page.products.map((product) => product.id),
+    ),
+  ]);
   // A Commander deck shows its commander's whole card (readable on hover), so it's clear who
   // leads the deck.
   const commanderOf = (product: ProductForSale): PrintingCard | undefined =>
     product.featured ? commanders.get(product.featured.printingId) : undefined;
-  const commanders = await capabilities.printingDetails(
-    page?.products.flatMap((product) => (product.featured ? [product.featured.printingId] : [])) ??
-      [],
-  );
-  if (page === null) notFound();
-  const { set } = page;
-  const ownedForReal = await reads.realCollection.productCounts(
-    actor,
-    page.products.map((product) => product.id),
-  );
 
   // Group the products by category, keeping the query's order.
   const groups = new Map<string, ProductForSale[]>();

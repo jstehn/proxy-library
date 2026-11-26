@@ -15,7 +15,7 @@ export const activityEvents = pgTable(
     payload: jsonb("payload").notNull(), // the event's other fields
   },
   (table) => [
-    index("activity_events_occurred_idx").on(table.occurredAt.desc()),
+    index("activity_events_occurred_idx").on(table.occurredAt.desc(), table.id.desc()),
     index("activity_events_actor_occurred_idx").on(
       table.actorId,
       table.occurredAt.desc(),

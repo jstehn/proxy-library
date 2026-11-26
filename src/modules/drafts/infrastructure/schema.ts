@@ -50,6 +50,9 @@ export const drafts = pgTable(
   },
   (table) => [
     index("drafts_status_idx").on(table.status),
+    index("drafts_dealing_deadline_idx")
+      .on(table.dealDeadline)
+      .where(sql`${table.status} = 'dealing' and ${table.dealDeadline} is not null`),
     check(
       "drafts_status_known",
       sql`${table.status} in ('lobby', 'drafting', 'dealing', 'finished', 'cancelled')`,
@@ -103,8 +106,12 @@ export const draftSeats = pgTable(
       .where(sql`${table.isActive} and ${table.botNumber} = 0`),
     check("draft_seats_bot_number", sql`${table.botNumber} >= 0`),
     // The worker looks for passed deadlines every few seconds.
-    index("draft_seats_deadline_idx").on(table.deadline),
-    index("draft_seats_prompt_deadline_idx").on(table.promptDeadline),
+    index("draft_seats_deadline_idx")
+      .on(table.deadline)
+      .where(sql`${table.deadline} is not null`),
+    index("draft_seats_prompt_deadline_idx")
+      .on(table.promptDeadline)
+      .where(sql`${table.promptDeadline} is not null`),
     index("draft_seats_user_draft_idx")
       .on(table.userId, table.draftId)
       .where(sql`${table.botNumber} = 0`),

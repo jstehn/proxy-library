@@ -14,16 +14,15 @@ import { Price } from "@/ui/mtg/price";
 export default async function AccountPage(props: PageProps<"/account">) {
   const { actor, reads } = await readPage();
   const externalName = externalSignInName();
-  const external = externalName === null ? null : await reads.accounts.externalSignInStatus(actor);
-  const query = await props.searchParams;
-  const linkError = describeExternalLinkError(
-    typeof query.error === "string" ? query.error : undefined,
-  );
-
-  const [wallet, economy] = await Promise.all([
+  const [query, external, wallet, economy] = await Promise.all([
+    props.searchParams,
+    externalName === null ? Promise.resolve(null) : reads.accounts.externalSignInStatus(actor),
     reads.wallet.summary(actor),
     reads.wallet.economySettings(),
   ]);
+  const linkError = describeExternalLinkError(
+    typeof query.error === "string" ? query.error : undefined,
+  );
   const startingAmount = Cents.format(economy.startingGrant);
 
   return (

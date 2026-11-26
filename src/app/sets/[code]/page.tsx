@@ -28,9 +28,11 @@ export default async function SetPage(props: PageProps<"/sets/[code]">) {
   const { reads } = await readPage();
   const { code } = await props.params;
 
-  const set = await reads.catalog.findSet(code);
+  const [set, printings] = await Promise.all([
+    reads.catalog.findSet(code),
+    reads.catalog.setPrintings(code.toUpperCase()),
+  ]);
   if (set === null) notFound();
-  const printings = await reads.catalog.setPrintings(set.code);
 
   return (
     <Page width="6xl">

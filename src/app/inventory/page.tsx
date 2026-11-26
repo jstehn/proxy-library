@@ -114,16 +114,18 @@ async function photosFor(
   reads: Reads,
   groups: readonly UnopenedGroup[],
 ): Promise<Map<number, string[]>> {
-  const byProduct = await reads.catalog.productPhotos(
-    groups.flatMap((group) => (group.productId ? [group.productId] : [])),
-  );
-  const byPack = await reads.catalog.packPhotos(
-    groups.flatMap((group) =>
-      group.contentKind === "pack" && group.setCode && group.boosterType
-        ? [{ setCode: group.setCode, boosterType: group.boosterType }]
-        : [],
+  const [byProduct, byPack] = await Promise.all([
+    reads.catalog.productPhotos(
+      groups.flatMap((group) => (group.productId ? [group.productId] : [])),
     ),
-  );
+    reads.catalog.packPhotos(
+      groups.flatMap((group) =>
+        group.contentKind === "pack" && group.setCode && group.boosterType
+          ? [{ setCode: group.setCode, boosterType: group.boosterType }]
+          : [],
+      ),
+    ),
+  ]);
   const photos = new Map<number, string[]>();
   for (const group of groups) {
     const found = group.productId

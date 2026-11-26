@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { readPage } from "@/server/page-instance";
 import { FORMAT_LABELS } from "../../../decks/labels";
@@ -7,12 +8,16 @@ import { Card } from "@/ui/card";
 import { Page } from "@/ui/page";
 import { buttonClass } from "@/ui/button";
 
+const loadPublicScorecard = cache(async (token: string) => {
+  const { reads } = await readPage({ allowVisitors: true });
+  return reads.decks.publicScorecard(token);
+});
+
 export async function generateMetadata(
   props: PageProps<"/d/[token]/scorecard">,
 ): Promise<Metadata> {
   const { token } = await props.params;
-  const { reads } = await readPage({ allowVisitors: true });
-  const found = await reads.decks.publicScorecard(token);
+  const found = await loadPublicScorecard(token);
   if (found === null) return { title: "Scorecard not found — Proxy Library" };
   return {
     title: `${found.report.deck.name} Scorecard — Proxy Library`,
@@ -22,8 +27,7 @@ export async function generateMetadata(
 
 export default async function PublicDeckScorecardPage(props: PageProps<"/d/[token]/scorecard">) {
   const { token } = await props.params;
-  const { reads } = await readPage({ allowVisitors: true });
-  const found = await reads.decks.publicScorecard(token);
+  const found = await loadPublicScorecard(token);
   if (found === null) notFound();
 
   const { ownerName, report } = found;

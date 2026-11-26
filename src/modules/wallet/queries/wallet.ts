@@ -54,23 +54,21 @@ export async function summary(db: DbExecutor, actor: Actor): Promise<WalletSumma
       spent: totalSinceReset(sql`${ledgerEntries.kind} in ${SPENDING_KINDS}`),
       sold: totalSinceReset(sql`${ledgerEntries.kind} = 'sellback'`),
       corrected: totalSinceReset(sql`${ledgerEntries.kind} = 'correction'`),
+      totalsSince: walletAccounts.totalsSince,
     })
-    .from(ledgerEntries)
-    .leftJoin(walletAccounts, eq(walletAccounts.userId, ledgerEntries.userId))
-    .where(eq(ledgerEntries.userId, userId));
-  const [account] = await db
-    .select({ totalsSince: walletAccounts.totalsSince })
     .from(walletAccounts)
-    .where(eq(walletAccounts.userId, userId));
+    .leftJoin(ledgerEntries, eq(ledgerEntries.userId, walletAccounts.userId))
+    .where(eq(walletAccounts.userId, userId))
+    .groupBy(walletAccounts.userId, walletAccounts.totalsSince);
 
   return {
-    balance: Cents.of(row.balance),
-    received: Cents.of(row.received),
-    selfFunded: Cents.of(row.selfFunded),
-    spent: Cents.of(-row.spent),
-    sold: Cents.of(row.sold),
-    corrected: Cents.of(-row.corrected),
-    totalsSince: account?.totalsSince?.toISOString() ?? null,
+    balance: Cents.of(row?.balance ?? 0),
+    received: Cents.of(row?.received ?? 0),
+    selfFunded: Cents.of(row?.selfFunded ?? 0),
+    spent: Cents.of(-(row?.spent ?? 0)),
+    sold: Cents.of(row?.sold ?? 0),
+    corrected: Cents.of(-(row?.corrected ?? 0)),
+    totalsSince: row?.totalsSince?.toISOString() ?? null,
   };
 }
 

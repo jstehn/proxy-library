@@ -1,4 +1,4 @@
-import { count } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { DbExecutor } from "@/shared/db";
 import { players } from "../infrastructure/schema";
 
@@ -7,6 +7,9 @@ import { players } from "../infrastructure/schema";
 
 /** Whether anyone has registered yet (the register page hides the invite field if not). */
 export async function hasAnyPlayers(db: DbExecutor): Promise<boolean> {
-  const [row] = await db.select({ total: count() }).from(players);
-  return row.total > 0;
+  const [row] = await db
+    .select({ present: sql<number>`1` })
+    .from(players)
+    .limit(1);
+  return row !== undefined;
 }

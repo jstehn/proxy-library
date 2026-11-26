@@ -414,6 +414,13 @@
       "when": 1795726881505,
       "tag": "0058_printing_search_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795730537147,
+      "tag": "0059_sql_audit_indexes",
+      "breakpoints": true
     }
   ]
 }

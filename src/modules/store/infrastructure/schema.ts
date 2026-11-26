@@ -66,6 +66,9 @@ export const storeTransactions = pgTable(
   (table) => [
     index("store_transactions_user_created_idx").on(table.userId, table.createdAt.desc()),
     index("store_transactions_printing_idx").on(table.printingId),
+    index("store_transactions_user_printing_idx")
+      .on(table.userId, table.printingId, table.createdAt, table.id)
+      .where(sql`${table.printingId} is not null`),
     check("store_transactions_quantity_positive", sql`${table.quantity} > 0`),
     check("store_transactions_direction_known", sql`${table.direction} in ('buy', 'sell')`),
     check(

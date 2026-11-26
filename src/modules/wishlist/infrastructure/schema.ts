@@ -54,6 +54,10 @@ export const wishes = pgTable(
       .on(table.userId, table.printingId, table.finish)
       .where(sql`${table.printingId} is not null`),
     index("wishes_user_idx").on(table.userId, table.createdAt),
+    index("wishes_user_oracle_idx").on(table.userId, table.oracleId),
+    index("wishes_user_targeted_idx")
+      .on(table.userId)
+      .where(sql`${table.targetCents} is not null`),
   ],
 );
 

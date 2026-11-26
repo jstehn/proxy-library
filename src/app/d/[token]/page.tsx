@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { EXPORTERS } from "@/modules/decks";
 import { readPage } from "@/server/page-instance";
@@ -10,10 +11,14 @@ import { FORMAT_LABELS } from "../../decks/labels";
 import { Button } from "@/ui/button";
 import { Page } from "@/ui/page";
 
+const loadPublicDeck = cache(async (token: string) => {
+  const { reads } = await readPage({ allowVisitors: true });
+  return reads.decks.publicDeck(token);
+});
+
 export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<Metadata> {
   const { token } = await props.params;
-  const { reads } = await readPage({ allowVisitors: true });
-  const found = await reads.decks.publicDeck(token);
+  const found = await loadPublicDeck(token);
   if (found === null) return { title: "Deck not found — Proxy Library" };
   return {
     title: `${found.view.deck.name} — Proxy Library`,
@@ -24,8 +29,10 @@ export async function generateMetadata(props: PageProps<"/d/[token]">): Promise<
 export default async function PublicDeckPage(props: PageProps<"/d/[token]">) {
   const { token } = await props.params;
   const searchParams = await props.searchParams;
-  const { actor, capabilities, reads } = await readPage({ allowVisitors: true });
-  const found = await reads.decks.publicDeck(token);
+  const [{ actor, capabilities, reads }, found] = await Promise.all([
+    readPage({ allowVisitors: true }),
+    loadPublicDeck(token),
+  ]);
   if (found === null) notFound();
 
   const { view, ownerName } = found;
