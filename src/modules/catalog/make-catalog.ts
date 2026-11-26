@@ -1,6 +1,11 @@
 import type { UnitOfWork } from "@/shared/kernel";
 import { makeCatalogAdmin, makeSync, type CardsDependencies, type CardsServices } from "./cards";
-import { makeEdhrecSync, makeEmbedCards, type OutsideDependencies } from "./outside";
+import {
+  makeEdhrecSync,
+  makeEmbedCards,
+  makeSpellbookSync,
+  type OutsideDependencies,
+} from "./outside";
 import { makeComprehensiveRulesSync, type RulesDependencies, type RulesServices } from "./rules";
 
 /** Everything the catalog reads and writes in one transaction: each area's services together. */
@@ -18,6 +23,7 @@ export function makeCatalog(dependencies: CatalogDependencies) {
     ...makeCatalogAdmin(dependencies),
     ...makeEdhrecSync(dependencies),
     ...makeEmbedCards(dependencies),
+    ...makeSpellbookSync(dependencies),
     ...makeComprehensiveRulesSync(dependencies),
   };
 }

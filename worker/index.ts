@@ -9,6 +9,7 @@ import {
   sync,
   syncEdhrec,
   syncRules,
+  syncSpellbook,
   valueProducts,
 } from "./commands/sync";
 import { createWorkerContainer } from "./container";
@@ -21,6 +22,7 @@ const COMMANDS: Record<string, Command> = {
   "embed-cards": embedCards,
   "sync-edhrec": syncEdhrec,
   "sync-rules": syncRules,
+  "sync-spellbook": syncSpellbook,
   "check-packs": checkPacks,
   "check-products": checkProducts,
   "check-commanders": checkCommanders,

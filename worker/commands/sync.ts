@@ -66,3 +66,12 @@ export const syncRules: Command = async (container) => {
   const force = process.argv.includes("--force");
   console.log(JSON.stringify(await container.catalog.syncComprehensiveRules({ force })));
 };
+
+/**
+ * `pnpm worker sync-spellbook [--force]`: refresh Commander Spellbook two-card combos
+ * (`spellbook_two_card_combos`, ADR 0025).
+ */
+export const syncSpellbook: Command = async (container) => {
+  const force = process.argv.includes("--force");
+  console.log(JSON.stringify(await container.catalog.syncSpellbookCombos({ force })));
+};
