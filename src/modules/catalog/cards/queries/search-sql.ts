@@ -3,10 +3,11 @@ import { cheapestPrice } from "@/shared/db";
 import { type UserId } from "@/shared/kernel";
 import { COLOR_COMBINATIONS, colorCombination, type ManaColor } from "@/shared/mtg";
 import {
-  manaSymbols,
-  type ComparableField,
+  isSetCode,
   parseColors,
+  parseManaQuery,
   rarityName,
+  type ComparableField,
   type Comparison,
   type SearchNode,
   type SearchTerm,
@@ -203,26 +204,57 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "loyalty":
     case "defense":
       return faceNumber(term.field, comparison, value);
+    case "powTou":
+      return powTouCondition(comparison, value);
+    case "devotion":
+      return devotionCondition(comparison, value);
     case "number":
       return comparison === ":" || comparison === "=" || comparison === "!="
         ? textTerm(sql`lower(p.collector_number) = lower(${value})`, comparison)
         : sql`nullif(regexp_replace(p.collector_number, '[^0-9]', '', 'g'), '')::int ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "produces":
-      return textTerm(
-        sql`p.produced_mana @> ${sql`array[${sql.join(
-          [...new Set(value.toUpperCase())].map((color) => sql`${color}`),
-          sql`, `,
-        )}]::text[]`}`,
-        comparison,
-      );
+      return producesCondition(comparison, value);
     case "usd":
       // The cheapest current market price among the printing's finishes, in dollars.
       return sql`${cheapestPrice("p.id")}
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Math.round(Number(value) * 100)}`;
+    case "edhrec":
+      return sql`(p.edhrec_rank is not null and p.edhrec_rank ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)})`;
+    case "prints":
+      return sql`(select count(*) from printings other where other.oracle_id = p.oracle_id)
+                  ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+    case "sets":
+      return sql`(select count(distinct other.set_code) from printings other where other.oracle_id = p.oracle_id)
+                  ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+    case "illustrations":
+      return sql`(select count(distinct other.illustration_id) from printings other
+                   where other.oracle_id = p.oracle_id and other.illustration_id is not null)
+                  ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+    case "in": {
+      const lower = value.toLowerCase();
+      if (lower === "foil" || lower === "nonfoil" || lower === "etched") {
+        return textTerm(sql`${lower} = any(p.finishes)`, comparison);
+      }
+      return textTerm(
+        sql`exists (select 1 from printings other
+                     where other.oracle_id = p.oracle_id and other.set_code = ${value.toUpperCase()})`,
+        comparison,
+      );
+    }
     case "year":
+      if (isSetCode(value)) {
+        return sql`left((select release_date from card_sets where code = p.set_code), 4)::int
+                    ${sql.raw(NUMERIC_OPERATORS[comparison])}
+                    left((select release_date from card_sets where code = ${value.toUpperCase()}), 4)::int`;
+      }
       return sql`left((select release_date from card_sets where code = p.set_code), 4)::int
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "date":
+      if (isSetCode(value)) {
+        return sql`(select release_date from card_sets where code = p.set_code)
+                    ${sql.raw(NUMERIC_OPERATORS[comparison])}
+                    (select release_date from card_sets where code = ${value.toUpperCase()})`;
+      }
       // Dates are "YYYY-MM-DD" text, so a shorter value compares by its prefix.
       return sql`left((select release_date from card_sets where code = p.set_code), ${value.length})
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${value}`;
@@ -235,6 +267,22 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
         comparison,
       );
     }
+    case "layout":
+      return textTerm(sql`lower(p.layout) = ${value.toLowerCase()}`, comparison);
+    case "setType":
+      return textTerm(
+        sql`(select lower(type) from card_sets where code = p.set_code) = ${value.toLowerCase()}`,
+        comparison,
+      );
+    case "flavor":
+      return textTerm(textMatch(sql`coalesce(p.flavor_text, '')`, term), comparison);
+    case "watermark":
+      return textTerm(sql`lower(coalesce(p.watermark, '')) = ${value.toLowerCase()}`, comparison);
+    case "stamp":
+      return textTerm(
+        sql`lower(coalesce(p.security_stamp, '')) = ${value.toLowerCase()}`,
+        comparison,
+      );
     case "own":
       return sql`${ownedCopiesOfCard(context)} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "free":
@@ -244,11 +292,11 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
       return sql`${copiesOfCard(sql`real_cards`, context.userId)}
                   ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
     case "color":
-      // Scryfall's default for colors is "at least these" (c:rw finds Boros and Mardu cards).
-      return colorCondition(sql`p.colors`, comparison === ":" ? ">=" : comparison, value);
+      // Scryfall's default for colors is "at least these" (c:rw), and exact for counts (c:2).
+      return colorCondition(sql`p.colors`, comparison, value, "color");
     case "identity":
-      // …and for identity, "within these" (id:rw finds what a Boros commander can play).
-      return colorCondition(sql`p.color_identity`, comparison === ":" ? "<=" : comparison, value);
+      // …and for identity, "within / at most" (id:rw, id:2).
+      return colorCondition(sql`p.color_identity`, comparison, value, "identity");
     case "manaValue":
       if (/^(even|odd)$/i.test(value)) {
         const remainder = value.toLowerCase() === "even" ? 0 : 1;
@@ -259,7 +307,7 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "toughness":
       return faceNumber(term.field, comparison, value);
     case "mana":
-      return textTerm(manaCondition(value), comparison);
+      return manaCondition(comparison, value);
     case "rarity":
       return rarityCondition(comparison, rarityName(value) ?? value);
     case "set":
@@ -274,8 +322,13 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
   }
 }
 
-/** Colors (or identity) compared with a set of colors, as Scryfall does. */
-function colorCondition(column: SQL, comparison: Comparison, value: string): SQL {
+/** Colors (or identity) compared with a set of colors or a count, as Scryfall does. */
+function colorCondition(
+  column: SQL,
+  comparison: Comparison,
+  value: string,
+  kind: "color" | "identity",
+): SQL {
   const parsed = parseColors(value);
   if (parsed === null) return sql`false`; // the parser already refuses these
   if (parsed.kind === "multicolored") {
@@ -284,8 +337,22 @@ function colorCondition(column: SQL, comparison: Comparison, value: string): SQL
   if (parsed.kind === "colorless") {
     return comparison === "!=" ? sql`cardinality(${column}) > 0` : sql`cardinality(${column}) = 0`;
   }
+  if (parsed.kind === "count") {
+    const effective = comparison === ":" ? (kind === "identity" ? "<=" : "=") : comparison;
+    return sql`cardinality(${column}) ${sql.raw(NUMERIC_OPERATORS[effective])} ${parsed.count}`;
+  }
+  const effective = comparison === ":" ? (kind === "identity" ? "<=" : ">=") : comparison;
+  return colorSetCondition(column, effective, parsed.colors);
+}
+
+/** Compares a text[] color column against a set of color codes with =, !=, <=, >=, <, >. */
+function colorSetCondition(
+  column: SQL,
+  comparison: Comparison,
+  colorsList: readonly string[],
+): SQL {
   const colors = sql`array[${sql.join(
-    parsed.colors.map((color) => sql`${color}`),
+    colorsList.map((color) => sql`${color}`),
     sql`, `,
   )}]::text[]`;
   const atLeast = sql`${column} @> ${colors}`;
@@ -307,13 +374,100 @@ function colorCondition(column: SQL, comparison: Comparison, value: string): SQL
   }
 }
 
-/** Each mana symbol at least as many times as asked (`m:{G}{G}` needs two {G}). */
-function manaCondition(value: string): SQL {
-  const parts = [...manaSymbols(value)].map(
-    ([symbol, count]) =>
-      sql`(char_length(coalesce(p.mana_cost, '')) - char_length(replace(coalesce(p.mana_cost, ''), ${symbol}, ''))) / ${symbol.length} >= ${count}`,
-  );
-  return parts.length === 0 ? sql`false` : sql`(${sql.join(parts, sql` and `)})`;
+/** `produces:wu`, `produces=wu`, `produces<=wu`, `produces>=2`. */
+function producesCondition(comparison: Comparison, value: string): SQL {
+  if (/^\d+$/.test(value)) {
+    return sql`cardinality(p.produced_mana) ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+  }
+  const effective = comparison === ":" ? ">=" : comparison;
+  return colorSetCondition(sql`p.produced_mana`, effective, [...new Set(value.toUpperCase())]);
+}
+
+/** Generic mana integer sum from `p.mana_cost` (`{2}{G}` → 2, `{G}` → 0). */
+const CARD_GENERIC_MANA = sql`coalesce((select sum((match[1])::int) from regexp_matches(coalesce(p.mana_cost, ''), '\\{([0-9]+)\\}', 'g') match), 0)`;
+
+/** Total count of non-generic `{...}` symbols in `p.mana_cost`. */
+const CARD_NON_GENERIC_SYMBOL_COUNT = sql`(
+  char_length(regexp_replace(coalesce(p.mana_cost, ''), '\\{[0-9]+\\}', '', 'g'))
+  - char_length(replace(regexp_replace(coalesce(p.mana_cost, ''), '\\{[0-9]+\\}', '', 'g'), '{', ''))
+)`;
+
+function manaSymbolCount(symbol: string): SQL {
+  return sql`(char_length(coalesce(p.mana_cost, '')) - char_length(replace(coalesce(p.mana_cost, ''), ${symbol}, ''))) / ${symbol.length}`;
+}
+
+/**
+ * Mana cost comparison (`m:{G}{G}`, `m=2g`, `m<=2gg`, `m>1g`, `m:10g`): compares generic mana
+ * numerically and non-generic symbols as a multiset.
+ */
+function manaCondition(comparison: Comparison, value: string): SQL {
+  const parsed = parseManaQuery(value);
+  if (parsed.isEmpty) return sql`false`;
+  const entries = [...parsed.symbols.entries()];
+  const totalQueriedSymbols = entries.reduce((sum, [, count]) => sum + count, 0);
+
+  const supersetParts: SQL[] = [sql`p.mana_cost is not null`];
+  if (parsed.generic !== null) supersetParts.push(sql`${CARD_GENERIC_MANA} >= ${parsed.generic}`);
+  for (const [symbol, count] of entries) {
+    supersetParts.push(sql`${manaSymbolCount(symbol)} >= ${count}`);
+  }
+  const superset = sql`(${sql.join(supersetParts, sql` and `)})`;
+
+  const exactParts: SQL[] = [
+    sql`p.mana_cost is not null`,
+    sql`${CARD_GENERIC_MANA} = ${parsed.generic ?? 0}`,
+    sql`${CARD_NON_GENERIC_SYMBOL_COUNT} = ${totalQueriedSymbols}`,
+  ];
+  for (const [symbol, count] of entries) {
+    exactParts.push(sql`${manaSymbolCount(symbol)} = ${count}`);
+  }
+  const exact = sql`(${sql.join(exactParts, sql` and `)})`;
+
+  const subsetParts: SQL[] = [
+    sql`p.mana_cost is not null`,
+    sql`${CARD_GENERIC_MANA} <= ${parsed.generic ?? 0}`,
+  ];
+  for (const [symbol, count] of entries) {
+    subsetParts.push(sql`${manaSymbolCount(symbol)} <= ${count}`);
+  }
+  const matchedSymbolSum =
+    entries.length === 0
+      ? sql`0`
+      : sql`(${sql.join(
+          entries.map(([symbol]) => manaSymbolCount(symbol)),
+          sql` + `,
+        )})`;
+  subsetParts.push(sql`${CARD_NON_GENERIC_SYMBOL_COUNT} = ${matchedSymbolSum}`);
+  const subset = sql`(${sql.join(subsetParts, sql` and `)})`;
+
+  switch (comparison) {
+    case ":":
+    case ">=":
+      return superset;
+    case "=":
+      return exact;
+    case "!=":
+      return sql`not ${exact}`;
+    case ">":
+      return sql`(${superset} and not ${exact})`;
+    case "<=":
+      return subset;
+    case "<":
+      return sql`(${subset} and not ${exact})`;
+  }
+}
+
+/** `dev:ggg`, `dev>=3`, `dev=wu`: colored mana pips in `p.mana_cost` (hybrid pips count as 1). */
+function devotionCondition(comparison: Comparison, value: string): SQL {
+  if (/^\d+$/.test(value)) {
+    const pipCount = sql`(select count(*) from regexp_matches(coalesce(p.mana_cost, ''), '\\{[^}]*[WUBRG][^}]*\\}', 'g'))`;
+    return sql`${pipCount} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)}`;
+  }
+  const uniqueColors = [...new Set(value.toUpperCase())].join("");
+  const pattern = `\\{[^}]*[${uniqueColors}][^}]*\\}`;
+  const effective = comparison === ":" ? ">=" : comparison;
+  const pipCount = sql`(select count(*) from regexp_matches(coalesce(p.mana_cost, ''), ${pattern}, 'g'))`;
+  return sql`${pipCount} ${sql.raw(NUMERIC_OPERATORS[effective])} ${value.length}`;
 }
 
 const RARITY_ORDER = sql`array['common', 'uncommon', 'rare', 'mythic']`;
@@ -324,11 +478,28 @@ function rarityCondition(comparison: Comparison, rarity: string): SQL {
   return sql`array_position(${RARITY_ORDER}, p.rarity) ${sql.raw(NUMERIC_OPERATORS[comparison])} array_position(${RARITY_ORDER}, ${rarity}::text)`;
 }
 
-/** A number printed on a card face (power, toughness, loyalty, defense), compared. */
+const NUMERIC_STAT = String.raw`^-?[0-9]+(\.[0-9]+)?$`;
+
+/** A number printed on a card face (power, toughness, loyalty, defense), compared (also `*`). */
 function faceNumber(key: string, comparison: Comparison, value: string): SQL {
+  if (value === "*") {
+    return textTerm(
+      sql`exists (select 1 from jsonb_array_elements(p.faces) face where coalesce(face->>${key}, '') like '%*%')`,
+      comparison,
+    );
+  }
   return sql`exists (select 1 from jsonb_array_elements(p.faces) face
-                      where face->>${key} ~ '^-?[0-9]+$'
-                        and (face->>${key})::int ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)})`;
+                      where face->>${key} ~ ${NUMERIC_STAT}
+                        and (face->>${key})::numeric ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)})`;
+}
+
+/** `pt>=8`: sum of numeric power and toughness on the same face. */
+function powTouCondition(comparison: Comparison, value: string): SQL {
+  return sql`exists (select 1 from jsonb_array_elements(p.faces) face
+                      where face->>'power' ~ ${NUMERIC_STAT}
+                        and face->>'toughness' ~ ${NUMERIC_STAT}
+                        and ((face->>'power')::numeric + (face->>'toughness')::numeric)
+                            ${sql.raw(NUMERIC_OPERATORS[comparison])} ${Number(value)})`;
 }
 
 /** Reminder text: anything in parentheses. */
@@ -377,21 +548,32 @@ function oracleCondition(term: SearchTerm, options: { withReminders: boolean }):
                       where ${text} ~* replace(${source}, '~', ${self}))`;
 }
 
-/** SQL for one number on the card: a face's (power, …) or the mana value. */
+/** SQL for one number on the card: a face's (power, …), power+toughness, or the mana value. */
 function cardNumber(field: ComparableField): SQL {
-  return field === "manaValue" ? sql`p.mana_value` : sql`(face->>${field})::int`;
+  if (field === "manaValue") return sql`p.mana_value`;
+  if (field === "powTou") {
+    return sql`((face->>'power')::numeric + (face->>'toughness')::numeric)`;
+  }
+  return sql`(face->>${field})::numeric`;
 }
 
-/** `pow>tou`: two numbers on the same face compared (faces without both numbers don't match). */
+/** `pow>tou`, `pt>mv`: two numbers on the same face compared (faces without both don't match). */
 function fieldComparison(
   field: SearchTerm["field"],
   comparison: Comparison,
   other: ComparableField,
 ): SQL {
   const left = field as ComparableField; // the parser only allows comparable fields here
-  const guards = [left, other]
-    .filter((side) => side !== "manaValue")
-    .map((side) => sql`face->>${side} ~ '^-?[0-9]+$'`);
+  const needed = new Set<string>();
+  for (const side of [left, other]) {
+    if (side === "powTou") {
+      needed.add("power");
+      needed.add("toughness");
+    } else if (side !== "manaValue") {
+      needed.add(side);
+    }
+  }
+  const guards = [...needed].map((key) => sql`face->>${key} ~ ${NUMERIC_STAT}`);
   return sql`exists (select 1 from jsonb_array_elements(p.faces) face
                       where ${sql.join(guards, sql` and `)}
                         and ${cardNumber(left)} ${sql.raw(NUMERIC_OPERATORS[comparison])} ${cardNumber(other)})`;
@@ -401,14 +583,31 @@ function fieldComparison(
 const PLAIN_RULES_TEXT = sql`coalesce((select string_agg(regexp_replace(face->>'text', ${REMINDER}, '', 'g'), ${"\n"})
                                           from jsonb_array_elements(p.faces) face), '')`;
 
+const LAND_CYCLE_ALIASES: Readonly<Record<string, string>> = {
+  crowdland: "bondland",
+  canopyland: "horizonland",
+  battleland: "tangoland",
+  snarl: "shadowland",
+  karoo: "bounceland",
+  bicycleland: "cycleland",
+  creatureland: "manland",
+};
+
 /**
- * The land cycles (design doc 28, section 3.6): `basic` from the type line, the rest from the
- * `land_cycles` the catalog's land-cycles recognizer stored for the card.
+ * The land cycles (design docs 28 and 71): `basic` from the type line, `tapland` from
+ * `entersTapped`, and the rest from `land_cycles` stored by the land-cycles recognizer.
  */
 function landCycle(value: string): SQL {
   if (value === "basic") return sql`(${hasType("Land")} and ${hasType("Basic")})`;
+  if (value === "tapland") {
+    return sql`(${hasType("Land")}
+                and exists (select 1 from card_features f
+                             where f.oracle_id = p.oracle_id
+                               and f.features->>'entersTapped' = 'always'))`;
+  }
+  const canonical = LAND_CYCLE_ALIASES[value] ?? value;
   return sql`exists (select 1 from card_features f
-                      where f.oracle_id = p.oracle_id and f.land_cycles @> array[${value}]::text[])`;
+                      where f.oracle_id = p.oracle_id and f.land_cycles @> array[${canonical}]::text[])`;
 }
 
 /** Creatures whose only rules text is keyword abilities (`Flying`, `Ward {2}`, …). */
@@ -428,14 +627,26 @@ function hasType(word: string): SQL {
 /** Every rules text on the card, joined (empty for vanilla cards). */
 const RULES_TEXT = sql`coalesce((select string_agg(face->>'text', '') from jsonb_array_elements(p.faces) face), '')`;
 
+/** SQL: another printing of this card was released strictly earlier than this printing's set. */
+const HAS_EARLIER_PRINTING = sql`exists (
+  select 1 from printings earlier
+  join card_sets earlier_set on earlier_set.code = earlier.set_code
+  where earlier.oracle_id = p.oracle_id
+    and earlier_set.release_date < (select release_date from card_sets where code = p.set_code)
+)`;
+
 function isCondition(value: string, context: SearchContext): SQL {
   switch (value) {
     case "foil":
       return context.foil;
+    case "nonfoil":
+      return sql`'nonfoil' = any(p.finishes)`;
     case "etched":
       return sql`'etched' = any(p.finishes)`;
     // Layouts. "dfc" is any card with a back face of its own.
     case "dfc":
+    case "doublefaced":
+    case "doublesided":
       return sql`p.layout in ('transform', 'modal_dfc', 'meld', 'reversible_card')`;
     case "transform":
     case "split":
@@ -444,21 +655,59 @@ function isCondition(value: string, context: SearchContext): SQL {
     case "meld":
     case "saga":
     case "class":
+    case "leveler":
       return sql`p.layout = ${value}`;
     case "mdfc":
       return sql`p.layout = 'modal_dfc'`;
+    case "reversible":
+      return sql`p.layout = 'reversible_card'`;
+    case "room":
+      return hasType("Room");
+    case "case":
+      return hasType("Case");
+    case "battle":
+      return hasType("Battle");
+    case "aftermath":
+      return sql`'Aftermath' = any(p.keywords)`;
+    case "prototype":
+      return sql`'Prototype' = any(p.keywords)`;
+    case "mutate":
+      return sql`'Mutate' = any(p.keywords)`;
     // Treatments.
     case "showcase":
     case "extendedart":
+    case "inverted":
+    case "nyxtouched":
+    case "tombstone":
+    case "colorshifted":
       return sql`${value} = any(p.frame_effects)`;
     case "fullart":
+    case "full":
       return sql`p.is_full_art`;
     case "borderless":
       return sql`p.border_color = 'borderless'`;
     case "serialized":
-      return sql`'serialized' = any(p.promo_types)`;
+    case "boosterfun":
+      return sql`${value} = any(p.promo_types)`;
+    case "ub":
+    case "universesbeyond":
+      return sql`'universesbeyond' = any(p.promo_types)`;
     case "promo":
       return sql`(cardinality(p.promo_types) > 0 and not p.promo_types <@ array['boosterfun', 'universesbeyond']::text[])`;
+    case "textless":
+      return sql`p.is_textless`;
+    case "spotlight":
+      return sql`p.is_story_spotlight`;
+    case "booster":
+      return sql`p.is_booster`;
+    // Frame eras.
+    case "old":
+      return sql`p.frame_version in ('1993', '1997')`;
+    case "new":
+    case "modern":
+      return sql`p.frame_version in ('2003', '2015')`;
+    case "future":
+      return sql`p.frame_version = 'future'`;
     // Kinds of card.
     case "permanent":
       return sql`not (${hasType("Instant")} or ${hasType("Sorcery")})`;
@@ -476,6 +725,27 @@ function isCondition(value: string, context: SearchContext): SQL {
                                where face->>'power' = '2' and face->>'toughness' = '2'))`;
     case "commander":
       return commanderCondition();
+    case "brawler":
+      return sql`((${hasType("Legendary")} and (${hasType("Creature")} or ${hasType("Planeswalker")}))
+                  or ${commanderCondition()})`;
+    case "companion":
+      return sql`'Companion' = any(p.keywords)`;
+    case "partner":
+      return sql`p.keywords && array['Partner', 'Partner with', 'Friends forever', 'Choose a Background', 'Doctor''s companion']::text[]`;
+    case "etb":
+      return sql`exists (select 1 from card_features f
+                          where f.oracle_id = p.oracle_id
+                            and f.features->'signals' @> '[{"name": "enters trigger"}]'::jsonb)`;
+    case "reprint":
+      return HAS_EARLIER_PRINTING;
+    case "firstprint":
+      return sql`not ${HAS_EARLIER_PRINTING}`;
+    case "reserved":
+      return sql`p.is_reserved`;
+    case "funny":
+      return sql`(p.border_color = 'silver' or p.security_stamp = 'acorn')`;
+    case "acorn":
+      return sql`p.security_stamp = 'acorn'`;
     case "frenchvanilla":
       return FRENCH_VANILLA;
     case "modal":

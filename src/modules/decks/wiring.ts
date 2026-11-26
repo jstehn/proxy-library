@@ -27,6 +27,7 @@ import {
   similarCards,
   auditDeckView,
   manaBasePlan,
+  searchCatalogQueries,
   searchForDeck,
   semanticSearchCatalog,
   semanticSearchForDeck,
@@ -216,6 +217,13 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       searchForDeck: (userId, request) =>
         searchForDeck(db, userId, {
           deckId: request.deckId,
+          queries: request.queries,
+          where: request.where,
+          perQuery: request.perQuery,
+          maxPriceCents: request.maxPriceCents,
+        }),
+      searchCatalogQueries: (userId, request) =>
+        searchCatalogQueries(db, userId, {
           queries: request.queries,
           where: request.where,
           perQuery: request.perQuery,

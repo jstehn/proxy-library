@@ -77,6 +77,15 @@ export const printings = pgTable(
     isGameChanger: boolean("is_game_changer").notNull().default(false),
     // Scryfall's edhrec_rank (1 = most popular on EDHREC), rewritten by every Scryfall pass (design doc 39).
     edhrecRank: integer("edhrec_rank"),
+    // Printing metadata from Scryfall's bulk file, rewritten by every Scryfall pass (design doc 71).
+    flavorText: text("flavor_text"),
+    watermark: text("watermark"),
+    isReserved: boolean("is_reserved").notNull().default(false),
+    isStorySpotlight: boolean("is_story_spotlight").notNull().default(false),
+    isBooster: boolean("is_booster").notNull().default(false),
+    isTextless: boolean("is_textless").notNull().default(false),
+    securityStamp: text("security_stamp"),
+    illustrationId: text("illustration_id"),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (table) => [

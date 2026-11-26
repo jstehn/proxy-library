@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { catalogQueries } from "@/modules/catalog";
+import { parseSearch } from "@/shared/card-search";
+import { FOIL_IN_CATALOG, searchCondition } from "./search-sql";
 import {
   actor,
   close,
@@ -406,5 +408,101 @@ describe("tags, themes and legality", () => {
     expect(await find("banned:commander")).toEqual(["Gutless Pirate"]);
     expect(await find("restricted:vintage")).toEqual(["Gutless Pirate"]);
     expect(await find("banned:modern")).toEqual([]);
+  });
+});
+
+describe("complete Scryfall syntax (design doc 71)", () => {
+  const findTs2 = async (query: string) => {
+    const parsed = parseSearch(query);
+    expect(parsed.notes).toEqual([]);
+    const condition = searchCondition(parsed.node, {
+      userId: actor("jack").userId,
+      foil: FOIL_IN_CATALOG,
+    });
+    const rows = await db.execute<{ name: string }>(sql`
+      select p.name from printings p where p.set_code = 'TS2' and ${condition} order by p.name
+    `);
+    return rows.rows.map((row) => row.name);
+  };
+
+  beforeAll(async () => {
+    const sharedOracle = randomUUID();
+    await db.execute(sql`
+      insert into card_sets (code, name, release_date, type, keyrune_code, is_enabled)
+      values ('TS2', 'Scryfall parity test', '2025-06-01', 'commander', 'ts2', true)`);
+
+    // Earlier printing of "Shared Reprint" in TST so TS2's copy is a reprint with 2 prints/sets/illustrations.
+    await db.execute(sql`
+      insert into printings (id, set_code, collector_number, name, oracle_id, scryfall_id, rarity,
+                             colors, color_identity, mana_cost, mana_value, type_line, layout,
+                             finishes, border_color, frame_version, frame_effects, promo_types,
+                             is_full_art, variant_label, faces, legalities, keywords,
+                             illustration_id)
+      values (${randomUUID()}, 'TST', '999', 'Shared Reprint', ${sharedOracle}, ${randomUUID()},
+              'rare', '{U,R}', '{U,R}', '{2}{U}{U}', 4, 'Creature — Wizard', 'normal',
+              '{nonfoil,foil}', 'black', '2015', '{}', '{}', false, '',
+              ${JSON.stringify([{ name: "Shared Reprint", typeLine: "Creature — Wizard", text: "Flying", power: "2", toughness: "3", loyalty: null, defense: null }])}::jsonb,
+              '{}'::jsonb, '{Flying}', 'illu-old')`);
+
+    await db.execute(sql`
+      insert into printings (id, set_code, collector_number, name, oracle_id, scryfall_id, rarity,
+                             colors, color_identity, mana_cost, mana_value, type_line, layout,
+                             finishes, border_color, frame_version, frame_effects, promo_types,
+                             is_full_art, variant_label, faces, legalities, keywords, produced_mana,
+                             edhrec_rank, flavor_text, watermark, is_reserved, is_story_spotlight,
+                             is_booster, is_textless, security_stamp, illustration_id)
+      values
+        (${randomUUID()}, 'TS2', '1', 'Shared Reprint', ${sharedOracle}, ${randomUUID()},
+         'rare', '{U,R}', '{U,R}', '{2}{U}{U}', 4, 'Creature — Wizard', 'normal',
+         '{nonfoil,foil}', 'black', '2015', '{}', '{}', false, '',
+         ${JSON.stringify([{ name: "Shared Reprint", typeLine: "Creature — Wizard", text: "Flying", power: "2", toughness: "3", loyalty: null, defense: null }])}::jsonb,
+         '{}'::jsonb, '{Flying}', '{U,R}', 120, 'A spark of genius.', 'izzet',
+         false, true, true, false, 'oval', 'illu-new'),
+        (${randomUUID()}, 'TS2', '2', 'Star Titan', ${randomUUID()}, ${randomUUID()},
+         'mythic', '{G}', '{G}', '{10}{G}{G}', 12, 'Legendary Creature — Giant', 'normal',
+         '{nonfoil}', 'black', '1997', '{}', '{universesbeyond}', false, '',
+         ${JSON.stringify([{ name: "Star Titan", typeLine: "Legendary Creature — Giant", text: "Trample", power: "*", toughness: "*", loyalty: null, defense: null }])}::jsonb,
+         '{}'::jsonb, '{Trample,Partner}', '{G}', 900, 'Colossal footsteps.', null,
+         true, false, false, true, 'acorn', 'illu-titan')`);
+  });
+
+  it("supports -(a or b), not:, color counts, mana comparisons, devotion, produces, and stats", async () => {
+    expect(await findTs2("-(t:giant or c:g)")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("not:reprint")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:reprint")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("is:firstprint")).toEqual(["Star Titan"]);
+    expect(await findTs2("c=2")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("c:mono")).toEqual(["Star Titan"]);
+    expect(await findTs2("m=2uu")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("m=2u")).toEqual([]);
+    expect(await findTs2("m<=3uu")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("m:10g")).toEqual(["Star Titan"]);
+    expect(await findTs2("dev:uu")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("dev:gg")).toEqual(["Star Titan"]);
+    expect(await findTs2("produces>=2")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("produces=ur")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("pt=5")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("pow:*")).toEqual(["Star Titan"]);
+  });
+
+  it("supports set_type, date>=set, prints/sets/illustrations, in:, edhrec, and printing metadata", async () => {
+    expect(await findTs2("st:commander")).toEqual(["Shared Reprint", "Star Titan"]);
+    expect(await findTs2("date>tst")).toEqual(["Shared Reprint", "Star Titan"]);
+    expect(await findTs2("prints=2 sets=2 illustrations=2")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("in:tst")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("in:foil")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("edhrec<=200")).toEqual(["Shared Reprint"]);
+    expect(await findTs2('ft:"spark"')).toEqual(["Shared Reprint"]);
+    expect(await findTs2("ft:/footsteps/")).toEqual(["Star Titan"]);
+    expect(await findTs2("wm:izzet")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("is:reserved")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:spotlight")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("is:booster")).toEqual(["Shared Reprint"]);
+    expect(await findTs2("is:textless")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:ub")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:old")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:partner")).toEqual(["Star Titan"]);
+    expect(await findTs2("stamp:acorn")).toEqual(["Star Titan"]);
+    expect(await findTs2("is:funny")).toEqual(["Star Titan"]);
   });
 });

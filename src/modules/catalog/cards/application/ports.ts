@@ -95,6 +95,14 @@ export type CardExtras = Readonly<{
   keywords: readonly string[];
   isGameChanger: boolean;
   edhrecRank: number | null;
+  flavorText: string | null;
+  watermark: string | null;
+  isReserved: boolean;
+  isStorySpotlight: boolean;
+  isBooster: boolean;
+  isTextless: boolean;
+  securityStamp: string | null;
+  illustrationId: string | null;
 }>;
 
 /** "This printing makes that token printing", from the printing's Scryfall `all_parts`. */

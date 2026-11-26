@@ -407,6 +407,13 @@
       "when": 1795549227860,
       "tag": "0057_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795726881505,
+      "tag": "0058_printing_search_metadata",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeDecks, type DeckId } from "@/modules/decks/core";
-import { searchForDeck } from "@/modules/decks/building";
+import { searchCatalogQueries, searchForDeck } from "@/modules/decks/building";
 import {
   actor,
   clock,
@@ -115,5 +115,23 @@ describe("searchForDeck", () => {
       maxPriceCents: null,
     });
     expect(result).toBeNull();
+  });
+
+  it("runs batched synergy queries without a deckId across owned cards (design doc 71)", async () => {
+    const result = await searchCatalogQueries(db, actor("jack").userId, {
+      queries: [
+        { synergy: "Exile removal", search: "o:exile" },
+        { synergy: "Enchantments", search: "t:enchantment" },
+      ],
+      where: "owned",
+      perQuery: 10,
+      maxPriceCents: null,
+    });
+    expect(result.cards.length).toBeGreaterThan(0);
+    expect(result.cards.every((card) => card.owned > 0)).toBe(true);
+    expect(result.cards[0]).toMatchObject({
+      name: "Banishing Light",
+      synergies: ["Exile removal", "Enchantments"],
+    });
   });
 });

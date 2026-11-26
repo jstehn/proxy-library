@@ -184,6 +184,65 @@ describe("tokens (design doc 25)", () => {
     expect(lines.every((each) => !each.isGameChanger)).toBe(true);
   });
 
+  it("maps printing metadata for Scryfall search syntax (design doc 71)", () => {
+    const parse = (changes: object) =>
+      mapScryfallCard(
+        ScryfallCardSchema.parse({
+          id: "meta-card",
+          name: "Black Lotus",
+          set: "lea",
+          set_type: "core",
+          lang: "en",
+          prices: {},
+          ...changes,
+        }),
+      );
+    const full = parse({
+      flavor_text: "A spark of inspiration.",
+      watermark: "izzet",
+      reserved: true,
+      story_spotlight: true,
+      booster: true,
+      textless: true,
+      security_stamp: "oval",
+      illustration_id: "illu-123",
+    });
+    expect(full.flavorText).toBe("A spark of inspiration.");
+    expect(full.watermark).toBe("izzet");
+    expect(full.isReserved).toBe(true);
+    expect(full.isStorySpotlight).toBe(true);
+    expect(full.isBooster).toBe(true);
+    expect(full.isTextless).toBe(true);
+    expect(full.securityStamp).toBe("oval");
+    expect(full.illustrationId).toBe("illu-123");
+
+    const defaults = parse({});
+    expect(defaults.flavorText).toBeNull();
+    expect(defaults.watermark).toBeNull();
+    expect(defaults.isReserved).toBe(false);
+    expect(defaults.isStorySpotlight).toBe(false);
+    expect(defaults.isBooster).toBe(false);
+    expect(defaults.isTextless).toBe(false);
+    expect(defaults.securityStamp).toBeNull();
+    expect(defaults.illustrationId).toBeNull();
+
+    const multiFace = parse({
+      card_faces: [
+        {
+          name: "Front",
+          type_line: "Creature",
+          flavor_text: "Day side.",
+          watermark: "mirran",
+          illustration_id: "illu-front",
+        },
+        { name: "Back", type_line: "Creature", flavor_text: "Night side." },
+      ],
+    });
+    expect(multiFace.flavorText).toBe("Day side.\nNight side.");
+    expect(multiFace.watermark).toBe("mirran");
+    expect(multiFace.illustrationId).toBe("illu-front");
+  });
+
   it("skips digital and non-English tokens", () => {
     const [rabbit] = byName("Rabbit");
     const raw = (changes: object) =>

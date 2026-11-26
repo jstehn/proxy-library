@@ -26,7 +26,12 @@ export { draftForDeck } from "./queries/build-from-collection";
 export { commanderDetails, commandersICanBuild, type CommanderSearch } from "./queries/commanders";
 export { embedSimForCards } from "./queries/embeddings";
 export { manaBasePlan } from "./queries/mana-base";
-export { searchForDeck, type SearchForDeck } from "./queries/search-for-deck";
+export {
+  searchCatalogQueries,
+  searchForDeck,
+  type CatalogSynergySearch,
+  type SearchForDeck,
+} from "./queries/search-for-deck";
 export {
   semanticSearchCatalog,
   semanticSearchForDeck,

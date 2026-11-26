@@ -14,6 +14,13 @@ export type DeckSearchRequest = Readonly<{
   maxPriceCents: number | null;
 }>;
 
+type CatalogQueriesRequest = Readonly<{
+  queries: ReadonlyArray<Readonly<{ synergy: string; search: string }>>;
+  where: "owned" | "game" | "real" | "store" | "both";
+  perQuery: number;
+  maxPriceCents: number | null;
+}>;
+
 export type SemanticRequest = Readonly<{
   concept: string;
   filter?: string;
@@ -27,8 +34,13 @@ export type SemanticRequest = Readonly<{
 type Named = Readonly<{ name: string }>;
 type Pick = Readonly<{ card: Named }>;
 
-export type DeckSearchReaders<Found extends { cards: readonly Named[] }, Semantic> = Readonly<{
+export type DeckSearchReaders<
+  Found extends { cards: readonly Named[] },
+  CatalogFound,
+  Semantic,
+> = Readonly<{
   searchForDeck(userId: UserId, request: DeckSearchRequest): Promise<Found | null>;
+  searchCatalogQueries(userId: UserId, request: CatalogQueriesRequest): Promise<CatalogFound>;
   semantic(userId: UserId, deckId: number, request: SemanticRequest): Promise<Semantic | null>;
   semanticCatalog(userId: UserId, request: SemanticRequest): Promise<Semantic>;
   profile(userId: UserId, deckId: number): Promise<DeckPlan | null>;
@@ -36,8 +48,9 @@ export type DeckSearchReaders<Found extends { cards: readonly Named[] }, Semanti
 
 export function makeDeckSearch<
   Found extends { cards: readonly Named[] },
+  CatalogFound,
   Semantic extends { owned: readonly Pick[]; store: readonly Pick[] },
->(readers: DeckSearchReaders<Found, Semantic>) {
+>(readers: DeckSearchReaders<Found, CatalogFound, Semantic>) {
   async function searchForDeck(
     request: Readonly<{ userId: UserId } & DeckSearchRequest>,
   ): Promise<Result<{ result: Found; cards: Found["cards"]; avoided: string[] }, DeckNotFound>> {
@@ -46,6 +59,13 @@ export function makeDeckSearch<
     const profile = await readers.profile(request.userId, request.deckId);
     const { kept, avoided } = withoutAvoidCards(result.cards, (card) => card.name, profile);
     return ok({ result, cards: kept, avoided });
+  }
+
+  async function searchCatalogQueries(
+    request: Readonly<{ userId: UserId } & CatalogQueriesRequest>,
+  ): Promise<Result<CatalogFound, never>> {
+    const result = await readers.searchCatalogQueries(request.userId, request);
+    return ok(result);
   }
 
   async function semantic(
@@ -78,5 +98,5 @@ export function makeDeckSearch<
     });
   }
 
-  return { searchForDeck, semantic };
+  return { searchForDeck, searchCatalogQueries, semantic };
 }

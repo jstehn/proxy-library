@@ -58,6 +58,15 @@ export const ScryfallCardSchema = z.object({
   game_changer: z.boolean().default(false),
   // Scryfall's EDHREC popularity rank (1 = most popular; design doc 39).
   edhrec_rank: z.number().int().positive().nullable().optional(),
+  // Printing metadata for Scryfall search syntax (design doc 71).
+  flavor_text: z.string().nullable().optional(),
+  watermark: z.string().nullable().optional(),
+  reserved: z.boolean().default(false),
+  story_spotlight: z.boolean().default(false),
+  booster: z.boolean().default(false),
+  textless: z.boolean().default(false),
+  security_stamp: z.string().nullable().optional(),
+  illustration_id: z.string().nullable().optional(),
   prices: z.object({
     usd: z.string().nullable().default(null),
     usd_foil: z.string().nullable().default(null),
@@ -69,6 +78,9 @@ export const ScryfallCardSchema = z.object({
       z.object({
         ...PrintedFields,
         colors: z.array(z.string()).optional(),
+        flavor_text: z.string().nullable().optional(),
+        watermark: z.string().nullable().optional(),
+        illustration_id: z.string().nullable().optional(),
         image_uris: ImageSizes.optional(),
       }),
     )
@@ -153,7 +165,18 @@ function relatedTokenIds(raw: ScryfallCardJson): string[] {
     .map((part) => part.id);
 }
 
+function mapFlavorText(raw: ScryfallCardJson): string | null {
+  if (raw.flavor_text !== undefined && raw.flavor_text !== null && raw.flavor_text !== "") {
+    return raw.flavor_text;
+  }
+  const faceFlavors = (raw.card_faces ?? [])
+    .map((face) => face.flavor_text)
+    .filter((flavor): flavor is string => flavor !== undefined && flavor !== null && flavor !== "");
+  return faceFlavors.length === 0 ? null : faceFlavors.join("\n");
+}
+
 export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
+  const firstFace = raw.card_faces?.[0];
   return {
     scryfallId: raw.id,
     setCode: SetCode.of(raw.set),
@@ -173,6 +196,14 @@ export function mapScryfallCard(raw: ScryfallCardJson): ScryfallCard {
     keywords: raw.keywords ?? [],
     isGameChanger: raw.game_changer,
     edhrecRank: raw.edhrec_rank ?? null,
+    flavorText: mapFlavorText(raw),
+    watermark: raw.watermark ?? firstFace?.watermark ?? null,
+    isReserved: raw.reserved,
+    isStorySpotlight: raw.story_spotlight,
+    isBooster: raw.booster,
+    isTextless: raw.textless,
+    securityStamp: raw.security_stamp ?? null,
+    illustrationId: raw.illustration_id ?? firstFace?.illustration_id ?? null,
     tokenIds: relatedTokenIds(raw),
     token: mapToken(raw),
   };

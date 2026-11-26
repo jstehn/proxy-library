@@ -18,6 +18,7 @@ describe("deckSearch", () => {
   it("leaves the avoid cards out of a synergy search and names them", async () => {
     const { searchForDeck } = makeDeckSearch({
       searchForDeck: async () => ({ cards: [{ name: "Mortuary" }, { name: "Kept" }] }),
+      searchCatalogQueries: async () => ({ queries: [], cards: [] }),
       semantic: async () => null,
       semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => profile,
@@ -27,10 +28,32 @@ describe("deckSearch", () => {
     expect(result.ok && result.value.avoided).toEqual(["Mortuary"]);
   });
 
+  it("supports deckless batched synergy queries across collection and store", async () => {
+    const { searchCatalogQueries } = makeDeckSearch({
+      searchForDeck: async () => null,
+      searchCatalogQueries: async () => ({
+        queries: [{ synergy: "tokens", search: "o:token", found: 1, shown: 1, notes: [] }],
+        cards: [{ name: "Doubling Season" }],
+      }),
+      semantic: async () => null,
+      semanticCatalog: async () => ({ owned: [], store: [] }),
+      profile: async () => null,
+    });
+    const result = await searchCatalogQueries({
+      userId,
+      queries: [{ synergy: "tokens", search: "o:token" }],
+      where: "owned",
+      perQuery: 10,
+      maxPriceCents: null,
+    });
+    expect(result.ok && result.value.cards).toEqual([{ name: "Doubling Season" }]);
+  });
+
   it("leaves them out of both pools of a semantic search", async () => {
     const pick = (name: string) => ({ card: { name } });
     const { semantic } = makeDeckSearch({
       searchForDeck: async () => null,
+      searchCatalogQueries: async () => ({ queries: [], cards: [] }),
       semantic: async () => ({ owned: [pick("Mortuary"), pick("A")], store: [pick("Mortuary")] }),
       semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => profile,
@@ -45,6 +68,7 @@ describe("deckSearch", () => {
     const pick = (name: string) => ({ card: { name } });
     const { semantic } = makeDeckSearch({
       searchForDeck: async () => null,
+      searchCatalogQueries: async () => ({ queries: [], cards: [] }),
       semantic: async () => null,
       semanticCatalog: async () => ({ owned: [pick("Ephemerate")], store: [pick("Cloudshift")] }),
       profile: async () => null,
@@ -58,6 +82,7 @@ describe("deckSearch", () => {
   it("says when the deck isn't the player's", async () => {
     const { searchForDeck, semantic } = makeDeckSearch({
       searchForDeck: async () => null,
+      searchCatalogQueries: async () => ({ queries: [], cards: [] }),
       semantic: async () => null,
       semanticCatalog: async () => ({ owned: [], store: [] }),
       profile: async () => null,

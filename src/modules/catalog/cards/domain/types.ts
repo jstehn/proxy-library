@@ -189,6 +189,22 @@ export type ScryfallCard = Readonly<{
   isGameChanger: boolean;
   /** Scryfall's EDHREC popularity rank (1 = most popular, null when unranked; design doc 39). */
   edhrecRank: number | null;
+  /** Flavor text across faces (newline-joined), or null when the printing has none (design doc 71). */
+  flavorText: string | null;
+  /** Printed watermark name (e.g. "phyrexian", "izzet"), or null. */
+  watermark: string | null;
+  /** On Wizards' Reserved List. */
+  isReserved: boolean;
+  /** Marked as a Story Spotlight card. */
+  isStorySpotlight: boolean;
+  /** Found in booster packs. */
+  isBooster: boolean;
+  /** Textless printing (e.g. player rewards promos). */
+  isTextless: boolean;
+  /** Security stamp ("oval", "triangle", "acorn", "circle", "arena", "heart"), or null. */
+  securityStamp: string | null;
+  /** Scryfall's illustration_id for counting distinct artworks per card. */
+  illustrationId: string | null;
   /**
    * Scryfall ids from its `all_parts` that may be tokens it makes (tokens, emblems, The Monarch)
    * alongside ordinary related cards; the sync keeps those that are token printings.

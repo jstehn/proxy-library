@@ -16,10 +16,25 @@ const TEXT_CYCLES: ReadonlyArray<readonly [string, string]> = [
   ["checkland", `${TAPPED} unless you control an? ${BASIC} or an? ${BASIC}`],
   ["fastland", `${TAPPED} unless you control two or fewer other lands`],
   ["slowland", `${TAPPED} unless you control two or more other lands`],
+  ["bondland", `${TAPPED} unless you have two or more opponents`],
+  ["tangoland", `${TAPPED} unless you control two or more basic lands`],
+  [
+    "shadowland",
+    `as [^.]*enters[^,]*, you may reveal an? ${BASIC} or ${BASIC} card from your hand`,
+  ],
   ["painland", String.raw`\{T\}: add \{[WUBRG]\} or \{[WUBRG]\}\.[^.\n]*deals 1 damage to you`],
+  ["filterland", String.raw`(\{[WUBRG]/[WUBRG]\}|\{1\}), \{T\}: add \{[WUBRG]\}\{[WUBRG]\}`],
+  [
+    "horizonland",
+    String.raw`\{T\}, pay 1 life: add \{[WUBRG]\} or \{[WUBRG]\}[\s\S]*sacrifice [^:]*: draw a card`,
+  ],
   ["bounceland", "return a land you control to its owner's hand"],
   ["scryland", `${THEN_ENTERS}scry 1`],
+  ["surveilland", `${THEN_ENTERS}surveil 1`],
   ["gainland", `${THEN_ENTERS}you gain 1 life`],
+  ["verge", `activate only if you control an? ${BASIC} or an? ${BASIC}`],
+  ["triland", String.raw`\{T\}: add \{[WUBRG]\}, \{[WUBRG]\}, or \{[WUBRG]\}`],
+  ["storageland", "put a storage counter on"],
   ["manland", String.raw`becomes an? [^.]*creature`],
 ];
 

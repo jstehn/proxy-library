@@ -59,6 +59,7 @@ export {
   candidatePool,
   type DeckSuggestions,
   embedSimForCards,
+  type CatalogSynergySearch,
   type SearchForDeck,
   semanticSearchForDeck,
   type SemanticSearchResult,

@@ -1,4 +1,4 @@
-import { BORDERS, FRAME_VERSIONS, IS_VALUES, MAX_PATTERN_LENGTH } from "./parse";
+import { BORDERS, FRAME_VERSIONS, IS_VALUES, MAX_PATTERN_LENGTH, SECURITY_STAMPS } from "./parse";
 import { TAGS, THEMES } from "@/shared/mtg";
 
 // Every keyword the card search understands (design docs 14, 15 and 28), modeled on Scryfall's
@@ -10,13 +10,17 @@ export type SearchHelpRow = Readonly<{ write: string; finds: string; example: st
 export const SEARCH_BASICS: readonly SearchHelpRow[] = [
   { write: "words", finds: "names containing all of them", example: "goblin king" },
   { write: '!"name"', finds: "exactly that name", example: '!"Lightning Bolt"' },
-  { write: "-term", finds: "everything but that", example: "-t:land" },
+  {
+    write: "-term",
+    finds: "everything but that (also -(a or b))",
+    example: "-(t:land or t:artifact)",
+  },
   { write: "or", finds: "either side", example: "t:elf or t:goblin" },
   { write: "( )", finds: "groups terms", example: "(c:r or c:g) mv<=2" },
-  { write: '"…"', finds: "a phrase with spaces", example: 'o:"draw a card"' },
+  { write: "\"…\" '…'", finds: "a phrase with spaces", example: 'o:"draw a card"' },
   {
     write: "/…/",
-    finds: `a regular expression (names, o:, t:, a:; up to ${MAX_PATTERN_LENGTH} characters)`,
+    finds: `a regular expression (names, o:, fo:, t:, a:, ft:; up to ${MAX_PATTERN_LENGTH} characters)`,
     example: "o:/draw (a|two) cards?/",
   },
 ];
@@ -26,20 +30,29 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
   { write: "t: type:", finds: "type line", example: "t:legendary t:creature" },
   {
     write: "c: color:",
-    finds: "colors: at least these (c:), or =, <=, >=, <, >",
-    example: "c:rw  c<=bg",
+    finds: "colors: at least these (c:), counts (c=2, c:mono), or =, <=, >=, <, >",
+    example: "c:rw  c<=bg  c=2",
   },
   {
-    write: "id: ci:",
-    finds: "color identity, including rules text: within these by default",
-    example: "id<=esper",
+    write: "id: ci: commander:",
+    finds: "color identity, including rules text: within these by default, or counts (id<=2)",
+    example: "id<=esper  id=2",
   },
   { write: "mv cmc", finds: "mana value", example: "mv<=2" },
-  { write: "m: mana:", finds: "mana cost symbols", example: "m:{G}{G}" },
   {
-    write: "pow tou loy def",
-    finds: "power, toughness, loyalty, defense",
-    example: "pow>=4 loy>=4",
+    write: "m: mana:",
+    finds: "mana cost symbols (m: or m>= at least, m= exact, m<= subset)",
+    example: "m:{G}{G}  m=2g",
+  },
+  {
+    write: "dev: devotion:",
+    finds: "devotion to colors or total pip count in mana cost",
+    example: "dev:ggg  dev>=3",
+  },
+  {
+    write: "pow tou pt loy def",
+    finds: "power, toughness, power+toughness, loyalty, defense (also pow:*)",
+    example: "pow>=4  pt>=8  loy>=4",
   },
   {
     write: "kw: keyword:",
@@ -47,10 +60,18 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
     example: 'kw:flying  kw:"first strike"',
   },
   { write: "r: rarity:", finds: "rarity (c, u, r, m)", example: "r>=rare" },
-  { write: "s: set:", finds: "set code", example: "s:blb" },
+  { write: "s: set: e: edition:", finds: "set code", example: "s:blb" },
+  {
+    write: "st: set_type:",
+    finds: "set type (expansion, commander, core, masters, …)",
+    example: "st:commander",
+  },
   { write: "cn: number:", finds: "collector number", example: "s:fdn cn<=100" },
   { write: "a: artist:", finds: "artist", example: 'a:"rebecca guay"' },
+  { write: "ft: flavor:", finds: "flavor text (supports /pattern/)", example: 'ft:"urza"' },
+  { write: "wm: watermark:", finds: "printed watermark", example: "wm:izzet" },
   { write: "f: format:", finds: "legal in a format", example: "f:pauper" },
+  { write: "not:", finds: "shorthand for -is: (any is: value)", example: "not:reprint  not:foil" },
   {
     write: "tag: role:",
     finds: `what the card does in a deck: ${TAGS.join(", ")}`,
@@ -91,20 +112,41 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
   },
   {
     write: "produces:",
-    finds: "mana it can make (W, U, B, R, G, C)",
-    example: "produces:g t:artifact",
+    finds: "mana it can make (W, U, B, R, G, C), comparisons (=, <=, >=), or count",
+    example: "produces:g  produces>=2",
   },
   { write: "usd", finds: "the cheapest current market price, in dollars", example: "usd<0.50" },
+  { write: "edhrec", finds: "EDHREC popularity rank (1 is most popular)", example: "edhrec<=500" },
+  {
+    write: "prints sets illustrations",
+    finds: "how many printings, sets, or distinct artworks this card has",
+    example: "prints=1  sets>=5",
+  },
+  {
+    write: "in:",
+    finds: "printed in a finish (foil, nonfoil, etched) or set code",
+    example: "in:foil  in:blb",
+  },
   {
     write: "year date",
-    finds: "the set's release year or date",
-    example: "year>=2024  date>=2024-08",
+    finds: "the set's release year, date, or another set's code",
+    example: "year>=2024  date>=blb",
+  },
+  {
+    write: "layout:",
+    finds: "card layout (normal, transform, modal_dfc, split, …)",
+    example: "layout:modal_dfc",
   },
   { write: "border:", finds: BORDERS.join(", "), example: "border:borderless" },
   {
     write: "frame:",
     finds: `${FRAME_VERSIONS.join(", ")}, or an effect such as showcase, extendedart, inverted`,
     example: "frame:showcase",
+  },
+  {
+    write: "stamp:",
+    finds: `security stamp (${SECURITY_STAMPS.join(", ")})`,
+    example: "stamp:triangle",
   },
   {
     write: "own owned",
@@ -123,16 +165,27 @@ export const SEARCH_KEYWORDS: readonly SearchHelpRow[] = [
   },
 ];
 
-export const IS_GROUPS = ["finish", "layout", "treatment", "kind", "land", "bracket"] as const;
+export const IS_GROUPS = [
+  "finish",
+  "layout",
+  "treatment",
+  "frame",
+  "kind",
+  "land",
+  "bracket",
+] as const;
 export const IS_DESCRIPTIONS: Readonly<Record<(typeof IS_GROUPS)[number], string>> = {
   finish:
-    "is:foil means: sold in foil (store), this copy is foil (collection), you own a foil (deck builder)",
-  layout: "how the card is laid out (dfc is any double-faced card; mdfc is modal)",
-  treatment: "special printings",
-  kind: "kinds of card (vanilla: no rules text; frenchvanilla: only keywords; bear: a 2-mana 2/2; modal: choose one —; party: Cleric, Rogue, Warrior or Wizard; outlaw: Assassin, Mercenary, Pirate, Rogue or Warlock; hybrid and phyrexian: mana in the cost)",
+    "is:foil means: sold in foil (store), this copy is foil (collection), you own a foil (deck builder); is:nonfoil and is:etched check available finishes",
+  layout:
+    "how the card is laid out (dfc/doublefaced/doublesided is any double-faced card; mdfc is modal)",
+  treatment: "special printings (ub/universesbeyond, boosterfun, spotlight, textless, booster)",
+  frame:
+    "frame era (old, new, modern, future) and frame effects (inverted, nyxtouched, tombstone, colorshifted)",
+  kind: "kinds of card (brawler, companion, partner, vanilla, frenchvanilla, bear, modal, party, outlaw, hybrid, phyrexian, etb, reprint, firstprint, reserved, funny, acorn)",
   bracket:
     "Commander brackets (gamechanger or gc: on Wizards' Game Changer list; landdenial: mass land denial, including Blood Moon and Back to Basics; extraturn: takes an extra turn). -is:gc leaves Game Changers out",
-  land: "land cycles (fetchable: has a basic land type; dual: two types and no rules text; triome: three types; pathway: a land on each face)",
+  land: "land cycles (fetchable, dual, shockland, fetchland, checkland, fastland, slowland, bondland, painland, filterland, horizonland, tangoland, shadowland, bounceland, scryland, surveilland, gainland, verge, triome, triland, cycleland, storageland, manland, pathway, tapland)",
 };
 
 /** The whole reference as Markdown, for the LLM tools (design doc 28). */

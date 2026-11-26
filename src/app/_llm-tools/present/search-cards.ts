@@ -1,5 +1,10 @@
 import type { CatalogSearch } from "@/modules/catalog";
-import type { SearchForDeck, SearchSignals, SemanticSearchResult } from "@/modules/decks";
+import type {
+  CatalogSynergySearch,
+  SearchForDeck,
+  SearchSignals,
+  SemanticSearchResult,
+} from "@/modules/decks";
 import { moneyOrNull, priceCents } from "../tool";
 import { compactMoneyFields } from "./money";
 
@@ -39,6 +44,24 @@ export function presentSemantic(
   });
 }
 
+type SynergyCard = SearchForDeck["cards"][number];
+
+function presentSynergyCard(
+  card: SynergyCard,
+  options: Readonly<{ includeText: boolean; showPrice: boolean }>,
+) {
+  return {
+    name: card.name,
+    manaCost: card.manaCost,
+    typeLine: card.typeLine,
+    ...(options.includeText && card.text ? { text: card.text } : {}),
+    owned: card.owned,
+    ...(options.showPrice ? { priceCents: priceCents(card.priceCents) } : {}),
+    synergies: card.synergies,
+    ...(card.isGameChanger ? { isGameChanger: true } : {}),
+  };
+}
+
 /** Mode "syntax" with a deck: one search per synergy, cards merged. */
 export function presentDeckSearch(
   result: SearchForDeck,
@@ -52,16 +75,18 @@ export function presentDeckSearch(
     ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
     goal: null,
     queries: result.queries,
-    cards: cards.map((card) => ({
-      name: card.name,
-      manaCost: card.manaCost,
-      typeLine: card.typeLine,
-      ...(options.includeText && card.text ? { text: card.text } : {}),
-      owned: card.owned,
-      ...(options.showPrice ? { priceCents: priceCents(card.priceCents) } : {}),
-      synergies: card.synergies,
-      ...(card.isGameChanger ? { isGameChanger: true } : {}),
-    })),
+    cards: cards.map((card) => presentSynergyCard(card, options)),
+  };
+}
+
+/** Mode "syntax" with batched synergy queries and no deck: cards merged across queries. */
+export function presentCatalogQueries(
+  result: CatalogSynergySearch,
+  options: Readonly<{ includeText: boolean; showPrice: boolean }>,
+): unknown {
+  return {
+    queries: result.queries,
+    cards: result.cards.map((card) => presentSynergyCard(card, options)),
   };
 }
 

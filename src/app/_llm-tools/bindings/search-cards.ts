@@ -1,9 +1,10 @@
 import { z } from "zod";
 import type { CatalogSearch } from "@/modules/catalog";
-import type { SearchForDeck, SemanticSearchResult } from "@/modules/decks";
+import type { CatalogSynergySearch, SearchForDeck, SemanticSearchResult } from "@/modules/decks";
 import { err, ok } from "@/shared/kernel";
 import { defineBinding } from "../binding";
 import {
+  presentCatalogQueries,
   presentCatalogSearch,
   presentDeckSearch,
   presentSemantic,
@@ -29,6 +30,7 @@ type Answer =
       cards: SearchForDeck["cards"];
       avoided: readonly string[];
     }>
+  | Readonly<{ mode: "queries"; result: CatalogSynergySearch }>
   | Readonly<{ mode: "catalog"; result: CatalogSearch }>;
 
 const SHORTHAND_UNITS: Readonly<Record<string, number>> = {
@@ -83,7 +85,7 @@ export const searchCardsBinding = defineBinding({
       .min(1)
       .max(6)
       .optional()
-      .describe("Up to 6 synergy queries when deckId + mode='syntax'."),
+      .describe("Up to 6 labeled synergy queries in mode='syntax' (works with or without deckId)."),
     query: z
       .string()
       .min(1)
@@ -193,6 +195,17 @@ export const searchCardsBinding = defineBinding({
       return found.ok ? ok<Answer>({ mode: "deck", ...found.value }) : found;
     }
 
+    if (input.queries !== undefined) {
+      const found = await capabilities.deckSearch.searchCatalogQueries({
+        userId,
+        queries: input.queries,
+        where: input.where ?? "both",
+        perQuery: input.maxPerQuery,
+        maxPriceCents: input.maxPriceCents ?? null,
+      });
+      return found.ok ? ok<Answer>({ mode: "queries", result: found.value }) : found;
+    }
+
     let addedSince: Date | undefined;
     if (input.addedSince !== undefined) {
       if (input.where === "store") {
@@ -215,7 +228,7 @@ export const searchCardsBinding = defineBinding({
     if (!input.search && addedSince === undefined && input.sort === undefined) {
       return err<Failure>({
         kind: "InvalidInput",
-        message: "Provide `search` (or `deckId` + `queries`, or `addedSince` / `sort`).",
+        message: "Provide `search`, `queries`, `addedSince`, or `sort`.",
       });
     }
     const where =
@@ -250,6 +263,11 @@ export const searchCardsBinding = defineBinding({
         );
       case "deck":
         return presentDeckSearch(answer.result, answer.cards, answer.avoided, {
+          includeText: input.includeText,
+          showPrice,
+        });
+      case "queries":
+        return presentCatalogQueries(answer.result, {
           includeText: input.includeText,
           showPrice,
         });

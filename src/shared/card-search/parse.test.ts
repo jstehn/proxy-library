@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  manaSymbols,
   parseColors,
+  parseManaQuery,
   parseSearch,
   rarityName,
   toggleTerm,
@@ -90,7 +90,7 @@ describe("parseColors", () => {
   });
 });
 
-describe("rarityName and manaSymbols", () => {
+describe("rarityName and parseManaQuery", () => {
   it("reads rarities by letter or name", () => {
     expect(rarityName("m")).toBe("mythic");
     expect(rarityName("Uncommon")).toBe("uncommon");
@@ -98,13 +98,16 @@ describe("rarityName and manaSymbols", () => {
   });
 
   it("counts mana symbols, braced or not", () => {
-    expect(manaSymbols("{G}{G}")).toEqual(new Map([["{G}", 2]]));
-    expect(manaSymbols("2gg")).toEqual(
-      new Map([
-        ["{2}", 1],
-        ["{G}", 2],
-      ]),
-    );
+    expect(parseManaQuery("{G}{G}")).toEqual({
+      generic: null,
+      symbols: new Map([["{G}", 2]]),
+      isEmpty: false,
+    });
+    expect(parseManaQuery("2gg")).toEqual({
+      generic: 2,
+      symbols: new Map([["{G}", 2]]),
+      isEmpty: false,
+    });
   });
 });
 
@@ -184,7 +187,7 @@ describe("design doc 15 keywords", () => {
     ]);
     expect(only("mv:/2/").notes).toEqual(['"mv:" doesn\'t take a /pattern/ (ignored)']);
     expect(only("produces:x").notes).toEqual([
-      '"x" isn\'t a mana color (W, U, B, R, G or C) (ignored)',
+      '"x" isn\'t a mana color (W, U, B, R, G, C or a number) (ignored)',
     ]);
     expect(only("border:plaid").notes).toHaveLength(1);
     expect(only("date>=yesterday").notes).toHaveLength(1);
@@ -296,8 +299,109 @@ describe("design doc 28 keywords", () => {
       "cycleland",
       "manland",
       "pathway",
+      "nonfoil",
+      "doublefaced",
+      "doublesided",
+      "reversible",
+      "leveler",
+      "room",
+      "case",
+      "battle",
+      "aftermath",
+      "prototype",
+      "mutate",
+      "full",
+      "ub",
+      "universesbeyond",
+      "boosterfun",
+      "textless",
+      "spotlight",
+      "booster",
+      "old",
+      "new",
+      "modern",
+      "future",
+      "inverted",
+      "nyxtouched",
+      "tombstone",
+      "colorshifted",
+      "brawler",
+      "companion",
+      "partner",
+      "etb",
+      "reprint",
+      "firstprint",
+      "reserved",
+      "funny",
+      "acorn",
+      "bondland",
+      "crowdland",
+      "filterland",
+      "horizonland",
+      "canopyland",
+      "tangoland",
+      "battleland",
+      "shadowland",
+      "snarl",
+      "karoo",
+      "surveilland",
+      "verge",
+      "triland",
+      "bicycleland",
+      "storageland",
+      "creatureland",
+      "tapland",
     ]) {
       expect(only(`is:${value}`).notes).toEqual([]);
     }
+  });
+
+  it("negates parenthesized groups and parses single-quoted phrases (design doc 71)", () => {
+    expect(only("-(t:land or t:artifact)").node).toEqual({
+      kind: "not",
+      child: {
+        kind: "or",
+        children: [term("type", ":", "land"), term("type", ":", "artifact")],
+      },
+    });
+    expect(only("o:'draw a card'").node).toEqual(term("oracle", ":", "draw a card"));
+    expect(only('o:"say \\"hello\\""').node).toEqual(term("oracle", ":", 'say "hello"'));
+    // Unquoted apostrophes inside names/words stay literal.
+    expect(only("Urza's").node).toEqual(term("name", ":", "Urza's"));
+  });
+
+  it("parses color counts, not:, mana comparisons, devotion, produces counts, and new keywords", () => {
+    expect(only("c=2 id<=3 c:mono").notes).toEqual([]);
+    expect(parseColors("2")).toEqual({ kind: "count", count: 2 });
+    expect(parseColors("mono")).toEqual({ kind: "count", count: 1 });
+    expect(parseColors("6")).toBeNull();
+
+    expect(only("not:foil").node).toEqual({
+      kind: "not",
+      child: term("is", ":", "foil"),
+    });
+    expect(only("not:unknownthing").notes).toHaveLength(1);
+
+    expect(only("m=2g m<=2gg m>1g m:10g").notes).toEqual([]);
+    expect(parseManaQuery("10gg")).toEqual({
+      generic: 10,
+      symbols: new Map([["{G}", 2]]),
+      isEmpty: false,
+    });
+    expect(parseManaQuery("{2}{W/U}")).toEqual({
+      generic: 2,
+      symbols: new Map([["{W/U}", 1]]),
+      isEmpty: false,
+    });
+
+    expect(only("produces=wu produces<=bg produces>=2").notes).toEqual([]);
+    expect(only("dev:ggg dev>=3 devotion=uu").notes).toEqual([]);
+    expect(only("pow:* tou=1.5 pt>=8 pt>mv").notes).toEqual([]);
+    expect(only("commander:esper edition:blb st:commander set_type:core").notes).toEqual([]);
+    expect(only("edhrec<=500 prints=1 sets>=3 illustrations>=2").notes).toEqual([]);
+    expect(only("layout:modal_dfc in:foil in:blb").notes).toEqual([]);
+    expect(only('ft:"urza" ft:/spark/ wm:izzet stamp:acorn').notes).toEqual([]);
+    expect(only("date>=blb year<mh3").notes).toEqual([]);
+    expect(only("stamp:invalid").notes).toHaveLength(1);
   });
 });

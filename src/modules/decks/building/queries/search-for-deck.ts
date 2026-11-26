@@ -113,20 +113,45 @@ const CARD_COLUMNS = sql`p.oracle_id, p.id as printing_id, p.name, p.mana_cost, 
   p.type_line, ${featureArray("role_tags")} as role_tags, ${featureArray("theme_tags")} as theme_tags, p.is_game_changer,
   coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '') as face_text`;
 
+type CatalogQueriesPool = "owned" | "game" | "real" | "store" | "both";
+
+type CatalogSynergySearchInput = Readonly<{
+  queries: readonly SynergyQuery[];
+  where: CatalogQueriesPool;
+  /** Cards per query, at most SEARCH_FOR_DECK_LIMITS.perQuery. */
+  perQuery: number;
+  /** Store cards above this price (cents) are left out. */
+  maxPriceCents: number | null;
+}>;
+
+export type CatalogSynergySearch = Readonly<{
+  queries: readonly QueryReport[];
+  cards: readonly MergedCard[];
+}>;
+
+type QueryScope = Readonly<{
+  userId: UserId;
+  usesRealCards: boolean;
+  onlyRealCards: boolean;
+  fits: SQL;
+}>;
+
 /** Your cards matching a search, as your most special copy of each. */
 async function ownedHits(
   db: DbExecutor,
-  context: Context,
+  scope: QueryScope,
   condition: SQL,
   limit: number,
 ): Promise<Row[]> {
+  const realOnly = scope.onlyRealCards ? sql`owned.owned_real > 0` : sql`true`;
+  const ownedCount = scope.onlyRealCards ? sql`owned.owned_real` : sql`owned.owned`;
   const rows = await db.execute<Row>(sql`
-    with owned as ${ownedPerCard(context.userId, context.usesRealCards)}
-    select ${CARD_COLUMNS}, owned.owned,
+    with owned as ${ownedPerCard(scope.userId, scope.usesRealCards)}
+    select ${CARD_COLUMNS}, ${ownedCount} as owned,
            ${latestPrice("p.id", "owned.finish")} as price_cents,
            count(*) over ()::int as total
       from owned join printings p on p.id = owned.printing_id
-     where ${condition} and ${fitsDeck(context)}
+     where ${condition} and ${scope.fits} and ${realOnly}
      order by p.name
      limit ${limit}
   `);
@@ -136,7 +161,7 @@ async function ownedHits(
 /** Store cards matching a search that you don't own, each at its cheapest printing for sale. */
 async function storeHits(
   db: DbExecutor,
-  context: Context,
+  scope: QueryScope,
   condition: SQL,
   limit: number,
   maxPriceCents: number | null,
@@ -147,8 +172,8 @@ async function storeHits(
     with matching as (
       select distinct p.oracle_id
         from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${condition} and ${fitsDeck(context)}
-         and ${notOwned(context.userId, context.usesRealCards)}
+       where ${condition} and ${scope.fits}
+         and ${notOwned(scope.userId, scope.usesRealCards)}
     ),
     cheapest as (
       select matching.oracle_id, best.printing_id, best.usd_cents
@@ -182,6 +207,49 @@ function toFound(row: Row): FoundCard {
   };
 }
 
+type RunQueriesOptions = Readonly<{
+  queries: readonly SynergyQuery[];
+  includeOwned: boolean;
+  includeStore: boolean;
+  perQuery: number;
+  maxPriceCents: number | null;
+  deckId?: number;
+}>;
+
+async function runSynergyQueries(
+  db: DbExecutor,
+  scope: QueryScope,
+  options: RunQueriesOptions,
+): Promise<CatalogSynergySearch> {
+  const perQuery = Math.min(Math.max(1, options.perQuery), SEARCH_FOR_DECK_LIMITS.perQuery);
+  const queries = options.queries.slice(0, SEARCH_FOR_DECK_LIMITS.queries);
+
+  // The queries run side by side; each is one or two SQL statements.
+  const hits: QueryHits[] = await Promise.all(
+    queries.map(async (query) => {
+      const parsed = parseSearch(query.search);
+      const condition = searchCondition(parsed.node, {
+        userId: scope.userId,
+        foil: foilOwnedBy(scope.userId, { includeReal: scope.usesRealCards }),
+        ownIncludesReal: scope.usesRealCards,
+        ...(options.deckId !== undefined ? { deckId: options.deckId } : {}),
+      });
+      const [owned, store] = await Promise.all([
+        options.includeOwned ? ownedHits(db, scope, condition, perQuery) : [],
+        options.includeStore
+          ? storeHits(db, scope, condition, perQuery, options.maxPriceCents)
+          : [],
+      ]);
+      const found = Number(owned[0]?.total ?? 0) + Number(store[0]?.total ?? 0);
+      // Owned first, then the store, within one query's share of the cap.
+      const cards = [...owned, ...store].slice(0, perQuery).map(toFound);
+      return { query, found, cards, notes: parsed.notes };
+    }),
+  );
+
+  return searchForDeckResult(hits, perQuery);
+}
+
 /** Runs every query for one of your decks; null if the deck isn't yours. */
 export async function searchForDeck(
   db: DbExecutor,
@@ -195,31 +263,20 @@ export async function searchForDeck(
   const target = view.deck.targetBracket;
   const overTarget = target === null ? [] : flagsOverTarget(view.lines.map(bracketLine), target);
   const context: Context = { ...browse, deckId: input.deckId, userId, overTarget };
-  const perQuery = Math.min(Math.max(1, input.perQuery), SEARCH_FOR_DECK_LIMITS.perQuery);
-  const queries = input.queries.slice(0, SEARCH_FOR_DECK_LIMITS.queries);
-
-  // The queries run side by side; each is one or two SQL statements.
-  const hits: QueryHits[] = await Promise.all(
-    queries.map(async (query) => {
-      const parsed = parseSearch(query.search);
-      const condition = searchCondition(parsed.node, {
-        userId,
-        foil: foilOwnedBy(userId, { includeReal: context.usesRealCards }),
-        ownIncludesReal: context.usesRealCards,
-        deckId: input.deckId,
-      });
-      const [owned, store] = await Promise.all([
-        input.where === "store" ? [] : ownedHits(db, context, condition, perQuery),
-        input.where === "owned"
-          ? []
-          : storeHits(db, context, condition, perQuery, input.maxPriceCents),
-      ]);
-      const found = Number(owned[0]?.total ?? 0) + Number(store[0]?.total ?? 0);
-      // Owned first, then the store, within one query's share of the cap.
-      const cards = [...owned, ...store].slice(0, perQuery).map(toFound);
-      return { query, found, cards, notes: parsed.notes };
-    }),
-  );
+  const scope: QueryScope = {
+    userId,
+    usesRealCards: context.usesRealCards,
+    onlyRealCards: false,
+    fits: fitsDeck(context),
+  };
+  const merged = await runSynergyQueries(db, scope, {
+    queries: input.queries,
+    includeOwned: input.where !== "store",
+    includeStore: input.where !== "owned",
+    perQuery: input.perQuery,
+    maxPriceCents: input.maxPriceCents,
+    deckId: input.deckId,
+  });
 
   return {
     deck: {
@@ -230,6 +287,27 @@ export async function searchForDeck(
       targetBracket: target,
     },
     leftOutOverTarget: overTarget,
-    ...searchForDeckResult(hits, perQuery),
+    ...merged,
   };
+}
+
+/** Runs batched synergy queries without a deck filter (design doc 71). */
+export async function searchCatalogQueries(
+  db: DbExecutor,
+  userId: UserId,
+  input: CatalogSynergySearchInput,
+): Promise<CatalogSynergySearch> {
+  const scope: QueryScope = {
+    userId,
+    usesRealCards: input.where !== "game",
+    onlyRealCards: input.where === "real",
+    fits: sql`true`,
+  };
+  return runSynergyQueries(db, scope, {
+    queries: input.queries,
+    includeOwned: input.where !== "store",
+    includeStore: input.where === "store" || input.where === "both",
+    perQuery: input.perQuery,
+    maxPriceCents: input.maxPriceCents,
+  });
 }

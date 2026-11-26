@@ -36,8 +36,11 @@ export type SearchField =
   | "mana"
   | "power"
   | "toughness"
+  | "powTou"
+  | "devotion"
   | "rarity"
   | "set"
+  | "setType"
   | "format"
   | "is"
   | "keyword"
@@ -51,6 +54,15 @@ export type SearchField =
   | "date"
   | "border"
   | "frame"
+  | "layout"
+  | "edhrec"
+  | "prints"
+  | "sets"
+  | "in"
+  | "flavor"
+  | "watermark"
+  | "stamp"
+  | "illustrations"
   | "own"
   | "free"
   | "real"
@@ -60,8 +72,9 @@ export type SearchField =
   | "restricted"
   | "fullOracle";
 
-/** Numbers a term can compare with each other on the same card: `pow>tou`, `pow>=mv`. */
-export type ComparableField = "power" | "toughness" | "loyalty" | "defense" | "manaValue";
+/** Numbers a term can compare with each other on the same card: `pow>tou`, `pow>=mv`, `pt>mv`. */
+export type ComparableField =
+  "power" | "toughness" | "powTou" | "loyalty" | "defense" | "manaValue";
 
 export type Comparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | ":";
 
@@ -103,6 +116,8 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   id: "identity",
   ci: "identity",
   identity: "identity",
+  commander: "identity",
+  coloridentity: "identity",
   mv: "manaValue",
   cmc: "manaValue",
   manavalue: "manaValue",
@@ -112,11 +127,18 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   power: "power",
   tou: "toughness",
   toughness: "toughness",
+  pt: "powTou",
+  powtou: "powTou",
+  dev: "devotion",
+  devotion: "devotion",
   r: "rarity",
   rarity: "rarity",
   s: "set",
   set: "set",
   e: "set",
+  edition: "set",
+  st: "setType",
+  set_type: "setType",
   f: "format",
   format: "format",
   legal: "format",
@@ -138,6 +160,19 @@ const KEYWORDS: Readonly<Record<string, SearchField>> = {
   date: "date",
   border: "border",
   frame: "frame",
+  layout: "layout",
+  edhrec: "edhrec",
+  edhrec_rank: "edhrec",
+  prints: "prints",
+  sets: "sets",
+  in: "in",
+  ft: "flavor",
+  flavor: "flavor",
+  wm: "watermark",
+  watermark: "watermark",
+  stamp: "stamp",
+  security_stamp: "stamp",
+  illustrations: "illustrations",
   own: "own",
   owned: "own",
   free: "free",
@@ -265,6 +300,8 @@ const COMPARABLE: Readonly<Record<string, ComparableField>> = {
   power: "power",
   tou: "toughness",
   toughness: "toughness",
+  pt: "powTou",
+  powtou: "powTou",
   loy: "loyalty",
   loyalty: "loyalty",
   def: "defense",
@@ -279,26 +316,76 @@ const NUMERIC_FIELDS = new Set<SearchField>([
   "manaValue",
   "power",
   "toughness",
+  "powTou",
   "loyalty",
   "defense",
   "usd",
   "year",
+  "edhrec",
+  "prints",
+  "sets",
+  "illustrations",
   "own",
   "free",
   "real",
 ]);
 /** Text fields that accept a /regular expression/ instead of words. */
-const PATTERN_FIELDS = new Set<SearchField>(["name", "oracle", "fullOracle", "type", "artist"]);
+const PATTERN_FIELDS = new Set<SearchField>([
+  "name",
+  "oracle",
+  "fullOracle",
+  "type",
+  "artist",
+  "flavor",
+]);
 /** The longest regular expression accepted, so a search can't ask the database for too much. */
 export const MAX_PATTERN_LENGTH = 100;
 
 /** Every `is:` value, grouped as the search help shows them. */
 export const IS_VALUES = {
-  finish: ["foil", "etched"],
-  layout: ["dfc", "transform", "mdfc", "split", "adventure", "flip", "meld", "saga", "class"],
-  treatment: ["showcase", "borderless", "extendedart", "fullart", "serialized", "promo"],
+  finish: ["foil", "nonfoil", "etched"],
+  layout: [
+    "dfc",
+    "doublefaced",
+    "doublesided",
+    "transform",
+    "mdfc",
+    "split",
+    "adventure",
+    "flip",
+    "meld",
+    "saga",
+    "class",
+    "reversible",
+    "leveler",
+    "room",
+    "case",
+    "battle",
+    "aftermath",
+    "prototype",
+    "mutate",
+  ],
+  treatment: [
+    "showcase",
+    "borderless",
+    "extendedart",
+    "fullart",
+    "full",
+    "serialized",
+    "promo",
+    "ub",
+    "universesbeyond",
+    "boosterfun",
+    "textless",
+    "spotlight",
+    "booster",
+  ],
+  frame: ["old", "new", "modern", "future", "inverted", "nyxtouched", "tombstone", "colorshifted"],
   kind: [
     "commander",
+    "brawler",
+    "companion",
+    "partner",
     "permanent",
     "spell",
     "historic",
@@ -311,6 +398,12 @@ export const IS_VALUES = {
     "outlaw",
     "hybrid",
     "phyrexian",
+    "etb",
+    "reprint",
+    "firstprint",
+    "reserved",
+    "funny",
+    "acorn",
   ],
   land: [
     "basic",
@@ -321,14 +414,31 @@ export const IS_VALUES = {
     "checkland",
     "fastland",
     "slowland",
+    "bondland",
+    "crowdland",
     "painland",
+    "filterland",
+    "horizonland",
+    "canopyland",
+    "tangoland",
+    "battleland",
+    "shadowland",
+    "snarl",
     "bounceland",
+    "karoo",
     "scryland",
+    "surveilland",
     "gainland",
+    "verge",
     "triome",
+    "triland",
     "cycleland",
+    "bicycleland",
+    "storageland",
     "manland",
+    "creatureland",
     "pathway",
+    "tapland",
   ],
   // Commander brackets (design doc 31): "gc" is short for "gamechanger".
   bracket: ["gamechanger", "gc", "landdenial", "extraturn"],
@@ -336,6 +446,7 @@ export const IS_VALUES = {
 const ALL_IS_VALUES = new Set<string>(Object.values(IS_VALUES).flat());
 export const BORDERS = ["black", "white", "borderless", "silver", "gold", "yellow"] as const;
 export const FRAME_VERSIONS = ["1993", "1997", "2003", "2015", "future"] as const;
+export const SECURITY_STAMPS = ["oval", "triangle", "acorn", "circle", "arena", "heart"] as const;
 const RARITIES = new Set(["common", "uncommon", "rare", "mythic", "special", "bonus"]);
 const RARITY_SHORT: Readonly<Record<string, string>> = {
   c: "common",
@@ -347,14 +458,14 @@ const RARITY_SHORT: Readonly<Record<string, string>> = {
 // --- Words -------------------------------------------------------------------------------
 
 type Token =
-  | Readonly<{ kind: "open" }>
+  | Readonly<{ kind: "open"; negated: boolean }>
   | Readonly<{ kind: "close" }>
   | Readonly<{ kind: "or" }>
   | Readonly<{ kind: "word"; text: string; negated: boolean }>;
 
 /**
- * Splits the search into words, keeping quoted phrases together (`o:"draw a card"` is one word)
- * and noting a leading `-` (not). Parentheses are their own tokens.
+ * Splits the search into words, keeping quoted phrases together (`o:"draw a card"` or
+ * `o:'draw a card'` is one word) and noting a leading `-` (not), including `-(…)`.
  */
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
@@ -364,11 +475,14 @@ function tokenize(text: string): Token[] {
     if (/\s/.test(character)) {
       index++;
     } else if (character === "(") {
-      tokens.push({ kind: "open" });
+      tokens.push({ kind: "open", negated: false });
       index++;
     } else if (character === ")") {
       tokens.push({ kind: "close" });
       index++;
+    } else if (character === "-" && text[index + 1] === "(") {
+      tokens.push({ kind: "open", negated: true });
+      index += 2;
     } else {
       let negated = false;
       if (character === "-" && index + 1 < text.length && !/\s/.test(text[index + 1])) {
@@ -376,7 +490,7 @@ function tokenize(text: string): Token[] {
         index++;
       }
       let word = "";
-      let inQuotes = false;
+      let quoteChar: '"' | "'" | null = null;
       let inPattern = false;
       while (index < text.length) {
         const next = text[index];
@@ -385,12 +499,38 @@ function tokenize(text: string): Token[] {
           word += next;
           if (next === "\\" && index + 1 < text.length) word += text[++index];
           else if (next === "/") inPattern = false;
-        } else if (next === "/" && !inQuotes && /^(!?|[a-z]+(<=|>=|!=|=|<|>|:))$/i.test(word)) {
+        } else if (quoteChar !== null) {
+          if (
+            next === "\\" &&
+            index + 1 < text.length &&
+            (text[index + 1] === quoteChar || text[index + 1] === "\\")
+          ) {
+            word += text[++index];
+          } else if (next === quoteChar) {
+            quoteChar = null;
+          } else {
+            word += next;
+          }
+        } else if (next === "/" && /^(!?|[a-z_]+(<=|>=|!=|=|<|>|:))$/i.test(word)) {
           word += next; // a pattern starts right after the keyword (or at the word's start)
           inPattern = true;
-        } else if (next === '"') inQuotes = !inQuotes;
-        else if (!inQuotes && (/\s/.test(next) || next === "(" || next === ")")) break;
-        else word += next;
+        } else if (next === '"') {
+          quoteChar = '"';
+        } else if (
+          next === "'" &&
+          (word === "" ||
+            word === "!" ||
+            word.endsWith(":") ||
+            word.endsWith("=") ||
+            word.endsWith("<") ||
+            word.endsWith(">"))
+        ) {
+          quoteChar = "'";
+        } else if (/\s/.test(next) || next === "(" || next === ")") {
+          break;
+        } else {
+          word += next;
+        }
         index++;
       }
       if (!negated && word.toLowerCase() === "or") tokens.push({ kind: "or" });
@@ -406,7 +546,7 @@ function splitWord(word: string): {
   comparison: Comparison;
   value: string;
 } {
-  const match = /^([a-z]+)(<=|>=|!=|=|<|>|:)(.*)$/i.exec(word);
+  const match = /^([a-z_]+)(<=|>=|!=|=|<|>|:)(.*)$/i.exec(word);
   if (match === null) return { keyword: null, comparison: ":", value: word };
   return { keyword: match[1].toLowerCase(), comparison: match[2] as Comparison, value: match[3] };
 }
@@ -442,7 +582,7 @@ export function parseSearch(text: string): ParsedSearch {
         const inner = parseOr();
         if (tokens[position]?.kind === "close") position++;
         else notes.push("A parenthesis isn't closed (treated as closed at the end)");
-        parts.push(inner);
+        parts.push(token.negated ? { kind: "not", child: inner } : inner);
       } else if (token.kind === "word") {
         const node = wordNode(token.text, notes);
         if (node !== null) parts.push(token.negated ? { kind: "not", child: node } : node);
@@ -480,6 +620,26 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
     return {
       kind: "term",
       term: { field: "name", comparison: ":", value: pattern, isPattern: true },
+    };
+  }
+
+  // `not:<value>` is Scryfall's shorthand for `-is:<value>`.
+  if (keyword === "not") {
+    if (rawValue === "") {
+      notes.push(`"${word}" has no value (ignored)`);
+      return null;
+    }
+    if (comparison !== ":" && comparison !== "=") {
+      notes.push(`"${comparison}" doesn't apply to text (ignored)`);
+      return null;
+    }
+    if (!ALL_IS_VALUES.has(rawValue.toLowerCase())) {
+      notes.push(`"not:${rawValue}" isn't supported (see Search help) (ignored)`);
+      return null;
+    }
+    return {
+      kind: "not",
+      child: { kind: "term", term: { field: "is", comparison: ":", value: rawValue } },
     };
   }
 
@@ -537,17 +697,60 @@ function wordNode(word: string, notes: string[]): SearchNode | null {
   return { kind: "term", term: { field, comparison, value: normalizedValue } };
 }
 
+function isNonNegativeInteger(value: string): boolean {
+  if (value.length === 0) return false;
+  for (const character of value) {
+    if (character < "0" || character > "9") return false;
+  }
+  return true;
+}
+
+/** Whether a string looks like a 2-6 character set code (e.g. `blb`, `mh3`), not a plain year. */
+export function isSetCode(value: string): boolean {
+  if (value.length < 2 || value.length > 6) return false;
+  let hasLetter = false;
+  for (const character of value.toLowerCase()) {
+    const isLetter = character >= "a" && character <= "z";
+    const isDigit = character >= "0" && character <= "9";
+    if (!isLetter && !isDigit) return false;
+    if (isLetter) hasLetter = true;
+  }
+  return hasLetter;
+}
+
+function isOnlyCharacters(value: string, allowed: string): boolean {
+  if (value.length === 0) return false;
+  for (const character of value.toLowerCase()) {
+    if (!allowed.includes(character)) return false;
+  }
+  return true;
+}
+
+const STAR_STAT_FIELDS = new Set<SearchField>(["power", "toughness", "loyalty", "defense"]);
+
 function valueProblem(field: SearchField, comparison: Comparison, value: string): string | null {
   if (field === "manaValue" && /^(even|odd)$/i.test(value)) {
     return comparison === ":" || comparison === "=" || comparison === "!="
       ? null
       : `"${comparison}" doesn't apply to even or odd`;
   }
+  if (STAR_STAT_FIELDS.has(field) && value === "*") {
+    return comparison === ":" || comparison === "=" || comparison === "!="
+      ? null
+      : `"${comparison}" doesn't apply to "*"`;
+  }
+  if (field === "year" && isSetCode(value)) return null;
   if (NUMERIC_FIELDS.has(field) && !/^-?\d+(\.\d+)?$/.test(value)) {
     return `"${value}" isn't a number`;
   }
   if ((field === "color" || field === "identity") && parseColors(value) === null) {
     return `"${value}" isn't a color`;
+  }
+  if (field === "mana" && parseManaQuery(value).isEmpty) {
+    return `"${value}" isn't a mana cost`;
+  }
+  if (field === "devotion" && !isNonNegativeInteger(value) && !isOnlyCharacters(value, "wubrg")) {
+    return `"${value}" isn't a devotion value (colors like ggg or a number)`;
   }
   if (field === "rarity" && rarityName(value) === null) return `"${value}" isn't a rarity`;
   if (field === "is" && !ALL_IS_VALUES.has(value.toLowerCase())) {
@@ -562,14 +765,17 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
   if ((field === "banned" || field === "restricted") && !/^[a-z]+$/i.test(value)) {
     return `"${value}" isn't a format`;
   }
-  if (field === "produces" && !/^[wubrgc]+$/i.test(value)) {
-    return `"${value}" isn't a mana color (W, U, B, R, G or C)`;
+  if (field === "produces" && !isNonNegativeInteger(value) && !/^[wubrgc]+$/i.test(value)) {
+    return `"${value}" isn't a mana color (W, U, B, R, G, C or a number)`;
   }
   if (field === "border" && !BORDERS.some((border) => border === value.toLowerCase())) {
     return `"${value}" isn't a border (${BORDERS.join(", ")})`;
   }
-  if (field === "date" && !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(value)) {
-    return `"${value}" isn't a date (write 2024, 2024-08 or 2024-08-02)`;
+  if (field === "stamp" && !SECURITY_STAMPS.some((stamp) => stamp === value.toLowerCase())) {
+    return `"${value}" isn't a security stamp (${SECURITY_STAMPS.join(", ")})`;
+  }
+  if (field === "date" && !isSetCode(value) && !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(value)) {
+    return `"${value}" isn't a date (write 2024, 2024-08, 2024-08-02 or a set code)`;
   }
   if (field === "number" && comparison !== ":" && comparison !== "=" && !/^\d+$/.test(value)) {
     return `"${value}" isn't a number`;
@@ -579,14 +785,18 @@ function valueProblem(field: SearchField, comparison: Comparison, value: string)
     "oracle",
     "type",
     "set",
+    "setType",
     "format",
-    "mana",
     "is",
     "keyword",
     "artist",
-    "produces",
     "border",
     "frame",
+    "layout",
+    "in",
+    "flavor",
+    "watermark",
+    "stamp",
     "fullOracle",
     "tag",
     "theme",
@@ -648,16 +858,17 @@ const COLOR_NAMES: Readonly<Record<string, readonly Color[]>> = {
   ),
 };
 
-/** A color value: "multicolored", "colorless", or a set of colors. */
+/** A color value: "multicolored", "colorless", a count of colors, or a set of colors. */
 export type ColorValue =
   | Readonly<{ kind: "multicolored" }>
   | Readonly<{ kind: "colorless" }>
+  | Readonly<{ kind: "count"; count: number }>
   | Readonly<{ kind: "colors"; colors: readonly Color[] }>;
 
 /**
  * Reads a color value: letters (`rw`, `wubrg`), color names (`red`), guild, shard and wedge
- * names (`simic`, `esper`, `abzan`), `m` / `multicolor` and `c` / `colorless`. Null if it isn't
- * a color.
+ * names (`simic`, `esper`, `abzan`), `m` / `multicolor`, `c` / `colorless`, `mono`, or a
+ * color count (`0`–`5`). Null if it isn't a color.
  */
 export function parseColors(value: string): ColorValue | null {
   const text = value.toLowerCase();
@@ -665,6 +876,13 @@ export function parseColors(value: string): ColorValue | null {
     return { kind: "multicolored" };
   }
   if (text === "c" || text === "colorless") return { kind: "colorless" };
+  if (text === "mono" || text === "monocolor" || text === "monocolored") {
+    return { kind: "count", count: 1 };
+  }
+  if (isNonNegativeInteger(text)) {
+    const count = Number(text);
+    return count <= 5 ? { kind: "count", count } : null;
+  }
   const named = COLOR_NAMES[text.replace(/[^a-z]/g, "")];
   if (named !== undefined) return { kind: "colors", colors: named };
   if (/^[wubrg]+$/.test(text)) {
@@ -681,20 +899,52 @@ export function rarityName(value: string): string | null {
   return RARITY_SHORT[text] ?? null;
 }
 
-/** The mana symbols in a cost search (`{G}{G}`, `gg` or `2g`), each with how many are needed. */
-export function manaSymbols(value: string): Map<string, number> {
+type ParsedManaQuery = Readonly<{
+  /** Generic mana amount (`{2}` → 2, `10g` → 10), or null when no generic component was given. */
+  generic: number | null;
+  /** Non-generic mana symbols and their counts (`{G}` → 2, `{W/U}` → 1). */
+  symbols: ReadonlyMap<string, number>;
+  /** True when the input contained no recognizable mana symbols. */
+  isEmpty: boolean;
+}>;
+
+/**
+ * Parses a mana cost query (`{2}{G}{G}`, `2gg`, `10g`, `{W/U}{P}`) into its generic amount and
+ * non-generic symbol counts.
+ */
+export function parseManaQuery(value: string): ParsedManaQuery {
   const symbols = new Map<string, number>();
-  const add = (symbol: string) => symbols.set(symbol, (symbols.get(symbol) ?? 0) + 1);
-  const braced = value.match(/\{[^}]+\}/g);
-  if (braced) {
-    for (const symbol of braced) add(symbol.toUpperCase());
-  } else {
-    for (const character of value.toUpperCase()) {
-      if (/[WUBRGCXS]/.test(character)) add(`{${character}}`);
-      else if (/\d/.test(character)) add(`{${character}}`);
+  let generic: number | null = null;
+  const addSymbol = (symbol: string) => symbols.set(symbol, (symbols.get(symbol) ?? 0) + 1);
+  const addGeneric = (amount: number) => {
+    generic = (generic ?? 0) + amount;
+  };
+  const upper = value.toUpperCase();
+  let index = 0;
+  while (index < upper.length) {
+    const character = upper[index];
+    if (character === "{") {
+      const close = upper.indexOf("}", index + 1);
+      if (close === -1) break;
+      const inner = upper.slice(index + 1, close);
+      if (inner.length > 0) {
+        if (isNonNegativeInteger(inner)) addGeneric(Number(inner));
+        else addSymbol(`{${inner}}`);
+      }
+      index = close + 1;
+    } else if (character >= "0" && character <= "9") {
+      let end = index + 1;
+      while (end < upper.length && upper[end] >= "0" && upper[end] <= "9") end++;
+      addGeneric(Number(upper.slice(index, end)));
+      index = end;
+    } else if ("WUBRGCXS".includes(character)) {
+      addSymbol(`{${character}}`);
+      index++;
+    } else {
+      index++;
     }
   }
-  return symbols;
+  return { generic, symbols, isEmpty: generic === null && symbols.size === 0 };
 }
 
 /**
