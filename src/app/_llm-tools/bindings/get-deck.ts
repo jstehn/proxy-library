@@ -61,21 +61,21 @@ export const getDeckBinding = defineBinding({
   async call(capabilities, actor, input) {
     const { deckId } = input;
     const asked = { ...input, include: input.include ?? [] };
-    const overview = await capabilities.deckOverview(actor, {
-      deckId,
-      parts: overviewPartsFor(asked),
-    });
-    if (!overview.ok) return overview;
     const wants = (name: (typeof asked.include)[number]) => asked.include.includes(name);
-    const [facts, signals, manaPlan] = await Promise.all([
-      wants("facts")
-        ? capabilities.deckFacts({ view: overview.value.view, includeMaybe: false })
-        : undefined,
+    const [overview, signals, manaPlan] = await Promise.all([
+      capabilities.deckOverview(actor, {
+        deckId,
+        parts: overviewPartsFor(asked),
+      }),
       wants("signals")
         ? capabilities.deckSignals({ userId: actor.userId, deckId, minimumCards: 1 })
         : undefined,
       wants("mana_plan") ? capabilities.deckManaPlan({ userId: actor.userId, deckId }) : undefined,
     ]);
+    if (!overview.ok) return overview;
+    const facts = wants("facts")
+      ? await capabilities.deckFacts({ view: overview.value.view, includeMaybe: false })
+      : undefined;
     return ok({
       overview: overview.value,
       ...(facts?.ok ? { facts: facts.value } : {}),

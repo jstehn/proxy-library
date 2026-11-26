@@ -29,13 +29,6 @@ export async function suggestionContext(
 ): Promise<SuggestionContext | null> {
   const view = await deckView(db, userId, deckId);
   if (view === null) return null;
-  const keywordRows = await db.execute<{ oracle_id: string; keywords: string[] }>(sql`
-    select p.oracle_id, array_agg(distinct keyword) as keywords
-      from printings p cross join unnest(p.keywords) as keyword
-     where p.oracle_id = any(${textArray(view.lines.map((line) => line.oracleId))})
-     group by p.oracle_id
-  `);
-  const keywords = new Map(keywordRows.rows.map((row) => [row.oracle_id, row.keywords]));
 
   const rules = formatRules(view.deck.format);
   const commanders = view.lines.filter((line) => line.board === "commander");
@@ -76,7 +69,7 @@ export async function suggestionContext(
     colorLimit,
     inDeck: atLimit,
     countedQuantities,
-    lines: view.lines.map((line) => ({ ...line, keywords: keywords.get(line.oracleId) ?? [] })),
+    lines: view.lines,
     commanderOracleIds: rules.hasCommandZone ? commanders.map((line) => line.oracleId) : [],
     targetBracket: view.deck.targetBracket,
     bracketLines: view.lines.map(bracketLine),

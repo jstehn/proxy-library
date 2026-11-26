@@ -100,27 +100,6 @@ export async function landPoolsForDeck(
   const { deckId } = context;
   const playable = playableLand(context.format, context.colorLimit);
 
-  // Every land you own: decks share cards, so other decks only show up as a note.
-  const owned = await db.execute<LandRow>(sql`
-    with owned as ${ownedPerCard(userId, context.usesRealCards)}
-    select ${LAND_COLUMNS}, owned.owned, null::int as price_cents,
-           (select array_agg(distinct d.name order by d.name) from deck_entries e
-              join decks d on d.id = e.deck_id
-             where d.owner_id = ${userId} and d.id <> ${deckId}
-               and e.oracle_id = owned.oracle_id and e.board <> 'maybe') as also_in
-      from owned join printings p on p.id = owned.printing_id
-     where ${playable}
-     order by p.name
-  `);
-
-  const basics = await db.execute<LandRow>(sql`
-    select distinct on (p.name) ${LAND_COLUMNS}, 0 as owned, null::int as price_cents,
-           null::text[] as also_in
-      from printings p
-     where p.name = any(${textArray(BASIC_NAMES)}) and p.type_line ~ '^Basic\\y.*\\yLand\\y'
-     order by p.name, p.id
-  `);
-
   // Store lands worth a look: two of the deck's colors (one, for a one-color deck), or a role
   // or theme the deck has. Each at its cheapest printing for sale.
   const stats = deckStats(context.lines);
@@ -133,16 +112,37 @@ export async function landPoolsForDeck(
   const deckRoles = profile.gaps.map((gap) => gap.tag);
   const themes = [...new Set([...profile.themes, ...extraThemes])];
   const colorsWanted = Math.min(2, Math.max(1, deckColors.length));
-  const store = await db.execute<LandRow>(sql`
-    with fits as (
-      select p.oracle_id,
-             (select count(*) from unnest(p.produced_mana) as made
-               where made = any(${textArray(deckColors)})) >= ${colorsWanted} as colors_fit,
-             coalesce(${featureArray("role_tags")} && ${textArray(deckRoles)}, false) as role_fit,
-             coalesce(${featureArray("theme_tags")} && ${textArray(themes)}, false) as theme_fit
-        from printings p join card_sets s on s.code = p.set_code and s.is_enabled
-       where ${playable} and ${notOwned(userId, context.usesRealCards)}
-    ),
+
+  const [owned, basics, store] = await Promise.all([
+    // Every land you own: decks share cards, so other decks only show up as a note.
+    db.execute<LandRow>(sql`
+      with owned as ${ownedPerCard(userId, context.usesRealCards)}
+      select ${LAND_COLUMNS}, owned.owned, null::int as price_cents,
+             (select array_agg(distinct d.name order by d.name) from deck_entries e
+                join decks d on d.id = e.deck_id
+               where d.owner_id = ${userId} and d.id <> ${deckId}
+                 and e.oracle_id = owned.oracle_id and e.board <> 'maybe') as also_in
+        from owned join printings p on p.id = owned.printing_id
+       where ${playable}
+       order by p.name
+    `),
+    db.execute<LandRow>(sql`
+      select distinct on (p.name) ${LAND_COLUMNS}, 0 as owned, null::int as price_cents,
+             null::text[] as also_in
+        from printings p
+       where p.name = any(${textArray(BASIC_NAMES)}) and p.type_line ~ '^Basic\\y.*\\yLand\\y'
+       order by p.name, p.id
+    `),
+    db.execute<LandRow>(sql`
+      with fits as (
+        select p.oracle_id,
+               (select count(*) from unnest(p.produced_mana) as made
+                 where made = any(${textArray(deckColors)})) >= ${colorsWanted} as colors_fit,
+               coalesce(${featureArray("role_tags")} && ${textArray(deckRoles)}, false) as role_fit,
+               coalesce(${featureArray("theme_tags")} && ${textArray(themes)}, false) as theme_fit
+          from printings p join card_sets s on s.code = p.set_code and s.is_enabled
+         where ${playable} and ${notOwned(userId, context.usesRealCards)}
+      ),
     -- The best-fitting lands first (colours, then role, then theme), not an arbitrary few.
     matching as (
       select oracle_id
@@ -160,7 +160,8 @@ export async function landPoolsForDeck(
     )
     select ${LAND_COLUMNS}, 0 as owned, cheapest.usd_cents as price_cents, null::text[] as also_in
       from cheapest join printings p on p.id = cheapest.printing_id
-  `);
+    `),
+  ]);
 
   // Lands over the deck's target bracket (a Game Changer land) are never offered.
   const withinTarget = (row: LandRow) => {

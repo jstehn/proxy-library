@@ -46,15 +46,21 @@ export async function makeDeckFor(
   seat: Seat,
   facts: FactsLookup,
   now: Date,
+  prefetched?: Readonly<{
+    setName: string;
+    basicLands: Awaited<ReturnType<DraftsServices["draftCatalog"]["basicLands"]>>;
+  }>,
 ): Promise<Result<DeckId, TooManyDecks>> {
   const build = suggestBuild(poolOf(draft, seat.seatNumber), facts);
-  const setName = await services.draftCatalog.setName(draft.setCode);
+  const [setName, ownedBasics, catalogBasics] = await Promise.all([
+    prefetched ? Promise.resolve(prefetched.setName) : services.draftCatalog.setName(draft.setCode),
+    services.draftCatalog.ownedBasics(seat.userId),
+    prefetched
+      ? Promise.resolve(prefetched.basicLands)
+      : services.draftCatalog.basicLands(draft.setCode),
+  ]);
   // Basics come from the player's own collection, topped up for free when short (rule 17).
-  const lands = planBasicLands(
-    build.basics,
-    await services.draftCatalog.ownedBasics(seat.userId),
-    await services.draftCatalog.basicLands(draft.setCode),
-  );
+  const lands = planBasicLands(build.basics, ownedBasics, catalogBasics);
   if (lands.free.length > 0) {
     await receiveCards(services, seat.userId, lands.free, {
       source: "draft",
@@ -85,10 +91,14 @@ export async function makeDeckFor(
 }
 
 async function finish(services: DraftsServices, draft: Draft, now: Date): Promise<void> {
-  const facts = await loadFacts(services, draft);
+  const [facts, setName, basicLands] = await Promise.all([
+    loadFacts(services, draft),
+    services.draftCatalog.setName(draft.setCode),
+    services.draftCatalog.basicLands(draft.setCode),
+  ]);
   // A player at the deck limit gets no deck now; the draft page offers "Make a deck" later.
   for (const seat of draft.seats.filter((each) => !isBot(each))) {
-    await makeDeckFor(services, draft, seat, facts, now);
+    await makeDeckFor(services, draft, seat, facts, now, { setName, basicLands });
   }
   // A draft with bots is an admin's test: the feed doesn't announce it.
   if (draft.seats.some(isBot)) return;
@@ -97,7 +107,7 @@ async function finish(services: DraftsServices, draft: Draft, now: Date): Promis
     {
       kind: "draft",
       actorId: draft.hostId,
-      setName: await services.draftCatalog.setName(draft.setCode),
+      setName,
       players: draft.seats.length,
     },
     now,

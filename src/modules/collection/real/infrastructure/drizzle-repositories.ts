@@ -32,16 +32,17 @@ export function drizzleRealCollectionRepository(db: DbExecutor): RealCollectionR
   }
 
   async function remove(userId: UserId, copies: readonly RealCopy[]) {
-    for (const copy of copies) {
-      await db
-        .delete(realCards)
-        .where(
-          and(
-            eq(realCards.userId, userId),
-            eq(realCards.printingId, copy.printingId),
-            eq(realCards.finish, copy.finish),
-          ),
-        );
+    for (let offset = 0; offset < copies.length; offset += CHUNK) {
+      const batch = copies.slice(offset, offset + CHUNK);
+      const printingIds = batch.map((copy) => copy.printingId);
+      const finishes = batch.map((copy) => copy.finish);
+      await db.execute(sql`
+        delete from real_cards
+         where user_id = ${userId}
+           and (printing_id, finish) in (
+             select * from unnest(${sql.param(printingIds)}::text[], ${sql.param(finishes)}::text[])
+           )
+      `);
     }
   }
 

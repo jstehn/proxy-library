@@ -9,7 +9,6 @@ import type { Finish } from "../domain/types";
 import { cardSets, printings, syncRuns } from "../infrastructure/schema";
 import {
   PRINTING_CARD_COLUMNS,
-  printingCards,
   toPrintingCard,
   type PrintingCard,
   type PrintingCardRow,

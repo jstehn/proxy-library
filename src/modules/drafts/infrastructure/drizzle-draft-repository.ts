@@ -281,27 +281,29 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     const query = db.select().from(drafts).where(eq(drafts.id, draftId));
     const [row] = forUpdate ? await query.for("update") : await query;
     if (row === undefined) return null;
-    const seats = await db.select().from(draftSeats).where(eq(draftSeats.draftId, draftId));
-    const basics = await db
-      .select()
-      .from(draftBasics)
-      .where(eq(draftBasics.draftId, draftId))
-      .orderBy(asc(draftBasics.position));
-    const packs = await db
-      .select()
-      .from(draftPacks)
-      .where(eq(draftPacks.draftId, draftId))
-      .orderBy(asc(draftPacks.packNumber));
-    const cards = await db
-      .select()
-      .from(draftCards)
-      .where(eq(draftCards.draftId, draftId))
-      .orderBy(asc(draftCards.packNumber), asc(draftCards.slot));
-    const reveals = await db
-      .select()
-      .from(draftReveals)
-      .where(eq(draftReveals.draftId, draftId))
-      .orderBy(asc(draftReveals.position));
+    const [seats, basics, packs, cards, reveals] = await Promise.all([
+      db.select().from(draftSeats).where(eq(draftSeats.draftId, draftId)),
+      db
+        .select()
+        .from(draftBasics)
+        .where(eq(draftBasics.draftId, draftId))
+        .orderBy(asc(draftBasics.position)),
+      db
+        .select()
+        .from(draftPacks)
+        .where(eq(draftPacks.draftId, draftId))
+        .orderBy(asc(draftPacks.packNumber)),
+      db
+        .select()
+        .from(draftCards)
+        .where(eq(draftCards.draftId, draftId))
+        .orderBy(asc(draftCards.packNumber), asc(draftCards.slot)),
+      db
+        .select()
+        .from(draftReveals)
+        .where(eq(draftReveals.draftId, draftId))
+        .orderBy(asc(draftReveals.position)),
+    ]);
 
     const cardsByPack = new Map<number, DraftCard[]>();
     for (const card of cards) {

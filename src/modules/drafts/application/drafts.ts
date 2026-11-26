@@ -2,7 +2,7 @@ import type { Actor } from "@/modules/accounts";
 import { SetCode, type Color } from "@/modules/catalog";
 import type { DeckId, TooManyDecks } from "@/modules/decks";
 import { ItemId, openPackForDraft } from "@/modules/inventory";
-import { openBooster } from "@/modules/packs";
+import { loadBooster, openBooster, openPack } from "@/modules/packs";
 import { receive, spend, type InsufficientFunds } from "@/modules/wallet";
 import { Cents, err, ok, seededRng, type Result } from "@/shared/kernel";
 import { peekAtPack, watchPlayer } from "../domain/actions";
@@ -356,12 +356,14 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, LeaveDraftError>(draftId, async (services, draft, now) => {
       const left = leaveTable(draft, actor.userId);
       if (!left.ok) return left;
+      const setName =
+        left.value.refunds.length > 0 ? await services.draftCatalog.setName(draft.setCode) : "";
       for (const refund of left.value.refunds) {
         await receive(services, {
           userId: refund.userId,
           amount: refund.amount,
           kind: "draft_refund",
-          note: `${await services.draftCatalog.setName(draft.setCode)} draft`,
+          note: `${setName} draft`,
           ref: `draft:${draft.id}`,
           now,
         });
@@ -379,19 +381,19 @@ export function makeDrafts(dependencies: DraftsDependencies) {
     return withDraft<void, StartDraftError>(draftId, async (services, draft, now) => {
       const ready = checkCanStart(draft, actor.userId);
       if (!ready.ok) return ready;
+      const loaded = await loadBooster(services, {
+        setCode: draft.setCode,
+        boosterType: draft.boosterType,
+      });
+      if (loaded === null) return err({ kind: "BoosterNotDraftable" });
       const opened: OpenedPack[][] = [];
       // One row of packs per seat, in the order seats will sit (startTable renumbers them so).
       for (let seat = 0; seat < seatsInOrder(draft).length; seat += 1) {
         const packs: OpenedPack[] = [];
         for (let round = 1; round <= DRAFT_STYLES[draft.style].packsPerPlayer; round += 1) {
           const seed = seeds.newSeed();
-          const pack = await openBooster(services, {
-            setCode: draft.setCode,
-            boosterType: draft.boosterType,
-            seed,
-          });
-          if (!pack.ok) return err({ kind: "BoosterNotDraftable" });
-          packs.push({ seed, cards: pack.value.cards });
+          const pack = openPack(loaded.config, loaded.facts, seed);
+          packs.push({ seed, cards: pack.cards });
         }
         opened.push(packs);
       }
