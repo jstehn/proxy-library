@@ -62,8 +62,12 @@ The tools are `get_account`, `list_decks`, `get_deck`, `create_deck`, `update_de
 
 13. **`search_cards`** has three modes (syntax, semantic, signals). `search_for_deck`-style queries
     stay inside the deck: within the commander's colour identity, legal in the deck's format unless
-    casual, not already on any board, avoid cards left out; each card lists the synergies it matched.
-    (doc 28 §4 rules 12-13, doc 54 §4 rule 1, doc 58 §4 rule 2; `search-for-deck.test.ts`)
+    casual, not already on any board, avoid cards left out; each card lists the synergies it matched
+    (omitted when a single unnamed `search` is used). Syntax searches (deck, batched `queries`, or
+    plain catalog/collection) accept optional `sort` (`price_desc`, `added_desc`, `mv`, `name`) and
+    omit empty metadata fields (`notes`, `hint`, `capped: false`, `leftOutOverTarget`, `pageCount: 1`)
+    to keep responses compact.
+    (doc 28 §4 rules 12-13, doc 54 §4 rule 1, doc 58 §4 rule 2, doc 71; `search-for-deck.test.ts`)
 14. **The search language** (`@/shared/card-search`, ADR 0017): `o:` reads rules text without
     reminder text, `fo:` with it; each land-cycle `is:` value matches its cycle only (checked against
     real cards and near-misses); an `otag:`/`function:` value maps to a tag or theme or is noted, never

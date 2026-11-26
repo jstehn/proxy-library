@@ -45,19 +45,31 @@ export function presentSemantic(
 }
 
 type SynergyCard = SearchForDeck["cards"][number];
+type QuerySummary = SearchForDeck["queries"][number];
+
+function presentQueryReport(query: QuerySummary) {
+  return {
+    synergy: query.synergy,
+    found: query.found,
+    shown: query.shown,
+    ...(query.capped ? { capped: true } : {}),
+    ...(query.notes.length > 0 ? { notes: query.notes } : {}),
+    ...(query.hint !== null ? { hint: query.hint } : {}),
+  };
+}
 
 function presentSynergyCard(
   card: SynergyCard,
-  options: Readonly<{ includeText: boolean; showPrice: boolean }>,
+  options: Readonly<{ includeText: boolean; showPrice: boolean; showSynergies: boolean }>,
 ) {
   return {
     name: card.name,
-    manaCost: card.manaCost,
+    ...(card.manaCost ? { manaCost: card.manaCost } : {}),
     typeLine: card.typeLine,
     ...(options.includeText && card.text ? { text: card.text } : {}),
     owned: card.owned,
     ...(options.showPrice ? { priceCents: priceCents(card.priceCents) } : {}),
-    synergies: card.synergies,
+    ...(options.showSynergies ? { synergies: card.synergies } : {}),
     ...(card.isGameChanger ? { isGameChanger: true } : {}),
   };
 }
@@ -69,13 +81,19 @@ export function presentDeckSearch(
   avoided: readonly string[],
   options: Readonly<{ includeText: boolean; showPrice: boolean }>,
 ): unknown {
+  const showSynergies =
+    result.queries.length > 1 ||
+    (result.queries.length === 1 && result.queries[0].synergy !== "search");
+  const { targetBracket, ...deckBase } = result.deck;
   return {
-    deck: result.deck,
-    leftOutOverTarget: result.leftOutOverTarget,
+    deck: {
+      ...deckBase,
+      ...(targetBracket !== null ? { targetBracket } : {}),
+    },
+    ...(result.leftOutOverTarget.length > 0 ? { leftOutOverTarget: result.leftOutOverTarget } : {}),
     ...(avoided.length > 0 ? { leftOutAvoid: avoided } : {}),
-    goal: null,
-    queries: result.queries,
-    cards: cards.map((card) => presentSynergyCard(card, options)),
+    queries: result.queries.map(presentQueryReport),
+    cards: cards.map((card) => presentSynergyCard(card, { ...options, showSynergies })),
   };
 }
 
@@ -85,8 +103,10 @@ export function presentCatalogQueries(
   options: Readonly<{ includeText: boolean; showPrice: boolean }>,
 ): unknown {
   return {
-    queries: result.queries,
-    cards: result.cards.map((card) => presentSynergyCard(card, options)),
+    queries: result.queries.map(presentQueryReport),
+    cards: result.cards.map((card) =>
+      presentSynergyCard(card, { ...options, showSynergies: true }),
+    ),
   };
 }
 
@@ -97,9 +117,9 @@ export function presentCatalogSearch(
 ): unknown {
   if (result.kind === "owned") {
     return {
-      notes: result.notes,
+      ...(result.notes.length > 0 ? { notes: result.notes } : {}),
       totals: result.totals,
-      pageCount: result.pageCount,
+      ...(result.pageCount > 1 ? { pageCount: result.pageCount } : {}),
       cards: result.cards.slice(0, options.limit).map((card) => ({
         name: card.name,
         ...(card.set ? { set: card.set } : {}),
@@ -111,9 +131,9 @@ export function presentCatalogSearch(
     };
   }
   return {
-    notes: result.notes,
+    ...(result.notes.length > 0 ? { notes: result.notes } : {}),
     total: result.total,
-    pageCount: result.pageCount,
+    ...(result.pageCount > 1 ? { pageCount: result.pageCount } : {}),
     cards: result.cards.slice(0, options.limit).map((card) => ({
       name: card.name,
       ...(card.set ? { set: card.set } : {}),

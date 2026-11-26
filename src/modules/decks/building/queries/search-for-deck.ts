@@ -21,6 +21,7 @@ import {
   type QueryReport,
   type SearchPool,
   type SynergyQuery,
+  type SynergySort,
 } from "../domain/search-for-deck";
 import { deckBrowseContext } from "./browse";
 import { deckView } from "@/modules/decks/core";
@@ -38,6 +39,7 @@ export type SearchForDeckInput = Readonly<{
   perQuery: number;
   /** Store cards above this price (cents) are left out. */
   maxPriceCents: number | null;
+  sort?: SynergySort;
 }>;
 
 export type SearchForDeck = Readonly<{
@@ -106,6 +108,7 @@ type Row = {
   is_game_changer: boolean;
   owned: number;
   price_cents: number | null;
+  last_acquired_at?: Date | string | null;
   total: number;
 };
 
@@ -122,6 +125,7 @@ type CatalogSynergySearchInput = Readonly<{
   perQuery: number;
   /** Store cards above this price (cents) are left out. */
   maxPriceCents: number | null;
+  sort?: SynergySort;
 }>;
 
 export type CatalogSynergySearch = Readonly<{
@@ -136,23 +140,60 @@ type QueryScope = Readonly<{
   fits: SQL;
 }>;
 
+function ownedOrder(sort?: SynergySort): SQL {
+  switch (sort) {
+    case "mv":
+      return sql`p.mana_value asc, p.name`;
+    case "price_desc":
+      return sql`price_cents desc nulls last, p.name`;
+    case "added_desc":
+      return sql`last_acquired_at desc nulls last, p.name`;
+    default:
+      return sql`p.name`;
+  }
+}
+
+function storeOrder(sort?: SynergySort): SQL {
+  switch (sort) {
+    case "mv":
+      return sql`p.mana_value asc, cheapest.usd_cents, p.name`;
+    case "price_desc":
+      return sql`cheapest.usd_cents desc, p.name`;
+    case "name":
+      return sql`p.name`;
+    default:
+      return sql`cheapest.usd_cents, p.name`;
+  }
+}
+
 /** Your cards matching a search, as your most special copy of each. */
 async function ownedHits(
   db: DbExecutor,
   scope: QueryScope,
   condition: SQL,
   limit: number,
+  sort?: SynergySort,
 ): Promise<Row[]> {
   const realOnly = scope.onlyRealCards ? sql`owned.owned_real > 0` : sql`true`;
   const ownedCount = scope.onlyRealCards ? sql`owned.owned_real` : sql`owned.owned`;
+  const lastAcquiredColumn =
+    sort === "added_desc"
+      ? sql`, greatest(
+            (select max(a.created_at) from acquisitions a
+              where a.user_id = ${scope.userId} and a.printing_id = p.id and a.quantity > 0),
+            (select max(rc.added_at) from real_cards rc
+              where rc.user_id = ${scope.userId} and rc.printing_id = p.id and ${scope.usesRealCards})
+          ) as last_acquired_at`
+      : sql``;
   const rows = await db.execute<Row>(sql`
     with owned as ${ownedPerCard(scope.userId, scope.usesRealCards)}
     select ${CARD_COLUMNS}, ${ownedCount} as owned,
-           ${latestPrice("p.id", "owned.finish")} as price_cents,
+           ${latestPrice("p.id", "owned.finish")} as price_cents
+           ${lastAcquiredColumn},
            count(*) over ()::int as total
       from owned join printings p on p.id = owned.printing_id
      where ${condition} and ${scope.fits} and ${realOnly}
-     order by p.name
+     order by ${ownedOrder(sort)}
      limit ${limit}
   `);
   return rows.rows;
@@ -165,6 +206,7 @@ async function storeHits(
   condition: SQL,
   limit: number,
   maxPriceCents: number | null,
+  sort?: SynergySort,
 ): Promise<Row[]> {
   const priceLimit =
     maxPriceCents === null ? sql`true` : sql`cheapest.usd_cents <= ${maxPriceCents}`;
@@ -184,13 +226,19 @@ async function storeHits(
            count(*) over ()::int as total
       from cheapest join printings p on p.id = cheapest.printing_id
      where ${priceLimit}
-     order by cheapest.usd_cents, p.name
+     order by ${storeOrder(sort)}
      limit ${limit}
   `);
   return rows.rows;
 }
 
 function toFound(row: Row): FoundCard {
+  const lastAcquiredAt =
+    row.last_acquired_at === undefined || row.last_acquired_at === null
+      ? undefined
+      : row.last_acquired_at instanceof Date
+        ? row.last_acquired_at
+        : new Date(row.last_acquired_at);
   return {
     oracleId: row.oracle_id,
     printingId: row.printing_id,
@@ -204,6 +252,7 @@ function toFound(row: Row): FoundCard {
     isGameChanger: row.is_game_changer,
     owned: Number(row.owned),
     priceCents: row.price_cents === null ? null : Number(row.price_cents),
+    ...(lastAcquiredAt !== undefined ? { lastAcquiredAt } : {}),
   };
 }
 
@@ -213,6 +262,7 @@ type RunQueriesOptions = Readonly<{
   includeStore: boolean;
   perQuery: number;
   maxPriceCents: number | null;
+  sort?: SynergySort;
   deckId?: number;
 }>;
 
@@ -235,9 +285,9 @@ async function runSynergyQueries(
         ...(options.deckId !== undefined ? { deckId: options.deckId } : {}),
       });
       const [owned, store] = await Promise.all([
-        options.includeOwned ? ownedHits(db, scope, condition, perQuery) : [],
+        options.includeOwned ? ownedHits(db, scope, condition, perQuery, options.sort) : [],
         options.includeStore
-          ? storeHits(db, scope, condition, perQuery, options.maxPriceCents)
+          ? storeHits(db, scope, condition, perQuery, options.maxPriceCents, options.sort)
           : [],
       ]);
       const found = Number(owned[0]?.total ?? 0) + Number(store[0]?.total ?? 0);
@@ -247,7 +297,7 @@ async function runSynergyQueries(
     }),
   );
 
-  return searchForDeckResult(hits, perQuery);
+  return searchForDeckResult(hits, perQuery, options.sort);
 }
 
 /** Runs every query for one of your decks; null if the deck isn't yours. */
@@ -275,6 +325,7 @@ export async function searchForDeck(
     includeStore: input.where !== "owned",
     perQuery: input.perQuery,
     maxPriceCents: input.maxPriceCents,
+    sort: input.sort,
     deckId: input.deckId,
   });
 
@@ -309,5 +360,6 @@ export async function searchCatalogQueries(
     includeStore: input.where === "store" || input.where === "both",
     perQuery: input.perQuery,
     maxPriceCents: input.maxPriceCents,
+    sort: input.sort,
   });
 }

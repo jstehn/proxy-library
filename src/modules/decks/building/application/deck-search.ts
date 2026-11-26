@@ -1,6 +1,7 @@
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import { withoutAvoidCards, type DeckPlan } from "@/modules/decks/core/client";
 import type { DeckNotFound } from "@/modules/decks/core/client";
+import type { SynergySort } from "../domain/search-for-deck";
 
 // Searching for cards for one deck (audit S1: search_cards with a deck): the synergy search
 // ("Treasure makers"), and the search by meaning. Both leave out the deck's "avoid" cards and say
@@ -12,6 +13,7 @@ export type DeckSearchRequest = Readonly<{
   where: "owned" | "store" | "both";
   perQuery: number;
   maxPriceCents: number | null;
+  sort?: SynergySort;
 }>;
 
 type CatalogQueriesRequest = Readonly<{
@@ -19,6 +21,7 @@ type CatalogQueriesRequest = Readonly<{
   where: "owned" | "game" | "real" | "store" | "both";
   perQuery: number;
   maxPriceCents: number | null;
+  sort?: SynergySort;
 }>;
 
 export type SemanticRequest = Readonly<{

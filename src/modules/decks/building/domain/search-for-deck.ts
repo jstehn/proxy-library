@@ -16,6 +16,9 @@ export type SynergyQuery = Readonly<{ synergy: string; search: string }>;
 export const SEARCH_POOLS = ["owned", "store", "both"] as const;
 export type SearchPool = (typeof SEARCH_POOLS)[number];
 
+/** Optional sort override for synergy searches; omitting it uses rule 13's synergy/owned ranking. */
+export type SynergySort = "price_desc" | "added_desc" | "mv" | "name";
+
 /** A card one query found. */
 export type FoundCard = CardIdentity &
   Pick<CardFacts, "name" | "manaCost" | "manaValue" | "typeLine" | "text"> &
@@ -28,6 +31,8 @@ export type FoundCard = CardIdentity &
     owned: number;
     /** The store's price for the printing above, in cents; null when it isn't for sale. */
     priceCents: number | null;
+    /** Latest acquisition time for owned cards, populated only when sorting by `added_desc`. */
+    lastAcquiredAt?: Date | null;
   }>;
 
 /** What one query found, before merging. */
@@ -71,16 +76,49 @@ export function mergeHits(hits: readonly QueryHits[]): MergedCard[] {
   return [...merged.values()].map(({ card, synergies }) => ({ ...card, synergies }));
 }
 
-/** Rule 13: more synergies first, then owned before store-only, then cheaper, then by name. */
-export function rankFound(cards: readonly MergedCard[]): MergedCard[] {
+/**
+ * Orders merged hits: by explicit `sort` when requested, otherwise rule 13 (more synergies first,
+ * then owned before store-only, then cheaper, then by name).
+ */
+export function rankFound(cards: readonly MergedCard[], sort?: SynergySort): MergedCard[] {
+  const byName = (a: MergedCard, b: MergedCard) =>
+    a.name.localeCompare(b.name) || a.oracleId.localeCompare(b.oracleId);
+  if (sort === "mv") {
+    return [...cards].sort(
+      (a, b) =>
+        a.manaValue - b.manaValue ||
+        b.synergies.length - a.synergies.length ||
+        Number(b.owned > 0) - Number(a.owned > 0) ||
+        byName(a, b),
+    );
+  }
+  if (sort === "price_desc") {
+    return [...cards].sort(
+      (a, b) =>
+        (b.priceCents ?? -1) - (a.priceCents ?? -1) ||
+        b.synergies.length - a.synergies.length ||
+        byName(a, b),
+    );
+  }
+  if (sort === "added_desc") {
+    return [...cards].sort(
+      (a, b) =>
+        (b.lastAcquiredAt?.getTime() ?? -1) - (a.lastAcquiredAt?.getTime() ?? -1) ||
+        Number(b.owned > 0) - Number(a.owned > 0) ||
+        b.synergies.length - a.synergies.length ||
+        byName(a, b),
+    );
+  }
+  if (sort === "name") {
+    return [...cards].sort(byName);
+  }
   const price = (card: MergedCard) => (card.owned > 0 ? 0 : (card.priceCents ?? Infinity));
   return [...cards].sort(
     (a, b) =>
       b.synergies.length - a.synergies.length ||
       Number(b.owned > 0) - Number(a.owned > 0) ||
       price(a) - price(b) ||
-      a.name.localeCompare(b.name) ||
-      a.oracleId.localeCompare(b.oracleId),
+      byName(a, b),
   );
 }
 
@@ -100,6 +138,7 @@ export function queryHint(hits: QueryHits, perQuery: number): string | null {
 export function searchForDeckResult(
   hits: readonly QueryHits[],
   perQuery: number,
+  sort?: SynergySort,
 ): { queries: QueryReport[]; cards: MergedCard[] } {
   const queries = hits.map((each) => ({
     synergy: each.query.synergy,
@@ -110,6 +149,6 @@ export function searchForDeckResult(
     notes: each.notes,
     hint: queryHint(each, perQuery),
   }));
-  const cards = rankFound(mergeHits(hits)).slice(0, SEARCH_FOR_DECK_LIMITS.merged);
+  const cards = rankFound(mergeHits(hits), sort).slice(0, SEARCH_FOR_DECK_LIMITS.merged);
   return { queries, cards };
 }

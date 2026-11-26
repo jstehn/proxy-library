@@ -120,7 +120,7 @@ export const searchCardsBinding = defineBinding({
       .enum(["price_desc", "added_desc", "mv", "name"])
       .optional()
       .describe(
-        "Sort order for catalog/collection search: 'price_desc', 'added_desc' (owned only), 'mv', or 'name' (default).",
+        "Sort order for syntax searches (deck, queries, or catalog/collection): 'price_desc', 'added_desc' (owned newest first), 'mv' (mana value asc), or 'name'. Omit for default synergy/owned ranking.",
       ),
     addedSince: z
       .string()
@@ -191,6 +191,7 @@ export const searchCardsBinding = defineBinding({
         where: input.where === "owned" || input.where === "store" ? input.where : "both",
         perQuery: input.maxPerQuery,
         maxPriceCents: input.maxPriceCents ?? null,
+        ...(input.sort !== undefined ? { sort: input.sort } : {}),
       });
       return found.ok ? ok<Answer>({ mode: "deck", ...found.value }) : found;
     }
@@ -202,6 +203,7 @@ export const searchCardsBinding = defineBinding({
         where: input.where ?? "both",
         perQuery: input.maxPerQuery,
         maxPriceCents: input.maxPriceCents ?? null,
+        ...(input.sort !== undefined ? { sort: input.sort } : {}),
       });
       return found.ok ? ok<Answer>({ mode: "queries", result: found.value }) : found;
     }

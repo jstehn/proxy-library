@@ -79,6 +79,37 @@ describe("rankFound (rule 13)", () => {
     ]);
   });
 
+  it("supports explicit sort orders: mv, price_desc, added_desc, and name", () => {
+    const earlier = new Date("2026-11-20T00:00:00Z");
+    const later = new Date("2026-11-25T00:00:00Z");
+    const cards: MergedCard[] = [
+      {
+        ...card("Zebra", { manaValue: 1, owned: 1, priceCents: 200, lastAcquiredAt: earlier }),
+        synergies: ["s0"],
+      },
+      {
+        ...card("Alpha", { manaValue: 5, owned: 1, priceCents: 1500, lastAcquiredAt: later }),
+        synergies: ["s0"],
+      },
+      {
+        ...card("Middle", { manaValue: 3, owned: 0, priceCents: 500 }),
+        synergies: ["s0", "s1"],
+      },
+    ];
+    expect(rankFound(cards, "mv").map((each) => each.name)).toEqual(["Zebra", "Middle", "Alpha"]);
+    expect(rankFound(cards, "price_desc").map((each) => each.name)).toEqual([
+      "Alpha",
+      "Middle",
+      "Zebra",
+    ]);
+    expect(rankFound(cards, "added_desc").map((each) => each.name)).toEqual([
+      "Alpha",
+      "Zebra",
+      "Middle",
+    ]);
+    expect(rankFound(cards, "name").map((each) => each.name)).toEqual(["Alpha", "Middle", "Zebra"]);
+  });
+
   it("only reorders: the same cards, whatever the input order", () => {
     const arbitraryCard = fc
       .record({

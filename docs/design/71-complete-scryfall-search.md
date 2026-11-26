@@ -169,10 +169,10 @@ export type CatalogSynergySearch = Readonly<{
 
 ## 5. Use cases
 
-| Use case                                         | Actor / authz         | Input                                                                             | Output                                                   | Errors (`kind`)      | Transaction? |
-| ------------------------------------------------ | --------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------- | ------------ |
-| `search_cards` (syntax + `queries`, no `deckId`) | Authenticated `Actor` | `queries`, `where`, `maxPerQuery`, `maxPriceCents`, `includeText`, `includePrice` | `CatalogSynergySearch` presented as `{ queries, cards }` | `InvalidInput`       | No (read)    |
-| `sync` (Scryfall pass)                           | Worker / `AdminActor` | Scryfall `default-cards.jsonl`                                                    | Populates 8 new `printings` columns via `saveCardExtras` | Existing sync errors | Per-batch    |
+| Use case                                         | Actor / authz         | Input                                                                                     | Output                                                           | Errors (`kind`)      | Transaction? |
+| ------------------------------------------------ | --------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------- | ------------ |
+| `search_cards` (syntax + `queries`, no `deckId`) | Authenticated `Actor` | `queries`, `where`, `maxPerQuery`, `maxPriceCents`, `sort`, `includeText`, `includePrice` | `CatalogSynergySearch` presented as compact `{ queries, cards }` | `InvalidInput`       | No (read)    |
+| `sync` (Scryfall pass)                           | Worker / `AdminActor` | Scryfall `default-cards.jsonl`                                                            | Populates 8 new `printings` columns via `saveCardExtras`         | Existing sync errors | Per-batch    |
 
 ## 6. Persistence
 
