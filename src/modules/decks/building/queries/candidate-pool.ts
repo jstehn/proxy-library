@@ -25,18 +25,21 @@ export function ownedPerCard(
 ): SQL {
   const only =
     oracleIds === undefined ? sql`` : sql`where p.oracle_id = any(${textArray(oracleIds)})`;
-  return sql`(select p.oracle_id, sum(c.quantity)::int as owned,
-                     coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
-                     (array_agg(c.printing_id order by ${MOST_SPECIAL_FIRST}))[1] as printing_id,
-                     (array_agg(c.finish order by ${MOST_SPECIAL_FIRST}))[1] as finish,
-                     (array_agg(c.printing_id order by c.quantity desc, c.printing_id))[1]
-                       as copies_printing_id,
-                     (array_agg(c.finish order by c.quantity desc, c.printing_id))[1]
-                       as copies_finish
-                from ${ownedCopies(userId, sql`${withReal}`)} c
-                join printings p on p.id = c.printing_id
-                ${only}
-               group by p.oracle_id)`;
+  return sql`(select agg.oracle_id, agg.owned, agg.owned_real,
+                     split_part(agg.special_pick, '/', 1) as printing_id,
+                     split_part(agg.special_pick, '/', 2) as finish,
+                     split_part(agg.copies_pick, '/', 1) as copies_printing_id,
+                     split_part(agg.copies_pick, '/', 2) as copies_finish
+                from (select p.oracle_id, sum(c.quantity)::int as owned,
+                             coalesce(sum(c.quantity) filter (where c.is_real), 0)::int as owned_real,
+                             (array_agg(c.printing_id || '/' || c.finish order by ${MOST_SPECIAL_FIRST}))[1]
+                               as special_pick,
+                             (array_agg(c.printing_id || '/' || c.finish order by c.quantity desc, c.printing_id))[1]
+                               as copies_pick
+                        from ${ownedCopies(userId, sql`${withReal}`)} c
+                        join printings p on p.id = c.printing_id
+                        ${only}
+                       group by p.oracle_id) agg)`;
 }
 
 /** SQL condition on a printing `p`: the player owns no printing of that card. */

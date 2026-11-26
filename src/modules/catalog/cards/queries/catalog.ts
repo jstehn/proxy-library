@@ -1,6 +1,6 @@
 import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { Actor, AdminActor } from "@/modules/accounts";
-import type { DbExecutor } from "@/shared/db";
+import { newestDayPrices, type DbExecutor } from "@/shared/db";
 import { parseSearch } from "@/shared/card-search";
 import { FOIL_IN_CATALOG, searchCondition } from "@/modules/catalog/cards/queries/search-sql";
 import { Cents } from "@/shared/kernel";
@@ -198,34 +198,41 @@ export async function searchPrintings(
   search: PrintingSearch,
 ): Promise<SearchResult> {
   const { where, notes } = printingConditions(actor, search);
+  const needsPrices = search.oneRowPerCard === true || search.sort === "price";
   const order = {
     name: sql`p.name, p.set_code, p.collector_number`,
     number: sql`p.set_code, nullif(regexp_replace(p.collector_number, '\\D', '', 'g'), '')::int nulls last, p.collector_number`,
     // The most expensive finish on the newest price day.
-    price: sql`(select max(s.usd_cents) from price_snapshots s
-                 where s.printing_id = p.id
-                   and s.day = (select max(day) from price_snapshots)) desc nulls last, p.name`,
+    price: sql`p.max_cents desc nulls last, p.name`,
     mana: sql`p.mana_value, p.name, p.set_code, p.collector_number`,
   }[search.sort];
   const pageSize = Math.min(SEARCH_PAGE_SIZE, Math.max(1, search.pageSize ?? SEARCH_PAGE_SIZE));
   const offset = (Math.max(1, search.page) - 1) * pageSize;
 
+  const pricesCte = needsPrices
+    ? sql`newest_prices as (
+        select printing_id, min(usd_cents) as min_cents, max(usd_cents) as max_cents
+          from ${newestDayPrices()}
+         group by printing_id
+      ),`
+    : sql``;
+  const priceJoin = needsPrices ? sql`left join newest_prices np on np.printing_id = p.id` : sql``;
+  const maxCentsColumn = needsPrices ? sql`, np.max_cents` : sql``;
+
   // The matching printings (narrow columns only so sorting stays in memory), or each matching
   // card's cheapest printing (unpriced ones last).
   const matching = search.oneRowPerCard
     ? sql`select distinct on (p.oracle_id)
-                 p.id, p.name, p.set_code, p.collector_number, p.mana_value
+                 p.id, p.name, p.set_code, p.collector_number, p.mana_value${maxCentsColumn}
             from printings p
             join card_sets s on s.code = p.set_code and s.is_enabled
+            ${priceJoin}
            where ${where}
-           order by p.oracle_id,
-                    (select min(snapshot.usd_cents) from price_snapshots snapshot
-                      where snapshot.printing_id = p.id
-                        and snapshot.day = (select max(day) from price_snapshots)) asc nulls last,
-                    p.id`
-    : sql`select p.id, p.name, p.set_code, p.collector_number, p.mana_value
+           order by p.oracle_id, np.min_cents asc nulls last, p.id`
+    : sql`select p.id, p.name, p.set_code, p.collector_number, p.mana_value${maxCentsColumn}
             from printings p
             join card_sets s on s.code = p.set_code and s.is_enabled
+            ${priceJoin}
            where ${where}`;
 
   const totalQuery = search.oneRowPerCard
@@ -240,7 +247,7 @@ export async function searchPrintings(
 
   const [rows, totals] = await Promise.all([
     db.execute<{ id: string }>(sql`
-      with matching as (${matching})
+      with ${pricesCte} matching as (${matching})
       select p.id from matching p
        order by ${order}
        limit ${pageSize} offset ${offset}

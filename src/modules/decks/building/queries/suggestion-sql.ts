@@ -120,6 +120,18 @@ function isComboPartnerOrderSql(
 }
 
 /** Cards you own that share something with what's wanted: one per oracle card. */
+function otherDeckUsageCte(userId: UserId, deckId: number): SQL {
+  return sql`
+    select e.oracle_id,
+           count(distinct e.deck_id)::int as other_decks,
+           sum(e.quantity)::int as other_copies
+      from deck_entries e
+      join decks d on d.id = e.deck_id
+     where d.owner_id = ${userId} and d.id <> ${deckId} and e.board <> 'maybe'
+     group by e.oracle_id
+  `;
+}
+
 export async function ownedCandidates(
   db: DbExecutor,
   userId: UserId,
@@ -129,23 +141,19 @@ export async function ownedCandidates(
 ): Promise<SuggestionCard[]> {
   const rows = await db.execute<CandidateRow>(sql`
     with owned as ${ownedPerCard(userId, context.usesRealCards)},
+    deck_usage as (${otherDeckUsageCte(userId, context.deckId)}),
     edhrec as (
       ${edhrecCte(context.commanderOracleIds)}
     )
     select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
            ${latestPrice("p.id", "owned.finish")} as price_cents,
-           (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
-             where d.owner_id = ${userId} and d.id <> ${context.deckId}
-               and e.oracle_id = owned.oracle_id and e.board <> 'maybe')::int as other_decks,
-           greatest(owned.owned - coalesce((select sum(e.quantity) from deck_entries e
-                                              join decks d on d.id = e.deck_id
-                                             where d.owner_id = ${userId} and d.id <> ${context.deckId}
-                                               and e.oracle_id = owned.oracle_id
-                                               and e.board <> 'maybe'), 0), 0)::int as free,
+           coalesce(deck_usage.other_decks, 0)::int as other_decks,
+           greatest(owned.owned - coalesce(deck_usage.other_copies, 0), 0)::int as free,
            edhrec.inclusion_rate as edhrec_inclusion,
            edhrec.synergy as edhrec_synergy,
            edhrec.total_decks as edhrec_total_decks
       from owned join printings p on p.id = owned.printing_id
+      left join deck_usage on deck_usage.oracle_id = owned.oracle_id
       left join edhrec on edhrec.card_oracle_id = p.oracle_id
      where ${fitsDeck(context)}
        and (${sharedCount(want)} > 0 or edhrec.synergy >= 0.05 or edhrec.inclusion_rate >= 0.15 or ${isComboPartnerSql(comboPartnerIds)})
@@ -278,20 +286,16 @@ export async function ownedCandidatesForIds(
       ? sql`and ps.usd_cents is not null and ps.usd_cents <= ${maxPriceCents}`
       : sql``;
   const rows = await db.execute<CandidateRow>(sql`
-    with owned as ${ownedPerCard(userId, context.usesRealCards, oracleIds)}
+    with owned as ${ownedPerCard(userId, context.usesRealCards, oracleIds)},
+    deck_usage as (${otherDeckUsageCte(userId, context.deckId)})
     select ${candidateColumns(context)}, owned.finish, owned.owned, owned.owned_real,
            ps.usd_cents as price_cents,
-           (select count(distinct e.deck_id) from deck_entries e join decks d on d.id = e.deck_id
-             where d.owner_id = ${userId} and d.id <> ${context.deckId}
-               and e.oracle_id = owned.oracle_id and e.board <> 'maybe')::int as other_decks,
-           greatest(owned.owned - coalesce((select sum(e.quantity) from deck_entries e
-                                              join decks d on d.id = e.deck_id
-                                             where d.owner_id = ${userId} and d.id <> ${context.deckId}
-                                               and e.oracle_id = owned.oracle_id
-                                               and e.board <> 'maybe'), 0), 0)::int as free,
+           coalesce(deck_usage.other_decks, 0)::int as other_decks,
+           greatest(owned.owned - coalesce(deck_usage.other_copies, 0), 0)::int as free,
            null as edhrec_inclusion, null as edhrec_synergy, null as edhrec_total_decks
       from owned
       join printings p on p.id = owned.printing_id
+      left join deck_usage on deck_usage.oracle_id = owned.oracle_id
       left join lateral (select ${latestPrice("p.id", "owned.finish")} as usd_cents) ps on true
      where ${fitsDeck(context)}
        ${priceFilter}
