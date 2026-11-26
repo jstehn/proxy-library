@@ -265,23 +265,23 @@ export type PrintingDetail = Pick<CardFacts, "typeLine"> &
 
 /** One printing with its set, for the card page. */
 export async function printingDetail(db: DbExecutor, id: string): Promise<PrintingDetail | null> {
-  const card = (await printingCards(db, [id])).get(id);
-  if (card === undefined) return null;
   const [row] = (
-    await db.execute<{
-      set_code: string;
-      set_name: string;
-      keyrune_code: string;
-      is_enabled: boolean;
-      type_line: string;
-    }>(sql`
-      select s.code as set_code, s.name as set_name, s.keyrune_code, s.is_enabled, p.type_line
+    await db.execute<
+      PrintingCardRow & {
+        set_name: string;
+        keyrune_code: string;
+        is_enabled: boolean;
+        type_line: string;
+      }
+    >(sql`
+      select ${PRINTING_CARD_COLUMNS}, s.name as set_name, s.keyrune_code, s.is_enabled, p.type_line
         from printings p join card_sets s on s.code = p.set_code
        where p.id = ${id}
     `)
   ).rows;
+  if (row === undefined) return null;
   return {
-    card,
+    card: toPrintingCard(row),
     setCode: row.set_code,
     setName: row.set_name,
     keyruneCode: row.keyrune_code,

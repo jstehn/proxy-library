@@ -57,11 +57,12 @@ export async function cardTextsToCompute(
   version: number,
   limit: number,
 ): Promise<CardText[]> {
+  const staleFilter = sql`not exists (
+    select 1 from card_features f
+     where f.oracle_id = p.oracle_id and f.features_version >= ${version}
+  )`;
   const rows = await db.execute<TextRow>(sql`
-    select t.* from (${oneTextPerCard(sql`true`)}) t
-      left join card_features f on f.oracle_id = t.oracle_id
-     where f.oracle_id is null or f.features_version < ${version}
-     order by t.oracle_id
-     limit ${limit}`);
+    ${oneTextPerCard(staleFilter)}
+    limit ${limit}`);
   return rows.rows.map(toCardText);
 }

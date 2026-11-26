@@ -51,6 +51,15 @@ export function featureArray(
   return sql`coalesce((select f.${sql.raw(column)} from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id), '{}'::text[])`;
 }
 
+/** GIN-indexable membership check against `card_features` array columns. */
+function hasFeature(
+  column: "role_tags" | "theme_tags" | "bracket_flags",
+  value: string,
+  printing = "p",
+): SQL {
+  return sql`exists (select 1 from card_features f where f.oracle_id = ${sql.raw(printing)}.oracle_id and f.${sql.raw(column)} @> array[${value}]::text[])`;
+}
+
 /** What a card makes and uses, as `{ makes: Theme[], uses: Theme[] }` (card features, doc 66). */
 export function signalIO(printing = "p"): SQL {
   return sql`coalesce((select f.features->'signalIO' from card_features f
@@ -186,9 +195,9 @@ function termCondition(term: SearchTerm, context: SearchContext): SQL {
     case "fullOracle":
       return textTerm(oracleCondition(term, { withReminders: true }), comparison);
     case "tag":
-      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("role_tags")})`, comparison);
+      return textTerm(hasFeature("role_tags", value.toLowerCase()), comparison);
     case "theme":
-      return textTerm(sql`${value.toLowerCase()} = any(${featureArray("theme_tags")})`, comparison);
+      return textTerm(hasFeature("theme_tags", value.toLowerCase()), comparison);
     case "banned":
     case "restricted":
       return textTerm(sql`p.legalities->>${value.toLowerCase()} = ${term.field}`, comparison);
@@ -763,9 +772,9 @@ function isCondition(value: string, context: SearchContext): SQL {
     case "gc":
       return sql`p.is_game_changer`;
     case "landdenial":
-      return sql`'landDenial' = any(${featureArray("bracket_flags")})`;
+      return hasFeature("bracket_flags", "landDenial");
     case "extraturn":
-      return sql`'extraTurn' = any(${featureArray("bracket_flags")})`;
+      return hasFeature("bracket_flags", "extraTurn");
     default:
       return landCycle(value); // the parser refuses other values
   }

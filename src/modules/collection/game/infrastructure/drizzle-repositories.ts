@@ -86,20 +86,37 @@ export function drizzleCollectionRepository(db: DbExecutor): CollectionRepositor
       }
     }
 
-    for (const loss of losses) {
-      const where = and(
-        eq(collectionCards.userId, userId),
-        eq(collectionCards.printingId, loss.printingId),
-        eq(collectionCards.finish, loss.finish),
-      );
-      if (owned(loss) === loss.quantity) {
-        await db.delete(collectionCards).where(where); // no rows at zero (the CHECK needs > 0)
-      } else {
-        await db
-          .update(collectionCards)
-          .set({ quantity: sql`${collectionCards.quantity} - ${loss.quantity}` })
-          .where(where);
-      }
+    const toDelete = losses.filter((loss) => owned(loss) === loss.quantity);
+    const toUpdate = losses.filter((loss) => owned(loss) > loss.quantity);
+
+    if (toDelete.length > 0) {
+      // No rows at zero (the CHECK needs > 0).
+      const printingIds = toDelete.map((loss) => loss.printingId);
+      const finishes = toDelete.map((loss) => loss.finish);
+      await db.execute(sql`
+        delete from collection_cards
+         where user_id = ${userId}
+           and (printing_id, finish) in (
+             select * from unnest(${sql.param(printingIds)}::text[], ${sql.param(finishes)}::text[])
+           )
+      `);
+    }
+    if (toUpdate.length > 0) {
+      const printingIds = toUpdate.map((loss) => loss.printingId);
+      const finishes = toUpdate.map((loss) => loss.finish);
+      const amounts = toUpdate.map((loss) => loss.quantity);
+      await db.execute(sql`
+        update collection_cards c
+           set quantity = c.quantity - v.amount
+          from unnest(
+                 ${sql.param(printingIds)}::text[],
+                 ${sql.param(finishes)}::text[],
+                 ${sql.param(amounts)}::int[]
+               ) as v(printing_id, finish, amount)
+         where c.user_id = ${userId}
+           and c.printing_id = v.printing_id
+           and c.finish = v.finish
+      `);
     }
     await db.insert(acquisitions).values(
       losses.map((loss) => ({

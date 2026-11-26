@@ -143,6 +143,9 @@ export function makeDeckEntries(dependencies: DecksDependencies) {
     return unitOfWork.run<void, SetEntryError>(async ({ decks, cards }) => {
       let deck = await decks.lockOwned(input.deckId, actor.userId);
       if (deck === null) return err({ kind: "DeckNotFound" });
+      const knownOracleIds = await cards.existingOracleIds(
+        input.cards.map((card) => card.oracleId),
+      );
       for (const card of input.cards) {
         const existing = deck.entries.find(
           (entry) => entry.oracleId === card.oracleId && entry.board === "main",
@@ -150,7 +153,7 @@ export function makeDeckEntries(dependencies: DecksDependencies) {
         const quantity = checkQuantity((existing?.quantity ?? 0) + card.quantity);
         if (!quantity.ok) return quantity;
         if (card.quantity < 1) return err({ kind: "QuantityInvalid", maximum: MAX_QUANTITY });
-        if (!(await cards.exists(card.oracleId))) return err({ kind: "CardNotFound" });
+        if (!knownOracleIds.has(card.oracleId)) return err({ kind: "CardNotFound" });
         deck = withEntry(deck, {
           oracleId: card.oracleId,
           board: "main",
@@ -211,6 +214,12 @@ export function makeDeckEntries(dependencies: DecksDependencies) {
       if (deck === null) return err({ kind: "DeckNotFound" });
       if (fingerprint(deck.entries) !== input.fingerprint) return err({ kind: "DeckChanged" });
 
+      const idsToCheck = normalized
+        .filter((change) => change.quantity === undefined || change.quantity > 0)
+        .map((change) => change.oracleId);
+      const knownOracleIds =
+        idsToCheck.length > 0 ? await cards.existingOracleIds(idsToCheck) : new Set<string>();
+
       let updated = deck;
       for (const change of normalized) {
         const existing = updated.entries.find(
@@ -220,7 +229,7 @@ export function makeDeckEntries(dependencies: DecksDependencies) {
         if (resolvedQuantity === undefined) {
           return err({ kind: "QuantityInvalid", maximum: MAX_QUANTITY });
         }
-        if (resolvedQuantity > 0 && !(await cards.exists(change.oracleId))) {
+        if (resolvedQuantity > 0 && !knownOracleIds.has(change.oracleId)) {
           return err({ kind: "CardNotFound" });
         }
         updated = withEntry(updated, {

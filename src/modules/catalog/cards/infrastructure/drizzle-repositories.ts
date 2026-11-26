@@ -297,26 +297,43 @@ export function drizzleCatalogRepository(db: DbExecutor): CatalogRepository {
     },
 
     async saveCardExtras(extras) {
-      for (const card of extras) {
-        await db
-          .update(printings)
-          .set({
-            imageUris: card.images,
+      // Batch into 500-row JSONB updates instead of ~100k row-by-row UPDATE round-trips.
+      for (const batch of chunks(extras)) {
+        const payload = JSON.stringify(
+          batch.map((card) => ({
+            scryfall_id: card.scryfallId,
+            image_uris: card.images,
             legalities: card.legalities,
-            producedMana: [...card.producedMana],
+            produced_mana: [...card.producedMana],
             keywords: [...card.keywords],
-            isGameChanger: card.isGameChanger,
-            edhrecRank: card.edhrecRank,
-            flavorText: card.flavorText,
+            is_game_changer: card.isGameChanger,
+            edhrec_rank: card.edhrecRank,
+            flavor_text: card.flavorText,
             watermark: card.watermark,
-            isReserved: card.isReserved,
-            isStorySpotlight: card.isStorySpotlight,
-            isBooster: card.isBooster,
-            isTextless: card.isTextless,
-            securityStamp: card.securityStamp,
-            illustrationId: card.illustrationId,
-          })
-          .where(eq(printings.scryfallId, card.scryfallId));
+            is_reserved: card.isReserved,
+            is_story_spotlight: card.isStorySpotlight,
+            is_booster: card.isBooster,
+            is_textless: card.isTextless,
+            security_stamp: card.securityStamp,
+            illustration_id: card.illustrationId,
+          })),
+        );
+        await db.execute(sql`
+          update printings p
+             set image_uris = v.image_uris, legalities = v.legalities,
+                 produced_mana = v.produced_mana, keywords = v.keywords,
+                 is_game_changer = v.is_game_changer, edhrec_rank = v.edhrec_rank,
+                 flavor_text = v.flavor_text, watermark = v.watermark,
+                 is_reserved = v.is_reserved, is_story_spotlight = v.is_story_spotlight,
+                 is_booster = v.is_booster, is_textless = v.is_textless,
+                 security_stamp = v.security_stamp, illustration_id = v.illustration_id
+            from jsonb_to_recordset(${payload}::jsonb) as v(
+                   scryfall_id text, image_uris jsonb, legalities jsonb,
+                   produced_mana text[], keywords text[], is_game_changer boolean,
+                   edhrec_rank integer, flavor_text text, watermark text,
+                   is_reserved boolean, is_story_spotlight boolean, is_booster boolean,
+                   is_textless boolean, security_stamp text, illustration_id text)
+           where p.scryfall_id = v.scryfall_id`);
       }
     },
 
