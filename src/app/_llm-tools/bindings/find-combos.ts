@@ -18,7 +18,8 @@ export const findCombosBinding = defineBinding({
   name: "find_combos",
   title: "Find N-card combos via Commander Spellbook",
   description: [
-    "Queries Commander Spellbook's find-my-combos API (including N-card and commander combos, cached 24 hours) for combos in the deck (distinguishing main-deck `complete` vs `needsMaybe`) and combos 1 card away (`oneAway`).",
+    "Queries Commander Spellbook's find-my-combos API (including N-card and commander combos, cached 24 hours) for combos in the deck (distinguishing main-deck `complete` vs `needsMaybe`) and combos 1 card away (`oneCardAway`, sorted with owned missing pieces first).",
+    "Also tracks combos where you already have all named cards and only need a generic role/template piece (e.g. 'A creature that creates a token when it dies', with a Scryfall query to search for it): these are never reported as `complete`, and are omitted by default to save tokens (check `totalNeedsTemplate` and pass `includeTemplateCombos: true` to inspect them).",
     "Use it when: checking what combos a deck runs for bracket disclosure, or finding combo lines and missing pieces.",
   ].join("\n"),
   scope: "read",
@@ -34,6 +35,12 @@ export const findCombosBinding = defineBinding({
       .default(false)
       .describe(
         "Only return one-card-away combos whose missing piece you already own (owned pieces are always sorted first).",
+      ),
+    includeTemplateCombos: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Include combos where all named cards are in the deck and only a generic template piece is needed (e.g. 'A creature with persist', with optional scryfallQuery). Off by default to save tokens; totalNeedsTemplate is always returned.",
       ),
     bracket: z
       .enum(["E", "P", "O", "S", "R", "C"])
@@ -54,6 +61,7 @@ export const findCombosBinding = defineBinding({
       deckId: input.deckId,
       includeMaybe: input.includeMaybe,
       ownedOnly: input.ownedOnly,
+      includeTemplateCombos: input.includeTemplateCombos,
       bracket: input.bracket,
       limit: input.limit,
       offset: input.offset,
@@ -73,6 +81,7 @@ export const findCombosBinding = defineBinding({
           }
         : {}),
       totalOneAway: combos.totalOneAway,
+      ...(combos.totalNeedsTemplate > 0 ? { totalNeedsTemplate: combos.totalNeedsTemplate } : {}),
       offset: combos.offset,
       limit: combos.limit,
       complete: combos.complete,
@@ -95,6 +104,23 @@ export const findCombosBinding = defineBinding({
         manaNeeded: combo.manaNeeded,
         identity: combo.identity,
       })),
+      ...(combos.needsTemplate !== undefined
+        ? {
+            needsTemplate: combos.needsTemplate.map((combo) => ({
+              id: combo.id,
+              status: "needsTemplate" as const,
+              ...(combo.maybePieces !== undefined ? { maybePieces: combo.maybePieces } : {}),
+              uses: combo.uses,
+              requires: combo.requires,
+              produces: combo.produces,
+              steps: combo.steps,
+              prerequisites: combo.prerequisites,
+              bracketTag: combo.bracketTag,
+              manaNeeded: combo.manaNeeded,
+              identity: combo.identity,
+            })),
+          }
+        : {}),
     };
   },
   describeError(failure: Failure, { input }): ToolError {

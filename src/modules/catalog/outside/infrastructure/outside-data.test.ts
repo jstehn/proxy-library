@@ -168,6 +168,28 @@ describe("makeOutsideData", () => {
               manaNeeded: null,
               identity: "G",
             },
+            {
+              id: "404",
+              uses: [
+                { card: { name: "Cathars' Crusade" } },
+                { card: { name: "Goblin Bombardment" } },
+              ],
+              requires: [
+                {
+                  quantity: 1,
+                  template: {
+                    name: "A creature that creates a token when it dies",
+                    scryfallQuery: 't:creature o:"when" o:"dies" o:"create"',
+                  },
+                },
+              ],
+              produces: [{ feature: { name: "Infinite damage" } }],
+              description: "Sacrifice token-maker.",
+              easyPrerequisites: "",
+              bracketTag: "3",
+              manaNeeded: "{0}",
+              identity: "RW",
+            },
           ],
         },
       }),
@@ -175,7 +197,13 @@ describe("makeOutsideData", () => {
     const outside = makeOutsideData(TEST_CLOCK, fetchFn);
 
     const res = await outside.fetchSpellbookCombos(
-      ["Ancestral Statue", "Elemental Bond", "Mikaeus, the Unhallowed"],
+      [
+        "Ancestral Statue",
+        "Elemental Bond",
+        "Mikaeus, the Unhallowed",
+        "Cathars' Crusade",
+        "Goblin Bombardment",
+      ],
       ['Henzie "Toolbox" Torre'],
     );
 
@@ -193,6 +221,19 @@ describe("makeOutsideData", () => {
       id: "202",
       missingCardName: "Triskelion",
       bracketTag: "4",
+    });
+
+    expect(res.needsTemplate).toHaveLength(1);
+    expect(res.needsTemplate?.[0]).toMatchObject({
+      id: "404",
+      uses: ["Cathars' Crusade", "Goblin Bombardment"],
+      requires: [
+        {
+          name: "A creature that creates a token when it dies",
+          quantity: 1,
+          scryfallQuery: 't:creature o:"when" o:"dies" o:"create"',
+        },
+      ],
     });
   });
 });

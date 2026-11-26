@@ -1,4 +1,8 @@
-import type { SpellbookCombo, SpellbookCombosResult } from "@/modules/catalog";
+import type {
+  SpellbookCombo,
+  SpellbookCombosResult,
+  SpellbookTemplateCombo,
+} from "@/modules/catalog";
 import { err, ok, type Result, type UserId } from "@/shared/kernel";
 import { isPlayed } from "@/modules/decks/core/client";
 import { declaredComboFor, type DeckPlan } from "@/modules/decks/core/client";
@@ -27,6 +31,8 @@ export type CombosRequest = Readonly<{
   includeMaybe: boolean;
   /** Only return one-card-away combos whose missing piece you already own. */
   ownedOnly?: boolean;
+  /** Include combos whose named cards are in the deck but need a generic template piece (e.g. "a creature with persist"). */
+  includeTemplateCombos?: boolean;
   /** Only combos Spellbook tags with this bracket letter. */
   bracket?: string;
   limit: number;
@@ -56,6 +62,11 @@ export type ComboOneAway = SpellbookCombo &
     maybePieces?: readonly string[];
   }>;
 
+export type ComboNeedsTemplate = SpellbookTemplateCombo &
+  Readonly<{
+    maybePieces?: readonly string[];
+  }>;
+
 export type DeckCombos = Readonly<{
   source: Pick<SpellbookCombosResult, "sourceUrl" | "fetchedAt" | "cached">;
   totalComplete: number;
@@ -65,10 +76,12 @@ export type DeckCombos = Readonly<{
   declarations: readonly Readonly<{ declared: string; foundBySpellbook: boolean }>[];
   undeclaredComplete: number;
   totalOneAway: number;
+  totalNeedsTemplate: number;
   offset: number;
   limit: number;
   complete: readonly DeckComboFound[];
   oneAway: readonly ComboOneAway[];
+  needsTemplate?: readonly ComboNeedsTemplate[];
 }>;
 
 export function makeDeckCombos(readers: DeckCombosReaders) {
@@ -176,6 +189,18 @@ export function makeDeckCombos(readers: DeckCombosReaders) {
     const page = { from: request.offset, to: request.offset + request.limit };
     const pagedOneAway = enrichedOneAway.slice(page.from, page.to);
 
+    const matchingTemplates = (spellbook.needsTemplate ?? [])
+      .filter((combo) => matchesBracket(combo.bracketTag))
+      .map((combo): ComboNeedsTemplate => {
+        const maybePieces = combo.uses.filter(
+          (name) => !playedNames.has(name.toLowerCase()) && maybeNames.has(name.toLowerCase()),
+        );
+        return {
+          ...combo,
+          ...(maybePieces.length > 0 ? { maybePieces } : {}),
+        };
+      });
+
     return ok({
       source: {
         sourceUrl: spellbook.sourceUrl,
@@ -193,10 +218,14 @@ export function makeDeckCombos(readers: DeckCombosReaders) {
         (combo) => combo.status === "complete" && combo.declared === undefined,
       ).length,
       totalOneAway: enrichedOneAway.length,
+      totalNeedsTemplate: matchingTemplates.length,
       offset: request.offset,
       limit: request.limit,
       complete: found.slice(page.from, page.to),
       oneAway: pagedOneAway,
+      ...(request.includeTemplateCombos === true
+        ? { needsTemplate: matchingTemplates.slice(page.from, page.to) }
+        : {}),
     });
   }
 

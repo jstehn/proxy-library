@@ -50,9 +50,21 @@ export type SpellbookCombo = Readonly<{
   identity: string;
 }>;
 
+export type SpellbookTemplateRequirement = Readonly<{
+  name: string;
+  quantity: number;
+  scryfallQuery?: string;
+}>;
+
 export type SpellbookOneCardAwayCombo = SpellbookCombo &
   Readonly<{
     missingCardName: string;
+  }>;
+
+/** A combo whose named cards are all in the deck, but that still needs 1+ generic template pieces. */
+export type SpellbookTemplateCombo = SpellbookCombo &
+  Readonly<{
+    requires: readonly SpellbookTemplateRequirement[];
   }>;
 
 export type SpellbookCombosResult = Readonly<{
@@ -61,4 +73,5 @@ export type SpellbookCombosResult = Readonly<{
   cached: boolean;
   complete: readonly SpellbookCombo[];
   oneCardAway: readonly SpellbookOneCardAwayCombo[];
+  needsTemplate?: readonly SpellbookTemplateCombo[];
 }>;

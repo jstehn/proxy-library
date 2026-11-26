@@ -76,7 +76,10 @@ The tools are `get_account`, `list_decks`, `get_deck`, `create_deck`, `update_de
     `parse.test.ts`)
 15. **`get_deck`** returns a compact deck by default; facts (stats, bracket estimate, problems,
     tokens) are opt-in. `find_combos` classes a combo "complete" only when every piece is on a
-    counted board, and keeps its one-card-away partners within the deck's target bracket (brackets 1-2 allow none). `draw_sample` follows `decks-play.md`. (doc 61 §4 rule 6, doc 54
+    counted board (never when it has an unverified template requirement), ranks owned one-away
+    missing pieces first (with `ownedOnly` filter), optionally returns template-needing combos via
+    `includeTemplateCombos: true` (always returning `totalNeedsTemplate` when non-zero), and keeps
+    its one-card-away partners within the deck's target bracket (brackets 1-2 allow none). `draw_sample` follows `decks-play.md`. (doc 61 §4 rule 6, doc 54
     §4 rule 4; `bindings.test.ts`, `deck-research.test.ts`)
 
 ## Outside research

@@ -18,6 +18,8 @@ import type {
   EdhrecCommanderData,
   SpellbookCombo,
   SpellbookOneCardAwayCombo,
+  SpellbookTemplateCombo,
+  SpellbookTemplateRequirement,
   SpellbookCombosResult,
 } from "../domain/outside-data";
 
@@ -295,9 +297,18 @@ const SpellbookComboProducesSchema = z.object({
   }),
 });
 
+const SpellbookComboRequiresSchema = z.object({
+  template: z.object({
+    name: z.string().min(1),
+    scryfallQuery: z.string().nullable().optional(),
+  }),
+  quantity: z.number().int().positive().optional().default(1),
+});
+
 const SpellbookComboVariantSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
   uses: z.array(SpellbookComboUseSchema).optional().default([]),
+  requires: z.array(SpellbookComboRequiresSchema).optional().default([]),
   produces: z.array(SpellbookComboProducesSchema).optional().default([]),
   description: z.string().optional().default(""),
   easyPrerequisites: z.string().optional().default(""),
@@ -317,7 +328,21 @@ const SpellbookFindMyCombosResponseSchema = z.object({
 type CachedSpellbookPayload = {
   complete: SpellbookCombo[];
   oneCardAway: SpellbookOneCardAwayCombo[];
+  needsTemplate: SpellbookTemplateCombo[];
 };
+
+function mapTemplateRequirements(
+  requires: readonly z.infer<typeof SpellbookComboRequiresSchema>[],
+): SpellbookTemplateRequirement[] {
+  return requires.map((req) => {
+    const query = req.template.scryfallQuery?.trim();
+    return {
+      name: req.template.name,
+      quantity: req.quantity,
+      ...(query ? { scryfallQuery: query } : {}),
+    };
+  });
+}
 
 function mapSpellbookVariant(v: z.infer<typeof SpellbookComboVariantSchema>): SpellbookCombo {
   const prereqs = [v.easyPrerequisites, v.notablePrerequisites]
@@ -343,22 +368,44 @@ function parseSpellbookFindMyCombos(
   const parsed = SpellbookFindMyCombosResponseSchema.parse(raw);
   const deckSet = new Set(deckCardNames.map((n) => n.trim().toLowerCase()));
 
-  const complete = parsed.results.included.map(mapSpellbookVariant);
+  const complete: SpellbookCombo[] = [];
   const oneCardAway: SpellbookOneCardAwayCombo[] = [];
+  const needsTemplate: SpellbookTemplateCombo[] = [];
+  const seenTemplateIds = new Set<string>();
+
+  const addTemplateCombo = (variant: z.infer<typeof SpellbookComboVariantSchema>) => {
+    if (seenTemplateIds.has(variant.id)) return;
+    seenTemplateIds.add(variant.id);
+    needsTemplate.push({
+      ...mapSpellbookVariant(variant),
+      requires: mapTemplateRequirements(variant.requires),
+    });
+  };
+
+  for (const variant of parsed.results.included) {
+    if (variant.requires.length > 0) {
+      // Never report a combo with an unverified generic template requirement as complete.
+      addTemplateCombo(variant);
+    } else {
+      complete.push(mapSpellbookVariant(variant));
+    }
+  }
 
   for (const variant of parsed.results.almostIncluded) {
     const missing = variant.uses
       .map((u) => u.card.name)
       .filter((name) => !deckSet.has(name.toLowerCase()));
-    if (missing.length === 1 && missing[0] !== undefined) {
+    if (missing.length === 1 && missing[0] !== undefined && variant.requires.length === 0) {
       oneCardAway.push({
         ...mapSpellbookVariant(variant),
         missingCardName: missing[0],
       });
+    } else if (missing.length === 0 && variant.requires.length > 0) {
+      addTemplateCombo(variant);
     }
   }
 
-  return { complete, oneCardAway };
+  return { complete, oneCardAway, needsTemplate };
 }
 
 async function fetchSpellbookCombos(
@@ -396,6 +443,7 @@ async function fetchSpellbookCombos(
     cached: hit.cached,
     complete: hit.value.complete,
     oneCardAway: hit.value.oneCardAway,
+    needsTemplate: hit.value.needsTemplate,
   };
 }
 

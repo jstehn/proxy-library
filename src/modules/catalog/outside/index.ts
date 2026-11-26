@@ -8,6 +8,7 @@ export type {
   EdhrecCommanderData,
   SpellbookCombo,
   SpellbookCombosResult,
+  SpellbookTemplateCombo,
 } from "./domain/outside-data";
 export { makeEdhrecSync, type EdhrecSyncSummary } from "./application/edhrec";
 export { makeSpellbookSync, type SpellbookSyncSummary } from "./application/spellbook";
