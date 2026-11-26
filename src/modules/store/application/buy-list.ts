@@ -1,5 +1,6 @@
 import type { Actor } from "@/modules/accounts";
-import type { InsufficientFunds } from "@/modules/wallet";
+import { receiveCardBatches } from "@/modules/collection";
+import { spend, type InsufficientFunds } from "@/modules/wallet";
 import { Cents, err, ok, type Result } from "@/shared/kernel";
 import type {
   LineNotForSale,
@@ -10,8 +11,8 @@ import type {
 } from "../domain/errors";
 import { checkQuantity, totalPrice } from "../domain/pricing";
 import { MAX_LIST_LINES } from "../domain/shopping-list";
-import type { StoreDependencies } from "./ports";
-import { buyCopies, type CheckedQuote, type SingleInput } from "./singles";
+import { quoteKey, type StoreDependencies } from "./ports";
+import type { CheckedQuote, SingleInput } from "./singles";
 
 // Buying a list of singles at once (design doc 15, section 3.4): all of it or nothing, at the
 // price the player saw or less.
@@ -43,27 +44,59 @@ export function makeBuyList(dependencies: StoreDependencies) {
     }
 
     return unitOfWork.run<ListReceipt, BuyListError>(async (services) => {
-      // Price every line first, so nothing is bought unless all of it can be (rules 1 and 2).
+      // Price every line in one batched query first, so nothing is bought unless all of it can be.
+      const quotedByKey = await services.marketPrices.quoteMany(input.lines);
       const quotes: CheckedQuote[] = [];
       for (const [index, line] of input.lines.entries()) {
-        const quote = await services.marketPrices.quote(line.printingId, line.finish);
-        if (quote === null || !quote.isSetEnabled)
+        const quote = quotedByKey.get(quoteKey(line.printingId, line.finish));
+        if (quote === undefined || !quote.isSetEnabled) {
           return err({ kind: "LineNotForSale", line: index });
+        }
         quotes.push(quote);
       }
-      const total = Cents.sum(
-        input.lines.map((line, index) => totalPrice(quotes[index].price, line.quantity)),
+      const lineTotals = input.lines.map((line, index) =>
+        totalPrice(quotes[index].price, line.quantity),
       );
+      const total = Cents.sum(lineTotals);
       if (total > input.expectedTotal) return err({ kind: "PricesChanged", total });
 
       const now = clock.now();
-      const transactionIds: number[] = [];
-      for (const [index, line] of input.lines.entries()) {
-        // The wallet refuses once the money runs out; returning the error undoes every line.
-        const bought = await buyCopies(services, { actor, line, quote: quotes[index], now });
-        if (!bought.ok) return bought;
-        transactionIds.push(bought.value.transactionId);
+      const transactionIds = await services.storeLedger.recordSingles(
+        input.lines.map((line, index) => ({
+          userId: actor.userId,
+          direction: "buy" as const,
+          printingId: line.printingId,
+          finish: line.finish,
+          quantity: line.quantity,
+          unitMarket: quotes[index].price,
+          rateBps: 10_000,
+          unitPrice: quotes[index].price,
+          total: lineTotals[index],
+          priceDay: quotes[index].day,
+          at: now,
+        })),
+      );
+      for (const [index, lineTotal] of lineTotals.entries()) {
+        // Rule 4: each line is recorded in the wallet ledger like a single purchase.
+        const paid = await spend(services, {
+          userId: actor.userId,
+          amount: lineTotal,
+          kind: "purchase_single",
+          note: null,
+          ref: `store:${transactionIds[index]}`,
+          now,
+        });
+        if (!paid.ok) return paid;
       }
+
+      await receiveCardBatches(
+        services,
+        actor.userId,
+        input.lines.map((line, index) => ({
+          gains: [{ printingId: line.printingId, finish: line.finish, quantity: line.quantity }],
+          acquisition: { source: "store" as const, ref: `store:${transactionIds[index]}`, at: now },
+        })),
+      );
       const cards = input.lines.reduce((sum, line) => sum + line.quantity, 0);
       return ok({ cards, total, transactionIds });
     });

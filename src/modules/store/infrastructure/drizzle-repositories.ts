@@ -124,44 +124,80 @@ export function drizzleStoreLedger(db: DbExecutor): StoreLedger {
     return row.id;
   }
 
-  async function recordSingle(trade: SingleTrade): Promise<number> {
-    const [row] = await db
+  async function recordSingles(trades: readonly SingleTrade[]): Promise<number[]> {
+    if (trades.length === 0) return [];
+    const rows = await db
       .insert(storeTransactions)
-      .values({
-        userId: trade.userId,
-        itemKind: "single",
-        direction: trade.direction,
-        printingId: trade.printingId,
-        finish: trade.finish,
-        quantity: trade.quantity,
-        unitMarketCents: trade.unitMarket,
-        rateBps: trade.rateBps,
-        unitPriceCents: trade.unitPrice,
-        totalCents: trade.total,
-        priceDay: trade.priceDay,
-        createdAt: trade.at,
-      })
+      .values(
+        trades.map((trade) => ({
+          userId: trade.userId,
+          itemKind: "single" as const,
+          direction: trade.direction,
+          printingId: trade.printingId,
+          finish: trade.finish,
+          quantity: trade.quantity,
+          unitMarketCents: trade.unitMarket,
+          rateBps: trade.rateBps,
+          unitPriceCents: trade.unitPrice,
+          totalCents: trade.total,
+          priceDay: trade.priceDay,
+          createdAt: trade.at,
+        })),
+      )
       .returning({ id: storeTransactions.id });
-    return row.id;
+    return rows.map((row) => row.id);
   }
 
-  return { recordSealedPurchase, recordSingle };
+  async function recordSingle(trade: SingleTrade): Promise<number> {
+    const [id] = await recordSingles([trade]);
+    return id;
+  }
+
+  return { recordSealedPurchase, recordSingle, recordSingles };
 }
 
 export function drizzleMarketPrices(db: DbExecutor): MarketPrices {
-  async function quote(printingId: PrintingId, finish: Finish): Promise<MarketQuote | null> {
-    const result = await db.execute<{ usd_cents: number; day: string; is_enabled: boolean }>(sql`
-      select s.usd_cents, s.day::text as day, cs.is_enabled
-        from ${latestSnapshot(sql`${printingId}`, sql`${finish}`)} s
-        join printings p on p.id = ${printingId}
+  async function quoteMany(
+    requests: readonly { printingId: PrintingId; finish: Finish }[],
+  ): Promise<Map<string, MarketQuote>> {
+    if (requests.length === 0) return new Map();
+    const seen = new Set<string>();
+    const printingIds: string[] = [];
+    const finishes: string[] = [];
+    for (const request of requests) {
+      const key = `${request.printingId}/${request.finish}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      printingIds.push(request.printingId);
+      finishes.push(request.finish);
+    }
+    const result = await db.execute<{
+      printing_id: string;
+      finish: string;
+      usd_cents: number;
+      day: string;
+      is_enabled: boolean;
+    }>(sql`
+      select req.printing_id, req.finish, s.usd_cents, s.day::text as day, cs.is_enabled
+        from unnest(${sql.param(printingIds)}::text[], ${sql.param(finishes)}::text[])
+          as req(printing_id, finish)
+        join printings p on p.id = req.printing_id
         join card_sets cs on cs.code = p.set_code
+        join lateral ${latestSnapshot(sql`req.printing_id`, sql`req.finish`)} s on true
     `);
-    const [row] = result.rows;
-    if (row === undefined) return null;
-    return { price: Cents.of(Number(row.usd_cents)), day: row.day, isSetEnabled: row.is_enabled };
+    return new Map(
+      result.rows.map((row) => [
+        `${row.printing_id}/${row.finish}`,
+        { price: Cents.of(Number(row.usd_cents)), day: row.day, isSetEnabled: row.is_enabled },
+      ]),
+    );
   }
 
-  return { quote };
+  async function quote(printingId: PrintingId, finish: Finish): Promise<MarketQuote | null> {
+    return (await quoteMany([{ printingId, finish }])).get(`${printingId}/${finish}`) ?? null;
+  }
+
+  return { quote, quoteMany };
 }
 
 const SETTINGS_ROW_ID = 1;

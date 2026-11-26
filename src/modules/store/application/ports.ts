@@ -62,14 +62,25 @@ export interface StoreLedger {
   recordSealedPurchase(purchase: SealedPurchase): Promise<number>;
   /** Records a single bought or sold and returns its transaction id. */
   recordSingle(trade: SingleTrade): Promise<number>;
+  /** Records many singles in one INSERT and returns their transaction ids in order. */
+  recordSingles(trades: readonly SingleTrade[]): Promise<number[]>;
 }
 
 /** The market price of one printing in one finish, and which daily snapshot it came from. */
 export type MarketQuote = Readonly<{ price: Cents; day: string; isSetEnabled: boolean }>;
 
+export type QuoteRequest = Readonly<{ printingId: PrintingId; finish: Finish }>;
+
+/** Key for looking up a quote in the map returned by `quoteMany`. */
+export function quoteKey(printingId: PrintingId, finish: Finish): string {
+  return `${printingId}/${finish}`;
+}
+
 export interface MarketPrices {
   /** The latest price, or null if that printing has none in that finish. */
   quote(printingId: PrintingId, finish: Finish): Promise<MarketQuote | null>;
+  /** Batch quote for many (printingId, finish) pairs, keyed by `quoteKey`. */
+  quoteMany(requests: readonly QuoteRequest[]): Promise<Map<string, MarketQuote>>;
 }
 
 export interface StoreSettings {

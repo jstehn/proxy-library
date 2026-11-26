@@ -14,7 +14,7 @@ import type {
 import { totalPrice } from "../domain/pricing";
 import { payoutPerCopy } from "../domain/singles";
 import type { ListReceipt } from "./buy-list";
-import type { StoreDependencies } from "./ports";
+import { quoteKey, type StoreDependencies } from "./ports";
 import type { SingleInput } from "./singles";
 
 export const MAX_SELL_LINES = 500;
@@ -73,9 +73,10 @@ export function makeSellList(dependencies: StoreDependencies) {
         day: string;
       }> = [];
 
+      const quotedByKey = await services.marketPrices.quoteMany(input.lines);
       for (const line of input.lines) {
-        const quote = await services.marketPrices.quote(line.printingId, line.finish);
-        if (quote === null) return err({ kind: "NoPrice" });
+        const quote = quotedByKey.get(quoteKey(line.printingId, line.finish));
+        if (quote === undefined) return err({ kind: "NoPrice" });
         const unitPrice = payoutPerCopy(quote.price, rateBps);
         if (unitPrice === 0) return err({ kind: "WorthNothing" });
         priced.push({
@@ -91,12 +92,10 @@ export function makeSellList(dependencies: StoreDependencies) {
       if (total < input.expectedTotal) return err({ kind: "PricesChanged", total });
 
       const now = clock.now();
-      const transactionIds: number[] = [];
-
-      for (const entry of priced) {
-        const transactionId = await services.storeLedger.recordSingle({
+      const transactionIds = await services.storeLedger.recordSingles(
+        priced.map((entry) => ({
           userId: actor.userId,
-          direction: "sell",
+          direction: "sell" as const,
           printingId: entry.line.printingId,
           finish: entry.line.finish,
           quantity: entry.line.quantity,
@@ -106,9 +105,8 @@ export function makeSellList(dependencies: StoreDependencies) {
           total: entry.lineTotal,
           priceDay: entry.day,
           at: now,
-        });
-        transactionIds.push(transactionId);
-      }
+        })),
+      );
 
       const ref = `store:${transactionIds[0]}`;
       // Take every card in one batch: if any line lacks enough copies, nothing is removed.

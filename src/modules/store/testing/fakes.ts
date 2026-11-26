@@ -56,6 +56,12 @@ export function inMemoryStoreLedger() {
       singles.push(trade);
       return ++lastId;
     },
+    async recordSingles(trades) {
+      return trades.map((trade) => {
+        singles.push(trade);
+        return ++lastId;
+      });
+    },
   };
   return { ...ledger, purchases, singles };
 }
@@ -65,6 +71,15 @@ export function inMemoryMarketPrices(quotes: Readonly<Record<string, MarketQuote
   return {
     async quote(printingId: PrintingId, finish: Finish) {
       return quotes[`${printingId}/${finish}`] ?? null;
+    },
+    async quoteMany(requests) {
+      const found = new Map<string, MarketQuote>();
+      for (const request of requests) {
+        const key = `${request.printingId}/${request.finish}`;
+        const matched = quotes[key];
+        if (matched !== undefined) found.set(key, matched);
+      }
+      return found;
     },
   };
 }
