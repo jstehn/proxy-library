@@ -368,28 +368,12 @@ function parseSpellbookFindMyCombos(
   const parsed = SpellbookFindMyCombosResponseSchema.parse(raw);
   const deckSet = new Set(deckCardNames.map((n) => n.trim().toLowerCase()));
 
-  const complete: SpellbookCombo[] = [];
+  // Spellbook's `results.included` only contains combos whose `uses` AND `requires` templates
+  // are already satisfied by the submitted decklist, so every `included` entry is complete.
+  const complete = parsed.results.included.map(mapSpellbookVariant);
   const oneCardAway: SpellbookOneCardAwayCombo[] = [];
   const needsTemplate: SpellbookTemplateCombo[] = [];
   const seenTemplateIds = new Set<string>();
-
-  const addTemplateCombo = (variant: z.infer<typeof SpellbookComboVariantSchema>) => {
-    if (seenTemplateIds.has(variant.id)) return;
-    seenTemplateIds.add(variant.id);
-    needsTemplate.push({
-      ...mapSpellbookVariant(variant),
-      requires: mapTemplateRequirements(variant.requires),
-    });
-  };
-
-  for (const variant of parsed.results.included) {
-    if (variant.requires.length > 0) {
-      // Never report a combo with an unverified generic template requirement as complete.
-      addTemplateCombo(variant);
-    } else {
-      complete.push(mapSpellbookVariant(variant));
-    }
-  }
 
   for (const variant of parsed.results.almostIncluded) {
     const missing = variant.uses
@@ -400,8 +384,16 @@ function parseSpellbookFindMyCombos(
         ...mapSpellbookVariant(variant),
         missingCardName: missing[0],
       });
-    } else if (missing.length === 0 && variant.requires.length > 0) {
-      addTemplateCombo(variant);
+    } else if (
+      missing.length === 0 &&
+      variant.requires.length > 0 &&
+      !seenTemplateIds.has(variant.id)
+    ) {
+      seenTemplateIds.add(variant.id);
+      needsTemplate.push({
+        ...mapSpellbookVariant(variant),
+        requires: mapTemplateRequirements(variant.requires),
+      });
     }
   }
 
