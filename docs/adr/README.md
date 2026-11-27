@@ -33,3 +33,4 @@ Template: [`TEMPLATE.md`](TEMPLATE.md).
 | 0023 | [Make `pnpm check` incremental, and size the design doc and lesson to the feature](0023-faster-checks-and-a-process-sized-to-the-feature.md) | Accepted                   |
 | 0028 | [Mount one Better Auth route: the Authentik callback](0028-authentik-callback-route.md)                                                      | Accepted                   |
 | 0024 | [Sell at the official MSRP by default; make value-based pricing an admin switch](0024-msrp-pricing-by-default.md)                            | Accepted                   |
+| 0031 | [Give contents to sealed products MTGJSON hasn't filled in, from data files](0031-sealed-contents-overrides.md)                              | Accepted                   |

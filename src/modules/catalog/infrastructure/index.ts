@@ -20,6 +20,7 @@ export {
   fixtureScryfallGateway,
 } from "../cards/infrastructure/fixture-gateways";
 export { fixtureWpnGateway, httpWpnGateway, memoryArtworkStore } from "../cards/infrastructure/wpn";
+export { diskContentsOverrides } from "../cards/infrastructure/contents-overrides";
 export {
   diskArtworkStore,
   diskImageStore,

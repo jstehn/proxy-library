@@ -14,6 +14,7 @@ import {
   REFERENCE_SETS_PER_RUN,
   referenceSetsToImport,
 } from "../domain/rules";
+import { applyContentsOverride } from "../domain/contents-overrides";
 import type { PriceSnapshot, SetCode, SetImport, TokenPrinting } from "../domain/types";
 import { makeFeaturesPass } from "./card-features";
 import { emptyArtworkSummary, makeArtworkPass, type ArtworkSummary } from "./artwork";
@@ -47,6 +48,8 @@ export type SyncSummary = {
   importedSupportingSets: string[];
   /** Sets imported printings-only for real collections, a few dozen per run (design doc 16). */
   importedReferenceSets?: string[];
+  /** Products that got their contents from a local override file (ADR 0031). */
+  contentsOverridden?: string[];
   /** Boosters, products and decks left out because they refer to something missing (rule 5). */
   leftOut: string[];
   /** Sets whose import failed with an unexpected error. The other sets still import. */
@@ -217,7 +220,8 @@ export function makeSync(dependencies: CardsDependencies) {
     kind: SyncKind,
     summary: SyncSummary,
   ): Promise<void> {
-    const setImport = await mtgjson.setFile(code);
+    const fromMtgjson = await mtgjson.setFile(code);
+    const setImport = await withContentsOverride(fromMtgjson, summary);
     addSkipped(summary, setImport);
 
     // Supporting sets first: their printings must exist before this set's references are checked.
@@ -252,6 +256,20 @@ export function makeSync(dependencies: CardsDependencies) {
       catalog.saveImport(checked.setImport, { kind: "full", importedAt: clock.now() }),
     );
     summary.importedSets.push(code);
+  }
+
+  /** Fills in contents MTGJSON lacks from our own override file, if there is one (ADR 0031). */
+  async function withContentsOverride(setImport: SetImport, summary: SyncSummary) {
+    if (dependencies.contentsOverrides === undefined) return setImport;
+    const { override, problems } = await dependencies.contentsOverrides.forSet(setImport.set.code);
+    const result = applyContentsOverride(setImport, override);
+    const prefix = (text: string) => `${setImport.set.code}: ${text}`;
+    summary.contentsOverridden = [
+      ...(summary.contentsOverridden ?? []),
+      ...result.applied.map(prefix),
+    ];
+    summary.leftOut.push(...[...problems, ...result.problems].map(prefix));
+    return result.setImport;
   }
 
   async function pricePass(bulkFilePath: string, summary: SyncSummary): Promise<void> {

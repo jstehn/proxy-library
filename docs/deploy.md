@@ -30,6 +30,7 @@ downloads Scryfall's card data (about 80 MB) and MTGJSON's files for the current
 ## Every day
 
 - **Nightly sync** at `SYNC_TIME` (default 04:00, in `TZ`): new prices, and new sets you enabled.
+- **Sealed contents files:** products MTGJSON lists with no contents are filled in from `data/sealed-contents/` (built into the image; set `SEALED_CONTENTS_DIR` to a mounted folder to add your own, see its README).
 - **Card features** (what each card does, ADR 0027) are filled in by the nightly sync. After an
   update that raises the features version, the next sync recomputes them, or run
   `pnpm worker sync features` now.

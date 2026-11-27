@@ -13,6 +13,7 @@ import type {
   SetImport,
   TokenPrinting,
 } from "../domain/types";
+import type { ContentsOverride } from "../domain/contents-overrides";
 import type { ArtworkSize, ProductForMatching, WpnImage, WpnLink, WpnSetPage } from "../domain/wpn";
 
 // Ports: what the catalog needs from outside (design doc 04, section 6).
@@ -25,6 +26,17 @@ export interface MtgjsonGateway {
   setList(): Promise<ReadonlyArray<{ set: CardSetInfo; isOnlineOnly: boolean }>>;
   /** One set file: printings, boosters, products and decks, digital-only things left out. */
   setFile(code: SetCode): Promise<SetImport>;
+}
+
+/**
+ * What we know about sealed products that MTGJSON lists with no contents yet (ADR 0031): data
+ * files people can add to. `problems` are files or entries that couldn't be used.
+ */
+export interface ContentsOverridesSource {
+  forSet(code: SetCode): Promise<{
+    override: ContentsOverride | undefined;
+    problems: readonly string[];
+  }>;
 }
 
 /** Scryfall's daily bulk file of every card, read as a stream. */
@@ -253,6 +265,8 @@ export type CardsDependencies = {
   unitOfWork: UnitOfWork<CardsServices>;
   extraPricedPrintings: ExtraPricedPrintings;
   mtgjson: MtgjsonGateway;
+  /** Contents for products MTGJSON hasn't filled in; none when left out. */
+  contentsOverrides?: ContentsOverridesSource;
   scryfall: ScryfallGateway;
   images: ImageStore;
   imageFetcher: ImageFetcher;

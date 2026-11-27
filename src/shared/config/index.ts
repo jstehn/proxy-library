@@ -23,6 +23,7 @@ const EnvSchema = z
     APP_URL: z.url({ error: "must be the app's public URL, e.g. http://localhost:3000" }),
     IMAGE_CACHE_DIR: z.string({ error: FROM_ENVRC }).min(1),
     SYNC_CACHE_DIR: z.string({ error: FROM_ENVRC }).min(1),
+    SEALED_CONTENTS_DIR: z.string().min(1).default("data/sealed-contents"),
     SYNC_TIME: z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be a 24-hour time like 04:00")
@@ -71,6 +72,8 @@ export type Config = Readonly<{
   imageCacheDir: string;
   /** Where the sync keeps its downloads (Scryfall's bulk file). */
   syncCacheDir: string;
+  /** Where the files giving contents to products MTGJSON hasn't filled in are (ADR 0031). */
+  sealedContentsDir: string;
   /** When the nightly sync runs, in the server's time zone. */
   syncTime: Readonly<{ hour: number; minute: number }>;
   /** Optional Reddit OAuth app credentials for oauth.reddit.com. */
@@ -108,6 +111,7 @@ export function loadConfig(
     appUrl: parsed.data.APP_URL,
     imageCacheDir: parsed.data.IMAGE_CACHE_DIR,
     syncCacheDir: parsed.data.SYNC_CACHE_DIR,
+    sealedContentsDir: parsed.data.SEALED_CONTENTS_DIR,
     syncTime: {
       hour: Number(parsed.data.SYNC_TIME.slice(0, 2)),
       minute: Number(parsed.data.SYNC_TIME.slice(3, 5)),

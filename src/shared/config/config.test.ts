@@ -18,6 +18,7 @@ describe("loadConfig", () => {
       appUrl: "http://localhost:3000",
       imageCacheDir: "/tmp/images",
       syncCacheDir: "/tmp/cache",
+      sealedContentsDir: "data/sealed-contents",
       syncTime: { hour: 4, minute: 0 },
     });
   });

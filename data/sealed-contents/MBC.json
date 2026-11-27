@@ -1,0 +1,12 @@
+{
+  "set": "MBC",
+  "note": "MTGJSON lists these products without contents (mtg-sealed-content data/products/MBC.yaml, checked 2026-11-27). A box is 24 packs, as sold in the Secret Lair Festival in a Box bundle. The case is left out until its size is confirmed.",
+  "products": {
+    "Mystery Booster Commander Edition Booster Pack": {
+      "pack": [{ "set": "mbc", "code": "draft" }]
+    },
+    "Mystery Booster Commander Edition Booster Box": {
+      "sealed": [{ "name": "Mystery Booster Commander Edition Booster Pack", "count": 24 }]
+    }
+  }
+}

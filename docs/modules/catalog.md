@@ -45,6 +45,10 @@ brackets.
     §4 rule 5, ADR 0007; `core.ts` `politeFetch`)
 11. **Embeddings** (for semantic search and similarity) are computed by the worker, incrementally:
     only cards with no row or a stale `(model, text version)`. (doc 53 §5 rule 4; `embed.test.ts`)
+12. **Contents MTGJSON lacks can come from our own files** (`data/sealed-contents/<SET>.json`,
+    folder set by `SEALED_CONTENTS_DIR`). A file fills in only products MTGJSON lists with no
+    contents, so upstream wins as soon as it has them; entries it can't use are reported in the sync's
+    `leftOut`, never fatal. Prices stay with the admin. (ADR 0031; `contents-overrides.test.ts`)
 
 ## Product imagery and details (WPN)
 
