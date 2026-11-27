@@ -187,6 +187,8 @@ export function buildCore(config: Config) {
     identity: betterAuthIdentityProvider(auth),
     secrets: cryptoSecretGenerator(),
     clock,
+    readPlayers: drizzlePlayerRepository(db),
+    readAccessTokens: drizzleAccessTokenRepository(db),
   });
 
   const wallet = makeWallet({ unitOfWork, clock });
@@ -218,6 +220,7 @@ export function buildCore(config: Config) {
   }
 
   const textEmbedder = huggingFaceTextEmbedder();
+  const catalogReads = drizzleCatalogRepository(db);
 
   const catalog = makeCatalog({
     unitOfWork,
@@ -232,6 +235,7 @@ export function buildCore(config: Config) {
     // WPN pages one a second; their images come from a CDN (design doc 13, rule 3).
     wpn: httpWpnGateway(politeFetch(1), politeFetch(4)),
     artworkFiles: diskArtworkStore(config.imageCacheDir),
+    readImageSource: (printingId) => catalogReads.imageSource(printingId),
     // EDHREC pages one a second (design doc 45, invariant 5).
     edhrec: httpEdhrecGateway(politeFetch(1)),
     spellbook: httpSpellbookGateway(politeFetch(1)),
