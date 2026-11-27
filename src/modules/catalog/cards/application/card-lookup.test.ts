@@ -99,4 +99,98 @@ describe("lookUpCards", () => {
     const [plain] = withoutSets.ok ? withoutSets.value : [];
     expect(plain?.found && plain.sets).toBeUndefined();
   });
+
+  it("uses findMany and decksUsingMany when provided and preserves query order", async () => {
+    const secondCard = {
+      oracleId: "o2",
+      printingId: "p2",
+      name: "Arcane Signet",
+      typeLine: "Artifact",
+      manaCost: "{2}",
+      colorIdentity: [],
+    };
+    let findCalls = 0;
+    let decksCalls = 0;
+    let findManyArgs: readonly string[] = [];
+    let decksManyArgs: readonly string[] = [];
+
+    const result = await makeCardLookup(
+      readers({
+        find: async () => {
+          findCalls += 1;
+          return null;
+        },
+        findMany: async (queries) => {
+          findManyArgs = queries;
+          return new Map([
+            ["Sol Ring", card],
+            ["Arcane Signet", secondCard],
+          ]);
+        },
+        decksUsing: async () => {
+          decksCalls += 1;
+          return [];
+        },
+        decksUsingMany: async (_actor, printingIds) => {
+          decksManyArgs = printingIds;
+          return new Map([["p2", [{ id: 9, name: "Ramp", quantity: 1 }]]]);
+        },
+      }),
+    )(actor, { queries: ["Sol Ring", "Missing", "Arcane Signet"] });
+
+    expect(findCalls).toBe(0);
+    expect(decksCalls).toBe(0);
+    expect(findManyArgs).toEqual(["Sol Ring", "Missing", "Arcane Signet"]);
+    expect(decksManyArgs).toEqual(["p1", "p2"]);
+    expect(
+      result.ok &&
+        result.value.map((entry) =>
+          entry.found
+            ? [entry.query, entry.card.name, entry.decksUsing.map((deck) => deck.name)]
+            : [entry.query, false],
+        ),
+    ).toEqual([
+      ["Sol Ring", "Sol Ring", []],
+      ["Missing", false],
+      ["Arcane Signet", "Arcane Signet", ["Ramp"]],
+    ]);
+  });
+
+  it("skips history, storePrintings, and ownedOfPrinting when their flags are false", async () => {
+    let historyCalls = 0;
+    let storeCalls = 0;
+    let ownedPrintingCalls = 0;
+
+    const result = await makeCardLookup(
+      readers({
+        history: async () => {
+          historyCalls += 1;
+          return {};
+        },
+        storePrintings: async () => {
+          storeCalls += 1;
+          return [];
+        },
+        ownedOfPrinting: async () => {
+          ownedPrintingCalls += 1;
+          return { nonfoil: 1 };
+        },
+      }),
+    )(actor, {
+      queries: ["Sol Ring"],
+      includeHistory: false,
+      includeStorePrintings: false,
+      includeOwnedOfPrinting: false,
+    });
+
+    expect(historyCalls).toBe(0);
+    expect(storeCalls).toBe(0);
+    expect(ownedPrintingCalls).toBe(0);
+    const [entry] = result.ok ? result.value : [];
+    expect(entry?.found && entry).toMatchObject({
+      priceTrend: [],
+      printingsForSale: [],
+      ownedOfThisPrinting: {},
+    });
+  });
 });

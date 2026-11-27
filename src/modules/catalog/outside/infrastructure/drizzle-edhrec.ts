@@ -53,13 +53,19 @@ export function drizzleEdhrecRepository(db: DbExecutor): EdhrecRepository {
       )}]::text[]`;
 
       const rows = await db.execute<{ key: string; oracle_id: string }>(sql`
-        select distinct on (k.key) k.key, p.oracle_id
-          from printings p
-         cross join lateral (
-           values (lower(p.name)), (lower(split_part(p.name, ' // ', 1)))
-         ) as k(key)
-         where k.key = any(${nameArray})
-         order by k.key, p.oracle_id
+        with matches as (
+          select lower(p.name) as key, p.oracle_id
+            from printings p
+           where lower(p.name) = any(${nameArray})
+          union all
+          select lower(split_part(p.name, ' // ', 1)) as key, p.oracle_id
+            from printings p
+           where p.name like '% // %'
+             and lower(split_part(p.name, ' // ', 1)) = any(${nameArray})
+        )
+        select distinct on (key) key, oracle_id
+          from matches
+         order by key, oracle_id
       `);
 
       return new Map(rows.rows.map((row) => [row.key, row.oracle_id]));

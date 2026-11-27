@@ -70,31 +70,34 @@ export async function findCards(
       select raw_key, lower_key
         from unnest(${sql.param(cleaned)}::text[], ${sql.param(lowered)}::text[])
           as input(raw_key, lower_key)
+    ),
+    matches as (
+      select w.raw_key as query_key, 0 as priority, p.*
+        from wanted w join printings p on p.id = w.raw_key
+      union all
+      select w.raw_key as query_key, 1 as priority, p.*
+        from wanted w join printings p on p.oracle_id = w.raw_key
+      union all
+      select w.raw_key as query_key, 2 as priority, p.*
+        from wanted w join printings p on lower(p.name) = w.lower_key
+      union all
+      select w.raw_key as query_key, 3 as priority, p.*
+        from wanted w join printings p
+          on p.name like '% // %' and lower(split_part(p.name, ' // ', 1)) = w.lower_key
+      union all
+      select w.raw_key as query_key, 4 as priority, p.*
+        from wanted w join printings p
+          on p.name like '% // %' and lower(split_part(p.name, ' // ', 2)) = w.lower_key
     )
-    select distinct on (w.raw_key)
-           w.raw_key as query_key,
+    select distinct on (p.query_key)
+           p.query_key,
            p.oracle_id, p.id as printing_id, p.scryfall_id, p.name, p.type_line, p.mana_cost,
            p.color_identity,
            coalesce((select string_agg(f->>'text', ${"\n"}) from jsonb_array_elements(p.faces) f), '')
              as face_text
-      from wanted w
-      join printings p
-        on p.id = w.raw_key
-        or p.oracle_id = w.raw_key
-        or lower(p.name) = w.lower_key
-        or (p.name like '% // %' and lower(split_part(p.name, ' // ', 1)) = w.lower_key)
-        or (p.name like '% // %' and lower(split_part(p.name, ' // ', 2)) = w.lower_key)
+      from matches p
       join card_sets s on s.code = p.set_code
-     order by
-       w.raw_key,
-       case
-         when p.id = w.raw_key then 0
-         when p.oracle_id = w.raw_key then 1
-         when lower(p.name) = w.lower_key then 2
-         when lower(split_part(p.name, ' // ', 1)) = w.lower_key then 3
-         else 4
-       end,
-       ${STANDARD_FIRST}
+     order by p.query_key, p.priority, ${STANDARD_FIRST}
   `);
   const byTrimmed = new Map<string, CardReference>();
   for (const row of rows.rows) {
@@ -195,11 +198,17 @@ export async function checkOwnedCards(
     name: string;
     front_name: string;
   }>(sql`
+    with matched as (
+      select p.* from printings p
+       where lower(p.name) = any(${lowerArray})
+      union all
+      select p.* from printings p
+       where p.name like '% // %'
+         and lower(split_part(p.name, ' // ', 1)) = any(${lowerArray})
+    )
     select distinct on (p.oracle_id) p.oracle_id, p.name,
            lower(split_part(p.name, ' // ', 1)) as front_name
-      from printings p join card_sets s on s.code = p.set_code
-     where lower(p.name) = any(${lowerArray})
-        or lower(split_part(p.name, ' // ', 1)) = any(${lowerArray})
+      from matched p join card_sets s on s.code = p.set_code
      order by p.oracle_id, ${STANDARD_FIRST}
   `);
 

@@ -100,12 +100,19 @@ export function candidatePool(db: DbExecutor, userId: UserId): CandidatePool {
     similarities: (deckOracleIds, candidateOracleIds) =>
       embedSimForCards(db, deckOracleIds, candidateOracleIds),
     neighbours: async (oracleId, limit) => {
+      const [target] = (
+        await db.execute<{ vec: string }>(sql`
+          select embedding::text as vec
+            from card_embeddings
+           where oracle_id = ${oracleId}
+        `)
+      ).rows;
+      if (target === undefined) return [];
       const rows = await db.execute<{ oracle_id: string; similarity: number }>(sql`
-        select e.oracle_id, (1 - (e.embedding <=> t.embedding))::float8 as similarity
-          from card_embeddings t
-          join card_embeddings e on e.oracle_id <> t.oracle_id
-         where t.oracle_id = ${oracleId}
-         order by e.embedding <=> t.embedding
+        select oracle_id, (1 - (embedding <=> ${target.vec}::vector))::float8 as similarity
+          from card_embeddings
+         where oracle_id <> ${oracleId}
+         order by embedding <=> ${target.vec}::vector
          limit ${limit}
       `);
       return rows.rows.map((row) => ({

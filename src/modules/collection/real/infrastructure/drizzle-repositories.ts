@@ -174,13 +174,23 @@ export function sqlPrintingMatcher(db: DbExecutor): PrintingMatcher {
         is_full_art: boolean;
         scryfall_id: string;
       }>(sql`
+        with matched_ids as (
+          select p.id from printings p
+           where lower(p.name) = any(${sql.param(names)}::text[])
+          union
+          select p.id from printings p
+           where p.name like '% // %'
+             and lower(split_part(p.name, ' // ', 1)) = any(${sql.param(names)}::text[])
+          union
+          select p.id from printings p
+           where p.scryfall_id = any(${sql.param(scryfallIds)}::text[])
+        )
         select p.id, p.oracle_id, p.name, p.set_code, p.collector_number, s.type as set_type,
                s.release_date, p.finishes, p.border_color, p.frame_effects, p.promo_types,
                p.is_full_art, p.scryfall_id
-          from printings p join card_sets s on s.code = p.set_code
-         where lower(p.name) = any(${sql.param(names)}::text[])
-            or lower(split_part(p.name, ' // ', 1)) = any(${sql.param(names)}::text[])
-            or p.scryfall_id = any(${sql.param(scryfallIds)}::text[])
+          from matched_ids m
+          join printings p on p.id = m.id
+          join card_sets s on s.code = p.set_code
       `);
 
       const byName = new Map<string, PrintingCandidate[]>();

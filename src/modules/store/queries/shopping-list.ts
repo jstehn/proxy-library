@@ -18,7 +18,7 @@ import {
 
 /** Matches a printing "p" by its whole name or its front face's ("Delver of Secrets"). */
 function nameIn(names: SQL): SQL {
-  return sql`(lower(p.name) = any(${names}) or lower(split_part(p.name, ' // ', 1)) = any(${names}))`;
+  return sql`(lower(p.name) = any(${names}) or (p.name like '% // %' and lower(split_part(p.name, ' // ', 1)) = any(${names})))`;
 }
 
 /** What the list would buy right now, at today's prices. */

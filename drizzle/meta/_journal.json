@@ -421,6 +421,13 @@
       "when": 1795730537147,
       "tag": "0059_sql_audit_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795757055020,
+      "tag": "0060_sql_efficiency_indexes",
+      "breakpoints": true
     }
   ]
 }
