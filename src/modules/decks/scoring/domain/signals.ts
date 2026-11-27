@@ -299,18 +299,21 @@ function recurringPhrases(
   for (const bucket of byCount.values()) {
     bucket.sort(([phraseA], [phraseB]) => phraseB.length - phraseA.length);
     const byWord = new Map<string, string[]>();
+    const byBoundary = new Map<string, string[]>();
     for (const entry of bucket) {
       const [phrase] = entry;
       const words = phrase.split(" ");
-      if (isContainedInIndexed(phrase, words, byWord)) continue;
+      if (isContainedInIndexed(phrase, words, byWord, byBoundary)) continue;
       kept.push(entry);
       for (const word of new Set(words)) {
-        let indexed = byWord.get(word);
-        if (indexed === undefined) {
-          indexed = [];
-          byWord.set(word, indexed);
-        }
-        indexed.push(phrase);
+        addToIndex(byWord, word, phrase);
+      }
+      const boundaries = new Set<string>();
+      for (let index = 0; index + 1 < words.length; index++) {
+        boundaries.add(`${words[index].slice(-1)} ${words[index + 1][0]}`);
+      }
+      for (const boundary of boundaries) {
+        addToIndex(byBoundary, boundary, phrase);
       }
     }
   }
@@ -323,15 +326,25 @@ function recurringPhrases(
   );
 }
 
+function addToIndex(index: Map<string, string[]>, key: string, phrase: string): void {
+  let list = index.get(key);
+  if (list === undefined) {
+    list = [];
+    index.set(key, list);
+  }
+  list.push(phrase);
+}
+
 /**
  * Checks whether an already-kept longer phrase in the same count bucket contains `phrase`.
  * For 3+ word phrases, every interior word must appear as a whole word in any containing phrase;
- * for 2-word phrases we check both words so suffix/prefix variants like "token"/"tokens" are caught.
+ * for 2-word phrases, the character pair across the space must match an adjacent word boundary.
  */
 function isContainedInIndexed(
   phrase: string,
   words: readonly string[],
   byWord: ReadonlyMap<string, readonly string[]>,
+  byBoundary: ReadonlyMap<string, readonly string[]>,
 ): boolean {
   if (words.length >= 3) {
     let bestWord = words[1];
@@ -346,7 +359,8 @@ function isContainedInIndexed(
     }
     return (byWord.get(bestWord) ?? []).some((other) => other.includes(phrase));
   }
-  return words.some((word) => (byWord.get(word) ?? []).some((other) => other.includes(phrase)));
+  const boundary = `${words[0].slice(-1)} ${words[1][0]}`;
+  return (byBoundary.get(boundary) ?? []).some((other) => other.includes(phrase));
 }
 
 function toSignal(finding: SignalFact, names: readonly string[]): Signal {

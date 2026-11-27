@@ -228,4 +228,20 @@ describe("countSignals recurringPhrases", () => {
 
     expect(actualPhrases).toEqual(expectedPhrases);
   });
+
+  it("drops 2-word phrases contained across both prefix and suffix boundaries (creature spell in noncreature spells)", () => {
+    const cards: SignalCard[] = ["Card A", "Card B", "Card C"].map((name) => ({
+      name,
+      roleTags: [],
+      themes: [],
+      signals: [],
+      faces: [{ plainText: "noncreature spells, creature spell." }],
+    }));
+
+    const phraseNames = countSignals(cards, { minimumCards: 3, limit: 100 })
+      .filter((signal) => signal.kind === "phrase")
+      .map((signal) => signal.name);
+
+    expect(phraseNames).toEqual(["noncreature spells"]);
+  });
 });
