@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Fetch } from "@/shared/http";
-import { diskImageStore, httpScryfallGateway } from "./gateways";
+import { diskArtworkStore, diskImageStore, httpScryfallGateway } from "./gateways";
 
 // The real Scryfall gateway and image store, with a fake fetch and a temporary folder.
 
@@ -71,7 +71,36 @@ describe("diskImageStore", () => {
     const key = { size: "small" as const, scryfallId: "abc", face: "front" as const };
     expect(await store.get(key)).toBeNull();
     await store.put(key, new Uint8Array([1, 2, 3]));
-    expect(await store.get(key)).toEqual(new Uint8Array([1, 2, 3]));
+    const loaded = await store.get(key);
+    expect(loaded).toBeInstanceOf(Uint8Array);
+    expect(loaded).toEqual(Buffer.from([1, 2, 3]));
     expect(readdirSync(join(directory, "small"))).toEqual(["abc-front.jpg"]); // no leftover .partial
+  });
+
+  it("handles concurrent puts to the same key without partial-file collisions", async () => {
+    const store = diskImageStore(directory);
+    const key = { size: "normal" as const, scryfallId: "race", face: "front" as const };
+    await Promise.all([
+      store.put(key, new Uint8Array([1, 2, 3])),
+      store.put(key, new Uint8Array([1, 2, 3])),
+      store.put(key, new Uint8Array([1, 2, 3])),
+    ]);
+    expect(await store.get(key)).toEqual(Buffer.from([1, 2, 3]));
+    expect(readdirSync(join(directory, "normal"))).toEqual(["race-front.jpg"]);
+  });
+});
+
+describe("diskArtworkStore", () => {
+  it("returns null for missing artwork and saves concurrently without partial leftovers", async () => {
+    const store = diskArtworkStore(directory);
+    expect(await store.get("pack-1", "small")).toBeNull();
+    await Promise.all([
+      store.put("pack-1", "small", new Uint8Array([4, 5, 6])),
+      store.put("pack-1", "small", new Uint8Array([4, 5, 6])),
+    ]);
+    const loaded = await store.get("pack-1", "small");
+    expect(loaded).toBeInstanceOf(Uint8Array);
+    expect(loaded).toEqual(Buffer.from([4, 5, 6]));
+    expect(readdirSync(join(directory, "artwork", "small"))).toEqual(["pack-1.webp"]);
   });
 });

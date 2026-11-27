@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { manualClock } from "@/shared/kernel/testing";
 import { AccessTokenId, MAX_LIVE_TOKENS, tokenHash } from "../../domain/access-token";
 import { toActor, type Actor } from "../../domain/player";
@@ -126,6 +126,42 @@ describe("actorFromToken (rule 1)", () => {
     const { secret } = await create(jack);
     await accounts.resetPassword(admin, { userId: jack.userId });
     expect(await accounts.actorFromToken(`Bearer ${secret}`)).toBeNull();
+  });
+
+  it("uses readPlayers and readAccessTokens directly without opening a unit of work", async () => {
+    const { token, secret } = await create(jack, ["decks:write"]);
+    const unitOfWorkRun = vi.fn(async () => {
+      throw new Error("unitOfWork.run should not be called on the read-only path");
+    });
+    const touchSpy = vi.spyOn(services.accessTokens, "touch");
+    const fastAccounts = makeAccounts({
+      unitOfWork: { run: unitOfWorkRun },
+      identity: inMemoryIdentityProvider(),
+      secrets: sequentialSecretGenerator(),
+      clock,
+      readPlayers: services.players,
+      readAccessTokens: services.accessTokens,
+    });
+
+    expect(await fastAccounts.actorFromToken(`Bearer ${secret}`)).toEqual({
+      actor: jack,
+      scopes: ["read", "decks:write"],
+      tokenId: token.id,
+    });
+    expect(unitOfWorkRun).not.toHaveBeenCalled();
+    expect(touchSpy).toHaveBeenCalledTimes(1);
+
+    clock.advanceBy(30_000);
+    expect(await fastAccounts.actorFromToken(`Bearer ${secret}`)).not.toBeNull();
+    expect(touchSpy).toHaveBeenCalledTimes(1);
+
+    clock.advanceBy(30_000);
+    expect(await fastAccounts.actorFromToken(`Bearer ${secret}`)).not.toBeNull();
+    expect(touchSpy).toHaveBeenCalledTimes(2);
+
+    await accounts.revokeAccessToken(jack, token.id);
+    expect(await fastAccounts.actorFromToken(`Bearer ${secret}`)).toBeNull();
+    expect(unitOfWorkRun).not.toHaveBeenCalled();
   });
 });
 

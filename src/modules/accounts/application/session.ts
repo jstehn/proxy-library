@@ -1,5 +1,5 @@
 import { ok } from "@/shared/kernel";
-import { isActive, toActor, type Actor } from "../domain/player";
+import { isActive, toActor, type Actor, type Player } from "../domain/player";
 import type { AccountsDependencies } from "./ports";
 
 /**
@@ -7,15 +7,21 @@ import type { AccountsDependencies } from "./ports";
  * is disabled or has no player row. Every page and action that needs a player calls this.
  */
 export function makeGetActor(dependencies: AccountsDependencies) {
-  const { unitOfWork, identity } = dependencies;
+  const { unitOfWork, identity, readPlayers } = dependencies;
 
   async function getActor(requestHeaders: Headers): Promise<Actor | null> {
     const userId = await identity.currentUserId(requestHeaders);
     if (userId === null) return null;
 
-    const player = await unitOfWork.run(async ({ players }) => ok(await players.findById(userId)));
-    if (!player.ok || player.value === null || !isActive(player.value)) return null;
-    return toActor(player.value);
+    let player: Player | null;
+    if (readPlayers !== undefined) {
+      player = await readPlayers.findById(userId);
+    } else {
+      const found = await unitOfWork.run(async ({ players }) => ok(await players.findById(userId)));
+      player = found.ok ? found.value : null;
+    }
+    if (player === null || !isActive(player)) return null;
+    return toActor(player);
   }
 
   return getActor;

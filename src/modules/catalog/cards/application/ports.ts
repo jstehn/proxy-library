@@ -258,6 +258,7 @@ export type CardsDependencies = {
   imageFetcher: ImageFetcher;
   wpn: WpnGateway;
   artworkFiles: ArtworkStore;
+  readImageSource?: (printingId: PrintingId) => Promise<ImageSource | null>;
   /** Given on to the outside syncs the nightly sync starts. */
   edhrec?: EdhrecGateway;
   spellbook?: SpellbookGateway;

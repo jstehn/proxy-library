@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { err, ok, UserId } from "@/shared/kernel";
 import { manualClock } from "@/shared/kernel/testing";
 import { toActor, type Actor, type Player } from "../domain/player";
@@ -191,6 +191,28 @@ describe("signIn and getActor", () => {
     await accounts.signOut(browser);
     expect(await accounts.getActor(browser)).toBeNull();
     expect(await accounts.getActor(new Headers())).toBeNull();
+  });
+
+  it("uses readPlayers directly in getActor without opening a unit of work", async () => {
+    const { admin, player } = await adminAndPlayer();
+    const browser = identity.headersFor(player.userId);
+    const unitOfWorkRun = vi.fn(async () => {
+      throw new Error("unitOfWork.run should not be called when readPlayers is provided");
+    });
+    const fastAccounts = makeAccounts({
+      unitOfWork: { run: unitOfWorkRun },
+      identity,
+      secrets: sequentialSecretGenerator(),
+      clock,
+      readPlayers: services.players,
+    });
+
+    expect((await fastAccounts.getActor(browser))?.username).toBe("jack");
+    expect(unitOfWorkRun).not.toHaveBeenCalled();
+
+    await accounts.setDisabled(admin, { userId: player.userId, disabled: true });
+    expect(await fastAccounts.getActor(browser)).toBeNull();
+    expect(unitOfWorkRun).not.toHaveBeenCalled();
   });
 });
 
