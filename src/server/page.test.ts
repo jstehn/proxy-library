@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { testActor, testAdminActor } from "@/modules/accounts/testing/actors";
 import type { Capabilities } from "./composition/capabilities";
 import { makeReadPage, type PageSources } from "./page";
@@ -28,6 +28,23 @@ describe("readPage", () => {
     expect(context.actor).toBe(actor);
     expect(context.capabilities).toBe(capabilities);
     expect(context.reads).toBe(reads);
+  });
+
+  it("starts timing the page before it waits for anything", async () => {
+    const calls: string[] = [];
+    const readPage = makeReadPage(
+      sources({
+        startMetrics: () => calls.push("metrics"),
+        requireActor: async () => {
+          calls.push("actor");
+          return actor;
+        },
+      }),
+    );
+    const pending = readPage();
+    expect(calls).toEqual(["metrics", "actor"]);
+    await pending;
+    vi.restoreAllMocks();
   });
 
   it("lets a visitor through only when the page allows visitors", async () => {

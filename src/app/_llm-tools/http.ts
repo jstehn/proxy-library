@@ -4,6 +4,7 @@ import { resourceMetadataUrl } from "@/app/_oauth/http";
 import {
   formatServerTiming,
   runWithMetrics,
+  setMetricClient,
   setMetricLabel,
   type MetricEntry,
   type MetricKind,
@@ -27,6 +28,22 @@ function mcpLabelFromPayload(payload: unknown): string {
     }
   }
   return `mcp:${record.method}`;
+}
+
+/** The MCP client's own name (sent once, in `initialize`), or else the request's User-Agent. */
+function clientNameFrom(request: Request, payload: unknown): string {
+  const item = Array.isArray(payload) ? payload[0] : payload;
+  const params =
+    typeof item === "object" && item !== null ? (item as { params?: unknown }).params : null;
+  const clientInfo =
+    typeof params === "object" && params !== null
+      ? (params as { clientInfo?: unknown }).clientInfo
+      : null;
+  if (typeof clientInfo === "object" && clientInfo !== null && "name" in clientInfo) {
+    const name = (clientInfo as { name?: unknown }).name;
+    if (typeof name === "string" && name.length > 0) return name;
+  }
+  return request.headers.get("user-agent") ?? "";
 }
 
 function withServerTiming(response: Response, snapshot: MetricEntry): Response {
@@ -75,6 +92,7 @@ export async function handleMcp(request: Request): Promise<Response> {
       .json()
       .catch(() => null);
     setMetricLabel(mcpLabelFromPayload(payload));
+    setMetricClient(clientNameFrom(request, payload));
     const context = await readTool(request);
     if (context === null) return unauthorized();
     const server = makeMcpServer(context);
@@ -94,6 +112,7 @@ export async function handleMcp(request: Request): Promise<Response> {
 /** POST /api/tools/<name>: the tool's input as the JSON body, its output as the answer. */
 export async function handleToolCall(request: Request, name: string): Promise<Response> {
   return runObservedHttp("tool", `tool:${name}`, async () => {
+    setMetricClient(request.headers.get("user-agent") ?? "");
     const context = await readTool(request);
     if (context === null) return unauthorized();
     let body: unknown = {};

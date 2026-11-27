@@ -28,6 +28,8 @@ export type PageSources = Readonly<{
   capabilities(): Capabilities;
   reads(): Reads;
   publicReads(): PublicReads;
+  /** Starts timing this page's render (see `page-metrics.ts`). Called before anything is awaited. */
+  startMetrics?(): void;
 }>;
 
 /** Builds `readPage` from where the actor, the capabilities and the reads come from (fakes in tests). */
@@ -43,6 +45,8 @@ export function makeReadPage(sources: PageSources) {
   async function readPage(
     options: { admin?: true; allowPasswordChangePending?: true; allowVisitors?: true } = {},
   ): Promise<PageContext | AdminPageContext | VisitorPageContext> {
+    // Before the first await, so the measurement covers everything the page does afterwards.
+    sources.startMetrics?.();
     const capabilities = sources.capabilities();
     if (options.allowVisitors) {
       const actor = await sources.currentActor();
