@@ -1,18 +1,30 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { QueryTimingEvent } from "@/shared/db";
 
-export type MetricKind = "mcp" | "tool" | "action";
+export type MetricKind = "mcp" | "tool" | "action" | "page";
 
 export type MetricEntry = Readonly<{
   kind: MetricKind;
   label: string;
+  /** Who called: the MCP client's name or the HTTP User-Agent (null for pages and actions). */
+  client: string | null;
+  /** When the operation started, as an ISO timestamp (to match a slow call to what happened then). */
+  at: string;
   startedAtMs: number;
   wallMs: number;
+  /**
+   * Wall time spent neither waiting on the database nor on outbound HTTP: JavaScript, rendering,
+   * or waiting for a free connection. Overlapping queries count once, so this never goes negative.
+   */
+  otherMs: number;
   sqlCount: number;
   sqlMs: number;
   sqlMaxMs: number;
   txCount: number;
   slowestSql: string | null;
+  /** The statement shape that ran most often (values stripped), when it ran at least twice. */
+  repeatedSql: string | null;
+  repeatedSqlCount: number;
   httpCount: number;
   httpMs: number;
   httpHosts: readonly string[];
@@ -21,7 +33,12 @@ export type MetricEntry = Readonly<{
 type MutableMetricStore = {
   kind: MetricKind;
   label: string;
+  at: string;
+  client: string | null;
   startedAtMs: number;
+  waitMs: number;
+  lastWaitEndMs: number;
+  statementCounts: Map<string, number>;
   sqlCount: number;
   sqlMs: number;
   sqlMaxMs: number;
@@ -37,6 +54,9 @@ const MAX_RECENT_ENTRIES = 100;
 const SLOW_WALL_MS = 250;
 const HIGH_SQL_COUNT = 15;
 const MAX_SQL_LENGTH = 160;
+const MAX_CLIENT_LENGTH = 80;
+const REPEATED_SQL_COUNT = 5;
+const MAX_DISTINCT_STATEMENTS = 200;
 
 const metricsStorage = new AsyncLocalStorage<MutableMetricStore>();
 const recentEntries: MetricEntry[] = [];
@@ -46,21 +66,71 @@ function roundMs(durationMs: number): number {
   return Math.round(durationMs * 10) / 10;
 }
 
-function compactSql(sqlText: string): string {
-  return sqlText.replace(/\s+/g, " ").trim().slice(0, MAX_SQL_LENGTH);
+function compactSql(sqlText: string, maxLength: number = MAX_SQL_LENGTH): string {
+  return sqlText.replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+/** The statement with its values stripped, so the same query with different ids counts as one. */
+function statementShape(sqlText: string): string {
+  return compactSql(sqlText, Number.POSITIVE_INFINITY)
+    .replace(/'[^']*'/g, "?")
+    .replace(/\$\d+/g, "?")
+    .replace(/\b\d+\b/g, "?")
+    .replace(/\(\s*\?(?:\s*,\s*\?)+\s*\)/g, "(?, …)");
+}
+
+function countStatement(store: MutableMetricStore, sqlText: string): void {
+  const shape = statementShape(sqlText);
+  const known = store.statementCounts.get(shape);
+  if (known !== undefined) {
+    store.statementCounts.set(shape, known + 1);
+  } else if (store.statementCounts.size < MAX_DISTINCT_STATEMENTS) {
+    store.statementCounts.set(shape, 1);
+  }
+}
+
+function mostRepeatedStatement(store: MutableMetricStore): { sql: string | null; count: number } {
+  let sql: string | null = null;
+  let count = 1;
+  for (const [shape, shapeCount] of store.statementCounts) {
+    if (shapeCount > count) {
+      sql = shape;
+      count = shapeCount;
+    }
+  }
+  return sql === null ? { sql: null, count: 0 } : { sql: sql.slice(0, MAX_SQL_LENGTH), count };
+}
+
+/**
+ * Add a finished wait (a query or an HTTP call) to the time spent waiting. Waits arrive in the
+ * order they end, so counting only the part after the previous wait's end adds overlapping
+ * (parallel) waits once.
+ */
+function addWait(store: MutableMetricStore, durationMs: number): void {
+  const endMs = performance.now();
+  const startMs = Math.max(endMs - durationMs, store.lastWaitEndMs, store.startedAtMs);
+  if (endMs > startMs) store.waitMs += endMs - startMs;
+  store.lastWaitEndMs = Math.max(store.lastWaitEndMs, endMs);
 }
 
 function finalizeSnapshot(store: MutableMetricStore): MetricEntry {
+  const wallMs = performance.now() - store.startedAtMs;
+  const repeated = mostRepeatedStatement(store);
   return {
     kind: store.kind,
     label: store.label,
+    at: store.at,
+    client: store.client,
     startedAtMs: roundMs(store.startedAtMs),
-    wallMs: roundMs(performance.now() - store.startedAtMs),
+    wallMs: roundMs(wallMs),
+    otherMs: roundMs(Math.max(0, wallMs - store.waitMs)),
     sqlCount: store.sqlCount,
     sqlMs: roundMs(store.sqlMs),
     sqlMaxMs: roundMs(store.sqlMaxMs),
     txCount: store.txCount,
     slowestSql: store.slowestSql,
+    repeatedSql: repeated.sql,
+    repeatedSqlCount: repeated.count,
     httpCount: store.httpCount,
     httpMs: roundMs(store.httpMs),
     httpHosts: [...store.httpHosts],
@@ -85,8 +155,11 @@ export function recordQueryEvent(event: QueryTimingEvent): void {
   if (store === undefined) return;
   store.sqlCount += 1;
   store.sqlMs += event.durationMs;
+  addWait(store, event.durationMs);
   if (event.isTransactionControl) {
     store.txCount += 1;
+  } else {
+    countStatement(store, event.sql);
   }
   if (
     store.slowestSql === null ||
@@ -109,6 +182,7 @@ export function recordHttpEvent(event: {
   if (store === undefined) return;
   store.httpCount += 1;
   store.httpMs += event.durationMs;
+  addWait(store, event.durationMs);
   if (event.host.length > 0) {
     store.httpHosts.add(event.host);
   }
@@ -122,15 +196,17 @@ export function setMetricLabel(label: string): void {
   }
 }
 
-/** Run an async operation under an isolated AsyncLocalStorage metrics context. */
-export async function runWithMetrics<T>(
-  input: { kind: MetricKind; label: string; log?: boolean },
-  work: () => Promise<T>,
-): Promise<{ result: T; snapshot: MetricEntry }> {
-  const store: MutableMetricStore = {
-    kind: input.kind,
-    label: input.label,
-    startedAtMs: performance.now(),
+function createStore(kind: MetricKind, label: string): MutableMetricStore {
+  const startedAtMs = performance.now();
+  return {
+    kind,
+    label,
+    at: new Date(performance.timeOrigin + startedAtMs).toISOString(),
+    client: null,
+    startedAtMs,
+    waitMs: 0,
+    lastWaitEndMs: startedAtMs,
+    statementCounts: new Map<string, number>(),
     sqlCount: 0,
     sqlMs: 0,
     sqlMaxMs: 0,
@@ -141,26 +217,63 @@ export async function runWithMetrics<T>(
     httpMs: 0,
     httpHosts: new Set<string>(),
   };
+}
 
+/** Record a finished operation in the recent list and print it when it is worth a log line. */
+function finishStore(store: MutableMetricStore, snapshot: MetricEntry | undefined, log: boolean) {
+  const entry = snapshot ?? finalizeSnapshot(store);
+  pushRecentEntry(entry);
+  const shouldLog =
+    log &&
+    loggingEnabled &&
+    (entry.kind === "mcp" ||
+      entry.kind === "tool" ||
+      entry.wallMs >= SLOW_WALL_MS ||
+      entry.sqlCount >= HIGH_SQL_COUNT ||
+      entry.repeatedSqlCount >= REPEATED_SQL_COUNT);
+  if (shouldLog) {
+    console.info("perf", JSON.stringify(entry));
+  }
+  return entry;
+}
+
+/** Note who is calling (an MCP client's name or a User-Agent), so unexpected traffic can be traced. */
+export function setMetricClient(client: string): void {
+  const store = metricsStorage.getStore();
+  if (store !== undefined && client.length > 0) {
+    store.client = client.slice(0, MAX_CLIENT_LENGTH);
+  }
+}
+
+/** Run an async operation under an isolated AsyncLocalStorage metrics context. */
+export async function runWithMetrics<T>(
+  input: { kind: MetricKind; label: string; log?: boolean },
+  work: () => Promise<T>,
+): Promise<{ result: T; snapshot: MetricEntry }> {
+  const store = createStore(input.kind, input.label);
   let snapshot: MetricEntry | undefined;
   try {
     const result = await metricsStorage.run(store, work);
     snapshot = finalizeSnapshot(store);
     return { result, snapshot };
   } finally {
-    const entry = snapshot ?? finalizeSnapshot(store);
-    pushRecentEntry(entry);
-    const shouldLog =
-      (input.log ?? true) &&
-      loggingEnabled &&
-      (entry.kind === "mcp" ||
-        entry.kind === "tool" ||
-        entry.wallMs >= SLOW_WALL_MS ||
-        entry.sqlCount >= HIGH_SQL_COUNT);
-    if (shouldLog) {
-      console.info("perf", JSON.stringify(entry));
-    }
+    finishStore(store, snapshot, input.log ?? true);
   }
+}
+
+/**
+ * Start measuring the rest of the current request, for work that has no wrapper to run inside
+ * (a page render). Everything after this call in the same request is counted until the returned
+ * function is called. If a measurement is already running (a layout and its page both ask),
+ * returns null and the first one keeps counting.
+ */
+export function startMetrics(input: { kind: MetricKind; label: string }): (() => void) | null {
+  if (metricsStorage.getStore() !== undefined) return null;
+  const store = createStore(input.kind, input.label);
+  metricsStorage.enterWith(store);
+  return () => {
+    finishStore(store, undefined, true);
+  };
 }
 
 /** Format a finalized metrics snapshot into an HTTP `Server-Timing` header value. */

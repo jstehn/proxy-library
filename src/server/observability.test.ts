@@ -9,8 +9,10 @@ import {
   recordQueryEvent,
   resolveActionLabel,
   runWithMetrics,
+  setMetricClient,
   setMetricLabel,
   setMetricsLogging,
+  startMetrics,
   wrapObservedAction,
 } from "./observability";
 
@@ -20,6 +22,96 @@ afterEach(() => {
 });
 
 describe("observability", () => {
+  it("finds the statement that ran most often, whatever values it ran with", async () => {
+    const { snapshot } = await runWithMetrics(
+      { kind: "page", label: "page:/decks", log: false },
+      async () => {
+        for (const deckId of [1, 2, 3, 4]) {
+          recordQueryEvent({
+            durationMs: 1,
+            sql: `SELECT *  FROM cards WHERE deck_id = ${deckId} AND name IN ('a', 'b')`,
+            isTransactionControl: false,
+          });
+        }
+        recordQueryEvent({ durationMs: 1, sql: "SELECT 1", isTransactionControl: false });
+        recordQueryEvent({ durationMs: 1, sql: "COMMIT", isTransactionControl: true });
+      },
+    );
+
+    expect(snapshot.repeatedSqlCount).toBe(4);
+    expect(snapshot.repeatedSql).toBe("SELECT * FROM cards WHERE deck_id = ? AND name IN (?, …)");
+  });
+
+  it("records who called, trimmed, and ignores it outside an operation", async () => {
+    expect(() => setMetricClient("nobody")).not.toThrow();
+    const { snapshot } = await runWithMetrics(
+      { kind: "mcp", label: "mcp:initialize", log: false },
+      async () => {
+        setMetricClient("claude-code");
+        setMetricClient("x".repeat(200));
+        setMetricClient("");
+      },
+    );
+    expect(snapshot.client).toBe("x".repeat(80));
+  });
+
+  it("leaves repeatedSql empty when no statement ran twice", async () => {
+    const { snapshot } = await runWithMetrics(
+      { kind: "page", label: "page:/", log: false },
+      async () => {
+        recordQueryEvent({ durationMs: 1, sql: "SELECT 1", isTransactionControl: false });
+        recordQueryEvent({
+          durationMs: 1,
+          sql: "SELECT 2 FROM cards",
+          isTransactionControl: false,
+        });
+      },
+    );
+    expect(snapshot).toMatchObject({ repeatedSql: null, repeatedSqlCount: 0 });
+  });
+
+  it("counts queries that overlap once in otherMs", async () => {
+    const { snapshot } = await runWithMetrics(
+      { kind: "page", label: "page:/overlap", log: false },
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        // Two queries that both took 30 ms and ended together (they ran in parallel).
+        recordQueryEvent({ durationMs: 30, sql: "SELECT 1", isTransactionControl: false });
+        recordQueryEvent({ durationMs: 30, sql: "SELECT 2", isTransactionControl: false });
+      },
+    );
+    expect(snapshot.sqlMs).toBe(60);
+    // Wall time is about 40 ms; the two queries overlap, so only 30 ms of it was waiting. Adding
+    // them up (60 ms) would have left nothing for "other".
+    expect(snapshot.otherMs).toBeGreaterThan(0);
+    expect(snapshot.otherMs).toBeLessThan(snapshot.wallMs - 25);
+    expect(snapshot.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("measures the rest of a request from startMetrics until it is finished", async () => {
+    setMetricsLogging(false);
+    await new Promise<void>((resolve) => {
+      // A fresh async context, so the measurement doesn't leak into other tests.
+      setTimeout(() => {
+        void (async () => {
+          const finish = startMetrics({ kind: "page", label: "page:/started" });
+          expect(finish).not.toBeNull();
+          expect(startMetrics({ kind: "page", label: "page:/second" })).toBeNull();
+          await Promise.resolve();
+          recordQueryEvent({ durationMs: 2, sql: "SELECT 1", isTransactionControl: false });
+          setMetricLabel("page:/renamed");
+          finish?.();
+          resolve();
+        })();
+      }, 0);
+    });
+    expect(recentMetricEntries()[0]).toMatchObject({
+      kind: "page",
+      label: "page:/renamed",
+      sqlCount: 1,
+    });
+  });
+
   it("isolates metrics across concurrent AsyncLocalStorage runs", async () => {
     const [first, second] = await Promise.all([
       runWithMetrics({ kind: "tool", label: "tool:first", log: false }, async () => {
@@ -121,13 +213,18 @@ describe("observability", () => {
     const zeroHttpTiming = formatServerTiming({
       kind: "mcp",
       label: "mcp:tools/list",
+      at: "2026-11-27T08:00:00.000Z",
+      client: null,
       startedAtMs: 0,
       wallMs: 42.1,
+      otherMs: 40.6,
       sqlCount: 1,
       sqlMs: 1.5,
       sqlMaxMs: 1.5,
       txCount: 0,
       slowestSql: "SELECT 1",
+      repeatedSql: null,
+      repeatedSqlCount: 0,
       httpCount: 0,
       httpMs: 0,
       httpHosts: [],

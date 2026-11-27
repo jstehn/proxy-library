@@ -196,6 +196,23 @@ secret (the secret is shown once). Connectors that register themselves can ask f
 `client_secret_basic` or `client_secret_post` and are given a secret. Each registration is logged
 (`oauth registration {...}`: the reason and the redirect URIs, never a secret) in the app's logs.
 
+### Finding what is slow
+
+The app prints a `perf` line for every MCP call and tool call, and for any page render or
+server action that takes 250 ms or more, runs 15 or more queries, or runs one query shape 5 or
+more times (a sign of an N+1 pattern). Each line says how long it took, how many queries it ran,
+the statement it repeated most, and how much time went to neither the database nor outbound HTTP
+(`otherMs`: JavaScript and rendering). The containers log to the host's journal, which keeps
+history across restarts and redeploys. Summarize it per page, call or action:
+
+```sh
+scripts/ops/perf-summary.sh              # the last 3 days
+scripts/ops/perf-summary.sh "1 day ago"
+```
+
+**Admin → Performance** shows the last 100 operations since the app started, plus Postgres's
+top statements when `pg_stat_statements` is on.
+
 ### Backups
 
 If your server runs **Ofelia** (a job scheduler for Docker), it reads the backup job from labels on the `db` container (when Ofelia

@@ -1,6 +1,7 @@
 import "server-only";
 import { getContainer } from "./composition/container";
 import { makeReadPage } from "./page";
+import { startPageMetrics } from "./page-metrics";
 import { getCurrentActor, requireActor, requireAdminActor } from "./session";
 
 /** `readPage()`: the real helper. Pages and routes use this one (ADR 0026). */
@@ -11,6 +12,7 @@ export const readPage = makeReadPage({
   capabilities: () => getContainer().capabilities,
   reads: () => getContainer().reads,
   publicReads: () => getContainer().publicReads,
+  startMetrics: startPageMetrics,
 });
 
 /**
