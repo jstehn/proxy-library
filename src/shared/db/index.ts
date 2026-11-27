@@ -1,5 +1,5 @@
 export { createDatabase } from "./client";
-export type { Database, DbExecutor } from "./client";
+export type { Database, DbExecutor, QueryTimingEvent } from "./client";
 export { runMigrations } from "./migrate";
 export { makeSystemService } from "./system";
 export type { SystemService } from "./system";

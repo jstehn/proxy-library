@@ -13,6 +13,7 @@ const ADMIN_PAGES = [
   ["/admin/photos", "Photos"],
   ["/admin/store", "Store prices"],
   ["/admin/packs", "Pack lab"],
+  ["/admin/performance", "Performance"],
 ] as const;
 
 export default async function AdminLayout(props: LayoutProps<"/admin">) {

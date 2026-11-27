@@ -10,10 +10,30 @@ declare global {
   var __tcgContainer: Core | undefined;
   // One LISTEN connection for live draft updates (ADR 0018), kept across hot reloads too.
   var __tcgDraftSubscriptions: DraftSubscriptions | undefined;
+  // Ensures process shutdown listeners are registered once across hot reloads.
+  var __tcgShutdownHooked: boolean | undefined;
+}
+
+function registerShutdownHandlers(): void {
+  if (globalThis.__tcgShutdownHooked) return;
+  globalThis.__tcgShutdownHooked = true;
+  const shutdown = () => {
+    const container = globalThis.__tcgContainer;
+    const subscriptions = globalThis.__tcgDraftSubscriptions;
+    globalThis.__tcgContainer = undefined;
+    globalThis.__tcgDraftSubscriptions = undefined;
+    void Promise.allSettled([
+      container?.close() ?? Promise.resolve(),
+      subscriptions?.close() ?? Promise.resolve(),
+    ]);
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
 }
 
 /** The app's services, built lazily on first use (so `next build` needs no database). */
 export function getContainer(): Core {
+  registerShutdownHandlers();
   globalThis.__tcgContainer ??= buildCore(loadConfig());
   return globalThis.__tcgContainer;
 }
@@ -23,6 +43,7 @@ export function getContainer(): Core {
  * only sends notifications, from inside its transactions.
  */
 export function getDraftSubscriptions(): DraftSubscriptions {
+  registerShutdownHandlers();
   globalThis.__tcgDraftSubscriptions ??= pgDraftSubscriptions(loadConfig().databaseUrl);
   return globalThis.__tcgDraftSubscriptions;
 }

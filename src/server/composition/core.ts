@@ -112,10 +112,12 @@ import {
 } from "@/shared/db";
 import { platformFetch, withRateLimit, withRetry, withUserAgent, type Fetch } from "@/shared/http";
 import { randomSeed, realSleep, systemClock } from "@/shared/runtime";
+import { recordHttpEvent, recordQueryEvent, setMetricsLogging } from "../observability";
 import { makeCheckHealth } from "./health";
 
 export function buildCore(config: Config) {
-  const { db, close } = createDatabase(config.databaseUrl);
+  setMetricsLogging(config.nodeEnv !== "test");
+  const { db, close } = createDatabase(config.databaseUrl, { onQuery: recordQueryEvent });
   const clock = systemClock();
   const auth = createAuth({
     db,
@@ -191,9 +193,26 @@ export function buildCore(config: Config) {
 
   // A polite fetch for outside services (design doc 04, rule 10): identifies us, spaces
   // requests out, and retries temporary failures. Each service gets its own speed limit.
+  const timedFetch: Fetch = async (url, init) => {
+    const startMs = performance.now();
+    let status: number | null = null;
+    try {
+      const response = await platformFetch(url, init);
+      status = response.status;
+      return response;
+    } finally {
+      let host = "unknown";
+      try {
+        host = new URL(url).host || "unknown";
+      } catch {
+        // Leave host as "unknown" when URL parsing fails.
+      }
+      recordHttpEvent({ host, durationMs: performance.now() - startMs, status });
+    }
+  };
   const userAgent = `ProxyLibrary/1.0 (self-hosted playgroup app; ${config.appUrl})`;
   function politeFetch(perSecond: number): Fetch {
-    const withRetries = withRetry({ attempts: 3, sleep: realSleep })(platformFetch);
+    const withRetries = withRetry({ attempts: 3, sleep: realSleep })(timedFetch);
     const limited = withRateLimit({ perSecond, clock, sleep: realSleep })(withRetries);
     return withUserAgent(userAgent)(limited);
   }
@@ -258,10 +277,11 @@ export function buildCore(config: Config) {
   const realCollection = makeRealCollection({ unitOfWork, clock });
   const wishlist = makeWishlist({ unitOfWork, clock });
   const social = makeSocial({ unitOfWork, clock });
-  const outsideData = makeOutsideData(clock);
+  const outsideData = makeOutsideData(clock, timedFetch);
   const youtube = makeYoutube({ gateway: youtubeiGateway(clock) });
   const reddit = makeReddit({
     gateway: redditHttpGateway(clock, {
+      fetchFn: timedFetch,
       clientId: config.redditClientId,
       clientSecret: config.redditClientSecret,
       braveSearchApiKey: config.braveSearchApiKey,

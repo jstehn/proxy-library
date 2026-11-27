@@ -12,6 +12,7 @@ x-app: &app
     APP_URL: ${APP_URL:-http://localhost:3000}
     IMAGE_CACHE_DIR: /data/images
     SYNC_CACHE_DIR: /data/cache
+    HF_HOME: /data/cache/huggingface
     SYNC_TIME: ${SYNC_TIME:-04:00}
     TZ: ${TZ:-UTC}
     # Sign in with Authentik (docs/deploy.md): all three of the first group, or none.
@@ -27,6 +28,22 @@ services:
   db:
     image: pgvector/pgvector:pg17
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - log_min_duration_statement=250
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - random_page_cost=1.1
     environment:
       POSTGRES_USER: tcg
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tcg}
