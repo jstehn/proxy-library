@@ -17,10 +17,26 @@ import type { CardFeatures } from "@/modules/catalog";
 // A few shuffled opening hands from a deck, the odds of a good start over many trials, and the
 // chance of casting a card by each turn: the one capability behind `draw_sample` and the builder.
 
+/** What the simulator reads from a deck line: a saved `DeckLine` or a line made for a preview. */
+export type CastLine = Pick<
+  DeckLine,
+  | "oracleId"
+  | "printingId"
+  | "board"
+  | "quantity"
+  | "name"
+  | "typeLine"
+  | "manaValue"
+  | "manaCost"
+  | "keywords"
+  | "roles"
+  | "producedMana"
+>;
+
 /** The deck lines with what the catalog's card features say about mana (ramp, tapped lands). */
 export type CastDeckView = Omit<DeckView, "lines"> &
   Readonly<{
-    lines: readonly (DeckLine &
+    lines: readonly (CastLine &
       Partial<Pick<CardFeatures, "tapMana" | "entersTapped" | "landFetch">>)[];
   }>;
 
@@ -44,6 +60,9 @@ export type CastRequest = Readonly<{
   runs: number;
   seed?: string;
 }>;
+
+/** What `castCurvesOf` needs beyond the deck itself (a `CastRequest` without the lookup). */
+export type CastCurvesOfRequest = Omit<CastRequest, "userId" | "deckId">;
 
 export type DrawSampleRequest = Readonly<{
   userId: UserId;
@@ -152,36 +171,48 @@ export function makeDrawSample(readers: DrawSampleReaders) {
       readers.profile(request.userId, request.deckId),
     ]);
     if (view === null) return err({ kind: "DeckNotFound" });
-    const cards = library(view.lines);
-    if (cards.length < OPENING_HAND) return err({ kind: "DeckTooSmall", minimum: OPENING_HAND });
-
-    const targets: CastTarget[] = [];
-    for (const name of request.cards) {
-      const target = castTarget(view, profile, name);
-      if (target === undefined) return err({ kind: "CastCardNotInDeck", name });
-      targets.push(target);
-    }
-    const rule = {
-      policy: COMMANDER_KEEP,
-      freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
-      maxMulligans: MAX_MULLIGANS,
-    };
-    const simulation = simulateCasting(cards, targets, {
-      rng: seededRng(request.seed ?? `cast-${request.deckId}`),
-      runs: request.runs,
-      onTheDraw: request.onTheDraw,
-      lastTurn: request.lastTurn,
-      rule,
-    });
-    return ok({
-      runs: simulation.runs,
-      marginPct: Math.round(simulation.marginOfError * 1000) / 10,
-      onTheDraw: request.onTheDraw,
-      cards: simulation.curves.map(describeCurve),
-    });
+    return castCurvesOf(view, profile, request);
   }
 
   return { drawSample, castCurves };
+}
+
+/**
+ * The same curves for a deck already in hand, saved or not (a preview's "after" deck). Pure: it
+ * reads nothing, so a given deck, seed and run count always give the same report.
+ */
+export function castCurvesOf(
+  view: CastDeckView,
+  profile: DeckPlan | null,
+  request: CastCurvesOfRequest,
+): Result<CastReport, CastFailure> {
+  const cards = library(view.lines);
+  if (cards.length < OPENING_HAND) return err({ kind: "DeckTooSmall", minimum: OPENING_HAND });
+
+  const targets: CastTarget[] = [];
+  for (const name of request.cards) {
+    const target = castTarget(view, profile, name);
+    if (target === undefined) return err({ kind: "CastCardNotInDeck", name });
+    targets.push(target);
+  }
+  const rule = {
+    policy: COMMANDER_KEEP,
+    freeMulligan: formatRules(view.deck.format).freeFirstMulligan,
+    maxMulligans: MAX_MULLIGANS,
+  };
+  const simulation = simulateCasting(cards, targets, {
+    rng: seededRng(request.seed ?? `cast-${view.deck.id}`),
+    runs: request.runs,
+    onTheDraw: request.onTheDraw,
+    lastTurn: request.lastTurn,
+    rule,
+  });
+  return ok({
+    runs: simulation.runs,
+    marginPct: Math.round(simulation.marginOfError * 1000) / 10,
+    onTheDraw: request.onTheDraw,
+    cards: simulation.curves.map(describeCurve),
+  });
 }
 
 function describeCurve(curve: CastCurve): CastReport["cards"][number] {

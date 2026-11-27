@@ -1,4 +1,9 @@
-import type { DeckChangePreview, DeckProblem, PreviewWarning } from "@/modules/decks";
+import type {
+  DeckChangePreview,
+  DeckProblem,
+  PreviewCastCurves,
+  PreviewWarning,
+} from "@/modules/decks";
 import {
   bracketWarningText,
   estimateLabel,
@@ -106,4 +111,25 @@ export function presentPreviewWarnings(warnings: readonly PreviewWarning[]): str
     }
     return `Adding avoid card: ${warning.card}${reason}`;
   });
+}
+
+/**
+ * The cast-by-turn curves of a preview as the model reads them: per card the percent chance of
+ * having cast it by turn 1, 2, … before and after, and the change. Measured by simulation: a change
+ * smaller than `marginPct` points is noise (design doc 72).
+ */
+export function presentCastCurves(curves: PreviewCastCurves) {
+  return {
+    runs: curves.runs,
+    marginPct: curves.marginPct,
+    onTheDraw: curves.onTheDraw,
+    cards: curves.cards.map((card) => ({
+      card: card.card,
+      before: card.before,
+      after: card.after,
+      change: card.delta,
+      medianTurn: { before: card.medianBefore, after: card.medianAfter },
+      ...(card.withinNoise ? { note: "within the margin of error: no clear change" } : {}),
+    })),
+  };
 }

@@ -13,7 +13,11 @@ import {
 } from "@/modules/decks";
 import { err, ok } from "@/shared/kernel";
 import { defineBinding } from "../binding";
-import { presentChangePreview, presentPreviewWarnings } from "../present/deck-preview";
+import {
+  presentCastCurves,
+  presentChangePreview,
+  presentPreviewWarnings,
+} from "../present/deck-preview";
 import type { ToolError } from "../tool";
 
 const deckIdField = z.number().int().positive().describe("Deck id from list_decks.");
@@ -66,6 +70,12 @@ export const editDeckBinding = defineBinding({
       .optional()
       .describe("Batch changes to preview or save."),
     save: z.boolean().default(false).describe("False previews changes; true saves them."),
+    curves: z
+      .boolean()
+      .default(true)
+      .describe(
+        "Preview only: include the commander's and added cards' chance of being cast by turn 1-10, before and after (simulated; small changes are noise).",
+      ),
     previewId: z.string().min(1).optional().describe("Preview id from a prior edit_deck preview."),
     list: z.string().min(1).optional().describe("Full deck list text (for full replacement)."),
     fingerprint: z.string().min(1).optional().describe("Deck fingerprint from get_deck."),
@@ -110,7 +120,11 @@ export const editDeckBinding = defineBinding({
       });
     }
     if (!input.save) {
-      const previewed = await capabilities.deckPreviews.previewChanges(actor, { deckId, changes });
+      const previewed = await capabilities.deckPreviews.previewChanges(actor, {
+        deckId,
+        changes,
+        curves: input.curves,
+      });
       return previewed.ok ? ok<Answer>({ kind: "previewed", stored: previewed.value }) : previewed;
     }
     if (!input.fingerprint) {
@@ -132,10 +146,11 @@ export const editDeckBinding = defineBinding({
       return { deckId: answer.deckId, cards: answer.report.cards };
     }
     if (answer.kind === "previewed") {
-      const { preview, warnings, previewId } = answer.stored;
+      const { preview, warnings, previewId, castCurves } = answer.stored;
       return {
         ...presentChangePreview(preview, { saved: false, fingerprint: preview.fingerprint }),
         ...(warnings.length > 0 ? { warnings: presentPreviewWarnings(warnings) } : {}),
+        ...(castCurves !== null ? { castByTurn: presentCastCurves(castCurves) } : {}),
         previewId,
       };
     }

@@ -2,8 +2,9 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { deckChangePreview, deckListPreview } from "@/modules/decks/changes";
-import { deckView, makeDecks } from "@/modules/decks/core";
+import { deckChangePreview, deckListPreview, deckViewAfterChanges } from "@/modules/decks/changes";
+import { deckView, getDeckProfile, makeDecks, withFeatures } from "@/modules/decks/core";
+import { makePreviewCastCurves } from "@/modules/decks/preview-curves";
 import {
   actor,
   clock,
@@ -70,6 +71,19 @@ beforeAll(async () => {
     manaValue: 3,
     priceCents: 200,
   });
+  await addCard({
+    name: "Test Preview Forest",
+    typeLine: "Basic Land — Forest",
+    identity: ["G"],
+    manaCost: "",
+    manaValue: 0,
+  });
+  await db.execute(
+    sql`update printings set produced_mana = '{G}' where oracle_id = ${oracleIds.get("Test Preview Forest")!}`,
+  );
+  for (let filler = 1; filler <= 25; filler++) {
+    await addCard({ name: `Test Preview Filler ${filler}`, typeLine: "Artifact", identity: ["G"] });
+  }
   await addCard({
     name: "Test Preview Ramp",
     typeLine: "Sorcery",
@@ -196,5 +210,90 @@ describe("dry-run preview & applyChanges (design doc 40)", () => {
         },
       ]);
     }
+  });
+});
+
+describe("the deck after a preview's changes (design doc 72)", () => {
+  it("applies quantities, loads cards new to the deck and drops lines taken to zero", async () => {
+    const created = await decks.createDeck(jack, { name: "After Deck", format: "commander" });
+    if (!created.ok) throw new Error(created.error.kind);
+    const deckId = created.value;
+    const commanderId = oracleIds.get("Test Preview Commander")!;
+    const rampId = oracleIds.get("Test Preview Ramp")!;
+    const gcId = oracleIds.get("Test Preview Game Changer")!;
+    await decks.setEntry(jack, { deckId, oracleId: commanderId, board: "commander", quantity: 1 });
+    await decks.setEntry(jack, { deckId, oracleId: gcId, board: "main", quantity: 1 });
+
+    const saved = await deckView(db, jack.userId, deckId);
+    if (saved === null) throw new Error("deck missing");
+    const after = await deckViewAfterChanges(db, jack.userId, saved, [
+      { oracleId: rampId, board: "main", quantity: 2 },
+      { oracleId: gcId, board: "main", quantity: 0 },
+    ]);
+
+    expect(after.lines.map((line) => [line.name, line.board, line.quantity]).sort()).toEqual([
+      ["Test Preview Commander", "commander", 1],
+      ["Test Preview Ramp", "main", 2],
+    ]);
+    const ramp = after.lines.find((line) => line.name === "Test Preview Ramp");
+    expect(ramp?.typeLine).toBe("Sorcery");
+    expect(ramp?.roles).toContain("ramp");
+    // The saved deck is untouched.
+    expect((await deckView(db, jack.userId, deckId))?.lines).toHaveLength(2);
+  });
+});
+
+describe("cast curves of a preview (design doc 72)", () => {
+  const previewCurves = makePreviewCastCurves({
+    afterView: (userId, view, changes) => deckViewAfterChanges(db, userId, view, changes),
+    addFeatures: (lines) => withFeatures(db, lines),
+    readDeck: (userId, deckId) => deckView(db, userId, deckId),
+    readPlan: async (userId, deckId) => (await getDeckProfile(db, userId, deckId))?.profile ?? null,
+  });
+
+  async function deckWithForests(forests: number) {
+    const created = await decks.createDeck(jack, { name: "Curve Deck", format: "commander" });
+    if (!created.ok) throw new Error(created.error.kind);
+    const deckId = created.value;
+    const commanderId = oracleIds.get("Test Preview Commander")!;
+    const forestId = oracleIds.get("Test Preview Forest")!;
+    await decks.setEntry(jack, { deckId, oracleId: commanderId, board: "commander", quantity: 1 });
+    await decks.setEntry(jack, { deckId, oracleId: forestId, board: "main", quantity: forests });
+    for (let filler = 1; filler <= 25; filler++) {
+      const oracleId = oracleIds.get(`Test Preview Filler ${filler}`)!;
+      await decks.setEntry(jack, { deckId, oracleId, board: "main", quantity: 1 });
+    }
+    return { deckId, forestId };
+  }
+
+  it("shows a worse commander curve after cutting lands, and the same one twice", async () => {
+    const { deckId, forestId } = await deckWithForests(16);
+    const cut = [{ oracleId: forestId, board: "main" as const, quantity: 4 }];
+    const first = await previewCurves(jack.userId, deckId, cut);
+    const second = await previewCurves(jack.userId, deckId, cut);
+    expect(first).toEqual(second);
+    const commander = first?.cards.find((card) => card.card === "Test Preview Commander");
+    expect(commander?.after[3]).toBeLessThan(commander!.before[3]);
+    expect(commander?.withinNoise).toBe(false);
+  });
+
+  it("gives zero change for a preview that changes nothing", async () => {
+    const { deckId, forestId } = await deckWithForests(16);
+    const same = await previewCurves(jack.userId, deckId, [
+      { oracleId: forestId, board: "main", quantity: 16 },
+    ]);
+    expect(same?.cards[0].delta.every((change) => change === 0)).toBe(true);
+    expect(same?.cards[0].withinNoise).toBe(true);
+  });
+
+  it("adds a card new to the deck with zeros before", async () => {
+    const { deckId } = await deckWithForests(16);
+    const rampId = oracleIds.get("Test Preview Ramp")!;
+    const result = await previewCurves(jack.userId, deckId, [
+      { oracleId: rampId, board: "main", quantity: 1 },
+    ]);
+    const ramp = result?.cards.find((card) => card.card === "Test Preview Ramp");
+    expect(ramp?.before.every((percent) => percent === 0)).toBe(true);
+    expect(ramp?.after.some((percent) => percent > 0)).toBe(true);
   });
 });

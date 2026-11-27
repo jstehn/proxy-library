@@ -102,6 +102,9 @@ modern, legacy, vintage, pauper, commander and limited.
 22. **Change previews do not save.** A preview of a list of changes shows cuts, additions, moves,
     statistics, problems and the price difference, and nothing is written until it is applied by
     its id. (doc 40; `preview.test.ts`, `deck-previews.test.ts`)
+    The `edit_deck` preview also gives the commander's and added cards' cast-by-turn curve before
+    and after; a change smaller than the margin of error is marked as noise, and a failed
+    simulation never fails the preview. (doc 72; `cast-curve-delta.test.ts`)
 
 ## Sharing
 

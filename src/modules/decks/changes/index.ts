@@ -20,3 +20,10 @@ export {
   viewFingerprint,
   type DeckChangePreview,
 } from "./queries/preview";
+export { deckViewAfterChanges } from "./queries/preview-cast";
+export {
+  castCurveDeltas,
+  MAX_CURVE_CARDS,
+  type PreviewCastCurves,
+} from "./domain/cast-curve-delta";
+export type { DeckChange } from "./domain/preview";
