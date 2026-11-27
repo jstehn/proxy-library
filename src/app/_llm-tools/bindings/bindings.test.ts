@@ -51,6 +51,7 @@ describe("list_decks binding", () => {
       outcome: {
         ok: true,
         value: {
+          note: expect.any(String),
           decks: [
             {
               id: 4,
@@ -59,8 +60,7 @@ describe("list_decks binding", () => {
               cards: 99,
               short: 2,
               usesRealCards: false,
-              visibility: "private",
-              updatedAt: "2026-01-01T00:00:00.000Z",
+              updated: "2026-01-01",
             },
           ],
         },

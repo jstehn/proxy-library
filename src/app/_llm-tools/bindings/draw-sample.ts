@@ -6,7 +6,7 @@ export const drawSampleBinding = defineBinding({
   name: "draw_sample",
   title: "Sample opening hands and the chance to cast a card by each turn",
   description:
-    'Deals `hands` shuffled 7-card opening hands plus the next `drawNext` cards, and simulates `trials` seeded games for the keepable-hand rate and turn-3 land drop. With `cast` (card names, or "commander") it also gives the measured chance of casting each card by turn 1, 2, ... `lastTurn`, with the median turn, the margin of error and the usual reasons a game missed. Rituals and cost reducers count. A measurement, not a score.',
+    'Deals `hands` shuffled 7-card opening hands plus the next `drawNext` cards, and simulates `trials` seeded games for the keepable-hand rate and turn-3 land drop. With `cast` (card names, or "commander"; get_deck already shows the commander curve) it also gives the measured chance of casting each card by turn 1, 2, ... `lastTurn`, with the median turn, the margin of error and the usual reasons a game missed. Rituals and cost reducers count. A measurement, not a score.',
   scope: "read",
   readOnly: true,
   input: z.object({
@@ -51,10 +51,20 @@ export const drawSampleBinding = defineBinding({
   }),
   call: (capabilities, actor, input) =>
     capabilities.drawSample.drawSample({ userId: actor.userId, ...input }),
-  present: (sample) => ({
-    ...sample,
-    ...(sample.cast ? { cast: castTable(sample.cast) } : {}),
-  }),
+  // A card is "Name {cost}" (a land is just its name): the model knows the card from its name.
+  present: (sample) => {
+    const short = (card: { name: string; manaCost: string }) =>
+      card.manaCost === "" ? card.name : `${card.name} ${card.manaCost}`;
+    return {
+      deckId: sample.deckId,
+      samples: sample.samples.map((one) => ({
+        hand: one.hand.map(short),
+        nextDraws: one.nextDraws.map(short),
+      })),
+      odds: sample.odds,
+      ...(sample.cast ? { cast: castTable(sample.cast) } : {}),
+    };
+  },
   describeError(failure, { input }) {
     if (failure.kind === "DeckNotFound") {
       return {

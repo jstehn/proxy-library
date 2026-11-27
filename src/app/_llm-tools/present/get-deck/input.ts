@@ -2,6 +2,7 @@ import {
   type Board,
   type DeckFacts,
   type DeckOverview,
+  type CastReport,
   type DeckSignals,
   type ManaBasePlanWithCastability,
 } from "@/modules/decks";
@@ -31,6 +32,8 @@ export type GetDeckAnswer = Readonly<{
   facts?: DeckFacts;
   signals?: DeckSignals;
   manaPlan?: ManaBasePlanWithCastability;
+  /** The commander's cast-by-turn curve (first page of a deck with a commander). */
+  commanderCast?: CastReport;
 }>;
 
 /** The bracket as get_deck reports it (design doc 31). Null outside Commander. */
