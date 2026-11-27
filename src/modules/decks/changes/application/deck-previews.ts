@@ -12,6 +12,7 @@ import type {
 } from "@/modules/decks/core/client";
 import { checkNote } from "@/modules/decks/core/client";
 import type { DeckChange, DeckChangePreview } from "../domain/preview";
+import type { PreviewCastCurves } from "../domain/cast-curve-delta";
 import type { ApplyChangesError, ApplyChangesReport } from "@/modules/decks/core";
 import type { ChangeToSave, PreviewRepository } from "./ports";
 
@@ -69,7 +70,9 @@ export type PreviewedChanges = Readonly<{
   warnings: readonly PreviewWarning[];
 }>;
 
-export type StoredPreviewResult = PreviewedChanges & Readonly<{ previewId: string }>;
+/** `castCurves` is null when it was not asked for or could not be made (design doc 72). */
+export type StoredPreviewResult = PreviewedChanges &
+  Readonly<{ previewId: string; castCurves: PreviewCastCurves | null }>;
 export type SavedChanges = PreviewedChanges & Readonly<{ fingerprint: string }>;
 
 export type DeckPreviewDependencies = Readonly<{
@@ -85,6 +88,12 @@ export type DeckPreviewDependencies = Readonly<{
     deckId: number,
     changes: readonly DeckChange[],
   ): Promise<DeckChangePreview | null>;
+  /** The cast-by-turn curves before and after the changes, or null when they can't be made. */
+  castCurves(
+    userId: UserId,
+    deckId: number,
+    changes: readonly DeckChange[],
+  ): Promise<PreviewCastCurves | null>;
   profile(userId: UserId, deckId: number): Promise<DeckPlan | null>;
   applyChanges(
     actor: Actor,
@@ -92,7 +101,8 @@ export type DeckPreviewDependencies = Readonly<{
   ): Promise<Result<ApplyChangesReport, ApplyChangesError>>;
 }>;
 
-type Evaluated = PreviewedChanges & Readonly<{ changesToSave: readonly ChangeToSave[] }>;
+type Evaluated = PreviewedChanges &
+  Readonly<{ changesToSave: readonly ChangeToSave[]; dryRun: readonly DeckChange[] }>;
 
 function warningsFor(
   view: DeckView | null,
@@ -199,16 +209,28 @@ export function makeDeckPreviews(dependencies: DeckPreviewDependencies) {
     const preview = await dependencies.changePreview(actor.userId, deckId, dryRun);
     if (preview === null) return err({ kind: "DeckNotFound" });
     const profile = await dependencies.profile(actor.userId, deckId);
-    return ok({ preview, warnings: warningsFor(view, profile, preview), changesToSave });
+    return ok({
+      preview,
+      warnings: warningsFor(view, profile, preview),
+      changesToSave,
+      dryRun,
+    });
   }
 
   /** Dry-runs a batch and stores it, so `applyPreview` can commit exactly these changes. */
   async function previewChanges(
     actor: Actor,
-    input: Readonly<{ deckId: number; changes: readonly ChangeRequest[] }>,
+    input: Readonly<{ deckId: number; changes: readonly ChangeRequest[]; curves?: boolean }>,
   ): Promise<Result<StoredPreviewResult, PreviewChangesError>> {
     const evaluated = await evaluate(actor, input.deckId, input.changes);
     if (!evaluated.ok) return evaluated;
+    // A simulation that fails or throws never fails the preview (design doc 72, invariant 5).
+    const castCurves =
+      input.curves === false
+        ? null
+        : await dependencies
+            .castCurves(actor.userId, input.deckId, evaluated.value.dryRun)
+            .catch(() => null);
     const now = clock.now();
     const previewId = newPreviewId();
     await previews.prune(now);
@@ -224,6 +246,7 @@ export function makeDeckPreviews(dependencies: DeckPreviewDependencies) {
       previewId,
       preview: evaluated.value.preview,
       warnings: evaluated.value.warnings,
+      castCurves,
     });
   }
 

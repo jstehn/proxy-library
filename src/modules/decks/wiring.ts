@@ -45,10 +45,12 @@ import {
   ownedSignalCards,
 } from "@/modules/decks/scoring";
 import { makeDrawSample } from "@/modules/decks/play";
+import { makePreviewCastCurves } from "./preview-curves";
 import type { Decks } from "@/modules/decks/core";
 import type { DeckSharing } from "@/modules/decks/sharing";
 import {
   deckChangePreview,
+  deckViewAfterChanges,
   makeDeckPreviews,
   makeSwapCards,
   makeTakeFromDeck,
@@ -92,6 +94,13 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
   const ownedChecks = (userId: UserId, names: readonly string[]) =>
     checkOwnedCards(db, userId, names);
 
+  const previewCastCurves = makePreviewCastCurves({
+    readDeck,
+    readPlan,
+    afterView: (userId, view, changes) => deckViewAfterChanges(db, userId, view, changes),
+    addFeatures: (lines) => withFeatures(db, lines),
+  });
+
   return {
     listDecks: makeListDecks({ decksFor: (userId) => decksFor(db, userId) }),
     deckOverview: makeDeckOverview({
@@ -113,6 +122,7 @@ export function wireDeckCapabilities(dependencies: DeckWiringDependencies) {
       },
       deckView: readDeck,
       changePreview: (userId, deckId, changes) => deckChangePreview(db, userId, deckId, changes),
+      castCurves: (userId, deckId, changes) => previewCastCurves(userId, deckId, changes),
       profile: readPlan,
       applyChanges: (actor, input) =>
         decks.applyChanges(actor, { ...input, deckId: DeckId.of(input.deckId) }),

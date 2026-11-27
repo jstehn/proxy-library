@@ -1,7 +1,7 @@
 # Design: cast curves in deck previews
 
 - **Phase:** 72
-- **Status:** Draft
+- **Status:** Approved and built (2026-11-26)
 - **Related ADRs:** 0008 (seeded randomness), 0026 (saved previews)
 - **Lesson:** no (reuses the simulator and the preview pipeline; no new TypeScript concept)
 - **Module page:** [decks-play.md](../modules/decks-play.md) (the simulator) and
@@ -63,7 +63,7 @@ export type PreviewCastCurves = Readonly<{
 }>;
 ```
 
-`ChangePreview` gains an optional `castCurves: PreviewCastCurves | null`. It is `null` for a deck
+`StoredPreviewResult` (what `previewChanges` returns) gains `castCurves: PreviewCastCurves | null`; `ChangePreview` itself is unchanged. It is `null` for a deck
 below the opening hand size, or when the player asked for no curves.
 
 Which cards: the commander(s) (if the format has a command zone) plus every card the change
@@ -113,9 +113,9 @@ existing snapshot tests in `engines-pinned.test.ts` pin that.
 
 - **`edit_deck` (LLM tool):** the preview text gains a "Cast by turn" block: per card, `T1..T10`
   before, after and delta in points, with "within noise" shown as such. Keep it one short table.
-- **Builder:** the preview panel shows the curves **after** the rest of the preview, loaded by its
-  own request, so a slow simulation delays only the curves, never the page. A card whose curve is
-  `withinNoise` is greyed.
+- **Builder:** the builder has no preview panel today (only `edit_deck` calls `previewChanges`),
+  so nothing changes on the page. A future panel should load the curves with its own request, after
+  the rest of the preview, so a slow simulation never delays the page.
 
 ## 9. Persistence
 
@@ -151,3 +151,13 @@ function in `changes/domain` (no I/O, easy to test), and the seeded `Rng` rule (
    deck's fingerprint, so any edit reshuffles? (Leaning: `preview-<deckId>`, for stable
    comparisons across edits.)
 3. On the draw or on the play: the preview shows the play only; add a toggle later if wanted.
+
+## 14. As built
+
+- Open questions settled as leaned: cap of 5, seed `preview-<deckId>`, play only.
+- `edit_deck` takes `curves` (default true) and answers with `castByTurn` (per card: `before`,
+  `after`, `change` per turn, both medians, and a note when within noise).
+- Only `previewChanges` makes curves; `saveChanges` and `applyPreview` do not.
+- A card added by the change has a "before" of zeros (it is not in the deck, so it cannot be cast).
+- Code: `castCurvesOf` (play), `castCurveDeltas` (changes/domain), `deckViewAfterChanges`
+  (changes/queries), the composition in `decks/wiring.ts`.

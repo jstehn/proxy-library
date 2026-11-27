@@ -61,6 +61,10 @@ simulations that answer "can I cast X by turn Y?" stay (owner D3). The orphaned 
 13. **Castability before and after.** The mana-base plan and the scorecard report castability with
     the same simulator; the same seed gives bit-identical percentages, and replacing off-colour lands
     with untapped coloured sources raises it. (doc 58 §4 rule 4 and §7.2; `castability.test.ts`)
+14. **The simulator can run on a deck that isn't saved.** `castCurvesOf` takes the deck's lines, so
+    a change preview scores the "after" deck; `castCurves` is the same call after reading the saved
+    deck. A preview uses one seed (`preview-<deckId>`) for both sides, so a difference is the change
+    and not the shuffle. (doc 72; `engines-pinned.test.ts`)
 
 ## Open decisions (found while writing this page)
 

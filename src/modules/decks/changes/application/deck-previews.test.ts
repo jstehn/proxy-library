@@ -66,6 +66,7 @@ function setup(overrides: Partial<DeckPreviewDependencies> = {}) {
         ],
       }) as never,
     changePreview: async (_userId, _deckId, changes) => fakePreview(changes),
+    castCurves: async () => null,
     profile: async () => null,
     applyChanges: async (_actor, input) => {
       applied.push(input);
@@ -75,6 +76,54 @@ function setup(overrides: Partial<DeckPreviewDependencies> = {}) {
   };
   return { capability: makeDeckPreviews(dependencies), previews, clock, applied };
 }
+
+const someCurves = {
+  runs: 2000,
+  marginPct: 2.2,
+  onTheDraw: false,
+  cards: [],
+};
+
+describe("previewChanges cast curves (design doc 72)", () => {
+  const changes = [{ card: "Sol Ring", board: "main" as const, quantity: 0 }];
+
+  it("returns the curves the port made, for the dry-run changes", async () => {
+    const seen: unknown[] = [];
+    const { capability } = setup({
+      castCurves: async (_userId, _deckId, dryRun) => {
+        seen.push(dryRun);
+        return someCurves;
+      },
+    });
+    const result = await capability.previewChanges(actor, { deckId: 5, changes });
+    expect(result.ok && result.value.castCurves).toEqual(someCurves);
+    expect(seen).toEqual([[{ oracleId: "oracle-Sol Ring", board: "main", quantity: 0 }]]);
+  });
+
+  it("skips the simulation when curves are switched off", async () => {
+    let calls = 0;
+    const { capability } = setup({
+      castCurves: async () => {
+        calls += 1;
+        return someCurves;
+      },
+    });
+    const result = await capability.previewChanges(actor, { deckId: 5, changes, curves: false });
+    expect(result.ok && result.value.castCurves).toBeNull();
+    expect(calls).toBe(0);
+  });
+
+  it("still previews and stores when the simulation throws (invariant 5)", async () => {
+    const { capability, previews } = setup({
+      castCurves: async () => {
+        throw new Error("simulation failed");
+      },
+    });
+    const result = await capability.previewChanges(actor, { deckId: 5, changes });
+    expect(result.ok && result.value.castCurves).toBeNull();
+    expect(previews.records.size).toBe(1);
+  });
+});
 
 describe("previewChanges", () => {
   it("stores the resolved changes under a new id, for 30 minutes", async () => {

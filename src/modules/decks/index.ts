@@ -30,6 +30,7 @@ export {
   makeDeckSnapshots,
   type PreviewChangesError,
   type PreviewRepository,
+  type PreviewCastCurves,
   type PreviewWarning,
   type SaveChangesError,
   type SavedChanges,
