@@ -402,6 +402,40 @@ describe("presence", () => {
     await drafts.markPresence(alice, draftId, true);
     expect(notifier.sent.length).toBe(sent + 1);
   });
+
+  it("uses lightweight touchPresence when available and notifies only on 'changed'", async () => {
+    const draftId = await host();
+    const sent = notifier.sent.length;
+    let lockCalls = 0;
+    const originalLock = repository.lock.bind(repository);
+    repository.lock = async (id) => {
+      lockCalls += 1;
+      return originalLock(id);
+    };
+    const outcomes: Array<{ kind: "noop" | "touched" } | { kind: "changed"; version: number }> = [
+      { kind: "noop" },
+      { kind: "changed", version: 42 },
+      { kind: "touched" },
+    ];
+    const calls: Array<{ draftId: number; userId: string; here: boolean; awayAfterMs: number }> =
+      [];
+    repository.touchPresence = async (id, userId, here, _now, awayAfterMs) => {
+      calls.push({ draftId: id, userId, here, awayAfterMs });
+      return outcomes.shift() ?? { kind: "noop" };
+    };
+
+    await drafts.markPresence(carol, draftId, true);
+    await drafts.markPresence(alice, draftId, true);
+    await drafts.markPresence(alice, draftId, true);
+
+    expect(lockCalls).toBe(0);
+    expect(calls).toEqual([
+      { draftId, userId: carol.userId, here: true, awayAfterMs: 40_000 },
+      { draftId, userId: alice.userId, here: true, awayAfterMs: 40_000 },
+      { draftId, userId: alice.userId, here: true, awayAfterMs: 40_000 },
+    ]);
+    expect(notifier.sent.slice(sent)).toEqual([{ draftId, version: 42 }]);
+  });
 });
 
 describe("making the deck again", () => {

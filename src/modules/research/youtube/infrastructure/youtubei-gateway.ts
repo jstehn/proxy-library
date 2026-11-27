@@ -13,11 +13,38 @@ import {
 
 const TRANSCRIPT_CACHE_TTL_MS = 20 * 60 * 1000;
 const TRANSCRIPT_CACHE_MAX_ENTRIES = 50;
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const SEARCH_CACHE_MAX_ENTRIES = 50;
+const SEARCH_TIMEOUT_MS = 12_000;
+const TRANSCRIPT_TIMEOUT_MS = 12_000;
+const METADATA_TIMEOUT_MS = 6_000;
 
-type CacheEntry = Readonly<{
-  transcript: VideoTranscript;
+type TimedEntry<T> = Readonly<{
+  data: T;
   expiresAtMs: number;
 }>;
+
+function withPromiseTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise.then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
@@ -48,6 +75,12 @@ function classifyYouTubeError(error: unknown, fallbackMessage: string): YouTubeE
   const message = error instanceof Error ? error.message : String(error);
   const lower = message.toLowerCase();
 
+  if (lower.includes("timed out")) {
+    return {
+      kind: "UpstreamError",
+      message: `${fallbackMessage}: ${message}`,
+    };
+  }
   if (lower.includes("429") || lower.includes("too many requests") || lower.includes("captcha")) {
     return {
       kind: "RateLimited",
@@ -125,47 +158,63 @@ function mapSearchItem(raw: unknown): YouTubeSearchResult | null {
 export function youtubeiGateway(clock: Clock): YouTubeGateway {
   Log.setLevel(Log.Level.NONE);
   let clientPromise: Promise<Innertube> | null = null;
-  const cache = new Map<string, CacheEntry>();
+  const transcriptCache = new Map<string, TimedEntry<VideoTranscript>>();
+  const searchCache = new Map<string, TimedEntry<readonly YouTubeSearchResult[]>>();
 
   function getClient(): Promise<Innertube> {
     if (!clientPromise) {
-      clientPromise = Innertube.create({ lang: "en", location: "US" }).catch((error) => {
+      clientPromise = withPromiseTimeout(
+        Innertube.create({ lang: "en", location: "US" }),
+        SEARCH_TIMEOUT_MS,
+        "YouTube client init",
+      ).catch((error: unknown) => {
         clientPromise = null;
         throw error;
       });
+      void clientPromise.catch(() => {});
     }
     return clientPromise;
   }
 
-  function getCached(key: string): VideoTranscript | null {
-    const entry = cache.get(key);
+  function readCache<T>(store: Map<string, TimedEntry<T>>, key: string): T | null {
+    const entry = store.get(key);
     if (!entry) return null;
     if (clock.now().getTime() >= entry.expiresAtMs) {
-      cache.delete(key);
+      store.delete(key);
       return null;
     }
-    // Refresh insertion order for LRU eviction.
-    cache.delete(key);
-    cache.set(key, entry);
-    return entry.transcript;
+    store.delete(key);
+    store.set(key, entry);
+    return entry.data;
   }
 
-  function setCached(key: string, transcript: VideoTranscript): void {
-    if (cache.size >= TRANSCRIPT_CACHE_MAX_ENTRIES) {
-      const oldestKey = cache.keys().next().value;
-      if (oldestKey !== undefined) cache.delete(oldestKey);
+  function writeCache<T>(
+    store: Map<string, TimedEntry<T>>,
+    key: string,
+    data: T,
+    maxEntries: number,
+    ttlMs: number,
+  ): void {
+    store.delete(key);
+    if (store.size >= maxEntries) {
+      const oldestKey = store.keys().next().value;
+      if (oldestKey !== undefined) store.delete(oldestKey);
     }
-    cache.set(key, {
-      transcript,
-      expiresAtMs: clock.now().getTime() + TRANSCRIPT_CACHE_TTL_MS,
-    });
+    store.set(key, { data, expiresAtMs: clock.now().getTime() + ttlMs });
   }
 
   return {
     async searchVideos({ query, limit }) {
+      const searchKey = `${query.trim().replace(/\s+/g, " ").toLowerCase()}:${limit}`;
+      const cached = readCache(searchCache, searchKey);
+      if (cached) return ok(cached);
+
       try {
-        const yt = await getClient();
-        const search = await yt.search(query, { type: "video" });
+        const search = await withPromiseTimeout(
+          getClient().then((yt) => yt.search(query, { type: "video" })),
+          SEARCH_TIMEOUT_MS,
+          "YouTube search",
+        );
         const rawVideos = Array.isArray(search.videos) ? search.videos : [];
         const results: YouTubeSearchResult[] = [];
 
@@ -177,6 +226,7 @@ export function youtubeiGateway(clock: Clock): YouTubeGateway {
           }
         }
 
+        writeCache(searchCache, searchKey, results, SEARCH_CACHE_MAX_ENTRIES, SEARCH_CACHE_TTL_MS);
         return ok(results);
       } catch (error) {
         return err(classifyYouTubeError(error, "Failed to search YouTube videos"));
@@ -191,17 +241,19 @@ export function youtubeiGateway(clock: Clock): YouTubeGateway {
       lang: string;
     }): Promise<Result<VideoTranscript, YouTubeError>> {
       const cacheKey = `${videoId}:${lang}`;
-      const cached = getCached(cacheKey);
+      const cached = readCache(transcriptCache, cacheKey);
       if (cached) return ok(cached);
 
       try {
-        const yt = await getClient();
+        // Launch metadata and transcript concurrently so slow Innertube init never delays captions.
+        const metadataPromise = withPromiseTimeout(
+          getClient().then((yt) => yt.getBasicInfo(videoId)),
+          METADATA_TIMEOUT_MS,
+          "YouTube metadata",
+        ).catch(() => null);
 
-        // Fetch metadata and transcript in parallel; metadata is best-effort so a parser quirk
-        // never blocks a valid transcript.
-        const [infoResult, rawSegments] = await Promise.all([
-          yt.getBasicInfo(videoId).catch(() => null),
-          fetchYoutubeTranscript(videoId, { lang }).catch((error) => {
+        const transcriptPromise = withPromiseTimeout(
+          fetchYoutubeTranscript(videoId, { lang }).catch((error: unknown) => {
             if (lang) {
               return fetchYoutubeTranscript(videoId).catch(() => {
                 throw error;
@@ -209,7 +261,11 @@ export function youtubeiGateway(clock: Clock): YouTubeGateway {
             }
             throw error;
           }),
-        ]);
+          TRANSCRIPT_TIMEOUT_MS,
+          "YouTube transcript",
+        );
+
+        const [infoResult, rawSegments] = await Promise.all([metadataPromise, transcriptPromise]);
 
         const basic = asRecord(infoResult?.basic_info);
         const title = readText(basic?.title) ?? `YouTube Video (${videoId})`;
@@ -252,7 +308,13 @@ export function youtubeiGateway(clock: Clock): YouTubeGateway {
           segments,
         };
 
-        setCached(cacheKey, result);
+        writeCache(
+          transcriptCache,
+          cacheKey,
+          result,
+          TRANSCRIPT_CACHE_MAX_ENTRIES,
+          TRANSCRIPT_CACHE_TTL_MS,
+        );
         return ok(result);
       } catch (error) {
         return err(classifyYouTubeError(error, "Failed to fetch YouTube transcript"));

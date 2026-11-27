@@ -75,4 +75,12 @@ describe("formatTranscriptPage", () => {
     expect(collected[0]).toContain("Segment 0:");
     expect(collected[24]).toContain("Segment 24:");
   });
+
+  it("paginates long transcripts under the 11_000-byte default cap", () => {
+    const transcript = sampleTranscript(300);
+    const page = formatTranscriptPage(transcript);
+    expect(new TextEncoder().encode(page.text).length).toBeLessThanOrEqual(11_000);
+    expect(page.nextCursor).toBeDefined();
+    expect(page.returnedSegments).toBeLessThan(300);
+  });
 });

@@ -16,7 +16,7 @@ import {
 } from "../../domain/access-token";
 import type { TokenNameInvalid, TokenNotFound, TooManyTokens } from "../../domain/errors";
 import { isActive, toActor, type Actor } from "../../domain/player";
-import type { AccountsDependencies } from "../ports";
+import type { AccessTokenRepository, AccountsDependencies, PlayerRepository } from "../ports";
 
 // Personal access tokens (design doc 28, section 5.1): how an LLM client acts as a player.
 
@@ -86,28 +86,49 @@ export function makeRevokeAccessToken(dependencies: AccountsDependencies) {
   return revokeAccessToken;
 }
 
+type TokenReaders = {
+  players: Pick<PlayerRepository, "findById">;
+  accessTokens: Pick<AccessTokenRepository, "findLiveByHash" | "touch">;
+};
+
+async function resolveTokenActor(
+  readers: TokenReaders,
+  hash: string,
+  clock: AccountsDependencies["clock"],
+): Promise<TokenActor | null> {
+  const token = await readers.accessTokens.findLiveByHash(hash);
+  if (token === null) return null;
+  const player = await readers.players.findById(token.userId);
+  if (player === null || !isActive(player) || player.mustChangePassword) return null;
+  const now = clock.now();
+  if (shouldTouch(token.lastUsedAt, now)) await readers.accessTokens.touch(token.id, now);
+  return { actor: toActor(player), scopes: token.scopes, tokenId: token.id };
+}
+
 /**
  * Who an `Authorization: Bearer …` header stands for (rule 1). Null for anything wrong: no
  * header, a wrong or revoked token, a disabled player, a player who must change their password.
  * Each answer is the same null, so a caller can't tell which.
  */
 export function makeActorFromToken(dependencies: AccountsDependencies) {
-  const { unitOfWork, clock } = dependencies;
+  const { unitOfWork, clock, readPlayers, readAccessTokens } = dependencies;
 
   async function actorFromToken(authorization: string | null): Promise<TokenActor | null> {
     const secret = bearerSecret(authorization);
     if (secret === null || !looksLikeToken(secret)) return null;
     const hash = await tokenHash(secret);
 
-    const found = await unitOfWork.run(async ({ players, accessTokens }) => {
-      const token = await accessTokens.findLiveByHash(hash);
-      if (token === null) return ok(null);
-      const player = await players.findById(token.userId);
-      if (player === null || !isActive(player) || player.mustChangePassword) return ok(null);
-      const now = clock.now();
-      if (shouldTouch(token.lastUsedAt, now)) await accessTokens.touch(token.id, now);
-      return ok({ actor: toActor(player), scopes: token.scopes, tokenId: token.id });
-    });
+    if (readPlayers !== undefined && readAccessTokens !== undefined) {
+      return resolveTokenActor(
+        { players: readPlayers, accessTokens: readAccessTokens },
+        hash,
+        clock,
+      );
+    }
+
+    const found = await unitOfWork.run(async (readers) =>
+      ok(await resolveTokenActor(readers, hash, clock)),
+    );
     return found.ok ? found.value : null;
   }
 

@@ -62,6 +62,7 @@ import {
 } from "../domain/steps";
 import { DRAFT_STYLES } from "../domain/style";
 import {
+  AWAY_AFTER_SECONDS,
   markPresence as markSeatPresence,
   pickForAway as pickForAwaySeat,
   runBots,
@@ -568,11 +569,28 @@ export function makeDrafts(dependencies: DraftsDependencies) {
    * isn't seated, so any signed-in player can watch a lobby.
    */
   async function markPresence(actor: Actor, draftId: DraftId, here: boolean): Promise<void> {
-    await withDraft<void, CardNoLongerOwned>(draftId, async (services, draft, now) => {
+    await unitOfWork.run<void, never>(async (services) => {
+      const now = clock.now();
+      if (services.drafts.touchPresence) {
+        const outcome = await services.drafts.touchPresence(
+          draftId,
+          actor.userId,
+          here,
+          now,
+          AWAY_AFTER_SECONDS * 1000,
+        );
+        if (outcome.kind === "changed") {
+          await services.draftNotifier.changed(draftId, outcome.version);
+        }
+        return ok();
+      }
+      const draft = await services.drafts.lock(draftId);
+      if (draft === null) return ok();
       const after = markSeatPresence(draft, actor.userId, here, now);
       // The same object back means "not seated here": nothing to save.
       if (after === draft) return ok();
-      return settle(services, draft, after, now);
+      await settle(services, draft, after, now);
+      return ok();
     });
   }
 

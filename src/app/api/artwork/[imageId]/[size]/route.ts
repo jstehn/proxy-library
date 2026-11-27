@@ -22,7 +22,12 @@ export async function GET(
   const image = await capabilities.catalog.artworkFor({ imageId, size: validSize });
   if (!image.ok) return new Response("Not found", { status: 404 });
 
-  return new Response(new Uint8Array(image.value), {
+  const body = Buffer.from(
+    image.value.buffer,
+    image.value.byteOffset,
+    image.value.byteLength,
+  ) as Buffer<ArrayBuffer>;
+  return new Response(body, {
     headers: {
       "Content-Type": "image/webp",
       "Cache-Control": "private, max-age=31536000, immutable",

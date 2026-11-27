@@ -43,6 +43,7 @@ export {
   type EdhrecNotFound,
   type EdhrecUnavailable,
   findCard,
+  findCards,
   type SearchSignals,
   type SpellbookUnavailable,
 } from "./scoring";

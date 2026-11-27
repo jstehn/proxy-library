@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import type { CollectionRow } from "@/modules/collection";
@@ -42,7 +41,6 @@ type CollectionSellWorkspaceProps = {
 
 export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
   const { rows, cardsById, notesByPrinting, buylistRateBps } = props;
-  const router = useRouter();
   const cart = useSellCart();
 
   const [keep, setKeep] = useState<1 | 4>(1);
@@ -167,7 +165,6 @@ export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
         setSellCart(() => []);
         setDrawerOpen(false);
         setNotice({ tone: "success", text: result.message });
-        router.refresh();
       } else {
         setNotice({ tone: "error", text: result.message });
       }

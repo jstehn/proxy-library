@@ -27,12 +27,17 @@ export async function GET(
   });
   if (!image.ok) return new Response("Not found", { status: 404 });
 
-  // A fresh copy backed by a plain ArrayBuffer, which is what Response accepts as a body.
-  return new Response(new Uint8Array(image.value), {
+  // Zero-copy view over the underlying buffer (Buffer satisfies BodyInit without copying bytes).
+  const body = Buffer.from(
+    image.value.buffer,
+    image.value.byteOffset,
+    image.value.byteLength,
+  ) as Buffer<ArrayBuffer>;
+  return new Response(body, {
     headers: {
       "Content-Type": "image/jpeg",
-      // "private": only the signed-in viewer's browser caches it, not shared proxies.
-      "Cache-Control": "private, max-age=31536000, immutable",
+      // Card images are public (`src/proxy.ts`), so shared caches may store them too.
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
   });
 }

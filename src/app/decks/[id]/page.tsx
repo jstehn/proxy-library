@@ -104,10 +104,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   if (builderDeck === null) notFound();
   // The builder keeps the deck in its own state; a pasted list or new settings start it afresh.
   const builderKey = `${deck.format}|${deck.usesRealCards}|${deck.entries
-    .map(
-      (entry) =>
-        `${entry.board}:${entry.oracleId}:${entry.quantity}:${entry.heading ?? ""}:${entry.note ?? ""}`,
-    )
+    .map((entry) => `${entry.board}:${entry.oracleId}:${entry.quantity}:${entry.heading ?? ""}`)
     .join(",")}|${deck.grouping}|${deck.headings.join(",")}`;
 
   // The Edit as text box (design doc 23): printings only where pinned, so saving the text

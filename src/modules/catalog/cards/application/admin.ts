@@ -17,11 +17,14 @@ import type {
   AdminPhotoChoice,
   CardsDependencies,
   ImageFace,
+  ImageKey,
   ImageSize,
   ImageSource,
   SyncKind,
   SyncRunRepository,
 } from "./ports";
+
+const IMAGE_SOURCE_CACHE_MAX = 5_000;
 
 export type RequestSyncError = Forbidden | SyncAlreadyQueued;
 export type SetSetEnabledError = Forbidden | SetNotFound;
@@ -33,7 +36,27 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Admin actions on the catalog, and serving card images. */
 export function makeCatalogAdmin(dependencies: CardsDependencies) {
-  const { unitOfWork, clock, images, imageFetcher, artworkFiles } = dependencies;
+  const { unitOfWork, clock, images, imageFetcher, artworkFiles, readImageSource } = dependencies;
+  const imageSourceCache = new Map<string, ImageSource>();
+  const inFlightImages = new Map<string, Promise<Uint8Array>>();
+
+  function getCachedSource(printingId: string): ImageSource | undefined {
+    const cached = imageSourceCache.get(printingId);
+    if (cached === undefined) return undefined;
+    imageSourceCache.delete(printingId);
+    imageSourceCache.set(printingId, cached);
+    return cached;
+  }
+
+  function setCachedSource(printingId: string, source: ImageSource): void {
+    if (imageSourceCache.has(printingId)) {
+      imageSourceCache.delete(printingId);
+    } else if (imageSourceCache.size >= IMAGE_SOURCE_CACHE_MAX) {
+      const oldest = imageSourceCache.keys().next().value;
+      if (oldest !== undefined) imageSourceCache.delete(oldest);
+    }
+    imageSourceCache.set(printingId, source);
+  }
 
   /** "Sync now": puts a run in the queue for the worker (design doc 04, section 5). */
   async function requestSync(
@@ -99,6 +122,21 @@ export function makeCatalogAdmin(dependencies: CardsDependencies) {
     });
   }
 
+  function fetchAndCacheImage(key: ImageKey, url: string, flightKey: string): Promise<Uint8Array> {
+    const existing = inFlightImages.get(flightKey);
+    if (existing !== undefined) return existing;
+
+    const pending = (async () => {
+      const bytes = await imageFetcher.fetch(url);
+      await images.put(key, bytes);
+      return bytes;
+    })().finally(() => {
+      inFlightImages.delete(flightKey);
+    });
+    inFlightImages.set(flightKey, pending);
+    return pending;
+  }
+
   /**
    * A card image: from our disk cache, or fetched from Scryfall once and saved (rule 10).
    */
@@ -107,22 +145,31 @@ export function makeCatalogAdmin(dependencies: CardsDependencies) {
     size: ImageSize;
     face: ImageFace;
   }): Promise<Result<Uint8Array, ImageNotFound>> {
-    const source = await unitOfWork.run<ImageSource | null, never>(async ({ catalog }) =>
-      ok(await catalog.imageSource(input.printingId)),
-    );
-    if (!source.ok || source.value === null) return err({ kind: "ImageNotFound" });
+    let source = getCachedSource(input.printingId);
+    if (source === undefined) {
+      let loaded: ImageSource | null;
+      if (readImageSource !== undefined) {
+        loaded = await readImageSource(input.printingId);
+      } else {
+        const result = await unitOfWork.run<ImageSource | null, never>(async ({ catalog }) =>
+          ok(await catalog.imageSource(input.printingId)),
+        );
+        loaded = result.ok ? result.value : null;
+      }
+      if (loaded === null) return err({ kind: "ImageNotFound" });
+      setCachedSource(input.printingId, loaded);
+      source = loaded;
+    }
 
-    const faceUris =
-      input.face === "front" ? source.value.images?.front : source.value.images?.back;
+    const faceUris = input.face === "front" ? source.images?.front : source.images?.back;
     if (faceUris === undefined || faceUris === null) return err({ kind: "ImageNotFound" });
 
-    const key = { size: input.size, scryfallId: source.value.scryfallId, face: input.face };
+    const key = { size: input.size, scryfallId: source.scryfallId, face: input.face };
     const cached = await images.get(key);
     if (cached !== null) return ok(cached);
 
-    const bytes = await imageFetcher.fetch(imageUrl(faceUris, input.size));
-    await images.put(key, bytes);
-    return ok(bytes);
+    const flightKey = `${key.size}:${key.scryfallId}:${key.face}`;
+    return ok(await fetchAndCacheImage(key, imageUrl(faceUris, input.size), flightKey));
   }
 
   /**

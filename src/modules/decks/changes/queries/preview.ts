@@ -148,12 +148,12 @@ export async function loadCardsForPreview(
          where p.oracle_id = w.oracle_id
          order by ${MOST_SPECIAL_FIRST} limit 1
       ) owned_printing on true
-      join lateral (
-        select p.* from printings p join card_sets s on s.code = p.set_code
-         where p.id = owned_printing.printing_id
-            or (owned_printing.printing_id is null and p.oracle_id = w.oracle_id)
+      left join lateral (
+        select p.id from printings p join card_sets s on s.code = p.set_code
+         where owned_printing.printing_id is null and p.oracle_id = w.oracle_id
          order by ${STANDARD_FIRST} limit 1
-      ) shown on true
+      ) standard_printing on true
+      join printings shown on shown.id = coalesce(owned_printing.printing_id, standard_printing.id)
       left join lateral (
         select c.finish from ${owned} c join printings p on p.id = c.printing_id
          where c.printing_id = shown.id
@@ -330,7 +330,7 @@ export async function deckListPreview(
       select p.oracle_id, p.name
         from printings p join card_sets s on s.code = p.set_code
        where lower(p.name) = any(${sql.param(missingNames)}::text[])
-          or lower(split_part(p.name, ' // ', 1)) = any(${sql.param(missingNames)}::text[])
+          or (p.name like '% // %' and lower(split_part(p.name, ' // ', 1)) = any(${sql.param(missingNames)}::text[]))
        order by ${STANDARD_FIRST}
     `);
     for (const row of rows.rows) {

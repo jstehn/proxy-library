@@ -138,4 +138,6 @@ export type AccountsDependencies = {
   identity: IdentityProvider;
   secrets: SecretGenerator;
   clock: Clock;
+  readPlayers?: Pick<PlayerRepository, "findById">;
+  readAccessTokens?: Pick<AccessTokenRepository, "findLiveByHash" | "touch">;
 };

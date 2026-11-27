@@ -9,7 +9,7 @@ import {
   type CatalogSearchSort,
 } from "@/modules/catalog";
 import type { OutsideDataService } from "@/modules/catalog/infrastructure";
-import { decksUsing, findCard } from "@/modules/decks";
+import { decksUsing, findCard, findCards } from "@/modules/decks";
 import type { DbExecutor } from "@/shared/db";
 import type { Reads } from "./reads";
 
@@ -65,6 +65,7 @@ export function wireLookupCapabilities(dependencies: LookupWiringDependencies) {
     }),
     lookUpCards: makeCardLookup({
       find: (query) => findCard(db, query),
+      findMany: (queries) => findCards(db, queries),
       detail: (printingId) => reads.catalog.printingDetail(printingId),
       history: (printingId) => reads.catalog.priceHistory(printingId),
       ownedOfPrinting: (actor, printingId) => reads.collection.ownedCopies(actor, printingId),
@@ -72,6 +73,7 @@ export function wireLookupCapabilities(dependencies: LookupWiringDependencies) {
       realCopies: (actor, oracleId) => reads.realCollection.ownedByOracle(actor, oracleId),
       decksUsing: async (actor, printingId) =>
         (await decksUsing(db, actor.userId, [printingId])).get(printingId) ?? [],
+      decksUsingMany: (actor, printingIds) => decksUsing(db, actor.userId, printingIds),
       wishes: (actor, printingId) => reads.wishlist.forCard(actor, printingId),
       storePrintings: (actor, name) => storePrintingsOfCard(db, actor, name, 20),
       sets: (oracleId) => setCodesOfCard(db, oracleId),

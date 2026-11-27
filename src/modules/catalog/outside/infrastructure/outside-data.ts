@@ -5,6 +5,7 @@ import {
   platformFetch,
   withRateLimit,
   withRetry,
+  withTimeout,
   withUserAgent,
   type Fetch,
 } from "@/shared/http";
@@ -33,29 +34,61 @@ type CacheEntry<T> = {
 
 export class TtlCache<T> {
   private readonly entries = new Map<string, CacheEntry<T>>();
+  private readonly inFlight = new Map<
+    string,
+    Promise<{ value: T; fetchedAt: string; cached: boolean }>
+  >();
 
   constructor(
     private readonly ttlMs: number,
     private readonly clock: Clock,
+    private readonly maxEntries = 200,
   ) {}
 
   async getOrFetch(
     key: string,
     fetcher: () => Promise<T>,
   ): Promise<{ value: T; fetchedAt: string; cached: boolean }> {
-    const now = this.clock.now();
+    const nowMs = this.clock.now().getTime();
     const existing = this.entries.get(key);
-    if (existing && existing.expiresAtMs > now.getTime()) {
-      return { value: existing.value, fetchedAt: existing.fetchedAt, cached: true };
+    if (existing) {
+      if (existing.expiresAtMs > nowMs) {
+        this.entries.delete(key);
+        this.entries.set(key, existing);
+        return { value: existing.value, fetchedAt: existing.fetchedAt, cached: true };
+      }
+      this.entries.delete(key);
     }
-    const value = await fetcher();
-    const fetchedAt = now.toISOString();
-    this.entries.set(key, {
-      value,
-      fetchedAt,
-      expiresAtMs: now.getTime() + this.ttlMs,
+
+    const active = this.inFlight.get(key);
+    if (active) return active;
+
+    const pending = (async () => {
+      const value = await fetcher();
+      const completedAt = this.clock.now();
+      const fetchedAt = completedAt.toISOString();
+      this.storeEntry(key, value, fetchedAt, completedAt.getTime());
+      return { value, fetchedAt, cached: false };
+    })().finally(() => {
+      this.inFlight.delete(key);
     });
-    return { value, fetchedAt, cached: false };
+
+    this.inFlight.set(key, pending);
+    return pending;
+  }
+
+  private storeEntry(key: string, value: T, fetchedAt: string, nowMs: number): void {
+    for (const [entryKey, entry] of this.entries) {
+      if (entry.expiresAtMs <= nowMs) this.entries.delete(entryKey);
+    }
+    if (this.maxEntries <= 0) return;
+    this.entries.delete(key);
+    while (this.entries.size >= this.maxEntries) {
+      const oldestKey = this.entries.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.entries.delete(oldestKey);
+    }
+    this.entries.set(key, { value, fetchedAt, expiresAtMs: nowMs + this.ttlMs });
   }
 }
 
@@ -65,7 +98,9 @@ function sleep(ms: number): Promise<void> {
 
 function makePoliteFetch(clock: Clock, baseFetch: Fetch = platformFetch): Fetch {
   return withUserAgent("ProxyLibrary/1.0 (+https://github.com/proxylib)")(
-    withRateLimit({ perSecond: 5, clock, sleep })(withRetry({ attempts: 2, sleep })(baseFetch)),
+    withRateLimit({ perSecond: 5, clock, sleep })(
+      withRetry({ attempts: 2, sleep })(withTimeout(15_000)(baseFetch)),
+    ),
   );
 }
 

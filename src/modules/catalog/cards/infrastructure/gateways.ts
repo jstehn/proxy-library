@@ -1,4 +1,5 @@
 // Adapters for MTGJSON, Scryfall and the image cache (design doc 04, section 6).
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -110,7 +111,7 @@ export function diskImageStore(root: string): ImageStore {
   return {
     async get(key) {
       try {
-        return new Uint8Array(await readFile(pathFor(key)));
+        return await readFile(pathFor(key));
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw error;
@@ -120,7 +121,7 @@ export function diskImageStore(root: string): ImageStore {
       const path = pathFor(key);
       await mkdir(join(root, key.size), { recursive: true });
       // Write-then-rename: a reader never sees a half-written image.
-      const partial = `${path}.partial-${process.pid}`;
+      const partial = `${path}.partial-${process.pid}-${randomUUID()}`;
       await writeFile(partial, bytes);
       await rename(partial, path);
     },
@@ -137,7 +138,7 @@ export function diskArtworkStore(root: string): ArtworkStore {
   return {
     async get(imageId, size) {
       try {
-        return new Uint8Array(await readFile(pathFor(imageId, size)));
+        return await readFile(pathFor(imageId, size));
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw error;
@@ -146,7 +147,7 @@ export function diskArtworkStore(root: string): ArtworkStore {
     async put(imageId, size, bytes) {
       const path = pathFor(imageId, size);
       await mkdir(join(root, "artwork", size), { recursive: true });
-      const partial = `${path}.partial-${process.pid}`;
+      const partial = `${path}.partial-${process.pid}-${randomUUID()}`;
       await writeFile(partial, bytes);
       await rename(partial, path);
     },

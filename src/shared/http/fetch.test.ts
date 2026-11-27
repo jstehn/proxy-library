@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { manualClock } from "@/shared/kernel/testing";
-import { withRateLimit, withRetry, withUserAgent, type Fetch } from "./fetch";
+import { withRateLimit, withRetry, withTimeout, withUserAgent, type Fetch } from "./fetch";
 
 /** A fake fetch that records calls and answers with the given statuses in turn. */
 function fakeFetch(statuses: number[] = [200]) {
@@ -125,5 +125,91 @@ describe("withRetry", () => {
     };
     await expect(withRetry({ attempts: 3, sleep })(failing)("x")).rejects.toThrow("network down");
     expect(calls).toBe(3);
+  });
+
+  it("caps Retry-After delays at maxRetryAfterMs (default 5_000 ms)", async () => {
+    const clock = manualClock("2026-01-01T00:00:00Z");
+    const { sleep, waits } = fakeSleep(clock);
+    let calls = 0;
+    const fetchFn: Fetch = async () => {
+      calls++;
+      if (calls === 1) {
+        return new Response("slow down", { status: 429, headers: { "Retry-After": "300" } });
+      }
+      if (calls === 2) {
+        return new Response("slow down", { status: 429, headers: { "Retry-After": "2" } });
+      }
+      return new Response("ok", { status: 200 });
+    };
+    const response = await withRetry({ attempts: 3, sleep })(fetchFn)("https://example.test");
+    expect(response.status).toBe(200);
+    expect(waits).toEqual([5_000, 2_000]);
+
+    const customSleep = fakeSleep(clock);
+    let customCalls = 0;
+    const customFetch: Fetch = async () => {
+      customCalls++;
+      return customCalls === 1
+        ? new Response("slow down", { status: 429, headers: { "Retry-After": "30" } })
+        : new Response("ok", { status: 200 });
+    };
+    await withRetry({ attempts: 2, sleep: customSleep.sleep, maxRetryAfterMs: 1_500 })(customFetch)(
+      "https://example.test",
+    );
+    expect(customSleep.waits).toEqual([1_500]);
+  });
+
+  it("does not retry when caller signal is already aborted", async () => {
+    const clock = manualClock("2026-01-01T00:00:00Z");
+    const { sleep, waits } = fakeSleep(clock);
+    const controller = new AbortController();
+    let calls = 0;
+    const fetchFn: Fetch = async (_url, init) => {
+      calls++;
+      controller.abort("cancelled");
+      throw new DOMException(String(init?.signal?.reason ?? "aborted"), "AbortError");
+    };
+    await expect(
+      withRetry({ attempts: 3, sleep })(fetchFn)("https://example.test", {
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow();
+    expect(calls).toBe(1);
+    expect(waits).toEqual([]);
+  });
+});
+
+describe("withTimeout", () => {
+  it("passes an AbortSignal that fires after timeoutMs", async () => {
+    let seenSignal: AbortSignal | undefined;
+    const slowFetch: Fetch = (_url, init) => {
+      seenSignal = init?.signal ?? undefined;
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new Error("aborted"));
+        });
+      });
+    };
+    await expect(withTimeout(15)(slowFetch)("https://example.test")).rejects.toThrow();
+    expect(seenSignal?.aborted).toBe(true);
+  });
+
+  it("combines an existing caller signal with the timeout signal", async () => {
+    const caller = new AbortController();
+    let seenSignal: AbortSignal | undefined;
+    const pendingFetch: Fetch = (_url, init) => {
+      seenSignal = init?.signal ?? undefined;
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+      });
+    };
+    const promise = withTimeout(5_000)(pendingFetch)("https://example.test", {
+      signal: caller.signal,
+    });
+    caller.abort();
+    await expect(promise).rejects.toThrow("aborted");
+    expect(seenSignal?.aborted).toBe(true);
   });
 });

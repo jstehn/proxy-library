@@ -13,7 +13,7 @@ import { formRedirect } from "@/server/form-action-instance";
 import { readPage } from "@/server/page-instance";
 import { COLORS } from "@/shared/mtg";
 import { revalidateDeckList } from "../decks/paths";
-import { DRAFTS_PATH, draftPath, revalidateDraft } from "./paths";
+import { DRAFTS_PATH, draftPath, revalidateDraft, revalidateDraftOnly } from "./paths";
 
 // Controllers for the draft pages (design doc 17): read the form, call the use case, and show
 // the outcome. No rules live here. A form that can't be read goes back to the draft list.
@@ -115,7 +115,7 @@ export async function pickAction(input: {
     slot: input.slot,
     choices: input.choices,
   });
-  revalidateDraft(input.draftId);
+  revalidateDraftOnly(input.draftId);
   if (result.ok || result.error.kind === "StalePick") return { error: null };
   return { error: describeDraftError(result.error) };
 }

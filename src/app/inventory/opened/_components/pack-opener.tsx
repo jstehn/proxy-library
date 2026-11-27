@@ -66,10 +66,18 @@ export function PackOpener(props: PackOpenerProps) {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const preloads = useRef(new Map<number, Promise<void>>());
 
-  // Start loading every pack's images straight away (rule 7).
+  const currentPackIndex = state.phase === "finished" ? null : state.pack;
+
+  // Preload only the current and next pack so opening a large bundle doesn't flood the server.
   useEffect(() => {
-    for (const pack of packs) preloads.current.set(pack.itemId, preload(pack.cards));
-  }, [packs]);
+    if (currentPackIndex === null) return;
+    for (const index of [currentPackIndex, currentPackIndex + 1]) {
+      const candidate = packs[index];
+      if (candidate !== undefined && !preloads.current.has(candidate.itemId)) {
+        preloads.current.set(candidate.itemId, preload(candidate.cards));
+      }
+    }
+  }, [packs, currentPackIndex]);
 
   const pack = state.phase === "finished" ? null : packs[state.pack];
   const revealed = pack === null ? 0 : revealedCount(state, pack);

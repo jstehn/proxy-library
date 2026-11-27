@@ -38,7 +38,8 @@ function parseNotification(payload: string | undefined) {
 export function pgDraftSubscriptions(databaseUrl: string): DraftSubscriptions {
   const listeners = new Map<number, Set<DraftListener>>();
   let client: Client | null = null;
-  let connecting: Promise<void> | null = null;
+  let connecting: Promise<boolean> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let retryDelay = 1000;
   let closed = false;
 
@@ -47,36 +48,49 @@ export function pgDraftSubscriptions(databaseUrl: string): DraftSubscriptions {
   }
 
   function reconnectLater() {
-    if (closed || listeners.size === 0) return;
-    setTimeout(() => {
-      void connect().then(() => tellEveryone(null)); // we may have missed changes meanwhile
+    if (closed || listeners.size === 0 || reconnectTimer !== null) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      void connect().then((connected) => {
+        if (connected) tellEveryone(null); // we may have missed changes meanwhile
+      });
     }, retryDelay);
     retryDelay = Math.min(retryDelay * 2, 30_000);
   }
 
-  async function connect(): Promise<void> {
-    if (client !== null || closed) return;
+  async function connect(): Promise<boolean> {
+    if (closed) return false;
+    if (client !== null) return true;
     connecting ??= (async () => {
-      const fresh = new Client({ connectionString: databaseUrl });
+      const fresh = new Client({ connectionString: databaseUrl, keepAlive: true });
+      let handledDisconnect = false;
+      function onDisconnect() {
+        if (handledDisconnect) return;
+        handledDisconnect = true;
+        if (client === fresh) client = null;
+        void fresh.end().catch(() => undefined);
+        reconnectLater();
+      }
       fresh.on("notification", (message) => {
         const parsed = parseNotification(message.payload);
         if (parsed === null) return;
         for (const listener of listeners.get(parsed.draftId) ?? []) listener(parsed.version);
       });
-      fresh.on("error", () => {
-        // A dropped connection: forget it and try again. Subscribers stay registered.
-        if (client === fresh) client = null;
-        void fresh.end().catch(() => undefined);
-        reconnectLater();
-      });
+      fresh.on("error", onDisconnect);
+      fresh.on("end", onDisconnect);
       try {
         await fresh.connect();
         await fresh.query(`listen ${CHANNEL}`);
+        if (closed) {
+          void fresh.end().catch(() => undefined);
+          return false;
+        }
         client = fresh;
         retryDelay = 1000;
+        return true;
       } catch {
-        void fresh.end().catch(() => undefined);
-        reconnectLater();
+        onDisconnect();
+        return false;
       } finally {
         connecting = null;
       }
@@ -97,6 +111,10 @@ export function pgDraftSubscriptions(databaseUrl: string): DraftSubscriptions {
 
   async function close(): Promise<void> {
     closed = true;
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     listeners.clear();
     const current = client;
     client = null;

@@ -31,6 +31,72 @@ describe("TtlCache", () => {
     expect(third.cached).toBe(false);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
+
+  it("evicts least recently used entries past maxEntries and cleans expired ones", async () => {
+    const nowMs = 1_000_000;
+    const cache = new TtlCache<string>(10_000, { now: () => new Date(nowMs) }, 2);
+    const fetcher = vi.fn(async (label: string) => label);
+
+    await cache.getOrFetch("a", () => fetcher("a"));
+    await cache.getOrFetch("b", () => fetcher("b"));
+    // Refresh "a" so "b" is LRU.
+    const hitA = await cache.getOrFetch("a", () => fetcher("a2"));
+    expect(hitA.cached).toBe(true);
+    expect(hitA.value).toBe("a");
+
+    await cache.getOrFetch("c", () => fetcher("c"));
+    expect(fetcher).toHaveBeenCalledTimes(3);
+
+    // "a" survived, "b" was evicted.
+    expect((await cache.getOrFetch("a", () => fetcher("a3"))).cached).toBe(true);
+    expect((await cache.getOrFetch("b", () => fetcher("b2"))).cached).toBe(false);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("deduplicates concurrent in-flight fetches and does not cache failures", async () => {
+    const nowMs = 1_000_000;
+    const cache = new TtlCache<number>(CACHE_TTL_MS, { now: () => new Date(nowMs) });
+    let resolvePending!: (value: number) => void;
+    const slowFetcher = vi.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          resolvePending = resolve;
+        }),
+    );
+
+    const p1 = cache.getOrFetch("shared", slowFetcher);
+    const p2 = cache.getOrFetch("shared", slowFetcher);
+    expect(slowFetcher).toHaveBeenCalledTimes(1);
+
+    resolvePending(99);
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.value).toBe(99);
+    expect(r2.value).toBe(99);
+
+    // Subsequent call hits cache.
+    const r3 = await cache.getOrFetch("shared", slowFetcher);
+    expect(r3.cached).toBe(true);
+    expect(slowFetcher).toHaveBeenCalledTimes(1);
+
+    // Errors reject all waiters, clean up inFlight, and are never cached.
+    let rejectPending!: (error: Error) => void;
+    const failingFetcher = vi.fn(
+      () =>
+        new Promise<number>((_resolve, reject) => {
+          rejectPending = reject;
+        }),
+    );
+    const f1 = cache.getOrFetch("err", failingFetcher);
+    const f2 = cache.getOrFetch("err", failingFetcher);
+    expect(failingFetcher).toHaveBeenCalledTimes(1);
+    rejectPending(new Error("boom"));
+    await expect(f1).rejects.toThrow("boom");
+    await expect(f2).rejects.toThrow("boom");
+
+    const retry = await cache.getOrFetch("err", async () => 7);
+    expect(retry.cached).toBe(false);
+    expect(retry.value).toBe(7);
+  });
 });
 
 describe("makeOutsideData", () => {

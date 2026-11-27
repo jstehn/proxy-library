@@ -1,4 +1,4 @@
-import { and, asc, eq, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PrintingId, SetCode } from "@/modules/catalog";
 import type { DeckId } from "@/modules/decks";
@@ -281,29 +281,27 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     const query = db.select().from(drafts).where(eq(drafts.id, draftId));
     const [row] = forUpdate ? await query.for("update") : await query;
     if (row === undefined) return null;
-    const [seats, basics, packs, cards, reveals] = await Promise.all([
-      db.select().from(draftSeats).where(eq(draftSeats.draftId, draftId)),
-      db
-        .select()
-        .from(draftBasics)
-        .where(eq(draftBasics.draftId, draftId))
-        .orderBy(asc(draftBasics.position)),
-      db
-        .select()
-        .from(draftPacks)
-        .where(eq(draftPacks.draftId, draftId))
-        .orderBy(asc(draftPacks.packNumber)),
-      db
-        .select()
-        .from(draftCards)
-        .where(eq(draftCards.draftId, draftId))
-        .orderBy(asc(draftCards.packNumber), asc(draftCards.slot)),
-      db
-        .select()
-        .from(draftReveals)
-        .where(eq(draftReveals.draftId, draftId))
-        .orderBy(asc(draftReveals.position)),
-    ]);
+    const seats = await db.select().from(draftSeats).where(eq(draftSeats.draftId, draftId));
+    const basics = await db
+      .select()
+      .from(draftBasics)
+      .where(eq(draftBasics.draftId, draftId))
+      .orderBy(asc(draftBasics.position));
+    const packs = await db
+      .select()
+      .from(draftPacks)
+      .where(eq(draftPacks.draftId, draftId))
+      .orderBy(asc(draftPacks.packNumber));
+    const cards = await db
+      .select()
+      .from(draftCards)
+      .where(eq(draftCards.draftId, draftId))
+      .orderBy(asc(draftCards.packNumber), asc(draftCards.slot));
+    const reveals = await db
+      .select()
+      .from(draftReveals)
+      .where(eq(draftReveals.draftId, draftId))
+      .orderBy(asc(draftReveals.position));
 
     const cardsByPack = new Map<number, DraftCard[]>();
     for (const card of cards) {
@@ -544,6 +542,48 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
       );
   }
 
+  async function touchPresence(
+    draftId: DraftId,
+    userId: UserId,
+    here: boolean,
+    now: Date,
+    awayAfterMs: number,
+  ): Promise<{ kind: "noop" | "touched" } | { kind: "changed"; version: number }> {
+    const [draftRow] = await db
+      .select({ status: drafts.status })
+      .from(drafts)
+      .where(and(eq(drafts.id, draftId), inArray(drafts.status, ["lobby", "drafting"])))
+      .for("update");
+    if (draftRow === undefined) return { kind: "noop" };
+
+    const seatFilter = and(
+      eq(draftSeats.draftId, draftId),
+      eq(draftSeats.userId, userId),
+      eq(draftSeats.botNumber, 0),
+    );
+    const [seat] = await db
+      .select({ lastSeenAt: draftSeats.lastSeenAt })
+      .from(draftSeats)
+      .where(seatFilter);
+    if (seat === undefined) return { kind: "noop" };
+
+    const wasAway =
+      seat.lastSeenAt === null || now.getTime() - seat.lastSeenAt.getTime() > awayAfterMs;
+    const nextLastSeenAt = here ? now : null;
+    const nowAway =
+      nextLastSeenAt === null || now.getTime() - nextLastSeenAt.getTime() > awayAfterMs;
+
+    await db.update(draftSeats).set({ lastSeenAt: nextLastSeenAt }).where(seatFilter);
+    if (wasAway === nowAway) return { kind: "touched" };
+
+    const [updated] = await db
+      .update(drafts)
+      .set({ version: sql`${drafts.version} + 1` })
+      .where(eq(drafts.id, draftId))
+      .returning({ version: drafts.version });
+    return { kind: "changed", version: updated.version };
+  }
+
   return {
     create,
     lock,
@@ -553,5 +593,6 @@ export function drizzleDraftRepository(db: DbExecutor): DraftRepository {
     lobbiesWith,
     withDeadlineBefore,
     setDeckOf,
+    touchPresence,
   };
 }

@@ -95,6 +95,9 @@ export const printings = pgTable(
     index("printings_lower_front_name_idx")
       .on(sql`lower(split_part(${table.name}, ' // ', 1))`)
       .where(sql`${table.name} like '% // %'`),
+    index("printings_lower_back_name_idx")
+      .on(sql`lower(split_part(${table.name}, ' // ', 2))`)
+      .where(sql`${table.name} like '% // %'`),
     index("printings_name_set_number_idx").on(table.name, table.setCode, table.collectorNumber),
     index("printings_game_changer_idx")
       .on(table.isGameChanger)

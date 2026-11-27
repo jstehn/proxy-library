@@ -474,7 +474,13 @@ describe("token efficiency & bug fix bindings", () => {
       detail: "compact",
       includeSets: true,
     });
-    expect(asked[0]).toEqual({ queries: ["Doubling Season"], includeSets: true });
+    expect(asked[0]).toEqual({
+      queries: ["Doubling Season"],
+      includeSets: true,
+      includeHistory: false,
+      includeStorePrintings: false,
+      includeOwnedOfPrinting: false,
+    });
     expect(withSets).toMatchObject({
       kind: "outcome",
       outcome: {

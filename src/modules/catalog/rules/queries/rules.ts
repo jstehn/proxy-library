@@ -56,10 +56,10 @@ export async function lookupRules(
       await db.execute<RuleRow>(sql`
         select rule_number, kind, section, parent_number, title, text, cr_version
           from comprehensive_rules
-         where lower(rule_number) = ${normalized}
-            or lower(parent_number) = ${normalized}
-            or lower(rule_number) like ${prefix}
-         order by (lower(rule_number) = ${normalized}) desc, rule_number asc
+         where rule_number = ${normalized}
+            or parent_number = ${normalized}
+            or rule_number like ${prefix}
+         order by (rule_number = ${normalized}) desc, rule_number asc
          limit ${ruleLimit}
       `)
     ).rows;

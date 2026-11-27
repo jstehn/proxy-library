@@ -25,7 +25,7 @@ export type FormattedTranscriptPage = Readonly<{
   totalSegments: number;
 }>;
 
-const DEFAULT_MAX_BYTES = 32_000;
+const DEFAULT_MAX_BYTES = 11_000;
 const textEncoder = new TextEncoder();
 
 function utf8Bytes(value: string): number {

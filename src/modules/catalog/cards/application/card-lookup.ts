@@ -33,6 +33,7 @@ export type StorePrintingOf = Readonly<{
 
 export type CardLookupReaders = Readonly<{
   find(query: string): Promise<FoundCard | null>;
+  findMany?(queries: readonly string[]): Promise<Map<string, FoundCard>>;
   detail(printingId: string): Promise<{
     card: { faces: readonly unknown[] };
     setCode: string;
@@ -46,6 +47,10 @@ export type CardLookupReaders = Readonly<{
     actor: Actor,
     printingId: string,
   ): Promise<readonly { id: number; name: string; quantity: number }[]>;
+  decksUsingMany?(
+    actor: Actor,
+    printingIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly { id: number; name: string; quantity: number }[]>>;
   wishes(actor: Actor, printingId: string): Promise<readonly { id: unknown; quantity: number }[]>;
   storePrintings(actor: Actor, name: string): Promise<readonly StorePrintingOf[]>;
   sets?(oracleId: string): Promise<readonly string[]>;
@@ -81,9 +86,21 @@ export type CardLookup =
       sets?: readonly string[];
     }>;
 
+type LookUpFlags = Readonly<{
+  includeSets: boolean;
+  includeHistory: boolean;
+  includeStorePrintings: boolean;
+  includeOwnedOfPrinting: boolean;
+}>;
+
 export function makeCardLookup(readers: CardLookupReaders) {
-  async function lookUpOne(actor: Actor, query: string, includeSets: boolean): Promise<CardLookup> {
-    const card = await readers.find(query);
+  async function lookUpOne(
+    actor: Actor,
+    query: string,
+    card: FoundCard | null,
+    preloadedDecks: readonly { id: number; name: string; quantity: number }[] | null,
+    flags: LookUpFlags,
+  ): Promise<CardLookup> {
     if (card === null) return { query, found: false };
     const [
       detail,
@@ -97,18 +114,26 @@ export function makeCardLookup(readers: CardLookupReaders) {
       sets,
     ] = await Promise.all([
       readers.detail(card.printingId),
-      readers.history(card.printingId),
-      readers.ownedOfPrinting(actor, card.printingId),
+      flags.includeHistory
+        ? readers.history(card.printingId)
+        : Promise.resolve<Partial<Record<string, readonly PricePointOf[]>>>({}),
+      flags.includeOwnedOfPrinting
+        ? readers.ownedOfPrinting(actor, card.printingId)
+        : Promise.resolve<Partial<Record<Finish, number>>>({}),
       readers.gameCopies(actor, card.oracleId),
       readers.realCopies(actor, card.oracleId),
-      readers.decksUsing(actor, card.printingId),
+      preloadedDecks !== null
+        ? Promise.resolve(preloadedDecks)
+        : readers.decksUsing(actor, card.printingId),
       readers.wishes(actor, card.printingId),
-      readers.storePrintings(actor, card.name),
-      includeSets && readers.sets ? readers.sets(card.oracleId) : Promise.resolve(undefined),
+      flags.includeStorePrintings
+        ? readers.storePrintings(actor, card.name)
+        : Promise.resolve<readonly StorePrintingOf[]>([]),
+      flags.includeSets && readers.sets ? readers.sets(card.oracleId) : Promise.resolve(undefined),
     ]);
     const sum = (copies: readonly CopyOfPrinting[]) =>
       copies.reduce((total, copy) => total + copy.quantity, 0);
-    const resolvedSets = includeSets
+    const resolvedSets = flags.includeSets
       ? (sets ?? [...new Set(printingsForSale.map((printing) => printing.set))].sort())
       : undefined;
     return {
@@ -148,11 +173,52 @@ export function makeCardLookup(readers: CardLookupReaders) {
 
   async function lookUpCards(
     actor: Actor,
-    request: Readonly<{ queries: readonly string[]; includeSets?: boolean }>,
+    request: Readonly<{
+      queries: readonly string[];
+      includeSets?: boolean;
+      includeHistory?: boolean;
+      includeStorePrintings?: boolean;
+      includeOwnedOfPrinting?: boolean;
+    }>,
   ): Promise<Result<CardLookup[], never>> {
-    const includeSets = request.includeSets ?? false;
+    const flags: LookUpFlags = {
+      includeSets: request.includeSets ?? false,
+      includeHistory: request.includeHistory ?? true,
+      includeStorePrintings: request.includeStorePrintings ?? true,
+      includeOwnedOfPrinting: request.includeOwnedOfPrinting ?? true,
+    };
+    const foundByQuery = readers.findMany
+      ? await readers.findMany(request.queries)
+      : new Map(
+          (
+            await Promise.all(
+              request.queries.map(async (query) => [query, await readers.find(query)] as const),
+            )
+          ).filter((entry): entry is readonly [string, FoundCard] => entry[1] !== null),
+        );
+    const foundPrintingIds = [
+      ...new Set(
+        request.queries
+          .map((query) => foundByQuery.get(query)?.printingId)
+          .filter((printingId): printingId is string => printingId !== undefined),
+      ),
+    ];
+    const decksByPrinting = readers.decksUsingMany
+      ? foundPrintingIds.length > 0
+        ? await readers.decksUsingMany(actor, foundPrintingIds)
+        : new Map<string, readonly { id: number; name: string; quantity: number }[]>()
+      : null;
     return ok(
-      await Promise.all(request.queries.map((query) => lookUpOne(actor, query, includeSets))),
+      await Promise.all(
+        request.queries.map((query) => {
+          const card = foundByQuery.get(query) ?? null;
+          const preloadedDecks =
+            card !== null && decksByPrinting !== null
+              ? (decksByPrinting.get(card.printingId) ?? [])
+              : null;
+          return lookUpOne(actor, query, card, preloadedDecks, flags);
+        }),
+      ),
     );
   }
   return lookUpCards;

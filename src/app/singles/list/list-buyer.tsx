@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { ListQuote, PrintingPreference, QuoteLine } from "@/modules/store";
 import { Cents } from "@/shared/kernel";
@@ -14,7 +13,6 @@ const WAIT_MILLISECONDS = 400;
 const money = (cents: number) => Cents.format(Cents.of(cents));
 
 export function ListBuyer(props: { startingText: string; balanceCents: number }) {
-  const router = useRouter();
   const [text, setText] = useState(props.startingText);
   const [preference, setPreference] = useState<PrintingPreference>("cheapest");
   const [onlyMissing, setOnlyMissing] = useState(true);
@@ -56,7 +54,6 @@ export function ListBuyer(props: { startingText: string; balanceCents: number })
       const answer = await buyListAction({ lines, expectedTotal: quote.totalCents });
       setResult(answer);
       if (answer.ok || answer.pricesChanged) setQuoteRound((round) => round + 1);
-      if (answer.ok) router.refresh(); // the balance in the header
     });
   }
 

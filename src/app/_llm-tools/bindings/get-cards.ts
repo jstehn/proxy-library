@@ -49,6 +49,9 @@ export const getCardsBinding = defineBinding({
     const cards = await capabilities.lookUpCards(actor, {
       queries: input.cards.slice(0, 25),
       includeSets: input.includeSets && input.detail === "compact",
+      includeHistory: input.detail === "full",
+      includeStorePrintings: input.detail === "full" || input.includePrice,
+      includeOwnedOfPrinting: input.detail === "full",
     });
     if (!cards.ok) return cards;
     return ok<Answer>({ detail: input.detail, cards: cards.value });

@@ -56,18 +56,29 @@ export function withRateLimit(options: {
   };
 }
 
+/** Aborts a request after `timeoutMs`, combining with any caller-supplied `init.signal`. */
+export function withTimeout(timeoutMs: number): FetchWrapper {
+  return (next) => (url, init) => {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = init?.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
+    return next(url, { ...init, signal });
+  };
+}
+
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 /**
  * Tries again after network errors and "try later" responses (429, 5xx), waiting longer each
- * time (0.5 s, 1 s, 2 s, …) or as long as the server's Retry-After header asks.
+ * time (0.5 s, 1 s, 2 s, …) or as long as the server's Retry-After header asks (capped at `maxRetryAfterMs`).
  */
 export function withRetry(options: {
   attempts: number;
   sleep: Sleep;
   baseDelayMs?: number;
+  maxRetryAfterMs?: number;
 }): FetchWrapper {
   const baseDelay = options.baseDelayMs ?? 500;
+  const maxRetryAfterMs = options.maxRetryAfterMs ?? 5_000;
 
   return (next) => async (url, init) => {
     for (let attempt = 1; ; attempt++) {
@@ -75,19 +86,24 @@ export function withRetry(options: {
       try {
         const response = await next(url, init);
         if (!RETRYABLE_STATUSES.has(response.status) || isLastAttempt) return response;
-        await options.sleep(retryAfterMs(response) ?? baseDelay * 2 ** (attempt - 1));
+        await options.sleep(
+          retryAfterMs(response, maxRetryAfterMs) ?? baseDelay * 2 ** (attempt - 1),
+        );
       } catch (error) {
-        if (isLastAttempt) throw error;
+        if (isLastAttempt || init?.signal?.aborted) throw error;
         await options.sleep(baseDelay * 2 ** (attempt - 1));
       }
     }
   };
 }
 
-function retryAfterMs(response: Response): number | null {
+function retryAfterMs(response: Response, maxRetryAfterMs: number): number | null {
   const header = response.headers.get("Retry-After");
-  const seconds = header === null ? Number.NaN : Number(header);
-  return Number.isFinite(seconds) ? seconds * 1000 : null;
+  if (header === null || header.trim().length === 0) return null;
+  const seconds = Number(header);
+  return Number.isFinite(seconds) && seconds >= 0
+    ? Math.min(seconds * 1000, maxRetryAfterMs)
+    : null;
 }
 
 /** GET a URL and return its JSON body (unchecked: the caller parses it with Zod). */

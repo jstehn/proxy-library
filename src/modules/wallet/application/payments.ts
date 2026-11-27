@@ -1,4 +1,4 @@
-import { ok, type Cents, type Result, type UserId } from "@/shared/kernel";
+import { Cents, ok, type Result, type UserId } from "@/shared/kernel";
 import type { InsufficientFunds } from "../domain/errors";
 import { checkCanAfford, ledgerEntry, type LedgerEntry } from "../domain/ledger";
 import type { WalletServices } from "./ports";
@@ -38,6 +38,41 @@ export async function spend(
   });
   await services.wallets.appendEntries([entry]);
   return ok(entry);
+}
+
+/** Takes several line payments from one wallet at once, checking the total balance once. */
+export async function spendMany(
+  services: WalletServices,
+  input: {
+    userId: UserId;
+    now: Date;
+    items: readonly {
+      amount: Cents;
+      kind: SpendInput["kind"];
+      note: string | null;
+      ref: string;
+    }[];
+  },
+): Promise<Result<LedgerEntry[], InsufficientFunds>> {
+  await bringUpToDate(services, input.userId, input.now);
+  if (input.items.length === 0) return ok([]);
+
+  const total = Cents.sum(input.items.map((item) => item.amount));
+  const canAfford = checkCanAfford(await services.wallets.balance(input.userId), total);
+  if (!canAfford.ok) return canAfford;
+
+  const entries = input.items.map((item) =>
+    ledgerEntry({
+      userId: input.userId,
+      kind: item.kind,
+      size: item.amount,
+      note: item.note,
+      effectiveAt: input.now,
+      ref: item.ref,
+    }),
+  );
+  await services.wallets.appendEntries(entries);
+  return ok(entries);
 }
 
 export type ReceiveInput = Readonly<{

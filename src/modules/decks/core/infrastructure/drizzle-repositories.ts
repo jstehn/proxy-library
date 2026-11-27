@@ -181,68 +181,129 @@ export function drizzleCardLookup(db: DbExecutor): CardLookup {
     queries: readonly CardQuery[],
     options: ResolveOptions,
   ): Promise<Map<number, ResolvedCard>> {
-    const found = new Map<number, ResolvedCard>();
+    if (queries.length === 0) return new Map();
     // The copies that count as this player's in the deck (real ones only if it uses them).
     const owned = ownedCopies(ownerId, sql`${options.includeReal}`);
+    const indices = queries.map((_, index) => index);
+    const names = queries.map((query) => query.name);
+    const lowerNames = queries.map((query) => query.name.toLowerCase());
+    const setCodes = queries.map((query) => query.setCode ?? "");
+    const collectorNumbers = queries.map((query) => query.collectorNumber ?? "");
+    const cheapestCte =
+      options.unnamedPrinting === "cheapest"
+        ? sql`,
+          newest_prices as (
+            select np.printing_id, min(np.usd_cents) as usd_cents
+              from ${newestDayPrices()} np
+             where np.printing_id in (select id from matched_printings)
+             group by np.printing_id
+          )`
+        : sql``;
+    const cheapestJoin =
+      options.unnamedPrinting === "cheapest"
+        ? sql`left join newest_prices np on np.printing_id = p.id`
+        : sql``;
     // An unowned line that names no printing: the cheapest printing in the store first (ties
     // and unpriced printings by the standard ranking), or just the standard ranking.
     const unnamedOrder =
       options.unnamedPrinting === "cheapest"
-        ? sql`(select min(snapshot.usd_cents) from ${newestDayPrices()} snapshot
-                where snapshot.printing_id = p.id) asc nulls last,
-              ${STANDARD_FIRST}`
+        ? sql`np.usd_cents asc nulls last, ${STANDARD_FIRST}`
         : STANDARD_FIRST;
-    // One small query per line: a pasted deck is at most about a hundred lines.
-    for (const [index, query] of queries.entries()) {
-      const setCode = query.setCode ?? "";
-      const collectorNumber = query.collectorNumber ?? "";
-      const [row] = (
-        await db.execute<{ oracle_id: string; id: string; finish: string; named: boolean }>(sql`
-          with candidates as (
-            select p.* from printings p
-             where lower(p.name) = lower(${query.name})
-                or lower(split_part(p.name, ' // ', 1)) = lower(${query.name})
-          ),
-          -- The printing the line names: set and number, or just the set.
-          named as (
-            select p.id from candidates p join card_sets s on s.code = p.set_code
-             where p.set_code = ${setCode}
-             order by (lower(p.name) = lower(${query.name})) desc,
-                      (p.collector_number = ${collectorNumber}) desc, s.release_date desc, p.id
-             limit 1
-          ),
-          -- Otherwise your most special copy (design doc 23, section 14).
-          special as (
-            select c.printing_id as id, c.finish from ${owned} c
-              join candidates p on p.id = c.printing_id
-             order by (lower(p.name) = lower(${query.name})) desc, ${MOST_SPECIAL_FIRST} limit 1
-          ),
-          -- Otherwise the card's standard printing (design doc 24, rule 2), or its cheapest.
-          standard as (
-            select p.id from candidates p join card_sets s on s.code = p.set_code
-             order by (lower(p.name) = lower(${query.name})) desc, ${unnamedOrder} limit 1
-          ),
-          chosen as (
-            select coalesce((select id from named), (select id from special), (select id from standard)) as id
-          )
-          select p.oracle_id, p.id, (select id from named) is not null as named,
-                 coalesce(
-                   -- your most special copy of the chosen printing, then its usual finish
-                   (select c.finish from ${owned} c where c.printing_id = p.id
-                     order by ${MOST_SPECIAL_FIRST} limit 1),
-                   case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
-                 ) as finish
-            from chosen join printings p on p.id = chosen.id
-        `)
-      ).rows;
-      if (row !== undefined) {
-        found.set(index, {
-          oracleId: row.oracle_id,
-          printingId: PrintingId.of(row.id),
-          finish: FinishSchema.parse(row.finish),
-          namedPrinting: row.named,
-        });
-      }
+
+    const rows = await db.execute<{
+      idx: number;
+      oracle_id: string;
+      id: string;
+      finish: string;
+      named: boolean;
+    }>(sql`
+      with wanted as (
+        select idx, name, lower_name, set_code, collector_number
+          from unnest(
+            ${sql.param(indices)}::int[],
+            ${sql.param(names)}::text[],
+            ${sql.param(lowerNames)}::text[],
+            ${sql.param(setCodes)}::text[],
+            ${sql.param(collectorNumbers)}::text[]
+          ) as input(idx, name, lower_name, set_code, collector_number)
+      ),
+      distinct_names as (
+        select distinct lower_name from wanted
+      ),
+      matched_printings as (
+        select dn.lower_name, true as exact_name, p.*
+          from distinct_names dn
+          join printings p on lower(p.name) = dn.lower_name
+        union all
+        select dn.lower_name, false as exact_name, p.*
+          from distinct_names dn
+          join printings p
+            on p.name like '% // %'
+           and lower(split_part(p.name, ' // ', 1)) = dn.lower_name
+      ),
+      owned_rows as (
+        select c.*
+          from ${owned} c
+         where c.printing_id in (select id from matched_printings)
+      )${cheapestCte},
+      -- The printing the line names: set and number, or just the set.
+      named as (
+        select distinct on (w.idx) w.idx, p.id
+          from wanted w
+          join matched_printings p on p.lower_name = w.lower_name and p.set_code = w.set_code
+          join card_sets s on s.code = p.set_code
+         order by w.idx, p.exact_name desc, (p.collector_number = w.collector_number) desc,
+                  s.release_date desc, p.id
+      ),
+      -- Otherwise your most special copy (design doc 23, section 14).
+      special as (
+        select distinct on (w.idx) w.idx, c.printing_id as id
+          from wanted w
+          join matched_printings p on p.lower_name = w.lower_name
+          join owned_rows c on c.printing_id = p.id
+         where not exists (select 1 from named n where n.idx = w.idx)
+         order by w.idx, p.exact_name desc, ${MOST_SPECIAL_FIRST}
+      ),
+      -- Otherwise the card's standard printing (design doc 24, rule 2), or its cheapest.
+      standard as (
+        select distinct on (w.idx) w.idx, p.id
+          from wanted w
+          join matched_printings p on p.lower_name = w.lower_name
+          join card_sets s on s.code = p.set_code
+          ${cheapestJoin}
+         where not exists (select 1 from named n where n.idx = w.idx)
+           and not exists (select 1 from special sp where sp.idx = w.idx)
+         order by w.idx, p.exact_name desc, ${unnamedOrder}
+      ),
+      chosen as (
+        select w.idx,
+               coalesce(n.id, sp.id, st.id) as id,
+               (n.id is not null) as named
+          from wanted w
+          left join named n on n.idx = w.idx
+          left join special sp on sp.idx = w.idx
+          left join standard st on st.idx = w.idx
+         where coalesce(n.id, sp.id, st.id) is not null
+      )
+      select chosen.idx, p.oracle_id, p.id, chosen.named,
+             coalesce(
+               -- your most special copy of the chosen printing, then its usual finish
+               (select c.finish from owned_rows c where c.printing_id = p.id
+                 order by ${MOST_SPECIAL_FIRST} limit 1),
+               case when 'nonfoil' = any(p.finishes) then 'nonfoil' else p.finishes[1] end
+             ) as finish
+        from chosen
+        join printings p on p.id = chosen.id
+    `);
+
+    const found = new Map<number, ResolvedCard>();
+    for (const row of rows.rows) {
+      found.set(Number(row.idx), {
+        oracleId: row.oracle_id,
+        printingId: PrintingId.of(row.id),
+        finish: FinishSchema.parse(row.finish),
+        namedPrinting: row.named,
+      });
     }
     return found;
   }

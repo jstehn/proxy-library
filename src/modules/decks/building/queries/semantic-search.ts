@@ -89,15 +89,19 @@ async function nearestOracleIds(
             )`
       : sql``;
 
-  const neighborRows = (
-    await db.execute<{ oracle_id: string; similarity: number }>(sql`
-      select e.oracle_id, (1 - (e.embedding <=> ${vecLiteral}::vector))::float8 as similarity
-        from card_embeddings e
-        ${typeWhere}
-       order by e.embedding <=> ${vecLiteral}::vector
-       limit 300
-    `)
-  ).rows;
+  const neighborRows = await db.transaction(async (transaction) => {
+    await transaction.execute(sql`set local hnsw.ef_search = 300`);
+    await transaction.execute(sql`set local hnsw.iterative_scan = relaxed_order`);
+    return (
+      await transaction.execute<{ oracle_id: string; similarity: number }>(sql`
+        select e.oracle_id, (1 - (e.embedding <=> ${vecLiteral}::vector))::float8 as similarity
+          from card_embeddings e
+          ${typeWhere}
+         order by e.embedding <=> ${vecLiteral}::vector
+         limit 300
+      `)
+    ).rows;
+  });
   if (neighborRows.length === 0) return null;
 
   const simById = new Map(neighborRows.map((row) => [row.oracle_id, Number(row.similarity)]));

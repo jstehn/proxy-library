@@ -57,6 +57,7 @@ export function createAuth(options: {
     session: {
       expiresIn: 30 * DAY_IN_SECONDS, // design doc 02: 30 days...
       updateAge: DAY_IN_SECONDS, // ...renewed (at most once a day) while in use
+      cookieCache: { enabled: true, maxAge: 5 * 60 },
     },
     // Authentik, when it is set up (design doc 69, section 4). A sign-in links to an existing
     // player and never makes one (`disableSignUp` below). A player links themselves from the
