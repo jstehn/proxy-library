@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CardPreviewGroup } from "@/app/_components/card-preview-group";
 import { CardTile } from "@/app/_components/card-tile";
 import { formatLabel } from "@/app/decks/labels";
 import type { PrintingCard } from "@/modules/catalog";
@@ -31,20 +32,27 @@ export function ProfileShowcase(props: {
       {profile.showcaseCards.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Showcase cards</h2>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {profile.showcaseCards.map((card) => {
+          <CardPreviewGroup
+            cards={profile.showcaseCards.flatMap((card) => {
               const printing = showcasePrintings.get(card.printingId);
-              if (!printing) return null;
-              return (
-                <CardTile
-                  key={card.printingId}
-                  printing={printing}
-                  priceLine={`${card.setCode.toUpperCase()} #${card.collectorNumber}`}
-                  href={`/cards/${card.printingId}`}
-                />
-              );
+              return printing ? [{ printing, href: `/cards/${card.printingId}` }] : [];
             })}
-          </ul>
+          >
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {profile.showcaseCards.map((card) => {
+                const printing = showcasePrintings.get(card.printingId);
+                if (!printing) return null;
+                return (
+                  <CardTile
+                    key={card.printingId}
+                    printing={printing}
+                    priceLine={`${card.setCode.toUpperCase()} #${card.collectorNumber}`}
+                    href={`/cards/${card.printingId}`}
+                  />
+                );
+              })}
+            </ul>
+          </CardPreviewGroup>
         </section>
       )}
     </>

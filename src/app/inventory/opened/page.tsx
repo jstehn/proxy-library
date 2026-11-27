@@ -143,6 +143,7 @@ async function openerPacks(
           finish: card.finish,
           priceCents: printing?.prices[card.finish] ?? null,
           hasImage: printing?.hasImage ?? false,
+          hasBackImage: printing?.hasBackImage ?? false,
           variantLabel: printing?.variantLabel ?? "",
         };
       }),

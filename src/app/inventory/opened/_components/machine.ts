@@ -10,6 +10,7 @@ export type OpenerCard = Readonly<{
   finish: Finish;
   priceCents: number | null;
   hasImage: boolean;
+  hasBackImage: boolean;
   variantLabel: string;
 }>;
 

@@ -2,6 +2,7 @@
 
 import { type Tag } from "@/shared/mtg";
 import { useState } from "react";
+import { CardPreviewDialog } from "@/app/_components/card-preview";
 import type { PrintingCard } from "@/modules/catalog";
 import type {
   Bracket,
@@ -14,8 +15,10 @@ import type {
   TokenLine,
 } from "@/modules/decks";
 import { bracketLine, estimateBracket } from "@/modules/decks/client";
+import { wrapIndex, type CardStepping } from "@/ui/mtg/card-art-logic";
 import { BracketPanel } from "./builder/bracket/bracket-panel";
 import { DeckList } from "./builder/list/deck-list";
+import { deckOrder } from "./builder/list/groups";
 import { problemsOf } from "./builder/derive";
 import { StatsPanel } from "./builder/stats/stats-panel";
 import { TestHandPanel } from "./builder/test-hand/test-hand-panel";
@@ -63,6 +66,30 @@ export function SharedDeckView(props: {
   );
   const [showTestHand, setShowTestHand] = useState(false);
   const [showTokens, setShowTokens] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewOrder = deckOrder(props.lines, props.grouping, props.headings).filter(
+    (line) => props.cards[line.printingId] !== undefined,
+  );
+  const activePreviewLine = previewIndex !== null ? (previewOrder[previewIndex] ?? null) : null;
+  const activePreviewCard =
+    activePreviewLine !== null ? (props.cards[activePreviewLine.printingId] ?? null) : null;
+  const previewStepping: CardStepping | null =
+    previewIndex !== null && previewOrder.length > 1
+      ? {
+          position: previewIndex + 1,
+          total: previewOrder.length,
+          onPrevious: () =>
+            setPreviewIndex((current) => wrapIndex(current ?? 0, -1, previewOrder.length)),
+          onNext: () =>
+            setPreviewIndex((current) => wrapIndex(current ?? 0, 1, previewOrder.length)),
+        }
+      : null;
+
+  function openPreview(line: DeckLine) {
+    const index = previewOrder.findIndex((candidate) => candidate.oracleId === line.oracleId);
+    if (index !== -1) setPreviewIndex(index);
+  }
+
   const problems = problemsOf(props.format, props.lines, props.rules);
   const problemsByName = new Map<string, string[]>();
   for (const problem of problems) {
@@ -79,7 +106,7 @@ export function SharedDeckView(props: {
           cards={props.cards}
           problemsByName={problemsByName}
           onChange={() => undefined}
-          onSelect={() => undefined}
+          onSelect={openPreview}
           busy={false}
           highlighted={highlighted}
           highlightedNames={highlightedNames}
@@ -174,6 +201,14 @@ export function SharedDeckView(props: {
           <TokensPanel tokens={props.tokens} onClose={() => setShowTokens(false)} />
         )}
       </aside>
+      {activePreviewCard !== null && (
+        <CardPreviewDialog
+          printing={activePreviewCard}
+          open={activePreviewCard !== null}
+          onClose={() => setPreviewIndex(null)}
+          stepping={previewStepping}
+        />
+      )}
     </div>
   );
 }

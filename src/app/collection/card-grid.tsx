@@ -1,3 +1,4 @@
+import { CardPreviewGroup } from "@/app/_components/card-preview-group";
 import { CardTile } from "@/app/_components/card-tile";
 import type { PrintingCard } from "@/modules/catalog";
 import type { CollectionRow } from "@/modules/collection";
@@ -14,32 +15,41 @@ export function CollectionCardGrid(props: {
   noteFor?: (printingId: string) => string | undefined;
   footerFor?: (row: CollectionRow, printing: PrintingCard) => React.ReactNode;
 }) {
+  const sections = sectionsOf(props.rows);
+  const previewCards = sections.flatMap((section) =>
+    section.rows.flatMap((row) => {
+      const printing = props.cards.get(row.printingId);
+      return printing === undefined ? [] : [{ printing, href: `/cards/${row.printingId}` }];
+    }),
+  );
   return (
-    <div className="flex flex-col gap-8">
-      {sectionsOf(props.rows).map((section) => (
-        <section key={section.label || "all"} className="flex flex-col gap-3">
-          {section.label && <h2 className="text-lg font-medium">{section.label}</h2>}
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {section.rows.map((row) => {
-              const printing = props.cards.get(row.printingId);
-              if (printing === undefined) return null;
-              const price = row.price === null ? "no price" : Cents.format(Cents.of(row.price));
-              return (
-                <CardTile
-                  key={`${row.printingId}/${row.finish}`}
-                  printing={printing}
-                  isFoil={row.finish !== "nonfoil"}
-                  href={`/cards/${row.printingId}`}
-                  priceLine={`${row.quantity}× · ${FINISH_NAMES[row.finish]}${price}`}
-                  note={props.noteFor?.(row.printingId)}
-                  footer={props.footerFor?.(row, printing)}
-                />
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <CardPreviewGroup cards={previewCards}>
+      <div className="flex flex-col gap-8">
+        {sections.map((section) => (
+          <section key={section.label || "all"} className="flex flex-col gap-3">
+            {section.label && <h2 className="text-lg font-medium">{section.label}</h2>}
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {section.rows.map((row) => {
+                const printing = props.cards.get(row.printingId);
+                if (printing === undefined) return null;
+                const price = row.price === null ? "no price" : Cents.format(Cents.of(row.price));
+                return (
+                  <CardTile
+                    key={`${row.printingId}/${row.finish}`}
+                    printing={printing}
+                    isFoil={row.finish !== "nonfoil"}
+                    href={`/cards/${row.printingId}`}
+                    priceLine={`${row.quantity}× · ${FINISH_NAMES[row.finish]}${price}`}
+                    note={props.noteFor?.(row.printingId)}
+                    footer={props.footerFor?.(row, printing)}
+                  />
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </CardPreviewGroup>
   );
 }
 

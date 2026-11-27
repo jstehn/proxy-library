@@ -357,6 +357,21 @@ dialog::backdrop {
   animation: foil-shimmer 2.8s linear infinite;
 }
 
+/* Carousel left/right edge cues on CardArt (design doc 73): always discoverable on touch,
+   stronger on hover/focus on pointer devices. */
+.carousel-edge-cue {
+  opacity: 0.45;
+}
+.carousel-stage:hover .carousel-edge-cue,
+.carousel-stage:focus-within .carousel-edge-cue {
+  opacity: 0.92;
+}
+@media (hover: none) {
+  .carousel-edge-cue {
+    opacity: 0.82;
+  }
+}
+
 /* Rule 5: with "reduce motion" on, cards appear without flipping, tearing or shaking. */
 @media (prefers-reduced-motion: reduce) {
   .flip-inner {

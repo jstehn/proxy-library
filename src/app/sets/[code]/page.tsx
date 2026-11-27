@@ -4,6 +4,7 @@ import { Cents } from "@/shared/kernel";
 import { type Finish } from "@/shared/mtg";
 import { ManaStylesheet } from "@/ui/mtg/mana";
 import { KeyruneStylesheet, SetSymbol } from "@/ui/mtg/set-symbol";
+import { CardPreviewGroup } from "@/app/_components/card-preview-group";
 import { CardTile } from "@/app/_components/card-tile";
 import { readPage } from "@/server/page-instance";
 import { Page } from "@/ui/page";
@@ -49,11 +50,13 @@ export default async function SetPage(props: PageProps<"/sets/[code]">) {
         </div>
       </header>
 
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {printings.map((printing) => (
-          <CardTile key={printing.id} printing={printing} priceLine={priceLine(printing)} />
-        ))}
-      </ul>
+      <CardPreviewGroup cards={printings.map((printing) => ({ printing }))}>
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {printings.map((printing) => (
+            <CardTile key={printing.id} printing={printing} priceLine={priceLine(printing)} />
+          ))}
+        </ul>
+      </CardPreviewGroup>
     </Page>
   );
 }

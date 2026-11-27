@@ -3,7 +3,15 @@
 // between them (remembered per device; the picture is the first choice) so a card can be seen
 // clearly. From the `md` breakpoint up it keeps the desktop layout: the picture beside the
 // heading, text and details. A phone-hidden part stays in the page for screen readers.
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  resolveCardFace,
+  toggleCardFace,
+  type CardFaceSide,
+  type CardStepping,
+  type FaceSelection,
+} from "./card-art-logic";
+import { CardArt } from "./card-art";
 import {
   CARD_VIEW_LABELS,
   CARD_VIEW_MODES,
@@ -14,7 +22,6 @@ import {
   type CardViewMode,
 } from "./card-view-mode";
 import { ManaText } from "./mana";
-import { CardImage } from "./card-image";
 
 /** What a face needs: structurally the catalog's `CardFace`, which `src/ui` can't import. */
 export type CardViewFace = Readonly<{
@@ -32,6 +39,13 @@ type CardViewProps = {
   printingId: string;
   name: string;
   hasImage?: boolean;
+  /** Whether the card has a second face with its own image (double-faced cards). */
+  hasBackImage?: boolean;
+  /** Controlled face; when omitted, CardView manages flip state per printingId. */
+  face?: CardFaceSide;
+  onFlip?: () => void;
+  /** Carousel navigation on the card art (left/right tap zones + horizontal swipe). */
+  stepping?: CardStepping | null;
   /** The printed text, one entry per face; null while it loads. */
   faces: readonly CardViewFace[] | null;
   /** A line under the text, such as the artist. */
@@ -91,11 +105,38 @@ function useCardViewMode(): readonly [CardViewMode, (mode: CardViewMode) => void
 }
 
 export function CardView(props: CardViewProps) {
-  const { printingId, name, hasImage = true, faces, credit, heading, children } = props;
+  const {
+    printingId,
+    name,
+    hasImage = true,
+    hasBackImage = false,
+    stepping = null,
+    faces,
+    credit,
+    heading,
+    children,
+  } = props;
   const { layout = "responsive", textStyle = "panel", desktopImage = "narrow" } = props;
   const [mode, chooseMode] = useCardViewMode();
+  const [internalFace, setInternalFace] = useState<FaceSelection | null>(null);
   const parts = visibleParts(mode, hasImage);
   const responsive = layout === "responsive";
+
+  const activeFace: CardFaceSide =
+    props.face !== undefined
+      ? hasBackImage
+        ? props.face
+        : "front"
+      : resolveCardFace(internalFace, printingId, hasBackImage);
+
+  function handleFlip() {
+    if (!hasBackImage) return;
+    if (props.onFlip) {
+      props.onFlip();
+    } else {
+      setInternalFace((current) => toggleCardFace(current, printingId, hasBackImage));
+    }
+  }
 
   // Below `md` (or always, when stacked) the parts are ordered and hidden by the mode; at `md`
   // and up the picture sits left and the rest in a column beside it.
@@ -113,19 +154,40 @@ export function CardView(props: CardViewProps) {
   return (
     <div className={root}>
       {hasImage && (
-        <CardImage
-          src={`/api/images/${printingId}/normal/front`}
-          alt={name}
-          width={488}
-          height={680}
-          className={`bg-surface-raised order-3 mx-auto aspect-[488/680] h-auto w-full max-w-sm self-start rounded-[4.5%] shadow-md ${imageSide} ${imageShown}`}
-        />
+        <div className={`order-3 mx-auto w-full max-w-sm self-start ${imageSide} ${imageShown}`}>
+          <CardArt
+            printingId={printingId}
+            name={name}
+            hasImage={hasImage}
+            hasBackImage={hasBackImage}
+            face={activeFace}
+            onFlip={handleFlip}
+            stepping={stepping}
+          />
+        </div>
       )}
       <div className={column}>
         {heading && <div className="order-1">{heading}</div>}
-        <ViewToggle mode={mode} onChoose={chooseMode} responsive={responsive} />
+        <ViewToggle
+          mode={mode}
+          onChoose={chooseMode}
+          responsive={responsive}
+          hasBackImage={hasBackImage}
+          activeFace={activeFace}
+          onFlip={handleFlip}
+          showFlipControl={!parts.image && hasBackImage}
+          stepping={!parts.image ? stepping : null}
+        />
         <div className={`order-4 ${textShown}`}>
-          <CardText faces={faces} credit={credit} textStyle={textStyle} />
+          <CardText
+            faces={faces}
+            credit={credit}
+            textStyle={textStyle}
+            desktopImage={desktopImage}
+            activeFaceIndex={
+              hasBackImage && (faces?.length ?? 0) > 1 ? (activeFace === "back" ? 1 : 0) : null
+            }
+          />
         </div>
         {children && (
           <div className={`order-5 flex flex-col ${textStyle === "plain" ? "gap-4" : "gap-2"}`}>
@@ -137,16 +199,28 @@ export function CardView(props: CardViewProps) {
   );
 }
 
+const COMPACT_STEP_BUTTON = [
+  "border-line text-muted hover:text-foreground",
+  "rounded-md border px-2.5 py-1 text-sm disabled:opacity-35",
+].join(" ");
+
 function ViewToggle(props: {
   mode: CardViewMode;
   onChoose: (mode: CardViewMode) => void;
   responsive: boolean;
+  hasBackImage: boolean;
+  activeFace: CardFaceSide;
+  onFlip: () => void;
+  showFlipControl: boolean;
+  stepping: CardStepping | null;
 }) {
+  const { stepping } = props;
+  const showSteps = stepping !== null && stepping.total > 1;
   return (
     <div
       role="group"
       aria-label="What to show of the card"
-      className={`order-2 flex gap-1 ${props.responsive ? "md:hidden" : ""}`}
+      className={`order-2 flex flex-wrap items-center gap-1 ${props.responsive ? "md:hidden" : ""}`}
     >
       {CARD_VIEW_MODES.map((mode) => (
         <button
@@ -163,6 +237,40 @@ function ViewToggle(props: {
           {CARD_VIEW_LABELS[mode]}
         </button>
       ))}
+      <div className="ml-auto flex items-center gap-1">
+        {props.showFlipControl && props.hasBackImage && (
+          <button
+            type="button"
+            aria-pressed={props.activeFace === "back"}
+            onClick={props.onFlip}
+            className="border-line text-foreground rounded-md border px-3 py-1 text-xs font-medium"
+          >
+            ↻ {props.activeFace === "back" ? "Front" : "Flip"}
+          </button>
+        )}
+        {showSteps && (
+          <>
+            <button
+              type="button"
+              onClick={stepping.onPrevious}
+              disabled={stepping.canGoPrevious === false}
+              aria-label="Previous card"
+              className={COMPACT_STEP_BUTTON}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={stepping.onNext}
+              disabled={stepping.canGoNext === false}
+              aria-label="Next card"
+              className={COMPACT_STEP_BUTTON}
+            >
+              ›
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -171,18 +279,28 @@ function CardText(props: {
   faces: readonly CardViewFace[] | null;
   credit?: string | null;
   textStyle: "panel" | "plain";
+  desktopImage: "narrow" | "wide";
+  activeFaceIndex: number | null;
 }) {
-  const { faces, credit, textStyle } = props;
+  const { faces, credit, textStyle, desktopImage, activeFaceIndex } = props;
+  const desktopPanelHeight = desktopImage === "wide" ? "md:max-h-[25rem]" : "md:max-h-56";
   const box =
     textStyle === "panel"
-      ? "bg-surface max-h-[50dvh] gap-2 overflow-y-auto rounded-md p-2 text-xs md:max-h-56"
+      ? `bg-surface max-h-[50dvh] gap-2 overflow-y-auto rounded-md p-2 text-xs ${desktopPanelHeight}`
       : "gap-4 text-sm";
   return (
     <div className={`flex flex-col ${box}`}>
       {faces === null ? (
         <p className="text-muted">Loading the card&apos;s text…</p>
       ) : (
-        faces.map((face, index) => <OracleFace key={index} face={face} />)
+        faces.map((face, index) => (
+          <OracleFace
+            key={index}
+            face={face}
+            faceLabel={activeFaceIndex === null ? null : index === 0 ? "Front" : "Back"}
+            isActiveFace={activeFaceIndex === index}
+          />
+        ))
       )}
       {credit && <p className="text-muted text-xs">{credit}</p>}
     </div>
@@ -190,8 +308,12 @@ function CardText(props: {
 }
 
 /** One face's printed text: name and cost, type line, rules text, stats. */
-function OracleFace(props: { face: CardViewFace }) {
-  const { face } = props;
+function OracleFace(props: {
+  face: CardViewFace;
+  faceLabel: string | null;
+  isActiveFace: boolean;
+}) {
+  const { face, faceLabel, isActiveFace } = props;
   const stats =
     face.power !== null && face.toughness !== null
       ? `${face.power}/${face.toughness}`
@@ -201,7 +323,21 @@ function OracleFace(props: { face: CardViewFace }) {
           ? `Defense ${face.defense}`
           : null;
   return (
-    <section className="flex flex-col gap-1">
+    <section
+      className={`flex flex-col gap-1 ${
+        faceLabel !== null
+          ? isActiveFace
+            ? "border-accent border-l-2 pl-2"
+            : "border-border-subtle border-l-2 pl-2 opacity-75"
+          : ""
+      }`}
+    >
+      {faceLabel !== null && (
+        <span className="text-muted text-[10px] font-semibold tracking-wide uppercase">
+          {faceLabel}
+          {isActiveFace ? " · showing" : ""}
+        </span>
+      )}
       <p className="flex justify-between gap-2 font-medium">
         <span>{face.name}</span>
         {face.manaCost && (

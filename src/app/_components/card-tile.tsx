@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { CardPreviewDialog, EnlargedCard } from "./card-preview";
+import { useCardPreviewGroup } from "./card-preview-group";
 import { CardImage } from "@/ui/mtg/card-image";
 import { rarityTextClass } from "@/ui/mtg/rarity";
 
@@ -11,8 +12,9 @@ const FOIL_SHEEN =
 const NO_IMAGE_BOX =
   "bg-surface-raised text-muted flex aspect-[146/204] w-full items-center justify-center rounded-md p-2 text-center text-xs";
 
-// One card in a grid (a set's cards, a pack's pulls). Hovering (or focusing, or tapping) it opens a larger version with
-// its printed text laid over the image, because the small grid image is too small to read.
+// One card in a grid (a set's cards, a pack's pulls). Hovering opens a quick enlarged preview;
+// clicking or tapping opens the unified modal preview (carousel-enabled when inside a
+// CardPreviewGroup, design doc 73).
 
 type CardTileProps = {
   printing: PrintingCard;
@@ -31,15 +33,12 @@ type CardTileProps = {
 
 export function CardTile(props: CardTileProps) {
   const { printing } = props;
+  const previewGroup = useCardPreviewGroup();
   const [isOpen, setIsOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [align, setAlign] = useState<"center" | "left" | "right">("center");
   const tileRef = useRef<HTMLLIElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  function isTouchOrNarrow() {
-    return window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768;
-  }
 
   // The enlarged card is wider than the tile; near the screen's edges, line it up with the
   // tile's edge instead of its center so it isn't cut off.
@@ -60,13 +59,11 @@ export function CardTile(props: CardTileProps) {
   }
 
   function handleActivate() {
-    if (isTouchOrNarrow()) {
-      setIsOpen(false);
-      setIsDialogOpen(true);
-    } else if (isOpen) {
-      setIsOpen(false);
+    setIsOpen(false);
+    if (previewGroup !== null) {
+      previewGroup.openCard(printing.id);
     } else {
-      open();
+      setIsDialogOpen(true);
     }
   }
 
@@ -84,8 +81,8 @@ export function CardTile(props: CardTileProps) {
         onBlur={() => setIsOpen(false)}
         onClick={handleActivate}
         aria-expanded={isOpen || isDialogOpen}
-        aria-label={`${printing.name}: show card text`}
-        className="relative block w-full rounded-[4.5%]"
+        aria-label={`${printing.name}: show card details`}
+        className="relative block w-full cursor-pointer rounded-[4.5%]"
       >
         {printing.hasImage ? (
           // Pre-sized images from our own cache. `srcSet` offers both
@@ -128,9 +125,10 @@ export function CardTile(props: CardTileProps) {
       {props.footer && <div className="mt-0.5">{props.footer}</div>}
 
       {isOpen && <EnlargedCard printing={printing} align={align} />}
-      {isDialogOpen && (
+      {previewGroup === null && isDialogOpen && (
         <CardPreviewDialog
           printing={printing}
+          href={props.href}
           open={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
         />

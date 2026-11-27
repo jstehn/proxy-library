@@ -19,6 +19,7 @@ function card(name: string, rarity = "common", priceCents: number | null = 10): 
     finish: "nonfoil",
     priceCents,
     hasImage: true,
+    hasBackImage: false,
     variantLabel: "",
   };
 }

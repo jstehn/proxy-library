@@ -1,12 +1,14 @@
 "use client";
 import { Cents } from "@/shared/kernel";
+import { CardArt, type CardFaceSide, type CardStepping } from "@/ui/mtg/card-art";
 import { CardImage } from "@/ui/mtg/card-image";
 import { CardBack } from "./card-back";
 import { hitLevel, type OpenerCard } from "./machine";
 
 // The large size (672 × 936): the spotlight and the phone stack show cards big enough to read,
 // and the grid's thumbnails reuse the same file, so each card downloads once.
-export const openerImageUrl = (card: OpenerCard) => `/api/images/${card.printingId}/large/front`;
+export const openerImageUrl = (card: OpenerCard, face: CardFaceSide = "front") =>
+  `/api/images/${card.printingId}/large/${face}`;
 
 const GLOW = { rare: "glow-rare", mythic: "glow-mythic", none: "" };
 
@@ -15,7 +17,7 @@ const STEP_BUTTON = [
   "flex h-11 w-11 items-center justify-center rounded-md border text-lg disabled:opacity-35",
 ].join(" ");
 
-/** A card's face: its image, with the moving foil shimmer on foils. */
+/** A card's static thumbnail face (used in the desktop reveal grid and phone strip). */
 function CardFace(props: { card: OpenerCard }) {
   const { card } = props;
   return (
@@ -93,7 +95,7 @@ function PackSteps(props: {
   );
 }
 
-/** The card being looked at, full size (larger screens). */
+/** The card being looked at, full size (larger screens), with carousel edge taps & DFC flip. */
 export function Spotlight(props: {
   card: OpenerCard | null;
   position: number;
@@ -104,6 +106,14 @@ export function Spotlight(props: {
   onNext: () => void;
 }) {
   const { card } = props;
+  const stepping: CardStepping = {
+    position: props.position,
+    total: props.total,
+    canGoPrevious: props.canGoPrevious,
+    canGoNext: props.canGoNext,
+    onPrevious: props.onPrevious,
+    onNext: props.onNext,
+  };
   return (
     <aside aria-label="Spotlight" className="flex w-72 shrink-0 flex-col gap-3 lg:w-80">
       {card === null ? (
@@ -117,7 +127,20 @@ export function Spotlight(props: {
             key={`${card.printingId}-${props.position}`}
             className={`animate-flip-in rounded-[4.5%] ${GLOW[hitLevel(card)]}`}
           >
-            <CardFace card={card} />
+            <CardArt
+              printingId={card.printingId}
+              name={card.name}
+              size="large"
+              hasImage={card.hasImage}
+              hasBackImage={card.hasBackImage}
+              stepping={stepping}
+              decorative
+              overlay={
+                card.finish !== "nonfoil" ? (
+                  <span aria-hidden className="foil-shimmer pointer-events-none absolute inset-0" />
+                ) : undefined
+              }
+            />
           </div>
           <CardCaption card={card} />
         </>
@@ -135,8 +158,9 @@ export function Spotlight(props: {
 }
 
 /**
- * Phones: one card at a time. Tap the stack or press › to flip the next card; use ‹ and › to step
- * back and forth through cards you've already revealed.
+ * Phones: one card at a time. Tap the face-down stack to reveal the first card; once face up,
+ * tap the left/right edges (or swipe, or press ‹ / ›) to step through revealed cards or flip the
+ * next one, and use the Flip button on two-sided cards.
  */
 export function RevealStack(props: {
   cards: readonly OpenerCard[];
@@ -156,28 +180,60 @@ export function RevealStack(props: {
   const top = cards[topIndex];
   const stillFaceDown = cards.length - revealed - (faceUp ? 0 : 1);
   const glow = faceUp || inSuspense ? GLOW[hitLevel(top)] : "";
+  const stepping: CardStepping = {
+    position: faceUp ? topIndex + 1 : 0,
+    total: cards.length,
+    canGoPrevious: props.canGoPrevious,
+    canGoNext: props.canGoNext,
+    onPrevious: props.onPrevious,
+    onNext: props.onNext,
+  };
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <button
-        type="button"
-        onClick={props.onNext}
-        disabled={!props.canGoNext}
-        aria-label={props.canGoNext ? "Next card" : top.name}
-        className="relative w-full max-w-xs"
-      >
+      <div className="relative w-full max-w-xs">
         {stillFaceDown > 0 && (
-          <div aria-hidden className="absolute inset-0 translate-x-2 translate-y-2">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 translate-x-2 translate-y-2"
+          >
             <CardBack />
           </div>
         )}
-        <div
-          key={`${topIndex}-${faceUp}`}
-          className={`relative rounded-[4.5%] ${faceUp ? "animate-flip-in" : ""} ${inSuspense ? "animate-suspense" : ""} ${glow}`}
-        >
-          {faceUp ? <CardFace card={top} /> : <CardBack />}
-        </div>
-      </button>
+        {faceUp ? (
+          <div key={`${topIndex}-up`} className={`animate-flip-in relative rounded-[4.5%] ${glow}`}>
+            <CardArt
+              printingId={top.printingId}
+              name={top.name}
+              size="large"
+              hasImage={top.hasImage}
+              hasBackImage={top.hasBackImage}
+              stepping={stepping}
+              decorative
+              overlay={
+                top.finish !== "nonfoil" ? (
+                  <span aria-hidden className="foil-shimmer pointer-events-none absolute inset-0" />
+                ) : undefined
+              }
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={props.onNext}
+            disabled={!props.canGoNext}
+            aria-label={props.canGoNext ? "Reveal next card" : top.name}
+            className="relative block w-full cursor-pointer"
+          >
+            <div
+              key={`${topIndex}-down`}
+              className={`relative rounded-[4.5%] ${inSuspense ? "animate-suspense" : ""} ${glow}`}
+            >
+              <CardBack />
+            </div>
+          </button>
+        )}
+      </div>
 
       <PackSteps
         position={faceUp ? topIndex + 1 : 0}

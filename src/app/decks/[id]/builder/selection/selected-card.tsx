@@ -68,6 +68,8 @@ export function SelectedCard(props: {
       <CardView
         printingId={selection.printingId}
         name={selection.name}
+        hasBackImage={detail?.hasBackImage ?? false}
+        stepping={stepping}
         faces={detail?.faces ?? null}
         textStyle="panel"
         heading={

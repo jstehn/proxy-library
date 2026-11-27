@@ -24,19 +24,23 @@ const TEAR_MILLISECONDS = 900;
 const PRELOAD_WAIT_MILLISECONDS = 3000; // rule 7: wait this long at most for images
 const SUSPENSE_MILLISECONDS = { rare: 900, mythic: 1600 };
 
-/** Loads every card image in the background; resolves when they're all in (or failed). */
+/** Loads every card image (front and, for double-faced cards, back) in the background. */
 function preload(cards: readonly OpenerCard[]): Promise<void> {
-  const loads = cards
-    .filter((card) => card.hasImage)
-    .map(
-      (card) =>
-        new Promise<void>((resolve) => {
-          const image = new Image();
-          image.onload = () => resolve();
-          image.onerror = () => resolve(); // a missing image shouldn't block the opening
-          image.src = openerImageUrl(card);
-        }),
-    );
+  const urls = cards.flatMap((card) => {
+    if (!card.hasImage) return [];
+    return card.hasBackImage
+      ? [openerImageUrl(card, "front"), openerImageUrl(card, "back")]
+      : [openerImageUrl(card, "front")];
+  });
+  const loads = urls.map(
+    (url) =>
+      new Promise<void>((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve();
+        image.onerror = () => resolve(); // a missing image shouldn't block the opening
+        image.src = url;
+      }),
+  );
   return Promise.all(loads).then(() => undefined);
 }
 

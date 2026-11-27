@@ -1,13 +1,18 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
-import { Button } from "@/ui/button";
+import { Dialog } from "@/ui/dialog";
+import {
+  resolveCardFace,
+  toggleCardFace,
+  type CardStepping,
+  type FaceSelection,
+} from "@/ui/mtg/card-art-logic";
 import { CardView } from "@/ui/mtg/card-view";
 import { ManaText } from "@/ui/mtg/mana";
 import { CardImage } from "@/ui/mtg/card-image";
 
-const DIALOG_BOX =
-  "border-border-subtle bg-background text-foreground m-auto max-h-[85dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-4 shadow-2xl backdrop:bg-black/70";
 const NO_IMAGE_BOX =
   "bg-surface-raised flex aspect-[488/680] w-full items-center justify-center rounded-[4.5%] p-2 text-center text-xs";
 const TEXT_OVERLAY =
@@ -105,75 +110,124 @@ export function FaceText(props: { face: CardFace; isBackFace: boolean }) {
   );
 }
 
-/** Touch-friendly native modal preview with scrollable card text and an explicit close button. */
+/**
+ * Unified modal card preview (design doc 73): built on the shared native `<Dialog>` with
+ * light-dismiss, two-sided card flipping, optional carousel stepping (left/right edge tap,
+ * horizontal swipe, and ArrowLeft/ArrowRight), and Image/Text/Both toggle on phones.
+ */
 export function CardPreviewDialog(props: {
   printing: PrintingCard;
   open: boolean;
   onClose: () => void;
+  stepping?: CardStepping | null;
+  href?: string;
 }) {
-  const { printing, open, onClose } = props;
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const { printing, open, onClose, stepping = null, href } = props;
+  const [faceSelection, setFaceSelection] = useState<FaceSelection | null>(null);
+  const activeFace = resolveCardFace(faceSelection, printing.id, printing.hasBackImage);
+
+  const flip = () => {
+    if (!printing.hasBackImage) return;
+    setFaceSelection((current) => toggleCardFace(current, printing.id, printing.hasBackImage));
+  };
+
+  // Keep latest handlers in a ref so the keyboard listener only attaches while the dialog is open.
+  const latestRef = useRef({ stepping, hasBackImage: printing.hasBackImage, flip });
+  useEffect(() => {
+    latestRef.current = { stepping, hasBackImage: printing.hasBackImage, flip };
+  });
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest("input, textarea, select") ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const { stepping: currentStepping, hasBackImage, flip: currentFlip } = latestRef.current;
+      if (
+        event.key === "ArrowLeft" &&
+        currentStepping !== null &&
+        (currentStepping.canGoPrevious ?? currentStepping.total > 1)
+      ) {
+        event.preventDefault();
+        currentStepping.onPrevious();
+      } else if (
+        event.key === "ArrowRight" &&
+        currentStepping !== null &&
+        (currentStepping.canGoNext ?? currentStepping.total > 1)
+      ) {
+        event.preventDefault();
+        currentStepping.onNext();
+      } else if (event.key.toLowerCase() === "f" && hasBackImage) {
+        event.preventDefault();
+        currentFlip();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const title =
+    stepping !== null && stepping.total > 1
+      ? `${printing.name} (${stepping.position} / ${stepping.total})`
+      : printing.name;
+
+  const credit = [printing.variantLabel, printing.artist && `Illustrated by ${printing.artist}`]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <dialog
-      ref={dialogRef}
-      onClose={onClose}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
-      }}
-      aria-label={printing.name}
-      className={DIALOG_BOX}
-    >
+    <Dialog open={open} onClose={onClose} title={title} size="lg" showCloseButton>
       <CardView
         printingId={printing.id}
         name={printing.name}
         hasImage={printing.hasImage}
+        hasBackImage={printing.hasBackImage}
+        face={activeFace}
+        onFlip={flip}
+        stepping={stepping}
         faces={printing.faces}
-        credit={[printing.variantLabel, printing.artist && `Illustrated by ${printing.artist}`]
-          .filter(Boolean)
-          .join(" · ")}
-        layout="stacked"
-        heading={
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold">{printing.name}</span>
-            <Button
-              type="button"
-              onClick={onClose}
-              aria-label="Close card preview"
-              variant="secondary"
-              className="min-h-11 min-w-11"
-            >
-              Close
-            </Button>
-          </div>
-        }
-      />
-    </dialog>
+        credit={credit}
+        layout="responsive"
+        desktopImage="wide"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="text-muted">
+            {printing.setCode.toUpperCase()} #{printing.collectorNumber} · {printing.rarity}
+          </span>
+          {href && (
+            <Link href={href} onClick={onClose} className="font-medium underline">
+              Open card page
+            </Link>
+          )}
+        </div>
+      </CardView>
+    </Dialog>
   );
 }
 
 /**
- * A card's full image that opens the enlarged, readable version on hover, focus or tap. Used
- * for a Commander deck's commander in the store, so it's clear who leads the deck.
+ * A card's full image that opens the enlarged, readable version on hover/focus and the modal
+ * preview on click/tap. Used for a Commander deck's commander in the store and in deck lists.
  */
-export function CardWithPreview(props: { printing: PrintingCard; caption?: string }) {
-  const { printing } = props;
+export function CardWithPreview(props: {
+  printing: PrintingCard;
+  caption?: string;
+  /** Optional override when clicking/tapping (e.g. to open a deck-wide carousel). */
+  onOpenPreview?: () => void;
+}) {
+  const { printing, onOpenPreview } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [align, setAlign] = useState<"center" | "left" | "right">("center");
   const frameRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  function isTouchOrNarrow() {
-    return window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768;
-  }
 
   function open() {
     if (window.matchMedia("(pointer: coarse)").matches) return;
@@ -192,13 +246,11 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
   }
 
   function handleActivate() {
-    if (isTouchOrNarrow()) {
-      setIsOpen(false);
-      setIsDialogOpen(true);
-    } else if (isOpen) {
-      setIsOpen(false);
+    setIsOpen(false);
+    if (onOpenPreview !== undefined) {
+      onOpenPreview();
     } else {
-      open();
+      setIsDialogOpen(true);
     }
   }
 
@@ -216,8 +268,8 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
         onBlur={() => setIsOpen(false)}
         onClick={handleActivate}
         aria-expanded={isOpen || isDialogOpen}
-        aria-label={`${printing.name}: show card text`}
-        className="block w-full rounded-[4.5%]"
+        aria-label={`${printing.name}: show card details`}
+        className="block w-full cursor-pointer rounded-[4.5%]"
       >
         {printing.hasImage ? (
           <CardImage
@@ -234,7 +286,7 @@ export function CardWithPreview(props: { printing: PrintingCard; caption?: strin
       </button>
       {props.caption && <p className="text-muted mt-1 text-xs">{props.caption}</p>}
       {isOpen && <EnlargedCard printing={printing} align={align} />}
-      {isDialogOpen && (
+      {onOpenPreview === undefined && isDialogOpen && (
         <CardPreviewDialog
           printing={printing}
           open={isDialogOpen}
@@ -267,6 +319,7 @@ export function NamePreview(props: {
 
   function show() {
     if (suppressedRef.current) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     const box = nameRef.current?.getBoundingClientRect();
     if (box === undefined || props.printing === undefined) return;
     // To the left of the name when there's room (deck lists sit on the right), else the right.

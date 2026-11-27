@@ -69,6 +69,7 @@ export default async function CardPage(props: PageProps<"/cards/[id]">) {
         printingId={card.id}
         name={card.name}
         hasImage={card.hasImage}
+        hasBackImage={card.hasBackImage}
         faces={card.faces}
         textStyle="plain"
         desktopImage="wide"

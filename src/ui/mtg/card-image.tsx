@@ -16,7 +16,9 @@ export type CardImageProps = ImageProps & Description;
 
 export function CardImage(props: CardImageProps) {
   const { alt, decorative, loading = "lazy", className, ...rest } = props;
-  const [failed, setFailed] = useState(false);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const currentSource = typeof rest.src === "string" ? rest.src : "";
+  const failed = failedSource !== null && failedSource === currentSource;
 
   if (failed) {
     return (
@@ -38,7 +40,7 @@ export function CardImage(props: CardImageProps) {
       alt={decorative ? "" : alt}
       loading={loading}
       className={className}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSource(currentSource)}
     />
   );
 }

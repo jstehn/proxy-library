@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { CardPreviewGroup } from "@/app/_components/card-preview-group";
 import { CardTile } from "@/app/_components/card-tile";
 import type { PrintingCard } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
@@ -230,11 +231,18 @@ export function OpenedResults(props: OpenedResultsProps) {
           {displayedCombined.length === 0 ? (
             <EmptyState>No duplicate pulls in this opening.</EmptyState>
           ) : (
-            <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-              {displayedCombined.map((item) => (
-                <OpenedCardTile key={item.key} item={item} />
-              ))}
-            </ol>
+            <CardPreviewGroup
+              cards={displayedCombined.map((item) => ({
+                printing: item.printing,
+                href: `/cards/${item.printing.id}`,
+              }))}
+            >
+              <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                {displayedCombined.map((item) => (
+                  <OpenedCardTile key={item.key} item={item} />
+                ))}
+              </ol>
+            </CardPreviewGroup>
           )}
         </section>
       )}
@@ -252,25 +260,34 @@ export function OpenedResults(props: OpenedResultsProps) {
                   </p>
                 )}
               </div>
-              <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-                {opening.cards.map((card, position) => {
+              <CardPreviewGroup
+                cards={opening.cards.flatMap((card) => {
                   const printing = cardsById[card.printingId];
-                  if (printing === undefined) return null;
-                  const unitPriceCents = Number(printing.prices[card.finish] ?? 0);
-                  const key = cardKey(card.printingId, card.finish);
-                  const item: CombinedOpenedCard = {
-                    key: `${opening.itemId}-${position}`,
-                    printing,
-                    finish: card.finish,
-                    quantity: card.quantity,
-                    unitPriceCents,
-                    totalPriceCents: unitPriceCents * card.quantity,
-                    ownedTotal: key in ownedByKey ? ownedByKey[key] : null,
-                    packOrder: position,
-                  };
-                  return <OpenedCardTile key={item.key} item={item} />;
+                  return printing === undefined
+                    ? []
+                    : [{ printing, href: `/cards/${printing.id}` }];
                 })}
-              </ol>
+              >
+                <ol className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                  {opening.cards.map((card, position) => {
+                    const printing = cardsById[card.printingId];
+                    if (printing === undefined) return null;
+                    const unitPriceCents = Number(printing.prices[card.finish] ?? 0);
+                    const key = cardKey(card.printingId, card.finish);
+                    const item: CombinedOpenedCard = {
+                      key: `${opening.itemId}-${position}`,
+                      printing,
+                      finish: card.finish,
+                      quantity: card.quantity,
+                      unitPriceCents,
+                      totalPriceCents: unitPriceCents * card.quantity,
+                      ownedTotal: key in ownedByKey ? ownedByKey[key] : null,
+                      packOrder: position,
+                    };
+                    return <OpenedCardTile key={item.key} item={item} />;
+                  })}
+                </ol>
+              </CardPreviewGroup>
             </section>
           ))}
     </div>

@@ -140,7 +140,10 @@ export function DeckList(props: {
               const card = props.cards[line.printingId];
               return card ? (
                 <div key={line.oracleId} className="flex flex-col gap-1">
-                  <CardWithPreview printing={card} />
+                  <CardWithPreview
+                    printing={card}
+                    onOpenPreview={props.readOnly ? () => props.onSelect(line) : undefined}
+                  />
                   {!props.readOnly && (
                     <div className="flex flex-wrap items-center justify-between gap-1">
                       {/* The picture only shows the card's text; this opens it in the panel

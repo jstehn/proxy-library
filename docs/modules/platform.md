@@ -14,6 +14,11 @@ installable PWA. Code: `docker-compose.yml`, `public/sw.js`, `src/app/globals.cs
 4. **Touch targets** on coarse pointers are at least 44 px (`--target-size`); animation and box-shadow
    highlights degrade under `prefers-reduced-motion` and `forced-colors`. (doc 49 §3 rules 2 and 5;
    `globals.css`)
+5. **Card previews and two-sided flipping** share `CardArt`, `CardView`, `CardPreviewDialog` (on
+   native `<Dialog>`), and `CardPreviewGroup`: cards in a sequence support left/right edge taps,
+   horizontal swipe, and `ArrowLeft`/`ArrowRight`; double-faced cards (`hasBackImage`) show a Flip
+   control (`F` on keyboard) that resets to front on card change. (doc 73; `card-art.tsx`,
+   `card-art-logic.test.ts`, `card-preview.tsx`)
 
 ## Not carried
 

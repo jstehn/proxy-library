@@ -7,6 +7,7 @@ import {
   Pagination,
   searchText,
 } from "@/app/_components/card-filters";
+import { CardPreviewGroup } from "@/app/_components/card-preview-group";
 import { CardTile } from "@/app/_components/card-tile";
 import { FINISHES } from "@/modules/catalog";
 import { Cents } from "@/shared/kernel";
@@ -69,25 +70,32 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
         sorts={SORTS}
         notes={result.notes}
       />
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {result.printingIds.map((id) => {
+      <CardPreviewGroup
+        cards={result.printingIds.flatMap((id) => {
           const printing = cards.get(id);
-          if (printing === undefined) return null;
-          const prices = FINISHES.flatMap((finish) => {
-            const price = printing.prices[finish];
-            return price === undefined ? [] : [`${FINISH_LABELS[finish]}${Cents.format(price)}`];
-          });
-          return (
-            <CardTile
-              key={id}
-              printing={printing}
-              href={`/cards/${id}`}
-              priceLine={prices.length === 0 ? "no price" : prices.join(" · ")}
-              note={wished.has(id) ? "★ On your wishlist" : undefined}
-            />
-          );
+          return printing === undefined ? [] : [{ printing, href: `/cards/${id}` }];
         })}
-      </ul>
+      >
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {result.printingIds.map((id) => {
+            const printing = cards.get(id);
+            if (printing === undefined) return null;
+            const prices = FINISHES.flatMap((finish) => {
+              const price = printing.prices[finish];
+              return price === undefined ? [] : [`${FINISH_LABELS[finish]}${Cents.format(price)}`];
+            });
+            return (
+              <CardTile
+                key={id}
+                printing={printing}
+                href={`/cards/${id}`}
+                priceLine={prices.length === 0 ? "no price" : prices.join(" · ")}
+                note={wished.has(id) ? "★ On your wishlist" : undefined}
+              />
+            );
+          })}
+        </ul>
+      </CardPreviewGroup>
       <Pagination action="/singles" values={values} page={page} pageCount={result.pageCount} />
     </Page>
   );
