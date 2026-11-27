@@ -255,4 +255,126 @@ describe("redditHttpGateway", () => {
     expect(res.value[0]?.postId).toBe("1xyz999");
     expect(res.value[0]?.subreddit).toBe("BudgetBrews");
   });
+
+  it("caches searchPosts for 5 minutes with normalized keys and skips caching errors", async () => {
+    let nowMs = 1_700_000_000_000;
+    const clock: Clock = { now: () => new Date(nowMs) };
+    let shouldFail = true;
+    const fetchFn = vi.fn(async () => {
+      if (shouldFail) return new Response("Rate Limited", { status: 429 });
+      return Response.json({
+        results: [
+          {
+            title: "Henzie",
+            url: "https://www.reddit.com/r/EDH/comments/1xyz999/henzie/",
+            content: "Primer",
+          },
+        ],
+      });
+    });
+
+    const gw = redditHttpGateway(clock, {
+      fetchFn,
+      sleep: async () => {},
+      searxngUrl: "http://searxng:8080",
+    });
+
+    const failed = await gw.searchPosts({
+      query: "  Henzie  Blitz ",
+      subreddit: "EDH",
+      sortBy: "relevance",
+      timeframe: "all",
+      limit: 5,
+    });
+    expect(failed.ok).toBe(false);
+    const callsAfterFail = fetchFn.mock.calls.length;
+
+    shouldFail = false;
+    const firstOk = await gw.searchPosts({
+      query: "  Henzie  Blitz ",
+      subreddit: "EDH",
+      sortBy: "relevance",
+      timeframe: "all",
+      limit: 5,
+    });
+    expect(firstOk.ok).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(callsAfterFail + 1);
+
+    // Normalized whitespace + case hits the cache without fetching again.
+    const cachedHit = await gw.searchPosts({
+      query: "henzie blitz",
+      subreddit: "edh",
+      sortBy: "relevance",
+      timeframe: "all",
+      limit: 5,
+    });
+    expect(cachedHit.ok).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(callsAfterFail + 1);
+
+    // Expires after 5 minutes.
+    nowMs += 5 * 60 * 1000;
+    const afterTtl = await gw.searchPosts({
+      query: "henzie blitz",
+      subreddit: "edh",
+      sortBy: "relevance",
+      timeframe: "all",
+      limit: 5,
+    });
+    expect(afterTtl.ok).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(callsAfterFail + 2);
+  });
+
+  it("launches Arctic Shift post and comment fetches in parallel with separate rate limiters", async () => {
+    const startedUrls: string[] = [];
+    let releasePosts!: () => void;
+    const postsGate = new Promise<void>((resolve) => {
+      releasePosts = resolve;
+    });
+    const fetchFn = vi.fn(async (url: string) => {
+      startedUrls.push(url);
+      if (url.includes("/api/posts/ids")) {
+        await postsGate;
+        return Response.json({
+          data: [
+            {
+              id: "1abc2de",
+              subreddit: "EDH",
+              title: "Parallel",
+              author: "op",
+              score: 10,
+              num_comments: 0,
+              created_utc: 1_700_000_000,
+              selftext: "Body",
+            },
+          ],
+        });
+      }
+      return Response.json({ data: [] });
+    });
+
+    const waits: number[] = [];
+    const gw = redditHttpGateway(testClock, {
+      fetchFn,
+      sleep: async (ms) => {
+        waits.push(ms);
+      },
+    });
+    const pending = gw.fetchThread({
+      postId: "1abc2de" as RedditPostId,
+      commentSort: "top",
+      commentLimit: 10,
+    });
+
+    await vi.waitFor(() => {
+      expect(startedUrls).toHaveLength(2);
+    });
+    expect(startedUrls[0]).toContain("/api/posts/ids");
+    expect(startedUrls[1]).toContain("/api/comments/tree");
+    // Arctic Shift is 4 req/s => 250ms spacing (not 1000ms).
+    expect(waits).toEqual([250]);
+
+    releasePosts();
+    const result = await pending;
+    expect(result.ok).toBe(true);
+  });
 });

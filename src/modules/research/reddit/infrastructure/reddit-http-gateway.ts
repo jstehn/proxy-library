@@ -4,6 +4,7 @@ import {
   platformFetch,
   withRateLimit,
   withRetry,
+  withTimeout,
   withUserAgent,
   type Fetch,
   type Sleep,
@@ -36,19 +37,54 @@ import {
 
 const THREAD_CACHE_MAX_ENTRIES = 50;
 const THREAD_CACHE_TTL_MS = 20 * 60 * 1000;
+const SEARCH_CACHE_MAX_ENTRIES = 50;
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const SERVICE_TIMEOUT_MS = 12_000;
 const REDDIT_USER_AGENT = "linux:proxy-library:v0.1.0 (MTG deck-building research)";
 
 const defaultSleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-type CacheEntry = {
-  thread: RedditThread;
-  expiresAtMs: number;
-};
 
 type TokenCache = {
   token: string;
   expiresAtMs: number;
 };
+
+function makeTimedLruCache<T>(clock: Clock, maxEntries: number, ttlMs: number) {
+  const entries = new Map<string, { value: T; expiresAtMs: number }>();
+
+  return {
+    get(key: string): T | null {
+      const entry = entries.get(key);
+      if (!entry) return null;
+      if (clock.now().getTime() >= entry.expiresAtMs) {
+        entries.delete(key);
+        return null;
+      }
+      entries.delete(key);
+      entries.set(key, entry);
+      return entry.value;
+    },
+    set(key: string, value: T): void {
+      entries.delete(key);
+      if (entries.size >= maxEntries) {
+        const oldestKey = entries.keys().next().value;
+        if (oldestKey !== undefined) entries.delete(oldestKey);
+      }
+      entries.set(key, {
+        value,
+        expiresAtMs: clock.now().getTime() + ttlMs,
+      });
+    },
+  };
+}
+
+function makeServiceFetch(perSecond: number, clock: Clock, sleep: Sleep, baseFetch: Fetch): Fetch {
+  return withUserAgent(REDDIT_USER_AGENT)(
+    withRateLimit({ perSecond, clock, sleep })(
+      withRetry({ attempts: 2, sleep })(withTimeout(SERVICE_TIMEOUT_MS)(baseFetch)),
+    ),
+  );
+}
 
 /**
  * Anti-corruption layer over Reddit's API (ADR 0007). Uses OAuth2 (`oauth.reddit.com`) when
@@ -68,10 +104,20 @@ export function redditHttpGateway(
 ): RedditGateway {
   const sleep = options.sleep ?? defaultSleep;
   const baseFetch = options.fetchFn ?? platformFetch;
-  const http: Fetch = withUserAgent(REDDIT_USER_AGENT)(
-    withRateLimit({ perSecond: 1, clock, sleep })(withRetry({ attempts: 2, sleep })(baseFetch)),
+  const redditFetch = makeServiceFetch(1, clock, sleep, baseFetch);
+  const arcticShiftFetch = makeServiceFetch(4, clock, sleep, baseFetch);
+  const braveFetch = makeServiceFetch(2, clock, sleep, baseFetch);
+  const searxngFetch = makeServiceFetch(4, clock, sleep, baseFetch);
+  const threadCache = makeTimedLruCache<RedditThread>(
+    clock,
+    THREAD_CACHE_MAX_ENTRIES,
+    THREAD_CACHE_TTL_MS,
   );
-  const cache = new Map<string, CacheEntry>();
+  const searchCache = makeTimedLruCache<readonly RedditSearchPost[]>(
+    clock,
+    SEARCH_CACHE_MAX_ENTRIES,
+    SEARCH_CACHE_TTL_MS,
+  );
   let tokenCache: TokenCache | null = null;
 
   const hasOAuth = Boolean(options.clientId && options.clientSecret);
@@ -83,7 +129,7 @@ export function redditHttpGateway(
       return tokenCache.token;
     }
     const creds = Buffer.from(`${options.clientId}:${options.clientSecret}`).toString("base64");
-    const raw = await fetchJson(http, "https://www.reddit.com/api/v1/access_token", {
+    const raw = await fetchJson(redditFetch, "https://www.reddit.com/api/v1/access_token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${creds}`,
@@ -102,32 +148,34 @@ export function redditHttpGateway(
   async function redditGet(pathAndQuery: string): Promise<unknown> {
     const token = await getAccessToken();
     if (token) {
-      return fetchJson(http, `https://oauth.reddit.com${pathAndQuery}`, {
+      return fetchJson(redditFetch, `https://oauth.reddit.com${pathAndQuery}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     }
     const [path, query] = pathAndQuery.split("?");
     const jsonPath = path?.endsWith(".json") ? path : `${path}.json`;
-    return fetchJson(http, `https://www.reddit.com${jsonPath}${query ? `?${query}` : ""}`);
+    return fetchJson(redditFetch, `https://www.reddit.com${jsonPath}${query ? `?${query}` : ""}`);
   }
 
   async function fetchThreadFromArcticShift(
     postId: RedditPostId,
     commentLimit: number,
   ): Promise<RedditThread | null> {
-    const postRaw = await fetchJson(
-      http,
-      `https://arctic-shift.photon-reddit.com/api/posts/ids?ids=t3_${postId}`,
-    );
+    const [postRaw, commentsRaw] = await Promise.all([
+      fetchJson(
+        arcticShiftFetch,
+        `https://arctic-shift.photon-reddit.com/api/posts/ids?ids=t3_${postId}`,
+      ),
+      fetchJson(
+        arcticShiftFetch,
+        `https://arctic-shift.photon-reddit.com/api/comments/tree?link_id=t3_${postId}&limit=${commentLimit}`,
+      ),
+    ]);
     const postListing = ArcticDataSchema.safeParse(postRaw);
     const first = postListing.success ? postListing.data.data?.[0] : undefined;
     const postParsed = first ? PostDataSchema.safeParse(first) : null;
     if (!postParsed?.success) return null;
 
-    const commentsRaw = await fetchJson(
-      http,
-      `https://arctic-shift.photon-reddit.com/api/comments/tree?link_id=t3_${postId}&limit=${commentLimit}`,
-    );
     const commentsListing = ArcticDataSchema.safeParse(commentsRaw);
     const comments: RedditComment[] = [];
     if (commentsListing.success && commentsListing.data.data) {
@@ -158,31 +206,18 @@ export function redditHttpGateway(
     };
   }
 
-  function getCached(key: string): RedditThread | null {
-    const entry = cache.get(key);
-    if (!entry) return null;
-    if (clock.now().getTime() >= entry.expiresAtMs) {
-      cache.delete(key);
-      return null;
-    }
-    cache.delete(key);
-    cache.set(key, entry);
-    return entry.thread;
-  }
-
-  function setCached(key: string, thread: RedditThread): void {
-    if (cache.size >= THREAD_CACHE_MAX_ENTRIES) {
-      const oldestKey = cache.keys().next().value;
-      if (oldestKey !== undefined) cache.delete(oldestKey);
-    }
-    cache.set(key, {
-      thread,
-      expiresAtMs: clock.now().getTime() + THREAD_CACHE_TTL_MS,
-    });
-  }
-
   return {
     async searchPosts({ query, subreddit, sortBy, timeframe, limit }) {
+      const searchCacheKey = JSON.stringify({
+        query: query.trim().replace(/\s+/g, " ").toLowerCase(),
+        subreddit: subreddit.trim().toLowerCase(),
+        sortBy,
+        timeframe,
+        limit,
+      });
+      const cachedSearch = searchCache.get(searchCacheKey);
+      if (cachedSearch) return ok(cachedSearch);
+
       const siteQuery = buildSiteSearchQuery(query, subreddit);
 
       if (!hasOAuth && options.braveSearchApiKey) {
@@ -202,7 +237,7 @@ export function redditHttpGateway(
             if (f) braveParams.set("freshness", f);
           }
           const raw = await fetchJson(
-            http,
+            braveFetch,
             `https://api.search.brave.com/res/v1/web/search?${braveParams.toString()}`,
             {
               headers: {
@@ -220,6 +255,7 @@ export function redditHttpGateway(
             }));
             const mapped = mapWebHitsToPosts(hits, limit);
             if (mapped.length > 0 || !options.searxngUrl) {
+              searchCache.set(searchCacheKey, mapped);
               return ok(mapped);
             }
           }
@@ -240,7 +276,7 @@ export function redditHttpGateway(
           if (timeframe !== "all") {
             searxParams.set("time_range", timeframe);
           }
-          const raw = await fetchJson(http, `${base}/search?${searxParams.toString()}`);
+          const raw = await fetchJson(searxngFetch, `${base}/search?${searxParams.toString()}`);
           const parsed = SearxngSearchSchema.safeParse(raw);
           if (!parsed.success) {
             return err({
@@ -253,7 +289,9 @@ export function redditHttpGateway(
             url: r.url,
             snippet: r.content,
           }));
-          return ok(mapWebHitsToPosts(hits, limit));
+          const mapped = mapWebHitsToPosts(hits, limit);
+          searchCache.set(searchCacheKey, mapped);
+          return ok(mapped);
         } catch (error) {
           return err(classifyRedditError(error, "Failed to search Reddit via SearXNG"));
         }
@@ -308,6 +346,7 @@ export function redditHttpGateway(
           });
         }
 
+        searchCache.set(searchCacheKey, results);
         return ok(results);
       } catch (error) {
         return err(classifyRedditError(error, "Failed to search Reddit"));
@@ -320,14 +359,14 @@ export function redditHttpGateway(
       commentLimit,
     }): Promise<Result<RedditThread, RedditError>> {
       const cacheKey = `${postId}:${commentSort}:${commentLimit}`;
-      const cached = getCached(cacheKey);
+      const cached = threadCache.get(cacheKey);
       if (cached) return ok(cached);
 
       if (!hasOAuth) {
         try {
           const archived = await fetchThreadFromArcticShift(postId, commentLimit);
           if (archived) {
-            setCached(cacheKey, archived);
+            threadCache.set(cacheKey, archived);
             return ok(archived);
           }
         } catch {
@@ -377,7 +416,7 @@ export function redditHttpGateway(
           comments,
         };
 
-        setCached(cacheKey, thread);
+        threadCache.set(cacheKey, thread);
         return ok(thread);
       } catch (error) {
         return err(classifyRedditError(error, "Failed to fetch Reddit thread"));
