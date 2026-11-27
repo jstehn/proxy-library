@@ -19,7 +19,8 @@ commander tax is not modelled.
 turn 1 to `lastTurn` (default 10), the median turn (first turn at 50%, or null), and the commonest
 reasons a run failed ("not drawn 12%, too little mana 20%, no B source 9%"). The report has the run
 count and a margin of error (95%, worst case: 2,000 runs is +/-2.2 points). The tool prints it as a
-header and one `T<n>` line per turn, a column per card. A measurement, never a score.
+header and, per card, one string of the percents for turn 1, 2, … (changed 2026-11-27: it was a `T<n>`
+line per turn). `get_deck` shows the commander's curve on its first page. A measurement, never a score.
 
 ## The simulator
 

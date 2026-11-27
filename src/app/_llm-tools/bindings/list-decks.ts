@@ -12,16 +12,18 @@ export const listDecksBinding = defineBinding({
   readOnly: true,
   input: z.object({}),
   call: (capabilities, actor) => capabilities.listDecks(actor),
+  // Defaults are left out per deck (most decks are private and use real cards) and said once.
   present: (decks) => ({
+    note: "usesRealCards is true and visibility is private unless a deck says otherwise.",
     decks: decks.map((deck) => ({
       id: deck.id,
       name: deck.name,
       format: deck.format,
       cards: deck.cards,
       short: deck.short,
-      usesRealCards: deck.usesRealCards,
-      visibility: deck.visibility,
-      updatedAt: deck.updatedAt,
+      ...(deck.usesRealCards ? {} : { usesRealCards: false }),
+      ...(deck.visibility === "private" ? {} : { visibility: deck.visibility }),
+      updated: deck.updatedAt.slice(0, 10),
     })),
   }),
 });

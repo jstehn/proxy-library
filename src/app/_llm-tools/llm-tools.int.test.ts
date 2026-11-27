@@ -130,6 +130,25 @@ describe("the MCP server", () => {
     expect(deck.list).toContain("1 Carrot Cake");
   });
 
+  it("includes the commander's cast-by-turn curve in get_deck (turns 1-10, on the play)", async () => {
+    const client = await connect();
+    const created = await call(client, "create_deck", {
+      name: "Curve",
+      list: "Commander\n1 Beza, the Bounding Spring\n\nDeck\n30 Plains",
+    });
+    const deck = await call(client, "get_deck", { deckId: created.deckId });
+    expect(deck.commanderCast).toMatchObject({
+      side: "play",
+      cards: [{ card: "Beza, the Bounding Spring" }],
+    });
+    expect(deck.commanderCast.cards[0].pct.split(" ")).toHaveLength(10);
+    const details = await call(client, "get_deck", {
+      deckId: created.deckId,
+      cards: ["Plains"],
+    });
+    expect(details.commanderCast).toBeUndefined();
+  });
+
   it("reads a deck compactly by default: one line per card with text, details on request", async () => {
     const client = await connect();
     await give("Banishing Light");
@@ -147,7 +166,7 @@ describe("the MCP server", () => {
     const allLines: string[] = Object.values(deck.cards as Record<string, string[]>).flat();
     expect(deck.cards.Commander[0]).toMatch(/^1 Beza, the Bounding Spring · /);
     expect(allLines.find((line) => line.includes("Banishing Light"))).toBe(
-      "1 Banishing Light · {2}{W} · Enchantment",
+      "1 Banishing Light · {2}{W}",
     );
     const withText = await call(client, "get_deck", {
       deckId: created.deckId,
@@ -680,8 +699,9 @@ describe("opening-hand odds & draw_sample", () => {
       lastTurn: 4,
       seed: "test-seed",
     });
-    expect(cast.cast.table).toHaveLength(4);
-    expect(cast.cast).toMatchObject({ runs: 200, cards: ["Banishing Light"] });
+    expect(cast.cast).toMatchObject({ runs: 200, cards: [{ card: "Banishing Light" }] });
+    expect(cast.cast.cards[0].pct.split(" ")).toHaveLength(4);
+    expect(cast.samples[0].hand[0]).toEqual(expect.any(String));
   });
 });
 

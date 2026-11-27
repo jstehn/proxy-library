@@ -63,7 +63,10 @@ export const getDeckBinding = defineBinding({
     const { deckId } = input;
     const asked = { ...input, include: input.include ?? [] };
     const wants = (name: (typeof asked.include)[number]) => asked.include.includes(name);
-    const [overview, signals, manaPlan] = await Promise.all([
+    // The commander's chance to be cast by each turn belongs on the first page of every deck view
+    // (about 0.2 s; a deck with no commander, or too few cards, simply has none).
+    const wantsCast = input.cards === undefined && (input.cursor ?? 0) === 0;
+    const [overview, signals, manaPlan, commanderCast] = await Promise.all([
       capabilities.deckOverview(actor, {
         deckId,
         parts: overviewPartsFor(asked),
@@ -72,6 +75,16 @@ export const getDeckBinding = defineBinding({
         ? capabilities.deckSignals({ userId: actor.userId, deckId, minimumCards: 1 })
         : undefined,
       wants("mana_plan") ? capabilities.deckManaPlan({ userId: actor.userId, deckId }) : undefined,
+      wantsCast
+        ? capabilities.drawSample.castCurves({
+            userId: actor.userId,
+            deckId,
+            cards: ["commander"],
+            onTheDraw: false,
+            lastTurn: 10,
+            runs: 2000,
+          })
+        : undefined,
     ]);
     if (!overview.ok) return overview;
     const facts = wants("facts")
@@ -82,6 +95,7 @@ export const getDeckBinding = defineBinding({
       ...(facts?.ok ? { facts: facts.value } : {}),
       ...(signals?.ok ? { signals: signals.value } : {}),
       ...(manaPlan?.ok ? { manaPlan: manaPlan.value } : {}),
+      ...(commanderCast?.ok ? { commanderCast: commanderCast.value } : {}),
     });
   },
   present: (answer, { input }) =>

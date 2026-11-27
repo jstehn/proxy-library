@@ -27,6 +27,8 @@ export type CompactLineSource = DeckCount &
 export type CompactLineOptions = Readonly<{
   /** Append the card's (trimmed) oracle text. */
   includeText: boolean;
+  /** The group the line sits under; a type line that only repeats it ("Instant") is left out. */
+  groupTypeLine?: string;
 }>;
 
 /** One group of card lines: a heading ("Ramp"), a card type ("Creatures"), or "Commander". */
@@ -53,6 +55,17 @@ const DISPLAY_ORDER = [
   "Other",
   "Lands",
 ];
+
+/** The type line a group's cards share, when one line can say it for the whole group. */
+const GROUP_TYPE_LINES: Record<string, string> = {
+  Planeswalkers: "Planeswalker",
+  Battles: "Battle",
+  Instants: "Instant",
+  Sorceries: "Sorcery",
+  Artifacts: "Artifact",
+  Enchantments: "Enchantment",
+  Lands: "Land",
+};
 
 /** The card-type group a line falls in when it has no heading ("Artifact Creature" → Creatures). */
 export function typeGroupOf(typeLine: string): string {
@@ -86,14 +99,16 @@ export function shortenOracleText(
 }
 
 /**
- * "1 Sol Ring · {1} · Artifact · ramp — {T}: Add {C}{C}." with flags only when true:
+ * "1 Sol Ring · {1} · ramp — {T}: Add {C}{C}." (the type line is left out when the group says it) with flags only when true:
  * SHORT n, GC, PINNED, role and note.
  */
 export function compactCardLine(line: CompactLineSource, options: CompactLineOptions): string {
   const parts = [`${line.quantity} ${line.name}`];
   if (line.manaCost !== null && line.manaCost !== "") parts.push(line.manaCost);
   const stats = line.printedStats ?? null;
-  parts.push(stats === null ? line.typeLine : `${line.typeLine} ${stats}`);
+  const typeLine = line.typeLine === options.groupTypeLine ? "" : line.typeLine;
+  const shownType = stats === null ? typeLine : `${typeLine} ${stats}`.trim();
+  if (shownType !== "") parts.push(shownType);
   const tags = line.tags ?? [];
   if (tags.length > 0) parts.push(tags.join(", "));
   const missing = line.isBasicLand ? 0 : Math.max(0, line.quantity - line.owned);
@@ -134,7 +149,15 @@ export function groupCompactLines(
           ? line.heading
           : typeGroupOf(line.typeLine);
     const group = byTitle.get(title) ?? [];
-    group.push(compactCardLine(line, { includeText: options.includeText }));
+    const byType = !(options.byHeading && line.heading !== null) && line.board !== "commander";
+    group.push(
+      compactCardLine(line, {
+        includeText: options.includeText,
+        ...(byType && GROUP_TYPE_LINES[title] !== undefined
+          ? { groupTypeLine: GROUP_TYPE_LINES[title] }
+          : {}),
+      }),
+    );
     byTitle.set(title, group);
   }
   const order = ["Commander", ...options.headings, ...DISPLAY_ORDER];

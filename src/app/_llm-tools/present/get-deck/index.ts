@@ -7,6 +7,7 @@ import { landReasonText, landTargetReasonText } from "@/app/decks/labels";
 import { heuristicProvenance, moneyOrNull } from "../../tool";
 import { compactMoneyFields, stripProvenance } from "../money";
 
+import { castTable } from "../cast-table";
 import { compactDeckPayload } from "./compact";
 import { fullDeckPayload } from "./full";
 import type { GetDeckAnswer, PresentInput } from "./input";
@@ -56,6 +57,7 @@ export function presentGetDeck(answer: GetDeckAnswer, request: PresentInput): un
       ...(answer.facts.bracketWithMaybe ? { bracketWithMaybe: answer.facts.bracketWithMaybe } : {}),
     });
   }
+  if (answer.commanderCast !== undefined) result.commanderCast = castTable(answer.commanderCast);
   if (answer.signals !== undefined) result.signals = answer.signals;
   if (answer.manaPlan !== undefined) result.manaPlan = manaPlanPayload(answer.manaPlan);
   if (input.include.includes("primer") && overview.profile) {
