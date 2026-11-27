@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { cardFeaturesOf } from "../../core/testing/deck-view";
 import { THEME_LABELS, type SignalIO } from "@/shared/mtg";
 import type { Board } from "@/modules/decks/core/client";
-import { deckSignalProfile, synergyMatches } from "./signals";
+import {
+  deckSignalProfile,
+  countSignals,
+  phrasesOf,
+  synergyMatches,
+  type SignalCard,
+} from "./signals";
 
 type TextCard = Readonly<{ name: string; typeLine: string; manaValue: number; text: string }>;
 type SignalLine = TextCard & Readonly<{ board: Board; quantity: number }>;
@@ -138,5 +144,88 @@ describe("deckSignalProfile & synergyMatches", () => {
     const r9 = synergyMatches(sacOutlet, profileOf(large));
     // 9x deck cards -> sqrt(9)/sqrt(1) = 3x, not 9x
     expect(r9.total).toBeCloseTo(r1.total * 3, 5);
+  });
+});
+
+describe("countSignals recurringPhrases", () => {
+  it("matches the naive substring-deduplication rule on 100 cards with minimumCards: 1", () => {
+    const snippets = [
+      "Whenever a creature enters under your control, venture into the dungeon and create a treasure token.",
+      "Whenever an artifact dies, create treasure tokens and exile the top card of your library.",
+      "At the beginning of combat, creatures you control gain menace and trample until end of turn.",
+      "Sacrifice a permanent: Scry equal to the number of counters among permanents you control.",
+      "Whenever you cast an instant or sorcery spell, the ring tempts you and draw a card.",
+    ];
+    const cards: SignalCard[] = Array.from({ length: 100 }, (_, index) => {
+      const text = `${snippets[index % snippets.length]} Unique mechanic word${index} alpha${index} beta${index}.`;
+      const features = cardFeaturesOf({
+        name: `Test Card ${index}`,
+        typeLine: "Creature — Wizard",
+        manaValue: 3,
+        text,
+      });
+      return {
+        name: `Test Card ${index}`,
+        roleTags: features.roleTags,
+        themes: features.themes,
+        signals: features.signals,
+        faces: features.faces,
+      };
+    });
+
+    const start = performance.now();
+    const result = countSignals(cards, { minimumCards: 1, limit: 1000 });
+    const elapsedMs = performance.now() - start;
+    expect(elapsedMs).toBeLessThan(1000);
+
+    // Build the exact phrase frequency map and verify every kept phrase obeys the naive rule.
+    const allPhrases = new Map<string, string[]>();
+    for (const card of cards) {
+      for (const phrase of phrasesOf(card.faces.map((face) => face.plainText).join("\n"))) {
+        const list = allPhrases.get(phrase) ?? [];
+        list.push(card.name);
+        allPhrases.set(phrase, list);
+      }
+    }
+    const frequent = [...allPhrases.entries()];
+    const naiveKept = frequent
+      .filter(
+        ([phrase, names]) =>
+          !frequent.some(
+            ([other, otherNames]) =>
+              other !== phrase && other.includes(phrase) && otherNames.length === names.length,
+          ),
+      )
+      .sort(
+        ([phraseA, namesA], [phraseB, namesB]) =>
+          namesB.length - namesA.length ||
+          phraseB.length - phraseA.length ||
+          phraseA.localeCompare(phraseB),
+      );
+
+    const namedLower = result
+      .filter((signal) => signal.kind !== "phrase")
+      .map((signal) => signal.name.toLowerCase());
+    const expectedPhrases = naiveKept
+      .filter(([phrase]) => {
+        const words = new Set(phrase.split(" "));
+        return !namedLower.some((name) => {
+          const nameWords = name.split(" ");
+          return (
+            name.includes(phrase) ||
+            (nameWords.length >= 2 &&
+              nameWords.every((word) => words.has(word) || words.has(`${word}s`)))
+          );
+        });
+      })
+      .slice(0, 12)
+      .map(([phrase, names]) => ({ name: phrase, cards: names.length }))
+      .sort((a, b) => b.cards - a.cards || a.name.localeCompare(b.name));
+
+    const actualPhrases = result
+      .filter((signal) => signal.kind === "phrase")
+      .map((signal) => ({ name: signal.name, cards: signal.cards }));
+
+    expect(actualPhrases).toEqual(expectedPhrases);
   });
 });

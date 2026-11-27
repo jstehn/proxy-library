@@ -133,7 +133,7 @@ export function StatsPanel(props: {
       </div>
 
       {props.deckId !== undefined && props.lines.some((line) => line.board === "commander") && (
-        <CastCurve deckId={props.deckId} card="commander" auto />
+        <CastCurve deckId={props.deckId} card="commander" />
       )}
 
       {neededColors.length > 0 && (

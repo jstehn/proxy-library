@@ -10,6 +10,7 @@ export {
   lockWallets,
   receive,
   spend,
+  spendMany,
   type ReceiveInput,
   type SpendInput,
 } from "./application/payments";

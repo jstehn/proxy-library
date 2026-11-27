@@ -28,6 +28,17 @@ export interface DraftRepository {
   withDeadlineBefore(now: Date): Promise<DraftId[]>;
   /** Remembers the deck a finished draft made for a player, for the "open your deck" link. */
   setDeckOf(draftId: DraftId, userId: UserId, deckId: DeckId): Promise<void>;
+  /**
+   * Updates a seated player's presence without loading the whole draft; returns `"changed"` with
+   * the new draft version only when the seat transitions between here and away.
+   */
+  touchPresence?(
+    draftId: DraftId,
+    userId: UserId,
+    here: boolean,
+    now: Date,
+    awayAfterMs: number,
+  ): Promise<{ kind: "noop" | "touched" } | { kind: "changed"; version: number }>;
 }
 
 /** What the drafts module needs to know from the catalog and the store. */

@@ -1,6 +1,6 @@
 import type { Actor } from "@/modules/accounts";
 import { receiveCardBatches } from "@/modules/collection";
-import { spend, type InsufficientFunds } from "@/modules/wallet";
+import { spendMany, type InsufficientFunds } from "@/modules/wallet";
 import { Cents, err, ok, type Result } from "@/shared/kernel";
 import type {
   LineNotForSale,
@@ -76,18 +76,18 @@ export function makeBuyList(dependencies: StoreDependencies) {
           at: now,
         })),
       );
-      for (const [index, lineTotal] of lineTotals.entries()) {
-        // Rule 4: each line is recorded in the wallet ledger like a single purchase.
-        const paid = await spend(services, {
-          userId: actor.userId,
-          amount: lineTotal,
-          kind: "purchase_single",
+      // Rule 4: each line is recorded in the wallet ledger like a single purchase.
+      const paid = await spendMany(services, {
+        userId: actor.userId,
+        now,
+        items: lineTotals.map((amount, index) => ({
+          amount,
+          kind: "purchase_single" as const,
           note: null,
           ref: `store:${transactionIds[index]}`,
-          now,
-        });
-        if (!paid.ok) return paid;
-      }
+        })),
+      });
+      if (!paid.ok) return paid;
 
       await receiveCardBatches(
         services,
