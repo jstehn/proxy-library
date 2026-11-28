@@ -4,19 +4,23 @@ import { z } from "zod";
 import { createDatabase, type QueryTimingEvent } from "@/shared/db";
 import {
   formatServerTiming,
+  hasActiveMetrics,
+  openMetricStore,
   recentMetricEntries,
   recordHttpEvent,
   recordQueryEvent,
+  registerFallbackMetricStore,
   resolveActionLabel,
   runWithMetrics,
   setMetricClient,
   setMetricLabel,
   setMetricsLogging,
-  startMetrics,
   wrapObservedAction,
+  type MetricStore,
 } from "./observability";
 
 afterEach(() => {
+  registerFallbackMetricStore(null);
   setMetricsLogging(true);
   vi.restoreAllMocks();
 });
@@ -88,28 +92,37 @@ describe("observability", () => {
     expect(snapshot.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  it("measures the rest of a request from startMetrics until it is finished", async () => {
+  it("records queries into a fallback metric store and lets runWithMetrics take precedence", async () => {
     setMetricsLogging(false);
-    await new Promise<void>((resolve) => {
-      // A fresh async context, so the measurement doesn't leak into other tests.
-      setTimeout(() => {
-        void (async () => {
-          const finish = startMetrics({ kind: "page", label: "page:/started" });
-          expect(finish).not.toBeNull();
-          expect(startMetrics({ kind: "page", label: "page:/second" })).toBeNull();
-          await Promise.resolve();
-          recordQueryEvent({ durationMs: 2, sql: "SELECT 1", isTransactionControl: false });
-          setMetricLabel("page:/renamed");
-          finish?.();
-          resolve();
-        })();
-      }, 0);
-    });
-    expect(recentMetricEntries()[0]).toMatchObject({
+    const slot: { store: MetricStore | undefined } = { store: undefined };
+    registerFallbackMetricStore(() => slot.store);
+
+    expect(hasActiveMetrics()).toBe(false);
+    const opened = openMetricStore({ kind: "page", label: "page:/started" });
+    slot.store = opened.store;
+    expect(hasActiveMetrics()).toBe(true);
+
+    // Simulates a caller continuing after `await readPage()` resolves.
+    await Promise.resolve();
+    recordQueryEvent({ durationMs: 2, sql: "SELECT 1", isTransactionControl: false });
+    opened.setLabel("page:/renamed");
+
+    // An explicit `runWithMetrics` (e.g. a Server Action) isolates its queries from the fallback.
+    const { snapshot: nested } = await runWithMetrics(
+      { kind: "action", label: "action:nested", log: false },
+      async () => {
+        recordQueryEvent({ durationMs: 3, sql: "SELECT 2", isTransactionControl: false });
+      },
+    );
+    expect(nested.sqlCount).toBe(1);
+
+    const entry = opened.finish();
+    expect(entry).toMatchObject({
       kind: "page",
       label: "page:/renamed",
       sqlCount: 1,
     });
+    expect(recentMetricEntries()[0]).toEqual(entry);
   });
 
   it("isolates metrics across concurrent AsyncLocalStorage runs", async () => {

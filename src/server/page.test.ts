@@ -30,11 +30,16 @@ describe("readPage", () => {
     expect(context.reads).toBe(reads);
   });
 
-  it("starts timing the page before it waits for anything", async () => {
+  it("starts timing before actor lookup and schedules finishing only after it resolves", async () => {
     const calls: string[] = [];
     const readPage = makeReadPage(
       sources({
-        startMetrics: () => calls.push("metrics"),
+        startMetrics: () => {
+          calls.push("start");
+          return () => {
+            calls.push("scheduleFinish");
+          };
+        },
         requireActor: async () => {
           calls.push("actor");
           return actor;
@@ -42,8 +47,9 @@ describe("readPage", () => {
       }),
     );
     const pending = readPage();
-    expect(calls).toEqual(["metrics", "actor"]);
+    expect(calls).toEqual(["start", "actor"]);
     await pending;
+    expect(calls).toEqual(["start", "actor", "scheduleFinish"]);
     vi.restoreAllMocks();
   });
 

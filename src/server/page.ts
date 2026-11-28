@@ -28,8 +28,12 @@ export type PageSources = Readonly<{
   capabilities(): Capabilities;
   reads(): Reads;
   publicReads(): PublicReads;
-  /** Starts timing this page's render (see `page-metrics.ts`). Called before anything is awaited. */
-  startMetrics?(): void;
+  /**
+   * Starts timing this page's render (see `page-metrics.ts`). Called before anything is awaited;
+   * returns an optional callback to schedule finishing once actor lookup (and any `cookies()` /
+   * `headers()` calls it makes) has completed.
+   */
+  startMetrics?(): (() => Promise<void> | void) | void;
 }>;
 
 /** Builds `readPage` from where the actor, the capabilities and the reads come from (fakes in tests). */
@@ -45,21 +49,25 @@ export function makeReadPage(sources: PageSources) {
   async function readPage(
     options: { admin?: true; allowPasswordChangePending?: true; allowVisitors?: true } = {},
   ): Promise<PageContext | AdminPageContext | VisitorPageContext> {
-    // Before the first await, so the measurement covers everything the page does afterwards.
-    sources.startMetrics?.();
+    // Before the first await, so the measurement covers actor lookup and everything after it.
+    const scheduleFinish = sources.startMetrics?.();
     const capabilities = sources.capabilities();
     if (options.allowVisitors) {
       const actor = await sources.currentActor();
+      await scheduleFinish?.();
       return actor === null
         ? { actor: null, capabilities, reads: sources.publicReads() }
         : { actor, capabilities, reads: sources.reads() };
     }
     if (options.admin) {
-      return { actor: await sources.requireAdminActor(), capabilities, reads: sources.reads() };
+      const actor = await sources.requireAdminActor();
+      await scheduleFinish?.();
+      return { actor, capabilities, reads: sources.reads() };
     }
     const actor = await sources.requireActor({
       allowPasswordChangePending: options.allowPasswordChangePending,
     });
+    await scheduleFinish?.();
     return { actor, capabilities, reads: sources.reads() };
   }
   return readPage;

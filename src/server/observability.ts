@@ -30,7 +30,7 @@ export type MetricEntry = Readonly<{
   httpHosts: readonly string[];
 }>;
 
-type MutableMetricStore = {
+export type MetricStore = {
   kind: MetricKind;
   label: string;
   at: string;
@@ -58,9 +58,28 @@ const MAX_CLIENT_LENGTH = 80;
 const REPEATED_SQL_COUNT = 5;
 const MAX_DISTINCT_STATEMENTS = 200;
 
-const metricsStorage = new AsyncLocalStorage<MutableMetricStore>();
+const metricsStorage = new AsyncLocalStorage<MetricStore>();
+let fallbackStoreLookup: (() => MetricStore | undefined) | null = null;
 const recentEntries: MetricEntry[] = [];
 let loggingEnabled = true;
+
+function activeStore(): MetricStore | undefined {
+  return metricsStorage.getStore() ?? fallbackStoreLookup?.();
+}
+
+/**
+ * Register a fallback lookup for the active metric store when `AsyncLocalStorage` has none
+ * (used by `page-metrics.ts` with React `cache()`, since `enterWith()` inside an async helper
+ * does not survive back to the caller after `await`).
+ */
+export function registerFallbackMetricStore(lookup: (() => MetricStore | undefined) | null): void {
+  fallbackStoreLookup = lookup;
+}
+
+/** Whether a metric measurement is already active in this request or async operation. */
+export function hasActiveMetrics(): boolean {
+  return activeStore() !== undefined;
+}
 
 function roundMs(durationMs: number): number {
   return Math.round(durationMs * 10) / 10;
@@ -79,7 +98,7 @@ function statementShape(sqlText: string): string {
     .replace(/\(\s*\?(?:\s*,\s*\?)+\s*\)/g, "(?, …)");
 }
 
-function countStatement(store: MutableMetricStore, sqlText: string): void {
+function countStatement(store: MetricStore, sqlText: string): void {
   const shape = statementShape(sqlText);
   const known = store.statementCounts.get(shape);
   if (known !== undefined) {
@@ -89,7 +108,7 @@ function countStatement(store: MutableMetricStore, sqlText: string): void {
   }
 }
 
-function mostRepeatedStatement(store: MutableMetricStore): { sql: string | null; count: number } {
+function mostRepeatedStatement(store: MetricStore): { sql: string | null; count: number } {
   let sql: string | null = null;
   let count = 1;
   for (const [shape, shapeCount] of store.statementCounts) {
@@ -106,14 +125,14 @@ function mostRepeatedStatement(store: MutableMetricStore): { sql: string | null;
  * order they end, so counting only the part after the previous wait's end adds overlapping
  * (parallel) waits once.
  */
-function addWait(store: MutableMetricStore, durationMs: number): void {
+function addWait(store: MetricStore, durationMs: number): void {
   const endMs = performance.now();
   const startMs = Math.max(endMs - durationMs, store.lastWaitEndMs, store.startedAtMs);
   if (endMs > startMs) store.waitMs += endMs - startMs;
   store.lastWaitEndMs = Math.max(store.lastWaitEndMs, endMs);
 }
 
-function finalizeSnapshot(store: MutableMetricStore): MetricEntry {
+function finalizeSnapshot(store: MetricStore): MetricEntry {
   const wallMs = performance.now() - store.startedAtMs;
   const repeated = mostRepeatedStatement(store);
   return {
@@ -151,7 +170,7 @@ export function setMetricsLogging(enabled: boolean): void {
 
 /** Record a database query timing into the active async operation, if one exists. */
 export function recordQueryEvent(event: QueryTimingEvent): void {
-  const store = metricsStorage.getStore();
+  const store = activeStore();
   if (store === undefined) return;
   store.sqlCount += 1;
   store.sqlMs += event.durationMs;
@@ -178,7 +197,7 @@ export function recordHttpEvent(event: {
   durationMs: number;
   status: number | null;
 }): void {
-  const store = metricsStorage.getStore();
+  const store = activeStore();
   if (store === undefined) return;
   store.httpCount += 1;
   store.httpMs += event.durationMs;
@@ -190,13 +209,13 @@ export function recordHttpEvent(event: {
 
 /** Update the current operation's label (for example after parsing an MCP JSON-RPC body). */
 export function setMetricLabel(label: string): void {
-  const store = metricsStorage.getStore();
+  const store = activeStore();
   if (store !== undefined) {
     store.label = label;
   }
 }
 
-function createStore(kind: MetricKind, label: string): MutableMetricStore {
+function createStore(kind: MetricKind, label: string): MetricStore {
   const startedAtMs = performance.now();
   return {
     kind,
@@ -220,7 +239,7 @@ function createStore(kind: MetricKind, label: string): MutableMetricStore {
 }
 
 /** Record a finished operation in the recent list and print it when it is worth a log line. */
-function finishStore(store: MutableMetricStore, snapshot: MetricEntry | undefined, log: boolean) {
+function finishStore(store: MetricStore, snapshot: MetricEntry | undefined, log: boolean) {
   const entry = snapshot ?? finalizeSnapshot(store);
   pushRecentEntry(entry);
   const shouldLog =
@@ -239,7 +258,7 @@ function finishStore(store: MutableMetricStore, snapshot: MetricEntry | undefine
 
 /** Note who is calling (an MCP client's name or a User-Agent), so unexpected traffic can be traced. */
 export function setMetricClient(client: string): void {
-  const store = metricsStorage.getStore();
+  const store = activeStore();
   if (store !== undefined && client.length > 0) {
     store.client = client.slice(0, MAX_CLIENT_LENGTH);
   }
@@ -262,17 +281,26 @@ export async function runWithMetrics<T>(
 }
 
 /**
- * Start measuring the rest of the current request, for work that has no wrapper to run inside
- * (a page render). Everything after this call in the same request is counted until the returned
- * function is called. If a measurement is already running (a layout and its page both ask),
- * returns null and the first one keeps counting.
+ * Open a metric store without entering `AsyncLocalStorage`, for callers that hold the store in
+ * their own per-request container (such as React `cache()` for page renders).
  */
-export function startMetrics(input: { kind: MetricKind; label: string }): (() => void) | null {
-  if (metricsStorage.getStore() !== undefined) return null;
+export function openMetricStore(input: { kind: MetricKind; label: string }): Readonly<{
+  store: MetricStore;
+  setLabel: (label: string) => void;
+  finish: () => MetricEntry;
+}> {
   const store = createStore(input.kind, input.label);
-  metricsStorage.enterWith(store);
-  return () => {
-    finishStore(store, undefined, true);
+  let finished = false;
+  return {
+    store,
+    setLabel(label: string) {
+      store.label = label;
+    },
+    finish() {
+      if (finished) return finalizeSnapshot(store);
+      finished = true;
+      return finishStore(store, undefined, true);
+    },
   };
 }
 
