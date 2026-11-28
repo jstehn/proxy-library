@@ -3,6 +3,19 @@ import { THEME_IDS, type ThemeId } from "@/shared/kernel";
 import { darkTheme, lightTheme, systemTheme } from "./presets/default";
 import { catppuccinLatteTheme, catppuccinMochaTheme } from "./presets/palettes";
 import { bloomburrowTheme, innistradTheme, kamigawaTheme, newCapennaTheme } from "./presets/planes";
+import {
+  kaladeshTheme,
+  lorwynTheme,
+  phyrexiaPorcelainTheme,
+  strixhavenTheme,
+} from "./presets/planes-light";
+import {
+  duskmournTheme,
+  ixalanTheme,
+  phyrexiaTheme,
+  ravnicaTheme,
+  therosTheme,
+} from "./presets/planes-wave2";
 import type { ThemeCategory, ThemeDefinition } from "./types";
 
 /**
@@ -19,6 +32,15 @@ const THEME_REGISTRY: Readonly<Record<ThemeId, ThemeDefinition>> = {
   innistrad: innistradTheme,
   kamigawa: kamigawaTheme,
   "new-capenna": newCapennaTheme,
+  ravnica: ravnicaTheme,
+  ixalan: ixalanTheme,
+  theros: therosTheme,
+  phyrexia: phyrexiaTheme,
+  "phyrexia-porcelain": phyrexiaPorcelainTheme,
+  duskmourn: duskmournTheme,
+  lorwyn: lorwynTheme,
+  kaladesh: kaladeshTheme,
+  strixhaven: strixhavenTheme,
 };
 
 const ALL_THEMES: readonly ThemeDefinition[] = THEME_IDS.map((id) => THEME_REGISTRY[id]);

@@ -15,6 +15,15 @@ export const THEME_IDS = [
   "innistrad",
   "kamigawa",
   "new-capenna",
+  "ravnica",
+  "ixalan",
+  "theros",
+  "phyrexia",
+  "phyrexia-porcelain",
+  "duskmourn",
+  "lorwyn",
+  "kaladesh",
+  "strixhaven",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
