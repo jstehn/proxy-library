@@ -29,7 +29,14 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
     reads.realCollection.sets(actor, ownerId),
     reads.realCollection.productsOf(actor, ownerId),
   ]);
-  const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
+  const printingIds = [
+    ...new Set(
+      result.rows.flatMap((row) =>
+        row.variants ? row.variants.map((variant) => variant.printingId) : [row.printingId],
+      ),
+    ),
+  ];
+  const cards = await capabilities.printingDetails(printingIds);
   const path = `/players/${id}/real`;
 
   return (
@@ -67,7 +74,11 @@ export default async function PlayerRealCollectionPage(props: PageProps<"/player
       {result.rows.length === 0 ? (
         <EmptyState>No real cards here.</EmptyState>
       ) : (
-        <CollectionCardGrid rows={result.rows} cards={cards} />
+        <CollectionCardGrid
+          rows={result.rows}
+          cards={cards}
+          showSetCode={filter.sections !== "set"}
+        />
       )}
       <Pagination action={path} values={values} page={page} pageCount={result.pageCount} />
     </Page>

@@ -6,5 +6,5 @@ export { receiveCardBatches, receiveCards } from "./application/receive-cards";
 export type { CardGain } from "./domain/cards";
 export type { NotEnoughCopies } from "./domain/errors";
 export { COLLECTION_EXPORTERS, type ExportRow } from "./domain/export";
-export type { CollectionFilter, CollectionRow } from "./queries/collection";
+export type { CollectionFilter, CollectionRow, CollectionVariant } from "./queries/collection";
 export * as collectionQueries from "./queries";

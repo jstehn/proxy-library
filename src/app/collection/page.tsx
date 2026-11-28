@@ -26,7 +26,13 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
     reads.catalog.enabledSets(),
     reads.store.buylistRate(),
   ]);
-  const printingIds = result.rows.map((row) => row.printingId);
+  const printingIds = [
+    ...new Set(
+      result.rows.flatMap((row) =>
+        row.variants ? row.variants.map((variant) => variant.printingId) : [row.printingId],
+      ),
+    ),
+  ];
   const [cards, inDecks] = await Promise.all([
     capabilities.printingDetails(printingIds),
     reads.decks.decksUsing(actor, printingIds),
@@ -74,6 +80,7 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
         cardsById={cardsById}
         notesByPrinting={notesByPrinting}
         buylistRateBps={buylistRateBps}
+        showSetCode={filter.sections !== "set"}
       />
       <Pagination action="/collection" values={values} page={page} pageCount={result.pageCount} />
     </Page>

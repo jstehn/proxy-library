@@ -4,11 +4,12 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { PrintingCard } from "@/modules/catalog";
 import { wrapIndex, type CardStepping } from "@/ui/mtg/card-art-logic";
-import { CardPreviewDialog } from "./card-preview";
+import { CardPreviewDialog, type CardPreviewVariant } from "./card-preview";
 
 export type CardPreviewItem = Readonly<{
   printing: PrintingCard;
   href?: string;
+  variants?: readonly CardPreviewVariant[];
 }>;
 
 type CardPreviewGroupContextValue = Readonly<{
@@ -51,6 +52,7 @@ export function CardPreviewGroup(props: {
         <CardPreviewDialog
           printing={activeItem.printing}
           href={activeItem.href}
+          variants={activeItem.variants}
           open={activeItem !== null}
           onClose={() => setActiveIndex(null)}
           stepping={stepping}

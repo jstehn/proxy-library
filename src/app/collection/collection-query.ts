@@ -37,6 +37,7 @@ export function readCollectionQuery(
       sections: oneOf(values.sections, SECTION_VALUES),
       sort: oneOf(values.sort, SORT_VALUES),
       page,
+      stackPrintings: true,
     },
     isFiltered: ["q", "name", "set", "rarity", "color", "finish"].some((key) => key in values),
   };

@@ -52,9 +52,22 @@ export type CollectionFilter = Readonly<{
   page: number; // from 1
   /** Optional override for rows per page (1–60; defaults to 60). */
   pageSize?: number;
+  /**
+   * Stack different printings/finishes of the same card (by oracle_id, or per set when sectioned
+   * by set), showing the most valuable one on top and returning every owned variant in `variants`.
+   */
+  stackPrintings?: boolean;
 }>;
 
 const COLLECTION_PAGE_SIZE = 60;
+
+export type CollectionVariant = Readonly<{
+  printingId: string;
+  finish: Finish;
+  quantity: number;
+  /** Latest market price of one copy in this finish, or null if there's none. */
+  price: number | null;
+}>;
 
 export type CollectionRow = Readonly<{
   printingId: string;
@@ -68,6 +81,11 @@ export type CollectionRow = Readonly<{
   manaValue: number;
   /** When the newest copy of this stack arrived, or null if unknown. */
   lastAcquiredAt: Date | null;
+  /**
+   * Every owned printing/finish in this stack, most valuable first. Present when
+   * `stackPrintings` is true; omitted otherwise.
+   */
+  variants?: readonly CollectionVariant[];
 }>;
 
 export type CollectionPage = Readonly<{
@@ -133,8 +151,10 @@ export async function readCollectionPage(
   // filtering by it, otherwise only for the 60 rows on the page.
   const [sectionOrder, sectionLabel] = COLLECTION_SECTIONS[filter.sections];
   const needsArrivalUpfront = filter.sort === "newest" || filter.addedSince !== undefined;
+  const stacked = filter.stackPrintings === true;
   const owned = sql`
-    select c.user_id, c.printing_id, c.finish, c.quantity, p.name, p.set_code, p.collector_number, p.mana_value,
+    select c.user_id, c.printing_id, c.finish, c.quantity, p.oracle_id,
+           p.name, p.set_code, p.collector_number, p.mana_value,
            s.release_date, ${sectionOrder} as section_order, ${sectionLabel} as section,
            ${latestPrice("c.printing_id", "c.finish")} as price
            ${needsArrivalUpfront ? sql`, ${source.newestArrival} as last_acquired_at` : sql``}
@@ -144,7 +164,7 @@ export async function readCollectionPage(
      where ${where}`;
   const order = {
     newest: sql`last_acquired_at desc nulls last, name`,
-    value: sql`price * quantity desc nulls last, name`,
+    value: sql`total_value_cents desc nulls last, name`,
     price: sql`price desc nulls last, name`,
     name: sql`name, set_code, finish`,
     mana: sql`mana_value, name, finish`,
@@ -160,34 +180,125 @@ export async function readCollectionPage(
   );
   const offset = (Math.max(1, filter.page) - 1) * pageSize;
 
-  const pageQuery = needsArrivalUpfront
-    ? sql`
-      select printing_id, finish, quantity, price, section, mana_value, last_acquired_at
-        from (${owned}) owned
-       -- Sections first (a set's section by newest set), then the chosen order within each.
-       order by ${outerOrder}
-       limit ${pageSize} offset ${offset}
-    `
-    : sql`
-      with paged as (
-        select user_id, printing_id, finish, quantity, price, section, mana_value,
-               section_order, release_date, set_code, name, collector_number
-          from (${owned}) owned
+  const stackKeyExpr =
+    filter.sections === "set" ? sql`set_code || ':' || oracle_id` : sql`oracle_id`;
+  const totalsStackKeyExpr =
+    filter.sections === "set" ? sql`p.set_code || ':' || p.oracle_id` : sql`p.oracle_id`;
+
+  let pageQuery: SQL;
+  if (stacked) {
+    const stackedCtes = sql`
+      owned as (${owned}),
+      ranked as (
+        select owned.*,
+               ${stackKeyExpr} as stack_key,
+               row_number() over (
+                 partition by ${stackKeyExpr}
+                 order by price desc nulls last,
+                          (finish <> 'nonfoil') desc,
+                          quantity desc,
+                          release_date desc,
+                          printing_id,
+                          finish
+               ) as variant_rank
+          from owned
+      ),
+      stacks as (
+        select top.user_id, top.oracle_id, top.printing_id, top.finish,
+               agg.total_quantity as quantity, top.price, agg.total_value_cents,
+               top.section_order, top.section, top.mana_value, top.release_date,
+               top.set_code, top.name, top.collector_number,
+               ${needsArrivalUpfront ? sql`agg.last_acquired_at,` : sql``}
+               agg.variants
+          from ranked top
+          join (
+            select stack_key,
+                   sum(quantity)::int as total_quantity,
+                   sum(price * quantity)::bigint as total_value_cents,
+                   ${needsArrivalUpfront ? sql`max(last_acquired_at) as last_acquired_at,` : sql``}
+                   json_agg(
+                     json_build_object(
+                       'printingId', printing_id,
+                       'finish', finish,
+                       'quantity', quantity,
+                       'price', price
+                     )
+                     order by variant_rank
+                   ) as variants
+              from ranked
+             group by stack_key
+          ) agg on agg.stack_key = top.stack_key
+         where top.variant_rank = 1
+      )`;
+    pageQuery = needsArrivalUpfront
+      ? sql`
+        with ${stackedCtes}
+        select printing_id, finish, quantity, price, section, mana_value, last_acquired_at, variants
+          from stacks
          order by ${outerOrder}
          limit ${pageSize} offset ${offset}
-      )
-      select paged.printing_id, paged.finish, paged.quantity, paged.price, paged.section,
-             paged.mana_value, arrival.last_acquired_at
-        from paged
-        join lateral (
-          select ${source.newestArrival} as last_acquired_at
-            from ${source.table} c
-           where c.user_id = paged.user_id
-             and c.printing_id = paged.printing_id
-             and c.finish = paged.finish
-        ) arrival on true
-       order by ${outerOrder}
-    `;
+      `
+      : sql`
+        with ${stackedCtes},
+        paged as (
+          select user_id, oracle_id, printing_id, finish, quantity, price, total_value_cents,
+                 section, mana_value, section_order, release_date, set_code, name,
+                 collector_number, variants
+            from stacks
+           order by ${outerOrder}
+           limit ${pageSize} offset ${offset}
+        )
+        select paged.printing_id, paged.finish, paged.quantity, paged.price, paged.section,
+               paged.mana_value, arrival.last_acquired_at, paged.variants
+          from paged
+          join lateral (
+            select max(a.last_acquired_at) as last_acquired_at
+              from (
+                select ${source.newestArrival} as last_acquired_at
+                  from ${source.table} c
+                  join printings p on p.id = c.printing_id
+                 where c.user_id = paged.user_id
+                   and p.oracle_id = paged.oracle_id
+                   ${filter.sections === "set" ? sql`and p.set_code = paged.set_code` : sql``}
+              ) a
+          ) arrival on true
+         order by ${outerOrder}
+      `;
+  } else {
+    pageQuery = needsArrivalUpfront
+      ? sql`
+        select printing_id, finish, quantity, price, section, mana_value, last_acquired_at,
+               null::json as variants
+          from (
+            select owned.*, (price * quantity)::bigint as total_value_cents
+              from (${owned}) owned
+          ) valued
+         -- Sections first (a set's section by newest set), then the chosen order within each.
+         order by ${outerOrder}
+         limit ${pageSize} offset ${offset}
+      `
+      : sql`
+        with paged as (
+          select user_id, printing_id, finish, quantity, price,
+                 (price * quantity)::bigint as total_value_cents,
+                 section, mana_value, section_order, release_date, set_code, name, collector_number
+            from (${owned}) owned
+           order by ${outerOrder}
+           limit ${pageSize} offset ${offset}
+        )
+        select paged.printing_id, paged.finish, paged.quantity, paged.price, paged.section,
+               paged.mana_value, arrival.last_acquired_at, null::json as variants
+          from paged
+          join lateral (
+            select ${source.newestArrival} as last_acquired_at
+              from ${source.table} c
+             where c.user_id = paged.user_id
+               and c.printing_id = paged.printing_id
+               and c.finish = paged.finish
+          ) arrival on true
+         order by ${outerOrder}
+      `;
+  }
 
   const [rows, totals] = await Promise.all([
     db.execute<{
@@ -198,9 +309,11 @@ export async function readCollectionPage(
       section: string;
       mana_value: number;
       last_acquired_at: Date | string | null;
+      variants: CollectionVariant[] | null;
     }>(pageQuery),
     db.execute<{ different: number; copies: number; value_cents: number }>(sql`
-      select count(*)::int as different, coalesce(sum(c.quantity), 0)::int as copies,
+      select ${stacked ? sql`count(distinct ${totalsStackKeyExpr})::int` : sql`count(*)::int`} as different,
+             coalesce(sum(c.quantity), 0)::int as copies,
              coalesce(sum(${latestPrice("c.printing_id", "c.finish")} * c.quantity), 0)::bigint as value_cents
         from ${source.table} c
         join printings p on p.id = c.printing_id
@@ -223,6 +336,16 @@ export async function readCollectionPage(
           : row.last_acquired_at instanceof Date
             ? row.last_acquired_at
             : new Date(row.last_acquired_at),
+      ...(row.variants !== null
+        ? {
+            variants: row.variants.map((variant) => ({
+              printingId: variant.printingId,
+              finish: variant.finish,
+              quantity: Number(variant.quantity),
+              price: variant.price === null ? null : Number(variant.price),
+            })),
+          }
+        : {}),
     })),
     totals: {
       different: summary.different,

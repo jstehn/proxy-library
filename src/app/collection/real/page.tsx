@@ -35,7 +35,14 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
     reads.realCollection.shared(),
   ]);
   const others = shared.filter((player) => player.userId !== actor.userId);
-  const cards = await capabilities.printingDetails(result.rows.map((row) => row.printingId));
+  const printingIds = [
+    ...new Set(
+      result.rows.flatMap((row) =>
+        row.variants ? row.variants.map((variant) => variant.printingId) : [row.printingId],
+      ),
+    ),
+  ];
+  const cards = await capabilities.printingDetails(printingIds);
 
   return (
     <Page width="6xl">
@@ -90,7 +97,11 @@ export default async function RealCollectionPage(props: PageProps<"/collection/r
           )}
         </p>
       ) : (
-        <CollectionCardGrid rows={result.rows} cards={cards} />
+        <CollectionCardGrid
+          rows={result.rows}
+          cards={cards}
+          showSetCode={filter.sections !== "set"}
+        />
       )}
       <Pagination
         action="/collection/real"

@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import type { PrintingCard } from "@/modules/catalog";
-import type { CollectionRow } from "@/modules/collection";
+import type { CollectionRow, CollectionVariant } from "@/modules/collection";
+import { useCardPreviewGroup } from "@/app/_components/card-preview-group";
 import { payoutPerCopy } from "@/modules/store/client";
 import { Cents } from "@/shared/kernel";
 import type { Finish } from "@/shared/mtg";
@@ -32,15 +33,29 @@ function itemKey(printingId: string, finish: Finish): string {
   return `${printingId}/${finish}`;
 }
 
+function StackSellButton(props: { printingId: string; label: string; className: string }) {
+  const previewGroup = useCardPreviewGroup();
+  return (
+    <button
+      type="button"
+      onClick={() => previewGroup?.openCard(props.printingId)}
+      className={props.className}
+    >
+      {props.label}
+    </button>
+  );
+}
+
 type CollectionSellWorkspaceProps = {
   rows: readonly CollectionRow[];
   cardsById: Readonly<Record<string, PrintingCard>>;
   notesByPrinting: Readonly<Record<string, string>>;
   buylistRateBps: number;
+  showSetCode?: boolean;
 };
 
 export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
-  const { rows, cardsById, notesByPrinting, buylistRateBps } = props;
+  const { rows, cardsById, notesByPrinting, buylistRateBps, showSetCode } = props;
   const cart = useSellCart();
 
   const [keep, setKeep] = useState<1 | 4>(1);
@@ -105,26 +120,26 @@ export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
     });
   }
 
-  function upsertCard(row: CollectionRow, printing: PrintingCard, quantity: number) {
-    if (row.price === null) return;
-    const unitPayoutCents = Number(payoutPerCopy(Cents.of(row.price), buylistRateBps));
+  function upsertVariant(variant: CollectionVariant, printing: PrintingCard, quantity: number) {
+    if (variant.price === null) return;
+    const unitPayoutCents = Number(payoutPerCopy(Cents.of(variant.price), buylistRateBps));
     if (unitPayoutCents <= 0) return;
-    const key = itemKey(row.printingId, row.finish);
+    const key = itemKey(variant.printingId, variant.finish);
     setSellCart((previous) => {
       if (quantity <= 0) {
         return previous.filter((item) => itemKey(item.printingId, item.finish) !== key);
       }
       const nextItem: SellCartItem = {
-        printingId: row.printingId,
-        finish: row.finish,
+        printingId: variant.printingId,
+        finish: variant.finish,
         name: printing.name,
         setCode: printing.setCode,
         collectorNumber: printing.collectorNumber,
         rarity: printing.rarity,
-        owned: row.quantity,
-        quantity: Math.min(quantity, row.quantity),
+        owned: variant.quantity,
+        quantity: Math.min(quantity, variant.quantity),
         unitPayoutCents,
-        deckNote: notesByPrinting[row.printingId],
+        deckNote: notesByPrinting[variant.printingId],
       };
       const exists = previous.some((item) => itemKey(item.printingId, item.finish) === key);
       if (exists) {
@@ -171,30 +186,30 @@ export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
     });
   }
 
-  function renderCardFooter(row: CollectionRow, printing: PrintingCard) {
-    if (!canBuy || row.price === null) return null;
-    const unitPayout = Number(payoutPerCopy(Cents.of(row.price), buylistRateBps));
+  function renderVariantFooter(variant: CollectionVariant, printing: PrintingCard) {
+    if (!canBuy || variant.price === null) return null;
+    const unitPayout = Number(payoutPerCopy(Cents.of(variant.price), buylistRateBps));
     if (unitPayout <= 0) return null;
 
-    const staged = cartByKey.get(itemKey(row.printingId, row.finish));
+    const staged = cartByKey.get(itemKey(variant.printingId, variant.finish));
     if (staged) {
       return (
         <div className={STAGED_STEPPER_CLASS}>
           <button
             type="button"
-            onClick={() => upsertCard(row, printing, staged.quantity - 1)}
+            onClick={() => upsertVariant(variant, printing, staged.quantity - 1)}
             aria-label={`Remove one ${printing.name} from sell cart`}
             className="rounded px-1.5 font-bold"
           >
             −
           </button>
           <span className="font-medium tabular-nums">
-            Sell {staged.quantity}/{row.quantity}
+            Sell {staged.quantity}/{variant.quantity}
           </span>
           <button
             type="button"
-            onClick={() => upsertCard(row, printing, staged.quantity + 1)}
-            disabled={staged.quantity >= row.quantity}
+            onClick={() => upsertVariant(variant, printing, staged.quantity + 1)}
+            disabled={staged.quantity >= variant.quantity}
             aria-label={`Add one more ${printing.name} to sell cart`}
             className="rounded px-1.5 font-bold disabled:opacity-40"
           >
@@ -204,20 +219,66 @@ export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
       );
     }
 
-    const extras = row.quantity > keep ? row.quantity - keep : 1;
+    const extras = variant.quantity > keep ? variant.quantity - keep : 1;
     const label =
-      row.quantity > keep
+      variant.quantity > keep
         ? `Sell ${extras} extra (${Cents.format(Cents.of(unitPayout * extras))})`
         : `Sell (${Cents.format(Cents.of(unitPayout))})`;
 
     return (
       <button
         type="button"
-        onClick={() => upsertCard(row, printing, extras)}
+        onClick={() => upsertVariant(variant, printing, extras)}
         className={QUICK_SELL_CLASS}
       >
         + {label}
       </button>
+    );
+  }
+
+  function renderCardFooter(row: CollectionRow, printing: PrintingCard) {
+    if (!canBuy) return null;
+    const variants = row.variants;
+    if (variants === undefined || variants.length <= 1) {
+      return renderVariantFooter(
+        variants?.[0] ?? {
+          printingId: row.printingId,
+          finish: row.finish,
+          quantity: row.quantity,
+          price: row.price,
+        },
+        printing,
+      );
+    }
+
+    const stagedCopies = variants.reduce(
+      (sum, variant) =>
+        sum + (cartByKey.get(itemKey(variant.printingId, variant.finish))?.quantity ?? 0),
+      0,
+    );
+    if (stagedCopies > 0) {
+      return (
+        <StackSellButton
+          printingId={row.printingId}
+          label={`Selling ${stagedCopies}/${row.quantity} · Printings`}
+          className={`${STAGED_STEPPER_CLASS} w-full cursor-pointer justify-center font-medium tabular-nums`}
+        />
+      );
+    }
+
+    const hasSellable = variants.some(
+      (variant) =>
+        variant.price !== null &&
+        Number(payoutPerCopy(Cents.of(variant.price), buylistRateBps)) > 0,
+    );
+    if (!hasSellable) return null;
+
+    return (
+      <StackSellButton
+        printingId={row.printingId}
+        label={`+ Sell (${variants.length} versions)…`}
+        className={`${QUICK_SELL_CLASS} cursor-pointer`}
+      />
     );
   }
 
@@ -285,8 +346,10 @@ export function CollectionSellWorkspace(props: CollectionSellWorkspaceProps) {
         <CollectionCardGrid
           rows={rows}
           cards={cardsMap}
+          showSetCode={showSetCode}
           noteFor={(printingId) => notesByPrinting[printingId]}
           footerFor={canBuy ? renderCardFooter : undefined}
+          variantFooterFor={canBuy ? renderVariantFooter : undefined}
         />
       )}
 

@@ -6,6 +6,7 @@ import {
   type CollectionFilter,
   type CollectionPage,
   type CollectionRow,
+  type CollectionVariant,
   type CopiesSource,
   type OwnedPrintingCopy,
   emptyCollectionPage,
@@ -21,7 +22,13 @@ import { type Finish } from "@/shared/mtg";
 // with the real collection (copies-sql.ts); this file says where the game's
 // copies live.
 
-export type { CollectionFilter, CollectionPage, CollectionRow, OwnedPrintingCopy };
+export type {
+  CollectionFilter,
+  CollectionPage,
+  CollectionRow,
+  CollectionVariant,
+  OwnedPrintingCopy,
+};
 
 /** Each stack's arrivals are the acquisitions that put its copies here. */
 function arrivalOf(aggregate: "min" | "max") {

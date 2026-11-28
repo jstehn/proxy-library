@@ -88,6 +88,7 @@ export default async function SinglesPage(props: PageProps<"/singles">) {
               <CardTile
                 key={id}
                 printing={printing}
+                showSetCode
                 href={`/cards/${id}`}
                 priceLine={prices.length === 0 ? "no price" : prices.join(" · ")}
                 note={wished.has(id) ? "★ On your wishlist" : undefined}

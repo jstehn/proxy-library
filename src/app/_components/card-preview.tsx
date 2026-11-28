@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { CardFace, PrintingCard } from "@/modules/catalog";
 import { Dialog } from "@/ui/dialog";
 import {
@@ -110,6 +110,19 @@ export function FaceText(props: { face: CardFace; isBackFace: boolean }) {
   );
 }
 
+/** One selectable printing/finish inside a stacked card preview. */
+export type CardPreviewVariant = Readonly<{
+  key: string;
+  printing: PrintingCard;
+  href?: string;
+  /** Compact button label, e.g. "SPG #24 · Foil · 1× · $12.00". */
+  label: string;
+  /** Optional extra note for this variant (e.g. which decks use it). */
+  note?: string;
+  /** Optional interactive footer for this variant (e.g. sell cart controls). */
+  footer?: ReactNode;
+}>;
+
 /**
  * Unified modal card preview (design doc 73): built on the shared native `<Dialog>` with
  * light-dismiss, two-sided card flipping, optional carousel stepping (left/right edge tap,
@@ -121,20 +134,35 @@ export function CardPreviewDialog(props: {
   onClose: () => void;
   stepping?: CardStepping | null;
   href?: string;
+  variants?: readonly CardPreviewVariant[];
 }) {
-  const { printing, open, onClose, stepping = null, href } = props;
+  const { printing, open, onClose, stepping = null, href, variants } = props;
+  const variantsLabelId = useId();
   const [faceSelection, setFaceSelection] = useState<FaceSelection | null>(null);
-  const activeFace = resolveCardFace(faceSelection, printing.id, printing.hasBackImage);
+  const [variantSelection, setVariantSelection] = useState<{
+    itemPrintingId: string;
+    variantKey: string;
+  } | null>(null);
+
+  const selectedKey =
+    variantSelection?.itemPrintingId === printing.id ? variantSelection.variantKey : null;
+  const activeVariant =
+    variants !== undefined && variants.length > 0
+      ? (variants.find((variant) => variant.key === selectedKey) ?? variants[0])
+      : null;
+  const displayed = activeVariant?.printing ?? printing;
+  const displayedHref = activeVariant?.href ?? href;
+  const activeFace = resolveCardFace(faceSelection, displayed.id, displayed.hasBackImage);
 
   const flip = () => {
-    if (!printing.hasBackImage) return;
-    setFaceSelection((current) => toggleCardFace(current, printing.id, printing.hasBackImage));
+    if (!displayed.hasBackImage) return;
+    setFaceSelection((current) => toggleCardFace(current, displayed.id, displayed.hasBackImage));
   };
 
   // Keep latest handlers in a ref so the keyboard listener only attaches while the dialog is open.
-  const latestRef = useRef({ stepping, hasBackImage: printing.hasBackImage, flip });
+  const latestRef = useRef({ stepping, hasBackImage: displayed.hasBackImage, flip });
   useEffect(() => {
-    latestRef.current = { stepping, hasBackImage: printing.hasBackImage, flip };
+    latestRef.current = { stepping, hasBackImage: displayed.hasBackImage, flip };
   });
 
   useEffect(() => {
@@ -175,38 +203,76 @@ export function CardPreviewDialog(props: {
 
   const title =
     stepping !== null && stepping.total > 1
-      ? `${printing.name} (${stepping.position} / ${stepping.total})`
-      : printing.name;
+      ? `${displayed.name} (${stepping.position} / ${stepping.total})`
+      : displayed.name;
 
-  const credit = [printing.variantLabel, printing.artist && `Illustrated by ${printing.artist}`]
+  const credit = [displayed.variantLabel, displayed.artist && `Illustrated by ${displayed.artist}`]
     .filter(Boolean)
     .join(" · ");
 
   return (
     <Dialog open={open} onClose={onClose} title={title} size="lg" showCloseButton>
       <CardView
-        printingId={printing.id}
-        name={printing.name}
-        hasImage={printing.hasImage}
-        hasBackImage={printing.hasBackImage}
+        printingId={displayed.id}
+        name={displayed.name}
+        hasImage={displayed.hasImage}
+        hasBackImage={displayed.hasBackImage}
         face={activeFace}
         onFlip={flip}
         stepping={stepping}
-        faces={printing.faces}
+        faces={displayed.faces}
         credit={credit}
         layout="responsive"
         desktopImage="wide"
       >
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="text-muted">
-            {printing.setCode.toUpperCase()} #{printing.collectorNumber} · {printing.rarity}
+            {displayed.setCode.toUpperCase()} #{displayed.collectorNumber} · {displayed.rarity}
+            {displayed.variantLabel && ` · ${displayed.variantLabel}`}
           </span>
-          {href && (
-            <Link href={href} onClick={onClose} className="font-medium underline">
+          {displayedHref && (
+            <Link href={displayedHref} onClick={onClose} className="font-medium underline">
               Open card page
             </Link>
           )}
         </div>
+        {activeVariant?.note && (
+          <p className="text-xs text-sky-700 dark:text-sky-400">{activeVariant.note}</p>
+        )}
+        {activeVariant?.footer && <div>{activeVariant.footer}</div>}
+        {variants !== undefined && variants.length > 1 && (
+          <div className="border-border-subtle flex flex-col gap-1.5 border-t pt-2">
+            <span id={variantsLabelId} className="text-muted text-xs font-medium">
+              Owned printings ({variants.length})
+            </span>
+            <div
+              role="group"
+              aria-labelledby={variantsLabelId}
+              className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto"
+            >
+              {variants.map((variant) => {
+                const isSelected = variant.key === activeVariant?.key;
+                return (
+                  <button
+                    key={variant.key}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() =>
+                      setVariantSelection({ itemPrintingId: printing.id, variantKey: variant.key })
+                    }
+                    className={`min-h-7 cursor-pointer rounded-md border px-2.5 py-1 text-left text-xs tabular-nums transition-colors [@media(pointer:coarse)]:min-h-10 ${
+                      isSelected
+                        ? "border-accent bg-accent text-accent-foreground font-medium"
+                        : "border-line text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {variant.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </CardView>
     </Dialog>
   );

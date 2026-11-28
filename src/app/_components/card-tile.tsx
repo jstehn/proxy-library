@@ -11,6 +11,8 @@ const FOIL_SHEEN =
   "pointer-events-none absolute inset-0 rounded-[4.5%] bg-gradient-to-br from-fuchsia-400/35 via-transparent to-cyan-300/40 ring-2 ring-sky-400 ring-offset-1";
 const NO_IMAGE_BOX =
   "bg-surface-raised text-muted flex aspect-[146/204] w-full items-center justify-center rounded-md p-2 text-center text-xs";
+const STACK_EDGE =
+  "border-line bg-surface-raised pointer-events-none absolute inset-0 translate-x-1 -translate-y-1 rounded-[4.5%] border shadow-sm";
 
 // One card in a grid (a set's cards, a pack's pulls). Hovering opens a quick enlarged preview;
 // clicking or tapping opens the unified modal preview (carousel-enabled when inside a
@@ -21,6 +23,10 @@ type CardTileProps = {
   priceLine: string;
   /** Pulled as a foil (or etched): shows a rainbow sheen over the image. */
   isFoil?: boolean;
+  /** Prefix the collector number with the set code (e.g. "EOE #319"), for multi-set grids. */
+  showSetCode?: boolean;
+  /** Show a subtle card-stack edge behind the image when multiple printings are stacked. */
+  stacked?: boolean;
   /** Where the card's name links to (its card page), if anywhere. */
   href?: string;
   /** An extra line under the price, e.g. which decks use this card. */
@@ -84,30 +90,33 @@ export function CardTile(props: CardTileProps) {
         aria-label={`${printing.name}: show card details`}
         className="relative block w-full cursor-pointer rounded-[4.5%]"
       >
-        {printing.hasImage ? (
-          // Pre-sized images from our own cache. `srcSet` offers both
-          // sizes and `sizes` says how wide a tile is; the browser picks the sharper "normal"
-          // image whenever the small one (146 px) would be blurry, e.g. on wide or high-density
-          // screens. (The small one alone was too soft to read.)
-          <CardImage
-            src={`/api/images/${printing.id}/small/front`}
-            srcSet={`/api/images/${printing.id}/small/front 146w, /api/images/${printing.id}/normal/front 488w`}
-            sizes="(min-width: 1024px) 190px, (min-width: 640px) 30vw, 50vw"
-            alt={printing.name}
-            loading="lazy"
-            width={146}
-            height={204}
-            className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
-          />
-        ) : (
-          <div className={NO_IMAGE_BOX}>{printing.name}</div>
-        )}
-        {props.isFoil && <FoilSheen />}
-        {props.badge && (
-          <span className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex items-center gap-1">
-            {props.badge}
-          </span>
-        )}
+        {props.stacked && <span aria-hidden className={STACK_EDGE} />}
+        <span className="relative block w-full">
+          {printing.hasImage ? (
+            // Pre-sized images from our own cache. `srcSet` offers both
+            // sizes and `sizes` says how wide a tile is; the browser picks the sharper "normal"
+            // image whenever the small one (146 px) would be blurry, e.g. on wide or high-density
+            // screens. (The small one alone was too soft to read.)
+            <CardImage
+              src={`/api/images/${printing.id}/small/front`}
+              srcSet={`/api/images/${printing.id}/small/front 146w, /api/images/${printing.id}/normal/front 488w`}
+              sizes="(min-width: 1024px) 190px, (min-width: 640px) 30vw, 50vw"
+              alt={printing.name}
+              loading="lazy"
+              width={146}
+              height={204}
+              className="bg-surface-raised aspect-[146/204] w-full rounded-[4.5%]"
+            />
+          ) : (
+            <div className={NO_IMAGE_BOX}>{printing.name}</div>
+          )}
+          {props.isFoil && <FoilSheen />}
+          {props.badge && (
+            <span className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex items-center gap-1">
+              {props.badge}
+            </span>
+          )}
+        </span>
       </button>
       {props.href ? (
         <Link href={props.href} className="leading-tight font-medium hover:underline">
@@ -117,7 +126,8 @@ export function CardTile(props: CardTileProps) {
         <span className="leading-tight font-medium">{printing.name}</span>
       )}
       <span className={`text-xs ${rarityTextClass(printing.rarity)}`}>
-        #{printing.collectorNumber} · {printing.rarity}
+        {props.showSetCode && `${printing.setCode.toUpperCase()} `}#{printing.collectorNumber} ·{" "}
+        {printing.rarity}
         {printing.variantLabel && ` · ${printing.variantLabel}`}
       </span>
       <span className="text-muted text-xs tabular-nums">{props.priceLine}</span>
