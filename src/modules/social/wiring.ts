@@ -8,6 +8,7 @@ export function wireSocialCapabilities({ social }: Readonly<{ social: Social }>)
     social: pick(
       social,
       "updateProfile",
+      "updateThemePreference",
       "sendFriendRequest",
       "acceptFriendRequest",
       "declineFriendRequest",

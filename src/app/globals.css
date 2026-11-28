@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@custom-variant dark {
+  &:where([data-color-scheme="dark"], [data-color-scheme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -28,10 +39,33 @@
   --warning-line: #fcd34d;
   --warning-ink: #78350f;
   --focus-ring: #1d4ed8;
+  --canvas-bg: var(--background);
+  --panel-bg: transparent;
+  --panel-blur: 0px;
+  --card-bg: transparent;
+  --header-bg: var(--background);
+  --theme-font-display: var(--font-geist-sans);
+  --theme-font-body: var(--font-geist-sans);
+  --theme-heading-tracking: normal;
+  --theme-radius-card: 0.5rem;
+  --theme-radius-control: 0.375rem;
+  --theme-card-shadow: none;
   --target-size: 24px;
   /* Tells the browser which theme its own controls (dropdowns, scrollbars, date pickers) should
      use. Without it, dark pages got light-grey text on white dropdown lists. */
   color-scheme: light dark;
+  accent-color: var(--accent);
+  scrollbar-color: var(--line) var(--surface);
+}
+
+:root[data-color-scheme="dark"],
+:root:has(> head > meta[name="color-scheme"][content="dark"]) {
+  color-scheme: dark;
+}
+
+:root[data-color-scheme="light"],
+:root:has(> head > meta[name="color-scheme"][content="light"]) {
+  color-scheme: light;
 }
 
 @media (pointer: coarse) {
@@ -67,12 +101,19 @@
   --color-warning-soft: var(--warning-soft);
   --color-warning-line: var(--warning-line);
   --color-warning-ink: var(--warning-ink);
+  --color-canvas: var(--canvas-bg);
+  --color-panel: var(--panel-bg);
+  --color-card: var(--card-bg);
+  --color-header: var(--header-bg);
+  --radius-card: var(--theme-radius-card);
+  --radius-control: var(--theme-radius-control);
   --font-sans: var(--font-geist-sans);
+  --font-display: var(--theme-font-display);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-color-scheme="light"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
     --muted: #a1a1aa;
@@ -135,17 +176,59 @@
   }
 
   body {
-    background: var(--background);
+    background: var(--canvas-bg);
     color: var(--foreground);
-    font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+    font-family: var(--theme-font-body), var(--font-sans), Arial, Helvetica, sans-serif;
     line-height: 1.5;
     padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-display), Arial, Helvetica, sans-serif;
+    letter-spacing: var(--theme-heading-tracking);
   }
 
   h1,
   h2,
   h3 {
     text-wrap: balance;
+  }
+}
+
+html[data-backdrop="active"] .theme-page-panel,
+html[data-backdrop="active"] #main-content > main {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  box-shadow: var(--theme-card-shadow);
+}
+
+@media (min-width: 768px) {
+  html[data-backdrop="active"] .theme-page-panel,
+  html[data-backdrop="active"] #main-content > main {
+    margin-block: 1.25rem;
+    padding-inline: 1.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+  }
+}
+
+html[data-backdrop="active"] .theme-header-chrome {
+  backdrop-filter: blur(var(--panel-blur));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --panel-bg: var(--background);
+    --card-bg: var(--surface);
+    --header-bg: var(--background);
+    --panel-blur: 0px;
+  }
+}
+
+@media (forced-colors: active) {
+  .theme-backdrop {
+    display: none;
   }
 }
 

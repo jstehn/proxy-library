@@ -11,4 +11,14 @@ export { ok, err } from "./result";
 export type { Ok, Err, Result } from "./result";
 export { seededRng, randomInt, shuffled, weightedPick, weightedSample } from "./rng";
 export type { Rng, Weighted } from "./rng";
+export {
+  THEME_COOKIE_NAME,
+  THEME_IDS,
+  DEFAULT_THEME_PREFERENCE,
+  isThemeId,
+  checkThemeId,
+  parseThemeCookie,
+  serializeThemeCookie,
+} from "./theme";
+export type { ThemeError, ThemeId, ThemePreference } from "./theme";
 export type { UnitOfWork } from "./unit-of-work";

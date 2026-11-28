@@ -1,6 +1,15 @@
 // Tables owned by the social module (design doc 48, section 8).
 import { sql } from "drizzle-orm";
-import { bigint, check, index, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 // Relative imports (not "@/…") because drizzle-kit loads this file outside the app.
 import { players } from "../../accounts/infrastructure/schema";
 import { decks } from "../../decks/core/infrastructure/schema";
@@ -30,6 +39,8 @@ export const playerProfiles = pgTable(
       .default(sql`'{}'::text[]`),
     statsVisibility: text("stats_visibility").notNull().default("everyone"),
     wishlistVisibility: text("wishlist_visibility").notNull().default("friends"),
+    themeId: text("theme_id").notNull().default("system"),
+    showThemeBackdrop: boolean("show_theme_backdrop").notNull().default(true),
     updatedAt: timestamptz("updated_at").notNull(),
   },
   (table) => [

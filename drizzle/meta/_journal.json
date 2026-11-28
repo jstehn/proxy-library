@@ -428,6 +428,13 @@
       "when": 1795757055020,
       "tag": "0060_sql_efficiency_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795834641628,
+      "tag": "0061_outstanding_jack_power",
+      "breakpoints": true
     }
   ]
 }

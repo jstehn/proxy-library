@@ -95,7 +95,7 @@ export async function SiteHeader() {
         ];
 
   return (
-    <header className="border-border-subtle border-b">
+    <header className="border-border-subtle bg-header theme-header-chrome border-b">
       <nav
         aria-label="Primary"
         className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"

@@ -15,7 +15,7 @@ type CardProps = HTMLAttributes<HTMLElement> & {
 
 export function Card(props: CardProps) {
   const { as: Tag = "div", padding = "none", stack, divided, className, ...rest } = props;
-  const classes = ["border-border-subtle rounded-lg border", PADDING_CLASSES[padding]];
+  const classes = ["border-border-subtle bg-card rounded-card border", PADDING_CLASSES[padding]];
   if (stack) classes.push("flex flex-col gap-3");
   if (divided) classes.push("divide-border-subtle divide-y");
   if (className) classes.push(className);

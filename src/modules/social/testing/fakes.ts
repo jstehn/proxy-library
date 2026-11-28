@@ -1,6 +1,6 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { DeckId } from "@/modules/decks";
-import type { UserId } from "@/shared/kernel";
+import type { ThemePreference, UserId } from "@/shared/kernel";
 import type {
   FriendshipRepository,
   PlayerLookup,
@@ -15,10 +15,12 @@ function pairKey(a: UserId, b: UserId): string {
   return a < b ? `${a}::${b}` : `${b}::${a}`;
 }
 
-function fakeProfileRepository(
-  initial: readonly PlayerProfile[] = [],
-): ProfileRepository & { all(): PlayerProfile[] } {
+function fakeProfileRepository(initial: readonly PlayerProfile[] = []): ProfileRepository & {
+  all(): PlayerProfile[];
+  themeOf(userId: UserId): ThemePreference | null;
+} {
   const map = new Map<string, PlayerProfile>(initial.map((p) => [p.userId, p]));
+  const themes = new Map<string, ThemePreference>();
   return {
     async findByUserId(userId) {
       return map.get(userId) ?? null;
@@ -26,8 +28,14 @@ function fakeProfileRepository(
     async save(profile) {
       map.set(profile.userId, profile);
     },
+    async saveThemePreference(userId, preference) {
+      themes.set(userId, preference);
+    },
     all() {
       return [...map.values()];
+    },
+    themeOf(userId) {
+      return themes.get(userId) ?? null;
     },
   };
 }

@@ -1,12 +1,13 @@
 import type { PrintingId } from "@/modules/catalog";
 import type { DeckId } from "@/modules/decks";
-import type { Clock, UnitOfWork, UserId } from "@/shared/kernel";
+import type { Clock, ThemePreference, UnitOfWork, UserId } from "@/shared/kernel";
 import type { Friendship } from "../domain/friendship";
 import type { PlayerProfile } from "../domain/profile";
 
 export interface ProfileRepository {
   findByUserId(userId: UserId): Promise<PlayerProfile | null>;
   save(profile: PlayerProfile): Promise<void>;
+  saveThemePreference(userId: UserId, preference: ThemePreference, updatedAt: Date): Promise<void>;
 }
 
 export interface FriendshipRepository {

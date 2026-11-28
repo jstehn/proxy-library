@@ -50,6 +50,16 @@ export default async function AccountPage(props: PageProps<"/account">) {
       </section>
 
       <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Appearance</h2>
+        <p className="text-muted text-sm">
+          Choose a color palette or Magic plane theme with official artwork backdrops.
+        </p>
+        <Link href="/account/appearance" className="w-fit underline">
+          Choose theme
+        </Link>
+      </section>
+
+      <section className="flex flex-col gap-2">
         <h2 className="font-medium">Password</h2>
         <Link href="/account/password" className="w-fit underline">
           Change password

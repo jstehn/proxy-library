@@ -1,0 +1,2 @@
+ALTER TABLE "player_profiles" ADD COLUMN "theme_id" text DEFAULT 'system' NOT NULL;--> statement-breakpoint
+ALTER TABLE "player_profiles" ADD COLUMN "show_theme_backdrop" boolean DEFAULT true NOT NULL;

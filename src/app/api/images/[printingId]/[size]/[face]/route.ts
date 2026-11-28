@@ -1,7 +1,7 @@
 import { PrintingId } from "@/modules/catalog";
 import { readCapabilities } from "@/server/page-instance";
 
-const SIZES = ["small", "normal", "large"] as const;
+const SIZES = ["small", "normal", "large", "artCrop"] as const;
 const FACES = ["front", "back"] as const;
 
 /**

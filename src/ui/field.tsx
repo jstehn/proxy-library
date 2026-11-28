@@ -14,7 +14,7 @@ const SIZE_CLASSES: Record<ControlSize, string> = {
 
 /** The class string for a text control, for the rare element that can't be one of these. */
 export function controlClass(size: ControlSize = "md", className?: string): string {
-  const classes = ["border-line rounded-md border bg-transparent", SIZE_CLASSES[size]];
+  const classes = ["border-line bg-field rounded-control border", SIZE_CLASSES[size]];
   if (className) classes.push(className);
   return classes.join(" ");
 }

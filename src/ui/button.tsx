@@ -26,7 +26,11 @@ type ButtonLook = { variant?: ButtonVariant; size?: ButtonSize; className?: stri
 /** The class string for a button-looking element. */
 export function buttonClass(look: ButtonLook = {}): string {
   const { variant = "primary", size = "md", className } = look;
-  const classes = ["rounded-md disabled:opacity-60", VARIANT_CLASSES[variant], SIZE_CLASSES[size]];
+  const classes = [
+    "rounded-control disabled:opacity-60",
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+  ];
   if (className) classes.push(className);
   return classes.join(" ");
 }

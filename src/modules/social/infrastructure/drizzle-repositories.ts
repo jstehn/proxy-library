@@ -66,6 +66,24 @@ export function drizzleProfileRepository(db: DbExecutor): ProfileRepository {
           },
         });
     },
+    async saveThemePreference(userId, preference, updatedAt) {
+      await db
+        .insert(playerProfiles)
+        .values({
+          userId,
+          themeId: preference.themeId,
+          showThemeBackdrop: preference.showBackdrop,
+          updatedAt,
+        })
+        .onConflictDoUpdate({
+          target: playerProfiles.userId,
+          set: {
+            themeId: preference.themeId,
+            showThemeBackdrop: preference.showBackdrop,
+            updatedAt,
+          },
+        });
+    },
   };
 }
 

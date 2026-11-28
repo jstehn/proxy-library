@@ -234,3 +234,54 @@ export async function setPhotos(
     })),
   };
 }
+
+export type BackdropLookup =
+  | Readonly<{ kind: "wpn-key-art"; setCode: string }>
+  | Readonly<{ kind: "scryfall-art-crop"; setCode: string; collectorNumber: string }>
+  | Readonly<{ kind: "static"; path: string }>;
+
+/**
+ * Resolves the first available local artwork URL for a theme backdrop (WPN set key art or
+ * Scryfall `art_crop`). Returns `null` cleanly if none of the candidates are synced yet.
+ */
+export async function resolveBackdropUrl(
+  db: DbExecutor,
+  candidates: readonly BackdropLookup[],
+): Promise<string | null> {
+  for (const candidate of candidates) {
+    if (candidate.kind === "static") return candidate.path;
+
+    if (candidate.kind === "wpn-key-art") {
+      const code = candidate.setCode.toUpperCase();
+      const [row] = (
+        await db.execute<{ key_art_id: string | null }>(sql`
+          select case when pg.key_art->>'id' in (select image_id from artwork_files)
+                      then pg.key_art->>'id' end as key_art_id
+            from wpn_pages pg
+           where pg.set_code = ${code}
+           limit 1
+        `)
+      ).rows;
+      if (row?.key_art_id) {
+        return `/api/artwork/${row.key_art_id}/large`;
+      }
+      continue;
+    }
+
+    const code = candidate.setCode.toUpperCase();
+    const [printing] = (
+      await db.execute<{ id: string }>(sql`
+        select id
+          from printings
+         where set_code = ${code}
+           and collector_number = ${candidate.collectorNumber}
+           and image_uris is not null
+         limit 1
+      `)
+    ).rows;
+    if (printing) {
+      return `/api/images/${printing.id}/artCrop/front`;
+    }
+  }
+  return null;
+}

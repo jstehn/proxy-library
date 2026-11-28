@@ -18,7 +18,7 @@ type DialogProps = {
   children: React.ReactNode;
 };
 
-const SURFACE = "bg-background text-foreground border-line rounded-lg border shadow-xl";
+const SURFACE = "bg-background text-foreground border-line rounded-card border shadow-xl";
 
 const SIZE_CLASSES: Record<DialogSize, string> = {
   sm: "w-[min(24rem,calc(100vw-2rem))]",

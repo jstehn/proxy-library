@@ -25,7 +25,7 @@ type PageProps = HTMLAttributes<HTMLElement> & { width?: PageWidth; spacing?: Pa
 export function Page(props: PageProps) {
   const { width = "4xl", spacing = "normal", className, ...rest } = props;
   const classes = [
-    "mx-auto flex w-full flex-col px-4",
+    "theme-page-panel mx-auto flex w-full flex-col px-4",
     WIDTH_CLASSES[width],
     SPACING_CLASSES[spacing],
   ];

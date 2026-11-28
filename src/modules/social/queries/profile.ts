@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/modules/accounts";
 import type { DbExecutor } from "@/shared/db";
+import { DEFAULT_THEME_PREFERENCE, isThemeId, type ThemePreference } from "@/shared/kernel";
 import type { ManaColor } from "@/shared/mtg";
 import type { ViewerRelation } from "../domain/friendship";
 import { canViewSection, type SectionVisibility } from "../domain/profile";
@@ -361,4 +362,18 @@ export async function profileForEdit(db: DbExecutor, actor: Actor): Promise<Prof
       format: d.format,
     })),
   };
+}
+
+/** The signed-in player's saved theme preference, falling back to default if unset or retired. */
+export async function themePreference(db: DbExecutor, actor: Actor): Promise<ThemePreference> {
+  const [row] = (
+    await db.execute<{ theme_id: string; show_theme_backdrop: boolean }>(sql`
+      select theme_id, show_theme_backdrop
+        from player_profiles
+       where user_id = ${actor.userId}
+       limit 1
+    `)
+  ).rows;
+  if (!row || !isThemeId(row.theme_id)) return DEFAULT_THEME_PREFERENCE;
+  return { themeId: row.theme_id, showBackdrop: row.show_theme_backdrop };
 }

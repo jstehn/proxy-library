@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cinzel, Fraunces, Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { themeCssVariables } from "@/ui/themes";
 import { PwaRegistration } from "./_components/pwa-registration";
+import { resolveActiveTheme } from "./_components/resolve-theme";
+import { ThemeBackdrop } from "./_components/theme-backdrop";
 import { SiteHeader } from "./site-header";
 
 const SKIP_LINK =
@@ -18,6 +21,32 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const storybookSerif = Fraunces({
+  variable: "--font-theme-storybook",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const gothicSerif = Cinzel({
+  variable: "--font-theme-gothic",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const techDisplay = Space_Grotesk({
+  variable: "--font-theme-tech",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const FONT_VARIABLES = [
+  geistSans.variable,
+  geistMono.variable,
+  storybookSerif.variable,
+  gothicSerif.variable,
+  techDisplay.variable,
+].join(" ");
 
 export const metadata: Metadata = {
   title: "Proxy Library",
@@ -38,17 +67,28 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const { theme, backdrop } = await resolveActiveTheme();
+  const themeStyle = themeCssVariables(theme, { backdropActive: backdrop !== null });
+
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      data-theme={theme.id}
+      data-color-scheme={theme.colorScheme}
+      data-backdrop={backdrop !== null ? "active" : undefined}
+      style={themeStyle}
+      className={`${FONT_VARIABLES} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+        <ThemeBackdrop backdrop={backdrop} />
         <a href="#main-content" className={SKIP_LINK}>
           Skip to content
         </a>
         <PwaRegistration />
         <Suspense
           fallback={
-            <header className="border-border-subtle border-b">
+            <header className="border-border-subtle bg-header theme-header-chrome border-b">
               <nav
                 aria-label="Primary"
                 className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"
@@ -66,7 +106,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </div>
         {/* Required by Wizards' Fan Content Policy (design doc 13). */}
-        <footer className="border-border-subtle text-muted border-t px-4 py-4 text-center text-xs">
+        <footer className="border-border-subtle bg-header theme-header-chrome text-muted border-t px-4 py-4 text-center text-xs">
           Proxy Library is unofficial Fan Content permitted under the Fan Content Policy. Not
           approved/endorsed by Wizards. Portions of the materials used are property of Wizards of
           the Coast. ©Wizards of the Coast LLC.
