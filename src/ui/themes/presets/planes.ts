@@ -14,17 +14,17 @@ export const bloomburrowTheme: ThemeDefinition = {
     headingTracking: "-0.015em",
   },
   shape: {
-    cardRadius: "0.75rem",
-    controlRadius: "0.5rem",
-    cardShadow: "0 4px 20px rgb(39 33 26 / 0.08)",
+    cardRadius: "1rem",
+    controlRadius: "9999px",
+    cardShadow: "0 10px 32px rgb(39 33 26 / 0.14)",
   },
   backdrop: {
     source: { kind: "wpn-key-art", setCode: "blb" },
     fallbackSource: { kind: "scryfall-art-crop", setCode: "blb", collectorNumber: "278" },
-    focalPoint: "center 25%",
-    opacity: 0.42,
+    focalPoint: "center 18%",
+    opacity: 0.85,
     scrim:
-      "linear-gradient(180deg, rgb(247 241 227 / 0.45) 0%, rgb(247 241 227 / 0.72) 45%, #efe6d2 100%)",
+      "linear-gradient(180deg, rgb(247 241 227 / 0.08) 0%, rgb(247 241 227 / 0.35) 32%, rgb(239 230 210 / 0.86) 72%, #efe6d2 100%)",
     credit: "Bloomburrow official key art — ©Wizards of the Coast",
   },
   tokens: {
@@ -56,10 +56,10 @@ export const bloomburrowTheme: ThemeDefinition = {
     warningInk: "#5e3206",
     focusRing: "#2f5d3a",
     canvasBg: "#efe6d2",
-    panelBg: "rgb(247 241 227 / 0.9)",
-    panelBlur: "12px",
-    cardBg: "rgb(252 249 242 / 0.86)",
-    headerBg: "rgb(247 241 227 / 0.88)",
+    panelBg: "rgb(247 241 227 / 0.84)",
+    panelBlur: "8px",
+    cardBg: "rgb(252 249 242 / 0.88)",
+    headerBg: "rgb(247 241 227 / 0.84)",
   },
 };
 
@@ -84,10 +84,10 @@ export const innistradTheme: ThemeDefinition = {
   backdrop: {
     source: { kind: "wpn-key-art", setCode: "inr" },
     fallbackSource: { kind: "scryfall-art-crop", setCode: "mid", collectorNumber: "272" },
-    focalPoint: "center 20%",
-    opacity: 0.45,
+    focalPoint: "center 16%",
+    opacity: 0.82,
     scrim:
-      "linear-gradient(180deg, rgb(17 16 21 / 0.45) 0%, rgb(17 16 21 / 0.78) 55%, #0c0b10 100%)",
+      "linear-gradient(180deg, rgb(17 16 21 / 0.12) 0%, rgb(17 16 21 / 0.48) 38%, rgb(12 11 16 / 0.9) 78%, #0c0b10 100%)",
     credit: "Innistrad official key art — ©Wizards of the Coast",
   },
   tokens: {
@@ -119,10 +119,10 @@ export const innistradTheme: ThemeDefinition = {
     warningInk: "#faf0d4",
     focusRing: "#e5c57c",
     canvasBg: "#0c0b10",
-    panelBg: "rgb(17 16 21 / 0.88)",
-    panelBlur: "12px",
+    panelBg: "rgb(17 16 21 / 0.82)",
+    panelBlur: "8px",
     cardBg: "rgb(26 24 33 / 0.84)",
-    headerBg: "rgb(17 16 21 / 0.86)",
+    headerBg: "rgb(17 16 21 / 0.82)",
   },
 };
 
@@ -140,17 +140,18 @@ export const kamigawaTheme: ThemeDefinition = {
     headingTracking: "-0.02em",
   },
   shape: {
-    cardRadius: "0.25rem",
-    controlRadius: "0.1875rem",
-    cardShadow: "0 0 0 1px rgb(56 232 255 / 0.1), 0 8px 28px rgb(5 8 20 / 0.55)",
+    cardRadius: "0.1875rem",
+    controlRadius: "0.125rem",
+    cardShadow:
+      "0 0 0 1px rgb(56 232 255 / 0.22), 0 0 24px rgb(56 232 255 / 0.1), 0 10px 30px rgb(5 8 20 / 0.65)",
   },
   backdrop: {
     source: { kind: "wpn-key-art", setCode: "neo" },
     fallbackSource: { kind: "scryfall-art-crop", setCode: "neo", collectorNumber: "295" },
-    focalPoint: "center 22%",
-    opacity: 0.48,
+    focalPoint: "center 18%",
+    opacity: 0.82,
     scrim:
-      "linear-gradient(180deg, rgb(12 15 29 / 0.42) 0%, rgb(12 15 29 / 0.78) 52%, #080a14 100%)",
+      "linear-gradient(180deg, rgb(12 15 29 / 0.1) 0%, rgb(12 15 29 / 0.46) 36%, rgb(8 10 20 / 0.9) 76%, #080a14 100%)",
     credit: "Kamigawa: Neon Dynasty official key art — ©Wizards of the Coast",
   },
   tokens: {
@@ -182,10 +183,10 @@ export const kamigawaTheme: ThemeDefinition = {
     warningInk: "#fef3c7",
     focusRing: "#38e8ff",
     canvasBg: "#080a14",
-    panelBg: "rgb(12 15 29 / 0.88)",
-    panelBlur: "12px",
-    cardBg: "rgb(20 25 46 / 0.84)",
-    headerBg: "rgb(12 15 29 / 0.86)",
+    panelBg: "rgb(12 15 29 / 0.8)",
+    panelBlur: "8px",
+    cardBg: "rgb(20 25 46 / 0.82)",
+    headerBg: "rgb(12 15 29 / 0.84)",
   },
 };
 
@@ -205,15 +206,16 @@ export const newCapennaTheme: ThemeDefinition = {
   shape: {
     cardRadius: "0.125rem",
     controlRadius: "0.125rem",
-    cardShadow: "0 0 0 1px rgb(226 184 87 / 0.14), 0 10px 30px rgb(0 0 0 / 0.55)",
+    cardShadow:
+      "inset 0 0 0 1px rgb(226 184 87 / 0.34), 0 0 0 1px rgb(226 184 87 / 0.2), 0 12px 34px rgb(0 0 0 / 0.65)",
   },
   backdrop: {
     source: { kind: "wpn-key-art", setCode: "snc" },
     fallbackSource: { kind: "scryfall-art-crop", setCode: "snc", collectorNumber: "276" },
-    focalPoint: "center 18%",
-    opacity: 0.44,
+    focalPoint: "center 15%",
+    opacity: 0.8,
     scrim:
-      "linear-gradient(180deg, rgb(18 16 14 / 0.42) 0%, rgb(18 16 14 / 0.78) 54%, #0b0a08 100%)",
+      "linear-gradient(180deg, rgb(18 16 14 / 0.14) 0%, rgb(18 16 14 / 0.5) 38%, rgb(11 10 8 / 0.92) 78%, #0b0a08 100%)",
     credit: "Streets of New Capenna official key art — ©Wizards of the Coast",
   },
   tokens: {
@@ -245,9 +247,9 @@ export const newCapennaTheme: ThemeDefinition = {
     warningInk: "#fcf1d4",
     focusRing: "#e2b857",
     canvasBg: "#0b0a08",
-    panelBg: "rgb(18 16 14 / 0.89)",
-    panelBlur: "12px",
-    cardBg: "rgb(28 25 21 / 0.85)",
-    headerBg: "rgb(18 16 14 / 0.88)",
+    panelBg: "rgb(18 16 14 / 0.82)",
+    panelBlur: "8px",
+    cardBg: "rgb(28 25 21 / 0.84)",
+    headerBg: "rgb(18 16 14 / 0.86)",
   },
 };

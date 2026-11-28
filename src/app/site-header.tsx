@@ -95,52 +95,54 @@ export async function SiteHeader() {
         ];
 
   return (
-    <header className="border-border-subtle bg-header theme-header-chrome border-b">
-      <nav
-        aria-label="Primary"
-        className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"
-      >
-        <Link href="/" className="font-semibold">
-          Proxy Library
-        </Link>
-        {links !== null && (
-          <div className="hidden flex-wrap items-center gap-x-3 md:flex">{links}</div>
-        )}
-        <span className="flex-1" />
-        {actor === null ? (
-          <Link href="/sign-in">Sign in</Link>
-        ) : (
-          <>
-            {balance !== null && (
-              <Link href="/wallet" className="font-medium tabular-nums" title="Your wallet">
-                {Cents.format(balance)}
-              </Link>
-            )}
-            <div className="hidden items-center gap-x-3 md:flex">
-              <Link href="/account" title="Your account">
-                {actor.displayName}
-              </Link>
-              <form action={signOutAction}>
-                <button type="submit" className="underline">
-                  Sign out
-                </button>
-              </form>
-            </div>
-            <PhoneMenu>
-              {links}
-              <Link href="/account">{actor.displayName}: account</Link>
-              <form action={signOutAction} className="px-2 py-1.5">
-                <button type="submit" className="underline">
-                  Sign out
-                </button>
-              </form>
-            </PhoneMenu>
-          </>
-        )}
-      </nav>
+    <>
+      <header className="border-border-subtle bg-header theme-header-chrome border-b">
+        <nav
+          aria-label="Primary"
+          className="mx-auto flex w-full max-w-6xl items-center gap-x-3 px-4 py-3 text-sm"
+        >
+          <Link href="/" className="font-semibold">
+            Proxy Library
+          </Link>
+          {links !== null && (
+            <div className="hidden flex-wrap items-center gap-x-3 md:flex">{links}</div>
+          )}
+          <span className="flex-1" />
+          {actor === null ? (
+            <Link href="/sign-in">Sign in</Link>
+          ) : (
+            <>
+              {balance !== null && (
+                <Link href="/wallet" className="font-medium tabular-nums" title="Your wallet">
+                  {Cents.format(balance)}
+                </Link>
+              )}
+              <div className="hidden items-center gap-x-3 md:flex">
+                <Link href="/account" title="Your account">
+                  {actor.displayName}
+                </Link>
+                <form action={signOutAction}>
+                  <button type="submit" className="underline">
+                    Sign out
+                  </button>
+                </form>
+              </div>
+              <PhoneMenu>
+                {links}
+                <Link href="/account">{actor.displayName}: account</Link>
+                <form action={signOutAction} className="px-2 py-1.5">
+                  <button type="submit" className="underline">
+                    Sign out
+                  </button>
+                </form>
+              </PhoneMenu>
+            </>
+          )}
+        </nav>
+      </header>
       {actor !== null && (
         <MobileBottomNav draftId={draft?.id ?? null} draftStatus={draft?.status ?? null} />
       )}
-    </header>
+    </>
   );
 }

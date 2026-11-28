@@ -196,25 +196,257 @@
   }
 }
 
+/* Apply backdrop-filter on a ::before layer rather than on <main> or <header> itself:
+   `backdrop-filter` creates a containing block for `position: fixed` descendants, which would
+   trap fixed mobile nav bars, floating carts, sheets, and hover previews inside the panel. */
 html[data-backdrop="active"] .theme-page-panel,
 html[data-backdrop="active"] #main-content > main {
+  position: relative;
+  isolation: isolate;
+  margin-top: 5.5rem;
+  margin-bottom: 1.5rem;
+  margin-inline: auto;
+  width: calc(100% - 1rem);
+  padding-block: 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--theme-card-shadow);
+}
+
+html[data-backdrop="active"] .theme-page-panel::before,
+html[data-backdrop="active"] #main-content > main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
   background: var(--panel-bg);
   backdrop-filter: blur(var(--panel-blur));
-  box-shadow: var(--theme-card-shadow);
 }
 
 @media (min-width: 768px) {
   html[data-backdrop="active"] .theme-page-panel,
   html[data-backdrop="active"] #main-content > main {
-    margin-block: 1.25rem;
+    margin-top: 7.5rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    padding-block: 2.25rem;
     padding-inline: 1.75rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-card);
   }
 }
 
 html[data-backdrop="active"] .theme-header-chrome {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+html[data-backdrop="active"] .theme-header-chrome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--header-bg);
   backdrop-filter: blur(var(--panel-blur));
+}
+
+/* --- Plane-specific artistic identities & CSS flourishes --- */
+
+/* Bloomburrow: dappled sunlit woodland, illuminated storybook double frame, botanical flourish. */
+html[data-theme="bloomburrow"] .theme-backdrop-art {
+  background-image:
+    radial-gradient(ellipse 65% 45% at 18% 10%, rgb(252 211 77 / 0.26), transparent 65%),
+    radial-gradient(ellipse 55% 40% at 85% 15%, rgb(47 93 58 / 0.22), transparent 60%),
+    radial-gradient(rgb(138 75 11 / 0.08) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    18px 18px;
+}
+
+html[data-theme="bloomburrow"] #main-content > main {
+  outline: 1px solid rgb(180 106 30 / 0.28);
+  outline-offset: -6px;
+}
+
+html[data-theme="bloomburrow"] #main-content h1 {
+  color: #1f4729;
+}
+
+html[data-theme="bloomburrow"] #main-content h1::after {
+  content: "";
+  display: block;
+  margin-top: 0.4rem;
+  height: 2px;
+  width: 4.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #2f5d3a, #b46a1e 65%, transparent);
+}
+
+html[data-theme="bloomburrow"] button.bg-accent {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 2px 8px rgb(47 93 58 / 0.25);
+}
+
+/* Innistrad: blood-moon glow, gothic cathedral ribbing, candlelight headings. */
+html[data-theme="innistrad"] .theme-backdrop-art {
+  background-image:
+    radial-gradient(circle 220px at 78% 8%, rgb(184 50 68 / 0.34), transparent 72%),
+    radial-gradient(ellipse 70% 50% at 20% 0%, rgb(217 180 104 / 0.12), transparent 60%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 54px,
+      rgb(217 180 104 / 0.04) 55px,
+      transparent 56px
+    );
+}
+
+html[data-theme="innistrad"] #main-content > main {
+  outline: 1px solid rgb(184 50 68 / 0.28);
+  outline-offset: -5px;
+}
+
+html[data-theme="innistrad"] #main-content h1 {
+  color: #ebd094;
+  text-shadow: 0 2px 18px rgb(184 50 68 / 0.5);
+}
+
+html[data-theme="innistrad"] #main-content h1::after {
+  content: "";
+  display: block;
+  margin-top: 0.4rem;
+  height: 1px;
+  width: 5.5rem;
+  background: linear-gradient(90deg, #b83244, #d9b468 55%, transparent);
+}
+
+/* Kamigawa: Ghost in the Shell / Neon Dynasty cyber grid, CRT scanlines, chamfered HUD corners. */
+html[data-theme="kamigawa"] .theme-backdrop-art {
+  background-image:
+    radial-gradient(ellipse 55% 40% at 15% 6%, rgb(56 232 255 / 0.24), transparent 65%),
+    radial-gradient(ellipse 50% 45% at 88% 12%, rgb(244 114 182 / 0.24), transparent 65%),
+    repeating-linear-gradient(
+      0deg,
+      rgb(56 232 255 / 0.045) 0px,
+      rgb(56 232 255 / 0.045) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(rgb(56 232 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 114 182 / 0.06) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    auto,
+    36px 36px,
+    36px 36px;
+}
+
+html[data-theme="kamigawa"] .theme-header-chrome {
+  border-bottom-color: rgb(56 232 255 / 0.45);
+  box-shadow: 0 1px 16px rgb(56 232 255 / 0.2);
+}
+
+html[data-theme="kamigawa"] #main-content > main {
+  border-color: rgb(56 232 255 / 0.4);
+}
+
+html[data-theme="kamigawa"] #main-content h1,
+html[data-theme="kamigawa"] #main-content h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+html[data-theme="kamigawa"] #main-content h1 {
+  color: #7df2ff;
+  text-shadow: 0 0 18px rgb(56 232 255 / 0.55);
+}
+
+html[data-theme="kamigawa"] #main-content h1::after {
+  content: "";
+  display: block;
+  margin-top: 0.45rem;
+  height: 2px;
+  width: 6rem;
+  background: linear-gradient(90deg, #38e8ff, #f472b6 70%, transparent);
+  box-shadow: 0 0 10px rgb(56 232 255 / 0.65);
+}
+
+html[data-theme="kamigawa"] button.bg-accent {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+  background: linear-gradient(135deg, #38e8ff 0%, #75f0ff 100%);
+  box-shadow: 0 0 16px rgb(56 232 255 / 0.35);
+}
+
+/* New Capenna: 1920s Art Deco gold chevron lattice, sunburst, double gilded frames, chamfered buttons. */
+html[data-theme="new-capenna"] .theme-backdrop-art {
+  background-image:
+    radial-gradient(ellipse 65% 42% at 50% 0%, rgb(226 184 87 / 0.26), transparent 68%),
+    repeating-linear-gradient(
+      60deg,
+      rgb(226 184 87 / 0.08) 0px,
+      rgb(226 184 87 / 0.08) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      -60deg,
+      rgb(226 184 87 / 0.08) 0px,
+      rgb(226 184 87 / 0.08) 1px,
+      transparent 1px,
+      transparent 28px
+    );
+}
+
+html[data-theme="new-capenna"] .theme-header-chrome {
+  border-bottom-color: rgb(226 184 87 / 0.45);
+}
+
+html[data-theme="new-capenna"] #main-content > main {
+  border-color: rgb(226 184 87 / 0.45);
+  outline: 1px solid rgb(226 184 87 / 0.28);
+  outline-offset: -6px;
+}
+
+html[data-theme="new-capenna"] #main-content h1,
+html[data-theme="new-capenna"] #main-content h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #f0cc75;
+}
+
+html[data-theme="new-capenna"] #main-content h1::after {
+  content: "";
+  display: block;
+  margin-top: 0.45rem;
+  height: 2px;
+  width: 6.5rem;
+  background: linear-gradient(90deg, #e2b857 0%, #f7e1a0 45%, #2e7d67 80%, transparent);
+}
+
+html[data-theme="new-capenna"] button.bg-accent {
+  clip-path: polygon(
+    7px 0,
+    calc(100% - 7px) 0,
+    100% 7px,
+    100% calc(100% - 7px),
+    calc(100% - 7px) 100%,
+    7px 100%,
+    0 calc(100% - 7px),
+    0 7px
+  );
+  background: linear-gradient(135deg, #f3d485 0%, #d4a13c 100%);
 }
 
 @media (prefers-reduced-transparency: reduce) {

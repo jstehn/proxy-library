@@ -44,10 +44,19 @@ test("switches curated themes, persists across reload, and toggles backdrop", as
   await expect(page.locator("html")).toHaveAttribute("data-color-scheme", "light");
   await maybeShot(page, "03-bloomburrow-appearance");
 
-  // Visit another page to verify site-wide theming.
+  // Visit another page to verify site-wide theming and mobile bottom nav pinning over backdrops.
   await page.goto("/account");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "bloomburrow");
   await maybeShot(page, "04-bloomburrow-account");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const bottomNav = page.getByRole("navigation", { name: "Quick navigation" });
+  await expect(bottomNav).toBeVisible();
+  const box = await bottomNav.boundingBox();
+  expect(box).not.toBeNull();
+  expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844);
+  await maybeShot(page, "04b-bloomburrow-phone");
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // Switch to Innistrad (dark gothic plane).
   await page.goto("/account/appearance");
@@ -59,11 +68,17 @@ test("switches curated themes, persists across reload, and toggles backdrop", as
   await selectTheme(page, "kamigawa");
   await expect(page.locator("html")).toHaveAttribute("data-color-scheme", "dark");
   await maybeShot(page, "06-kamigawa");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await maybeShot(page, "06b-kamigawa-phone");
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // Switch to New Capenna (dark Art Deco plane).
   await selectTheme(page, "new-capenna");
   await expect(page.locator("html")).toHaveAttribute("data-color-scheme", "dark");
   await maybeShot(page, "07-new-capenna");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await maybeShot(page, "07b-new-capenna-phone");
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // Toggle palette-only mode (hide background artwork).
   await page.getByLabel("Show background artwork on plane themes").uncheck();

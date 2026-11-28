@@ -274,8 +274,12 @@ export async function resolveBackdropUrl(
         select id
           from printings
          where set_code = ${code}
-           and collector_number = ${candidate.collectorNumber}
            and image_uris is not null
+         order by
+           (collector_number = ${candidate.collectorNumber}) desc,
+           (type_line ilike '%Land%') desc,
+           (rarity = 'mythic') desc,
+           id
          limit 1
       `)
     ).rows;
